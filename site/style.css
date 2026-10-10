@@ -48,10 +48,19 @@ section { padding: 88px 0; }
 .nav-row { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: #eef1f6; font: 700 1.1rem var(--font-head); text-decoration: none; }
 .nav nav { display: flex; gap: 22px; }
+.lang-switch { display: inline-flex; align-items: center; flex: none; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: 600 0.86rem var(--font-body); text-decoration: none; cursor: pointer; }
+.lang-switch:hover { border-color: var(--accent); }
+.lang-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .nav nav a { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
 .nav nav a:hover { color: var(--text); }
 
 .hero { padding: 72px 0 64px; }
+[dir="rtl"] body { font-family: "IBM Plex Sans Arabic", "Segoe UI", sans-serif; }
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] .brand, [dir="rtl"] .btn { font-family: "IBM Plex Sans Arabic", "Segoe UI", sans-serif; }
+[dir="rtl"] .hero-logo { margin-inline-start: 0; margin-inline-end: 0; }
+[dir="rtl"] .section-lead, [dir="rtl"] .lead { max-width: 66ch; }
+[dir="rtl"] .code, [dir="rtl"] code, [dir="rtl"] .kbd { direction: ltr; text-align: left; unicode-bidi: isolate; }
+[dir="rtl"] .steps::before { left: 16px; right: 16px; }
 .hero-grid { display: grid; gap: 48px; align-items: center; }
 .hero-logo { margin: 0 0 20px; }
 .eyebrow { color: var(--muted); font-family: var(--font-mono); font-size: 0.85rem; margin-bottom: 18px; }
@@ -146,6 +155,9 @@ section { padding: 88px 0; }
   .steps::before { top: 16px; bottom: 16px; left: 15px; right: auto; width: 1px; height: auto; }
   .steps li { padding-left: 52px; }
   .num { position: absolute; left: 0; top: 0; margin: 0; }
+  [dir="rtl"] .steps::before { left: auto; right: 15px; }
+  [dir="rtl"] .steps li { padding-left: 0; padding-right: 52px; }
+  [dir="rtl"] .num { left: auto; right: 0; }
   .cli-row { grid-template-columns: 1fr; gap: 28px; }
 }
 @media (max-width: 640px) {

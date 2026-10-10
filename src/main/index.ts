@@ -11,6 +11,7 @@ import { SettingsStore } from './settingsStore'
 import { StatusWatcher } from './statusWatcher'
 import { OpsWatcher } from './opsWatcher'
 import { bridgeDirs, claudeSettingsPath, legacyUserDataDir, opsDirs } from './paths'
+import { applyPendingPaneonImport } from './paneonImport'
 import { resolveExecutable } from './executables'
 import { migrateLegacyUserData } from './userDataMigration'
 import { CliRunner } from './cliRunner'
@@ -133,9 +134,11 @@ app.whenReady().then(() => {
         nodePath: resolveExecutable('node.exe')
       })
     : null
+  let importNote: string | null = null
+  try { importNote = applyPendingPaneonImport(userData) } catch (error) { importNote = `Paneon import was not applied: ${(error as Error).message}` }
   const store = new SettingsStore(join(userData, 'settings.json'))
   const loaded = store.load()
-  const warning = [migration?.note, loaded.warning].filter(Boolean).join(' ') || null
+  const warning = [migration?.note, importNote, loaded.warning].filter(Boolean).join(' ') || null
   const ptys = new PtyManager({
     onData: (id, data) => send(IPC.ptyData, id, data),
     onExit: (id, code) => send(IPC.ptyExit, id, code)

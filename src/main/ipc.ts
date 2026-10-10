@@ -1,4 +1,6 @@
 import { statSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { BrowserWindow, clipboard, dialog, ipcMain, shell, app } from 'electron'
 import { IPC } from '../shared/ipc'
 import type {
@@ -26,7 +28,10 @@ import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './g
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
-import { bridgeDirs, claudeSettingsPath } from './paths'
+import { bridgeDirs, claudeHome, claudeSettingsPath } from './paths'
+import { exportSkill, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
+  import { previewPaneonImport, queuePaneonImport } from './paneonImport'
+  import { paneonUserDataDir } from './paths'
 import { listAllSessions } from './sessionIndex'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
 import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type BridgeLocations } from './statusBridge'
@@ -36,6 +41,7 @@ import { exportTranscript } from './transcriptExport'
 import { resolveExecutable } from './executables'
 import type { PtyManager } from './ptyManager'
 import { readSessions } from './sessionsWatcher'
+import { collectProcessActivity } from './processActivity'
 import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
@@ -74,6 +80,13 @@ export function registerIpc(
     ...bridgeDirs(app.getPath('userData')),
     nodePath: resolveExecutable('node.exe')
   })
+  const skillLocations = (): SkillLocations => ({
+    claude: claudeHome(),
+    codex: process.env.DAWSHA_CODEX_HOME ?? join(homedir(), '.codex'),
+    gemini: process.env.DAWSHA_GEMINI_HOME ?? join(homedir(), '.gemini'),
+    shared: process.env.DAWSHA_SHARED_HOME ?? join(homedir(), '.agents'),
+    projects: settings.get().projects.map((project) => project.folder)
+  })
   let warning = initialWarning
   ipcMain.handle(IPC.settingsGet, () => {
     const result = { settings: settings.get(), warning }
@@ -81,6 +94,8 @@ export function registerIpc(
     return result
   })
   ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => settings.update(patch))
+  ipcMain.handle(IPC.paneonImportPreview, () => previewPaneonImport(paneonUserDataDir(), app.getPath('userData')))
+  ipcMain.handle(IPC.paneonImportQueue, () => queuePaneonImport(paneonUserDataDir(), app.getPath('userData')))
   ipcMain.handle(IPC.checkFolder, (_event, path: string) => checkFolder(path))
   ipcMain.handle(IPC.gitBranch, (_event, folder: string) => currentBranch(folder))
   ipcMain.handle(IPC.sessionsList, () => readSessions())
@@ -88,6 +103,22 @@ export function registerIpc(
   ipcMain.handle(IPC.geminiList, () => readGeminiSessions())
   ipcMain.handle(IPC.statusList, () => status.current())
   ipcMain.handle(IPC.opsList, () => ops.current())
+  ipcMain.handle(IPC.processActivityList, () => collectProcessActivity(ptys.activityRoots()))
+  ipcMain.handle(IPC.skillsList, () => listSkills(skillLocations()))
+  ipcMain.handle(IPC.skillsOpen, async (_event, id: unknown) => {
+    const skill = resolveSkill(skillLocations(), id)
+    if (!skill) throw new Error('Skill is no longer available.')
+    const error = await shell.openPath(skill.kind === 'agent' ? skill.path : join(skill.path, 'SKILL.md'))
+    if (error) throw new Error(error)
+  })
+  ipcMain.handle(IPC.skillsExport, async (_event, id: unknown) => {
+    if (!resolveSkill(skillLocations(), id)) throw new Error('Skill is no longer available.')
+    const owner = getWindow()
+      const options = { properties: ['openDirectory'] as Array<'openDirectory'>, title: 'Export to folder' }
+    const selected = owner ? await dialog.showOpenDialog(owner, options) : await dialog.showOpenDialog(options)
+    if (selected.canceled || !selected.filePaths[0]) return null
+    return exportSkill(skillLocations(), id, selected.filePaths[0])
+  })
   ipcMain.on(IPC.opsTrack, (_event, ids: unknown) => {
     ops.track(Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [])
   })

@@ -52,7 +52,7 @@ export const DEFAULT_THEME_ID = 'grid-dark'
 export const THEMES: Theme[] = [
   {
     id: 'grid-dark',
-    name: 'Grid Dark',
+    name: 'Dawsha',
     kind: 'dark',
     app: {
       background: '#0c0e12',

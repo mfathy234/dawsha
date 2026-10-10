@@ -368,7 +368,7 @@ export async function discardPane(paneId: string): Promise<void> {
 export function focusPane(paneId: string, keepMaximized = false): void {
   const state = store.state
   const stays = keepMaximized && state.maximizedId !== null
-  if (state.focusedId === paneId && (stays || state.maximizedId === null || state.maximizedId === paneId)) return
+  if (state.view === 'grid' && state.focusedId === paneId && (stays || state.maximizedId === null || state.maximizedId === paneId)) return
   store.set((s) => ({
     ...s,
     focusedId: paneId,

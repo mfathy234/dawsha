@@ -34,7 +34,8 @@ export const ICONS = {
   bolt: svg(14, '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>'),
   snippet: svg(14, '<path d="M5 6h14 M5 12h14 M5 18h9"/>'),
   layout: svg(14, '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16 M3 12h9"/>'),
-  palette: svg(16, '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10" r="1"/><path d="M12 21a2 2 0 0 1-2-2c0-1.5 1-1.5 1-3a2 2 0 0 1 2-2h3"/>')
+  palette: svg(16, '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10" r="1"/><path d="M12 21a2 2 0 0 1-2-2c0-1.5 1-1.5 1-3a2 2 0 0 1 2-2h3"/>'),
+  settings: svg(16, '<path d="M10 2h4l.5 2.5 2 1 2.3-1.1 2 3.5-1.9 1.6v2.5l1.9 1.6-2 3.5-2.3-1.1-2 1L14 20h-4l-.5-2.5-2-1-2.3 1.1-2-3.5 1.9-1.6V10l-1.9-1.6 2-3.5 2.3 1.1 2-1L10 2Z"/><circle cx="12" cy="11" r="2.5"/>')
 }
 
 export const logoMark = (size: number): string =>

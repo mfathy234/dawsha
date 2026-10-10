@@ -7,6 +7,9 @@ import type { WorktreeStatus } from './compare'
 import type { BranchListResult, GitQuickRequest, GitQuickResult, SyncCounts } from './gitBranches'
 import type { CommitRequest, DiscardRequest, GitCommitResult, GitDiffResult, RepoStatusResult } from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
+import type { ProcessActivity } from './processActivity'
+import type { SkillEntry } from './skills'
+import type { PaneonImportPreview } from './paneonImport'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
 import type { TranscriptRequest, TranscriptResult } from './transcript'
@@ -41,6 +44,8 @@ import type {
 export interface GridApi {
   getSettings(): Promise<SettingsLoadResult>
   updateSettings(patch: Partial<Settings>): Promise<Settings>
+  paneonImportPreview(): Promise<PaneonImportPreview>
+  queuePaneonImport(): Promise<void>
   pickFolder(): Promise<string | null>
   pickImage(): Promise<string | null>
   pathForFile(file: File): string
@@ -88,6 +93,10 @@ export interface GridApi {
   kill(id: string): Promise<void>
   onData(listener: (id: string, data: string) => void): () => void
   onExit(listener: (id: string, exitCode: number) => void): () => void
+  listProcessActivity(): Promise<ProcessActivity[]>
+  listSkills(): Promise<SkillEntry[]>
+  openSkill(id: string): Promise<void>
+  exportSkill(id: string): Promise<string | null>
   readClipboard(): Promise<ClipboardContent>
   writeClipboard(text: string): Promise<void>
   openExternal(url: string): Promise<void>

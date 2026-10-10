@@ -7,13 +7,12 @@ const CLEAR = '\x1b[2J\x1b[H'
 
 const readSettings = (sandbox: Sandbox): any => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8'))
 
-function openedTargets(sandbox: Sandbox): string[] {
+function openedTargets(sandbox: Sandbox): { kind: string; path: string; line?: number; col?: number }[] {
   try {
     return readFileSync(sandbox.openLog, 'utf8')
       .split('\n')
       .filter(Boolean)
-      .map((line) => JSON.parse(line) as { goto?: string })
-      .flatMap((entry) => (entry.goto ? [entry.goto] : []))
+      .map((line) => JSON.parse(line) as { kind: string; path: string; line?: number; col?: number })
   } catch {
     return []
   }
@@ -25,6 +24,8 @@ function seedProject(sandbox: Sandbox): void {
   writeFileSync(join(sandbox.projectFolder, 'src', 'invoices', 'totals.ts'), 'export const total = 1\n', 'utf8')
   writeFileSync(join(sandbox.projectFolder, 'tests', 'a.test.ts'), 'test\n', 'utf8')
   writeFileSync(join(sandbox.projectFolder, 'README.md'), '# acme-web\n', 'utf8')
+  writeFileSync(join(sandbox.projectFolder, 'preview.html'), '<!doctype html><title>Preview</title>', 'utf8')
+  writeFileSync(join(sandbox.projectFolder, 'photo.png'), Buffer.from('89504e470d0a1a0a', 'hex'))
   writeFileSync(join(sandbox.root, 'notes.md'), '# notes\n', 'utf8')
 }
 
@@ -69,7 +70,7 @@ test('file paths in terminal output are links when the file exists, and Ctrl+cli
     await page.keyboard.down('Control')
     await page.mouse.click(first.x, first.y)
     await page.keyboard.up('Control')
-    await expect.poll(() => openedTargets(sandbox)).toEqual([`${totals}:42:7`])
+    await expect.poll(() => openedTargets(sandbox)).toEqual([{ kind: 'default', path: totals, line: 42, col: 7 }])
 
     const windows = await showLine(page, id, 'src\\invoices\\totals.ts:9 broken\r\n')
     await hover(page, windows)
@@ -77,7 +78,7 @@ test('file paths in terminal output are links when the file exists, and Ctrl+cli
     await page.keyboard.down('Control')
     await page.mouse.click(windows.x, windows.y)
     await page.keyboard.up('Control')
-    await expect.poll(() => openedTargets(sandbox).at(-1)).toBe(`${totals}:9`)
+    await expect.poll(() => openedTargets(sandbox).at(-1)).toEqual({ kind: 'default', path: totals, line: 9 })
 
     const absolute = await showLine(page, id, `${join(sandbox.root, 'notes.md')}:3\r\n`)
     await hover(page, absolute)
@@ -85,7 +86,7 @@ test('file paths in terminal output are links when the file exists, and Ctrl+cli
     await page.keyboard.down('Control')
     await page.mouse.click(absolute.x, absolute.y)
     await page.keyboard.up('Control')
-    await expect.poll(() => openedTargets(sandbox).at(-1)).toBe(`${join(sandbox.root, 'notes.md')}:3`)
+    await expect.poll(() => openedTargets(sandbox).at(-1)).toEqual({ kind: 'default', path: join(sandbox.root, 'notes.md'), line: 3 })
 
     const parens = await showLine(page, id, 'tests/a.test.ts(12,4): error TS2322\r\n')
     await hover(page, parens)
@@ -93,7 +94,17 @@ test('file paths in terminal output are links when the file exists, and Ctrl+cli
     await page.keyboard.down('Control')
     await page.mouse.click(parens.x, parens.y)
     await page.keyboard.up('Control')
-    await expect.poll(() => openedTargets(sandbox).at(-1)).toBe(`${join(sandbox.projectFolder, 'tests', 'a.test.ts')}:12:4`)
+    await expect.poll(() => openedTargets(sandbox).at(-1)).toEqual({ kind: 'default', path: join(sandbox.projectFolder, 'tests', 'a.test.ts'), line: 12, col: 4 })
+
+    for (const [file, kind] of [['preview.html', 'html'], ['photo.png', 'image']] as const) {
+      const point = await showLine(page, id, `${file} opens here\r\n`)
+      await hover(page, point)
+      await expect(pointer).toHaveCount(1)
+      await page.keyboard.down('Control')
+      await page.mouse.click(point.x, point.y)
+      await page.keyboard.up('Control')
+      await expect.poll(() => openedTargets(sandbox).at(-1)).toEqual({ kind, path: join(sandbox.projectFolder, file) })
+    }
 
     const relative = await showLine(page, id, './README.md is the entry\r\n')
     await hover(page, relative)

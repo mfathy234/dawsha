@@ -54,7 +54,7 @@ describe('theme set', () => {
     expect(new Set(ids).size).toBe(ids.length)
     expect(THEMES.map((t) => t.name)).toEqual(
       expect.arrayContaining([
-        'Grid Dark',
+        'Dawsha',
         'Nord',
         'Tokyo Night',
         'Catppuccin Mocha',

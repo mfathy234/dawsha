@@ -6,6 +6,7 @@ import { claudeCommand, codexCommand, geminiCommand, launchSpec, shellCommand } 
 import { windowsCommandLine } from './commandLine'
 import type { QuitLog } from './quitLog'
 import type { AppInfo, SpawnRequest, SpawnResult } from '../shared/types'
+import type { ProcessRoot } from '../shared/processActivity'
 
 const FLUSH_MS = 8
 
@@ -16,6 +17,7 @@ export interface PtyHandlers {
 
 interface Entry {
   process: pty.IPty
+  startedAt: number
   buffer: string
   timer: NodeJS.Timeout | null
   killed: boolean
@@ -36,6 +38,10 @@ export class PtyManager {
 
   info(userData: string): Omit<AppInfo, 'version'> {
     return { claudeCommand: claudeCommand(), codexCommand: codexCommand(), geminiCommand: geminiCommand(), shellCommand: shellCommand(), home: homedir(), userData }
+  }
+
+  activityRoots(): ProcessRoot[] {
+    return [...this.entries].map(([tabId, entry]) => ({ tabId, pid: entry.process.pid, startedAt: entry.startedAt }))
   }
 
   spawn(request: SpawnRequest): SpawnResult {
@@ -114,7 +120,7 @@ export class PtyManager {
   }
 
   private attach(id: string, child: pty.IPty): void {
-    const entry: Entry = { process: child, buffer: '', timer: null, killed: false }
+    const entry: Entry = { process: child, startedAt: Date.now(), buffer: '', timer: null, killed: false }
     this.entries.set(id, entry)
     child.onData((data) => {
       if (entry.killed) return

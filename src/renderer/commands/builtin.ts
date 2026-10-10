@@ -238,6 +238,7 @@ export function installBuiltinCommands(): void {
     { id: 'view.sidebar', title: 'Toggle the sidebar', group: 'Actions', run: () => toggleSidebar() },
     { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'snippets folders', run: () => showView('projects') },
     { id: 'view.agents', title: 'Open Agents', group: 'Actions', keywords: 'install update cli', run: () => showView('agents') },
+    { id: 'view.skills', title: 'Open Skills', group: 'Actions', keywords: 'installed export copy agent', run: () => showView('skills') },
     { id: 'view.usage', title: 'Open Usage', group: 'Actions', keywords: 'tokens cost limits history', run: () => showView('usage') },
     {
       id: 'view.settings',

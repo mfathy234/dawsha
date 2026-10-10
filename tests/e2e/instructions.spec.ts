@@ -35,7 +35,7 @@ test('project instructions are listed, edited with their line endings kept and g
     await expect(page.locator('.instr-row[data-file="CLAUDE.md"]')).toContainText('modified')
     await expect(page.locator('.instr-row[data-file="AGENTS.md"]')).toHaveAttribute('data-status', 'missing')
     await expect(page.locator('.instr-row[data-file="GEMINI.md"]')).toHaveAttribute('data-status', 'missing')
-    await expect(page.locator('[data-vscode="AGENTS.md"]')).toHaveCount(0)
+    await expect(page.locator('[data-open-file="AGENTS.md"]')).toHaveCount(0)
 
     await page.locator('[data-edit="CLAUDE.md"]').click()
     const area = page.locator('#instr-editor')
@@ -75,7 +75,7 @@ test('project instructions are listed, edited with their line endings kept and g
     await page.getByRole('alertdialog', { name: 'Revert CLAUDE.md?' }).getByRole('button', { name: 'Revert CLAUDE.md' }).click()
     await expect(area).toHaveValue('edited elsewhere\nand mine\n')
 
-    await page.locator('[data-vscode="CLAUDE.md"]').click()
+    await page.locator('[data-open-file="CLAUDE.md"]').click()
     await expect.poll(() => (existsSync(sandbox.openLog) ? readFileSync(sandbox.openLog, 'utf8') : '')).toContain('CLAUDE.md')
     expect(existsSync(agents)).toBe(false)
   } finally {

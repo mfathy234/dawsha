@@ -8,7 +8,11 @@ const CLOCK_MS = 1000
 function needsClock(): boolean {
   const state = store.state
   if (state.detailsPaneId !== null) return true
-  return state.panes.some((pane) => pane.tabs.some((tab) => tab.agentsOpen === true))
+  if (state.panes.some((pane) => pane.tabs.some((tab) => tab.agentsOpen === true))) return true
+  return state.view === 'grid' && state.panes.length > 0 && (
+    Object.values(state.statusInfo).some((info) => info.rateLimits.length > 0) ||
+    Object.values(state.opsInfo).some((info) => info.limits.length > 0)
+  )
 }
 
 export async function installOps(): Promise<void> {

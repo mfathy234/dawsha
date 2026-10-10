@@ -1,4 +1,5 @@
-import { SNIPPET_VARIABLES, validateSnippet, type SnippetDraft } from '../../shared/snippets'
+import { SNIPPET_VARIABLES, snippetPreview, validateSnippet, type SnippetDraft } from '../../shared/snippets'
+import { SNIPPET_TEXT_MAX } from '../../shared/settingsSchema'
 import type { Project, Snippet } from '../../shared/types'
 import { h } from '../dom'
 import { nextDialogId, present } from './dialogs'
@@ -48,6 +49,8 @@ export function snippetDialog(options: SnippetDialogOptions): Promise<SnippetDra
   const scope = scopeSelect(`sn-scope-${id}`, options)
   const shortcut = shortcutSelect(`sn-shortcut-${id}`, options)
   const error = h('p', { class: 'field-error', role: 'alert', hidden: true })
+  const preview = h('p', { class: 'snippet-preview' })
+  const count = h('span', { class: 'snippet-count' })
   const cancel = h('button', { class: 'btn ghost', type: 'button' }, 'Cancel')
   const save = h('button', { class: 'btn primary', type: 'button', 'data-confirm': '' }, 'Save snippet')
   const variables = h(
@@ -64,6 +67,7 @@ export function snippetDialog(options: SnippetDialogOptions): Promise<SnippetDra
     h('h2', {}, editing ? 'Edit snippet' : 'New snippet'),
     field('Name', name.id, name),
     field('Text', text.id, text),
+    h('div', { class: 'snippet-preview-wrap', 'aria-live': 'polite' }, h('span', {}, 'Preview'), preview, count),
     h('div', { class: 'field' }, h('span', { class: 'dialog-label' }, 'Variables'), variables),
     h('div', { class: 'field-row' }, field('Scope', scope.id, scope), field('Shortcut', shortcut.id, shortcut)),
     error,
@@ -77,6 +81,12 @@ export function snippetDialog(options: SnippetDialogOptions): Promise<SnippetDra
     projectId: scope.value === '' ? null : scope.value,
     shortcut: shortcut.value === '' ? null : Number(shortcut.value)
   })
+  const updatePreview = (): void => {
+    preview.textContent = snippetPreview(text.value, 180) || 'Your snippet preview appears here.'
+    count.textContent = `${text.value.length} / ${SNIPPET_TEXT_MAX} characters`
+  }
+  updatePreview()
+  text.addEventListener('input', updatePreview)
   for (const control of [name, text, scope, shortcut]) control.addEventListener('input', () => (error.hidden = true))
   cancel.addEventListener('click', () => shown.finish(null))
   save.addEventListener('click', () => {

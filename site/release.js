@@ -18,7 +18,7 @@
       });
       if (version) {
         document.querySelectorAll('[data-version]').forEach(function (el) {
-          el.textContent = 'Version ' + version;
+          el.textContent = (document.documentElement.lang === 'ar' ? 'الإصدار ' : 'Version ') + version;
         });
       }
     })

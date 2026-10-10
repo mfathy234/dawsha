@@ -23,6 +23,7 @@ import { api } from './api'
 import { installAttention } from './attention'
 import { guardWindowDrops } from './fileDrop'
 import { installOps } from './ops'
+import { installProcessActivity } from './processActivity'
 import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
@@ -92,6 +93,7 @@ async function boot(): Promise<void> {
   guardWindowDrops()
   installUsageSnapshot()
   void installOps()
+  installProcessActivity()
   installBuiltinCommands()
   installLayoutCommands()
   installCompareCommands()

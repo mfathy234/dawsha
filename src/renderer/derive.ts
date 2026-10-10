@@ -3,10 +3,11 @@ import type { SyncCounts } from '../shared/gitBranches'
 import type { Attention } from '../shared/attention'
 import { matchSessions, sessionDisplayName, sessionStatus, sessionWaiting } from '../shared/sessionMatch'
 import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsFeed'
+import type { ProcessActivity } from '../shared/processActivity'
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { formatDuration, sessionUsage } from '../shared/sessionCost'
 import { lastOutputAt } from './ptyActivity'
-import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, SessionFile, StatusInfo, TabAgent } from '../shared/types'
+import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, RateLimitWindow, SessionFile, StatusInfo, TabAgent } from '../shared/types'
 import { folderOfPane, projectById, type AppState, type PaneState, type TermState } from './state'
 
 export type PaneStatus = 'busy' | 'idle' | 'exited'
@@ -20,14 +21,28 @@ export interface TabView {
 }
 
 export interface PaneInfo {
+  agent: TabAgent
+  agentsOpen: boolean
   model: { label: string; family: ModelFamily } | null
   contextPercent: number | null
+  limits: RateLimitWindow[]
   costUsd: number | null
   elapsed: string | null
   tokens: number | null
   ageMs: number | null
   changes: GitChanges | null
   ops: PaneOpsInfo | null
+}
+
+const LIMIT_FRESH_MS = 30 * 60_000
+
+export function paneLimits(tab: TermState, live: StatusInfo | null, snapshot: OpsSnapshot | null, now: number): RateLimitWindow[] {
+  if (tab.agent !== 'claude' || tab.status === 'exited') return []
+  const sources = [
+    live && now - live.receivedAt <= LIMIT_FRESH_MS ? { at: live.receivedAt, windows: live.rateLimits } : null,
+    snapshot && !snapshot.ended && now - snapshot.updatedAt <= LIMIT_FRESH_MS ? { at: snapshot.updatedAt, windows: snapshot.limits } : null
+  ].filter((source): source is { at: number; windows: RateLimitWindow[] } => source !== null && source.windows.length > 0)
+  return sources.sort((a, b) => b.at - a.at)[0]?.windows ?? []
 }
 
 export interface PaneOpsInfo {
@@ -53,6 +68,7 @@ export interface PaneView {
   attention: Attention
   info: PaneInfo
   snapshot: OpsSnapshot | null
+  activity: ProcessActivity[]
   opsLive: boolean
   live: StatusInfo | null
   agentsOpen: boolean
@@ -186,6 +202,7 @@ function claudeInfo(
     ...base,
     model: opsModel ?? liveModel,
     contextPercent: snapshot?.context?.percent ?? live?.contextPercent ?? null,
+    limits: paneLimits(tab, live, snapshot, state.now),
     costUsd: live?.costUsd ?? null,
     ageMs: known ? ageSince(state.now, live?.receivedAt, snapshot?.updatedAt, session?.updatedAt) : null,
     ops: opsInfoFor(snapshot, opsLive, tab.agentsOpen === true)
@@ -225,7 +242,7 @@ function baseInfoFor(
   opsLive: boolean
 ): PaneInfo {
   const changes = folder ? (state.gitChanges[folder] ?? null) : null
-  const empty: PaneInfo = { model: null, contextPercent: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null }
+  const empty: PaneInfo = { agent: tab.agent, agentsOpen: tab.agentsOpen === true, model: null, contextPercent: null, limits: [], costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null }
   if (tab.agent === 'claude') return claudeInfo(state, tab, matches, empty, snapshot, opsLive)
   if (tab.agent === 'codex') {
     const session = matches.codex.get(tab.id)
@@ -278,6 +295,7 @@ export function derivePanes(state: AppState): PaneView[] {
       agent: primary.agent,
       status,
       snapshot,
+      activity: primary.status === 'exited' ? [] : (state.processActivity[primary.id] ?? []),
       opsLive,
       live: liveStatusFor(state, primary, matches),
       agentsOpen: primary.agentsOpen === true,

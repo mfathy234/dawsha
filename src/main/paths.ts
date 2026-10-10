@@ -23,3 +23,6 @@ export const opsDirs = (): string[] =>
 export const legacyUserDataDir = (): string | null => {
   return process.env.DAWSHA_LEGACY_USER_DATA ?? null
 }
+
+export const paneonUserDataDir = (): string =>
+  process.env.DAWSHA_PANEON_USER_DATA ?? join(roaming(), 'Paneon')

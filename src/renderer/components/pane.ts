@@ -169,7 +169,7 @@ export class PaneComponent {
     this.updateAttention(view)
     this.updateInfo(view, maximized)
     this.updateHint(view)
-    this.drawer.update(view.opsLive ? view.snapshot : null, view.agentsOpen, view.title.toUpperCase(), view.now)
+    this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now)
     this.updateDetails(view, maximized)
     this.restart.hidden = !view.activeExited
     this.updateMaximizeButton(maximized)
@@ -192,11 +192,12 @@ export class PaneComponent {
 
   private updateInfo(view: PaneView, maximized: boolean): void {
     this.info.classList.toggle('clickable', maximized)
-    const signature = JSON.stringify([view.info, view.title])
+    const signature = JSON.stringify([view.info, view.title, view.now])
     if (signature === this.infoSignature) return
     this.infoSignature = signature
     const items = paneInfoStrip(view.info, {
       title: view.title.toUpperCase(),
+      now: view.now,
       onOpenChanges: () => void openChanges(this.paneId),
       onToggleAgents: () => {
         const tabId = view.primaryTabId

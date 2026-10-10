@@ -199,11 +199,11 @@ export class InstructionsPanelComponent {
       {
         class: 'btn small ghost',
         type: 'button',
-        'data-vscode': snap.name,
-        'aria-label': `Open ${snap.name} in VS Code`,
+        'data-open-file': snap.name,
+        'aria-label': `Open ${snap.name} with default app`,
         onClick: () => void api.openInstruction(project.folder, snap.name)
       },
-      'Open in VS Code'
+      'Open file'
     )
     return [edit, code]
   }

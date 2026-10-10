@@ -66,7 +66,7 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await page.getByRole('radio', { name: /Solarized Light/ }).click()
     await expect(page.locator('.note')).toContainText('run /theme and pick light')
     await page.screenshot({ path: join(SCREENS, '4-light-theme.png') })
-    await page.getByRole('radio', { name: /Grid Dark/ }).click()
+    await page.getByRole('radio', { name: /Dawsha/ }).click()
     await page.keyboard.press('Escape')
     await expect(page.locator('.theme-picker')).toHaveCount(0)
 

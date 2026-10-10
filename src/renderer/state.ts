@@ -5,6 +5,7 @@ import type { AgentsReport, ToolReport } from '../shared/agentTools'
 import type { Attention } from '../shared/attention'
 import { emptySnapshot, type UsageSnapshot } from '../shared/sessionCost'
 import type { OpsSnapshot } from '../shared/opsFeed'
+import type { ProcessActivity } from '../shared/processActivity'
 import type { ChangelogEntry } from '../shared/changelog'
 import { initialUpdateState, type UpdateState } from '../shared/updates'
 import type {
@@ -54,7 +55,7 @@ export interface PaneState {
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'projects' | 'agents' | 'usage' | 'settings'
+export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'settings'
 
 export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about'
 
@@ -98,6 +99,7 @@ export interface AppState {
   gitSync: Record<string, SyncCounts | null>
   statusInfo: Record<string, StatusInfo>
   opsInfo: Record<string, OpsSnapshot>
+  processActivity: Record<string, ProcessActivity[]>
   detailsPaneId: string | null
   gitChanges: Record<string, GitChanges | null>
   usage: UsageSnapshot
@@ -142,6 +144,7 @@ export const initialState = (): AppState => ({
   gitSync: {},
   statusInfo: {},
   opsInfo: {},
+  processActivity: {},
   detailsPaneId: null,
   gitChanges: {},
   usage: emptySnapshot(),

@@ -1,8 +1,8 @@
-import { spawn } from 'node:child_process'
 import { statSync } from 'node:fs'
 import { isAbsolute, relative, resolve } from 'node:path'
-import { shell } from 'electron'
-import { MAX_FILE_CANDIDATES, MAX_FILE_PATH_LENGTH, gotoTarget, isSafeToOpen, type FileRef } from '../shared/filePaths'
+import { pathToFileURL } from 'node:url'
+import { dialog, shell } from 'electron'
+import { MAX_FILE_CANDIDATES, MAX_FILE_PATH_LENGTH, fileOpenKind, isSafeToOpen, type FileRef } from '../shared/filePaths'
 import { logTo } from './desktop'
 
 const isFile = (path: string): boolean => {
@@ -35,27 +35,28 @@ export function existingFiles(folder: string, candidates: unknown): (string | nu
   return candidates.slice(0, MAX_FILE_CANDIDATES).map((candidate) => resolveFile(folder, candidate))
 }
 
-function launchEditor(target: string, onFailure: () => void): void {
-  if (/["%^&|<>\r\n]/.test(target)) return onFailure()
-  const child = spawn(`code -g "${target}"`, { shell: true, detached: true, stdio: 'ignore', windowsHide: true })
-  child.on('error', onFailure)
-  child.on('exit', (code) => {
-    if (code !== 0) onFailure()
-  })
-  child.unref()
-}
-
 export async function openFile(folder: string, ref: FileRef): Promise<void> {
   const full = resolveFile(folder, ref?.path)
   if (!full) return
   const line = Number.isInteger(ref.line) && (ref.line as number) > 0 ? ref.line : undefined
   const col = line !== undefined && Number.isInteger(ref.col) && (ref.col as number) > 0 ? ref.col : undefined
-  const target = gotoTarget(full, { path: full, line, col })
+  const kind = fileOpenKind(full)
   const log = process.env.DAWSHA_OPEN_LOG
-  if (log) return logTo(log, JSON.stringify({ editor: 'code', goto: target }))
-  const fallback = (): void => {
-    if (isSafeToOpen(full)) void shell.openPath(full)
-    else shell.showItemInFolder(full)
+  if (log) return logTo(log, JSON.stringify({ kind, path: full, ...(line ? { line } : {}), ...(col ? { col } : {}) }))
+  if (!isSafeToOpen(full)) {
+    shell.showItemInFolder(full)
+    return
   }
-  launchEditor(target, fallback)
+  try {
+    const problem = kind === 'html' ? await shell.openExternal(pathToFileURL(full).href).then(() => '') : await shell.openPath(full)
+    if (!problem) return
+    throw new Error(problem)
+  } catch (error) {
+    shell.showItemInFolder(full)
+    void dialog.showMessageBox({
+      type: 'warning',
+      message: 'Could not open this file',
+      detail: `${full}\n\n${error instanceof Error ? error.message : String(error)}\n\nThe file was revealed in Explorer.`
+    })
+  }
 }

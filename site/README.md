@@ -1,6 +1,8 @@
 # Dawsha website
 
-A single static page: `index.html`, `style.css`, `release.js`, `motion.js` (scroll reveals, logo intro and terminal typing, all skipped under reduced motion) and `assets/`. No framework and no build step. Open `index.html` in a browser, or serve the folder with any static server (`npx serve site`).
+A static English page at `index.html` and Arabic page at `ar/index.html`, sharing `style.css`, `release.js`, `motion.js` (scroll reveals, logo intro and terminal typing, all skipped under reduced motion) and `assets/`. No framework or runtime build step. Open either page in a browser, or serve the folder with any static server (`npx serve site`).
+
+Both languages render without JavaScript. The language links switch between `/` and `/ar/`, which have separate canonical URLs and social metadata. `i18n.js` is the translation source used to regenerate the Arabic page with `node scripts/build-arabic-site.mjs`; commit the regenerated `ar/index.html` whenever the English content or translations change. The site keeps Dawsha's dark colors in both languages.
 
 The download buttons link to the latest GitHub release. `release.js` asks `api.github.com` for the newest release and points the buttons at the Setup and Portable assets and fills in the version. With JavaScript off, or when the API is rate limited, the buttons keep their fallback link to `https://github.com/mfathy234/dawsha/releases/latest`.
 

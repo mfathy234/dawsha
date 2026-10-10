@@ -22,7 +22,7 @@
 - **A grid of real terminals.** 1 to 6+ panes laid out automatically, each a full terminal (xterm.js on `node-pty`) with tabs for more agent sessions or a shell. Maximize any pane, zoom text per project.
 - **Three agents, one workflow.** Pick a project and its default agent starts in that folder without a prompt. Switch agent per session with the split **New session** button (Claude / Codex / Gemini) or Tab in the quick-pick.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
-- **Plans and sub-agents at a glance.** With the optional ops feed, panes show plan progress and a drawer of running sub-agents; a details panel shows context, limits, changed files and the last build and test result.
+- **Activity per pane.** Native child-process activity works for Claude, Codex and Gemini without a mod. An optional Claude ops feed adds plan progress and sub-agent details. Context and any available 5-hour/weekly limits stay with their own pane.
 - **Arrange panes your way.** Drag the borders between panes to resize them, drag a pane by its header or a tab along its strip to reorder, or use the **Move pane** button and the keyboard. Pin a pane so it stays beside whichever pane you maximize. Switch panes with **Ctrl+Tab**, jump to one with **Ctrl+1** to **Ctrl+9**, or to the next one waiting on you with **Ctrl+Shift+J**.
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
 - **A command palette.** **Ctrl+K** searches your open sessions, actions, projects, snippets and layouts in one list and runs what you pick from the keyboard.
@@ -39,15 +39,17 @@
 - **Context warnings.** The context gauge turns amber at 80% and red at 90%, and a full session offers **Compact** before it runs out.
 - **Drop files into a terminal.** Drag files from Explorer onto a pane to type their paths for the agent.
 - **Find in the terminal.** **Ctrl+Shift+F** searches a pane's output with match case, whole word and regex, and steps through the matches.
-- **Work with the output.** Ctrl+click a `file:line` path to open it in VS Code at that line, jump between your prompts with **Ctrl+Up** and **Ctrl+Down**, copy the last reply (**Ctrl+Alt+C**) or the prompt you are still typing (**Ctrl+Alt+P**), save a selection as a snippet, and clear the scrollback.
+- **Work with the output.** Ctrl+click a file reference to open it with its matching app (images in Photos, HTML in your browser); scripts and executables are revealed in Explorer. Jump between prompts with **Ctrl+Up** and **Ctrl+Down**, copy the last reply (**Ctrl+Alt+C**) or the prompt you are typing (**Ctrl+Alt+P**), save a selection as a snippet, and clear the scrollback.
 - **Highlight rules.** Lines with errors, warnings or passing tests are tinted in every pane; change the words and colors in Settings.
 - **Open in your editor.** Every pane header has an **Open in VS Code** button, and the pane menu opens the folder's `.sln` in **Visual Studio** when there is one. The menu shows each action's icon and shortcut.
 - **Usage.** Tokens per day by agent, tokens and Claude Code cost by project and agent, and a history of your 5 hour and weekly limits, read from the agents' own folders.
 - **A `dawsha` command.** Run `dawsha .` in any folder to add it as a project and start its agent, `dawsha resume --last` to pick up the newest session, `dawsha open <layout>` to bring a saved layout back, or `dawsha ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
 - **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab. Choose per agent whether sessions start with full access, on by default for Claude Code and Codex.
+- **Skills and agents inventory.** The **Skills** tab separates installed skills from agent definitions across user, plugin and project locations. Filter by AI provider, then open, copy a path or export an item to a folder you choose.
+- **Paneon settings import.** If Paneon settings are found, Settings > General offers an import. Dawsha backs up its current settings and applies Paneon projects, layouts, snippets and preferences the next time you open Dawsha; Paneon remains untouched.
 - **Settings in one place.** A Settings view (Ctrl+,) for the palette shortcut, notifications and live session info, full access per agent, updates, the full changelog and where your data lives.
-- **Themes.** Eight themes (Grid Dark, Nord, Tokyo Night, Catppuccin Mocha, Solarized Dark, Gruvbox Dark, GitHub Light, Solarized Light) with contrast checks, plus an optional background image.
+- **Themes.** Eight themes (Dawsha, Nord, Tokyo Night, Catppuccin Mocha, Solarized Dark, Gruvbox Dark, GitHub Light, Solarized Light) with contrast checks, plus an optional background image.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
 
 | Focus a pane and open its details | Sub-agents drawer |
@@ -57,6 +59,10 @@
 | Projects | Agents |
 |---|---|
 | ![The projects view](docs/screenshots/projects.png) | ![The agents view with install and update buttons](docs/screenshots/agents.png) |
+
+![The Skills tab showing installed skills and their locations](docs/screenshots/skills.png)
+
+![The Skills tab showing installed agent definitions](docs/screenshots/installed-agents.png)
 
 ![The theme picker open over the grid](docs/screenshots/themes.png)
 
@@ -68,7 +74,7 @@
 
 | Update available | What's new after an update |
 |---|---|
-| ![The Update 0.5.1 pill in the top bar with its popover: release notes, Update now and Later](docs/screenshots/update.png) | ![The What's new dialog listing the changes since the previous version](docs/screenshots/whats-new.png) |
+| ![The Update 0.1.1 pill in the top bar with its popover: release notes, Update now and Later](docs/screenshots/update.png) | ![The What's new dialog listing the changes since the previous version](docs/screenshots/whats-new.png) |
 
 | Command palette | Saved layouts |
 |---|---|
@@ -105,7 +111,7 @@ The installer also puts the `dawsha` command on your user PATH (open a new termi
 
 The installed build (`Dawsha-Setup-<version>.exe`) updates itself from GitHub Releases:
 
-- 10 seconds after start and every 6 hours it checks for a newer release. An **Update 0.5.1** pill appears in the top bar, right of the session counts.
+- 10 seconds after start and every 6 hours it checks for a newer release. An **Update 0.1.1** pill appears in the top bar, right of the session counts when that version is available.
 - **Update now** downloads in the background (the pill shows the progress) while your sessions keep running. When it is ready the pill says **Restart to update**: **Restart now** installs it and your open sessions reopen, or choose **When I quit** and it installs the next time you close Dawsha.
 - **Later** hides the pill until a newer version than the one you dismissed is found. A failed download shows **Update failed** with **Try again** and **Open GitHub**.
 - The Theme popover has an **Updates** section: turn automatic checks off, see when Dawsha last checked, **Check now** and **What's new**.
@@ -152,7 +158,7 @@ Tip: run `dawsha .` in any folder to open it in Dawsha.
 | Ctrl+Up / Ctrl+Down | Jump to your previous / next prompt in the focused terminal (passed to the agent when there is none) |
 | Ctrl+Alt+C | Copy the last reply |
 | Ctrl+Alt+P | Copy the prompt you are typing, without sending it |
-| Ctrl+click on a file path | Open it in VS Code at that line and column |
+| Ctrl+click on a file path | Open with the matching default app; HTML in a browser; scripts in Explorer |
 | Ctrl+wheel, Ctrl+=, Ctrl+-, Ctrl+0 | Zoom the focused pane (10-28, default 15), remembered per project |
 | Ctrl+click on a link | Open it in the browser |
 | Ctrl+C with a selection, Ctrl+V | Copy and paste. With an image on the clipboard, Ctrl+V saves it as a PNG and pastes its path (as `@path` for Gemini CLI) |
@@ -252,7 +258,7 @@ Drag files or folders from Explorer onto a pane: their paths are typed into the 
 
 ### Working with terminal output
 
-- **File paths** such as `src/invoices/totals.ts:42:7`, `src\app\main.ts(10,5)` or an absolute path become links when the file exists. Ctrl+click opens it in VS Code at that line and column, or with its default app when VS Code is not found. Programs and scripts are only shown in Explorer, never run.
+- **File paths** such as `src/invoices/totals.ts:42:7`, `src\app\main.ts(10,5)` or an absolute path become links when the file exists. Ctrl+click opens images and ordinary files with their default app, HTML in the default browser, and only reveals programs and scripts in Explorer rather than running them.
 - **Prompts**: each prompt you send is marked. **Ctrl+Up** and **Ctrl+Down** scroll to the previous or next one; when there is none in that direction the keys go to the agent as usual.
 - **Copy last reply** (**Ctrl+Alt+C**, the ⋯ menu or the palette) copies everything after your last prompt, with wrapped lines joined.
 - **Copy current prompt** (**Ctrl+Alt+P**) copies what is in the agent's input box before you send it, read from the screen; when no input box is found it copies what you typed since your last Enter. Nothing is sent or cleared.
@@ -338,7 +344,7 @@ Both are optional and off until you turn them on.
 
 **Live session info (status-line bridge).** Claude Code runs a status-line command with the session as JSON on stdin. The Theme popover toggle **Show live session info** installs a small script (`%APPDATA%\Dawsha\bin\statusline-bridge.js`, run with `node`) as `statusLine` in `~/.claude/settings.json`. It first shows a confirmation naming that file and your current status line. The previous value is kept in `bin\bridge-state.json` and a full copy in `settings.json.dawsha-backup`; turning the toggle off restores it (a status line you changed after install is left alone). The script saves each payload to `%APPDATA%\Dawsha\status\<session_id>.json` and then runs your previous status line with the same input, so it keeps working. A settings file that is not valid JSON is reported and never touched. This is the only file Dawsha edits outside its own folder.
 
-**Ops feed.** A Claude Code mod can write a snapshot of each session to `%APPDATA%\dawsha\ops\<sessionId>.json` (the legacy `%APPDATA%\claude-grid\ops` folder is read too). Dawsha only reads these files: it polls every second, keeps the last good parse of a file that is mid-write, ignores unknown fields and needs only `v`, `sessionId` and `updatedAt`. A snapshot belongs to the pane whose Claude session id matches. With a snapshot, the strip shows plan progress and running sub-agents, the **agents** toggle opens the drawer, and on a maximized pane the strip opens the details panel. Without one, panes fall back to the status-line data.
+**Activity and optional ops feed.** Each live pane discovers activity from its own app-launched process tree, so the activity drawer works for Claude, Codex and Gemini without a mod. A Claude Code mod can additionally write a snapshot to `%APPDATA%\dawsha\ops\<sessionId>.json` (the legacy `%APPDATA%\claude-grid\ops` folder is read too). Dawsha only reads these files: it polls every second, keeps the last good parse of a file that is mid-write, ignores unknown fields and needs only `v`, `sessionId` and `updatedAt`. A snapshot belongs only to the pane whose Claude session ID matches and adds plan and sub-agent detail. Context and available rate limits are displayed per pane; unavailable limits are not borrowed from another agent.
 
 ## Data and privacy
 

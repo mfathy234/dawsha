@@ -16,7 +16,6 @@ import { ICONS, logoMark } from '../icons'
 import { agentMark } from './agentMark'
 import { countSessions, type PaneView } from '../derive'
 import { toolState } from '../../shared/agentTools'
-import { newestLimits } from '../../shared/opsFeed'
 import { formatPercent, gauge, gaugeStage } from '../../shared/statusLine'
 import type { RateLimitWindow } from '../../shared/types'
 import { h, icon } from '../dom'
@@ -34,8 +33,8 @@ export class TopBarComponent {
       'aria-label': 'New session, Ctrl+N',
       onClick: () => openQuickPick()
     },
-    'New session',
-    h('span', { class: 'kbd' }, 'Ctrl+N')
+    h('span', { class: 'new-session-icon', 'aria-hidden': 'true' }, icon(ICONS.plus)),
+    h('span', { class: 'new-session-label' }, 'New session')
   )
   private readonly chevron = h(
     'button',
@@ -53,19 +52,24 @@ export class TopBarComponent {
   private agentMenu: HTMLElement | null = null
   readonly themeButton = h(
     'button',
-    { class: 'btn ghost', type: 'button', id: 'theme-button', 'aria-haspopup': 'dialog', onClick: () => toggleThemePicker() },
-    'Theme'
+    { class: 'btn ghost topbar-tool', type: 'button', id: 'theme-button', 'aria-label': 'Theme', 'aria-haspopup': 'dialog', onClick: () => toggleThemePicker() },
+    h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.palette)),
+    h('span', { class: 'utility-label' }, 'Theme')
   )
   private readonly projects = h('button', { class: 'btn ghost', type: 'button', id: 'projects-button' }, 'Projects')
   private readonly agentsDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly agents = h('button', { class: 'btn ghost', type: 'button', id: 'agents-button' }, 'Agents', this.agentsDot)
+  private readonly skills = h('button', { class: 'btn ghost', type: 'button', id: 'skills-button' }, 'Skills')
   readonly layoutsButton = h(
     'button',
     { class: 'btn ghost', type: 'button', id: 'layouts-button', 'aria-haspopup': 'dialog', onClick: () => toggleLayouts() },
     'Layouts'
   )
   private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
-  private readonly settings = h('button', { class: 'btn ghost', type: 'button', id: 'settings-button' }, 'Settings')
+  private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings' },
+    h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
+    h('span', { class: 'utility-label' }, 'Settings')
+  )
   private readonly count = h('span', { class: 'topbar-count', 'aria-live': 'polite' })
   readonly updatePill = h('button', {
     class: 'update-pill',
@@ -94,32 +98,43 @@ export class TopBarComponent {
     this.agents.addEventListener('click', () => {
       showView(this.agents.getAttribute('aria-pressed') === 'true' ? 'grid' : 'agents')
     })
+    this.skills.addEventListener('click', () => {
+      showView(this.skills.getAttribute('aria-pressed') === 'true' ? 'grid' : 'skills')
+    })
     this.el = h(
       'header',
       { class: 'topbar' },
       h('span', { class: 'app-logo' }, icon(logoMark(20))),
       h('span', { class: 'app-title' }, 'Dawsha'),
-      h('div', { class: 'split' }, this.newSession, h('span', { class: 'split-sep' }), this.chevron),
-      this.projects,
-      this.agents,
-      this.layoutsButton,
-      this.usage,
+      h('div', { class: 'split' }, this.newSession, this.chevron),
+      h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
+        this.projects,
+        this.agents,
+        this.skills,
+        this.layoutsButton,
+        this.usage
+      ),
       this.count,
       this.updatePill,
       h('span', { class: 'spacer' }),
       this.limits,
-      h('button', { class: 'btn ghost compact', type: 'button', 'aria-label': 'Decrease font size', onClick: () => zoomAll(-1) }, 'A−'),
-      h('button', { class: 'btn ghost compact', type: 'button', 'aria-label': 'Increase font size', onClick: () => zoomAll(1) }, 'A+'),
-      this.settings,
-      this.themeButton
+      h('div', { class: 'topbar-tools' },
+        h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
+          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', onClick: () => zoomAll(-1) }, 'A−'),
+          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', onClick: () => zoomAll(1) }, 'A+')
+        ),
+        this.settings,
+        this.themeButton
+      )
     )
   }
 
   update(state: AppState, views: PaneView[]): void {
-    this.updateLimits(state)
+    this.updateLimits(state, views)
     const { sessions, busy } = countSessions(views)
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.agents.setAttribute('aria-pressed', String(state.view === 'agents'))
+    this.skills.setAttribute('aria-pressed', String(state.view === 'skills'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
     const updates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
@@ -243,9 +258,8 @@ export class TopBarComponent {
     }
   }
 
-  private updateLimits(state: AppState): void {
-    const statuses = state.bridge.installed ? Object.values(state.statusInfo) : []
-    const windows = newestLimits(statuses, Object.values(state.opsInfo))?.windows ?? []
+  private updateLimits(state: AppState, views: PaneView[]): void {
+    const windows = views.find((view) => view.pane.id === state.focusedId)?.info.limits ?? []
     const signature = JSON.stringify(windows)
     if (signature === this.limitsSignature) return
     this.limitsSignature = signature

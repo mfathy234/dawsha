@@ -274,11 +274,11 @@ test('a development build has no pill and Check now is disabled', async () => {
   }
 })
 
-test('after an update the What is new dialog lists every version since the one you had, once', async () => {
+test('after an update the What is new dialog shows 0.1.0 once', async () => {
   const sandbox = createSandbox()
   writeFileSync(
     join(sandbox.userData, 'settings.json'),
-    JSON.stringify({ version: 2, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }], lastSeenVersion: '0.2.0' }),
+    JSON.stringify({ version: 2, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }], lastSeenVersion: '0.0.9' }),
     'utf8'
   )
   const first = await launchApp(sandbox)
@@ -286,15 +286,12 @@ test('after an update the What is new dialog lists every version since the one y
   try {
     const dialog = first.page.getByRole('dialog', { name: `What's new in Dawsha ${version}` })
     await expect(dialog).toBeVisible()
-    await expect(dialog).toContainText('Updated from 0.2.0')
+    await expect(dialog).toContainText('Updated from 0.0.9')
     await expect(dialog.locator(`.wn-entry[data-version="${version}"]`)).toBeVisible()
-    await expect(dialog.locator('.wn-entry[data-version="0.3.0"]')).toHaveCount(0)
-    await expect(dialog.locator('.wn-entry[data-version="0.2.0"]')).toHaveCount(0)
-    await dialog.locator('#wn-show-older').click()
-    await expect(dialog.locator('.wn-entry[data-version="0.3.0"]')).toBeVisible()
+    await expect(dialog.locator('.wn-entry')).toHaveCount(1)
     await expect(dialog.locator('#wn-show-older')).toHaveCount(0)
     await first.page.screenshot({ path: 'test-results/screens/32-whats-new.png' })
-    expect(readSettings(sandbox).lastSeenVersion).toBe('0.2.0')
+    expect(readSettings(sandbox).lastSeenVersion).toBe('0.0.9')
     await dialog.locator('#wn-close').click()
     await expect(first.page.locator('.whats-new')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox).lastSeenVersion).toBe(version)
@@ -330,16 +327,13 @@ test('a fresh install records the version and shows setup instead of What is new
   }
 })
 
-test('an install from 0.3.0 without a recorded version is treated as updated from 0.3.0', async () => {
+test('legacy data from 0.3.0 without a recorded version does not show a downgrade as new', async () => {
   const sandbox = createSandbox()
   const { lastSeenVersion: _dropped, ...legacy } = readSettings(sandbox)
   writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(legacy), 'utf8')
   const { app, page } = await launchApp(sandbox)
   try {
-    const dialog = page.getByRole('dialog', { name: `What's new in Dawsha ${APP_VERSION}` })
-    await expect(dialog).toBeVisible()
-    await expect(dialog).toContainText('Updated from 0.3.0')
-    await dialog.getByRole('button', { name: 'Got it' }).click()
+    await expect(page.locator('.whats-new')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox).lastSeenVersion).toBe(APP_VERSION)
   } finally {
     await closeApp(app)

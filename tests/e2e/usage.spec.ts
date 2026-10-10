@@ -149,6 +149,22 @@ test('explains empty and partial data instead of showing blank charts', async ()
   }
 })
 
+test('sidebar session returns to its already-focused pane from Usage', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Usage', exact: true }).click()
+    await expect(page.locator('.usage-view')).toBeVisible()
+    await page.locator('.sidebar .sess-row').click()
+    await expect(page.locator('.usage-view')).toBeHidden()
+    await expect(page.locator('.pane')).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})
+
 test('records limit readings and session cost from the status-line payloads for later days', async () => {
   const sandbox = createSandbox()
   const statusDir = join(sandbox.userData, 'status')

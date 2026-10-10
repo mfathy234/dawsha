@@ -29,10 +29,15 @@ import {
   type HighlightSettings
 } from '../../shared/highlights'
 import { compareVersions } from '../../shared/version'
+import { entriesUpTo } from '../../shared/changelog'
 import { DEFAULT_PALETTE_SHORTCUT } from '../../shared/settingsSchema'
 import { formatShortcut, parseShortcut } from '../../shared/shortcuts'
 import { updateStatusLine } from '../../shared/updates'
 import { h } from '../dom'
+import { api } from '../api'
+import type { PaneonImportPreview } from '../../shared/paneonImport'
+import { confirmDialog } from './dialogs'
+import { toast } from './toast'
 import { CHANGELOG_ENTRIES } from '../changelog'
 import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
@@ -95,8 +100,10 @@ export class SettingsViewComponent {
   private editIndex: number | null = null
   private editDraft: RuleDraft = emptyDraft()
   private editError: string | null = null
+  private paneonImport: PaneonImportPreview | null = null
 
   constructor() {
+    void api.paneonImportPreview().then((preview) => { this.paneonImport = preview; this.refresh() }).catch(() => undefined)
     this.nav.addEventListener('keydown', (event) => this.onNavKey(event))
     this.panel.addEventListener('click', (event) => {
       const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-link]')
@@ -258,8 +265,39 @@ export class SettingsViewComponent {
         'Getting started',
         h('button', { class: 'btn ghost small', type: 'button', id: 'getting-started', onClick: () => openOnboarding() }, 'Getting started…'),
         h('p', { class: 'hint' }, 'Reopen the setup guide for projects, agents and session info.')
-      )
+      ),
+      ...(this.paneonImport?.available ? [row(
+        'Paneon settings',
+        h('button', {
+          class: 'btn ghost small', type: 'button', id: 'import-paneon-settings',
+          disabled: this.paneonImport.pending || this.paneonImport.error !== null,
+          onClick: () => void this.importPaneonSettings()
+        }, 'Import Paneon settings'),
+        h('p', { class: 'hint', id: 'paneon-import-summary' },
+          this.paneonImport.pending
+            ? 'Import queued; close and reopen Dawsha to apply it.'
+            : this.paneonImport.error ?? `${this.paneonImport.projects} project${this.paneonImport.projects === 1 ? '' : 's'}, ${this.paneonImport.layouts} layout${this.paneonImport.layouts === 1 ? '' : 's'} and ${this.paneonImport.snippets} snippet${this.paneonImport.snippets === 1 ? '' : 's'} found. Your current Dawsha settings will be backed up.`
+        )
+      )] : [])
     ]
+  }
+
+  private async importPaneonSettings(): Promise<void> {
+    const confirmed = await confirmDialog({
+      title: 'Import Paneon settings?',
+      body: 'This replaces Dawsha settings on the next launch. A backup of the current Dawsha settings will be saved. Paneon stays untouched; close and reopen Dawsha to apply the import.',
+      confirmLabel: 'Import Paneon settings',
+      danger: false
+    })
+    if (!confirmed) return
+    try {
+      await api.queuePaneonImport()
+      this.paneonImport = { ...this.paneonImport!, pending: true }
+      this.refresh()
+      toast('Paneon import queued. Close and reopen Dawsha to apply it.', 'info')
+    } catch (error) {
+      toast((error as Error).message || 'Paneon settings could not be imported.')
+    }
   }
 
   private commitShortcut(text: string): void {
@@ -575,8 +613,8 @@ export class SettingsViewComponent {
   }
 
   private changelog(state: AppState): HTMLElement[] {
-    const entries = [...CHANGELOG_ENTRIES].sort((a, b) => compareVersions(b.version, a.version))
     const current = state.info.version
+    const entries = entriesUpTo(CHANGELOG_ENTRIES, current).sort((a, b) => compareVersions(b.version, a.version))
     const toolbar = row(
       "What's new",
       h('button', { class: 'btn ghost small', type: 'button', id: 'whats-new', onClick: () => openWhatsNew() }, "Show what's new"),

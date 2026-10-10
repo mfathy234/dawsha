@@ -1,7 +1,7 @@
 import { formatChanges } from '../../shared/gitChanges'
 import { formatAge, formatCost, formatPercent, gauge, gaugeStage } from '../../shared/statusLine'
 import { formatTokens } from '../../shared/usage'
-import { modelLetter } from '../../shared/opsFeed'
+import { formatResets, modelLetter } from '../../shared/opsFeed'
 import { contextLevel } from '../../shared/contextWarning'
 import type { PaneInfo } from '../derive'
 import { h, icon } from '../dom'
@@ -9,16 +9,16 @@ import { ICONS } from '../icons'
 
 export interface StripHandlers {
   title: string
+  now: number
   onToggleAgents(): void
   onOpenChanges(): void
 }
 
 function opsItems(info: PaneInfo, handlers: StripHandlers): HTMLElement[] {
   const ops = info.ops
-  if (!ops) return []
   const items: HTMLElement[] = []
-  if (ops.plan) items.push(h('span', { class: 'info-plan', title: 'Plan progress' }, `▸ ${ops.plan.done}/${ops.plan.total}`))
-  if (ops.running.length > 0) {
+  if (ops?.plan) items.push(h('span', { class: 'info-plan', title: 'Plan progress' }, `▸ ${ops.plan.done}/${ops.plan.total}`))
+  if (ops && ops.running.length > 0) {
     items.push(h('span', { class: 'info-running', title: 'Running agents' }, `${ops.running.length} running`))
     items.push(
       h(
@@ -28,21 +28,22 @@ function opsItems(info: PaneInfo, handlers: StripHandlers): HTMLElement[] {
       )
     )
   }
+  if (info.agent === 'shell') return items
   items.push(h('span', { class: 'spacer' }))
-  const label = `${ops.agentsOpen ? 'Hide' : 'Show'} agents of ${handlers.title}`
+  const label = `${info.agentsOpen ? 'Hide' : 'Show'} activity of ${handlers.title}`
   items.push(
     h(
       'button',
       {
-        class: `agents-toggle${ops.agentsOpen ? ' open' : ''}`,
+        class: `agents-toggle${info.agentsOpen ? ' open' : ''}`,
         type: 'button',
         'aria-label': label,
-        'aria-expanded': ops.agentsOpen ? 'true' : 'false',
+        'aria-expanded': info.agentsOpen ? 'true' : 'false',
         title: label,
         onClick: handlers.onToggleAgents
       },
-      'agents',
-      icon(ops.agentsOpen ? ICONS.chevronUp : ICONS.chevronDown)
+      'activity',
+      icon(info.agentsOpen ? ICONS.chevronUp : ICONS.chevronDown)
     )
   )
   return items
@@ -56,11 +57,27 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
   if (info.contextPercent !== null) {
     items.push(
       h(
-        'span',
-        { class: `info-gauge stage-${gaugeStage(info.contextPercent)} ctx-${contextLevel(info.contextPercent)}`, title: 'Context window used' },
-        `${gauge(info.contextPercent)} ${formatPercent(info.contextPercent)}`
+        'span', { class: 'info-context' },
+        h('span', { class: 'info-label' }, 'ctx '),
+        h('span',
+          { class: `info-gauge stage-${gaugeStage(info.contextPercent)} ctx-${contextLevel(info.contextPercent)}`, title: 'Context window used' },
+          `${gauge(info.contextPercent)} ${formatPercent(info.contextPercent)}`
+        )
       )
     )
+  } else if (info.agent !== 'shell') {
+    items.push(h('span', { class: 'info-context unavailable' }, 'ctx unavailable'))
+  }
+  if (info.agent !== 'shell') {
+    for (const [key, label] of [['five_hour', '5h'], ['seven_day', 'week']] as const) {
+      const window = info.limits.find((entry) => entry.key === key)
+      const reset = window ? formatResets(window.resetsAt, handlers.now) : ''
+      items.push(h('span', {
+        class: `info-limit${window ? ` stage-${gaugeStage(window.percent)}` : ' unavailable'}`,
+        'data-pane-limit': key,
+        title: window ? `${label}: ${formatPercent(window.percent)} used${reset ? `, ${reset}` : ', reset time unavailable'}` : `${label} limit unavailable for this session`
+      }, window ? `${label} ${formatPercent(window.percent)}${reset ? ` · ${reset}` : ''}` : `${label} unavailable`))
+    }
   }
   if (info.elapsed !== null) items.push(h('span', { class: 'info-elapsed', title: 'Session time' }, info.elapsed))
   if (info.tokens !== null) items.push(h('span', { class: 'info-tokens', title: 'Session tokens' }, `${formatTokens(info.tokens)} tokens`))

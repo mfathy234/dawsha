@@ -45,6 +45,8 @@ test('snippets are managed in the Projects view with a confirmation naming the o
     await expect(dialog.getByRole('alert')).toHaveText('Enter a name.')
     await dialog.getByLabel('Name').fill('Review the diff')
     await dialog.getByLabel('Text').fill('Review the staged changes and list risks.')
+    await expect(dialog.locator('.snippet-preview')).toHaveText('Review the staged changes and list risks.')
+    await expect(dialog.locator('.snippet-count')).toContainText('41')
     await dialog.getByLabel('Shortcut').selectOption('1')
     await page.screenshot({ path: join(SCREENS, '35-snippet-dialog.png') })
     await dialog.getByRole('button', { name: 'Save snippet' }).click()
@@ -52,6 +54,7 @@ test('snippets are managed in the Projects view with a confirmation naming the o
     await expect(page.locator('.snippet-row')).toContainText('Review the diff')
     await expect(page.locator('.snippet-row')).toContainText('all projects')
     await expect(page.locator('.snippet-row .snippet-key')).toHaveText('Alt+1')
+    await expect(page.locator('.toast').last()).toContainText("Saved snippet 'Review the diff'")
 
     await page.locator('#add-snippet').click()
     const second = page.getByRole('dialog', { name: 'New snippet' })

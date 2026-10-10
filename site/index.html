@@ -1,11 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dawsha - Every AI coding agent, one readable window</title>
 <meta name="description" content="Dawsha is a Windows app that puts Claude Code, Codex CLI and Gemini CLI side by side in a grid of large, readable terminals, with live status, resume, compare and needs-you alerts. Free, local, no account.">
 <link rel="canonical" href="https://mfathy234.github.io/dawsha/">
+<link rel="alternate" hreflang="en" href="https://mfathy234.github.io/dawsha/">
+<link rel="alternate" hreflang="ar" href="https://mfathy234.github.io/dawsha/ar/">
 <meta name="theme-color" content="#0c0e12">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
@@ -25,7 +27,7 @@
 <meta name="twitter:image" content="https://mfathy234.github.io/dawsha/assets/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <script>if(!matchMedia("(prefers-reduced-motion: reduce)").matches){document.documentElement.classList.add("js");setTimeout(function(){if(!window.__m)document.documentElement.classList.remove("js")},3500)}</script>
 <link rel="stylesheet" href="vendor/lenis.css">
 <link rel="stylesheet" href="style.css">
@@ -46,6 +48,7 @@
       <a href="#download">Download</a>
       <a href="https://github.com/mfathy234/dawsha" rel="noopener">GitHub</a>
     </nav>
+    <a class="lang-switch" lang="ar" href="ar/index.html" aria-label="العربية">العربية</a>
   </div>
 </header>
 
@@ -101,6 +104,14 @@
           <img loading="lazy" src="assets/usage.png" width="1600" height="1000" alt="The Usage view with tokens per day by agent, limit history and tables by project and by agent">
           <figcaption><strong>Usage.</strong> Tokens per day, cost where an agent reports one, and your 5 hour and weekly limits.</figcaption>
         </figure>
+        <figure class="shot">
+          <img loading="lazy" src="assets/skills.png" width="1600" height="1000" alt="Dawsha Skills tab showing installed Claude, Codex, Gemini and shared skills with their locations">
+          <figcaption><strong>Skills.</strong> Find, open, copy and export skills installed for each agent.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img loading="lazy" src="assets/installed-agents.png" width="1600" height="1000" alt="Dawsha Skills tab showing installed agent definitions with their locations">
+          <figcaption><strong>Installed agents.</strong> Browse and export your agent definitions, including project agents.</figcaption>
+        </figure>
       </div>
     </div>
   </section>
@@ -110,12 +121,12 @@
       <h2 id="features-h">Built for running several agents at once</h2>
       <figure class="shot feature-shot">
         <img loading="lazy" src="assets/agents-drawer.png" width="1600" height="1000" alt="A pane with the sub-agents drawer open next to its terminal">
-        <figcaption><strong>Sub-agents at a glance.</strong> Plan progress and running sub-agents sit beside each pane.</figcaption>
+        <figcaption><strong>Activity at a glance.</strong> Native processes and optional Claude sub-agent progress sit beside each pane.</figcaption>
       </figure>
       <div class="fgroups">
-        <div class="fgroup"><h3>Run</h3><ul><li><strong>Three agents in one grid</strong><span>Up to 6 real terminals. Resize, drag, pin or maximize any pane, Ctrl+Tab between them.</span></li><li><strong>The dawsha command</strong><span>Start, resume and open layouts from the terminal you already use.</span></li><li><strong>Commit and push</strong><span>Review the changed files, commit the ones you pick or commit and push. Pull, switch branch and stash in a click.</span></li><li><strong>Layouts, snippets, instructions</strong><span>Restore a setup by name, insert snippets, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.</span></li><li><strong>Themes</strong><span>Eight themes with contrast checks and an optional background image.</span></li></ul></div>
-        <div class="fgroup"><h3>Switch<svg class="ill ill-hop" width="38" height="38" viewBox="0 0 80 80" aria-hidden="true" focusable="false"><rect class="lit" x="5" y="4" width="30" height="31" rx="4" fill="#34d399" fill-opacity=".85" stroke="none"/><path class="dr" pathLength="1" style="--dd:0ms" d="M5 6 Q5 4 7 4 L33 4.5 Q35 5 35 7 L34.6 33 Q34 35 32 35 L7 34.6 Q4.8 34 5 32Z"/><path class="dr" pathLength="1" style="--dd:120ms" d="M45 6 Q45 4 47 4 L73 4.5 Q75 5 75 7 L74.6 33 Q74 35 72 35 L47 34.6 Q44.8 34 45 32Z"/><path class="dr" pathLength="1" style="--dd:240ms" d="M5 46 Q5 44 7 44 L33 44.5 Q35 45 35 47 L34.6 73 Q34 75 32 75 L7 74.6 Q4.8 74 5 72Z"/><path class="dr" pathLength="1" style="--dd:360ms" d="M45 46 Q45 44 47 44 L73 44.5 Q75 45 75 47 L74.6 73 Q74 75 72 75 L47 74.6 Q44.8 74 45 72Z"/></svg></h3><ul><li><strong>Resume any session</strong><span>Ctrl+Shift+R lists earlier sessions of all three agents.</span></li><li><strong>Command palette</strong><span>Ctrl+K finds sessions, projects, snippets and layouts.</span></li><li><strong>Find and copy</strong><span>Search any pane, open file:line paths in VS Code, copy the last reply or the prompt you are typing.</span></li><li><strong>Ask two agents</strong><span>One prompt, two worktrees, two answers to compare.</span></li><li><strong>Continue in another agent</strong><span>Hand a session over with an editable summary, or export it as Markdown.</span></li></ul></div>
-        <div class="fgroup"><h3>Stay informed</h3><ul><li><strong>Needs-you alerts</strong><span>An amber border and a notification when a pane waits on you.</span></li><li><strong>Highlights and context</strong><span>Errors stand out, and a nearly full session warns you before it runs out.</span></li><li><strong>Cost and usage</strong><span>Time, tokens and cost on every pane, plus a full usage view.</span></li><li><strong>In-app updates</strong><span>The installed build updates itself while sessions keep running.</span></li><li class="has-ill"><strong>Everything local</strong><span>No account and no telemetry. Nothing leaves your machine.</span><svg class="ill ill-lock" width="56" height="42" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" style="--dd:0ms" d="M9 5 Q9 3 11 3 L53 3.3 Q55 3.5 55 6 L54.6 33 Q54.5 35 52.5 35 L11 34.8 Q9 34.5 9 32.5Z"/><path class="dr" pathLength="1" style="--dd:200ms" d="M3 40 Q3 38 6 38 L58 38.4 Q61 38.5 61 40.5 Q61 43 58 43 L6 43 Q3 42.8 3 40Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M27 38.5 Q32 41 37 38.5"/><path class="fd" d="M25.5 20.5 Q25.5 19 27 19 L37 19.2 Q38.5 19.4 38.5 21 L38.3 28 Q38.2 29.6 36.7 29.6 L27 29.5 Q25.5 29.4 25.5 28Z" fill="#34d399" fill-opacity=".25" stroke="#34d399"/><circle class="fd" cx="32" cy="24" r="1.2" fill="#34d399" stroke="none"/><path class="shk" stroke="#34d399" d="M28.5 19 L28.4 15.5 Q28.5 11.5 32 11.5 Q35.5 11.5 35.6 15.5 L35.5 19"/></svg></li></ul></div>
+        <div class="fgroup"><h3>Run</h3><ul><li><strong>Three agents in one grid</strong><span>Up to 6 real terminals. Resize, drag, pin or maximize any pane, Ctrl+Tab between them.</span></li><li><strong>The dawsha command</strong><span>Start, resume and open layouts from the terminal you already use.</span></li><li><strong>Commit and push</strong><span>Review the changed files, commit the ones you pick or commit and push. Pull, switch branch and stash in a click.</span></li><li><strong>Layouts, snippets, instructions</strong><span>Restore a setup by name, insert snippets, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.</span></li><li><strong>Import Paneon settings</strong><span>Bring in your projects and preferences with a backup of your current Dawsha settings.</span></li><li><strong>Themes</strong><span>Eight themes with contrast checks and an optional background image.</span></li><li><strong>Installed skills</strong><span>Browse, open, copy and export skills for every agent, including project skills.</span></li></ul></div>
+        <div class="fgroup"><h3>Switch<svg class="ill ill-hop" width="38" height="38" viewBox="0 0 80 80" aria-hidden="true" focusable="false"><rect class="lit" x="5" y="4" width="30" height="31" rx="4" fill="#34d399" fill-opacity=".85" stroke="none"/><path class="dr" pathLength="1" style="--dd:0ms" d="M5 6 Q5 4 7 4 L33 4.5 Q35 5 35 7 L34.6 33 Q34 35 32 35 L7 34.6 Q4.8 34 5 32Z"/><path class="dr" pathLength="1" style="--dd:120ms" d="M45 6 Q45 4 47 4 L73 4.5 Q75 5 75 7 L74.6 33 Q74 35 72 35 L47 34.6 Q44.8 34 45 32Z"/><path class="dr" pathLength="1" style="--dd:240ms" d="M5 46 Q5 44 7 44 L33 44.5 Q35 45 35 47 L34.6 73 Q34 75 32 75 L7 74.6 Q4.8 74 5 72Z"/><path class="dr" pathLength="1" style="--dd:360ms" d="M45 46 Q45 44 47 44 L73 44.5 Q75 45 75 47 L74.6 73 Q74 75 72 75 L47 74.6 Q44.8 74 45 72Z"/></svg></h3><ul><li><strong>Resume any session</strong><span>Ctrl+Shift+R lists earlier sessions of all three agents.</span></li><li><strong>Command palette</strong><span>Ctrl+K finds sessions, projects, snippets and layouts.</span></li><li><strong>Find and copy</strong><span>Search any pane, open files in their matching apps, and copy the last reply or the prompt you are typing.</span></li><li><strong>Ask two agents</strong><span>One prompt, two worktrees, two answers to compare.</span></li><li><strong>Continue in another agent</strong><span>Hand a session over with an editable summary, or export it as Markdown.</span></li></ul></div>
+        <div class="fgroup"><h3>Stay informed</h3><ul><li><strong>Needs-you alerts</strong><span>An amber border and a notification when a pane waits on you.</span></li><li><strong>Highlights and context</strong><span>Errors stand out, and a nearly full session warns you before it runs out.</span></li><li><strong>Reset countdowns</strong><span>Claude panes show the 5-hour and weekly reset countdowns when Claude reports them.</span></li><li><strong>Cost and usage</strong><span>Time, tokens and cost on every pane, plus a full usage view.</span></li><li><strong>In-app updates</strong><span>The installed build updates itself while sessions keep running.</span></li><li class="has-ill"><strong>Everything local</strong><span>No account and no telemetry. Nothing leaves your machine.</span><svg class="ill ill-lock" width="56" height="42" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" style="--dd:0ms" d="M9 5 Q9 3 11 3 L53 3.3 Q55 3.5 55 6 L54.6 33 Q54.5 35 52.5 35 L11 34.8 Q9 34.5 9 32.5Z"/><path class="dr" pathLength="1" style="--dd:200ms" d="M3 40 Q3 38 6 38 L58 38.4 Q61 38.5 61 40.5 Q61 43 58 43 L6 43 Q3 42.8 3 40Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M27 38.5 Q32 41 37 38.5"/><path class="fd" d="M25.5 20.5 Q25.5 19 27 19 L37 19.2 Q38.5 19.4 38.5 21 L38.3 28 Q38.2 29.6 36.7 29.6 L27 29.5 Q25.5 29.4 25.5 28Z" fill="#34d399" fill-opacity=".25" stroke="#34d399"/><circle class="fd" cx="32" cy="24" r="1.2" fill="#34d399" stroke="none"/><path class="shk" stroke="#34d399" d="M28.5 19 L28.4 15.5 Q28.5 11.5 32 11.5 Q35.5 11.5 35.6 15.5 L35.5 19"/></svg></li></ul></div>
       </div>
     </div>
   </section>

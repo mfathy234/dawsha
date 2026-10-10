@@ -5,6 +5,21 @@ import { expect, test } from '@playwright/test'
 import { createFakeTools } from '../support/fakeTools'
 import { closeApp, createSandbox, launchApp } from './helpers'
 
+test('a pane shows native activity without a Claude ops mod', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
+    const toggle = page.locator('.pane .agents-toggle')
+    await expect(toggle).toBeVisible()
+    await toggle.click()
+    await expect(page.locator('.pane .agents-drawer')).toBeVisible()
+    await expect(page.locator('.pane .agents-drawer')).toContainText('Processes')
+    await expect(page.locator('.pane .agents-drawer .process-item').first()).toBeVisible({ timeout: 20_000 })
+  } finally {
+    await closeApp(app)
+  }
+})
+
 function fakeEnv(installed: Parameters<typeof createFakeTools>[1]) {
   const dir = mkdtempSync(join(tmpdir(), 'dawsha-fake-'))
   const tools = createFakeTools(dir, installed, { claude: '2.1.301', codex: '0.156.1', gemini: '0.9.1' })

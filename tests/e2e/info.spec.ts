@@ -45,7 +45,14 @@ function writeSession(sandbox: Sandbox, sessionId: string, status: string, name 
 function writeStatus(sandbox: Sandbox, sessionId: string): void {
   const dir = join(sandbox.userData, 'status')
   mkdirSync(dir, { recursive: true })
-  const payload = { ...JSON.parse(fixture), session_id: sessionId }
+  const payload = {
+    ...JSON.parse(fixture),
+    session_id: sessionId,
+    rate_limits: {
+      five_hour: { used_percentage: 9, resets_at: Math.floor((Date.now() + 5 * 3_600_000) / 1000) },
+      seven_day: { used_percentage: 54, resets_at: Math.floor((Date.now() + 4 * 86_400_000) / 1000) }
+    }
+  }
   writeFileSync(join(dir, `${sessionId}.json`), JSON.stringify(payload), 'utf8')
 }
 
@@ -94,6 +101,8 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await expect(page.locator('.pane-info .info-model')).toHaveClass(/fam-opus/)
     await expect(page.locator('.pane-info .info-gauge')).toHaveText('▱▱▱▱▱ 7%')
     await expect(page.locator('.pane-info .info-cost')).toHaveText('$0.34')
+    await expect(page.locator('.pane-info [data-pane-limit="five_hour"]')).toContainText('5h 9% · resets in')
+    await expect(page.locator('.pane-info [data-pane-limit="seven_day"]')).toContainText('week 54% · resets in')
     await expect(page.locator('.pane-info .info-age')).toContainText('ago')
     await expect(page.locator('[data-limit="five_hour"]')).toHaveText('5h ▱▱▱▱▱ 9%')
     await expect(page.locator('[data-limit="seven_day"]')).toHaveText('week ▰▰▰▱▱ 54%')

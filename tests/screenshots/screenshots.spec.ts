@@ -26,8 +26,26 @@ test('generates the README screenshots from fake projects only', async () => {
   mkdirSync(OUT, { recursive: true })
   const sandbox = createSandbox()
   seed(sandbox, true)
+  for (const [project, agent, name] of [
+    ['acme-web', 'claude', 'Review'],
+    ['billing-api', 'codex', 'Plan'],
+    ['docs-site', 'gemini', 'Docs']
+  ]) {
+    const demoSkill = join(folder(project), `.${agent}`, 'skills', name)
+    mkdirSync(demoSkill, { recursive: true })
+    writeFileSync(join(demoSkill, 'SKILL.md'), `# ${name}\n`)
+  }
+  for (const [project, agent, file] of [
+    ['acme-web', 'claude', 'reviewer.md'],
+    ['billing-api', 'codex', 'architect.toml'],
+    ['docs-site', 'gemini', 'writer.md']
+  ]) {
+    const demoAgent = join(folder(project), `.${agent}`, 'agents', file)
+    mkdirSync(join(demoAgent, '..'), { recursive: true })
+    writeFileSync(demoAgent, `# ${file}\n`)
+  }
   writeHistory(sandbox, folder)
-  const { app, page } = await launchApp(sandbox, demoEnv())
+  const { app, page } = await launchApp(sandbox, { ...demoEnv(), DAWSHA_SHARED_HOME: join(sandbox.root, 'shared-home') })
   try {
     await resize(app)
     for (const project of PROJECTS) {
@@ -58,6 +76,16 @@ test('generates the README screenshots from fake projects only', async () => {
     await expect(page.locator('.pane.maximized')).toHaveCount(0)
 
     await page.locator('.agents-toggle').first().click()
+
+    await page.getByRole('button', { name: 'Skills', exact: true }).click()
+    await expect(page.locator('.skill-row')).toHaveCount(3)
+    await settle(page, 800)
+    await page.screenshot({ path: join(OUT, 'skills.png') })
+    await page.getByRole('button', { name: 'Installed agents' }).click()
+    await expect(page.locator('.skill-row')).toHaveCount(3)
+    await settle(page, 400)
+    await page.screenshot({ path: join(OUT, 'installed-agents.png') })
+    await page.getByRole('button', { name: 'Skills', exact: true }).click()
     await expect(page.locator('.agents-drawer:visible')).toHaveCount(1)
     await settle(page)
     await page.screenshot({ path: join(OUT, 'agents-drawer.png') })
@@ -159,7 +187,7 @@ test('generates the update and what is new screenshots', async () => {
   ].join('\n')
   const script = JSON.stringify({
     check: 'available',
-    info: { version: '0.9.1', releaseDate: '2026-10-15T09:00:00.000Z', releaseNotes: notes }
+    info: { version: '0.1.1', releaseDate: '2026-10-15T09:00:00.000Z', releaseNotes: notes }
   })
   const sandbox = createSandbox()
   seed(sandbox, true)
@@ -175,7 +203,7 @@ test('generates the update and what is new screenshots', async () => {
       await page.getByRole('button', { name: `New Claude session in ${project.name}`, exact: true }).click()
     }
     await expect(page.locator('.pane')).toHaveCount(2)
-    await expect(page.locator('#update-pill')).toHaveText('Update 0.9.1')
+    await expect(page.locator('#update-pill')).toHaveText('Update 0.1.1')
     await page.locator('#update-pill').click()
     await expect(page.locator('.update-popover')).toBeVisible()
     await settle(page, 1500)
@@ -187,7 +215,7 @@ test('generates the update and what is new screenshots', async () => {
   const seen = createSandbox()
   seed(seen, true)
   const stored = JSON.parse(readFileSync(join(seen.userData, 'settings.json'), 'utf8'))
-  writeFileSync(join(seen.userData, 'settings.json'), JSON.stringify({ ...stored, lastSeenVersion: '0.4.0' }), 'utf8')
+  writeFileSync(join(seen.userData, 'settings.json'), JSON.stringify({ ...stored, lastSeenVersion: '0.0.9' }), 'utf8')
   const launched = await launchApp(seen, demoEnv())
   try {
     await resize(launched.app)

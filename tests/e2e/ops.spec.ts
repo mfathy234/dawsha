@@ -154,9 +154,10 @@ test('ops feed: strip, agents drawer, details panel, updates, stale and ended', 
     await expect(details).toBeHidden()
 
     writeOps(sandbox, { ended: true })
-    await expect(page.locator('.agents-toggle')).toHaveCount(0, { timeout: 15_000 })
+    await expect(page.locator('.agents-toggle')).toHaveCount(1, { timeout: 15_000 })
     await expect(page.locator('.info-letters')).toHaveCount(0)
-    await expect(page.locator('.agents-drawer')).toBeHidden()
+    await expect(page.locator('.agents-drawer')).toContainText('Processes')
+    await expect(page.locator('.agents-drawer .drawer-item')).toHaveCount(0)
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
@@ -174,7 +175,7 @@ test('details panel without a snapshot explains what the ops mod adds', async ()
     const details = page.locator('.pane-details')
     await expect(details).toBeVisible()
     await expect(details).toContainText('The ops mod adds plan, agents, files and checks to this panel.')
-    await expect(page.locator('.agents-toggle')).toHaveCount(0)
+    await expect(page.locator('.agents-toggle')).toHaveCount(1)
   } finally {
     await closeBounded(app)
   }

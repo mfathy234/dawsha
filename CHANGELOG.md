@@ -3,6 +3,24 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.1.0] - 2026-10-10
+
+### Added
+
+- Dawsha identity with its own Windows executable, installer and taskbar icon.
+- Native per-pane process activity for Claude, Codex and Gemini, without an optional Claude mod.
+- A Skills view for installed user, plugin and project skills and agent definitions, with open, copy-path and safe export actions.
+- Per-pane context and available rate-limit information, with reset times for Claude limits.
+- Arabic and English website with language switching, RTL layout and current app screenshots.
+- A confirmed Paneon settings import that backs up Dawsha settings and applies the imported settings on the next launch.
+
+### Changed
+
+- File and image references open in the matching default app; HTML opens in the browser, while potentially executable files are revealed in Explorer.
+- Sessions in the sidebar return to the grid from Usage and other views.
+- Snippet saving has a live preview and confirmation; the first theme is named Dawsha without changing its colors or saved ID.
+- New session, top navigation, font-size, Settings and Theme controls have a more focused visual hierarchy while retaining Dawsha's colors.
+
 ## [0.9.0] - 2026-10-09
 
 ### Added

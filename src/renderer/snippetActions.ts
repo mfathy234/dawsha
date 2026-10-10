@@ -67,6 +67,7 @@ export async function editSnippet(snippetId?: string, prefill?: SnippetPrefill):
   }
   const { snippets } = store.state.settings
   setSnippets(existing ? snippets.map((s) => (s.id === existing.id ? next : s)) : [...snippets, next])
+  toast(`${existing ? 'Updated' : 'Saved'} snippet '${next.name}'.`, 'info')
 }
 
 export async function deleteSnippet(snippetId: string): Promise<void> {

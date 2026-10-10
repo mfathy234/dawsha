@@ -31,6 +31,13 @@ export const isSafeToOpen = (path: string): boolean => {
   return dot > 0 && SAFE_TO_OPEN.has(name.slice(dot + 1).toLowerCase())
 }
 
+export function fileOpenKind(path: string): 'image' | 'html' | 'default' {
+  const ext = (path.split(/[\\/]/).pop() ?? '').split('.').pop()?.toLowerCase()
+  if (ext === 'html' || ext === 'htm') return 'html'
+  if (ext && ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svg'].includes(ext)) return 'image'
+  return 'default'
+}
+
 function urlSpans(text: string): [number, number][] {
   return [...text.matchAll(URL_SPAN)].map((m) => [m.index ?? 0, (m.index ?? 0) + m[0].length])
 }
