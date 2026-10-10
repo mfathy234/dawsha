@@ -5,8 +5,8 @@ test('top bar shows the brand and the split New session button picks the agent',
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
-    await expect(page).toHaveTitle('Paneon')
-    await expect(page.locator('.app-title')).toHaveText('Paneon')
+    await expect(page).toHaveTitle('Dawsha')
+    await expect(page.locator('.app-title')).toHaveText('Dawsha')
     await expect(page.locator('.app-logo svg')).toBeVisible()
 
     const chevron = page.getByRole('button', { name: 'Choose agent', exact: true })

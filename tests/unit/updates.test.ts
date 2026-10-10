@@ -49,13 +49,13 @@ describe('update pill', () => {
 
 describe('status line', () => {
   it('reports up to date with a relative time', () => {
-    expect(updateStatusLine(state({ checkedAt: 0 }), 5 * 60_000)).toBe('Paneon 0.4.0 · up to date · checked 5 minutes ago')
-    expect(updateStatusLine(state({ checkedAt: null }), 0)).toBe('Paneon 0.4.0 · not checked yet')
+    expect(updateStatusLine(state({ checkedAt: 0 }), 5 * 60_000)).toBe('Dawsha 0.4.0 · up to date · checked 5 minutes ago')
+    expect(updateStatusLine(state({ checkedAt: null }), 0)).toBe('Dawsha 0.4.0 · not checked yet')
   })
 
   it('reports available, portable and development', () => {
-    expect(updateStatusLine(state({ status: 'available', version: '0.5.0' }), 0)).toBe('Paneon 0.4.0 · update available')
-    expect(updateStatusLine(state({ mode: 'portable' }), 0)).toBe('Paneon 0.4.0 · portable build: updates from GitHub')
+    expect(updateStatusLine(state({ status: 'available', version: '0.5.0' }), 0)).toBe('Dawsha 0.4.0 · update available')
+    expect(updateStatusLine(state({ mode: 'portable' }), 0)).toBe('Dawsha 0.4.0 · portable build: updates from GitHub')
     expect(updateStatusLine(state({ mode: 'dev' }), 0)).toContain('updates are off')
   })
 

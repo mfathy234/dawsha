@@ -20,7 +20,7 @@ function paneVisible(state: AppState, view: PaneView): boolean {
 }
 
 function notifyText(view: PaneView, kind: 'done' | 'needs'): { title: string; body: string } {
-  const project = view.project?.name ?? 'Paneon'
+  const project = view.project?.name ?? 'Dawsha'
   return kind === 'done'
     ? { title: `${view.title} is done`, body: `${project}: the session finished and is waiting for you.` }
     : { title: `${view.title} needs you`, body: `${project}: the session is waiting on a permission prompt.` }
@@ -35,7 +35,7 @@ function notifyContext(state: AppState, view: PaneView): void {
   api.notify({
     paneId: view.pane.id,
     title: `${view.title} context is ${Math.round(view.info.contextPercent)}% full`,
-    body: `${view.project?.name ?? 'Paneon'}: /compact or start a fresh session.`,
+    body: `${view.project?.name ?? 'Dawsha'}: /compact or start a fresh session.`,
     sound: state.settings.sessionInfo.sound
   })
 }

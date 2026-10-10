@@ -21,7 +21,7 @@ function numberFromEnv(name: string, fallback: number): number {
 }
 
 export function setupUpdates(options: UpdatesOptions): UpdateController {
-  const fake = process.env.PANEON_TEST_UPDATER === 'fake'
+  const fake = process.env.DAWSHA_TEST_UPDATER === 'fake'
   const mode = detectUpdateMode({ packaged: app.isPackaged, portableDir: process.env.PORTABLE_EXECUTABLE_DIR, fake })
   const backend = mode === 'dev' ? createInertBackend() : fake ? createFakeBackend() : createGithubBackend()
   const controller = new UpdateController({
@@ -30,8 +30,8 @@ export function setupUpdates(options: UpdatesOptions): UpdateController {
     currentVersion: appVersion(),
     autoCheck: () => options.settings.get().autoUpdateCheck,
     onChange: (state) => options.send(IPC.updateState, state),
-    startDelayMs: numberFromEnv('PANEON_UPDATE_START_DELAY_MS', DEFAULT_START_DELAY_MS),
-    intervalMs: numberFromEnv('PANEON_UPDATE_INTERVAL_MS', DEFAULT_INTERVAL_MS)
+    startDelayMs: numberFromEnv('DAWSHA_UPDATE_START_DELAY_MS', DEFAULT_START_DELAY_MS),
+    intervalMs: numberFromEnv('DAWSHA_UPDATE_INTERVAL_MS', DEFAULT_INTERVAL_MS)
   })
   ipcMain.handle(IPC.updateGet, () => controller.state)
   ipcMain.handle(IPC.updateCheck, () => controller.check(true))

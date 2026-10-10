@@ -98,7 +98,7 @@ export class LayoutsPopoverComponent {
       'div',
       { class: 'layouts-foot' },
       save,
-      h('span', { class: 'muted' }, 'From a terminal: ', h('code', {}, `paneon open ${example}`))
+      h('span', { class: 'muted' }, 'From a terminal: ', h('code', {}, `dawsha open ${example}`))
     )
     return [head, list, foot]
   }

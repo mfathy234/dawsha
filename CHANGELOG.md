@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Paneon are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [0.9.0] - 2026-10-09
@@ -55,7 +55,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - Ctrl+V with a screenshot on the clipboard pasted nothing. The image is now saved and its path pasted, so the agent
   attaches it.
-- Removing a compare worktree right after closing its pane could fail with "Permission denied" on Windows. Paneon now
+- Removing a compare worktree right after closing its pane could fail with "Permission denied" on Windows. Dawsha now
   waits for the folder to be released.
 
 ## [0.6.0] - 2026-10-09
@@ -94,7 +94,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Saved layouts. The **Layouts** button in the top bar saves the current panes (project, agents, tabs, session ids, text
   size and order) under a name, and lists, opens, renames and deletes them. Opening asks whether to replace the current
   panes or add alongside them. Tabs with a session id resume it, the rest start fresh. From a terminal:
-  `paneon open <layout>` and `paneon layouts`.
+  `dawsha open <layout>` and `dawsha layouts`.
 - Prompt snippets. A **Snippets** tab in Projects holds short prompts, global or for one project, with the variables
   `{{selection}}`, `{{branch}}`, `{{project}}` and `{{folder}}` and an optional **Alt+1** to **Alt+9** shortcut. Inserting
   types the text into the focused terminal without pressing Enter, as a bracketed paste when the agent supports it so
@@ -103,7 +103,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
   and shows them side by side in a linked pair under a shared Compare header. Each can run in its own git worktree on a
   new branch. **Keep A**, **Keep B**, **Keep both** and **Diff A vs B** finish the comparison; closing a side and removing
   its worktree and branch each ask first, and a worktree with uncommitted files or commits is kept unless you confirm.
-- Continue in another agent. A pane's menu and the palette offer **Continue in Codex / Gemini / Claude**. Paneon writes a
+- Continue in another agent. A pane's menu and the palette offer **Continue in Codex / Gemini / Claude**. Dawsha writes a
   summary (goal, files touched from git, plan and last check from the ops feed, last error and recent terminal output) that
   you can edit, then starts the other agent in the same folder with it as the first message. The new pane carries a
   **from <agent>** chip.
@@ -124,7 +124,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Taskbar and notifications now show Paneon's own icon and name.
+- Taskbar and notifications now show Dawsha's own icon and name.
 - Upgrading by hand from 0.3.0 now shows this What's new dialog too.
 
 ## [0.3.0] - 2026-10-08
@@ -138,9 +138,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
   instead of started twice.
 - Resume entry points in the split-button menu and in every project's menu, plus an empty state per project.
 - A muted "resumed" chip in the pane header for the first minute of a session resumed from the picker.
-- The `paneon` command: `open`, `.`, `start`, `resume`, `ls`, `sessions`, `add`, `update-agents`, `--help` and `--version`.
+- The `dawsha` command: `open`, `.`, `start`, `resume`, `ls`, `sessions`, `add`, `update-agents`, `--help` and `--version`.
   The installer adds it to the user PATH and removes it on uninstall.
-- First-run setup with two steps (add a project, check your agents), a `paneon .` tip, and a Getting started item in the
+- First-run setup with two steps (add a project, check your agents), a `dawsha .` tip, and a Getting started item in the
   Theme popover to reopen it.
 - Second launches of the app forward their arguments to the running instance.
 
@@ -152,7 +152,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Paneon, formerly Claude Grid: a grid of real terminals for Claude Code, Codex CLI and Gemini CLI.
+- Dawsha, formerly Claude Grid: a grid of real terminals for Claude Code, Codex CLI and Gemini CLI.
 - Codex CLI and Gemini CLI sessions with titles, models, context and busy/idle state next to Claude Code.
 - The Agents view with installed and latest versions and one-click install and update in a visible shell tab.
 - Needs-you alerts: an amber border, taskbar flash and Windows notification when a session finishes or waits on a prompt.
@@ -161,4 +161,4 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Renamed from Claude Grid to Paneon; settings are migrated from the old user-data folder on first start.
+- Renamed from Claude Grid to Dawsha; settings are migrated from the old user-data folder on first start.

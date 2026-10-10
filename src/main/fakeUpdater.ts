@@ -39,7 +39,7 @@ export function createFakeBackend(): UpdaterBackend {
     for (const listener of listeners.get(event) ?? []) listener(payload)
   }
   const hook: FakeHook = {
-    script: parseScript(process.env.PANEON_TEST_UPDATER_SCRIPT),
+    script: parseScript(process.env.DAWSHA_TEST_UPDATER_SCRIPT),
     checks: 0,
     downloads: 0,
     setScript: (script) => {
@@ -47,7 +47,7 @@ export function createFakeBackend(): UpdaterBackend {
     },
     release: () => releaseHold?.()
   }
-  ;(globalThis as { __paneonFakeUpdater?: FakeHook }).__paneonFakeUpdater = hook
+  ;(globalThis as { __dawshaFakeUpdater?: FakeHook }).__dawshaFakeUpdater = hook
   const info = (): UpdateInfoPayload => hook.script.info ?? { version: '9.9.9' }
 
   return {
@@ -81,7 +81,7 @@ export function createFakeBackend(): UpdaterBackend {
       emit('update-downloaded', info())
     },
     quitAndInstall: (silent, forceRunAfter) => {
-      const log = process.env.PANEON_TEST_UPDATER_LOG
+      const log = process.env.DAWSHA_TEST_UPDATER_LOG
       if (log) appendFileSync(log, `quitAndInstall ${silent} ${forceRunAfter}\n`, 'utf8')
       app.quit()
     }

@@ -10,15 +10,15 @@ const readSettings = (userData: string): any => JSON.parse(readFileSync(join(use
 
 function toolsEnv(): Record<string, string> {
   const tools = createFakeTools(
-    mkdtempSync(join(tmpdir(), 'paneon-onboarding-')),
+    mkdtempSync(join(tmpdir(), 'dawsha-onboarding-')),
     { claude: '2.1.301', codex: null, gemini: null },
     { claude: '2.1.301', codex: '0.156.1', gemini: '0.9.1' }
   )
   return {
     PATH: `${tools.pathEntry}${delimiter}${process.env.PATH ?? ''}`,
-    PANEON_CLAUDE_COMMAND: tools.commands.claude,
-    PANEON_CODEX_COMMAND: tools.commands.codex,
-    PANEON_GEMINI_COMMAND: tools.commands.gemini
+    DAWSHA_CLAUDE_COMMAND: tools.commands.claude,
+    DAWSHA_CODEX_COMMAND: tools.commands.codex,
+    DAWSHA_GEMINI_COMMAND: tools.commands.gemini
   }
 }
 
@@ -26,7 +26,7 @@ test('first run shows the setup steps, marks them done and remembers the dismiss
   const sandbox = createSandbox({ empty: true })
   const first = await launchApp(sandbox, toolsEnv())
   try {
-    const dialog = first.page.getByRole('dialog', { name: 'Set up Paneon' })
+    const dialog = first.page.getByRole('dialog', { name: 'Set up Dawsha' })
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('.ob-step')).toHaveCount(2)
     await expect(dialog.locator('.ob-step[data-step="1"]')).not.toHaveClass(/done/)
@@ -34,7 +34,7 @@ test('first run shows the setup steps, marks them done and remembers the dismiss
     await expect(dialog.locator('#ob-agents')).toContainText('Codex CLI not installed')
     await expect(dialog.locator('#ob-agents')).toContainText('Gemini CLI not installed')
     await expect(dialog.locator('.ob-step[data-step="2"]')).toHaveClass(/done/)
-    await expect(dialog).toContainText('Tip: run paneon . in any folder to open it here.')
+    await expect(dialog).toContainText('Tip: run dawsha . in any folder to open it here.')
     await expect(dialog).toContainText('Everything stays on this computer.')
     await expect(dialog).not.toContainText('Connect Claude Code')
     await expect(dialog.locator('#ob-close')).toHaveText('Skip')
@@ -70,7 +70,7 @@ test('skipping keeps the setup closed on the next start and Getting started reop
     await expect(second.page.locator('.onboarding')).toHaveCount(0)
     await openSettings(second.page, 'general')
     await second.page.locator('#getting-started').click()
-    await expect(second.page.getByRole('dialog', { name: 'Set up Paneon' })).toBeVisible()
+    await expect(second.page.getByRole('dialog', { name: 'Set up Dawsha' })).toBeVisible()
     await second.page.locator('#ob-open-agents').click()
     await expect(second.page.locator('.onboarding')).toHaveCount(0)
     await expect(second.page.locator('.agents-view')).toBeVisible()

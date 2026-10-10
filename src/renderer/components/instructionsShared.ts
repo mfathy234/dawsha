@@ -59,7 +59,7 @@ export class InstructionsSharedComponent {
       h(
         'p',
         { class: 'muted' },
-        'Write it once. Paneon keeps it between paneon:shared markers in each file; text outside the markers is never touched.'
+        'Write it once. Dawsha keeps it between dawsha:shared markers in each file; text outside the markers is never touched.'
       ),
       this.text,
       h('div', { class: 'instr-creates' }, ...boxes),

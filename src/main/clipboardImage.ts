@@ -5,7 +5,7 @@ import type { ClipboardContent } from '../shared/clipboard'
 
 const KEEP_MS = 24 * 60 * 60 * 1000
 
-export const pasteDir = (): string => process.env.PANEON_PASTE_DIR ?? join(app.getPath('temp'), 'paneon-paste')
+export const pasteDir = (): string => process.env.DAWSHA_PASTE_DIR ?? join(app.getPath('temp'), 'dawsha-paste')
 
 function pruneOld(dir: string, now: number): void {
   for (const name of readdirSync(dir)) {

@@ -8,8 +8,8 @@ const PNG_1PX =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 
 test('Ctrl+V with a screenshot on the clipboard saves it and pastes its path', async () => {
-  const pasteDir = mkdtempSync(join(tmpdir(), 'paneon-paste-'))
-  const { app, page } = await launchApp(createSandbox(), { PANEON_PASTE_DIR: pasteDir })
+  const pasteDir = mkdtempSync(join(tmpdir(), 'dawsha-paste-'))
+  const { app, page } = await launchApp(createSandbox(), { DAWSHA_PASTE_DIR: pasteDir })
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()

@@ -37,7 +37,7 @@ export function startQuitWatchdog(options: QuitWatchdogOptions): () => void {
   timer.unref()
   const worker = new Worker(WORKER_SOURCE, {
     eval: true,
-    workerData: { shared, ms: options.ms, pid: options.pid ?? process.pid, logPath: options.logPath ?? process.env.PANEON_QUIT_LOG }
+    workerData: { shared, ms: options.ms, pid: options.pid ?? process.pid, logPath: options.logPath ?? process.env.DAWSHA_QUIT_LOG }
   })
   worker.unref()
   worker.on('error', () => undefined)

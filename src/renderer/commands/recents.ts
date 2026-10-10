@@ -1,6 +1,6 @@
 import { pushRecent } from '../../shared/palette'
 
-const STORAGE_KEY = 'paneon.palette.recent'
+const STORAGE_KEY = 'dawsha.palette.recent'
 
 export function loadRecents(): string[] {
   try {

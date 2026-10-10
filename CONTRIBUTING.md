@@ -1,6 +1,6 @@
-# Contributing to Paneon
+# Contributing to Dawsha
 
-Thanks for helping. Paneon is a small Electron + TypeScript app; changes are easiest to review when they are focused.
+Thanks for helping. Dawsha is a small Electron + TypeScript app; changes are easiest to review when they are focused.
 
 ## Set up
 
@@ -24,7 +24,7 @@ Use short, imperative Conventional Commit messages (`feat:`, `fix:`, `refactor:`
 
 ## Reporting bugs
 
-Open an issue using the bug template. Include the Paneon version, Windows version, which agent was involved and steps to reproduce.
+Open an issue using the bug template. Include the Dawsha version, Windows version, which agent was involved and steps to reproduce.
 
 ## License
 

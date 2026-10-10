@@ -7,7 +7,7 @@ import { closeApp, createSandbox, launchApp, runCli, QUIT_BUDGET_MS } from './he
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 const CLAUDE_ID = '11111111-2222-4333-8444-555555555555'
 
-test('the paneon command talks to the running app over the pipe', async () => {
+test('the dawsha command talks to the running app over the pipe', async () => {
   const sandbox = createSandbox()
   const dir = join(sandbox.claudeHome, 'projects', sandbox.projectFolder.replace(/[^A-Za-z0-9]/g, '-'))
   mkdirSync(dir, { recursive: true })
@@ -18,14 +18,14 @@ test('the paneon command talks to the running app over the pipe', async () => {
       JSON.stringify({ type: 'ai-title', aiTitle: 'Add dark mode toggle' })
     ].join('\n') + '\n'
   )
-  const { app, page } = await launchApp(sandbox, { PANEON_CODEX_COMMAND: 'cmd.exe' })
+  const { app, page } = await launchApp(sandbox, { DAWSHA_CODEX_COMMAND: 'cmd.exe' })
   try {
     const version = await runCli(sandbox, ['--version'])
-    expect(version).toMatchObject({ code: 0, out: expect.stringMatching(/^Paneon \d+\.\d+\.\d+$/) })
+    expect(version).toMatchObject({ code: 0, out: expect.stringMatching(/^Dawsha \d+\.\d+\.\d+$/) })
 
     const help = await runCli(sandbox, ['--help'])
     expect(help.code).toBe(0)
-    expect(help.out).toContain('Usage: paneon [command]')
+    expect(help.out).toContain('Usage: dawsha [command]')
 
     const ls = await runCli(sandbox, ['ls'])
     expect(ls.code).toBe(0)
@@ -85,7 +85,7 @@ test('a second launch with arguments is forwarded to the running app', async () 
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
-    const env = { ...process.env, PANEON_USER_DATA: sandbox.userData, PANEON_PIPE: sandbox.pipe } as Record<string, string>
+    const env = { ...process.env, DAWSHA_USER_DATA: sandbox.userData, DAWSHA_PIPE: sandbox.pipe } as Record<string, string>
     delete env.ELECTRON_RUN_AS_NODE
     const electronPath = require('electron') as unknown as string
     const child = spawn(electronPath, [resolve(__dirname, '../../out/main/index.js'), 'ls'], { env, stdio: 'ignore' })

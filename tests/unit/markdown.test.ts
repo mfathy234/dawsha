@@ -3,20 +3,20 @@ import { htmlToMarkdown, normalizeNotes, releaseTagUrl, renderMarkdown, safeLink
 
 describe('safeLink', () => {
   it('allows the project repository on github.com over https', () => {
-    expect(safeLink('https://github.com/mfathy234/paneon/releases/tag/v0.4.0')).toBe('https://github.com/mfathy234/paneon/releases/tag/v0.4.0')
-    expect(safeLink('https://github.com/mfathy234/paneon')).toBe('https://github.com/mfathy234/paneon')
+    expect(safeLink('https://github.com/mfathy234/dawsha/releases/tag/v0.4.0')).toBe('https://github.com/mfathy234/dawsha/releases/tag/v0.4.0')
+    expect(safeLink('https://github.com/mfathy234/dawsha')).toBe('https://github.com/mfathy234/dawsha')
   })
 
   it('rejects other hosts, repositories, schemes and tricks', () => {
     for (const bad of [
-      'http://github.com/mfathy234/paneon/releases',
-      'https://github.com/mfathy234/paneon-evil/releases',
-      'https://github.com/someone/paneon',
-      'https://github.com/mfathy234/paneon/../../evil/repo',
-      'https://github.com/mfathy234/paneon/%2e%2e/%2e%2e/evil/repo',
-      'https://github.com.evil.example/mfathy234/paneon/x',
-      'https://user@github.com/mfathy234/paneon/x',
-      'https://github.com:444/mfathy234/paneon/x',
+      'http://github.com/mfathy234/dawsha/releases',
+      'https://github.com/mfathy234/dawsha-evil/releases',
+      'https://github.com/someone/dawsha',
+      'https://github.com/mfathy234/dawsha/../../evil/repo',
+      'https://github.com/mfathy234/dawsha/%2e%2e/%2e%2e/evil/repo',
+      'https://github.com.evil.example/mfathy234/dawsha/x',
+      'https://user@github.com/mfathy234/dawsha/x',
+      'https://github.com:444/mfathy234/dawsha/x',
       'javascript:alert(1)',
       'file:///C:/Windows/System32/calc.exe',
       'not a url',
@@ -27,8 +27,8 @@ describe('safeLink', () => {
   })
 
   it('builds the release tag url', () => {
-    expect(releaseTagUrl('0.4.0')).toBe('https://github.com/mfathy234/paneon/releases/tag/v0.4.0')
-    expect(releaseTagUrl('v0.4.0')).toBe('https://github.com/mfathy234/paneon/releases/tag/v0.4.0')
+    expect(releaseTagUrl('0.4.0')).toBe('https://github.com/mfathy234/dawsha/releases/tag/v0.4.0')
+    expect(releaseTagUrl('v0.4.0')).toBe('https://github.com/mfathy234/dawsha/releases/tag/v0.4.0')
   })
 })
 
@@ -52,16 +52,16 @@ describe('renderMarkdown', () => {
 
   it('keeps links to this repository and turns every other link into plain text', () => {
     const html = renderMarkdown(
-      '- [notes](https://github.com/mfathy234/paneon/releases/tag/v0.4.0) and [evil](https://evil.example/x) and [js](javascript:alert(1))'
+      '- [notes](https://github.com/mfathy234/dawsha/releases/tag/v0.4.0) and [evil](https://evil.example/x) and [js](javascript:alert(1))'
     )
-    expect(html).toContain('<a href="https://github.com/mfathy234/paneon/releases/tag/v0.4.0" data-link>notes</a>')
+    expect(html).toContain('<a href="https://github.com/mfathy234/dawsha/releases/tag/v0.4.0" data-link>notes</a>')
     expect(html).toContain('and evil and js')
     expect(html).not.toContain('evil.example')
     expect(html).not.toContain('javascript:')
   })
 
   it('does not let a link label or url break out of the attribute', () => {
-    const html = renderMarkdown('[x" onclick="alert(1)](https://github.com/mfathy234/paneon/a"b)')
+    const html = renderMarkdown('[x" onclick="alert(1)](https://github.com/mfathy234/dawsha/a"b)')
     expect(html).not.toMatch(/<a [^>]*onclick/)
   })
 })
@@ -69,11 +69,11 @@ describe('renderMarkdown', () => {
 describe('release notes from GitHub', () => {
   it('turns the html GitHub sends into markdown', () => {
     const md = htmlToMarkdown(
-      '<h2>What&#39;s changed</h2><ul><li>Fix &amp; polish</li><li><a href="https://github.com/mfathy234/paneon/pull/2">PR 2</a></li></ul>'
+      '<h2>What&#39;s changed</h2><ul><li>Fix &amp; polish</li><li><a href="https://github.com/mfathy234/dawsha/pull/2">PR 2</a></li></ul>'
     )
     expect(md).toContain("### What's changed")
     expect(md).toContain('- Fix & polish')
-    expect(md).toContain('- [PR 2](https://github.com/mfathy234/paneon/pull/2)')
+    expect(md).toContain('- [PR 2](https://github.com/mfathy234/dawsha/pull/2)')
   })
 
   it('normalizes strings, markdown, arrays and junk', () => {

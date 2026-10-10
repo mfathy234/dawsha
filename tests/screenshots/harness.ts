@@ -6,7 +6,7 @@ import { APP_VERSION } from '../e2e/helpers'
 import { CLAUDE_IDS } from './resumeFixtures'
 
 export const OUT = resolve(__dirname, '../../docs/screenshots')
-export const DEMO_ROOT = 'C:\\paneon-demo'
+export const DEMO_ROOT = 'C:\\dawsha-demo'
 export const SCRIPT = resolve(__dirname, 'demo-agent.cjs')
 export const SIZE = { width: 1600, height: 1000 }
 
@@ -28,12 +28,12 @@ export function seed(sandbox: Sandbox, withFolders: boolean): void {
 export function demoEnv(): Record<string, string> {
   const node = process.execPath
   return {
-    PANEON_CLAUDE_COMMAND: node,
-    PANEON_CLAUDE_ARGS: JSON.stringify([SCRIPT, 'claude']),
-    PANEON_CODEX_COMMAND: node,
-    PANEON_CODEX_ARGS: JSON.stringify([SCRIPT, 'codex']),
-    PANEON_GEMINI_COMMAND: node,
-    PANEON_GEMINI_ARGS: JSON.stringify([SCRIPT, 'gemini'])
+    DAWSHA_CLAUDE_COMMAND: node,
+    DAWSHA_CLAUDE_ARGS: JSON.stringify([SCRIPT, 'claude']),
+    DAWSHA_CODEX_COMMAND: node,
+    DAWSHA_CODEX_ARGS: JSON.stringify([SCRIPT, 'codex']),
+    DAWSHA_GEMINI_COMMAND: node,
+    DAWSHA_GEMINI_ARGS: JSON.stringify([SCRIPT, 'gemini'])
   }
 }
 

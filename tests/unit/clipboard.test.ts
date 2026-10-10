@@ -8,7 +8,7 @@ describe('pasteText', () => {
   })
 
   it('pastes an image as its file path, as an @ reference for Gemini, quoted when it has spaces', () => {
-    expect(imagePasteText('claude', 'C:\Temp\paneon-paste\paste-1.png')).toBe('C:\Temp\paneon-paste\paste-1.png ')
+    expect(imagePasteText('claude', 'C:\Temp\dawsha-paste\paste-1.png')).toBe('C:\Temp\dawsha-paste\paste-1.png ')
     expect(imagePasteText('codex', 'C:\Temp\p.png')).toBe('C:\Temp\p.png ')
     expect(imagePasteText('gemini', 'C:\Temp\p.png')).toBe('@C:\Temp\p.png ')
     expect(imagePasteText('shell', 'C:\\My Temp\\p.png')).toBe("'C:\\My Temp\\p.png' ")

@@ -23,7 +23,7 @@ export function findSolution(folder: string): string | null {
 }
 
 export async function quickOpen(kind: QuickOpenKind, folder: string): Promise<void> {
-  const log = process.env.PANEON_OPEN_LOG
+  const log = process.env.DAWSHA_OPEN_LOG
   if (log) return logTo(log, JSON.stringify({ kind, folder }))
   if (kind === 'explorer') {
     await shell.openPath(folder)
@@ -42,14 +42,14 @@ export async function quickOpen(kind: QuickOpenKind, folder: string): Promise<vo
 export async function openLink(url: string): Promise<void> {
   const href = safeLink(url)
   if (!href) return
-  const log = process.env.PANEON_OPEN_LOG
+  const log = process.env.DAWSHA_OPEN_LOG
   if (log) return logTo(log, JSON.stringify({ link: href }))
   await shell.openExternal(href)
 }
 
 export function notifyUser(window: BrowserWindow | null, request: NotifyRequest): void {
   const unfocused = !window || window.isDestroyed() || !window.isFocused()
-  const log = process.env.PANEON_NOTIFY_LOG
+  const log = process.env.DAWSHA_NOTIFY_LOG
   if (log) return logTo(log, JSON.stringify({ ...request, flash: unfocused }))
   if (window && !window.isDestroyed() && unfocused) window.flashFrame(true)
   if (!Notification.isSupported()) return

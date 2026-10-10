@@ -70,12 +70,12 @@ test('continues a session in another agent with an editable summary and a from c
   const node = process.execPath
   const { app, page } = await launchApp(sandbox, {
     FAKE_AGENT_LOG: logDir,
-    PANEON_CLAUDE_COMMAND: node,
-    PANEON_CLAUDE_ARGS: JSON.stringify([FAKE, 'claude']),
-    PANEON_CODEX_COMMAND: node,
-    PANEON_CODEX_ARGS: JSON.stringify([FAKE, 'codex']),
-    PANEON_GEMINI_COMMAND: node,
-    PANEON_GEMINI_ARGS: JSON.stringify([FAKE, 'gemini'])
+    DAWSHA_CLAUDE_COMMAND: node,
+    DAWSHA_CLAUDE_ARGS: JSON.stringify([FAKE, 'claude']),
+    DAWSHA_CODEX_COMMAND: node,
+    DAWSHA_CODEX_ARGS: JSON.stringify([FAKE, 'codex']),
+    DAWSHA_GEMINI_COMMAND: node,
+    DAWSHA_GEMINI_ARGS: JSON.stringify([FAKE, 'gemini'])
   })
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()

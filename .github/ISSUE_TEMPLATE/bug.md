@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Something in Paneon does not work as expected
+about: Something in Dawsha does not work as expected
 title: ''
 labels: bug
 assignees: ''
@@ -18,7 +18,7 @@ assignees: ''
 
 **Environment**
 
-- Paneon version (installer name or `package.json`):
+- Dawsha version (installer name or `package.json`):
 - Windows version:
 - Agent involved (Claude Code / Codex CLI / Gemini CLI / none) and its version:
 - Installed build or built from source:

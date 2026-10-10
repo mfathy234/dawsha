@@ -183,7 +183,7 @@ export async function openLayout(layout: SavedLayout, mode?: OpenMode): Promise<
 
 export async function openLayoutByName(query: string, mode?: OpenMode): Promise<LayoutOutcome> {
   const layout = findLayout(store.state.settings.layouts, query)
-  if (!layout) return { ok: false, text: `No layout named '${query}'. Run paneon layouts.` }
+  if (!layout) return { ok: false, text: `No layout named '${query}'. Run dawsha layouts.` }
   return openLayout(layout, mode)
 }
 

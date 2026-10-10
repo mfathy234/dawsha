@@ -19,7 +19,7 @@ async function addProject(folder: string, name?: string): Promise<ReturnType<typ
   const projects = store.state.settings.projects
   const wanted = (name ?? folderName(folder)).toLowerCase()
   if (projects.some((p) => p.name.toLowerCase() === wanted)) {
-    return `A project named '${wanted}' already exists. Use paneon add <path> --name <name>.`
+    return `A project named '${wanted}' already exists. Use dawsha add <path> --name <name>.`
   }
   return createProject(folder, name)
 }

@@ -41,13 +41,8 @@
       at(o.trigger || els[0], () => g.to(els, { opacity: 1, y: 0, duration: o.dur ?? 0.7, ease: E, stagger: o.stagger || 0, delay: o.delay || 0, clearProps: CLEAR }));
     };
 
-    $('.logo').forEach((svg, k) => {
-      const panes = $('.pane', svg);
-      g.set(panes, { opacity: 0, scale: 0.6 });
-      g.timeline({ delay: 0.1 + k * 0.05 })
-        .to(panes, { opacity: (i) => (i ? 1 : 0.4), scale: 1, duration: 0.4, ease: 'power2.out', stagger: 0.06 })
-        .to(panes[0], { opacity: 1, duration: 0.3, ease: 'sine.out' }, '+=0.05')
-        .to(panes[0], { scale: 1.12, duration: 0.2, yoyo: true, repeat: 1, ease: 'sine.inOut' }, '<');
+    $('.logo').forEach((logo, k) => {
+      g.from(logo, { opacity: 0, scale: 0.8, duration: 0.55, ease: 'back.out(1.4)', delay: 0.1 + k * 0.05, clearProps: CLEAR });
     });
     const copy = $('.hero-copy > :not(.hero-logo)');
     g.set(copy, { opacity: 0, y: 16 });

@@ -1,5 +1,5 @@
-appId: io.github.mfathy234.paneon
-productName: Paneon
+appId: io.github.mfathy234.dawsha
+productName: Dawsha
 directories:
   output: release
 files:
@@ -7,13 +7,13 @@ files:
   - package.json
   - build/icon.png
 extraResources:
-  - from: build/paneon-cli.cjs
-    to: paneon-cli.cjs
+  - from: build/dawsha-cli.cjs
+    to: dawsha-cli.cjs
   - from: build/path-edit.ps1
     to: path-edit.ps1
 extraFiles:
-  - from: build/paneon.cmd
-    to: paneon.cmd
+  - from: build/dawsha.cmd
+    to: dawsha.cmd
 asar: true
 asarUnpack:
   - node_modules/node-pty/**
@@ -30,7 +30,7 @@ win:
   signAndEditExecutable: true
   signExecutable: false
 nsis:
-  artifactName: Paneon-Setup-${version}.${ext}
+  artifactName: Dawsha-Setup-${version}.${ext}
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
@@ -39,8 +39,8 @@ nsis:
   uninstallerIcon: build/icon.ico
   installerHeaderIcon: build/icon.ico
 portable:
-  artifactName: Paneon-Portable-${version}.${ext}
+  artifactName: Dawsha-Portable-${version}.${ext}
 publish:
   provider: github
   owner: mfathy234
-  repo: paneon
+  repo: dawsha

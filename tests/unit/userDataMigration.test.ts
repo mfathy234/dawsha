@@ -11,10 +11,10 @@ afterEach(() => roots.splice(0).forEach((r) => rmSync(r, { recursive: true, forc
 const readJson = (path: string): any => JSON.parse(readFileSync(path, 'utf8'))
 
 function setup(claudeSettings: string, withBridge: boolean) {
-  const root = mkdtempSync(join(tmpdir(), 'paneon-migrate-'))
+  const root = mkdtempSync(join(tmpdir(), 'dawsha-migrate-'))
   roots.push(root)
   const legacyDir = join(root, 'claude-grid')
-  const newDir = join(root, 'Paneon')
+  const newDir = join(root, 'Dawsha')
   const claudeSettingsPath = join(root, 'claude-home', 'settings.json')
   mkdirSync(legacyDir, { recursive: true })
   mkdirSync(join(root, 'claude-home'), { recursive: true })

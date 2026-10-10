@@ -98,7 +98,7 @@ export class TopBarComponent {
       'header',
       { class: 'topbar' },
       h('span', { class: 'app-logo' }, icon(logoMark(20))),
-      h('span', { class: 'app-title' }, 'Paneon'),
+      h('span', { class: 'app-title' }, 'Dawsha'),
       h('div', { class: 'split' }, this.newSession, h('span', { class: 'split-sep' }), this.chevron),
       this.projects,
       this.agents,

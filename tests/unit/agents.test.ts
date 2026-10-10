@@ -131,31 +131,31 @@ describe('launchSpec', () => {
     process.env = { ...saved }
   })
 
-  it('uses PANEON_CODEX_COMMAND for codex without resume args', () => {
-    process.env.PANEON_CODEX_COMMAND = process.execPath
+  it('uses DAWSHA_CODEX_COMMAND for codex without resume args', () => {
+    process.env.DAWSHA_CODEX_COMMAND = process.execPath
     const spec = launchSpec(request({ resume: true, sessionId: 'abc' }))
     expect(spec).toEqual({ file: process.execPath, args: [] })
   })
 
   it('keeps the claude and codex overrides independent', () => {
-    process.env.PANEON_CLAUDE_COMMAND = process.execPath
-    process.env.PANEON_CODEX_COMMAND = 'C:\\definitely\\missing\\codex.exe'
+    process.env.DAWSHA_CLAUDE_COMMAND = process.execPath
+    process.env.DAWSHA_CODEX_COMMAND = 'C:\\definitely\\missing\\codex.exe'
     expect(launchSpec(request({ agent: 'claude', resume: true }))).toEqual({ file: process.execPath, args: [] })
     expect(launchSpec(request({ agent: 'codex' }))).toContain('Could not find')
   })
 
-  it('uses PANEON_GEMINI_COMMAND for gemini without session args and reports a missing one', () => {
-    process.env.PANEON_GEMINI_COMMAND = process.execPath
+  it('uses DAWSHA_GEMINI_COMMAND for gemini without session args and reports a missing one', () => {
+    process.env.DAWSHA_GEMINI_COMMAND = process.execPath
     expect(launchSpec(request({ agent: 'gemini', sessionId: 'u-1' }))).toEqual({ file: process.execPath, args: [] })
-    process.env.PANEON_GEMINI_COMMAND = 'C:\\definitely\\missing\\gemini.exe'
+    process.env.DAWSHA_GEMINI_COMMAND = 'C:\\definitely\\missing\\gemini.exe'
     expect(launchSpec(request({ agent: 'gemini' }))).toContain('Could not find')
   })
 
   it('appends the initial prompt after the agent arguments, even for overridden commands', () => {
-    process.env.PANEON_CLAUDE_COMMAND = process.execPath
-    process.env.PANEON_CODEX_COMMAND = process.execPath
-    process.env.PANEON_GEMINI_COMMAND = process.execPath
-    process.env.PANEON_CODEX_ARGS = '["--flag"]'
+    process.env.DAWSHA_CLAUDE_COMMAND = process.execPath
+    process.env.DAWSHA_CODEX_COMMAND = process.execPath
+    process.env.DAWSHA_GEMINI_COMMAND = process.execPath
+    process.env.DAWSHA_CODEX_ARGS = '["--flag"]'
     const prompt = 'Why does the "login" test fail?\nSecond line'
     expect(launchSpec(request({ agent: 'claude', prompt }))).toEqual({ file: process.execPath, args: [prompt] })
     expect(launchSpec(request({ agent: 'codex', prompt }))).toEqual({ file: process.execPath, args: ['--flag', prompt] })
@@ -172,36 +172,36 @@ describe('launchSpec', () => {
     writeFileSync(join(dir, 'gemini.cmd'), '', 'utf8')
     writeFileSync(join(bundle, 'gemini.js'), '', 'utf8')
     writeFileSync(join(dir, 'node.exe'), '', 'utf8')
-    delete process.env.PANEON_GEMINI_COMMAND
+    delete process.env.DAWSHA_GEMINI_COMMAND
     process.env.PATH = dir
     expect(launchSpec(request({ agent: 'gemini', sessionId: 'u-1', prompt: 'hi there' }))).toEqual({
       file: join(dir, 'node.exe'),
       args: [join(bundle, 'gemini.js'), '--session-id', 'u-1', '--prompt-interactive=hi there']
     })
-    process.env.PANEON_SHELL = process.execPath
+    process.env.DAWSHA_SHELL = process.execPath
     expect(launchSpec(request({ agent: 'shell', prompt: 'ignored' }))).toEqual({ file: process.execPath, args: [] })
   })
 
   it('refuses a prompt for an agent that can only be started through a .cmd shim', () => {
     const dir = mkdtempSync(join(tmpdir(), 'cg-codex-shim-'))
     writeFileSync(join(dir, 'codex.cmd'), '', 'utf8')
-    delete process.env.PANEON_CODEX_COMMAND
+    delete process.env.DAWSHA_CODEX_COMMAND
     process.env.PATH = dir
     process.env.ComSpec = 'C:\\Windows\\System32\\cmd.exe'
     expect(launchSpec(request({ agent: 'codex', prompt: 'a & b' }))).toContain('.cmd shim')
     expect(typeof launchSpec(request({ agent: 'codex' }))).toBe('object')
   })
 
-  it('splits PANEON_CODEX_ARGS', () => {
-    process.env.PANEON_CODEX_COMMAND = process.execPath
-    process.env.PANEON_CODEX_ARGS = '["--flag","two words"]'
+  it('splits DAWSHA_CODEX_ARGS', () => {
+    process.env.DAWSHA_CODEX_COMMAND = process.execPath
+    process.env.DAWSHA_CODEX_ARGS = '["--flag","two words"]'
     expect(launchSpec(request({}))).toEqual({ file: process.execPath, args: ['--flag', 'two words'] })
   })
 })
 
 describe('shellArgs', () => {
   it('opens a plain interactive shell without a command', () => {
-    delete process.env.PANEON_SHELL
+    delete process.env.DAWSHA_SHELL
     expect(shellArgs('pwsh.exe')).toEqual(['-NoLogo'])
   })
 

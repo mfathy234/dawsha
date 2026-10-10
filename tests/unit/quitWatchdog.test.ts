@@ -13,7 +13,7 @@ describe('quit watchdog', () => {
   it('kills the target process when it is still alive after the deadline and logs why', async () => {
     const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' })
     const gone = exitOf(child)
-    const logPath = join(mkdtempSync(join(tmpdir(), 'paneon-wd-')), 'quit.log')
+    const logPath = join(mkdtempSync(join(tmpdir(), 'dawsha-wd-')), 'quit.log')
     const stop = startQuitWatchdog({ ms: 300, pid: child.pid, logPath })
     await Promise.race([gone, new Promise((_, reject) => setTimeout(() => reject(new Error('not killed')), 8000))])
     stop()

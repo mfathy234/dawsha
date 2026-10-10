@@ -39,7 +39,7 @@ export class CliRunner {
 
   private forward(command: CliCommand): Promise<CliReply> {
     const window = this.getWindow()
-    if (!window || window.isDestroyed()) return Promise.resolve({ ok: false, exit: 1, out: 'paneon: the window is not open.' })
+    if (!window || window.isDestroyed()) return Promise.resolve({ ok: false, exit: 1, out: 'dawsha: the window is not open.' })
     this.counter += 1
     const id = this.counter
     return new Promise((done) => {
@@ -51,7 +51,7 @@ export class CliRunner {
       const onDone = (_event: unknown, replyId: number, reply: CliReply): void => {
         if (replyId === id) finish(reply)
       }
-      const timer = setTimeout(() => finish({ ok: false, exit: 1, out: 'paneon: Paneon did not answer in time.' }), COMMAND_WAIT_MS)
+      const timer = setTimeout(() => finish({ ok: false, exit: 1, out: 'dawsha: Dawsha did not answer in time.' }), COMMAND_WAIT_MS)
       ipcMain.on(IPC.cliDone, onDone)
       window.webContents.send(IPC.cliRun, id, command)
     })
@@ -59,13 +59,13 @@ export class CliRunner {
 
   async execute(request: CliRequest): Promise<CliReply> {
     const parsed = parseCli(request.args, request.cwd, (path) => resolve(request.cwd, path))
-    if (!parsed.ok) return { ok: false, exit: 2, out: `paneon: ${parsed.error}` }
+    if (!parsed.ok) return { ok: false, exit: 2, out: `dawsha: ${parsed.error}` }
     const { command } = parsed
     if (command.kind === 'help') return { ok: true, exit: 0, out: HELP_TEXT }
-    if (command.kind === 'version') return { ok: true, exit: 0, out: `Paneon ${app.getVersion()}` }
-    if (!(await this.whenReady())) return { ok: false, exit: 1, out: 'paneon: Paneon is still starting. Try again.' }
+    if (command.kind === 'version') return { ok: true, exit: 0, out: `Dawsha ${app.getVersion()}` }
+    if (!(await this.whenReady())) return { ok: false, exit: 1, out: 'dawsha: Dawsha is still starting. Try again.' }
     this.reveal()
-    if (command.kind === 'open') return { ok: true, exit: 0, out: 'Opened Paneon' }
+    if (command.kind === 'open') return { ok: true, exit: 0, out: 'Opened Dawsha' }
     return this.forward(command)
   }
 

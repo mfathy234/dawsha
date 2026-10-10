@@ -121,7 +121,7 @@ export async function buildTranscriptDoc(request: TranscriptRequest, withChanges
 }
 
 async function choosePath(window: BrowserWindow | null, name: string): Promise<string | null> {
-  const override = process.env.PANEON_SAVE_PATH
+  const override = process.env.DAWSHA_SAVE_PATH
   if (override) return override
   const options = {
     title: 'Export transcript',

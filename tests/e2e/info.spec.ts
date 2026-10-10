@@ -85,7 +85,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     const edited = readJson(join(sandbox.claudeHome, 'settings.json'))
     expect(edited.keep).toBe(1)
     expect(edited.statusLine.command).toContain('statusline-bridge.js')
-    expect(existsSync(join(sandbox.claudeHome, 'settings.json.paneon-backup'))).toBe(true)
+    expect(existsSync(join(sandbox.claudeHome, 'settings.json.dawsha-backup'))).toBe(true)
     await closeSettings(page)
 
     writeSession(sandbox, 'sess-info-1', 'idle')

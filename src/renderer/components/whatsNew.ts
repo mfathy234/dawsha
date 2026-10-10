@@ -62,7 +62,7 @@ export class WhatsNewComponent {
     const dialog = h(
       'div',
       { class: 'dialog whats-new', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'wn-title' },
-      h('h2', { id: 'wn-title' }, `What's new in Paneon ${this.view.version}`),
+      h('h2', { id: 'wn-title' }, `What's new in Dawsha ${this.view.version}`),
       this.view.from ? h('p', { class: 'wn-from' }, `Updated from ${this.view.from}`) : null,
       h('div', { class: 'wn-body' }, latest ? entryBlock(latest) : h('p', {}, 'No release notes for this version.'), olderBlock),
       h(

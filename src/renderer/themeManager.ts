@@ -62,7 +62,7 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
   root.dataset.kind = bundle.theme.kind
   root.classList.toggle('has-image', bundle.imageActive)
   root.style.setProperty('--image-blur', `${settings.image.blur}px`)
-  const url = bundle.imageActive ? `url("cg-image://current/?v=${imageVersion}")` : 'none'
+  const url = bundle.imageActive ? `url("dawsha-image://current/?v=${imageVersion}")` : 'none'
   root.style.setProperty('--image-url', url)
 }
 

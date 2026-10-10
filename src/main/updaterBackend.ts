@@ -2,7 +2,7 @@ import { autoUpdater } from 'electron-updater'
 import type { BackendEvent, UpdaterBackend } from './updateController'
 
 export const UPDATE_OWNER = 'mfathy234'
-export const UPDATE_REPO = 'paneon'
+export const UPDATE_REPO = 'dawsha'
 
 export function createGithubBackend(): UpdaterBackend {
   autoUpdater.autoDownload = false

@@ -1,5 +1,5 @@
 (function () {
-  var API = 'https://api.github.com/repos/mfathy234/paneon/releases/latest';
+  var API = 'https://api.github.com/repos/mfathy234/dawsha/releases/latest';
   fetch(API, { headers: { Accept: 'application/vnd.github+json' } })
     .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); })
     .then(function (rel) {

@@ -60,7 +60,7 @@ export function formatAgo(from: number, now: number): string {
 }
 
 export function updateStatusLine(state: UpdateState, now: number): string {
-  const version = `Paneon ${state.currentVersion}`
+  const version = `Dawsha ${state.currentVersion}`
   if (state.mode === 'dev') return `${version} · development build: updates are off`
   if (state.mode === 'portable') return `${version} · portable build: updates from GitHub`
   if (state.status === 'checking') return `${version} · checking for updates…`

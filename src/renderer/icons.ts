@@ -38,4 +38,4 @@ export const ICONS = {
 }
 
 export const logoMark = (size: number): string =>
-  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" role="img" aria-label="Paneon logo"><rect x="3" y="3" width="12" height="12" rx="3" fill="var(--accent)"/><g fill="currentColor" fill-opacity=".3"><rect x="17" y="3" width="12" height="12" rx="3"/><rect x="3" y="17" width="12" height="12" rx="3"/><rect x="17" y="17" width="12" height="12" rx="3"/></g></svg>`
+  `<svg width="${size}" height="${size}" viewBox="0 0 256 256" role="img" aria-label="Dawsha logo"><rect x="8" y="8" width="240" height="240" rx="58" fill="var(--bg)"/><path d="M51 62h154a25 25 0 0 1 25 25v84a25 25 0 0 1-25 25h-74l-38 30v-30H51a25 25 0 0 1-25-25V87a25 25 0 0 1 25-25Z" fill="var(--accent)"/><path d="m61 114 27 19-27 19m56 1h34" fill="none" stroke="var(--on-accent)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/><rect x="166" y="108" width="33" height="10" rx="5" fill="var(--on-accent)"/><rect x="166" y="128" width="33" height="10" rx="5" fill="var(--on-accent)"/><rect x="166" y="148" width="33" height="10" rx="5" fill="var(--on-accent)"/></svg>`

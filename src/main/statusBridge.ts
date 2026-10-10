@@ -4,7 +4,7 @@ import type { BridgePreview, BridgeResult, BridgeStatus } from '../shared/types'
 import { BRIDGE_CONFIG_NAME, BRIDGE_SCRIPT, BRIDGE_SCRIPT_NAME } from './bridgeScript'
 
 const STATE_NAME = 'bridge-state.json'
-const BACKUP_SUFFIX = '.paneon-backup'
+const BACKUP_SUFFIX = '.dawsha-backup'
 const DEFAULT_INDENT = 2
 
 export interface BridgeLocations {

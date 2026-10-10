@@ -30,7 +30,7 @@ export function handoffDialog(options: HandoffDialogOptions): Promise<string | n
     h(
       'p',
       { class: 'dialog-hint' },
-      'This summary is what Paneon sends as the first message. Edit it freely. The pane you continue from keeps running.'
+      'This summary is what Dawsha sends as the first message. Edit it freely. The pane you continue from keeps running.'
     ),
     area,
     error,

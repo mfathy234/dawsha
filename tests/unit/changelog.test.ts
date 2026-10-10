@@ -26,7 +26,7 @@ Intro text that is not an entry.
 
 - First item that wraps
   onto a second line.
-- Second item with a [link](https://github.com/mfathy234/paneon/issues/1).
+- Second item with a [link](https://github.com/mfathy234/dawsha/issues/1).
 
 ### Fixed
 
@@ -59,7 +59,7 @@ describe('parseChangelog', () => {
     expect(entries[0].sections.map((s) => s.heading)).toEqual(['Added', 'Fixed'])
     expect(entries[0].sections[0].items).toEqual([
       'First item that wraps onto a second line.',
-      'Second item with a [link](https://github.com/mfathy234/paneon/issues/1).'
+      'Second item with a [link](https://github.com/mfathy234/dawsha/issues/1).'
     ])
   })
 

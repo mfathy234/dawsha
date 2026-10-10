@@ -51,7 +51,7 @@ export async function openFile(folder: string, ref: FileRef): Promise<void> {
   const line = Number.isInteger(ref.line) && (ref.line as number) > 0 ? ref.line : undefined
   const col = line !== undefined && Number.isInteger(ref.col) && (ref.col as number) > 0 ? ref.col : undefined
   const target = gotoTarget(full, { path: full, line, col })
-  const log = process.env.PANEON_OPEN_LOG
+  const log = process.env.DAWSHA_OPEN_LOG
   if (log) return logTo(log, JSON.stringify({ editor: 'code', goto: target }))
   const fallback = (): void => {
     if (isSafeToOpen(full)) void shell.openPath(full)

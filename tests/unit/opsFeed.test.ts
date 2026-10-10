@@ -134,7 +134,7 @@ describe('readOpsDir', () => {
   const dirs: string[] = []
   afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })))
   const temp = (): string => {
-    const dir = mkdtempSync(join(tmpdir(), 'paneon-ops-'))
+    const dir = mkdtempSync(join(tmpdir(), 'dawsha-ops-'))
     dirs.push(dir)
     return dir
   }

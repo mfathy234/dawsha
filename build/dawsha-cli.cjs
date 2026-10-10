@@ -8,9 +8,9 @@ const START_WAIT_MS = 30000
 const RETRY_MS = 250
 
 function pipePath() {
-  if (process.env.PANEON_PIPE) return process.env.PANEON_PIPE
+  if (process.env.DAWSHA_PIPE) return process.env.DAWSHA_PIPE
   const user = (process.env.USERNAME || os.userInfo().username || 'user').replace(/[^A-Za-z0-9_.-]/g, '_')
-  return '\\\\.\\pipe\\paneon-' + user
+  return '\\\\.\\pipe\\dawsha-' + user
 }
 
 function send(request) {
@@ -26,7 +26,7 @@ function send(request) {
       try {
         resolve(JSON.parse(buffer))
       } catch {
-        reject(new Error('Paneon sent an unreadable answer.'))
+        reject(new Error('Dawsha sent an unreadable answer.'))
       }
     })
     socket.on('error', reject)
@@ -36,8 +36,8 @@ function send(request) {
 function startApp() {
   const env = { ...process.env }
   delete env.ELECTRON_RUN_AS_NODE
-  const extra = process.env.PANEON_APP_ARGS ? JSON.parse(process.env.PANEON_APP_ARGS) : []
-  const child = spawn(process.env.PANEON_EXE || process.execPath, extra, {
+  const extra = process.env.DAWSHA_APP_ARGS ? JSON.parse(process.env.DAWSHA_APP_ARGS) : []
+  const child = spawn(process.env.DAWSHA_EXE || process.execPath, extra, {
     detached: true,
     stdio: 'ignore',
     env
@@ -62,7 +62,7 @@ async function answer(request) {
       continue
     }
   }
-  return { ok: false, exit: 1, out: 'paneon: Paneon did not start in time.' }
+  return { ok: false, exit: 1, out: 'dawsha: Dawsha did not start in time.' }
 }
 
 answer({ args: process.argv.slice(2), cwd: process.cwd() }).then((reply) => {

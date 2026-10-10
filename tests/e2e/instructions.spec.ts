@@ -3,8 +3,8 @@ import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { closeApp, createSandbox, launchApp, QUIT_BUDGET_MS } from './helpers'
 
-const START = '<!-- paneon:shared:start -->'
-const END = '<!-- paneon:shared:end -->'
+const START = '<!-- dawsha:shared:start -->'
+const END = '<!-- dawsha:shared:end -->'
 const ORIGINAL = '# acme-web\r\nUse tabs.\r\n'
 
 const count = (text: string, needle: string): number => text.split(needle).length - 1

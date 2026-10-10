@@ -12,7 +12,7 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 function makeRepo(commit = true): string {
-  const root = mkdtempSync(join(tmpdir(), 'paneon-compare-'))
+  const root = mkdtempSync(join(tmpdir(), 'dawsha-compare-'))
   const repo = join(root, 'acme-web')
   mkdirSync(repo)
   git(repo, 'init', '-q', '-b', 'main')
@@ -33,7 +33,7 @@ describe('probeRepo', () => {
     const empty = await probeRepo(makeRepo(false))
     expect(empty.isRepo).toBe(true)
     expect(empty.hasCommits).toBe(false)
-    const plain = mkdtempSync(join(tmpdir(), 'paneon-plain-'))
+    const plain = mkdtempSync(join(tmpdir(), 'dawsha-plain-'))
     expect(await probeRepo(plain)).toEqual({ isRepo: false, hasCommits: false, branch: null })
   })
 })

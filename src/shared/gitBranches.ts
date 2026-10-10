@@ -147,7 +147,7 @@ export function trimGitMessage(text: string, max = MAX_MESSAGE_CHARS): string {
 
 export function stashMessage(date: Date, branch?: string): string {
   const stamp = date.toISOString().slice(0, 16).replace('T', ' ')
-  return branch ? `Paneon: ${branch} ${stamp}` : `Paneon: ${stamp}`
+  return branch ? `Dawsha: ${branch} ${stamp}` : `Dawsha: ${stamp}`
 }
 
 export function isDivergedPull(message: string): boolean {

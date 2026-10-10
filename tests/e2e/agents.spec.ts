@@ -6,13 +6,13 @@ import { createFakeTools } from '../support/fakeTools'
 import { closeApp, createSandbox, launchApp } from './helpers'
 
 function fakeEnv(installed: Parameters<typeof createFakeTools>[1]) {
-  const dir = mkdtempSync(join(tmpdir(), 'paneon-fake-'))
+  const dir = mkdtempSync(join(tmpdir(), 'dawsha-fake-'))
   const tools = createFakeTools(dir, installed, { claude: '2.1.301', codex: '0.156.1', gemini: '0.9.1' })
   const env = {
     PATH: `${tools.pathEntry}${delimiter}${process.env.PATH ?? ''}`,
-    PANEON_CLAUDE_COMMAND: tools.commands.claude,
-    PANEON_CODEX_COMMAND: tools.commands.codex,
-    PANEON_GEMINI_COMMAND: tools.commands.gemini
+    DAWSHA_CLAUDE_COMMAND: tools.commands.claude,
+    DAWSHA_CODEX_COMMAND: tools.commands.codex,
+    DAWSHA_GEMINI_COMMAND: tools.commands.gemini
   }
   return { tools, env }
 }

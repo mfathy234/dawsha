@@ -6,7 +6,7 @@ import { checkAgentTools, clearLatestCache } from '../../src/main/agentTools'
 import { toolState } from '../../src/shared/agentTools'
 import { createFakeTools } from '../support/fakeTools'
 
-const KEYS = ['PATH', 'PANEON_CLAUDE_COMMAND', 'PANEON_CODEX_COMMAND', 'PANEON_GEMINI_COMMAND']
+const KEYS = ['PATH', 'DAWSHA_CLAUDE_COMMAND', 'DAWSHA_CODEX_COMMAND', 'DAWSHA_GEMINI_COMMAND']
 let saved: Record<string, string | undefined> = {}
 const dirs: string[] = []
 
@@ -24,13 +24,13 @@ afterEach(() => {
 })
 
 function fake(installed: Parameters<typeof createFakeTools>[1]) {
-  const dir = mkdtempSync(join(tmpdir(), 'paneon-tools-'))
+  const dir = mkdtempSync(join(tmpdir(), 'dawsha-tools-'))
   dirs.push(dir)
   const tools = createFakeTools(dir, installed, { claude: '2.1.301', codex: '0.156.1', gemini: '0.9.1' })
   process.env.PATH = `${tools.pathEntry}${delimiter}${process.env.PATH ?? ''}`
-  process.env.PANEON_CLAUDE_COMMAND = tools.commands.claude
-  process.env.PANEON_CODEX_COMMAND = tools.commands.codex
-  process.env.PANEON_GEMINI_COMMAND = tools.commands.gemini
+  process.env.DAWSHA_CLAUDE_COMMAND = tools.commands.claude
+  process.env.DAWSHA_CODEX_COMMAND = tools.commands.codex
+  process.env.DAWSHA_GEMINI_COMMAND = tools.commands.gemini
   return tools
 }
 

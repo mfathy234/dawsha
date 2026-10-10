@@ -3,26 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Paneon - Every AI coding agent, one readable window</title>
-<meta name="description" content="Paneon is a Windows app that puts Claude Code, Codex CLI and Gemini CLI side by side in a grid of large, readable terminals, with live status, resume, compare and needs-you alerts. Free, local, no account.">
-<link rel="canonical" href="https://paneon.pages.dev/">
+<title>Dawsha - Every AI coding agent, one readable window</title>
+<meta name="description" content="Dawsha is a Windows app that puts Claude Code, Codex CLI and Gemini CLI side by side in a grid of large, readable terminals, with live status, resume, compare and needs-you alerts. Free, local, no account.">
+<link rel="canonical" href="https://mfathy234.github.io/dawsha/">
 <meta name="theme-color" content="#0c0e12">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
 <link rel="apple-touch-icon" href="assets/icon.png">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Paneon">
-<meta property="og:title" content="Paneon - Every AI coding agent, one readable window">
+<meta property="og:site_name" content="Dawsha">
+<meta property="og:title" content="Dawsha - Every AI coding agent, one readable window">
 <meta property="og:description" content="Claude Code, Codex CLI and Gemini CLI side by side in one grid of readable terminals. Windows, free, local.">
-<meta property="og:url" content="https://paneon.pages.dev/">
-<meta property="og:image" content="https://paneon.pages.dev/assets/og.png">
+<meta property="og:url" content="https://mfathy234.github.io/dawsha/">
+<meta property="og:image" content="https://mfathy234.github.io/dawsha/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Paneon showing four agent sessions in a 2 by 2 grid">
+<meta property="og:image:alt" content="Dawsha showing four agent sessions in a 2 by 2 grid">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Paneon - Every AI coding agent, one readable window">
+<meta name="twitter:title" content="Dawsha - Every AI coding agent, one readable window">
 <meta name="twitter:description" content="Claude Code, Codex CLI and Gemini CLI side by side in one grid of readable terminals. Windows, free, local.">
-<meta name="twitter:image" content="https://paneon.pages.dev/assets/og.png">
+<meta name="twitter:image" content="https://mfathy234.github.io/dawsha/assets/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -35,16 +35,16 @@
 
 <header class="nav">
   <div class="wrap nav-row">
-    <a class="brand" href="#top" aria-label="Paneon home">
-      <svg class="logo" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="pane lit" style="--i:0" x="3" y="3" width="12" height="12" rx="3" fill="#34d399"/><rect class="pane" style="--i:1" x="17" y="3" width="12" height="12" rx="3" fill="#d6dae3" fill-opacity=".3"/><rect class="pane" style="--i:2" x="3" y="17" width="12" height="12" rx="3" fill="#d6dae3" fill-opacity=".3"/><rect class="pane" style="--i:3" x="17" y="17" width="12" height="12" rx="3" fill="#d6dae3" fill-opacity=".3"/></svg>
-      <span>Paneon</span>
+    <a class="brand" href="#top" aria-label="Dawsha home">
+      <img class="logo" src="assets/logo.svg" width="28" height="28" alt="">
+      <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
       <a href="#showcase">Screens</a>
       <a href="#features">Features</a>
       <a href="#cli">Command</a>
       <a href="#download">Download</a>
-      <a href="https://github.com/mfathy234/paneon" rel="noopener">GitHub</a>
+      <a href="https://github.com/mfathy234/dawsha" rel="noopener">GitHub</a>
     </nav>
   </div>
 </header>
@@ -53,17 +53,17 @@
   <section class="hero" id="top">
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <svg class="logo hero-logo" width="40" height="40" viewBox="0 0 32 32" role="img" aria-label="Paneon logo: a 2 by 2 grid with one lit pane"><rect class="pane lit" style="--i:0" x="3" y="3" width="12" height="12" rx="3" fill="#34d399"/><rect class="pane" style="--i:1" x="17" y="3" width="12" height="12" rx="3" fill="#d6dae3" fill-opacity=".3"/><rect class="pane" style="--i:2" x="3" y="17" width="12" height="12" rx="3" fill="#d6dae3" fill-opacity=".3"/><rect class="pane" style="--i:3" x="17" y="17" width="12" height="12" rx="3" fill="#d6dae3" fill-opacity=".3"/></svg>
+        <img class="logo hero-logo" src="assets/logo.svg" width="40" height="40" alt="Dawsha logo: a terminal inside a speech bubble">
         <p class="eyebrow">For Claude Code, Codex CLI and Gemini CLI</p>
         <h1>Every AI coding agent, one readable window.</h1>
         <p class="lead">Run Claude Code, Codex and Gemini side by side in large, readable terminals, one pane per task.</p>
         <div class="cta">
-          <a class="btn primary lg" href="https://github.com/mfathy234/paneon/releases/latest" data-dl="setup"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm-8,70.41-64-11.63V152h64ZM96,136H32a8,8,0,0,0-8,8v40a8,8,0,0,0,6.57,7.87l64,11.64a8.54,8.54,0,0,0,1.43.13,8,8,0,0,0,8-8V144A8,8,0,0,0,96,136Zm-8,50.05-48-8.73V152H88ZM213.13,33.86a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86ZM200,104H136V61.22l64-11.63ZM101.13,54.22a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM88,104H40V78.68L88,70Z"/></svg><span>Download for Windows</span></a>
-          <a class="btn secondary lg" href="https://github.com/mfathy234/paneon/releases/latest" data-dl="portable"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></svg><span>Portable version</span></a>
+          <a class="btn primary lg" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm-8,70.41-64-11.63V152h64ZM96,136H32a8,8,0,0,0-8,8v40a8,8,0,0,0,6.57,7.87l64,11.64a8.54,8.54,0,0,0,1.43.13,8,8,0,0,0,8-8V144A8,8,0,0,0,96,136Zm-8,50.05-48-8.73V152H88ZM213.13,33.86a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86ZM200,104H136V61.22l64-11.63ZM101.13,54.22a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM88,104H40V78.68L88,70Z"/></svg><span>Download for Windows</span></a>
+          <a class="btn secondary lg" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></svg><span>Portable version</span></a>
         </div>
       </div>
       <figure class="shot hero-shot">
-        <img src="assets/grid.webp" width="1600" height="1000" alt="Paneon showing four sessions in a 2 by 2 grid: Claude Code, Codex CLI and Gemini CLI on four sample projects">
+        <img src="assets/grid.png" width="1600" height="1000" alt="Dawsha showing four sessions in a 2 by 2 grid: Claude Code, Codex CLI and Gemini CLI on four sample projects">
       </figure>
     </div>
   </section>
@@ -76,7 +76,7 @@
         <li><span class="mark brand codex" aria-hidden="true"><svg width="15" height="15" aria-hidden="true" focusable="false" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg></span> Codex CLI</li>
         <li><span class="mark brand gemini" aria-hidden="true"><svg width="15" height="15" aria-hidden="true" focusable="false" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg></span> Gemini CLI</li>
       </ul>
-      <p class="muted">Your own installs and sign-ins. Paneon never handles credentials.</p>
+      <p class="muted">Your own installs and sign-ins. Dawsha never handles credentials.</p>
     </div>
   </section>
 
@@ -86,19 +86,19 @@
       <p class="section-lead">Real screenshots from the app, with sample projects.</p>
       <div class="showcase">
         <figure class="shot">
-          <img loading="lazy" src="assets/resume-picker.webp" width="1600" height="1000" alt="The resume picker listing earlier sessions of all three agents with a preview of the selected one">
+          <img loading="lazy" src="assets/resume-picker.png" width="1600" height="1000" alt="The resume picker listing earlier sessions of all three agents with a preview of the selected one">
           <figcaption><strong>Resume anything.</strong> One list of earlier sessions across all three agents, with search and a preview.</figcaption>
         </figure>
         <figure class="shot">
-          <img loading="lazy" src="assets/palette.webp" width="1600" height="1000" alt="The command palette filtered by a short query, listing sessions, actions and projects">
+          <img loading="lazy" src="assets/palette.png" width="1600" height="1000" alt="The command palette filtered by a short query, listing sessions, actions and projects">
           <figcaption><strong>Command palette.</strong> Ctrl+K reaches sessions, projects, snippets and layouts from the keyboard.</figcaption>
         </figure>
         <figure class="shot">
-          <img loading="lazy" src="assets/compare.webp" width="1600" height="1000" alt="Two agents answering the same prompt side by side, each in its own worktree, with Keep A, Keep B and Diff buttons">
+          <img loading="lazy" src="assets/compare.png" width="1600" height="1000" alt="Two agents answering the same prompt side by side, each in its own worktree, with Keep A, Keep B and Diff buttons">
           <figcaption><strong>Ask two agents.</strong> Same prompt, two answers, each in its own git worktree. Keep one, both, or diff.</figcaption>
         </figure>
         <figure class="shot">
-          <img loading="lazy" src="assets/usage.webp" width="1600" height="1000" alt="The Usage view with tokens per day by agent, limit history and tables by project and by agent">
+          <img loading="lazy" src="assets/usage.png" width="1600" height="1000" alt="The Usage view with tokens per day by agent, limit history and tables by project and by agent">
           <figcaption><strong>Usage.</strong> Tokens per day, cost where an agent reports one, and your 5 hour and weekly limits.</figcaption>
         </figure>
       </div>
@@ -109,11 +109,11 @@
     <div class="wrap">
       <h2 id="features-h">Built for running several agents at once</h2>
       <figure class="shot feature-shot">
-        <img loading="lazy" src="assets/agents-drawer.webp" width="1600" height="1000" alt="A pane with the sub-agents drawer open next to its terminal">
+        <img loading="lazy" src="assets/agents-drawer.png" width="1600" height="1000" alt="A pane with the sub-agents drawer open next to its terminal">
         <figcaption><strong>Sub-agents at a glance.</strong> Plan progress and running sub-agents sit beside each pane.</figcaption>
       </figure>
       <div class="fgroups">
-        <div class="fgroup"><h3>Run</h3><ul><li><strong>Three agents in one grid</strong><span>Up to 6 real terminals. Resize, drag, pin or maximize any pane, Ctrl+Tab between them.</span></li><li><strong>The paneon command</strong><span>Start, resume and open layouts from the terminal you already use.</span></li><li><strong>Commit and push</strong><span>Review the changed files, commit the ones you pick or commit and push. Pull, switch branch and stash in a click.</span></li><li><strong>Layouts, snippets, instructions</strong><span>Restore a setup by name, insert snippets, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.</span></li><li><strong>Themes</strong><span>Eight themes with contrast checks and an optional background image.</span></li></ul></div>
+        <div class="fgroup"><h3>Run</h3><ul><li><strong>Three agents in one grid</strong><span>Up to 6 real terminals. Resize, drag, pin or maximize any pane, Ctrl+Tab between them.</span></li><li><strong>The dawsha command</strong><span>Start, resume and open layouts from the terminal you already use.</span></li><li><strong>Commit and push</strong><span>Review the changed files, commit the ones you pick or commit and push. Pull, switch branch and stash in a click.</span></li><li><strong>Layouts, snippets, instructions</strong><span>Restore a setup by name, insert snippets, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.</span></li><li><strong>Themes</strong><span>Eight themes with contrast checks and an optional background image.</span></li></ul></div>
         <div class="fgroup"><h3>Switch<svg class="ill ill-hop" width="38" height="38" viewBox="0 0 80 80" aria-hidden="true" focusable="false"><rect class="lit" x="5" y="4" width="30" height="31" rx="4" fill="#34d399" fill-opacity=".85" stroke="none"/><path class="dr" pathLength="1" style="--dd:0ms" d="M5 6 Q5 4 7 4 L33 4.5 Q35 5 35 7 L34.6 33 Q34 35 32 35 L7 34.6 Q4.8 34 5 32Z"/><path class="dr" pathLength="1" style="--dd:120ms" d="M45 6 Q45 4 47 4 L73 4.5 Q75 5 75 7 L74.6 33 Q74 35 72 35 L47 34.6 Q44.8 34 45 32Z"/><path class="dr" pathLength="1" style="--dd:240ms" d="M5 46 Q5 44 7 44 L33 44.5 Q35 45 35 47 L34.6 73 Q34 75 32 75 L7 74.6 Q4.8 74 5 72Z"/><path class="dr" pathLength="1" style="--dd:360ms" d="M45 46 Q45 44 47 44 L73 44.5 Q75 45 75 47 L74.6 73 Q74 75 72 75 L47 74.6 Q44.8 74 45 72Z"/></svg></h3><ul><li><strong>Resume any session</strong><span>Ctrl+Shift+R lists earlier sessions of all three agents.</span></li><li><strong>Command palette</strong><span>Ctrl+K finds sessions, projects, snippets and layouts.</span></li><li><strong>Find and copy</strong><span>Search any pane, open file:line paths in VS Code, copy the last reply or the prompt you are typing.</span></li><li><strong>Ask two agents</strong><span>One prompt, two worktrees, two answers to compare.</span></li><li><strong>Continue in another agent</strong><span>Hand a session over with an editable summary, or export it as Markdown.</span></li></ul></div>
         <div class="fgroup"><h3>Stay informed</h3><ul><li><strong>Needs-you alerts</strong><span>An amber border and a notification when a pane waits on you.</span></li><li><strong>Highlights and context</strong><span>Errors stand out, and a nearly full session warns you before it runs out.</span></li><li><strong>Cost and usage</strong><span>Time, tokens and cost on every pane, plus a full usage view.</span></li><li><strong>In-app updates</strong><span>The installed build updates itself while sessions keep running.</span></li><li class="has-ill"><strong>Everything local</strong><span>No account and no telemetry. Nothing leaves your machine.</span><svg class="ill ill-lock" width="56" height="42" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" style="--dd:0ms" d="M9 5 Q9 3 11 3 L53 3.3 Q55 3.5 55 6 L54.6 33 Q54.5 35 52.5 35 L11 34.8 Q9 34.5 9 32.5Z"/><path class="dr" pathLength="1" style="--dd:200ms" d="M3 40 Q3 38 6 38 L58 38.4 Q61 38.5 61 40.5 Q61 43 58 43 L6 43 Q3 42.8 3 40Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M27 38.5 Q32 41 37 38.5"/><path class="fd" d="M25.5 20.5 Q25.5 19 27 19 L37 19.2 Q38.5 19.4 38.5 21 L38.3 28 Q38.2 29.6 36.7 29.6 L27 29.5 Q25.5 29.4 25.5 28Z" fill="#34d399" fill-opacity=".25" stroke="#34d399"/><circle class="fd" cx="32" cy="24" r="1.2" fill="#34d399" stroke="none"/><path class="shk" stroke="#34d399" d="M28.5 19 L28.4 15.5 Q28.5 11.5 32 11.5 Q35.5 11.5 35.6 15.5 L35.5 19"/></svg></li></ul></div>
       </div>
@@ -126,7 +126,7 @@
       <ol class="steps">
         <li><span class="num" aria-hidden="true">1</span><svg class="sico" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" d="M5 14 L5 22 Q5 24 7 24 L21 24 Q23 24 23 22 L23 14"/><path class="dr" pathLength="1" style="--dd:150ms" d="M14 3 L14.2 16 M9 11 L14 16 L19 11"/></svg><h3>Install</h3><p>Run the installer or the portable exe. Sign in once to each agent CLI you use, in any terminal.</p></li>
         <li><span class="num" aria-hidden="true">2</span><svg class="sico" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" d="M4 9 Q4 7 6 7 L11 7.2 L14 10.5 L22 10.4 Q24 10.5 24 12.5 L23.8 21 Q23.8 23 21.8 23 L6 23.2 Q4 23 4 21Z"/><path class="dr" pathLength="1" style="--dd:150ms" d="M14 14.5 L14 19.5 M11.5 17 L16.5 17"/></svg><h3>Add projects</h3><p>Pick a folder and a default agent. A short first-run setup shows which CLIs it found.</p></li>
-        <li><span class="num" aria-hidden="true">3</span><svg class="sico" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" d="M4 6 L24 6.2 Q26 6.5 26 8.5 L25.8 20 Q25.8 22 23.8 22 L4.2 21.8 Q2 21.5 2 19.5 L2.2 8 Q2.3 6 4 6Z"/><path class="dr" pathLength="1" style="--dd:150ms" d="M7 11 L11 14 L7 17 M14 18 L19.5 18.2"/></svg><h3>Start sessions</h3><p>Press Ctrl+N, or run <code>paneon .</code> in a folder. Each agent runs in its own pane.</p></li>
+        <li><span class="num" aria-hidden="true">3</span><svg class="sico" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" d="M4 6 L24 6.2 Q26 6.5 26 8.5 L25.8 20 Q25.8 22 23.8 22 L4.2 21.8 Q2 21.5 2 19.5 L2.2 8 Q2.3 6 4 6Z"/><path class="dr" pathLength="1" style="--dd:150ms" d="M7 11 L11 14 L7 17 M14 18 L19.5 18.2"/></svg><h3>Start sessions</h3><p>Press Ctrl+N, or run <code>dawsha .</code> in a folder. Each agent runs in its own pane.</p></li>
         <li><span class="num" aria-hidden="true">4</span><svg class="sico" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" d="M14 4 Q8 5 8 12 L8.2 17 L6 20.5 L22 20.6 L19.8 17 L20 12 Q20 5 14 4Z"/><path class="dr" pathLength="1" style="--dd:150ms" d="M11 23.5 Q14 26.5 17 23.5"/><circle class="fd" cx="22" cy="6" r="2.6" fill="#34d399" stroke="none"/></svg><h3>Stay on top</h3><p>Glance at status, plans and context. Come back when a pane asks for you.</p></li>
       </ol>
     </div>
@@ -135,48 +135,48 @@
   <section id="cli" aria-labelledby="cli-h">
     <div class="wrap cli-row">
       <div>
-        <h2 id="cli-h">The <code>paneon</code> command</h2>
-        <p class="section-lead">The installer adds it to your PATH. Open a new terminal and drive Paneon from where you already work.</p>
+        <h2 id="cli-h">The <code>dawsha</code> command</h2>
+        <p class="section-lead">The installer adds it to your PATH. Open a new terminal and drive Dawsha from where you already work.</p>
       </div>
-      <pre class="code" tabindex="0" aria-label="paneon command examples"><code><span class="c"># add this folder and start its agent</span>
-paneon .
+      <pre class="code" tabindex="0" aria-label="dawsha command examples"><code><span class="c"># add this folder and start its agent</span>
+dawsha .
 
 <span class="c"># start a specific agent on a project</span>
-paneon start billing-api --agent codex
+dawsha start billing-api --agent codex
 
 <span class="c"># pick up the newest session</span>
-paneon resume --last</code></pre>
+dawsha resume --last</code></pre>
     </div>
   </section>
 
   <section id="download" aria-labelledby="download-h">
     <div class="wrap">
-      <h2 id="download-h">Download Paneon</h2>
+      <h2 id="download-h">Download Dawsha</h2>
       <p class="section-lead"><span data-version>Latest release</span>, Windows 10/11 x64. Free under the MIT licence.</p>
       <div class="dl-grid">
         <div class="dl-card primary-card">
           <h3>Installer <span class="tag">Recommended</span></h3>
-          <p>Adds the <code>paneon</code> command to your PATH and updates itself.</p>
-          <a class="btn primary" href="https://github.com/mfathy234/paneon/releases/latest" data-dl="setup"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm-8,70.41-64-11.63V152h64ZM96,136H32a8,8,0,0,0-8,8v40a8,8,0,0,0,6.57,7.87l64,11.64a8.54,8.54,0,0,0,1.43.13,8,8,0,0,0,8-8V144A8,8,0,0,0,96,136Zm-8,50.05-48-8.73V152H88ZM213.13,33.86a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86ZM200,104H136V61.22l64-11.63ZM101.13,54.22a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM88,104H40V78.68L88,70Z"/></svg><span>Download for Windows</span></a>
+          <p>Adds the <code>dawsha</code> command to your PATH and updates itself.</p>
+          <a class="btn primary" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm-8,70.41-64-11.63V152h64ZM96,136H32a8,8,0,0,0-8,8v40a8,8,0,0,0,6.57,7.87l64,11.64a8.54,8.54,0,0,0,1.43.13,8,8,0,0,0,8-8V144A8,8,0,0,0,96,136Zm-8,50.05-48-8.73V152H88ZM213.13,33.86a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86ZM200,104H136V61.22l64-11.63ZM101.13,54.22a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM88,104H40V78.68L88,70Z"/></svg><span>Download for Windows</span></a>
         </div>
         <div class="dl-card">
           <h3>Portable</h3>
           <p>One exe, no install, no PATH changes. Does not update itself.</p>
-          <a class="btn secondary" href="https://github.com/mfathy234/paneon/releases/latest" data-dl="portable"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></svg><span>Portable version</span></a>
+          <a class="btn secondary" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></svg><span>Portable version</span></a>
         </div>
       </div>
       <p class="note"><strong>SmartScreen.</strong> The builds are not code signed, so Windows may show "Windows protected your PC". Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
-      <p class="note"><strong>Requirements.</strong> Windows 10 or 11 (x64) and the agent CLIs you want to use: Claude Code, Codex CLI, Gemini CLI. Node.js 20+ is only needed to install Codex and Gemini from inside Paneon.</p>
+      <p class="note"><strong>Requirements.</strong> Windows 10 or 11 (x64) and the agent CLIs you want to use: Claude Code, Codex CLI, Gemini CLI. Node.js 20+ is only needed to install Codex and Gemini from inside Dawsha.</p>
     </div>
   </section>
 
   <section class="closing" aria-labelledby="closing-h">
     <div class="wrap">
-      <svg class="ill ill-desk" viewBox="0 0 360 190" role="img" aria-label="A quiet desk with a monitor showing the Paneon grid, a plant and a cup of tea"><path class="dr" pathLength="1" style="--dd:0ms" d="M14 168 Q100 171 190 168 T346 167"/><path class="dr" pathLength="1" style="--dd:150ms" d="M96 28 Q96 22 102 22 L238 22.5 Q244 22.5 244 28.5 L243.5 114 Q243.5 120 238 120 L102 119.6 Q96 119.5 96 114Z"/><path class="dr" pathLength="1" style="--dd:450ms" d="M169 120 Q168 140 167 157"/><path class="dr" pathLength="1" style="--dd:550ms" d="M148 167 Q168 156 190 167"/><path class="fd" d="M108 33 L166 33.4 L165.6 68 L108.4 67.6Z" fill="#34d399" fill-opacity=".85" stroke="#34d399" style="--dd:1000ms"/><path class="dr" pathLength="1" style="--dd:600ms" d="M174 33.4 L232 33 L231.6 68 L174.4 68.2Z"/><path class="dr" pathLength="1" style="--dd:700ms" d="M108.4 75 L166 75.4 L165.6 110 L108 109.6Z"/><path class="dr" pathLength="1" style="--dd:800ms" d="M174 75.4 L232 75 L231.6 110 L174.4 110.2Z"/><path class="dr" pathLength="1" style="--dd:300ms" d="M268 168 L263 138 Q283 140 303 138 L298 168Z"/><path class="dr" pathLength="1" style="--dd:450ms" d="M264 140 Q283 143 302 140"/><path class="dr" pathLength="1" style="--dd:600ms" d="M283 138 Q282 120 284 104"/><path class="dr" pathLength="1" style="--dd:800ms" d="M284 108 Q268 100 266 84 Q282 86 284 108Z"/><path class="dr" pathLength="1" style="--dd:950ms" d="M284 118 Q300 112 306 94 Q288 94 284 118Z"/><path class="dr" pathLength="1" style="--dd:1100ms" d="M283 128 Q270 124 262 112 Q276 108 283 128Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M42 168 Q40 148 40 142 L72 142.4 Q72 150 70 168Z"/><path class="dr" pathLength="1" style="--dd:600ms" d="M72 148 Q84 148 82 157 Q80 163 71 162"/><g class="steam"><path class="dr" pathLength="1" style="--dd:1300ms" d="M52 134 Q46 126 53 120 Q60 114 53 106"/></g><g class="steam s2"><path class="dr" pathLength="1" style="--dd:1500ms" d="M62 132 Q68 125 62 119 Q56 113 62 106"/></g></svg><h2 id="closing-h">Stop hunting for the right window.</h2>
+      <svg class="ill ill-desk" viewBox="0 0 360 190" role="img" aria-label="A quiet desk with a monitor showing the Dawsha grid, a plant and a cup of tea"><path class="dr" pathLength="1" style="--dd:0ms" d="M14 168 Q100 171 190 168 T346 167"/><path class="dr" pathLength="1" style="--dd:150ms" d="M96 28 Q96 22 102 22 L238 22.5 Q244 22.5 244 28.5 L243.5 114 Q243.5 120 238 120 L102 119.6 Q96 119.5 96 114Z"/><path class="dr" pathLength="1" style="--dd:450ms" d="M169 120 Q168 140 167 157"/><path class="dr" pathLength="1" style="--dd:550ms" d="M148 167 Q168 156 190 167"/><path class="fd" d="M108 33 L166 33.4 L165.6 68 L108.4 67.6Z" fill="#34d399" fill-opacity=".85" stroke="#34d399" style="--dd:1000ms"/><path class="dr" pathLength="1" style="--dd:600ms" d="M174 33.4 L232 33 L231.6 68 L174.4 68.2Z"/><path class="dr" pathLength="1" style="--dd:700ms" d="M108.4 75 L166 75.4 L165.6 110 L108 109.6Z"/><path class="dr" pathLength="1" style="--dd:800ms" d="M174 75.4 L232 75 L231.6 110 L174.4 110.2Z"/><path class="dr" pathLength="1" style="--dd:300ms" d="M268 168 L263 138 Q283 140 303 138 L298 168Z"/><path class="dr" pathLength="1" style="--dd:450ms" d="M264 140 Q283 143 302 140"/><path class="dr" pathLength="1" style="--dd:600ms" d="M283 138 Q282 120 284 104"/><path class="dr" pathLength="1" style="--dd:800ms" d="M284 108 Q268 100 266 84 Q282 86 284 108Z"/><path class="dr" pathLength="1" style="--dd:950ms" d="M284 118 Q300 112 306 94 Q288 94 284 118Z"/><path class="dr" pathLength="1" style="--dd:1100ms" d="M283 128 Q270 124 262 112 Q276 108 283 128Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M42 168 Q40 148 40 142 L72 142.4 Q72 150 70 168Z"/><path class="dr" pathLength="1" style="--dd:600ms" d="M72 148 Q84 148 82 157 Q80 163 71 162"/><g class="steam"><path class="dr" pathLength="1" style="--dd:1300ms" d="M52 134 Q46 126 53 120 Q60 114 53 106"/></g><g class="steam s2"><path class="dr" pathLength="1" style="--dd:1500ms" d="M62 132 Q68 125 62 119 Q56 113 62 106"/></g></svg><h2 id="closing-h">Stop hunting for the right window.</h2>
       <p class="section-lead">Put every agent where you can read it.</p>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/mfathy234/paneon/releases/latest" data-dl="setup"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm-8,70.41-64-11.63V152h64ZM96,136H32a8,8,0,0,0-8,8v40a8,8,0,0,0,6.57,7.87l64,11.64a8.54,8.54,0,0,0,1.43.13,8,8,0,0,0,8-8V144A8,8,0,0,0,96,136Zm-8,50.05-48-8.73V152H88ZM213.13,33.86a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86ZM200,104H136V61.22l64-11.63ZM101.13,54.22a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM88,104H40V78.68L88,70Z"/></svg><span>Download for Windows</span></a>
-        <a class="btn secondary" href="https://github.com/mfathy234/paneon"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"/></svg><span>View on GitHub</span></a>
+        <a class="btn primary" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm-8,70.41-64-11.63V152h64ZM96,136H32a8,8,0,0,0-8,8v40a8,8,0,0,0,6.57,7.87l64,11.64a8.54,8.54,0,0,0,1.43.13,8,8,0,0,0,8-8V144A8,8,0,0,0,96,136Zm-8,50.05-48-8.73V152H88ZM213.13,33.86a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86ZM200,104H136V61.22l64-11.63ZM101.13,54.22a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM88,104H40V78.68L88,70Z"/></svg><span>Download for Windows</span></a>
+        <a class="btn secondary" href="https://github.com/mfathy234/dawsha"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"/></svg><span>View on GitHub</span></a>
       </div>
     </div>
   </section>
@@ -184,11 +184,11 @@ paneon resume --last</code></pre>
 
 <footer class="footer">
   <div class="wrap foot-row">
-    <div class="brand"><img src="assets/logo.svg" width="22" height="22" alt=""><span>Paneon</span></div>
+    <div class="brand"><img src="assets/logo.svg" width="22" height="22" alt=""><span>Dawsha</span></div>
     <ul>
-      <li><a href="https://github.com/mfathy234/paneon" rel="noopener">GitHub</a></li>
-      <li><a href="https://github.com/mfathy234/paneon/releases" rel="noopener">Changelog</a></li>
-      <li><a href="https://github.com/mfathy234/paneon/blob/main/LICENSE" rel="noopener">MIT licence</a></li>
+      <li><a href="https://github.com/mfathy234/dawsha" rel="noopener">GitHub</a></li>
+      <li><a href="https://github.com/mfathy234/dawsha/releases" rel="noopener">Changelog</a></li>
+      <li><a href="https://github.com/mfathy234/dawsha/blob/main/LICENSE" rel="noopener">MIT licence</a></li>
     </ul>
   </div>
 </footer>

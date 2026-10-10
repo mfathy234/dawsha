@@ -49,7 +49,7 @@ test('the pane menu exports a session as Markdown with prompts, replies, tool li
   const sandbox = createSandbox()
   seed(sandbox)
   const out = join(sandbox.root, 'export.md')
-  const { app, page } = await launchApp(sandbox, { PANEON_SAVE_PATH: out })
+  const { app, page } = await launchApp(sandbox, { DAWSHA_SAVE_PATH: out })
   try {
     await resumeSeeded(page)
     await page.getByRole('button', { name: 'Pane actions' }).click()
@@ -78,7 +78,7 @@ test('the palette exports a self-contained HTML page when the chosen file is .ht
   const sandbox = createSandbox()
   seed(sandbox)
   const out = join(sandbox.root, 'export.html')
-  const { app, page } = await launchApp(sandbox, { PANEON_SAVE_PATH: out })
+  const { app, page } = await launchApp(sandbox, { DAWSHA_SAVE_PATH: out })
   try {
     await resumeSeeded(page)
     await page.locator('.term-host.active').click()
@@ -102,7 +102,7 @@ test('the palette exports a self-contained HTML page when the chosen file is .ht
 test('a tab without a session file exports its terminal text and says so', async () => {
   const sandbox = createSandbox()
   const out = join(sandbox.root, 'terminal.md')
-  const { app, page } = await launchApp(sandbox, { PANEON_SAVE_PATH: out })
+  const { app, page } = await launchApp(sandbox, { DAWSHA_SAVE_PATH: out })
   try {
     await page.getByRole('button', { name: NEW_CLAUDE, exact: true }).click()
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })

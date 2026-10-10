@@ -26,7 +26,7 @@ function notesFor(report: UsageReport): string[] {
   }
   if (!report.hasCost) {
     notes.push(
-      'Cost is shown for Claude Code sessions that reported one through Show live session info (Theme popover). Paneon keeps the last cost of each session, so older days stay available.'
+      'Cost is shown for Claude Code sessions that reported one through Show live session info (Theme popover). Dawsha keeps the last cost of each session, so older days stay available.'
     )
   } else {
     notes.push('Claude Code cost is counted on the day of each session\'s last cost report. Tokens count input, output and cache writes; cache reads are listed apart.')
@@ -172,7 +172,7 @@ export class UsageViewComponent {
         h(
           'p',
           { class: 'usage-empty', id: 'usage-limits-empty' },
-          'No limit readings in this range. Paneon records the 5 hour and weekly limit whenever Claude Code reports it through Show live session info, so the history starts from the day you turn that on.'
+          'No limit readings in this range. Dawsha records the 5 hour and weekly limit whenever Claude Code reports it through Show live session info, so the history starts from the day you turn that on.'
         )
       )
     }

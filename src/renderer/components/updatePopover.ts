@@ -90,14 +90,14 @@ export class UpdatePopoverComponent {
     const version = update.version ?? ''
     if (update.status === 'downloading') {
       return [
-        h('h2', { class: 'update-title' }, `Downloading Paneon ${version}`),
+        h('h2', { class: 'update-title' }, `Downloading Dawsha ${version}`),
         h('p', { class: 'update-sub', id: 'update-percent' }, `${Math.round(update.percent)}%`),
         h('p', { class: 'hint' }, BACKGROUND_NOTE)
       ]
     }
     if (update.status === 'ready') {
       return [
-        h('h2', { class: 'update-title' }, `Paneon ${version} is ready. Restart now, or it installs when you quit.`),
+        h('h2', { class: 'update-title' }, `Dawsha ${version} is ready. Restart now, or it installs when you quit.`),
         h(
           'div',
           { class: 'update-actions' },
@@ -122,7 +122,7 @@ export class UpdatePopoverComponent {
     const portable = update.mode === 'portable'
     const later = this.button('update-later', 'Later', () => void runUpdateAction('dismiss'))
     const nodes: Array<HTMLElement | null> = [
-      h('h2', { class: 'update-title' }, `Paneon ${version} is available${portable ? PORTABLE_NOTE : ''}`),
+      h('h2', { class: 'update-title' }, `Dawsha ${version} is available${portable ? PORTABLE_NOTE : ''}`),
       h('p', { class: 'update-sub' }, `You have ${update.currentVersion}${releasedOn(update.releaseDate)}`),
       this.notes(update),
       portable

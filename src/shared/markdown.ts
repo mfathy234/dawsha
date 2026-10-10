@@ -1,8 +1,8 @@
-export const RELEASES_URL = 'https://github.com/mfathy234/paneon/releases'
+export const RELEASES_URL = 'https://github.com/mfathy234/dawsha/releases'
 export const RELEASE_LATEST_URL = `${RELEASES_URL}/latest`
 export const releaseTagUrl = (version: string): string => `${RELEASES_URL}/tag/v${version.replace(/^v/, '')}`
 
-const REPO_PATH = '/mfathy234/paneon'
+const REPO_PATH = '/mfathy234/dawsha'
 
 export function safeLink(value: string): string | null {
   let url: URL

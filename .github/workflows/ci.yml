@@ -38,6 +38,6 @@ jobs:
           path: |
             test-results/
             playwright-report/
-            ${{ runner.temp }}/paneon-e2e-*/quit.log
+            ${{ runner.temp }}/dawsha-e2e-*/quit.log
           if-no-files-found: ignore
           retention-days: 7

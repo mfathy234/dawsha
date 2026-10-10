@@ -16,7 +16,7 @@ interface World {
 }
 
 function world(): World {
-  const root = mkdtempSync(join(tmpdir(), 'paneon-index-'))
+  const root = mkdtempSync(join(tmpdir(), 'dawsha-index-'))
   const folders = { web: 'C:\\work\\acme-web', api: 'C:\\work\\billing-api', site: 'C:\\work\\docs-site' }
   const homes = { claudeProjects: join(root, 'claude'), codex: join(root, 'codex'), gemini: join(root, 'gemini') }
   const projects: Project[] = [

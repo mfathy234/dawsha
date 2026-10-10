@@ -30,7 +30,7 @@ interface GridHook {
 }
 
 export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
-  const root = mkdtempSync(join(tmpdir(), 'paneon-e2e-'))
+  const root = mkdtempSync(join(tmpdir(), 'dawsha-e2e-'))
   const userData = join(root, 'userData')
   const projectFolder = join(root, 'Smoke Project')
   const sessionsDir = join(root, 'sessions')
@@ -59,7 +59,7 @@ export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
     opsDir: join(root, 'ops'),
     notifyLog: join(root, 'notify.log'),
     quitLog: join(root, 'quit.log'),
-    pipe: String.raw`\\.\pipe\paneon-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+    pipe: String.raw`\\.\pipe\dawsha-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
   }
 }
 
@@ -73,21 +73,21 @@ export async function launchApp(
     args: [resolve(__dirname, '../../out/main/index.js')],
     env: {
       ...env,
-      PANEON_USER_DATA: sandbox.userData,
-      PANEON_APP_VERSION: APP_VERSION,
-      PANEON_CLAUDE_COMMAND: 'cmd.exe',
-      PANEON_CODEX_COMMAND: 'cmd.exe',
-      PANEON_CODEX_HOME: sandbox.codexHome,
-      PANEON_GEMINI_COMMAND: 'cmd.exe',
-      PANEON_GEMINI_HOME: sandbox.geminiHome,
-      PANEON_SHELL: 'cmd.exe',
-      PANEON_SESSIONS_DIR: sandbox.sessionsDir,
-      PANEON_CLAUDE_HOME: sandbox.claudeHome,
-      PANEON_OPS_DIR: sandbox.opsDir,
-      PANEON_OPEN_LOG: sandbox.openLog,
-      PANEON_NOTIFY_LOG: sandbox.notifyLog,
-      PANEON_QUIT_LOG: sandbox.quitLog,
-      PANEON_PIPE: sandbox.pipe,
+      DAWSHA_USER_DATA: sandbox.userData,
+      DAWSHA_APP_VERSION: APP_VERSION,
+      DAWSHA_CLAUDE_COMMAND: 'cmd.exe',
+      DAWSHA_CODEX_COMMAND: 'cmd.exe',
+      DAWSHA_CODEX_HOME: sandbox.codexHome,
+      DAWSHA_GEMINI_COMMAND: 'cmd.exe',
+      DAWSHA_GEMINI_HOME: sandbox.geminiHome,
+      DAWSHA_SHELL: 'cmd.exe',
+      DAWSHA_SESSIONS_DIR: sandbox.sessionsDir,
+      DAWSHA_CLAUDE_HOME: sandbox.claudeHome,
+      DAWSHA_OPS_DIR: sandbox.opsDir,
+      DAWSHA_OPEN_LOG: sandbox.openLog,
+      DAWSHA_NOTIFY_LOG: sandbox.notifyLog,
+      DAWSHA_QUIT_LOG: sandbox.quitLog,
+      DAWSHA_PIPE: sandbox.pipe,
       GCM_INTERACTIVE: 'never',
       GIT_AUTHOR_NAME: 'Test User',
       GIT_AUTHOR_EMAIL: 'test@example.invalid',
@@ -156,9 +156,9 @@ export interface CliResult {
 
 export function runCli(sandbox: Sandbox, args: string[], cwd: string = sandbox.root): Promise<CliResult> {
   const electronPath = require('electron') as unknown as string
-  const env = { ...process.env, ELECTRON_RUN_AS_NODE: '1', PANEON_PIPE: sandbox.pipe } as Record<string, string>
+  const env = { ...process.env, ELECTRON_RUN_AS_NODE: '1', DAWSHA_PIPE: sandbox.pipe } as Record<string, string>
   return new Promise((resolveResult, reject) => {
-    const child = spawn(electronPath, [resolve(__dirname, '../../build/paneon-cli.cjs'), ...args], { cwd, env })
+    const child = spawn(electronPath, [resolve(__dirname, '../../build/dawsha-cli.cjs'), ...args], { cwd, env })
     let out = ''
     let err = ''
     child.stdout.on('data', (chunk: Buffer) => (out += chunk.toString()))

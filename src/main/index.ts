@@ -22,12 +22,12 @@ import { createQuitLog } from './quitLog'
 import { startQuitWatchdog } from './quitWatchdog'
 import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, runPhases, runQuit, type ShutdownDeps } from './shutdown'
 
-const IMAGE_SCHEME = 'cg-image'
+const IMAGE_SCHEME = 'dawsha-image'
 const quitLog = createQuitLog()
 
-app.setAppUserModelId('io.github.mfathy234.paneon')
+app.setAppUserModelId('io.github.mfathy234.dawsha')
 
-if (process.env.PANEON_USER_DATA) app.setPath('userData', process.env.PANEON_USER_DATA)
+if (process.env.DAWSHA_USER_DATA) app.setPath('userData', process.env.DAWSHA_USER_DATA)
 
 protocol.registerSchemesAsPrivileged([
   { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } }
@@ -86,7 +86,7 @@ function createWindow(): BrowserWindow {
     height: 900,
     minWidth: 960,
     minHeight: 600,
-    title: 'Paneon',
+    title: 'Dawsha',
     icon: join(app.getAppPath(), 'build', 'icon.png'),
     backgroundColor: '#0c0e12',
     autoHideMenuBar: true,

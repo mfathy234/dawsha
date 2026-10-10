@@ -1,15 +1,15 @@
 {
-  "name": "paneon",
-  "productName": "Paneon",
+  "name": "dawsha",
+  "productName": "Dawsha",
   "version": "0.9.0",
   "description": "One window for all your AI coding agents: a grid of readable terminals for Claude Code, Codex CLI and Gemini CLI",
-  "homepage": "https://github.com/mfathy234/paneon",
+  "homepage": "https://github.com/mfathy234/dawsha",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mfathy234/paneon.git"
+    "url": "git+https://github.com/mfathy234/dawsha.git"
   },
   "bugs": {
-    "url": "https://github.com/mfathy234/paneon/issues"
+    "url": "https://github.com/mfathy234/dawsha/issues"
   },
   "main": "./out/main/index.js",
   "author": "Mohamed Fathy",

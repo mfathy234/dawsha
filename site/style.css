@@ -166,9 +166,8 @@ section { padding: 88px 0; }
 html.lenis, html.lenis body { height: auto; }
 html.lenis { scroll-behavior: auto; }
 
-.logo rect { transform-box: fill-box; transform-origin: center; }
 .nav .logo { flex: none; }
-.js .logo .pane, .js .hero-copy > :not(.hero-logo), .js .hero-shot { opacity: 0; }
+.js .hero-copy > :not(.hero-logo), .js .hero-shot { opacity: 0; }
 
 .fgroup h3 { position: relative; }
 .fgroup h3 .ill-hop { position: absolute; right: 0; top: -8px; }

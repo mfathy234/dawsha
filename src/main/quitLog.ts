@@ -2,7 +2,7 @@ import { appendFileSync } from 'node:fs'
 
 export type QuitLog = (message: string) => void
 
-export function createQuitLog(path: string | undefined = process.env.PANEON_QUIT_LOG): QuitLog {
+export function createQuitLog(path: string | undefined = process.env.DAWSHA_QUIT_LOG): QuitLog {
   if (!path) return () => undefined
   const started = Date.now()
   return (message) => {

@@ -52,7 +52,7 @@ async function pull(root: string): Promise<GitQuickResult> {
   const pulled = await git(root, ['pull', '--ff-only'], SLOW_MS)
   if (pulled.ok) return done(pullSummary(pulled.stdout))
   if (isDivergedPull(pulled.message)) {
-    return fail(`${trimGitMessage(pulled.message)}\nThe branches have diverged. Resolve this from the Changes panel or your terminal; Paneon never merges or rebases for you.`)
+    return fail(`${trimGitMessage(pulled.message)}\nThe branches have diverged. Resolve this from the Changes panel or your terminal; Dawsha never merges or rebases for you.`)
   }
   return fail(pulled.message)
 }

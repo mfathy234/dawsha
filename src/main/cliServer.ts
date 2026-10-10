@@ -5,9 +5,9 @@ import type { CliReply, CliRequest } from '../shared/cli'
 const MAX_REQUEST_BYTES = 64 * 1024
 
 export function pipePath(): string {
-  if (process.env.PANEON_PIPE) return process.env.PANEON_PIPE
+  if (process.env.DAWSHA_PIPE) return process.env.DAWSHA_PIPE
   const user = (process.env.USERNAME || userInfo().username || 'user').replace(/[^A-Za-z0-9_.-]/g, '_')
-  return `\\\\.\\pipe\\paneon-${user}`
+  return `\\\\.\\pipe\\dawsha-${user}`
 }
 
 export function isCliRequest(value: unknown): value is CliRequest {
@@ -30,7 +30,7 @@ export function startCliServer(run: (request: CliRequest) => Promise<CliReply>, 
       buffer += chunk
       if (buffer.length > MAX_REQUEST_BYTES) {
         handled = true
-        reply({ ok: false, exit: 2, out: 'paneon: request too large.' })
+        reply({ ok: false, exit: 2, out: 'dawsha: request too large.' })
         return
       }
       const end = buffer.indexOf('\n')
@@ -40,14 +40,14 @@ export function startCliServer(run: (request: CliRequest) => Promise<CliReply>, 
       try {
         request = JSON.parse(buffer.slice(0, end))
       } catch {
-        reply({ ok: false, exit: 2, out: 'paneon: could not read the request.' })
+        reply({ ok: false, exit: 2, out: 'dawsha: could not read the request.' })
         return
       }
       if (!isCliRequest(request)) {
-        reply({ ok: false, exit: 2, out: 'paneon: could not read the request.' })
+        reply({ ok: false, exit: 2, out: 'dawsha: could not read the request.' })
         return
       }
-      run(request).then(reply, (error: unknown) => reply({ ok: false, exit: 1, out: `paneon: ${(error as Error).message}` }))
+      run(request).then(reply, (error: unknown) => reply({ ok: false, exit: 1, out: `dawsha: ${(error as Error).message}` }))
     })
   })
   server.on('error', () => undefined)

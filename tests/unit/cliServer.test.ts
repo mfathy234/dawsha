@@ -5,7 +5,7 @@ import type { CliReply, CliRequest } from '../../src/shared/cli'
 
 const servers: { close(): void }[] = []
 let counter = 0
-const uniquePipe = (): string => `\\\\.\\pipe\\paneon-unit-${process.pid}-${(counter += 1)}`
+const uniquePipe = (): string => `\\\\.\\pipe\\dawsha-unit-${process.pid}-${(counter += 1)}`
 
 afterEach(() => {
   for (const server of servers.splice(0)) server.close()
@@ -55,18 +55,18 @@ describe('cli pipe server', () => {
     const path = await serve(async () => {
       throw new Error('boom')
     })
-    expect(await talk(path, `${JSON.stringify({ args: [], cwd: 'x' })}\n`)).toEqual({ ok: false, exit: 1, out: 'paneon: boom' })
+    expect(await talk(path, `${JSON.stringify({ args: [], cwd: 'x' })}\n`)).toEqual({ ok: false, exit: 1, out: 'dawsha: boom' })
   })
 })
 
 describe('pipePath and isCliRequest', () => {
   it('honours the override and names the pipe per user', () => {
-    const before = process.env.PANEON_PIPE
-    process.env.PANEON_PIPE = '\\\\.\\pipe\\custom'
+    const before = process.env.DAWSHA_PIPE
+    process.env.DAWSHA_PIPE = '\\\\.\\pipe\\custom'
     expect(pipePath()).toBe('\\\\.\\pipe\\custom')
-    delete process.env.PANEON_PIPE
-    expect(pipePath()).toMatch(/^\\\\\.\\pipe\\paneon-.+/)
-    if (before !== undefined) process.env.PANEON_PIPE = before
+    delete process.env.DAWSHA_PIPE
+    expect(pipePath()).toMatch(/^\\\\\.\\pipe\\dawsha-.+/)
+    if (before !== undefined) process.env.DAWSHA_PIPE = before
   })
 
   it('validates request shape', () => {

@@ -18,7 +18,7 @@ export interface MigrationResult {
 const NOT_MIGRATED: MigrationResult = { migrated: false, bridge: 'none', note: null }
 
 const LEFT_NOTE =
-  'Paneon copied your settings from the old Claude Grid folder. Live session info still points at the old ' +
+  'Dawsha copied your settings from the old Claude Grid folder. Live session info still points at the old ' +
   'folder because ~/.claude/settings.json was changed after it was turned on. Turn it off and on again in ' +
   'the Theme popover to re-enable it.'
 

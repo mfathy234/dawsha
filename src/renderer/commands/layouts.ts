@@ -9,7 +9,7 @@ function layoutCommands(state: AppState): Command[] {
     id: `layout:${layout.id}`,
     title: `Open "${layout.name}"`,
     group: 'Layouts',
-    hint: `paneon open ${layoutSlug(layout.name)}`,
+    hint: `dawsha open ${layoutSlug(layout.name)}`,
     keywords: 'layout workspace',
     run: () => void openLayoutFromUi(layout)
   }))

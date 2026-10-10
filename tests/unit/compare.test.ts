@@ -66,7 +66,7 @@ describe('compareNames', () => {
 })
 
 describe('safety checks', () => {
-  it('only accept names Paneon creates', () => {
+  it('only accept names Dawsha creates', () => {
     expect(isCompareBranch('main')).toBe(false)
     expect(isCompareBranch('compare/x7k2p9-c')).toBe(false)
     expect(isCompareBranch('compare/x7k2p9-a; rm')).toBe(false)

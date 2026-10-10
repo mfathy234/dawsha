@@ -98,8 +98,8 @@ test('inserting a snippet types it into the focused terminal without sending it 
   seedSnippets(sandbox.userData)
   execFileSync('git', ['init', '-q', '-b', 'feature/dark-mode'], { cwd: sandbox.projectFolder })
   const { app, page } = await launchApp(sandbox, {
-    PANEON_CLAUDE_COMMAND: process.execPath,
-    PANEON_CLAUDE_ARGS: JSON.stringify([ECHO])
+    DAWSHA_CLAUDE_COMMAND: process.execPath,
+    DAWSHA_CLAUDE_ARGS: JSON.stringify([ECHO])
   })
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()

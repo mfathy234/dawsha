@@ -64,7 +64,7 @@ test('saves, lists, renames and deletes layouts from the Layouts menu', async ()
     await expect(page.locator('.layout-row')).toHaveCount(1)
     await expect(page.locator('.layout-row')).toContainText('Morning')
     await expect(page.locator('.layout-row')).toContainText('1 pane')
-    await expect(page.locator('.layouts-foot')).toContainText('paneon open morning')
+    await expect(page.locator('.layouts-foot')).toContainText('dawsha open morning')
     await page.screenshot({ path: join(SCREENS, '32-layouts-menu.png') })
 
     await page.locator('#save-layout').click()
@@ -129,7 +129,7 @@ test('opens a layout into an empty grid, asks before touching open panes and res
     await expect(page.locator('#palette-input')).toBeFocused()
     await page.keyboard.type('docs day')
     await expect(page.locator('.palette-group')).toHaveText(['Layouts'])
-    await expect(page.locator('.palette-row .palette-hint')).toHaveText('paneon open docs-day')
+    await expect(page.locator('.palette-row .palette-hint')).toHaveText('dawsha open docs-day')
     await page.keyboard.press('Enter')
     const choice = page.getByRole('alertdialog')
     await expect(choice.getByRole('heading')).toHaveText('Replace the current panes?')
@@ -160,7 +160,7 @@ test('opens a layout into an empty grid, asks before touching open panes and res
   }
 })
 
-test('the paneon command lists and opens layouts', async () => {
+test('the dawsha command lists and opens layouts', async () => {
   const sandbox = createSandbox()
   seedLayouts(sandbox.userData)
   const { app, page } = await launchApp(sandbox)
@@ -173,7 +173,7 @@ test('the paneon command lists and opens layouts', async () => {
 
     const missing = await runCli(sandbox, ['open', 'evening'])
     expect(missing.code).toBe(1)
-    expect(missing.err).toContain("No layout named 'evening'. Run paneon layouts.")
+    expect(missing.err).toContain("No layout named 'evening'. Run dawsha layouts.")
     expect((await runCli(sandbox, ['open', 'morning', '--replace', '--alongside'])).code).toBe(2)
     expect((await runCli(sandbox, ['open', 'lost'])).err).toContain("Layout 'Lost' has no pane whose project still exists.")
 

@@ -155,19 +155,19 @@ test('refuses a dirty switch, stashes and switches, then applies the last stash'
     await expect(page.locator('.toast.info').last()).toContainText('Apply last stash', { timeout: SLOW })
     expect(git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('feature/dark-mode')
     expect(git(repo, '-c', 'core.autocrlf=true', 'status', '--porcelain')).toBe('')
-    expect(git(repo, 'stash', 'list')).toContain('Paneon: main')
+    expect(git(repo, 'stash', 'list')).toContain('Dawsha: main')
     expect(existsSync(join(repo, 'notes.txt'))).toBe(false)
 
     await runFromPalette(page, 'Apply last stash', 'git.stash-pop')
     await expect(page.locator('.toast.error').last()).toContainText('The stash was kept', { timeout: SLOW })
-    expect(git(repo, 'stash', 'list')).toContain('Paneon: main')
+    expect(git(repo, 'stash', 'list')).toContain('Dawsha: main')
 
     git(repo, 'reset', '-q', '--hard')
     git(repo, 'clean', '-fdq')
     git(repo, 'switch', '-q', 'main')
     await expect(page.locator('.chip-branch .chip-text')).toHaveText('main', { timeout: SLOW })
     await runFromPalette(page, 'Apply last stash', 'git.stash-pop')
-    await expect(page.locator('.toast.info').last()).toContainText('Applied stash: On main: Paneon: main', { timeout: SLOW })
+    await expect(page.locator('.toast.info').last()).toContainText('Applied stash: On main: Dawsha: main', { timeout: SLOW })
     expect(text(join(repo, 'a.txt'))).toBe('one\nlocal edit\n')
     expect(text(join(repo, 'notes.txt'))).toBe('untracked\n')
     expect(git(repo, 'stash', 'list')).toBe('')
@@ -177,7 +177,7 @@ test('refuses a dirty switch, stashes and switches, then applies the last stash'
     writeFileSync(join(repo, 'b.txt'), 'one\nwip\n')
     await runFromPalette(page, 'Stash changes', 'git.stash')
     await expect(page.locator('.toast.info').last()).toContainText('Changes stashed', { timeout: SLOW })
-    expect(git(repo, 'stash', 'list')).toMatch(/Paneon: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/)
+    expect(git(repo, 'stash', 'list')).toMatch(/Dawsha: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/)
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }

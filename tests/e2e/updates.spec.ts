@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { APP_VERSION, closeApp, createSandbox, launchApp, openSettings, type Sandbox } from './helpers'
 
-const RELEASE_URL = 'https://github.com/mfathy234/paneon/releases/tag/v9.9.0'
+const RELEASE_URL = 'https://github.com/mfathy234/dawsha/releases/tag/v9.9.0'
 const NOTES = [
   '### Added',
   '',
@@ -46,18 +46,18 @@ const lines = (file: string): string[] => (existsSync(file) ? readFileSync(file,
 
 function updaterEnv(sandbox: Sandbox, script: Script, extra: Record<string, string> = {}): Record<string, string> {
   return {
-    PANEON_TEST_UPDATER: 'fake',
-    PANEON_TEST_UPDATER_SCRIPT: JSON.stringify(script),
-    PANEON_TEST_UPDATER_LOG: join(sandbox.root, 'updater.log'),
-    PANEON_UPDATE_START_DELAY_MS: '200',
-    PANEON_UPDATE_INTERVAL_MS: '3600000',
+    DAWSHA_TEST_UPDATER: 'fake',
+    DAWSHA_TEST_UPDATER_SCRIPT: JSON.stringify(script),
+    DAWSHA_TEST_UPDATER_LOG: join(sandbox.root, 'updater.log'),
+    DAWSHA_UPDATE_START_DELAY_MS: '200',
+    DAWSHA_UPDATE_INTERVAL_MS: '3600000',
     ...extra
   }
 }
 
 const hookCall = <T>(app: ElectronApplication, run: string): Promise<T> =>
   app.evaluate((_electron, code) => {
-    const hook = (globalThis as unknown as { __paneonFakeUpdater: Hook }).__paneonFakeUpdater
+    const hook = (globalThis as unknown as { __dawshaFakeUpdater: Hook }).__dawshaFakeUpdater
     return new Function('hook', `return (${code})`)(hook)
   }, run) as Promise<T>
 
@@ -77,13 +77,13 @@ function exited(app: ElectronApplication): Promise<void> {
 
 test('an update walks from available to downloading to ready and restarts through quitAndInstall', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchApp(sandbox, updaterEnv(sandbox, AVAILABLE, { PANEON_OPEN_LOG: join(sandbox.root, 'open.log') }))
+  const { app, page } = await launchApp(sandbox, updaterEnv(sandbox, AVAILABLE, { DAWSHA_OPEN_LOG: join(sandbox.root, 'open.log') }))
   try {
     await expect(pill(page)).toHaveText('Update 9.9.0')
     await expect(pill(page)).toHaveClass(/status-available/)
     await pill(page).click()
     const popover = page.locator('.update-popover')
-    await expect(popover.locator('.update-title')).toHaveText('Paneon 9.9.0 is available')
+    await expect(popover.locator('.update-title')).toHaveText('Dawsha 9.9.0 is available')
     const version = APP_VERSION
     await expect(popover.locator('.update-sub')).toContainText(`You have ${version} · released`)
     await expect(popover.locator('#update-notes')).toContainText('Dark mode toggle for acme-web')
@@ -107,7 +107,7 @@ test('an update walks from available to downloading to ready and restarts throug
 
     await openPopover(page)
     await expect(page.locator('.update-popover .update-title')).toHaveText(
-      'Paneon 9.9.0 is ready. Restart now, or it installs when you quit.'
+      'Dawsha 9.9.0 is ready. Restart now, or it installs when you quit.'
     )
     await expect(page.locator('.update-popover')).toContainText('Open sessions reopen after the restart')
     const gone = exited(app)
@@ -141,7 +141,7 @@ test('a failed download shows Update failed, retries and opens GitHub', async ()
   const sandbox = createSandbox()
   const { app, page } = await launchApp(
     sandbox,
-    updaterEnv(sandbox, { ...AVAILABLE, hold: false, download: 'error', downloadError: 'Disk is full' }, { PANEON_OPEN_LOG: join(sandbox.root, 'open.log') })
+    updaterEnv(sandbox, { ...AVAILABLE, hold: false, download: 'error', downloadError: 'Disk is full' }, { DAWSHA_OPEN_LOG: join(sandbox.root, 'open.log') })
   )
   try {
     await pill(page).click()
@@ -154,7 +154,7 @@ test('a failed download shows Update failed, retries and opens GitHub', async ()
 
     await page.locator('#update-github').click()
     await expect.poll(() => lines(sandbox.openLog).length).toBe(1)
-    expect(JSON.parse(lines(sandbox.openLog)[0]).link).toBe('https://github.com/mfathy234/paneon/releases/latest')
+    expect(JSON.parse(lines(sandbox.openLog)[0]).link).toBe('https://github.com/mfathy234/dawsha/releases/latest')
 
     await setScript(app, { ...AVAILABLE, hold: false, download: 'ok' })
     await page.locator('#update-retry').click()
@@ -167,7 +167,7 @@ test('a failed download shows Update failed, retries and opens GitHub', async ()
 
 test('a failed manual check shows Update failed and Try again checks again', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchApp(sandbox, updaterEnv(sandbox, { check: 'error', checkError: 'Network unreachable' }, { PANEON_UPDATE_START_DELAY_MS: '3600000' }))
+  const { app, page } = await launchApp(sandbox, updaterEnv(sandbox, { check: 'error', checkError: 'Network unreachable' }, { DAWSHA_UPDATE_START_DELAY_MS: '3600000' }))
   try {
     await expect(pill(page)).toBeHidden()
     await openSettings(page, 'updates')
@@ -209,16 +209,16 @@ test('Later hides the pill until a newer version than the dismissed one is found
 
 test('the portable build points to GitHub and never downloads', async () => {
   const sandbox = createSandbox()
-  const portableDir = mkdtempSync(join(tmpdir(), 'paneon-portable-'))
+  const portableDir = mkdtempSync(join(tmpdir(), 'dawsha-portable-'))
   const { app, page } = await launchApp(
     sandbox,
-    updaterEnv(sandbox, AVAILABLE, { PORTABLE_EXECUTABLE_DIR: portableDir, PANEON_OPEN_LOG: join(sandbox.root, 'open.log') })
+    updaterEnv(sandbox, AVAILABLE, { PORTABLE_EXECUTABLE_DIR: portableDir, DAWSHA_OPEN_LOG: join(sandbox.root, 'open.log') })
   )
   try {
     await expect(pill(page)).toHaveText('Update 9.9.0')
     await pill(page).click()
     const popover = page.locator('.update-popover')
-    await expect(popover.locator('.update-title')).toHaveText("Paneon 9.9.0 is available. The portable version can't update itself.")
+    await expect(popover.locator('.update-title')).toHaveText("Dawsha 9.9.0 is available. The portable version can't update itself.")
     await expect(popover.locator('#update-now')).toHaveCount(0)
     await expect(popover.getByRole('button', { name: 'Later' })).toBeVisible()
     await popover.getByRole('button', { name: 'Download from GitHub' }).click()
@@ -237,7 +237,7 @@ test('turning off automatic checks stops the schedule, Check now still works', a
   const sandbox = createSandbox()
   const { app, page } = await launchApp(
     sandbox,
-    updaterEnv(sandbox, { check: 'none' }, { PANEON_UPDATE_START_DELAY_MS: '150', PANEON_UPDATE_INTERVAL_MS: '400' })
+    updaterEnv(sandbox, { check: 'none' }, { DAWSHA_UPDATE_START_DELAY_MS: '150', DAWSHA_UPDATE_INTERVAL_MS: '400' })
   )
   try {
     await expect.poll(() => hookCall<number>(app, 'hook.checks')).toBeGreaterThanOrEqual(2)
@@ -284,7 +284,7 @@ test('after an update the What is new dialog lists every version since the one y
   const first = await launchApp(sandbox)
   const version = APP_VERSION
   try {
-    const dialog = first.page.getByRole('dialog', { name: `What's new in Paneon ${version}` })
+    const dialog = first.page.getByRole('dialog', { name: `What's new in Dawsha ${version}` })
     await expect(dialog).toBeVisible()
     await expect(dialog).toContainText('Updated from 0.2.0')
     await expect(dialog.locator(`.wn-entry[data-version="${version}"]`)).toBeVisible()
@@ -307,7 +307,7 @@ test('after an update the What is new dialog lists every version since the one y
     await expect(second.page.locator('.whats-new')).toHaveCount(0)
     await openSettings(second.page, 'changelog')
     await second.page.locator('#whats-new').click()
-    const reopened = second.page.getByRole('dialog', { name: `What's new in Paneon ${version}` })
+    const reopened = second.page.getByRole('dialog', { name: `What's new in Dawsha ${version}` })
     await expect(reopened).toBeVisible()
     await expect(reopened).not.toContainText('Updated from')
     await second.page.keyboard.press('Escape')
@@ -322,7 +322,7 @@ test('a fresh install records the version and shows setup instead of What is new
   const { app, page } = await launchApp(sandbox)
   try {
     const version = APP_VERSION
-    await expect(page.getByRole('dialog', { name: 'Set up Paneon' })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Set up Dawsha' })).toBeVisible()
     await expect(page.locator('.whats-new')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox).lastSeenVersion).toBe(version)
   } finally {
@@ -336,7 +336,7 @@ test('an install from 0.3.0 without a recorded version is treated as updated fro
   writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(legacy), 'utf8')
   const { app, page } = await launchApp(sandbox)
   try {
-    const dialog = page.getByRole('dialog', { name: `What's new in Paneon ${APP_VERSION}` })
+    const dialog = page.getByRole('dialog', { name: `What's new in Dawsha ${APP_VERSION}` })
     await expect(dialog).toBeVisible()
     await expect(dialog).toContainText('Updated from 0.3.0')
     await dialog.getByRole('button', { name: 'Got it' }).click()

@@ -35,9 +35,9 @@ export interface CliReply {
 export const COMMAND_NAMES = ['open', 'start', 'resume', 'ls', 'layouts', 'sessions', 'add', 'update-agents', 'help'] as const
 
 export const HELP_TEXT = [
-  'Usage: paneon [command]',
+  'Usage: dawsha [command]',
   '',
-  '  open                                   Open Paneon (default)',
+  '  open                                   Open Dawsha (default)',
   '  open <layout> [--replace|--alongside]  Open a saved layout',
   '  layouts                                List saved layouts',
   '  . | start <project|path>               Start a session in a project',
@@ -139,7 +139,7 @@ export function parseCli(args: string[], cwd: string, resolvePath: (path: string
     case 'update-agents':
       return { ok: true, command: { kind: 'update-agents' } }
     default:
-      return fail(`Unknown command '${first}'. Run paneon --help.`)
+      return fail(`Unknown command '${first}'. Run dawsha --help.`)
   }
 }
 
@@ -194,7 +194,7 @@ async function ensureProject(
 async function runStart(command: Extract<CliCommand, { kind: 'start' }>, host: CliHost): Promise<CliReply> {
   let project = command.target ? findProject(host.projects, command.target, null) : undefined
   let added = false
-  if (command.target && !project) return failure(`No project named '${command.target}'. Run paneon ls.`)
+  if (command.target && !project) return failure(`No project named '${command.target}'. Run dawsha ls.`)
   if (command.path) {
     const ensured = await ensureProject(host, command.path)
     if ('ok' in ensured) return ensured
@@ -212,7 +212,7 @@ async function runStart(command: Extract<CliCommand, { kind: 'start' }>, host: C
 
 async function runResume(command: Extract<CliCommand, { kind: 'resume' }>, host: CliHost): Promise<CliReply> {
   const project = findProject(host.projects, command.project, command.project ? null : command.path)
-  if (command.project && !project) return failure(`No project named '${command.project}'. Run paneon ls.`)
+  if (command.project && !project) return failure(`No project named '${command.project}'. Run dawsha ls.`)
   if (!command.last) {
     host.openResumePicker(project?.id)
     return success(project ? `Opened the resume picker for ${project.name}` : 'Opened the resume picker')
@@ -228,7 +228,7 @@ async function runResume(command: Extract<CliCommand, { kind: 'resume' }>, host:
 
 async function runSessions(command: Extract<CliCommand, { kind: 'sessions' }>, host: CliHost): Promise<CliReply> {
   const project = command.project ? findProject(host.projects, command.project, null) : undefined
-  if (command.project && !project) return failure(`No project named '${command.project}'. Run paneon ls.`)
+  if (command.project && !project) return failure(`No project named '${command.project}'. Run dawsha ls.`)
   const sessions = await host.listSessions({ projectId: project?.id })
   if (sessions.length === 0) return success('No earlier sessions found.')
   const rows = sessions.map((s) => [s.agent, s.title, `${formatAge(host.now - s.modifiedAt)} ago`, s.id.slice(0, 6)])
@@ -248,13 +248,13 @@ function runLayouts(host: CliHost): CliReply {
 export async function runCli(command: CliCommand, host: CliHost): Promise<CliReply> {
   switch (command.kind) {
     case 'open':
-      return success('Opened Paneon')
+      return success('Opened Dawsha')
     case 'help':
       return success(HELP_TEXT)
     case 'version':
-      return success(`Paneon ${host.version}`)
+      return success(`Dawsha ${host.version}`)
     case 'ls':
-      if (host.projects.length === 0) return success('No projects yet. Run paneon add <path>.')
+      if (host.projects.length === 0) return success('No projects yet. Run dawsha add <path>.')
       return success(
         table(
           ['NAME', 'AGENT', 'FOLDER', 'SESSIONS'],

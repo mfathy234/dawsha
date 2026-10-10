@@ -137,7 +137,7 @@ describe('parseCli', () => {
   })
 
   it('rejects unknown commands, options, agents and missing values', () => {
-    expect(parse('launch')).toEqual({ ok: false, error: "Unknown command 'launch'. Run paneon --help." })
+    expect(parse('launch')).toEqual({ ok: false, error: "Unknown command 'launch'. Run dawsha --help." })
     expect(parse('ls', '--wide')).toEqual({ ok: false, error: "Unknown option '--wide'." })
     expect(parse('start', 'x', '--agent', 'cursor')).toEqual({
       ok: false,
@@ -172,7 +172,7 @@ describe('table', () => {
 describe('runCli', () => {
   it('prints help and the version', async () => {
     expect((await run({ kind: 'help' })).out).toBe(HELP_TEXT)
-    expect(await run({ kind: 'version' })).toEqual({ ok: true, exit: 0, out: 'Paneon 0.3.0' })
+    expect(await run({ kind: 'version' })).toEqual({ ok: true, exit: 0, out: 'Dawsha 0.3.0' })
   })
 
   it('lists projects with their open session counts', async () => {
@@ -184,7 +184,7 @@ describe('runCli', () => {
   })
 
   it('says so when there are no projects', async () => {
-    expect((await run({ kind: 'ls' }, host({ projects: [] }))).out).toBe('No projects yet. Run paneon add <path>.')
+    expect((await run({ kind: 'ls' }, host({ projects: [] }))).out).toBe('No projects yet. Run dawsha add <path>.')
   })
 
   it('starts the default agent of an existing project', async () => {
@@ -201,7 +201,7 @@ describe('runCli', () => {
 
   it('fails on an unknown project name', async () => {
     const reply = await run({ kind: 'start', target: 'nope', path: null, here: false })
-    expect(reply).toEqual({ ok: false, exit: 1, out: "No project named 'nope'. Run paneon ls." })
+    expect(reply).toEqual({ ok: false, exit: 1, out: "No project named 'nope'. Run dawsha ls." })
   })
 
   it('adds a folder that is not a project yet and then starts it', async () => {
@@ -276,11 +276,11 @@ describe('runCli', () => {
     const reply = await run({ kind: 'open-layout', name: 'morning', mode: 'add' }, h)
     expect(h.openLayout).toHaveBeenCalledWith('morning', 'add')
     expect(reply).toEqual({ ok: true, exit: 0, out: "Opened layout 'morning' (3 panes)" })
-    const missing = host({ openLayout: vi.fn(async () => ({ ok: false, text: "No layout named 'x'. Run paneon layouts." })) })
+    const missing = host({ openLayout: vi.fn(async () => ({ ok: false, text: "No layout named 'x'. Run dawsha layouts." })) })
     expect(await run({ kind: 'open-layout', name: 'x' }, missing)).toEqual({
       ok: false,
       exit: 1,
-      out: "No layout named 'x'. Run paneon layouts."
+      out: "No layout named 'x'. Run dawsha layouts."
     })
   })
 

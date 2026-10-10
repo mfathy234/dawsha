@@ -7,8 +7,8 @@ export const INSTRUCTION_FILES = [
 export type InstructionFileName = (typeof INSTRUCTION_FILES)[number]['name']
 
 export const INSTRUCTION_MAX_BYTES = 512 * 1024
-export const SHARED_START = '<!-- paneon:shared:start -->'
-export const SHARED_END = '<!-- paneon:shared:end -->'
+export const SHARED_START = '<!-- dawsha:shared:start -->'
+export const SHARED_END = '<!-- dawsha:shared:end -->'
 
 export interface FileStamp {
   mtimeMs: number

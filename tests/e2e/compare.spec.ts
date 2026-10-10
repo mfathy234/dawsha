@@ -32,12 +32,12 @@ function fakeEnv(logDir: string): Record<string, string> {
   const node = process.execPath
   return {
     FAKE_AGENT_LOG: logDir,
-    PANEON_CLAUDE_COMMAND: node,
-    PANEON_CLAUDE_ARGS: JSON.stringify([FAKE, 'claude']),
-    PANEON_CODEX_COMMAND: node,
-    PANEON_CODEX_ARGS: JSON.stringify([FAKE, 'codex']),
-    PANEON_GEMINI_COMMAND: node,
-    PANEON_GEMINI_ARGS: JSON.stringify([FAKE, 'gemini'])
+    DAWSHA_CLAUDE_COMMAND: node,
+    DAWSHA_CLAUDE_ARGS: JSON.stringify([FAKE, 'claude']),
+    DAWSHA_CODEX_COMMAND: node,
+    DAWSHA_CODEX_ARGS: JSON.stringify([FAKE, 'codex']),
+    DAWSHA_GEMINI_COMMAND: node,
+    DAWSHA_GEMINI_ARGS: JSON.stringify([FAKE, 'gemini'])
   }
 }
 
@@ -231,7 +231,7 @@ test('keeps both sides, removes a clean worktree after a named confirmation and 
 
 test('works in a folder that is not a git repository and reports why worktrees are off', async () => {
   const sandbox = createSandbox()
-  const plain = join(mkdtempSync(join(tmpdir(), 'paneon-plain-')), 'docs-site')
+  const plain = join(mkdtempSync(join(tmpdir(), 'dawsha-plain-')), 'docs-site')
   mkdirSync(plain, { recursive: true })
   const fresh = makeRepo(sandbox.root, 'mobile-shell', false)
   seedProjects(sandbox, [

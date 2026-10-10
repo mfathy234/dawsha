@@ -112,5 +112,5 @@ async function boot(): Promise<void> {
 
 boot().catch((error: unknown) => {
   console.error(error)
-  toast(`Paneon could not start: ${(error as Error).message}`)
+  toast(`Dawsha could not start: ${(error as Error).message}`)
 })

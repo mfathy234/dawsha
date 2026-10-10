@@ -8,7 +8,7 @@ import { hourKey } from '../../src/shared/usage'
 
 const CLAUDE_ID = '11111111-2222-4333-8444-555555555555'
 const CODEX_ID = '019aaaaa-0000-7000-8000-0000000000aa'
-const WORK = join(tmpdir(), 'paneon-usage-work')
+const WORK = join(tmpdir(), 'dawsha-usage-work')
 
 const PROJECTS: Project[] = [
   { id: 'acme', name: 'acme-web', folder: join(WORK, 'acme-web'), defaultAgent: 'claude' },
@@ -25,7 +25,7 @@ interface Homes {
 }
 
 function makeHomes(): Homes {
-  const root = mkdtempSync(join(tmpdir(), 'paneon-usage-'))
+  const root = mkdtempSync(join(tmpdir(), 'dawsha-usage-'))
   return { root, claude: join(root, 'claude'), codex: join(root, 'codex'), gemini: join(root, 'gemini') }
 }
 
@@ -93,9 +93,9 @@ afterEach(() => {
 })
 
 function use(homes: Homes): void {
-  process.env.PANEON_CLAUDE_HOME = homes.claude
-  process.env.PANEON_CODEX_HOME = homes.codex
-  process.env.PANEON_GEMINI_HOME = homes.gemini
+  process.env.DAWSHA_CLAUDE_HOME = homes.claude
+  process.env.DAWSHA_CODEX_HOME = homes.codex
+  process.env.DAWSHA_GEMINI_HOME = homes.gemini
 }
 
 describe('UsageService.report', () => {

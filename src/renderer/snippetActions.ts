@@ -74,7 +74,7 @@ export async function deleteSnippet(snippetId: string): Promise<void> {
   if (!snippet) return
   const confirmed = await confirmDialog({
     title: `Delete snippet "${snippet.name}"?`,
-    body: 'This removes the snippet from Paneon. Text you already inserted into a terminal is not affected.',
+    body: 'This removes the snippet from Dawsha. Text you already inserted into a terminal is not affected.',
     confirmLabel: `Delete "${snippet.name}"`
   })
   if (!confirmed) return

@@ -6,7 +6,7 @@ import type { SessionFile } from '../shared/types'
 const POLL_MS = 3000
 
 export const sessionsDir = (): string =>
-  process.env.PANEON_SESSIONS_DIR ?? join(process.env.USERPROFILE ?? homedir(), '.claude', 'sessions')
+  process.env.DAWSHA_SESSIONS_DIR ?? join(process.env.USERPROFILE ?? homedir(), '.claude', 'sessions')
 
 type Liveness = 'alive' | 'denied' | 'dead'
 

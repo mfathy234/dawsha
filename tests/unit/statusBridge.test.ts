@@ -44,7 +44,7 @@ describe('installBridge and uninstallBridge', () => {
     expect(installed.theme).toBe('dark')
     expect(installed.permissions).toEqual({ allow: ['Bash'] })
     expect(existsSync(join(where.binDir, BRIDGE_SCRIPT_NAME))).toBe(true)
-    expect(existsSync(`${where.settingsPath}.paneon-backup`)).toBe(true)
+    expect(existsSync(`${where.settingsPath}.dawsha-backup`)).toBe(true)
     expect(bridgeStatus(where).installed).toBe(true)
 
     expect(uninstallBridge(where)).toEqual({ ok: true, note: undefined })
@@ -60,7 +60,7 @@ describe('installBridge and uninstallBridge', () => {
 
     expect(installBridge(where).ok).toBe(true)
     expect(readJson(where.settingsPath).statusLine).toEqual({ type: 'command', command: bridgeCommand(where), padding: 2 })
-    expect(readFileSync(`${where.settingsPath}.paneon-backup`, 'utf8')).toBe(original)
+    expect(readFileSync(`${where.settingsPath}.dawsha-backup`, 'utf8')).toBe(original)
     expect(readJson(join(where.binDir, 'bridge-state.json')).previous).toEqual(previous)
     expect(bridgePreview(where).previousCommand).toBeNull()
 

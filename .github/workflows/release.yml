@@ -41,8 +41,8 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           grep -q "^version: ${version}$" release/latest.yml
-          grep -q "Paneon-Setup-${version}.exe" release/latest.yml
-          test -f "release/Paneon-Setup-${version}.exe.blockmap"
+          grep -q "Dawsha-Setup-${version}.exe" release/latest.yml
+          test -f "release/Dawsha-Setup-${version}.exe.blockmap"
       - name: Create the GitHub Release
         shell: bash
         env:
@@ -57,10 +57,10 @@ jobs:
             notes=(--generate-notes)
           fi
           gh release create "${GITHUB_REF_NAME}" \
-            "release/Paneon-Setup-${version}.exe" \
-            "release/Paneon-Setup-${version}.exe.blockmap" \
-            "release/Paneon-Portable-${version}.exe" \
+            "release/Dawsha-Setup-${version}.exe" \
+            "release/Dawsha-Setup-${version}.exe.blockmap" \
+            "release/Dawsha-Portable-${version}.exe" \
             "release/latest.yml" \
-            --title "Paneon ${version}" \
+            --title "Dawsha ${version}" \
             "${notes[@]}" \
             --verify-tag

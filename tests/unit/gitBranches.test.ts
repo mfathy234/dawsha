@@ -66,9 +66,9 @@ describe('ahead and behind', () => {
 
 describe('parseStashList', () => {
   it('reads the ref and subject of every entry', () => {
-    const text = 'stash@{0}\tOn main: Paneon: 2026-10-09 10:00\nstash@{1}\tWIP on dev: abc1234 first'
+    const text = 'stash@{0}\tOn main: Dawsha: 2026-10-09 10:00\nstash@{1}\tWIP on dev: abc1234 first'
     expect(parseStashList(text)).toEqual([
-      { ref: 'stash@{0}', subject: 'On main: Paneon: 2026-10-09 10:00' },
+      { ref: 'stash@{0}', subject: 'On main: Dawsha: 2026-10-09 10:00' },
       { ref: 'stash@{1}', subject: 'WIP on dev: abc1234 first' }
     ])
     expect(parseStashList('')).toEqual([])
@@ -143,7 +143,7 @@ describe('git message helpers', () => {
 
   it('names stashes with the date and optionally the branch', () => {
     const date = new Date('2026-10-09T10:30:00Z')
-    expect(stashMessage(date)).toBe('Paneon: 2026-10-09 10:30')
-    expect(stashMessage(date, 'main')).toBe('Paneon: main 2026-10-09 10:30')
+    expect(stashMessage(date)).toBe('Dawsha: 2026-10-09 10:30')
+    expect(stashMessage(date, 'main')).toBe('Dawsha: main 2026-10-09 10:30')
   })
 })

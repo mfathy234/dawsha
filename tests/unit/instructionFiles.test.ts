@@ -10,7 +10,7 @@ let folder = ''
 const projects = () => [{ id: 'acme', name: 'acme-web', folder, defaultAgent: 'claude' as const }]
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'paneon-instr-'))
+  root = mkdtempSync(join(tmpdir(), 'dawsha-instr-'))
   folder = join(root, 'acme-web')
   mkdirSync(folder)
 })

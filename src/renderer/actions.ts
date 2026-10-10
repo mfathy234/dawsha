@@ -820,8 +820,8 @@ export async function removeProject(projectId: string): Promise<void> {
   const snippetNote = scoped > 0 ? ` Its ${scoped} snippet${scoped === 1 ? '' : 's'} ${scoped === 1 ? 'is' : 'are'} removed too.` : ''
   const body =
     open.length > 0
-      ? `This removes ${project.name} from Paneon and stops its ${open.length} open session${open.length === 1 ? '' : 's'}. The folder stays on disk.${snippetNote}`
-      : `This removes ${project.name} from Paneon. The folder stays on disk.${snippetNote}`
+      ? `This removes ${project.name} from Dawsha and stops its ${open.length} open session${open.length === 1 ? '' : 's'}. The folder stays on disk.${snippetNote}`
+      : `This removes ${project.name} from Dawsha. The folder stays on disk.${snippetNote}`
   const confirmed = await confirmDialog({
     title: `Remove ${project.name}?`,
     body,
@@ -956,7 +956,7 @@ export async function enableBridge(): Promise<void> {
     title: 'Show live session info?',
     body:
       `This edits ~/.claude/settings.json (${preview.settingsPath}): its statusLine is set to a small script that ` +
-      `saves each session's status for Paneon. ${BRIDGE_COMMAND_NOTE} ${previous} ` +
+      `saves each session's status for Dawsha. ${BRIDGE_COMMAND_NOTE} ${previous} ` +
       'Turning this off puts the previous value back.',
     confirmLabel: 'Edit ~/.claude/settings.json',
     danger: false

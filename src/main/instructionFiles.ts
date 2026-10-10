@@ -47,14 +47,14 @@ function targetOf(root: string, name: string): Target {
   }
   const inside = relative(realpathSync(root), real)
   if (inside === '' || inside.startsWith('..') || isAbsolute(inside)) {
-    return { ok: false, message: `${name} links to a file outside the project, so Paneon leaves it alone.` }
+    return { ok: false, message: `${name} links to a file outside the project, so Dawsha leaves it alone.` }
   }
   return { ok: true, path: real }
 }
 
 export function readInstruction(projects: Project[], folder: unknown, name: unknown): InstructionRead {
   const root = projectFolder(projects, folder)
-  if (!root || !isInstructionName(name)) return { ok: false, message: 'That file is not part of a Paneon project.' }
+  if (!root || !isInstructionName(name)) return { ok: false, message: 'That file is not part of a Dawsha project.' }
   const target = targetOf(root, name)
   if (!target.ok) return { ok: false, message: target.message }
   const path = target.path
@@ -86,7 +86,7 @@ function changedOnDisk(path: string, expected: FileStamp | null): boolean {
 export function writeInstruction(projects: Project[], request: InstructionWriteRequest): InstructionWriteResult {
   const root = projectFolder(projects, request?.folder)
   if (!root || !isInstructionName(request?.name) || typeof request.content !== 'string') {
-    return failure('invalid', 'That file is not part of a Paneon project.')
+    return failure('invalid', 'That file is not part of a Dawsha project.')
   }
   const { name, content } = request
   if (Buffer.byteLength(content, 'utf8') > INSTRUCTION_MAX_BYTES) {
@@ -100,7 +100,7 @@ export function writeInstruction(projects: Project[], request: InstructionWriteR
   if (!request.overwrite && changedOnDisk(path, request.expected ?? null)) {
     return failure('changed', `${name} changed on disk since you opened it.`)
   }
-  const temp = join(dirname(path), `.${basename(path)}.paneon-${randomBytes(4).toString('hex')}.tmp`)
+  const temp = join(dirname(path), `.${basename(path)}.dawsha-${randomBytes(4).toString('hex')}.tmp`)
   try {
     writeFileSync(temp, content, 'utf8')
     renameSync(temp, path)

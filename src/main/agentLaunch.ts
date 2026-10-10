@@ -13,14 +13,14 @@ export interface LaunchSpec {
 
 const CODEX_VENDOR = join('@openai', 'codex-win32-x64', 'vendor', 'x86_64-pc-windows-msvc', 'bin', 'codex.exe')
 
-export const claudeCommand = (): string => process.env.PANEON_CLAUDE_COMMAND || 'claude.exe'
+export const claudeCommand = (): string => process.env.DAWSHA_CLAUDE_COMMAND || 'claude.exe'
 
-export const codexCommand = (): string => process.env.PANEON_CODEX_COMMAND || 'codex'
+export const codexCommand = (): string => process.env.DAWSHA_CODEX_COMMAND || 'codex'
 
-export const geminiCommand = (): string => process.env.PANEON_GEMINI_COMMAND || 'gemini'
+export const geminiCommand = (): string => process.env.DAWSHA_GEMINI_COMMAND || 'gemini'
 
 export function shellCommand(): string {
-  if (process.env.PANEON_SHELL) return process.env.PANEON_SHELL
+  if (process.env.DAWSHA_SHELL) return process.env.DAWSHA_SHELL
   return resolveExecutable('pwsh.exe') ? 'pwsh.exe' : 'powershell.exe'
 }
 
@@ -40,7 +40,7 @@ export function locateCodexBinary(pathDirs: string[]): string | null {
 
 function resolveCodex(pathDirs: string[]): LaunchSpec | null {
   const command = codexCommand()
-  if (process.env.PANEON_CODEX_COMMAND) {
+  if (process.env.DAWSHA_CODEX_COMMAND) {
     const file = resolveExecutable(command)
     return file ? { file, args: [] } : null
   }
@@ -68,7 +68,7 @@ export function locateGeminiEntry(pathDirs: string[]): LaunchSpec | null {
 }
 
 function resolveGemini(pathDirs: string[]): LaunchSpec | null {
-  if (process.env.PANEON_GEMINI_COMMAND) {
+  if (process.env.DAWSHA_GEMINI_COMMAND) {
     const file = resolveExecutable(geminiCommand())
     return file ? { file, args: [] } : null
   }
@@ -104,7 +104,7 @@ export function agentArgs(
 export function shellArgs(file: string, command?: string): string[] {
   const name = (file.split(/[\\/]/).pop() ?? file).toLowerCase()
   if (command !== undefined) return name === 'cmd.exe' ? ['/d', '/s', '/c', command] : ['-NoLogo', '-Command', command]
-  return process.env.PANEON_SHELL ? [] : ['-NoLogo']
+  return process.env.DAWSHA_SHELL ? [] : ['-NoLogo']
 }
 
 export function launchSpec(request: SpawnRequest): LaunchSpec | string {
@@ -117,30 +117,30 @@ export function launchSpec(request: SpawnRequest): LaunchSpec | string {
   const pathDirs = (process.env.PATH ?? '').split(delimiter)
   if (request.agent === 'codex') {
     const base = resolveCodex(pathDirs)
-    if (!base) return `Could not find ${codexCommand()}. Install Codex CLI (npm i -g @openai/codex) or set PANEON_CODEX_COMMAND.`
-    const overridden = Boolean(process.env.PANEON_CODEX_COMMAND)
-    const extra = splitArgs(process.env.PANEON_CODEX_ARGS)
+    if (!base) return `Could not find ${codexCommand()}. Install Codex CLI (npm i -g @openai/codex) or set DAWSHA_CODEX_COMMAND.`
+    const overridden = Boolean(process.env.DAWSHA_CODEX_COMMAND)
+    const extra = splitArgs(process.env.DAWSHA_CODEX_ARGS)
     const initial = promptFor(base, request)
     if (typeof initial === 'string') return initial
     return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
   }
   if (request.agent === 'gemini') {
     const base = resolveGemini(pathDirs)
-    if (!base) return `Could not find ${geminiCommand()}. Install Gemini CLI (npm i -g @google/gemini-cli) or set PANEON_GEMINI_COMMAND.`
-    const overridden = Boolean(process.env.PANEON_GEMINI_COMMAND)
-    const extra = splitArgs(process.env.PANEON_GEMINI_ARGS)
+    if (!base) return `Could not find ${geminiCommand()}. Install Gemini CLI (npm i -g @google/gemini-cli) or set DAWSHA_GEMINI_COMMAND.`
+    const overridden = Boolean(process.env.DAWSHA_GEMINI_COMMAND)
+    const extra = splitArgs(process.env.DAWSHA_GEMINI_ARGS)
     const initial = promptFor(base, request)
     if (typeof initial === 'string') return initial
     return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
   }
   const command = claudeCommand()
   const file = resolveExecutable(command, claudeFallbackDirs())
-  if (!file) return `Could not find ${command}. Install Claude Code or set PANEON_CLAUDE_COMMAND.`
+  if (!file) return `Could not find ${command}. Install Claude Code or set DAWSHA_CLAUDE_COMMAND.`
   const initial = promptFor({ file, args: [] }, request)
   if (typeof initial === 'string') return initial
   const args = [
-    ...splitArgs(process.env.PANEON_CLAUDE_ARGS),
-    ...agentArgs(request, Boolean(process.env.PANEON_CLAUDE_COMMAND)),
+    ...splitArgs(process.env.DAWSHA_CLAUDE_ARGS),
+    ...agentArgs(request, Boolean(process.env.DAWSHA_CLAUDE_COMMAND)),
     ...initial
   ]
   return { file, args }
@@ -159,7 +159,7 @@ function promptFor(base: LaunchSpec, request: Pick<SpawnRequest, 'agent' | 'prom
   return promptArgs(request.agent, request.prompt)
 }
 
-export const codexHome = (): string => process.env.PANEON_CODEX_HOME ?? join(process.env.USERPROFILE ?? homedir(), '.codex')
+export const codexHome = (): string => process.env.DAWSHA_CODEX_HOME ?? join(process.env.USERPROFILE ?? homedir(), '.codex')
 
 
-export const geminiHome = (): string => process.env.PANEON_GEMINI_HOME ?? join(process.env.USERPROFILE ?? homedir(), '.gemini')
+export const geminiHome = (): string => process.env.DAWSHA_GEMINI_HOME ?? join(process.env.USERPROFILE ?? homedir(), '.gemini')

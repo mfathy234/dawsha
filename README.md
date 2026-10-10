@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="src/renderer/assets/logo.svg" width="96" height="96" alt="Paneon logo: a 2 by 2 grid with one lit pane">
+  <img src="src/renderer/assets/logo.svg" width="96" height="96" alt="Dawsha logo: a terminal inside a speech bubble">
 </p>
 
-<h1 align="center">Paneon</h1>
+<h1 align="center">Dawsha</h1>
 
 <p align="center"><strong>One window for all your AI coding agents.</strong></p>
 
-<p align="center">Website: <a href="https://paneon.pages.dev">https://paneon.pages.dev</a></p>
+<p align="center"><a href="https://github.com/mfathy234/dawsha">GitHub repository</a></p>
 
 <p align="center">
   A Windows desktop app that puts Claude Code, OpenAI Codex CLI and Google Gemini CLI side by side in a grid of
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/grid.png" alt="Paneon showing four sessions in a 2 by 2 grid: Claude Code, Codex CLI and Gemini CLI on four demo projects">
+  <img src="docs/screenshots/grid.png" alt="Dawsha showing four sessions in a 2 by 2 grid: Claude Code, Codex CLI and Gemini CLI on four demo projects">
 </p>
 
 ## Features
@@ -26,7 +26,7 @@
 - **Arrange panes your way.** Drag the borders between panes to resize them, drag a pane by its header or a tab along its strip to reorder, or use the **Move pane** button and the keyboard. Pin a pane so it stays beside whichever pane you maximize. Switch panes with **Ctrl+Tab**, jump to one with **Ctrl+1** to **Ctrl+9**, or to the next one waiting on you with **Ctrl+Shift+J**.
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
 - **A command palette.** **Ctrl+K** searches your open sessions, actions, projects, snippets and layouts in one list and runs what you pick from the keyboard.
-- **Saved layouts.** Save the current panes under a name and bring the same setup back later, resuming each agent's session, from the **Layouts** menu, the palette or `paneon open <layout>`.
+- **Saved layouts.** Save the current panes under a name and bring the same setup back later, resuming each agent's session, from the **Layouts** menu, the palette or `dawsha open <layout>`.
 - **Prompt snippets.** Keep short prompts with `{{selection}}`, `{{branch}}`, `{{project}}` and `{{folder}}` variables and insert one into the focused terminal with **Alt+1** to **Alt+9**, typed but not sent.
 - **Ask two agents.** Send one prompt to two agents at once, each optionally in its own git worktree, watch them side by side and keep one, keep both or diff them.
 - **Continue in another agent.** Hand a session over to Codex, Gemini or Claude with an editable summary of the goal, the files touched, what is done and left, the last error and the recent output.
@@ -43,7 +43,7 @@
 - **Highlight rules.** Lines with errors, warnings or passing tests are tinted in every pane; change the words and colors in Settings.
 - **Open in your editor.** Every pane header has an **Open in VS Code** button, and the pane menu opens the folder's `.sln` in **Visual Studio** when there is one. The menu shows each action's icon and shortcut.
 - **Usage.** Tokens per day by agent, tokens and Claude Code cost by project and agent, and a history of your 5 hour and weekly limits, read from the agents' own folders.
-- **A `paneon` command.** Run `paneon .` in any folder to add it as a project and start its agent, `paneon resume --last` to pick up the newest session, `paneon open <layout>` to bring a saved layout back, or `paneon ls` to list your projects, all from the terminal you already have open.
+- **A `dawsha` command.** Run `dawsha .` in any folder to add it as a project and start its agent, `dawsha resume --last` to pick up the newest session, `dawsha open <layout>` to bring a saved layout back, or `dawsha ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
 - **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab. Choose per agent whether sessions start with full access, on by default for Claude Code and Codex.
 - **Settings in one place.** A Settings view (Ctrl+,) for the palette shortcut, notifications and live session info, full access per agent, updates, the full changelog and where your data lives.
@@ -62,9 +62,9 @@
 
 | Resume picker | First run |
 |---|---|
-| ![The resume picker listing sessions of all three agents with a preview of the selected one](docs/screenshots/resume-picker.png) | ![The Set up Paneon dialog with two steps, add a project and install your agents](docs/screenshots/onboarding.png) |
+| ![The resume picker listing sessions of all three agents with a preview of the selected one](docs/screenshots/resume-picker.png) | ![The Set up Dawsha dialog with two steps, add a project and install your agents](docs/screenshots/onboarding.png) |
 
-![A PowerShell window running paneon ls, paneon start and paneon sessions next to the Paneon grid. The image is a composite of a real app screenshot and the real output of those commands.](docs/screenshots/cli.png)
+![A PowerShell window running dawsha ls, dawsha start and dawsha sessions next to the Dawsha grid. The image is a composite of a real app screenshot and the real output of those commands.](docs/screenshots/cli.png)
 
 | Update available | What's new after an update |
 |---|---|
@@ -90,42 +90,42 @@
 | Codex CLI | `codex` | `npm i -g @openai/codex` | `codex resume <id>` | From rollout files in `~/.codex/sessions` |
 | Gemini CLI | `gemini` | `npm i -g @google/gemini-cli` | `gemini --resume <id>` | From chat files in `~/.gemini/tmp`; busy/idle from terminal activity |
 
-Paneon only reads the agents' own folders. It never writes to `~/.codex` or `~/.gemini`.
+Dawsha only reads the agents' own folders. It never writes to `~/.codex` or `~/.gemini`.
 
 ## Install
 
-1. Download `Paneon-Setup-<version>.exe` (installer) or `Paneon-Portable-<version>.exe` from the [latest release](https://github.com/mfathy234/paneon/releases/latest).
+1. Download `Dawsha-Setup-<version>.exe` (installer) or `Dawsha-Portable-<version>.exe` from the [latest release](https://github.com/mfathy234/dawsha/releases/latest).
 2. Run it. The builds are not code signed, so Windows SmartScreen may show "Windows protected your PC": choose **More info**, then **Run anyway**.
 
 Requirements: Windows 10 or 11 (x64). Node.js 20+ is only needed for installing Codex and Gemini through the Agents view.
 
-The installer also puts the `paneon` command on your user PATH (open a new terminal after installing) and removes it again on uninstall. The portable build does not touch your PATH: run `Paneon-Portable-<version>.exe` directly, or copy it somewhere and add that folder to your PATH yourself. Arguments given to the portable exe are forwarded to the running Paneon, but its answers appear as a toast in the app instead of in the terminal.
+The installer also puts the `dawsha` command on your user PATH (open a new terminal after installing) and removes it again on uninstall. The portable build does not touch your PATH: run `Dawsha-Portable-<version>.exe` directly, or copy it somewhere and add that folder to your PATH yourself. Arguments given to the portable exe are forwarded to the running Dawsha, but its answers appear as a toast in the app instead of in the terminal.
 
 ## Updates
 
-The installed build (`Paneon-Setup-<version>.exe`) updates itself from GitHub Releases:
+The installed build (`Dawsha-Setup-<version>.exe`) updates itself from GitHub Releases:
 
 - 10 seconds after start and every 6 hours it checks for a newer release. An **Update 0.5.1** pill appears in the top bar, right of the session counts.
-- **Update now** downloads in the background (the pill shows the progress) while your sessions keep running. When it is ready the pill says **Restart to update**: **Restart now** installs it and your open sessions reopen, or choose **When I quit** and it installs the next time you close Paneon.
+- **Update now** downloads in the background (the pill shows the progress) while your sessions keep running. When it is ready the pill says **Restart to update**: **Restart now** installs it and your open sessions reopen, or choose **When I quit** and it installs the next time you close Dawsha.
 - **Later** hides the pill until a newer version than the one you dismissed is found. A failed download shows **Update failed** with **Try again** and **Open GitHub**.
-- The Theme popover has an **Updates** section: turn automatic checks off, see when Paneon last checked, **Check now** and **What's new**.
-- After an update Paneon shows **What's new** once, with the changes of every version since the one you had (read from the bundled `CHANGELOG.md`). A fresh install shows the setup instead.
+- The Theme popover has an **Updates** section: turn automatic checks off, see when Dawsha last checked, **Check now** and **What's new**.
+- After an update Dawsha shows **What's new** once, with the changes of every version since the one you had (read from the bundled `CHANGELOG.md`). A fresh install shows the setup instead.
 
-The portable build (`Paneon-Portable-<version>.exe`) cannot replace itself: it tells you a new version exists and opens the release page. Development runs never check.
+The portable build (`Dawsha-Portable-<version>.exe`) cannot replace itself: it tells you a new version exists and opens the release page. Development runs never check.
 
-Updates are not code signed, like the installer itself. Paneon verifies the downloaded file against the SHA-512 in the release's `latest.yml` and does not require a publisher signature.
+Updates are not code signed, like the installer itself. Dawsha verifies the downloaded file against the SHA-512 in the release's `latest.yml` and does not require a publisher signature.
 
 Version 0.3.0 and older have no updater: install 0.4.0 manually once, later versions arrive in the app.
 
 ## First run
 
-On a fresh install Paneon opens **Set up Paneon** with two steps: add a project (a folder picker) and install your agents (it shows which CLIs it found and has an **Open Agents** button). **Skip** or **Done** closes it for good; **Getting started** in the Theme popover reopens it. You can also do the steps by hand:
+On a fresh install Dawsha opens **Set up Dawsha** with two steps: add a project (a folder picker) and install your agents (it shows which CLIs it found and has an **Open Agents** button). **Skip** or **Done** closes it for good; **Getting started** in the Theme popover reopens it. You can also do the steps by hand:
 
 1. Open **Projects** (top bar) and add a project: a name and a folder. Choose each project's default agent.
-2. Sign in once to each agent you use, in any terminal: `claude`, `codex`, `gemini`. Paneon never handles your credentials.
+2. Sign in once to each agent you use, in any terminal: `claude`, `codex`, `gemini`. Dawsha never handles your credentials.
 3. Press **Ctrl+N** (or click a project) to start a session. If an agent is not installed, open **Agents** and click **Install**.
 
-Tip: run `paneon .` in any folder to open it in Paneon.
+Tip: run `dawsha .` in any folder to open it in Dawsha.
 
 ## Using it
 
@@ -181,11 +181,11 @@ Press **Ctrl+Shift+R**, choose **Resume a session...** in the split-button menu,
 
 ### Command palette
 
-Press **Ctrl+K** (or Ctrl+Shift+P) anywhere in the window, also while a terminal has focus. Paneon takes Ctrl+K before the terminal sees it, because agents rarely use it on Windows; set `"paletteShortcut": "Ctrl+Alt+P"` in `settings.json` to use another key (Ctrl or Alt plus one key, and Ctrl+Shift+P keeps working). The list has five groups: **Sessions** (switch to an open pane), **Actions**, **Projects** (`Start Codex in billing-api`), **Snippets** and **Layouts**. The filter is fuzzy and also matches session titles. Up and Down move through every row, **Tab** jumps to the next group, **Enter** runs the row and **Esc** closes. With an empty filter the commands you ran last come first under **Recent**. The palette, the menus and the keyboard shortcuts read one command list, so a new action shows up in all three.
+Press **Ctrl+K** (or Ctrl+Shift+P) anywhere in the window, also while a terminal has focus. Dawsha takes Ctrl+K before the terminal sees it, because agents rarely use it on Windows; set `"paletteShortcut": "Ctrl+Alt+P"` in `settings.json` to use another key (Ctrl or Alt plus one key, and Ctrl+Shift+P keeps working). The list has five groups: **Sessions** (switch to an open pane), **Actions**, **Projects** (`Start Codex in billing-api`), **Snippets** and **Layouts**. The filter is fuzzy and also matches session titles. Up and Down move through every row, **Tab** jumps to the next group, **Enter** runs the row and **Esc** closes. With an empty filter the commands you ran last come first under **Recent**. The palette, the menus and the keyboard shortcuts read one command list, so a new action shows up in all three.
 
 ### Saved layouts
 
-**Layouts** in the top bar lists your saved layouts. **Save current layout...** asks for a name and stores, for every pane in order, its project, its tabs (agent, label and session id), the active tab and the text size. **Open** adds the layout's panes. When panes are already open Paneon asks first: **Replace with <name>** stops the open sessions (their files stay on disk), **Add alongside** keeps them running, **Cancel** does nothing. Tabs that have a session id resume it (`claude -r <id>`, `codex resume <id>`, `gemini --resume <id>`), the others start fresh, and a session that is already open in the grid starts fresh instead of running twice. Panes whose project was removed are skipped and reported. **Rename** and **Delete** are in the same list, and Delete names the layout in its confirmation. The two panes of an **Ask two agents** comparison are saved as plain panes without session ids, because their worktrees are temporary. From a terminal, `paneon layouts` lists them and `paneon open <layout>` opens one (see below).
+**Layouts** in the top bar lists your saved layouts. **Save current layout...** asks for a name and stores, for every pane in order, its project, its tabs (agent, label and session id), the active tab and the text size. **Open** adds the layout's panes. When panes are already open Dawsha asks first: **Replace with <name>** stops the open sessions (their files stay on disk), **Add alongside** keeps them running, **Cancel** does nothing. Tabs that have a session id resume it (`claude -r <id>`, `codex resume <id>`, `gemini --resume <id>`), the others start fresh, and a session that is already open in the grid starts fresh instead of running twice. Panes whose project was removed are skipped and reported. **Rename** and **Delete** are in the same list, and Delete names the layout in its confirmation. The two panes of an **Ask two agents** comparison are saved as plain panes without session ids, because their worktrees are temporary. From a terminal, `dawsha layouts` lists them and `dawsha open <layout>` opens one (see below).
 
 ### Snippets
 
@@ -202,11 +202,11 @@ Press the shortcut or choose `Insert "<name>"` in the palette to type the text i
 
 ### Ask two agents
 
-**Ask two agents...** (Ctrl+Shift+A, the split-button menu or the palette) opens a dialog with a project, an agent for **A** and one for **B** (default Claude and Codex), a prompt and the option **Start each in its own git worktree**, which is on when the project is a git repository with at least one commit. With it on, Paneon runs `git worktree add -b compare/<id>-a ../<repo>-compare-<id>-a HEAD` (and the same for `b`) so the two agents cannot overwrite each other; git errors show in the dialog and nothing is left behind. Both agents start with the prompt as their first message: `claude "<prompt>"`, `codex "<prompt>"` and `gemini --prompt-interactive=<prompt>`, passed as one argument without a shell. A Codex or Gemini that is installed only as an npm `.cmd` shim cannot take a prompt safely and reports that instead.
+**Ask two agents...** (Ctrl+Shift+A, the split-button menu or the palette) opens a dialog with a project, an agent for **A** and one for **B** (default Claude and Codex), a prompt and the option **Start each in its own git worktree**, which is on when the project is a git repository with at least one commit. With it on, Dawsha runs `git worktree add -b compare/<id>-a ../<repo>-compare-<id>-a HEAD` (and the same for `b`) so the two agents cannot overwrite each other; git errors show in the dialog and nothing is left behind. Both agents start with the prompt as their first message: `claude "<prompt>"`, `codex "<prompt>"` and `gemini --prompt-interactive=<prompt>`, passed as one argument without a shell. A Codex or Gemini that is installed only as an npm `.cmd` shim cannot take a prompt safely and reports that instead.
 
 The two panes sit side by side under a shared **Compare** header with the prompt, marked **A** and **B**, with these buttons below:
 
-- **Keep A** and **Keep B** close the other pane after a confirmation that names it, then offer to remove its worktree and branch. If that worktree has uncommitted files or commits of its own Paneon says so and keeps it unless you confirm.
+- **Keep A** and **Keep B** close the other pane after a confirmation that names it, then offer to remove its worktree and branch. If that worktree has uncommitted files or commits of its own Dawsha says so and keeps it unless you confirm.
 - **Keep both** unlinks the two panes and leaves the worktrees alone.
 - **Diff A vs B** opens a shell tab with `git diff compare/<id>-a compare/<id>-b`, or `git diff --no-index` between the two folders when either has uncommitted files (that diff also lists the worktrees' `.git` pointer files).
 
@@ -214,7 +214,7 @@ A comparison survives a restart: the pair, the prompt and the worktree folders a
 
 ### Continue in another agent
 
-The pane menu (the three dots) and the palette offer **Continue in Codex**, **Gemini** or **Claude**, whichever the pane is not. Paneon builds a summary from what it knows: the session title as **Goal**, **Files touched** from `git diff HEAD --numstat` and untracked files, **What's done** and **What's left** from the ops feed's plan and last build or test result, **Last error** (a failed check, else the last line of the terminal that looks like an error) and the last 40 lines of terminal output without colours. You can edit all of it before **Start <agent> with this** opens a new pane in the same folder with the text as the first message. The pane you continued from keeps running, and the new one shows a muted **from <agent>** chip. The summary is limited to 6000 characters.
+The pane menu (the three dots) and the palette offer **Continue in Codex**, **Gemini** or **Claude**, whichever the pane is not. Dawsha builds a summary from what it knows: the session title as **Goal**, **Files touched** from `git diff HEAD --numstat` and untracked files, **What's done** and **What's left** from the ops feed's plan and last build or test result, **Last error** (a failed check, else the last line of the terminal that looks like an error) and the last 40 lines of terminal output without colours. You can edit all of it before **Start <agent> with this** opens a new pane in the same folder with the text as the first message. The pane you continued from keeps running, and the new one shows a muted **from <agent>** chip. The summary is limited to 6000 characters.
 
 ### Cost and time per pane
 
@@ -236,7 +236,7 @@ Click the branch in a pane header, or search the palette, for **Pull**, **Fetch*
 
 Projects > **Instructions** lists a project's `CLAUDE.md` (Claude Code), `AGENTS.md` (Codex CLI) and `GEMINI.md` (Gemini CLI) with their size and last change. **Edit** opens a file in an editor with Save (Ctrl+S) and Revert; line endings are kept. When the file changed on disk since you opened it, Save stops and offers Reload, or Overwrite after a confirmation that names the file.
 
-**Shared instructions** are written once and kept between `<!-- paneon:shared:start -->` and `<!-- paneon:shared:end -->` in every file that exists; tick a missing file to create it. A preview lists what will change before **Apply to all files**. Text outside the markers is never touched. **Edit project instructions** in the palette opens the tab for the focused pane's project.
+**Shared instructions** are written once and kept between `<!-- dawsha:shared:start -->` and `<!-- dawsha:shared:end -->` in every file that exists; tick a missing file to create it. A preview lists what will change before **Apply to all files**. Text outside the markers is never touched. **Edit project instructions** in the palette opens the tab for the focused pane's project.
 
 ### Context warnings
 
@@ -269,7 +269,7 @@ Lines that contain `error`, `failed`, `exception` (red), `warning` (amber) or `p
 
 ### Settings
 
-Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Highlights**, **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Paneon keeps there). The Theme menu holds the themes and the background image.
+Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Highlights**, **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Dawsha keeps there). The Theme menu holds the themes and the background image.
 
 ### Usage
 
@@ -279,30 +279,30 @@ Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General
 - Codex CLI: `~/.codex/sessions`, the running `token_count` totals turned into amounts per hour. Tokens are uncached input plus output; cached input is listed apart.
 - Gemini CLI: `~/.gemini/tmp/*/chats`, the token counts of each reply (uncached input, output, thoughts and tool tokens).
 
-The chart stacks the three agents and switches between **Tokens** and **Cost**. **By project** assigns each session to the project whose folder contains its working folder (anything else is **Other**) and shows sessions, tokens, cost and the busiest agent; **By agent** shows sessions, tokens, cache reads and cost. Paneon never invents a price: cost is shown only for Claude Code sessions that reported one through **Show live session info**, which Paneon keeps per session in `usage-history.json` so it stays after the status files are cleaned up (it is counted on the day the cost last changed). Codex and Gemini show `n/a`. The same file keeps a history of the 5 hour and weekly limit readings (a new one when a percentage changes or after 15 minutes, newest 3000 kept), drawn as **Limit usage**; it starts on the day you turn the live info on. When a folder is missing, a range is empty or no cost was reported, the view says so instead of showing a blank chart.
+The chart stacks the three agents and switches between **Tokens** and **Cost**. **By project** assigns each session to the project whose folder contains its working folder (anything else is **Other**) and shows sessions, tokens, cost and the busiest agent; **By agent** shows sessions, tokens, cache reads and cost. Dawsha never invents a price: cost is shown only for Claude Code sessions that reported one through **Show live session info**, which Dawsha keeps per session in `usage-history.json` so it stays after the status files are cleaned up (it is counted on the day the cost last changed). Codex and Gemini show `n/a`. The same file keeps a history of the 5 hour and weekly limit readings (a new one when a percentage changes or after 15 minutes, newest 3000 kept), drawn as **Limit usage**; it starts on the day you turn the live info on. When a folder is missing, a range is empty or no cost was reported, the view says so instead of showing a blank chart.
 
-### The paneon command
+### The dawsha command
 
-`paneon` talks to the running app over a local named pipe (`\\.\pipe\paneon-<user>`) and starts Paneon first if it is not running. Nothing stays in the background when Paneon is closed. It prints to the terminal you ran it in and exits non-zero on errors.
+`dawsha` talks to the running app over a local named pipe (`\\.\pipe\dawsha-<user>`) and starts Dawsha first if it is not running. Nothing stays in the background when Dawsha is closed. It prints to the terminal you ran it in and exits non-zero on errors.
 
 | Command | What it does |
 |---|---|
-| `paneon` or `paneon open` | Open Paneon, or bring it to the front |
-| `paneon open <layout> [--replace\|--alongside]` | Open a saved layout (a name, in any case, or with dashes for spaces). When panes are open it asks in the app unless you give `--replace` (stop them first) or `--alongside` (keep them) |
-| `paneon layouts` | List saved layouts with their pane counts and projects |
-| `paneon .` | Add the current folder as a project if it is new (name = folder name, default agent Claude) and start its default agent in a new pane |
-| `paneon start <project\|path> [--agent claude\|codex\|gemini] [--here]` | Start a session; a path is added as a project if it is new. `--here` opens it as a tab in the focused pane when that pane belongs to the project |
-| `paneon resume [project] [--last] [--agent <agent>]` | Open the resume picker for a project (default: the project of the current folder), or with `--last` resume the newest matching session |
-| `paneon ls` | List projects with their default agent, folder and open session count |
-| `paneon sessions [project]` | List earlier sessions: agent, title, last activity, short id |
-| `paneon add <path> [--name <name>]` | Add a project |
-| `paneon update-agents` | Update the installed agents in a visible shell tab |
-| `paneon --help`, `paneon --version` | Usage and version |
+| `dawsha` or `dawsha open` | Open Dawsha, or bring it to the front |
+| `dawsha open <layout> [--replace\|--alongside]` | Open a saved layout (a name, in any case, or with dashes for spaces). When panes are open it asks in the app unless you give `--replace` (stop them first) or `--alongside` (keep them) |
+| `dawsha layouts` | List saved layouts with their pane counts and projects |
+| `dawsha .` | Add the current folder as a project if it is new (name = folder name, default agent Claude) and start its default agent in a new pane |
+| `dawsha start <project\|path> [--agent claude\|codex\|gemini] [--here]` | Start a session; a path is added as a project if it is new. `--here` opens it as a tab in the focused pane when that pane belongs to the project |
+| `dawsha resume [project] [--last] [--agent <agent>]` | Open the resume picker for a project (default: the project of the current folder), or with `--last` resume the newest matching session |
+| `dawsha ls` | List projects with their default agent, folder and open session count |
+| `dawsha sessions [project]` | List earlier sessions: agent, title, last activity, short id |
+| `dawsha add <path> [--name <name>]` | Add a project |
+| `dawsha update-agents` | Update the installed agents in a visible shell tab |
+| `dawsha --help`, `dawsha --version` | Usage and version |
 
 ```
-PS C:\work\acme-web> paneon start billing-api --agent codex
+PS C:\work\acme-web> dawsha start billing-api --agent codex
 billing-api: started Codex in pane 3
-PS C:\work\acme-web> paneon resume --last --agent claude
+PS C:\work\acme-web> dawsha resume --last --agent claude
 Resumed 'Add dark mode toggle' (Claude Code) in pane 4
 ```
 
@@ -322,7 +322,7 @@ Open **Agents** in the top bar. Each row shows the installed version (`<cli> --v
 
 npm-based commands need Node.js 20+; without it the row shows "Needs Node.js 20+" with a link instead of a button. Nothing runs until you click.
 
-**Start with full access** under each agent decides whether new sessions skip the agent's approval prompts. It is on for Claude Code and Codex CLI and off for Gemini CLI until you change it, and applies to sessions started after the change. Paneon passes the agent's own flag:
+**Start with full access** under each agent decides whether new sessions skip the agent's approval prompts. It is on for Claude Code and Codex CLI and off for Gemini CLI until you change it, and applies to sessions started after the change. Dawsha passes the agent's own flag:
 
 | Agent | Flag |
 |---|---|
@@ -336,19 +336,19 @@ With it on the agent edits files and runs commands without asking, so turn it of
 
 Both are optional and off until you turn them on.
 
-**Live session info (status-line bridge).** Claude Code runs a status-line command with the session as JSON on stdin. The Theme popover toggle **Show live session info** installs a small script (`%APPDATA%\Paneon\bin\statusline-bridge.js`, run with `node`) as `statusLine` in `~/.claude/settings.json`. It first shows a confirmation naming that file and your current status line. The previous value is kept in `bin\bridge-state.json` and a full copy in `settings.json.paneon-backup`; turning the toggle off restores it (a status line you changed after install is left alone). The script saves each payload to `%APPDATA%\Paneon\status\<session_id>.json` and then runs your previous status line with the same input, so it keeps working. A settings file that is not valid JSON is reported and never touched. This is the only file Paneon edits outside its own folder.
+**Live session info (status-line bridge).** Claude Code runs a status-line command with the session as JSON on stdin. The Theme popover toggle **Show live session info** installs a small script (`%APPDATA%\Dawsha\bin\statusline-bridge.js`, run with `node`) as `statusLine` in `~/.claude/settings.json`. It first shows a confirmation naming that file and your current status line. The previous value is kept in `bin\bridge-state.json` and a full copy in `settings.json.dawsha-backup`; turning the toggle off restores it (a status line you changed after install is left alone). The script saves each payload to `%APPDATA%\Dawsha\status\<session_id>.json` and then runs your previous status line with the same input, so it keeps working. A settings file that is not valid JSON is reported and never touched. This is the only file Dawsha edits outside its own folder.
 
-**Ops feed.** A Claude Code mod can write a snapshot of each session to `%APPDATA%\paneon\ops\<sessionId>.json` (the legacy `%APPDATA%\claude-grid\ops` folder is read too). Paneon only reads these files: it polls every second, keeps the last good parse of a file that is mid-write, ignores unknown fields and needs only `v`, `sessionId` and `updatedAt`. A snapshot belongs to the pane whose Claude session id matches. With a snapshot, the strip shows plan progress and running sub-agents, the **agents** toggle opens the drawer, and on a maximized pane the strip opens the details panel. Without one, panes fall back to the status-line data.
+**Ops feed.** A Claude Code mod can write a snapshot of each session to `%APPDATA%\dawsha\ops\<sessionId>.json` (the legacy `%APPDATA%\claude-grid\ops` folder is read too). Dawsha only reads these files: it polls every second, keeps the last good parse of a file that is mid-write, ignores unknown fields and needs only `v`, `sessionId` and `updatedAt`. A snapshot belongs to the pane whose Claude session id matches. With a snapshot, the strip shows plan progress and running sub-agents, the **agents** toggle opens the drawer, and on a maximized pane the strip opens the details panel. Without one, panes fall back to the status-line data.
 
 ## Data and privacy
 
-Everything is in the Electron user-data folder, `%APPDATA%\Paneon` for the installed app:
+Everything is in the Electron user-data folder, `%APPDATA%\Dawsha` for the installed app:
 
 - `settings.json`: projects, theme, notification toggles, sidebar state, the open-panes workspace, saved layouts, snippets and the palette key.
 - `usage-history.json`: the last cost of each Claude Code session that reported one and the 5 hour and weekly limit readings, for the Usage view (written only when the live session info is on).
 - `bin\` and `status\`: the status-line script and the saved status payloads (only when the live toggle was used; files older than 7 days are removed).
 
-Paneon has no telemetry and makes no network calls except the Agents view looking up the latest CLI versions (`npm view`, or the npm registry when npm is missing). Agent session files are only read. Upgrading from Claude Grid 0.1: on first start Paneon copies `settings.json` and the status folder from `%APPDATA%\claude-grid` (the old folder is never deleted) and, if the live toggle was on, re-points the status line it installed. If `~/.claude/settings.json` was changed since, it is left alone and a toast explains how to turn the toggle off and on again.
+Dawsha has no telemetry and makes no network calls except the Agents view looking up the latest CLI versions (`npm view`, or the npm registry when npm is missing). Agent session files are only read. Dawsha uses its own `%APPDATA%\Dawsha` folder, separate from Paneon and Claude Grid. An explicit `DAWSHA_LEGACY_USER_DATA` path can import settings from an earlier installation.
 
 ## Build from source
 
@@ -361,7 +361,7 @@ npm run icons        # regenerate build/icon.ico and build/icon.png from src/ren
 npm run screenshots  # regenerate docs/screenshots from fake demo projects
 ```
 
-Requirements: Windows, Node 24. The Electron binary downloads on first use. `npm run package` writes `release/Paneon-Setup-<version>.exe` and `release/Paneon-Portable-<version>.exe`.
+Requirements: Windows, Node 24. The Electron binary downloads on first use. `npm run package` writes `release/Dawsha-Setup-<version>.exe` and `release/Dawsha-Portable-<version>.exe`.
 
 ## Testing
 
@@ -375,21 +375,21 @@ The end-to-end tests launch the built app with a temporary user-data folder and 
 
 | Variable | Effect |
 |---|---|
-| `PANEON_CLAUDE_COMMAND`, `PANEON_CODEX_COMMAND`, `PANEON_GEMINI_COMMAND` | Replace an agent's command. Resume arguments are not added when set. |
-| `PANEON_CLAUDE_ARGS`, `PANEON_CODEX_ARGS`, `PANEON_GEMINI_ARGS` | Arguments for that command, space separated or a JSON array. |
-| `PANEON_SHELL` | Replaces the shell used by Shell tabs and Agents-view commands. |
-| `PANEON_USER_DATA` | Use another user-data folder (also skips the Claude Grid migration unless `PANEON_LEGACY_USER_DATA` is set). |
-| `PANEON_LEGACY_USER_DATA` | Folder to migrate old Claude Grid settings from. |
-| `PANEON_SESSIONS_DIR` | Read Claude session files from another folder. |
-| `PANEON_CLAUDE_HOME` | Use another folder instead of `%USERPROFILE%\.claude`. |
-| `PANEON_CODEX_HOME`, `PANEON_GEMINI_HOME` | Read Codex or Gemini sessions from another folder. |
-| `PANEON_OPS_DIR` | Read ops snapshots from this folder only. |
-| `PANEON_PIPE` | Name of the named pipe the `paneon` command uses (default `\\.\pipe\paneon-<user>`); set it to run a second, isolated instance. |
-| `PANEON_EXE`, `PANEON_APP_ARGS` | The `paneon` command: program and JSON array of arguments used to start the app when no pipe answers (default: the Paneon exe itself). |
-| `PANEON_UPDATE_START_DELAY_MS`, `PANEON_UPDATE_INTERVAL_MS` | Tests: delay of the first update check and the gap between checks (default 10 s and 6 h). |
-| `PANEON_TEST_UPDATER`, `PANEON_TEST_UPDATER_SCRIPT`, `PANEON_TEST_UPDATER_LOG` | Tests: `fake` replaces the GitHub updater with a scripted one (JSON script) and logs `quitAndInstall` calls to the file. |
-| `PANEON_APP_VERSION` | Tests: the version the app reports (the e2e runs report the package version). |
-| `PANEON_OPEN_LOG`, `PANEON_NOTIFY_LOG` | Tests: append open-in-editor and notification requests to a file instead of acting on them. |
+| `DAWSHA_CLAUDE_COMMAND`, `DAWSHA_CODEX_COMMAND`, `DAWSHA_GEMINI_COMMAND` | Replace an agent's command. Resume arguments are not added when set. |
+| `DAWSHA_CLAUDE_ARGS`, `DAWSHA_CODEX_ARGS`, `DAWSHA_GEMINI_ARGS` | Arguments for that command, space separated or a JSON array. |
+| `DAWSHA_SHELL` | Replaces the shell used by Shell tabs and Agents-view commands. |
+| `DAWSHA_USER_DATA` | Use another user-data folder. |
+| `DAWSHA_LEGACY_USER_DATA` | Explicitly import settings from this older user-data folder. |
+| `DAWSHA_SESSIONS_DIR` | Read Claude session files from another folder. |
+| `DAWSHA_CLAUDE_HOME` | Use another folder instead of `%USERPROFILE%\.claude`. |
+| `DAWSHA_CODEX_HOME`, `DAWSHA_GEMINI_HOME` | Read Codex or Gemini sessions from another folder. |
+| `DAWSHA_OPS_DIR` | Read ops snapshots from this folder only. |
+| `DAWSHA_PIPE` | Name of the named pipe the `dawsha` command uses (default `\\.\pipe\dawsha-<user>`); set it to run a second, isolated instance. |
+| `DAWSHA_EXE`, `DAWSHA_APP_ARGS` | The `dawsha` command: program and JSON array of arguments used to start the app when no pipe answers (default: the Dawsha exe itself). |
+| `DAWSHA_UPDATE_START_DELAY_MS`, `DAWSHA_UPDATE_INTERVAL_MS` | Tests: delay of the first update check and the gap between checks (default 10 s and 6 h). |
+| `DAWSHA_TEST_UPDATER`, `DAWSHA_TEST_UPDATER_SCRIPT`, `DAWSHA_TEST_UPDATER_LOG` | Tests: `fake` replaces the GitHub updater with a scripted one (JSON script) and logs `quitAndInstall` calls to the file. |
+| `DAWSHA_APP_VERSION` | Tests: the version the app reports (the e2e runs report the package version). |
+| `DAWSHA_OPEN_LOG`, `DAWSHA_NOTIFY_LOG` | Tests: append open-in-editor and notification requests to a file instead of acting on them. |
 
 ## Project layout
 
@@ -405,9 +405,9 @@ src/preload    typed bridge exposed as window.gridApi
 src/renderer   app shell, sidebar, grid, pane, quick-pick, resume picker, onboarding, projects and agents views,
                command registry and palette, layouts menu, snippets, comparison pair, handoff and usage views,
                theme picker, dialogs, command host
-build          icons, the paneon launcher (paneon.cmd, paneon-cli.cjs) and the installer PATH script
+build          icons, the dawsha launcher (dawsha.cmd, dawsha-cli.cjs) and the installer PATH script
 tests/unit     vitest
-tests/e2e      Playwright _electron tests (temp user-data, fake agent commands, the paneon command over a test pipe)
+tests/e2e      Playwright _electron tests (temp user-data, fake agent commands, the dawsha command over a test pipe)
 tests/screenshots  the harness behind docs/screenshots
 scripts        icon generation
 ```

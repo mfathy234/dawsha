@@ -92,7 +92,7 @@ test('generates the README screenshots from fake projects only', async () => {
     for (const args of [['ls'], ['start', 'billing-api', '--agent', 'codex'], ['sessions', 'acme-web']]) {
       const result = await runCli(sandbox, args, demoCwd)
       expect(result.code).toBe(0)
-      runs.push({ cwd: demoCwd, command: `paneon ${args.join(' ')}`, out: result.out })
+      runs.push({ cwd: demoCwd, command: `dawsha ${args.join(' ')}`, out: result.out })
     }
     await expect(page.locator('.pane')).toHaveCount(5)
     await expect(page.locator('.pane-header .agent-mark.codex')).toHaveCount(2)
@@ -104,7 +104,7 @@ test('generates the README screenshots from fake projects only', async () => {
   }
 
   const tools = createFakeTools(
-    mkdtempSync(join(tmpdir(), 'paneon-shots-tools-')),
+    mkdtempSync(join(tmpdir(), 'dawsha-shots-tools-')),
     { claude: '2.1.294', codex: '0.156.1', gemini: null },
     { claude: '2.1.301', codex: '0.156.1', gemini: '0.9.1' }
   )
@@ -112,9 +112,9 @@ test('generates the README screenshots from fake projects only', async () => {
   seed(second, false)
   const launched = await launchApp(second, {
     PATH: `${tools.pathEntry}${delimiter}${process.env.PATH ?? ''}`,
-    PANEON_CLAUDE_COMMAND: tools.commands.claude,
-    PANEON_CODEX_COMMAND: tools.commands.codex,
-    PANEON_GEMINI_COMMAND: tools.commands.gemini
+    DAWSHA_CLAUDE_COMMAND: tools.commands.claude,
+    DAWSHA_CODEX_COMMAND: tools.commands.codex,
+    DAWSHA_GEMINI_COMMAND: tools.commands.gemini
   })
   try {
     await resize(launched.app)
@@ -130,9 +130,9 @@ test('generates the README screenshots from fake projects only', async () => {
   const third = createSandbox({ empty: true })
   const first = await launchApp(third, {
     PATH: `${tools.pathEntry}${delimiter}${process.env.PATH ?? ''}`,
-    PANEON_CLAUDE_COMMAND: tools.commands.claude,
-    PANEON_CODEX_COMMAND: tools.commands.codex,
-    PANEON_GEMINI_COMMAND: tools.commands.gemini
+    DAWSHA_CLAUDE_COMMAND: tools.commands.claude,
+    DAWSHA_CODEX_COMMAND: tools.commands.codex,
+    DAWSHA_GEMINI_COMMAND: tools.commands.gemini
   })
   try {
     await resize(first.app)
@@ -159,15 +159,15 @@ test('generates the update and what is new screenshots', async () => {
   ].join('\n')
   const script = JSON.stringify({
     check: 'available',
-    info: { version: '0.5.1', releaseDate: '2026-10-15T09:00:00.000Z', releaseNotes: notes }
+    info: { version: '0.9.1', releaseDate: '2026-10-15T09:00:00.000Z', releaseNotes: notes }
   })
   const sandbox = createSandbox()
   seed(sandbox, true)
   const { app, page } = await launchApp(sandbox, {
     ...demoEnv(),
-    PANEON_TEST_UPDATER: 'fake',
-    PANEON_TEST_UPDATER_SCRIPT: script,
-    PANEON_UPDATE_START_DELAY_MS: '200'
+    DAWSHA_TEST_UPDATER: 'fake',
+    DAWSHA_TEST_UPDATER_SCRIPT: script,
+    DAWSHA_UPDATE_START_DELAY_MS: '200'
   })
   try {
     await resize(app)
@@ -175,7 +175,7 @@ test('generates the update and what is new screenshots', async () => {
       await page.getByRole('button', { name: `New Claude session in ${project.name}`, exact: true }).click()
     }
     await expect(page.locator('.pane')).toHaveCount(2)
-    await expect(page.locator('#update-pill')).toHaveText('Update 0.5.1')
+    await expect(page.locator('#update-pill')).toHaveText('Update 0.9.1')
     await page.locator('#update-pill').click()
     await expect(page.locator('.update-popover')).toBeVisible()
     await settle(page, 1500)

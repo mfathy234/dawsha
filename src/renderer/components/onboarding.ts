@@ -101,15 +101,15 @@ export class OnboardingComponent {
     const dialog = h(
       'div',
       { class: 'dialog onboarding', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'ob-title' },
-      h('h2', { id: 'ob-title' }, 'Set up Paneon'),
+      h('h2', { id: 'ob-title' }, 'Set up Dawsha'),
       h('p', { class: 'ob-lede' }, 'Two quick steps. You can skip the last one.'),
       h(
         'ol',
         { class: 'ob-steps' },
         this.step(1, projectDone, 'Add a project', 'Pick a folder. Sessions you start open inside it.', null, addButton),
-        this.step(2, installed > 0, 'Install your agents', 'Paneon runs the agent CLIs you already use.', this.agentLine(state), agentsButton)
+        this.step(2, installed > 0, 'Install your agents', 'Dawsha runs the agent CLIs you already use.', this.agentLine(state), agentsButton)
       ),
-      h('p', { class: 'ob-tip' }, 'Tip: run ', h('code', {}, 'paneon .'), ' in any folder to open it here.'),
+      h('p', { class: 'ob-tip' }, 'Tip: run ', h('code', {}, 'dawsha .'), ' in any folder to open it here.'),
       h('p', { class: 'ob-privacy' }, 'Everything stays on this computer. Nothing is sent anywhere.'),
       h('div', { class: 'dialog-actions' }, close)
     )

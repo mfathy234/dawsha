@@ -62,7 +62,7 @@ function run(file: string, args: string[]): Promise<string | null> {
 function locate(agent: AgentKind): string | null {
   const command = agentCommand(agent)
   const found = resolveExecutable(command, agent === 'claude' ? claudeFallbackDirs() : [])
-  if (found || agent !== 'claude' || process.env.PANEON_CLAUDE_COMMAND) return found
+  if (found || agent !== 'claude' || process.env.DAWSHA_CLAUDE_COMMAND) return found
   return resolveExecutable('claude.cmd')
 }
 

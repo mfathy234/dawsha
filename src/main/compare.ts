@@ -90,7 +90,7 @@ function deleteLeftover(path: string): string | null {
 export async function removeWorktree(request: WorktreeRemoval): Promise<GitResult> {
   const { repo, path, branch, force } = request
   if (!isCompareBranch(branch) || !isCompareWorktree(path)) {
-    return { ok: false, error: 'Paneon only removes worktrees and branches it created for a comparison.' }
+    return { ok: false, error: 'Dawsha only removes worktrees and branches it created for a comparison.' }
   }
   if (existsSync(path)) {
     const problem = await removeWorktreeFolder(repo, path, force)

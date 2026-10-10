@@ -9,15 +9,15 @@ const readSettings = (userData: string): any => JSON.parse(readFileSync(join(use
 
 function fakeEnv(): Record<string, string> {
   const tools = createFakeTools(
-    mkdtempSync(join(tmpdir(), 'paneon-settings-')),
+    mkdtempSync(join(tmpdir(), 'dawsha-settings-')),
     { claude: '2.1.301', codex: '0.156.1', gemini: '0.9.1' },
     { claude: '2.1.301', codex: '0.156.1', gemini: '0.9.1' }
   )
   return {
     PATH: `${tools.pathEntry}${delimiter}${process.env.PATH ?? ''}`,
-    PANEON_CLAUDE_COMMAND: tools.commands.claude,
-    PANEON_CODEX_COMMAND: tools.commands.codex,
-    PANEON_GEMINI_COMMAND: tools.commands.gemini
+    DAWSHA_CLAUDE_COMMAND: tools.commands.claude,
+    DAWSHA_CODEX_COMMAND: tools.commands.codex,
+    DAWSHA_GEMINI_COMMAND: tools.commands.gemini
   }
 }
 
@@ -132,7 +132,7 @@ test('sidebar and notification toggles persist, and Getting started opens from G
     await page.locator('#sidebar-collapsed').check()
     await expect.poll(() => readSettings(sandbox.userData).sidebarCollapsed).toBe(true)
     await page.locator('#getting-started').click()
-    await expect(page.getByRole('dialog', { name: 'Set up Paneon' })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Set up Dawsha' })).toBeVisible()
     await page.keyboard.press('Escape')
 
     await openSettings(page, 'notifications')
@@ -192,7 +192,7 @@ test('the changelog lists every version newest first and the What is new dialog 
     await page.keyboard.press('Control+k')
     await page.locator('.palette input').fill("Show what's new")
     await page.keyboard.press('Enter')
-    const dialog = page.getByRole('dialog', { name: `What's new in Paneon ${APP_VERSION}` })
+    const dialog = page.getByRole('dialog', { name: `What's new in Dawsha ${APP_VERSION}` })
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: 'Full changelog' }).click()
     await expect(page.locator('.whats-new')).toHaveCount(0)
@@ -225,9 +225,9 @@ test('About shows the version, the data paths and opens links and the data folde
       )
       .toEqual([
         { kind: 'explorer', folder: sandbox.userData },
-        { link: 'https://github.com/mfathy234/paneon' },
-        { link: 'https://github.com/mfathy234/paneon/releases' },
-        { link: 'https://github.com/mfathy234/paneon/blob/main/LICENSE' }
+        { link: 'https://github.com/mfathy234/dawsha' },
+        { link: 'https://github.com/mfathy234/dawsha/releases' },
+        { link: 'https://github.com/mfathy234/dawsha/blob/main/LICENSE' }
       ])
   } finally {
     await closeApp(app)

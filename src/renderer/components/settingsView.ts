@@ -39,15 +39,15 @@ import { entryBlock } from './whatsNew'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar and setup.' },
-  { id: 'notifications', label: 'Notifications & session info', lede: 'What Paneon shows and tells you while sessions run.' },
+  { id: 'notifications', label: 'Notifications & session info', lede: 'What Dawsha shows and tells you while sessions run.' },
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
-  { id: 'updates', label: 'Updates', lede: 'Keep Paneon current.' },
+  { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
   { id: 'highlights', label: 'Highlights', lede: 'Tint terminal lines that contain the words you care about.' },
   { id: 'changelog', label: 'Changelog', lede: 'Every released version, newest first.' },
   { id: 'about', label: 'About', lede: 'Version, links and where your data lives.' }
 ]
 
-const REPO_URL = 'https://github.com/mfathy234/paneon'
+const REPO_URL = 'https://github.com/mfathy234/dawsha'
 const LINKS = [
   { id: 'settings-link-repo', label: 'GitHub repository', url: REPO_URL },
   { id: 'settings-link-releases', label: 'Releases', url: `${REPO_URL}/releases` },
@@ -105,7 +105,7 @@ export class SettingsViewComponent {
       openUpdateLink(link.href)
     })
     this.el.append(
-      h('div', { class: 'settings-head' }, h('h1', {}, 'Settings'), h('p', { class: 'lede' }, 'Preferences for Paneon. Theme and background image stay in the Theme menu.')),
+      h('div', { class: 'settings-head' }, h('h1', {}, 'Settings'), h('p', { class: 'lede' }, 'Preferences for Dawsha. Theme and background image stay in the Theme menu.')),
       h('div', { class: 'settings-body' }, this.nav, h('div', { class: 'settings-content' }, this.title, this.lede, this.panel))
     )
   }
@@ -604,7 +604,7 @@ export class SettingsViewComponent {
     const path = (label: string, value: string, id: string): HTMLElement =>
       row(label, null, h('code', { class: 'set-path', id }, value || 'unknown'))
     return [
-      row('Paneon', h('span', { class: 'set-value mono', id: 'about-version' }, version || 'unknown')),
+      row('Dawsha', h('span', { class: 'set-value mono', id: 'about-version' }, version || 'unknown')),
       row(
         'Links',
         h(
