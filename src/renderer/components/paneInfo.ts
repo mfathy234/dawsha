@@ -65,18 +65,18 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
         )
       )
     )
-  } else if (info.agent !== 'shell') {
-    items.push(h('span', { class: 'info-context unavailable' }, 'ctx unavailable'))
+  } else if (info.agent === 'claude') {
+    items.push(h('span', { class: 'info-context unavailable', title: 'Waiting for Claude Code status. Enable Show live session info in Settings, then send a prompt.' }, 'ctx waiting'))
   }
-  if (info.agent !== 'shell') {
+  if (info.agent === 'claude') {
     for (const [key, label] of [['five_hour', '5h'], ['seven_day', 'week']] as const) {
       const window = info.limits.find((entry) => entry.key === key)
       const reset = window ? formatResets(window.resetsAt, handlers.now) : ''
       items.push(h('span', {
         class: `info-limit${window ? ` stage-${gaugeStage(window.percent)}` : ' unavailable'}`,
         'data-pane-limit': key,
-        title: window ? `${label}: ${formatPercent(window.percent)} used${reset ? `, ${reset}` : ', reset time unavailable'}` : `${label} limit unavailable for this session`
-      }, window ? `${label} ${formatPercent(window.percent)}${reset ? ` · ${reset}` : ''}` : `${label} unavailable`))
+        title: window ? `${label}: ${formatPercent(window.percent)} used${reset ? `, ${reset}` : ', reset time unavailable'}` : `Waiting for Claude Code to report the ${label} limit`
+      }, window ? `${label} ${formatPercent(window.percent)}${reset ? ` · ${reset}` : ''}` : `${label} waiting`))
     }
   }
   if (info.elapsed !== null) items.push(h('span', { class: 'info-elapsed', title: 'Session time' }, info.elapsed))
