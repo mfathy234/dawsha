@@ -28,6 +28,8 @@ jobs:
       - run: npm run build
       - name: Unit tests
         run: npx vitest run
+      - name: Install browser for website tests
+        run: npx playwright install chromium
       - name: End-to-end tests
         run: npx playwright test
       - name: Upload test artifacts

@@ -32,6 +32,7 @@ export interface PaneInfo {
   ageMs: number | null
   changes: GitChanges | null
   ops: PaneOpsInfo | null
+  geminiTools: { name: string; at: number }[]
 }
 
 const LIMIT_FRESH_MS = 30 * 60_000
@@ -242,7 +243,7 @@ function baseInfoFor(
   opsLive: boolean
 ): PaneInfo {
   const changes = folder ? (state.gitChanges[folder] ?? null) : null
-  const empty: PaneInfo = { agent: tab.agent, agentsOpen: tab.agentsOpen === true, model: null, contextPercent: null, limits: [], costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null }
+  const empty: PaneInfo = { agent: tab.agent, agentsOpen: tab.agentsOpen === true, model: null, contextPercent: null, limits: [], costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [] }
   if (tab.agent === 'claude') return claudeInfo(state, tab, matches, empty, snapshot, opsLive)
   if (tab.agent === 'codex') {
     const session = matches.codex.get(tab.id)
@@ -258,7 +259,8 @@ function baseInfoFor(
     return {
       ...empty,
       model: session?.model ? { label: session.model, family: 'gemini' } : null,
-      ageMs: session ? ageSince(state.now, session.updatedAt) : null
+      ageMs: session ? ageSince(state.now, session.updatedAt) : null,
+      geminiTools: session?.recentTools ?? []
     }
   }
   return empty

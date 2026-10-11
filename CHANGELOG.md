@@ -3,6 +3,19 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-10-11
+
+### Added
+
+- Search session prompts and replies when resuming, with a checkbox to include all projects.
+- Keep closed sessions under their projects until they are removed from the project list.
+- Track project tasks with linked sessions, notes and commit references.
+- Show recent Gemini tool activity in pane details and the agents drawer.
+
+### Changed
+
+- Use the animated favicon in the app and website headers, with reduced-motion support.
+
 ## [0.1.0] - 2026-10-10
 
 ### Added
@@ -166,7 +179,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - The project menu entry "Resume session..." now opens the resume picker filtered to that project.
 
-## [0.2.0] - 2026-10-08
+## [0.2.0-legacy] - 2026-10-08
 
 ### Added
 

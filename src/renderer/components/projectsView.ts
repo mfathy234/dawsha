@@ -6,6 +6,7 @@ import { clear, h } from '../dom'
 import type { AppState, ProjectsTab } from '../state'
 import { InstructionsPanelComponent } from './instructionsPanel'
 import { SnippetsPanelComponent } from './snippetsPanel'
+import { TasksPanelComponent } from './tasksPanel'
 
 export class ProjectsViewComponent {
   readonly el = h('main', { class: 'projects-view', 'aria-label': 'Projects' })
@@ -17,6 +18,7 @@ export class ProjectsViewComponent {
   private current: AppState | null = null
 
   private readonly snippets = new SnippetsPanelComponent()
+  private readonly tasks = new TasksPanelComponent()
   private readonly instructions = new InstructionsPanelComponent()
   private readonly tabs = new Map<ProjectsTab, HTMLElement>()
   private readonly projectsPanel = h('div', { class: 'proj-panel', role: 'tabpanel', id: 'panel-projects' })
@@ -44,7 +46,9 @@ export class ProjectsViewComponent {
     this.snippets.el.id = 'panel-snippets'
     this.instructions.el.setAttribute('role', 'tabpanel')
     this.instructions.el.id = 'panel-instructions'
-    this.el.append(h('h1', {}, 'Projects'), this.tabBar(), this.projectsPanel, this.snippets.el, this.instructions.el)
+    this.tasks.el.setAttribute('role', 'tabpanel')
+    this.tasks.el.id = 'panel-tasks'
+    this.el.append(h('h1', {}, 'Projects'), this.tabBar(), this.projectsPanel, this.tasks.el, this.snippets.el, this.instructions.el)
   }
 
   private tabBar(): HTMLElement {
@@ -65,6 +69,7 @@ export class ProjectsViewComponent {
       return button
     }
     return h('div', { class: 'rp-tabs proj-tabs', role: 'tablist', 'aria-label': 'Projects view' }, tab('projects', 'Projects'),
+      tab('tasks', 'Tasks'),
       tab('snippets', 'Snippets'),
       tab('instructions', 'Instructions')
     )
@@ -78,6 +83,7 @@ export class ProjectsViewComponent {
       button.tabIndex = selected ? 0 : -1
     }
     this.projectsPanel.hidden = state.projectsTab !== 'projects'
+    this.tasks.el.hidden = state.projectsTab !== 'tasks'
     this.snippets.el.hidden = state.projectsTab !== 'snippets'
     this.instructions.el.hidden = state.projectsTab !== 'instructions'
   }
@@ -86,6 +92,7 @@ export class ProjectsViewComponent {
     this.current = state
     this.updateTabs(state)
     this.snippets.update(state)
+    this.tasks.update(state)
     this.instructions.update(state)
     this.updateCounts(state)
     const signature = JSON.stringify(state.settings.projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent]))
