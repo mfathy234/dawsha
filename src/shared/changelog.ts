@@ -54,7 +54,13 @@ export function parseChangelog(text: string): ChangelogEntry[] {
     }
   }
   closeItem()
-  return entries.sort((a, b) => compareVersions(b.version, a.version))
+  return entries.sort((a, b) => {
+    const dated = /^\d{4}-\d{2}-\d{2}$/
+    if (a.date && b.date && dated.test(a.date) && dated.test(b.date) && a.date !== b.date) {
+      return b.date.localeCompare(a.date)
+    }
+    return compareVersions(b.version, a.version)
+  })
 }
 
 export function entryToMarkdown(entry: ChangelogEntry): string {

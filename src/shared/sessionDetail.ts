@@ -136,3 +136,37 @@ export function geminiDetail(text: string, scale = 1): SessionDetail {
   detail.messages = Math.round(messages * scale)
   return detail
 }
+
+export function contentMatch(agent: AgentKind, text: string, query: string): string | null {
+  const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return null
+  const pieces: string[] = []
+  const take = (value: unknown): void => {
+    const body = blockText(value, ['text', 'input_text', 'output_text']).replace(/\s+/g, ' ').trim()
+    if (body) pieces.push(body)
+  }
+  for (const record of records(text)) {
+    if (agent === 'claude') {
+      if (record.type !== 'user' && record.type !== 'assistant') continue
+      const message = isRecord(record.message) ? record.message : {}
+      take(message.content)
+    } else if (agent === 'codex') {
+      const payload = isRecord(record.payload) ? record.payload : {}
+      if (record.type === 'event_msg' && (payload.type === 'user_message' || payload.type === 'agent_message')) take(payload.message)
+      else if (record.type === 'response_item' && payload.type === 'message') take(payload.content)
+    } else {
+      if (Array.isArray(record.messages)) {
+        for (const message of record.messages) {
+          if (isRecord(message) && (message.type === 'user' || message.type === 'gemini')) take(message.content)
+        }
+      } else if (record.type === 'user' || record.type === 'gemini') take(record.content)
+    }
+  }
+  for (const piece of pieces) {
+    const lower = piece.toLowerCase()
+    if (!words.every((word) => lower.includes(word))) continue
+    const at = lower.indexOf(words[0])
+    return piece.slice(Math.max(0, at - 70), Math.min(piece.length, at + 180))
+  }
+  return null
+}

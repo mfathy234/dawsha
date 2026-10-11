@@ -169,7 +169,7 @@ export class PaneComponent {
     this.updateAttention(view)
     this.updateInfo(view, maximized)
     this.updateHint(view)
-    this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now)
+    this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now, view.info.geminiTools)
     this.updateDetails(view, maximized)
     this.restart.hidden = !view.activeExited
     this.updateMaximizeButton(maximized)

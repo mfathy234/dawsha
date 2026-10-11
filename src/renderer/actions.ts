@@ -13,6 +13,7 @@ import {
   type GridSplits,
   type StatusInfo,
   type Settings,
+  type KeptSession,
   type TabAgent
 } from '../shared/types'
 import { agentOf, AGENT_NAMES } from '../shared/agents'
@@ -56,6 +57,7 @@ import {
 } from './state'
 import { nextAttentionPane } from '../shared/attention'
 import { shouldRelaunchPlain } from '../shared/resumeFallback'
+import { sessionDisplayName } from '../shared/sessionMatch'
 import { applyTheme } from './themeManager'
 import { disposeTerminal, getTerminal } from './terminals'
 
@@ -194,12 +196,14 @@ export async function startSession(
   projectId: string,
   agent?: AgentKind,
   resumeId?: string,
-  chip = false
+  chip = false,
+  titleHint?: string
 ): Promise<number> {
   const project = projectById(store.state, projectId)
   if (!project) return 0
   const tab: TermState = {
     ...makeTerm(agent ?? agentOf(project), [], resumeId),
+    titleHint,
     resumeChipAt: chip ? Date.now() : undefined
   }
   const pane: PaneState = {
@@ -297,6 +301,35 @@ async function stopTerminal(termId: string): Promise<void> {
   disposeTerminal(termId)
 }
 
+function keepClosedTabs(pane: PaneState, tabs: TermState[]): void {
+  const state = store.state
+  const view = derivePanes(state).find((item) => item.pane.id === pane.id)
+  const matches = matchAll(state)
+  const additions: KeptSession[] = tabs.flatMap((tab) => {
+    if (tab.agent === 'shell' || !state.settings.projects.some((project) => project.id === pane.projectId)) return []
+    const sessionId = tab.sessionId || (tab.agent === 'claude' ? matches.claude.get(tab.id)?.sessionId
+      : tab.agent === 'codex' ? matches.codex.get(tab.id)?.sessionId
+      : matches.gemini.get(tab.id)?.sessionId)
+    if (!sessionId) return []
+    const observed = tab.agent === 'claude' ? sessionDisplayName(matches.claude.get(tab.id))
+      : tab.agent === 'codex' ? matches.codex.get(tab.id)?.name
+      : matches.gemini.get(tab.id)?.name
+    const title = observed?.trim() || tab.titleHint || (tab.label !== tab.agent ? tab.label : null) || (tab.id === pane.activeTabId && view?.named ? view.title : null) || tab.label
+    return [{ projectId: pane.projectId, agent: tab.agent, sessionId, title, closedAt: Date.now() }]
+  })
+  if (additions.length === 0) return
+  const keys = new Set(additions.map((item) => `${item.agent}:${item.sessionId}`))
+  const keptSessions = [...state.settings.keptSessions.filter((item) => !keys.has(`${item.agent}:${item.sessionId}`)), ...additions]
+  store.set((current) => ({ ...current, settings: { ...current.settings, keptSessions } }))
+  void saveSettings({ keptSessions })
+}
+
+export function removeKeptSession(agent: AgentKind, sessionId: string): void {
+  const keptSessions = store.state.settings.keptSessions.filter((item) => item.agent !== agent || item.sessionId !== sessionId)
+  store.set((state) => ({ ...state, settings: { ...state.settings, keptSessions } }))
+  void saveSettings({ keptSessions })
+}
+
 function removeTab(state: AppState, paneId: string, termId: string): AppState {
   const pane = paneById(state, paneId)
   if (!pane) return state
@@ -335,6 +368,7 @@ export async function closeTerminal(paneId: string, termId: string): Promise<voi
     })
     if (!confirmed) return
   }
+  keepClosedTabs(pane, [tab])
   await stopTerminal(termId)
   store.set((s) => removeTab(s, paneId, termId))
   persistWorkspace()
@@ -360,6 +394,7 @@ export async function closePane(paneId: string): Promise<void> {
 export async function discardPane(paneId: string): Promise<void> {
   const pane = paneById(store.state, paneId)
   if (!pane) return
+  keepClosedTabs(pane, pane.tabs)
   await Promise.all(pane.tabs.map((t) => stopTerminal(t.id)))
   store.set((s) => removePane(s, paneId))
   persistWorkspace()
@@ -831,14 +866,16 @@ export async function removeProject(projectId: string): Promise<void> {
   for (const pane of open) await discardPane(pane.id)
   const projects = store.state.settings.projects.filter((p) => p.id !== projectId)
   const snippets = store.state.settings.snippets.filter((s) => s.projectId !== projectId)
-  store.set((s) => ({ ...s, settings: { ...s.settings, projects, snippets } }))
-  void saveSettings({ projects, snippets })
+  const keptSessions = store.state.settings.keptSessions.filter((s) => s.projectId !== projectId)
+  const tasks = store.state.settings.tasks.filter((task) => task.projectId !== projectId)
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects, snippets, keptSessions, tasks } }))
+  void saveSettings({ projects, snippets, keptSessions, tasks })
 }
 
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, agentsOpen: tab.agentsOpen, from: tab.from })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from })
   }
   return {
     id: newId(),
@@ -1090,7 +1127,7 @@ export async function resumeInNewPane(session: ResumeSession): Promise<ResumeOut
     focusOpenSession(open)
     return { pane: open.number, alreadyOpen: true }
   }
-  const pane = await startSession(session.projectId, session.agent, session.id, true)
+  const pane = await startSession(session.projectId, session.agent, session.id, true, session.title)
   return { pane, alreadyOpen: false }
 }
 
@@ -1119,7 +1156,7 @@ export async function resumeInFocusedPane(session: ResumeSession): Promise<Resum
   }
   await stopTerminal(active.id)
   const others = pane.tabs.filter((t) => t.id !== active.id)
-  const tab: TermState = { ...makeTerm(session.agent, others, session.id), resumeChipAt: Date.now() }
+  const tab: TermState = { ...makeTerm(session.agent, others, session.id), titleHint: session.title, resumeChipAt: Date.now() }
   store.set((s) =>
     mapPane({ ...s, focusedId: pane.id, view: 'grid', quickPickOpen: false }, pane.id, (p) => ({
       ...p,

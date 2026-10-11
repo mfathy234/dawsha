@@ -121,4 +121,17 @@ describe('listAllSessions', () => {
   it('returns nothing when no agent folders exist', async () => {
     expect(await listAllSessions(world().projects, {}, world().homes)).toEqual([])
   })
+
+  it('searches reply content within the selected project when requested', async () => {
+    const w = world()
+    claudeSession(w, 'web', 40, 'Fix color theme', 5)
+    claudeSession(w, 'api', 41, 'Fix export', 10)
+    const dir = join(w.homes.claudeProjects, claudeProjectSlug(w.folders.web))
+    const path = join(dir, `${uuid(40)}.jsonl`)
+    writeFileSync(path, `${line({ type: 'user', message: { content: 'Fix color theme' } })}\n${line({ type: 'assistant', message: { content: [{ type: 'text', text: 'The rare zebra token was found in the stylesheet.' }] } })}\n${line({ type: 'ai-title', aiTitle: 'Fix color theme' })}\n`)
+    expect(await listAllSessions(w.projects, { projectId: 'web', query: 'rare zebra' }, w.homes)).toEqual([])
+    const found = await listAllSessions(w.projects, { projectId: 'web', query: 'rare zebra', searchContent: true }, w.homes)
+    expect(found).toHaveLength(1)
+    expect(found[0].matchExcerpt).toContain('rare zebra token')
+  })
 })

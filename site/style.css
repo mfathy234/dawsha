@@ -47,6 +47,9 @@ section { padding: 88px 0; }
 .nav { position: sticky; top: 0; z-index: 10; background: rgba(12, 14, 18, 0.97); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
 .nav-row { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: #eef1f6; font: 700 1.1rem var(--font-head); text-decoration: none; }
+.brand-logo { transform-origin: center; animation: brand-breathe 4s ease-in-out infinite; }
+@keyframes brand-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .brand-logo { animation: none; } }
 .nav nav { display: flex; gap: 22px; }
 .lang-switch { display: inline-flex; align-items: center; flex: none; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: 600 0.86rem var(--font-body); text-decoration: none; cursor: pointer; }
 .lang-switch:hover { border-color: var(--accent); }

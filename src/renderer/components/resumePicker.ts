@@ -2,7 +2,7 @@ import { AGENTS, AGENT_NAMES, agentLabel } from '../../shared/agents'
 import { groupSessions, messageWord, sessionSummary } from '../../shared/resumeIndex'
 import { formatAge } from '../../shared/statusLine'
 import { ageGroup } from '../../shared/resumeIndex'
-import type { AgentKind, ResumeSession } from '../../shared/types'
+import type { AgentKind, ResumeQuery, ResumeSession } from '../../shared/types'
 import { closeQuickPick, findOpenSession, openQuickPick, resumeInFocusedPane, resumeInNewPane, setQuickPickMode } from '../actions'
 import { api } from '../api'
 import { clear, h, icon } from '../dom'
@@ -37,6 +37,7 @@ export class ResumePickerComponent {
   private root: HTMLElement | null = null
   private search: HTMLInputElement | null = null
   private projectSelect: HTMLSelectElement | null = null
+  private allProjects: HTMLInputElement | null = null
   private chips: HTMLElement | null = null
   private list: HTMLElement | null = null
   private preview: HTMLElement | null = null
@@ -74,11 +75,15 @@ export class ResumePickerComponent {
       autocomplete: 'off'
     })
     this.projectSelect = h('select', { class: 'rp-project', id: 'rp-project', 'aria-label': 'Project filter' })
-    this.projectSelect.append(h('option', { value: '' }, 'All projects'))
+    this.projectSelect.append(h('option', { value: '' }, 'Choose project'))
     for (const project of state.settings.projects) {
       this.projectSelect.append(h('option', { value: project.id }, project.name))
     }
-    this.projectSelect.value = state.resumeProjectId ?? ''
+    const focused = state.panes.find((pane) => pane.id === state.focusedId)?.projectId
+    const scope = state.resumeProjectId ?? focused
+    this.projectSelect.value = scope ?? ''
+    this.allProjects = h('input', { type: 'checkbox', id: 'rp-all-projects', checked: !scope })
+    this.projectSelect.disabled = this.allProjects.checked
     this.chips = h('div', { class: 'rp-chips', role: 'group', 'aria-label': 'Agent filter' })
     this.list = h('div', { class: 'rp-list', id: 'rp-list', role: 'listbox', 'aria-label': 'Recent sessions' })
     this.preview = h('div', { class: 'rp-preview', 'aria-live': 'polite' })
@@ -95,7 +100,8 @@ export class ResumePickerComponent {
       'div',
       { class: 'popover quickpick resume-picker', role: 'dialog', 'aria-label': 'Start or resume a session' },
       h('div', { class: 'rp-head' }, h('div', { class: 'rp-top' }, modeTabs('resume'), h('span', { class: 'spacer' }), hint),
-        h('div', { class: 'rp-filters' }, h('div', { class: 'rp-search-wrap' }, icon(ICONS.search), this.search), this.projectSelect),
+        h('div', { class: 'rp-filters' }, h('div', { class: 'rp-search-wrap' }, icon(ICONS.search), this.search), this.projectSelect,
+          h('label', { class: 'rp-scope', for: 'rp-all-projects' }, this.allProjects, 'Search all projects')),
         this.chips),
       h('div', { class: 'rp-body' }, this.list, this.preview),
       this.foot
@@ -105,6 +111,13 @@ export class ResumePickerComponent {
       this.timer = window.setTimeout(() => this.load(), SEARCH_DELAY_MS)
     })
     this.projectSelect.addEventListener('change', () => this.load())
+    this.allProjects.addEventListener('change', () => {
+      if (this.projectSelect) {
+        this.projectSelect.disabled = this.allProjects?.checked ?? false
+        if (!this.allProjects?.checked && !this.projectSelect.value) this.projectSelect.value = state.settings.projects[0]?.id ?? ''
+      }
+      this.load()
+    })
     this.root.addEventListener('keydown', (event) => this.onKey(event))
     document.body.appendChild(this.root)
     document.addEventListener('pointerdown', this.outside, true)
@@ -126,16 +139,18 @@ export class ResumePickerComponent {
     this.root?.remove()
     this.root = null
     this.search = null
+    this.allProjects = null
     this.list = null
     this.preview = null
     if (!stillOpen) this.anchor().focus()
   }
 
-  private currentQuery(): { projectId?: string; agent?: AgentKind; query?: string } {
+  private currentQuery(): ResumeQuery {
     return {
-      projectId: this.projectSelect?.value || undefined,
+      projectId: this.allProjects?.checked ? undefined : (this.projectSelect?.value || undefined),
       agent: this.agent ?? undefined,
-      query: this.search?.value.trim() || undefined
+      query: this.search?.value.trim() || undefined,
+      searchContent: true
     }
   }
 
@@ -254,7 +269,7 @@ export class ResumePickerComponent {
 
   private emptyState(): HTMLElement {
     if (this.loading) return h('p', { class: 'popover-empty' }, 'Loading sessions…')
-    const projectName = this.latest?.settings.projects.find((p) => p.id === this.projectSelect?.value)?.name
+    const projectName = this.allProjects?.checked ? undefined : this.latest?.settings.projects.find((p) => p.id === this.projectSelect?.value)?.name
     const filtered = Boolean(this.search?.value.trim()) || this.agent !== null
     const text = filtered ? 'No sessions match.' : projectName ? `No earlier sessions in ${projectName}.` : 'No earlier sessions found.'
     return h(
@@ -291,6 +306,7 @@ export class ResumePickerComponent {
           { class: 'rp-row-meta' },
           h('span', { class: 'rp-project-chip' }, project?.name ?? ''),
           h('span', {}, messageWord(session.messageCount)),
+          session.matchExcerpt ? h('span', { class: 'rp-match-chip' }, 'content match') : null,
           open ? h('span', { class: 'rp-open' }, `open in pane ${open.number}`) : null
         )
       )
@@ -329,6 +345,7 @@ export class ResumePickerComponent {
       ),
       field('First prompt', session.firstPrompt, true),
       field('Last assistant message', session.lastAssistant, true),
+      field('Matching content', session.matchExcerpt, true),
       h(
         'div',
         { class: 'rp-actions' },

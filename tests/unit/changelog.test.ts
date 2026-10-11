@@ -68,6 +68,11 @@ describe('parseChangelog', () => {
     expect(parseChangelog(shuffled).map((e) => e.version)).toEqual(['0.2.0', '0.1.0'])
   })
 
+  it('keeps a new release ahead of higher numbered legacy releases by date', () => {
+    const changelog = '## [0.2.0] - 2026-10-11\n\n### Added\n\n- New.\n\n## [0.9.0] - 2026-10-09\n\n### Added\n\n- Legacy.\n'
+    expect(parseChangelog(changelog).map((entry) => entry.version)).toEqual(['0.2.0', '0.9.0'])
+  })
+
   it('returns nothing for text without entries', () => {
     expect(parseChangelog('just words')).toEqual([])
   })

@@ -133,7 +133,12 @@ function killTree(proc: ReturnType<ElectronApplication['process']>, reason: stri
 
 export async function closeApp(app: ElectronApplication): Promise<number> {
   const started = Date.now()
-  const proc = app.process()
+  let proc: ReturnType<ElectronApplication['process']>
+  try {
+    proc = app.process()
+  } catch {
+    return 0
+  }
   const exited = new Promise<void>((resolve) => proc.once('exit', () => resolve()))
   await app.evaluate(({ app: electronApp }) => electronApp.quit()).catch(() => undefined)
   await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, QUIT_BUDGET_MS))])

@@ -1,5 +1,13 @@
 (() => {
   const translations = {
+    'Find and resume sessions': 'ابحث عن الجلسات واستأنفها',
+    'Ctrl+Shift+R searches prompts and replies. Choose the current project or include all projects.': 'ابحث في الأسئلة والردود باستخدام Ctrl+Shift+R. اختر المشروع الحالي أو جميع المشاريع.',
+    'Keep closed sessions': 'احتفظ بالجلسات المغلقة',
+    'Closed tabs stay under their project until you remove them there. Resume one whenever you need it.': 'تبقى الألسنة المغلقة تحت مشروعها حتى تزيلها منه. يمكنك استئنافها وقتما تشاء.',
+    'Project tasks': 'مهام المشروع',
+    'Keep a task timeline with notes, commit references and linked sessions.': 'احتفظ بسجل للمهمة يتضمن الملاحظات ومراجع الالتزامات والجلسات المرتبطة.',
+    'Gemini tool activity': 'نشاط أدوات Gemini',
+    "See Gemini's recent tools beside its pane and in the agents drawer.": 'اطّلع على أحدث أدوات Gemini بجوار مساحته وفي لوحة الوكلاء.',
     'Skip to content': 'انتقل إلى المحتوى',
     'Screens': 'صور التطبيق', 'Features': 'المميزات', 'Command': 'سطر الأوامر', 'Download': 'التحميل',
     'For Claude Code, Codex CLI and Gemini CLI': 'لـ Claude Code وCodex CLI وGemini CLI',
