@@ -95,6 +95,7 @@ test('prompt markers, copy last reply, copy prompt, save selection and clear scr
 
     await feedTerminal(page, id, '\x1b[2J\x1b[H')
     await page.keyboard.type('zzz')
+    await expect.poll(() => bufferText(page, id), { timeout: SLOW }).toContain('zzz')
     await page.keyboard.press('Control+Alt+p')
     await expect.poll(() => clipboardText(app), { timeout: SLOW }).toBe('zzz')
     for (let i = 0; i < 3; i += 1) await page.keyboard.press('Backspace')
