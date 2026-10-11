@@ -12,7 +12,8 @@ import { pillLabel, showUpdatePill } from '../../shared/updates'
 import { AGENTS, AGENT_NAMES } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
 import { openCompareDialog } from '../compareActions'
-import { ICONS, logoMark } from '../icons'
+import { ICONS } from '../icons'
+import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
 import { countSessions, type PaneView } from '../derive'
 import { toolState } from '../../shared/agentTools'
@@ -104,7 +105,7 @@ export class TopBarComponent {
     this.el = h(
       'header',
       { class: 'topbar' },
-      h('span', { class: 'app-logo' }, icon(logoMark(20))),
+      h('span', { class: 'app-logo', 'aria-hidden': 'true' }, icon(faviconSvg)),
       h('span', { class: 'app-title' }, 'Dawsha'),
       h('div', { class: 'split' }, this.newSession, this.chevron),
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },

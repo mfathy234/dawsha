@@ -107,5 +107,9 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
     )
   }
   if (info.ageMs !== null) items.push(h('span', { class: 'info-age', title: 'Last activity' }, `${formatAge(info.ageMs)} ago`))
+  if (info.agent === 'gemini' && info.geminiTools.length > 0) {
+    const last = info.geminiTools[info.geminiTools.length - 1]
+    items.push(h('span', { class: 'info-gemini-tool', title: `Last Gemini tool recorded at ${new Date(last.at).toLocaleTimeString()}` }, `tool ${last.name}`))
+  }
   return [...items, ...opsItems(info, handlers)]
 }

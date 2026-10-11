@@ -11,6 +11,8 @@ import {
   type CompareLink,
   type CompareNames,
   type FullAccess,
+  type KeptSession,
+  type ProjectTask,
   type Project,
   type SavedLayout,
   type SavedPane,
@@ -54,6 +56,8 @@ export const defaultSettings = (): Settings => ({
   workspace: { panes: [], focusedIndex: 0 },
   layouts: [],
   snippets: [],
+  keptSessions: [],
+  tasks: [],
   lastSeenVersion: null,
   autoUpdateCheck: true,
   paletteShortcut: DEFAULT_PALETTE_SHORTCUT,
@@ -102,6 +106,8 @@ function sanitizeTab(value: unknown): SavedTab | null {
   const raw = value.agent ?? value.kind
   const agent: TabAgent = raw === 'shell' ? 'shell' : isAgent(raw) ? raw : 'claude'
   const tab: SavedTab = { agent, label: asString(value.label) ?? agent }
+  const titleHint = asString(value.titleHint)
+  if (titleHint && agent !== 'shell') tab.titleHint = titleHint
   const sessionId = asString(value.sessionId)
   if (sessionId && agent !== 'shell') tab.sessionId = sessionId
   if (value.agentsOpen === true && agent === 'claude') tab.agentsOpen = true
@@ -236,6 +242,44 @@ function sanitizeFullAccess(value: unknown): FullAccess {
   return { claude: pick('claude'), codex: pick('codex'), gemini: pick('gemini') }
 }
 
+function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSession[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const sessions: KeptSession[] = []
+  for (const item of value) {
+    if (!isRecord(item) || !projectIds.has(String(item.projectId)) || !isAgent(item.agent)) continue
+    const sessionId = asString(item.sessionId)
+    const title = asString(item.title)
+    if (!sessionId || !title) continue
+    const key = `${item.agent}:${sessionId}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    sessions.push({ projectId: String(item.projectId), agent: item.agent, sessionId, title: title.slice(0, 160), closedAt: clampNumber(item.closedAt, 0, Date.now() + 86_400_000, Date.now()) })
+  }
+  return sessions.slice(-500)
+}
+
+function sanitizeTasks(value: unknown, projectIds: Set<string>): ProjectTask[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const tasks: ProjectTask[] = []
+  for (const item of value) {
+    if (!isRecord(item) || !projectIds.has(String(item.projectId))) continue
+    const id = asString(item.id)
+    const title = asString(item.title)
+    if (!id || !title || seen.has(id)) continue
+    seen.add(id)
+    const events = (Array.isArray(item.events) ? item.events : []).flatMap((event) => {
+      if (!isRecord(event) || (event.kind !== 'note' && event.kind !== 'commit')) return []
+      const eventId = asString(event.id)
+      const text = asString(event.text)
+      return eventId && text ? [{ id: eventId, kind: event.kind as 'note' | 'commit', text: text.slice(0, 500), at: clampNumber(event.at, 0, Date.now() + 86_400_000, Date.now()) }] : []
+    }).slice(-300)
+    tasks.push({ id, projectId: String(item.projectId), title: title.slice(0, 160), note: typeof item.note === 'string' ? item.note.slice(0, 4000) : '', createdAt: clampNumber(item.createdAt, 0, Date.now() + 86_400_000, Date.now()), sessionKeys: Array.isArray(item.sessionKeys) ? [...new Set(item.sessionKeys.filter((key): key is string => typeof key === 'string' && /^(claude|codex|gemini):[^:]+$/.test(key)))].slice(0, 100) : [], events })
+  }
+  return tasks.slice(0, 300)
+}
+
 function sanitizeShortcut(value: unknown): string {
   const binding = typeof value === 'string' ? parseShortcut(value) : null
   return binding ? formatShortcut(binding) : DEFAULT_PALETTE_SHORTCUT
@@ -260,6 +304,8 @@ export function migrateSettings(raw: unknown): Settings {
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
     layouts: sanitizeLayouts(raw.layouts),
     snippets: sanitizeSnippets(raw.snippets, new Set(projects.map((p) => p.id))),
+    keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
+    tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
     autoUpdateCheck: raw.autoUpdateCheck !== false,
     paletteShortcut: sanitizeShortcut(raw.paletteShortcut),

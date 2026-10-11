@@ -2,7 +2,7 @@ import { AGENT_NAMES, agentOf } from '../../shared/agents'
 import { filterProjects } from '../../shared/quickPick'
 import { projectTodayLabel, projectTodayTooltip } from '../../shared/sessionCost'
 import type { AgentKind, Project } from '../../shared/types'
-import { focusPane, openResumePicker, showView, startSession, toggleProjectExpanded, toggleSidebar } from '../actions'
+import { closePane, focusPane, openResumePicker, removeKeptSession, showView, startSession, toggleProjectExpanded, toggleSidebar } from '../actions'
 import type { PaneView } from '../derive'
 import { clear, h, icon, iconButton } from '../dom'
 import { ICONS } from '../icons'
@@ -57,7 +57,8 @@ export class SidebarComponent {
       projects.map((p) => [p.id, p.name, p.defaultAgent]),
       state.collapsedProjects,
       projects.map((p) => projectTodayLabel(state.usage.projectsToday[p.id])),
-      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent])
+      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent]),
+      state.settings.keptSessions
     ])
     if (signature === this.signature) return
     this.signature = signature
@@ -157,6 +158,7 @@ export class SidebarComponent {
     for (const view of own) {
       const selected = view.pane.id === state.focusedId
       rows.push(
+        h('div', { class: 'kept-session-row' },
         h(
           'button',
           {
@@ -168,8 +170,20 @@ export class SidebarComponent {
           agentMark(view.agent),
           h('span', { class: 'sess-name' }, view.title),
           h('span', { class: 'sess-status' }, ' · ', h('span', { class: view.status }, view.status))
+        ),
+        iconButton(`Close ${view.title} in ${project.name}`, ICONS.close, () => void closePane(view.pane.id), 'small')
         )
       )
+    }
+    const openKeys = new Set(state.panes.flatMap((pane) => pane.tabs.flatMap((tab) => tab.sessionId ? [`${tab.agent}:${tab.sessionId}`] : [])))
+    const kept = state.settings.keptSessions.filter((session) => session.projectId === project.id && !openKeys.has(`${session.agent}:${session.sessionId}`))
+    if (kept.length > 0) rows.push(h('div', { class: 'sess-group-label' }, `Closed sessions (${kept.length})`))
+    for (const session of kept) {
+      rows.push(h('div', { class: 'kept-session-row' },
+        h('button', { class: 'sess-row', type: 'button', title: `Resume ${session.title}`, onClick: () => void startSession(project.id, session.agent, session.sessionId, true, session.title) },
+          agentMark(session.agent), h('span', { class: 'sess-name' }, session.title)),
+        iconButton(`Remove ${session.title} from ${project.name}`, ICONS.close, () => removeKeptSession(session.agent, session.sessionId), 'small')
+      ))
     }
     return rows
   }

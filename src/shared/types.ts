@@ -44,6 +44,7 @@ export interface CompareLink {
 export interface SavedTab {
   agent: TabAgent
   label: string
+  titleHint?: string
   sessionId?: string
   agentsOpen?: boolean
   from?: AgentKind
@@ -89,6 +90,24 @@ export interface Snippet {
   shortcut: number | null
 }
 
+export interface KeptSession {
+  projectId: string
+  agent: AgentKind
+  sessionId: string
+  title: string
+  closedAt: number
+}
+
+export interface ProjectTask {
+  id: string
+  projectId: string
+  title: string
+  note: string
+  createdAt: number
+  sessionKeys: string[]
+  events: { id: string; kind: 'note' | 'commit'; text: string; at: number }[]
+}
+
 export interface SessionInfoSettings {
   notifications: boolean
   sound: boolean
@@ -104,6 +123,8 @@ export interface Settings {
   workspace: Workspace
   layouts: SavedLayout[]
   snippets: Snippet[]
+  keptSessions: KeptSession[]
+  tasks: ProjectTask[]
   lastSeenVersion: string | null
   autoUpdateCheck: boolean
   paletteShortcut: string
@@ -148,6 +169,7 @@ export interface GeminiSession {
   startedAt: number
   updatedAt: number
   model?: string
+  recentTools?: { name: string; at: number }[]
 }
 
 export type ModelFamily = 'opus' | 'sonnet' | 'haiku' | 'fable' | 'codex' | 'gemini' | 'other'
@@ -195,12 +217,14 @@ export interface ResumeSession {
   model?: string
   firstPrompt?: string
   lastAssistant?: string
+  matchExcerpt?: string
 }
 
 export interface ResumeQuery {
   projectId?: string
   agent?: AgentKind
   query?: string
+  searchContent?: boolean
   limit?: number
 }
 

@@ -137,7 +137,7 @@ export class GeminiWatcher {
 
   private async tick(): Promise<void> {
     const sessions = await readGeminiSessions()
-    const signature = JSON.stringify(sessions.map((s) => [s.sessionId, s.name, s.startedAt, s.updatedAt, s.model]))
+    const signature = JSON.stringify(sessions.map((s) => [s.sessionId, s.name, s.startedAt, s.updatedAt, s.model, s.recentTools]))
     if (signature === this.last) return
     this.last = signature
     this.onChange(sessions)
