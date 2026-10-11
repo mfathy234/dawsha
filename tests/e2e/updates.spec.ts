@@ -274,7 +274,7 @@ test('a development build has no pill and Check now is disabled', async () => {
   }
 })
 
-test('after an update the What is new dialog shows 0.1.0 once', async () => {
+test('after an update the What is new dialog shows the current release once', async () => {
   const sandbox = createSandbox()
   writeFileSync(
     join(sandbox.userData, 'settings.json'),
@@ -289,7 +289,7 @@ test('after an update the What is new dialog shows 0.1.0 once', async () => {
     await expect(dialog).toContainText('Updated from 0.0.9')
     await expect(dialog.locator(`.wn-entry[data-version="${version}"]`)).toBeVisible()
     await expect(dialog.locator('.wn-entry')).toHaveCount(1)
-    await expect(dialog.locator('#wn-show-older')).toHaveCount(0)
+    await expect(dialog.locator('#wn-show-older')).toBeVisible()
     await first.page.screenshot({ path: 'test-results/screens/32-whats-new.png' })
     expect(readSettings(sandbox).lastSeenVersion).toBe('0.0.9')
     await dialog.locator('#wn-close').click()

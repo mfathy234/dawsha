@@ -22,13 +22,22 @@ describe('parseGeminiChat', () => {
       updatedAt: Date.parse('2026-10-08T12:00:20.500Z'),
       name: 'Explain the build script',
       model: 'gemini-2.5-pro',
-      hasConversation: true
+      hasConversation: true,
+      recentTools: []
     })
   })
 
   it('prefers a recorded summary over the first prompt', () => {
     const text = `${fixture}{"$set":{"summary":"Fixing the build"}}\n`
     expect(parseGeminiChat(text)?.name).toBe('Fixing the build')
+  })
+
+  it('keeps recent tool names and times from Gemini messages', () => {
+    const text = `${fixture}${JSON.stringify({ id: 'm4', type: 'gemini', timestamp: '2026-10-08T12:00:21.000Z', toolCalls: [{ name: 'read_file' }, { name: 'run_shell_command' }] })}\n`
+    expect(parseGeminiChat(text)?.recentTools).toEqual([
+      { name: 'read_file', at: Date.parse('2026-10-08T12:00:21.000Z') },
+      { name: 'run_shell_command', at: Date.parse('2026-10-08T12:00:21.000Z') }
+    ])
   })
 
   it('has no conversation and no name for a metadata-only file', () => {

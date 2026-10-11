@@ -10,6 +10,7 @@ export interface GeminiChat {
   name?: string
   model?: string
   hasConversation: boolean
+  recentTools: { name: string; at: number }[]
 }
 
 type Json = Record<string, unknown>
@@ -43,6 +44,7 @@ interface Accumulator {
   firstUser?: string
   model?: string
   sawMessage: boolean
+  recentTools: { name: string; at: number }[]
 }
 
 function takeMetadata(acc: Accumulator, meta: Json): void {
@@ -61,6 +63,14 @@ function takeMessage(acc: Accumulator, message: Json): void {
     if (text && !text.startsWith('/') && !text.startsWith('?')) acc.firstUser = text
   }
   if (message.type === 'gemini' && typeof message.model === 'string' && message.model) acc.model = message.model
+  if (message.type === 'gemini' && Array.isArray(message.toolCalls)) {
+    const at = asTime(message.timestamp) ?? acc.updatedAt ?? Date.now()
+    for (const call of message.toolCalls) {
+      if (!isRecord(call) || typeof call.name !== 'string' || !call.name.trim()) continue
+      acc.recentTools.push({ name: call.name.slice(0, 80), at })
+    }
+    acc.recentTools = acc.recentTools.slice(-8)
+  }
 }
 
 function takeRecord(acc: Accumulator, record: Json): void {
@@ -82,12 +92,13 @@ function finish(acc: Accumulator): GeminiChat | null {
     updatedAt: acc.updatedAt ?? startedAt,
     name: name || undefined,
     model: acc.model,
-    hasConversation: acc.sawMessage
+    hasConversation: acc.sawMessage,
+    recentTools: acc.recentTools
   }
 }
 
 export function parseGeminiChat(text: string): GeminiChat | null {
-  const acc: Accumulator = { sawMessage: false }
+  const acc: Accumulator = { sawMessage: false, recentTools: [] }
   const trimmed = text.trim()
   if (trimmed.startsWith('{') && !trimmed.includes('\n')) {
     try {
@@ -114,7 +125,7 @@ export function parseLegacyGeminiChat(text: string): GeminiChat | null {
   try {
     const whole: unknown = JSON.parse(text)
     if (!isRecord(whole)) return null
-    const acc: Accumulator = { sawMessage: false }
+    const acc: Accumulator = { sawMessage: false, recentTools: [] }
     takeRecord(acc, whole)
     return finish(acc)
   } catch {
@@ -128,7 +139,8 @@ export function toGeminiSession(chat: GeminiChat, modifiedAt: number): GeminiSes
     name: chat.name,
     startedAt: chat.startedAt,
     updatedAt: Math.max(chat.updatedAt, Math.round(modifiedAt)),
-    model: chat.model
+    model: chat.model,
+    recentTools: chat.recentTools
   }
 }
 

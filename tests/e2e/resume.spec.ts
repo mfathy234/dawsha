@@ -138,6 +138,8 @@ test('resume entry points: split-button menu, project filter and the empty state
     await page.getByRole('menuitem', { name: /Resume a session/ }).click()
     await expect(page.locator('.resume-picker')).toBeVisible()
     await expect(page.locator('#rp-project')).toHaveValue('')
+    await expect(page.locator('#rp-all-projects')).toBeChecked()
+    await page.locator('#rp-all-projects').uncheck()
     await page.locator('#rp-project').selectOption('gone')
     await expect(page.locator('.rp-empty')).toContainText('No earlier sessions in Missing.')
     await page.screenshot({ path: join(SCREENS, '22-resume-empty.png') })
@@ -145,6 +147,84 @@ test('resume entry points: split-button menu, project filter and the empty state
     await expect(page.getByRole('listbox', { name: 'Start a session in' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.locator('.quickpick')).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('closed sessions stay under their project until removed there', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.keyboard.press('Control+Shift+R')
+    await page.locator('.rp-row', { hasText: 'Add dark mode toggle' }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Close pane' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: /Close/ }).last().click()
+    await expect(page.locator('.pane')).toHaveCount(0)
+    await expect(page.locator('.kept-session-row')).toContainText('Add dark mode toggle')
+    await expect.poll(() => readSettings(sandbox.userData).keptSessions?.length).toBe(1)
+    await page.getByRole('button', { name: 'Remove Add dark mode toggle from Smoke' }).click()
+    await expect(page.locator('.kept-session-row')).toHaveCount(0)
+    await expect.poll(() => readSettings(sandbox.userData).keptSessions?.length).toBe(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('a project task keeps linked session and timeline entries', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.getByRole('button', { name: 'Projects', exact: true }).click()
+    await page.getByRole('tab', { name: 'Tasks' }).click()
+    await page.getByRole('button', { name: 'New task' }).click()
+    await page.getByRole('dialog').getByRole('textbox').fill('Theme cleanup')
+    await page.getByRole('dialog').getByRole('button', { name: 'Create task' }).click()
+    await expect(page.locator('.tasks-item')).toContainText('Theme cleanup')
+    await page.getByRole('textbox', { name: 'Task goal' }).fill('Keep settings readable')
+    await page.getByRole('textbox', { name: 'Task goal' }).blur()
+    await expect(page.getByRole('combobox', { name: 'Session to link' }).locator('option')).toHaveCount(4)
+    await page.getByRole('combobox', { name: 'Session to link' }).selectOption({ label: 'Claude · Add dark mode toggle' })
+    await page.getByRole('button', { name: 'Link session' }).click()
+    await expect.poll(() => readSettings(sandbox.userData).tasks?.[0]?.sessionKeys?.length).toBe(1)
+    await page.getByRole('button', { name: 'Add note' }).click()
+    await page.getByRole('dialog').getByRole('textbox').fill('Review complete')
+    await page.getByRole('dialog').getByRole('button', { name: 'Add to history' }).click()
+    await expect(page.locator('.task-history')).toContainText('Review complete')
+    await expect.poll(() => readSettings(sandbox.userData).tasks?.[0]?.sessionKeys?.length).toBe(1)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('session content search uses the all-projects checkbox', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const otherFolder = join(sandbox.root, 'Other Project')
+  mkdirSync(otherFolder, { recursive: true })
+  const settings = readSettings(sandbox.userData)
+  settings.projects.push({ id: 'other', name: 'Other', folder: otherFolder, defaultAgent: 'claude' })
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(settings))
+  const dir = join(sandbox.claudeHome, 'projects', otherFolder.replace(/[^A-Za-z0-9]/g, '-'))
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, '11111111-2222-4333-8444-777777777777.jsonl'), [
+    JSON.stringify({ type: 'user', message: { content: 'Check the settings page' } }),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'The rare zebra token is in the settings stylesheet.' }] } }),
+    JSON.stringify({ type: 'ai-title', aiTitle: 'Check settings' })
+  ].join('\n') + '\n')
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.locator('.proj-row', { hasText: 'Smoke' }).getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    await page.getByRole('menuitem', { name: /Resume in Smoke/ }).click()
+    await expect(page.locator('#rp-all-projects')).not.toBeChecked()
+    await page.locator('#rp-search').fill('rare zebra')
+    await expect(page.locator('.rp-row')).toHaveCount(0)
+    await page.locator('#rp-all-projects').check()
+    await expect(page.locator('.rp-row')).toHaveCount(1)
+    await expect(page.locator('.rp-preview')).toContainText('rare zebra token')
   } finally {
     await closeApp(app)
   }

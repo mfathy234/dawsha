@@ -219,6 +219,9 @@ button {
   display: inline-flex;
   color: var(--text);
 }
+.app-logo svg { display: block; width: 24px; height: 24px; transform-origin: center; animation: app-logo-breathe 4s ease-in-out infinite; }
+@keyframes app-logo-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .app-logo svg { animation: none; } }
 
 .split {
   display: flex;
@@ -587,6 +590,115 @@ button {
 
 .sess-row.selected {
   color: var(--accent);
+}
+
+.sess-group-label {
+  padding: 8px 8px 2px 28px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.kept-session-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.kept-session-row .sess-row {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+}
+
+.kept-session-row .icon-btn {
+  flex: none;
+}
+
+.tasks-panel {
+  min-width: 0;
+}
+
+.info-gemini-tool {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.tasks-head,
+.tasks-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tasks-head .lede,
+.tasks-head h2,
+.tasks-head h3 {
+  margin-right: auto;
+}
+
+.tasks-layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.tasks-list,
+.tasks-detail {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.tasks-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 4px;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tasks-item:hover,
+.tasks-item.selected {
+  background: var(--raised);
+}
+
+.tasks-detail textarea {
+  display: block;
+  width: 100%;
+  margin: 8px 0 16px;
+}
+
+.tasks-link select {
+  flex: 1;
+  min-width: 180px;
+}
+
+.task-event {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.task-event p {
+  margin: 4px 0;
+}
+
+.task-event small {
+  color: var(--muted);
+}
+
+@media (max-width: 700px) {
+  .tasks-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .sess-name {
@@ -1190,8 +1302,7 @@ input[type='checkbox'] {
   white-space: pre-line;
   padding: 10px 14px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
   border-radius: var(--radius);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   font-size: 13px;
@@ -1200,7 +1311,7 @@ input[type='checkbox'] {
 }
 
 .toast.error {
-  border-left-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
 }
 
 .projects-view {
@@ -2180,6 +2291,22 @@ input[type='checkbox'] {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.rp-filters {
+  flex-wrap: wrap;
+}
+
+.rp-filters .rp-search-wrap {
+  flex-basis: 100%;
+}
+
+.rp-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 12px;
 }
 
 .rp-hint,

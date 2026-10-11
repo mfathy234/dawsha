@@ -6,6 +6,7 @@ export interface SnapshotTab {
   id: string
   agent: TabAgent
   label: string
+  titleHint?: string
   sessionId?: string
   agentsOpen?: boolean
   from?: AgentKind
@@ -50,6 +51,7 @@ export function snapshotWorkspace(
         tabs: pane.tabs.map((tab) => ({
           agent: tab.agent,
           label: tab.label,
+          titleHint: tab.titleHint,
           sessionId: tab.agent === 'shell' || detached ? undefined : sessionFor(tab),
           agentsOpen: tab.agentsOpen === true ? true : undefined,
           from: tab.from

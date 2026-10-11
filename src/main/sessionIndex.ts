@@ -4,7 +4,7 @@ import { parseRolloutMeta, parseSessionIndex } from '../shared/codexSession'
 import { parseGeminiChat } from '../shared/geminiSession'
 import { claudeProjectSlug, sessionIdFromFile, sessionTitle } from '../shared/projectSessions'
 import { RESUME_LIMIT, matchesQuery } from '../shared/resumeIndex'
-import { claudeDetail, codexDetail, geminiDetail, modelLabel, type SessionDetail } from '../shared/sessionDetail'
+import { claudeDetail, codexDetail, contentMatch, geminiDetail, modelLabel, type SessionDetail } from '../shared/sessionDetail'
 import { normalizePath } from '../shared/sessionMatch'
 import type { AgentKind, Project, ResumeQuery, ResumeSession } from '../shared/types'
 import { codexHome, geminiHome } from './agentLaunch'
@@ -200,7 +200,16 @@ export async function listAllSessions(
     if (sessions.length >= limit) break
     const session = await enrich(candidate, names)
     if (!session || seen.has(`${session.agent}:${session.id}`)) continue
-    if (query.query && !matchesQuery(session, names_.get(session.projectId) ?? '', query.query)) continue
+    if (query.query) {
+      const metadataMatch = matchesQuery(session, names_.get(session.projectId) ?? '', query.query)
+      if (!metadataMatch && query.searchContent) {
+        try {
+          const excerpt = contentMatch(candidate.agent, (await sample(candidate.path, candidate.size)).text, query.query)
+          if (excerpt) session.matchExcerpt = excerpt
+        } catch { /* An unreadable transcript simply does not match. */ }
+      }
+      if (!metadataMatch && !session.matchExcerpt) continue
+    }
     seen.add(`${session.agent}:${session.id}`)
     sessions.push(session)
   }

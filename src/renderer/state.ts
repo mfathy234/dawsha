@@ -27,6 +27,7 @@ export interface TermState {
   id: string
   agent: TabAgent
   label: string
+  titleHint?: string
   sessionId?: string
   pid?: number
   startedAt: number
@@ -59,7 +60,7 @@ export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'settin
 
 export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about'
 
-export type ProjectsTab = 'projects' | 'snippets' | 'instructions'
+export type ProjectsTab = 'projects' | 'tasks' | 'snippets' | 'instructions'
 
 export interface AgentsState {
   report: AgentsReport | null
