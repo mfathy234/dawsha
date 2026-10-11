@@ -6,7 +6,7 @@
 
 <p align="center"><strong>One window for all your AI coding agents.</strong></p>
 
-<p align="center"><a href="https://github.com/mfathy234/dawsha">GitHub repository</a></p>
+<p align="center"><a href="https://dawsha.pages.dev/">Website</a> · <a href="https://github.com/mfathy234/dawsha">GitHub repository</a></p>
 
 <p align="center">
   A Windows desktop app that puts Claude Code, OpenAI Codex CLI and Google Gemini CLI side by side in a grid of

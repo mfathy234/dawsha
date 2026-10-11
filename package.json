@@ -3,7 +3,7 @@
   "productName": "Dawsha",
   "version": "0.1.0",
   "description": "One window for all your AI coding agents: a grid of readable terminals for Claude Code, Codex CLI and Gemini CLI",
-  "homepage": "https://github.com/mfathy234/dawsha",
+  "homepage": "https://dawsha.pages.dev/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mfathy234/dawsha.git"

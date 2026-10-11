@@ -14,7 +14,7 @@ try {
   await translationScript.evaluate((element) => element.remove())
 
   await page.evaluate(() => {
-    const siteUrl = 'https://mfathy234.github.io/dawsha/'
+    const siteUrl = 'https://dawsha.pages.dev/'
     document.querySelector('link[rel="canonical"]').href = `${siteUrl}ar/`
     document.querySelector('link[rel="alternate"][hreflang="en"]').href = siteUrl
     document.querySelector('link[rel="alternate"][hreflang="ar"]').href = `${siteUrl}ar/`
