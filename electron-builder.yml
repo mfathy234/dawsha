@@ -49,6 +49,16 @@ mac:
     - zip
   artifactName: Dawsha-${version}-mac-${arch}.${ext}
   hardenedRuntime: true
+linux:
+  category: Development
+  icon: build/icon.png
+  target:
+    - target: AppImage
+      arch: x64
+    - target: deb
+      arch: x64
+  artifactName: Dawsha-${version}-linux-${arch}.${ext}
+  maintainer: Mohamed Fathy <mfathy234@users.noreply.github.com>
 publish:
   provider: github
   owner: mfathy234

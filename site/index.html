@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dawsha - Every AI coding agent, one readable window</title>
-<meta name="description" content="Dawsha puts Claude Code, Codex CLI and Gemini CLI side by side in readable terminals on Windows and Apple Silicon Mac. Free, local, no account.">
+<meta name="description" content="Dawsha puts Claude Code, Codex CLI and Gemini CLI side by side in readable terminals on Windows, Apple Silicon Mac and Linux. Free, local, no account.">
 <link rel="canonical" href="https://dawsha.pages.dev/">
 <link rel="alternate" hreflang="en" href="https://dawsha.pages.dev/">
 <link rel="alternate" hreflang="ar" href="https://dawsha.pages.dev/ar/">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Dawsha">
 <meta property="og:title" content="Dawsha - Every AI coding agent, one readable window">
-<meta property="og:description" content="Claude Code, Codex CLI and Gemini CLI side by side in one grid of readable terminals. Windows and Apple Silicon Mac, free and local.">
+<meta property="og:description" content="Claude Code, Codex CLI and Gemini CLI side by side in one grid of readable terminals. Windows, Apple Silicon Mac and Linux, free and local.">
 <meta property="og:url" content="https://dawsha.pages.dev/">
 <meta property="og:image" content="https://dawsha.pages.dev/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -23,7 +23,7 @@
 <meta property="og:image:alt" content="Dawsha showing four agent sessions in a 2 by 2 grid">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Dawsha - Every AI coding agent, one readable window">
-<meta name="twitter:description" content="Claude Code, Codex CLI and Gemini CLI side by side in one grid of readable terminals. Windows and Apple Silicon Mac, free and local.">
+<meta name="twitter:description" content="Claude Code, Codex CLI and Gemini CLI side by side in one grid of readable terminals. Windows, Apple Silicon Mac and Linux, free and local.">
 <meta name="twitter:image" content="https://dawsha.pages.dev/assets/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -61,8 +61,16 @@
         <h1>Every AI coding agent, one readable window.</h1>
         <p class="lead">Run Claude Code, Codex and Gemini side by side in large, readable terminals, one session per task.</p>
         <div class="cta">
-          <a class="btn primary lg" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm-8,70.41-64-11.63V152h64ZM96,136H32a8,8,0,0,0-8,8v40a8,8,0,0,0,6.57,7.87l64,11.64a8.54,8.54,0,0,0,1.43.13,8,8,0,0,0,8-8V144A8,8,0,0,0,96,136Zm-8,50.05-48-8.73V152H88ZM213.13,33.86a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86ZM200,104H136V61.22l64-11.63ZM101.13,54.22a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM88,104H40V78.68L88,70Z"/></svg><span>Download for Windows</span></a>
-          <a class="btn secondary lg" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></svg><span>Portable version</span></a>
+          <details class="download-picker">
+            <summary class="btn primary lg"><span>Download</span><span class="download-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="download-options">
+              <div><strong>Windows</strong><span>x64</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup" target="_blank" rel="noopener noreferrer">Installer (.exe)</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable" target="_blank" rel="noopener noreferrer">Portable (.exe)</a></div>
+              <div><strong>macOS</strong><span>Apple Silicon</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="mac" target="_blank" rel="noopener noreferrer">Disk image (.dmg)</a></div>
+              <div><strong>Linux</strong><span>x64</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-appimage" target="_blank" rel="noopener noreferrer">AppImage</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-deb" target="_blank" rel="noopener noreferrer">Debian / Ubuntu (.deb)</a></div>
+              <p>Missing a package? Check the release assets.</p>
+            </div>
+          </details>
+          <a class="btn secondary lg" href="#download">All downloads</a>
         </div>
       </div>
       <figure class="shot hero-shot">
@@ -163,7 +171,7 @@ dawsha resume --last</code></pre>
   <section id="download" aria-labelledby="download-h">
     <div class="wrap">
       <h2 id="download-h">Download Dawsha</h2>
-      <p class="section-lead"><span data-version>Latest release</span>, Windows 10/11 x64 and Apple Silicon Mac. Free under the MIT licence.</p>
+      <p class="section-lead"><span data-version>Latest release</span>, Windows 10/11 x64, Apple Silicon Mac and Linux x64. Free under the MIT licence.</p>
       <div class="dl-grid">
         <div class="dl-card primary-card">
           <h3>Installer <span class="tag">Recommended</span></h3>
@@ -175,16 +183,24 @@ dawsha resume --last</code></pre>
           <p>One exe, no install, no PATH changes. Does not update itself.</p>
           <a class="btn secondary" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></svg><span>Portable version</span></a>
         </div>
-        <div class="dl-card mac-card" data-platform-card="mac" hidden>
+        <div class="dl-card mac-card" data-platform-card="mac">
           <div class="mac-copy">
             <h3>Apple Silicon Mac</h3>
             <p>macOS 13 or later · ARM64 DMG · Drag Dawsha to Applications.</p>
           </div>
-          <a class="btn secondary" href="https://github.com/mfathy234/dawsha/releases/download/v0.3.0/Dawsha-0.3.0-mac-arm64.dmg" data-dl="mac" target="_blank" rel="noopener noreferrer">Download for Mac</a>
+          <a class="btn secondary" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="mac" target="_blank" rel="noopener noreferrer">Download for Mac</a>
+        </div>
+        <div class="dl-card mac-card" data-platform-card="linux">
+          <div class="mac-copy"><h3>Linux</h3><p>x64 · AppImage or Debian / Ubuntu package.</p></div>
+          <details class="download-picker">
+            <summary class="btn secondary">Download for Linux <span class="download-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="download-options"><div><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-appimage" target="_blank" rel="noopener noreferrer">AppImage</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-deb" target="_blank" rel="noopener noreferrer">Debian / Ubuntu (.deb)</a></div></div>
+          </details>
         </div>
       </div>
+      <p class="note">Linux packages appear here after the first Linux release. If a package is unavailable, the link opens the latest release.</p>
       <p class="note"><strong>SmartScreen.</strong> The builds are not code signed, so Windows may show "Windows protected your PC". Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
-      <p class="note"><strong>Requirements.</strong> Windows 10 or 11 (x64), or an Apple Silicon Mac with macOS 13 or later. Install the agent CLIs you want to use: Claude Code, Codex CLI, Gemini CLI. Node.js 20+ is only needed to install Codex and Gemini from inside Dawsha.</p>
+      <p class="note"><strong>Requirements.</strong> Windows 10 or 11 (x64), an Apple Silicon Mac with macOS 13 or later, or Linux (x64). Install the agent CLIs you want to use: Claude Code, Codex CLI, Gemini CLI. Node.js 20+ is only needed to install Codex and Gemini from inside Dawsha.</p>
     </div>
   </section>
 
@@ -193,7 +209,15 @@ dawsha resume --last</code></pre>
       <img class="closing-mark brand-logo" src="favicon.svg?v=0.2.0-2" width="112" height="112" alt="Dawsha logo"><h2 id="closing-h">Stop hunting for the right window.</h2>
       <p class="section-lead">Put every agent where you can read it.</p>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm-8,70.41-64-11.63V152h64ZM96,136H32a8,8,0,0,0-8,8v40a8,8,0,0,0,6.57,7.87l64,11.64a8.54,8.54,0,0,0,1.43.13,8,8,0,0,0,8-8V144A8,8,0,0,0,96,136Zm-8,50.05-48-8.73V152H88ZM213.13,33.86a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86ZM200,104H136V61.22l64-11.63ZM101.13,54.22a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM88,104H40V78.68L88,70Z"/></svg><span>Download for Windows</span></a>
+        <details class="download-picker">
+            <summary class="btn primary lg"><span>Download</span><span class="download-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="download-options">
+              <div><strong>Windows</strong><span>x64</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup" target="_blank" rel="noopener noreferrer">Installer (.exe)</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable" target="_blank" rel="noopener noreferrer">Portable (.exe)</a></div>
+              <div><strong>macOS</strong><span>Apple Silicon</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="mac" target="_blank" rel="noopener noreferrer">Disk image (.dmg)</a></div>
+              <div><strong>Linux</strong><span>x64</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-appimage" target="_blank" rel="noopener noreferrer">AppImage</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-deb" target="_blank" rel="noopener noreferrer">Debian / Ubuntu (.deb)</a></div>
+              <p>Missing a package? Check the release assets.</p>
+            </div>
+          </details>
         <a class="btn secondary" href="https://github.com/mfathy234/dawsha" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"/></svg><span>View on GitHub</span></a>
       </div>
     </div>

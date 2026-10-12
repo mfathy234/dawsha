@@ -34,7 +34,7 @@ export async function quickOpen(kind: QuickOpenKind, folder: string): Promise<vo
     if (solution) await shell.openPath(join(folder, solution))
     return
   }
-  const child = process.platform === 'darwin'
+  const child = process.platform !== 'win32'
     ? spawn(resolveExecutable('code', platformExecutableDirs()) ?? 'code', ['--reuse-window', folder], {
         detached: true,
         stdio: 'ignore',
