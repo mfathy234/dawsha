@@ -16,7 +16,7 @@ test('the Arabic page is readable without JavaScript and has Arabic share metada
   await expect(page.getByRole('heading', { level: 1 })).toContainText('وكلاء')
   await expect(page.getByText('استيراد إعدادات سابقة')).toBeVisible()
   await expect(page.getByText('الوكلاء المثبتون.')).toBeVisible()
-  await expect(page.locator('.primary-card p')).toContainText('إلى PATH ويتحدث تلقائيًا.')
+  await expect(page.locator('#windows-download p')).toContainText('ويندوز')
   await expect(page.locator('.code .c').first()).toContainText('أضف هذا المجلد')
   await expect(page.locator('.hero-shot img')).toHaveJSProperty('complete', true)
   await expect(page.getByRole('link', { name: 'English' })).toHaveAttribute('href', '../index.html')
@@ -35,7 +35,7 @@ test('the site switches between Arabic RTL and English LTR with translated navig
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('وكلاء')
   await expect(page.locator('nav a[href="#features"]')).toContainText('المميزات')
-  await expect(page.locator('.hero .btn.primary')).toContainText('ويندوز')
+  await expect(page.locator('.hero .download-action')).toContainText('حمّل لويندوز')
   await expect(page.locator('.hero-shot img')).toHaveAttribute('alt', /دوشة/)
   await expect(page.locator('#cli-h')).toHaveText(/أمر\s*dawsha\s*$/)
   await page.screenshot({ path: 'test-results/site-ar.png' })
@@ -59,7 +59,7 @@ test('English content and screenshots remain available without JavaScript', asyn
   await context.close()
 })
 
-test('shows the Apple Silicon download only when the latest release has a Mac DMG', async ({ page }) => {
+test('resolves the Apple Silicon download when the latest release has a Mac DMG', async ({ page }) => {
   await page.route('https://api.github.com/repos/mfathy234/dawsha/releases/latest', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -80,14 +80,73 @@ test('shows the Apple Silicon download only when the latest release has a Mac DM
   )
 })
 
-test('keeps the Apple Silicon download hidden until a release includes it', async ({ page }) => {
+test('keeps platform choices linked to releases when assets are missing', async ({ page }) => {
   await page.route('https://api.github.com/repos/mfathy234/dawsha/releases/latest', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({ tag_name: 'v0.2.1', assets: [] })
   }))
   await page.goto(url)
-  await expect(page.locator('[data-platform-card="mac"]')).toBeHidden()
+  await expect(page.locator('[data-platform-card="mac"]')).toBeVisible()
+  await expect(page.locator('[data-platform-card="mac"] [data-dl="mac"]')).toHaveAttribute('href', 'https://github.com/mfathy234/dawsha/releases/latest')
+})
+
+test('download dropdown works with the keyboard and resolves Linux assets', async ({ page }) => {
+  const appImage = 'https://github.com/mfathy234/dawsha/releases/download/v0.3.0/Dawsha-0.3.0-linux-x64.AppImage'
+  await page.route('https://api.github.com/repos/mfathy234/dawsha/releases/latest', route => route.fulfill({
+    json: { tag_name: 'v0.3.0', assets: [{ name: 'Dawsha-0.3.0-linux-x64.AppImage', browser_download_url: appImage }] }
+  }))
+  await page.goto(url)
+  const dropdown = page.locator('.hero .download-menu')
+  await dropdown.locator('summary').focus()
+  await page.keyboard.press('Enter')
+  await expect(dropdown.locator('[data-dl="linux-appimage"]')).toHaveAttribute('href', appImage)
+  await expect(dropdown.locator('.platform-icon')).toHaveCount(5)
+  await page.keyboard.press('Escape')
+  await expect(dropdown).not.toHaveAttribute('open', '')
+  await expect(dropdown.locator('summary')).toBeFocused()
+})
+
+test('resolves each platform package and closes the dropdown with Escape', async ({ page }) => {
+  const packages = {
+    setup: 'Dawsha-Setup-0.3.0.exe', portable: 'Dawsha-Portable-0.3.0.exe',
+    mac: 'Dawsha-0.3.0-mac-arm64.dmg',
+    'linux-appimage': 'Dawsha-0.3.0-linux-x64.AppImage', 'linux-deb': 'Dawsha-0.3.0-linux-x64.deb'
+  }
+  const base = 'https://github.com/mfathy234/dawsha/releases/download/v0.3.0/'
+  await page.route('https://api.github.com/repos/mfathy234/dawsha/releases/latest', route => route.fulfill({
+    json: { tag_name: 'v0.3.0', assets: Object.values(packages).map(name => ({ name, browser_download_url: base + name })) }
+  }))
+  await page.goto(url)
+  await page.locator('.hero .download-menu summary').click()
+  for (const [key, name] of Object.entries(packages)) {
+    await expect(page.locator(`.hero .download-menu [data-dl="${key}"]`)).toHaveAttribute('href', base + name)
+  }
+  for (const [key, name] of Object.entries(packages)) {
+    await expect(page.locator(`#download [data-dl="${key}"]`)).toHaveAttribute('href', base + name)
+  }
+})
+
+test('API failure retains working release links for every platform', async ({ page }) => {
+  await page.route('https://api.github.com/repos/mfathy234/dawsha/releases/latest', route => route.fulfill({ status: 403, body: '{}' }))
+  await page.goto(url)
+  for (const link of await page.locator('[data-dl]').all()) {
+    await expect(link).toHaveAttribute('href', 'https://github.com/mfathy234/dawsha/releases/latest')
+  }
+})
+
+test('platform dropdowns remain usable on mobile without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } })
+  const page = await context.newPage()
+  for (const address of [url, arabicUrl]) {
+    await page.goto(address)
+    const dropdown = page.locator('.hero .download-menu')
+    await dropdown.locator('summary').click()
+    await expect(dropdown.locator('[data-dl="linux-appimage"]')).toBeVisible()
+    await expect(page.locator('#download .platform-download')).toHaveCount(5)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  }
+  await context.close()
 })
 
 test('Arabic fits a mobile viewport and keeps the language switch keyboard accessible', async ({ page }) => {

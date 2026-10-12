@@ -3,6 +3,17 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-10-12
+
+### Added
+
+- Run Dawsha on Linux x64 and distribute AppImage and Debian / Ubuntu packages.
+- Add platform-specific Windows, macOS and Linux downloads to the English and Arabic websites.
+
+### Changed
+
+- Refine the platform download menu with a compact open transition and align the platform cards.
+
 ## [0.3.0] - 2026-10-12
 
 ### Added
@@ -169,7 +180,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
   own folders and shows tokens per day (or hour) by agent, tokens and Claude Code cost by project and by agent, and a
   history of the 5 hour and weekly limits. Cost appears only where an agent reports one; nothing is estimated.
 
-## [0.4.0] - 2026-10-08
+## [0.4.0-legacy] - 2026-10-08
 
 ### Added
 

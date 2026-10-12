@@ -114,6 +114,24 @@ describe('decideWhatsNew', () => {
     }
   })
 
+  it('keeps archived legacy entries out of release notes', () => {
+    const withLegacy = parseChangelog(`## [0.4.0] - 2026-10-12
+
+### Added
+
+- Current release.
+
+## [0.4.0-legacy] - 2026-10-08
+
+### Added
+
+- Older development release.
+`)
+    const decision = decideWhatsNew('0.4.0', '0.3.0', withLegacy)
+    expect(decision.show).toBe(true)
+    if (decision.show) expect(decision.entries.map((entry) => entry.version)).toEqual(['0.4.0'])
+  })
+
   it('shows every version in between after a multi-version jump, newest first', () => {
     const decision = decideWhatsNew('0.4.0', '0.2.0', entries)
     expect(decision.show).toBe(true)
