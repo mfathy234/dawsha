@@ -15,6 +15,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Use Claude transcript titles for active sessions in the Projects sidebar when live session metadata has no title.
 - Keep pane expand and close controls visible in compact headers, add Restore pane to grid to the pane actions menu,
   and allow long pane menus to scroll so lower actions such as saving snippets stay reachable.
+- Use the animated favicon mark beside the website's Switch heading and above the closing tagline in English and Arabic.
 
 ## [0.2.0] - 2026-10-11
 
