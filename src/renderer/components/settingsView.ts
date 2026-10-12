@@ -214,7 +214,7 @@ export class SettingsViewComponent {
   }
 
   private general(state: AppState): HTMLElement[] {
-    const draft = this.shortcutDraft ?? state.settings.paletteShortcut
+    const draft = this.shortcutDraft ?? formatShortcut(parseShortcut(state.settings.paletteShortcut) ?? parseShortcut(DEFAULT_PALETTE_SHORTCUT)!)
     const input = h('input', {
       class: `text-input mono${this.shortcutError ? ' invalid' : ''}`,
       type: 'text',
@@ -258,7 +258,9 @@ export class SettingsViewComponent {
       row(
         'Command palette shortcut',
         h('div', { class: 'set-inline' }, input, reset),
-        h('p', { class: 'hint' }, `Ctrl or Alt plus a key, such as ${DEFAULT_PALETTE_SHORTCUT} or Alt+Space. Ctrl+Shift+P always works too.`),
+        h('p', { class: 'hint' }, navigator.platform.toLowerCase().includes('mac')
+          ? 'Command or Option plus a key. Command+Shift+P always works too.'
+          : `Ctrl or Alt plus a key, such as ${DEFAULT_PALETTE_SHORTCUT} or Alt+Space. Ctrl+Shift+P always works too.`),
         this.shortcutError ? h('p', { class: 'field-error', id: 'palette-shortcut-error', role: 'alert' }, this.shortcutError) : null
       ),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed)),

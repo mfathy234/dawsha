@@ -3,6 +3,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
 import { insertionData } from '../shared/snippets'
+import { primaryModifierPressed } from '../shared/shortcuts'
 import { h } from './dom'
 import { TerminalPrompts } from './terminalPrompts'
 import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
@@ -237,7 +238,7 @@ export class TerminalView {
   }
 
   private handleWheel(event: WheelEvent): void {
-    if (!event.ctrlKey) return
+    if (!primaryModifierPressed(event)) return
     event.preventDefault()
     event.stopPropagation()
     this.callbacks.onZoom(event.deltaY < 0 ? 1 : -1)
@@ -246,12 +247,12 @@ export class TerminalView {
   private handleKey(event: KeyboardEvent): boolean {
     if (event.type !== 'keydown') return true
     const key = event.key.toLowerCase()
-    if (event.ctrlKey && !event.altKey && key === 'c' && this.term.hasSelection()) {
+    if (primaryModifierPressed(event) && !event.altKey && key === 'c' && this.term.hasSelection()) {
       void this.callbacks.writeClipboard(this.term.getSelection())
       this.term.clearSelection()
       return false
     }
-    if (event.ctrlKey && !event.altKey && key === 'v') {
+    if (primaryModifierPressed(event) && !event.altKey && key === 'v') {
       event.preventDefault()
       void this.callbacks
         .readClipboard()

@@ -3,6 +3,7 @@ import { groupSessions, messageWord, sessionSummary } from '../../shared/resumeI
 import { formatAge } from '../../shared/statusLine'
 import { ageGroup } from '../../shared/resumeIndex'
 import type { AgentKind, ResumeQuery, ResumeSession } from '../../shared/types'
+import { primaryModifierPressed } from '../../shared/shortcuts'
 import { closeQuickPick, findOpenSession, openQuickPick, resumeInFocusedPane, resumeInNewPane, setQuickPickMode } from '../actions'
 import { api } from '../api'
 import { clear, h, icon } from '../dom'
@@ -93,7 +94,7 @@ export class ResumePickerComponent {
       { class: 'rp-hint' },
       h('span', { class: 'kbd' }, 'Tab'),
       ' switches agent · ',
-      h('span', { class: 'kbd' }, 'Ctrl+R'),
+      h('span', { class: 'kbd' }, navigator.platform.toLowerCase().includes('mac') ? 'Cmd+R' : 'Ctrl+R'),
       ' toggles New/Resume'
     )
     this.root = h(
@@ -195,7 +196,7 @@ export class ResumePickerComponent {
       event.preventDefault()
       event.stopPropagation()
       closeQuickPick()
-    } else if (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'r') {
+    } else if (primaryModifierPressed(event) && !event.shiftKey && event.key.toLowerCase() === 'r') {
       event.preventDefault()
       event.stopPropagation()
       setQuickPickMode('new')

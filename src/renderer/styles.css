@@ -16,7 +16,7 @@
   --radius: 8px;
   --image-url: none;
   --image-blur: 0px;
-  --font-ui: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
   color-scheme: dark;
 }
@@ -225,28 +225,34 @@ button {
 
 .split {
   display: flex;
-  height: 36px;
+  height: 34px;
   flex: none;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 10px;
+  background: var(--surface);
 }
 
 .split-main,
 .split-chevron {
-  height: 36px;
+  height: 28px;
   border: 0;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .split-main {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 14px 0 12px;
-  border-radius: 9px;
-  background: var(--accent);
-  color: var(--on-accent);
+  gap: 6px;
+  padding: 0 11px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -273,27 +279,26 @@ button {
 }
 
 .split-main:hover {
-  filter: brightness(1.08);
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
 }
 
 .split-chevron:hover {
-  background: var(--raised);
-  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
 }
 
 .split-main:active,
 .split-chevron:active {
-  filter: brightness(0.82);
+  background: color-mix(in srgb, var(--accent) 23%, var(--surface));
 }
 
 .split-chevron[aria-expanded='true'] {
-  border-color: var(--accent);
   color: var(--accent);
 }
 
 .split-main:focus-visible,
 .split-chevron:focus-visible {
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -532,7 +537,16 @@ button {
   background: none;
   color: var(--muted);
   display: inline-flex;
-  cursor: pointer;
+  pointer-events: none;
+}
+
+.proj-collapse {
+  width: 24px;
+  height: 24px;
+}
+
+.proj-collapse[aria-expanded='false'] {
+  color: var(--text);
 }
 
 .proj-name {
@@ -989,12 +1003,12 @@ button {
 }
 
 .pane-strip {
-  height: 36px;
+  height: 22px;
   flex: none;
   display: flex;
   align-items: stretch;
-  gap: 4px;
-  padding: 0 12px;
+  gap: 1px;
+  padding: 0 6px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
@@ -1002,12 +1016,12 @@ button {
 .strip-tab {
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 6px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1026,12 +1040,6 @@ button {
   white-space: pre;
 }
 
-.strip-hint {
-  display: flex;
-  align-items: center;
-  font-size: 12px;
-  color: var(--muted);
-}
 
 .empty {
   flex: 1;

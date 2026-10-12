@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { agentLabel, agentOf, nextAgent, sessionLabel } from '../../src/shared/agents'
-import { agentArgs, launchSpec, locateCodexBinary, locateGeminiEntry, shellArgs } from '../../src/main/agentLaunch'
+import { agentArgs, claudeCommand, launchSpec, locateCodexBinary, locateGeminiEntry, shellArgs, shellCommand } from '../../src/main/agentLaunch'
 import type { SpawnRequest } from '../../src/shared/types'
 
 const request = (patch: Partial<SpawnRequest>): SpawnRequest => ({
@@ -174,12 +174,12 @@ describe('launchSpec', () => {
     writeFileSync(join(dir, 'node.exe'), '', 'utf8')
     delete process.env.DAWSHA_GEMINI_COMMAND
     process.env.PATH = dir
-    expect(launchSpec(request({ agent: 'gemini', sessionId: 'u-1', prompt: 'hi there' }))).toEqual({
+    expect(launchSpec(request({ agent: 'gemini', sessionId: 'u-1', prompt: 'hi there' }), 'win32')).toEqual({
       file: join(dir, 'node.exe'),
       args: [join(bundle, 'gemini.js'), '--session-id', 'u-1', '--prompt-interactive=hi there']
     })
     process.env.DAWSHA_SHELL = process.execPath
-    expect(launchSpec(request({ agent: 'shell', prompt: 'ignored' }))).toEqual({ file: process.execPath, args: [] })
+    expect(launchSpec(request({ agent: 'shell', prompt: 'ignored' }), 'win32')).toEqual({ file: process.execPath, args: [] })
   })
 
   it('refuses a prompt for an agent that can only be started through a .cmd shim', () => {
@@ -188,8 +188,8 @@ describe('launchSpec', () => {
     delete process.env.DAWSHA_CODEX_COMMAND
     process.env.PATH = dir
     process.env.ComSpec = 'C:\\Windows\\System32\\cmd.exe'
-    expect(launchSpec(request({ agent: 'codex', prompt: 'a & b' }))).toContain('.cmd shim')
-    expect(typeof launchSpec(request({ agent: 'codex' }))).toBe('object')
+    expect(launchSpec(request({ agent: 'codex', prompt: 'a & b' }), 'win32')).toContain('.cmd shim')
+    expect(typeof launchSpec(request({ agent: 'codex' }), 'win32')).toBe('object')
   })
 
   it('splits DAWSHA_CODEX_ARGS', () => {
@@ -197,17 +197,37 @@ describe('launchSpec', () => {
     process.env.DAWSHA_CODEX_ARGS = '["--flag","two words"]'
     expect(launchSpec(request({}))).toEqual({ file: process.execPath, args: ['--flag', 'two words'] })
   })
+
+  it('uses macOS executable names and finds extensionless Codex and Gemini commands', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dawsha-macos-tools-'))
+    writeFileSync(join(dir, 'codex'), '', 'utf8')
+    writeFileSync(join(dir, 'gemini'), '', 'utf8')
+    delete process.env.DAWSHA_CODEX_COMMAND
+    delete process.env.DAWSHA_GEMINI_COMMAND
+    process.env.PATH = dir
+
+    expect(claudeCommand('darwin')).toBe('claude')
+    expect(launchSpec(request({ agent: 'codex' }), 'darwin')).toEqual({ file: join(dir, 'codex'), args: [] })
+    expect(launchSpec(request({ agent: 'gemini' }), 'darwin')).toEqual({ file: join(dir, 'gemini'), args: [] })
+  })
 })
 
 describe('shellArgs', () => {
   it('opens a plain interactive shell without a command', () => {
     delete process.env.DAWSHA_SHELL
-    expect(shellArgs('pwsh.exe')).toEqual(['-NoLogo'])
+    expect(shellArgs('pwsh.exe', undefined, 'win32')).toEqual(['-NoLogo'])
   })
 
   it('runs a one-shot command with the right switches per shell', () => {
-    expect(shellArgs('pwsh.exe', 'npm -v')).toEqual(['-NoLogo', '-Command', 'npm -v'])
+    expect(shellArgs('pwsh.exe', 'npm -v', 'win32')).toEqual(['-NoLogo', '-Command', 'npm -v'])
     expect(shellArgs('cmd.exe', 'npm -v')).toEqual(['/d', '/s', '/c', 'npm -v'])
     expect(shellArgs(['C:', 'Windows', 'System32', 'cmd.exe'].join(String.fromCharCode(92)), 'npm -v')[0]).toBe('/d')
+  })
+
+  it('selects zsh and login-shell arguments on macOS', () => {
+    delete process.env.DAWSHA_SHELL
+    expect(shellCommand('darwin', { SHELL: '/bin/zsh' })).toBe('/bin/zsh')
+    expect(shellArgs('/bin/zsh', undefined, 'darwin')).toEqual(['-l'])
+    expect(shellArgs('/bin/zsh', 'npm -v', 'darwin')).toEqual(['-lc', 'npm -v'])
   })
 })

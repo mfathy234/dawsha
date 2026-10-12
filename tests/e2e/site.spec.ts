@@ -59,6 +59,37 @@ test('English content and screenshots remain available without JavaScript', asyn
   await context.close()
 })
 
+test('shows the Apple Silicon download only when the latest release has a Mac DMG', async ({ page }) => {
+  await page.route('https://api.github.com/repos/mfathy234/dawsha/releases/latest', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      tag_name: 'v0.3.0',
+      assets: [{
+        name: 'Dawsha-0.3.0-mac-arm64.dmg',
+        browser_download_url: 'https://github.com/mfathy234/dawsha/releases/download/v0.3.0/Dawsha-0.3.0-mac-arm64.dmg'
+      }]
+    })
+  }))
+  await page.goto(url)
+  const card = page.locator('[data-platform-card="mac"]')
+  await expect(card).toBeVisible()
+  await expect(card.locator('[data-dl="mac"]')).toHaveAttribute(
+    'href',
+    'https://github.com/mfathy234/dawsha/releases/download/v0.3.0/Dawsha-0.3.0-mac-arm64.dmg'
+  )
+})
+
+test('keeps the Apple Silicon download hidden until a release includes it', async ({ page }) => {
+  await page.route('https://api.github.com/repos/mfathy234/dawsha/releases/latest', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ tag_name: 'v0.2.1', assets: [] })
+  }))
+  await page.goto(url)
+  await expect(page.locator('[data-platform-card="mac"]')).toBeHidden()
+})
+
 test('Arabic fits a mobile viewport and keeps the language switch keyboard accessible', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.setViewportSize({ width: 390, height: 844 })

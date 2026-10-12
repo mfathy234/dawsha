@@ -185,7 +185,17 @@ test('needs-you: done after busy to idle, permission prompt, notification only w
     await expect.poll(() => readLines(sandbox.notifyLog).length, { timeout: 15_000 }).toBe(before + 1)
     const note = readLines(sandbox.notifyLog).at(-1)
     expect(note.title).toContain('is done')
-    expect(note.paneId).toBeTruthy()
+    const targetPaneId = await first.getAttribute('data-pane-id')
+    expect(note.paneId).toBe(targetPaneId)
+
+    await page.getByRole('button', { name: 'Usage', exact: true }).click()
+    await expect(page.locator('.usage-view')).toBeVisible()
+    await app.evaluate(({ BrowserWindow }, paneId) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('app:notify-click', paneId)
+    }, targetPaneId)
+    await expect(page.locator('.usage-view')).toBeHidden()
+    await expect(page.locator(`.pane[data-pane-id="${targetPaneId}"]`)).toHaveClass(/maximized/)
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }

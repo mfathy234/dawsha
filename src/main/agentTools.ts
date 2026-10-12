@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { extname } from 'node:path'
+import { delimiter, extname } from 'node:path'
 import { AGENTS } from '../shared/agents'
 import {
   NPM_PACKAGES,
@@ -11,7 +11,7 @@ import {
 } from '../shared/agentTools'
 import type { AgentKind } from '../shared/types'
 import { agentCommand } from './agentLaunch'
-import { claudeFallbackDirs, resolveExecutable } from './executables'
+import { claudeFallbackDirs, platformExecutableDirs, resolveExecutable } from './executables'
 
 export const LATEST_TTL_MS = 30 * 60 * 1000
 const RUN_TIMEOUT_MS = 20_000
@@ -43,7 +43,11 @@ function run(file: string, args: string[]): Promise<string | null> {
     }
     let child: ReturnType<typeof spawn>
     try {
-      child = spawn(command, argv, { windowsHide: true, windowsVerbatimArguments: viaShell, stdio: ['ignore', 'pipe', 'pipe'] })
+      const dirs = platformExecutableDirs()
+      const env = dirs.length
+        ? { ...process.env, PATH: [...new Set([...(process.env.PATH ?? '').split(delimiter).filter(Boolean), ...dirs])].join(delimiter) }
+        : process.env
+      child = spawn(command, argv, { env, windowsHide: true, windowsVerbatimArguments: viaShell, stdio: ['ignore', 'pipe', 'pipe'] })
     } catch {
       resolve(null)
       return
@@ -61,14 +65,15 @@ function run(file: string, args: string[]): Promise<string | null> {
 
 function locate(agent: AgentKind): string | null {
   const command = agentCommand(agent)
-  const found = resolveExecutable(command, agent === 'claude' ? claudeFallbackDirs() : [])
-  if (found || agent !== 'claude' || process.env.DAWSHA_CLAUDE_COMMAND) return found
+  const found = resolveExecutable(command, [...platformExecutableDirs(), ...(agent === 'claude' ? claudeFallbackDirs() : [])])
+  if (found || agent !== 'claude' || process.platform !== 'win32' || process.env.DAWSHA_CLAUDE_COMMAND) return found
   return resolveExecutable('claude.cmd')
 }
 
 async function nodeInfo(): Promise<AgentsReport['node']> {
-  const nodePath = resolveExecutable('node')
-  const npmPath = resolveExecutable('npm')
+  const dirs = platformExecutableDirs()
+  const nodePath = resolveExecutable('node', dirs)
+  const npmPath = resolveExecutable('npm', dirs)
   const [node, npm] = await Promise.all([
     nodePath ? run(nodePath, ['--version']) : Promise.resolve(null),
     npmPath ? run(npmPath, ['--version']) : Promise.resolve(null)
@@ -94,7 +99,7 @@ async function latestVersion(agent: AgentKind, force: boolean): Promise<string |
   const pkg = NPM_PACKAGES[agent]
   const cached = latestCache.get(pkg)
   if (!force && cached && Date.now() - cached.at < LATEST_TTL_MS) return cached.version
-  const npm = resolveExecutable('npm')
+  const npm = resolveExecutable('npm', platformExecutableDirs())
   let version: string | null = null
   if (npm) {
     const output = await run(npm, ['view', pkg, 'version'])

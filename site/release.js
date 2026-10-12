@@ -11,11 +11,17 @@
         }
         return null;
       }
-      var urls = { setup: find(/setup.*\.exe$/i), portable: find(/portable.*\.exe$/i) };
+      var urls = {
+        setup: find(/setup.*\.exe$/i),
+        portable: find(/portable.*\.exe$/i),
+        mac: find(/mac-arm64\.dmg$/i)
+      };
       document.querySelectorAll('[data-dl]').forEach(function (a) {
         var url = urls[a.getAttribute('data-dl')];
         if (url) a.href = url;
       });
+      var macCard = document.querySelector('[data-platform-card="mac"]');
+      if (macCard && urls.mac) macCard.hidden = false;
       if (version) {
         document.querySelectorAll('[data-version]').forEach(function (el) {
           el.textContent = (document.documentElement.lang === 'ar' ? 'الإصدار ' : 'Version ') + version;

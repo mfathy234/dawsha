@@ -13,6 +13,7 @@ import { api } from '../api'
 import { setInstructionsGuard } from '../instructionsActions'
 import { clear, h } from '../dom'
 import { store, type AppState } from '../state'
+import { primaryModifierPressed } from '../../shared/shortcuts'
 import { confirmDialog } from './dialogs'
 import { InstructionsSharedComponent, type FileSnap } from './instructionsShared'
 import { toast } from './toast'
@@ -57,7 +58,7 @@ export class InstructionsPanelComponent {
     this.select.addEventListener('change', () => void this.switchProject(this.select.value))
     this.area.addEventListener('input', () => this.syncChrome())
     this.area.addEventListener('keydown', (event) => {
-      if (event.ctrlKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 's') {
+      if (primaryModifierPressed(event) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 's') {
         event.preventDefault()
         event.stopPropagation()
         void this.save(false)

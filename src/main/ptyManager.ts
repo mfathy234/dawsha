@@ -1,9 +1,11 @@
 import { execFile } from 'node:child_process'
 import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { delimiter } from 'node:path'
 import * as pty from 'node-pty'
 import { claudeCommand, codexCommand, geminiCommand, launchSpec, shellCommand } from './agentLaunch'
-import { windowsCommandLine } from './commandLine'
+import { ptyArguments } from './commandLine'
+import { platformExecutableDirs } from './executables'
 import type { QuitLog } from './quitLog'
 import type { AppInfo, SpawnRequest, SpawnResult } from '../shared/types'
 import type { ProcessRoot } from '../shared/processActivity'
@@ -51,7 +53,7 @@ export class PtyManager {
     if (typeof spec === 'string') return { ok: false, error: spec }
     this.kill(request.id)
     try {
-      const child = pty.spawn(spec.file, windowsCommandLine(spec.args), {
+      const child = pty.spawn(spec.file, ptyArguments(spec.args), {
         name: 'xterm-256color',
         cols: Math.max(2, request.cols),
         rows: Math.max(1, request.rows),
@@ -98,7 +100,9 @@ export class PtyManager {
     const trees = entries.map((entry) => {
       entry.killed = true
       if (entry.timer) clearTimeout(entry.timer)
-      return taskkillTree(entry.process.pid, log)
+      if (process.platform === 'win32') return taskkillTree(entry.process.pid, log)
+      killPosixTree(entry.process.pid)
+      return Promise.resolve()
     })
     let timer: NodeJS.Timeout | undefined
     const deadline = new Promise<void>((resolve) => {
@@ -116,6 +120,9 @@ export class PtyManager {
     }
     env.TERM = 'xterm-256color'
     env.COLORTERM = 'truecolor'
+    if (process.platform === 'darwin') {
+      env.PATH = [...new Set([...(env.PATH ?? '').split(delimiter).filter(Boolean), ...platformExecutableDirs()])].join(delimiter)
+    }
     return env
   }
 
@@ -157,6 +164,10 @@ function taskkillTree(pid: number, log: QuitLog = () => undefined): Promise<void
 }
 
 function killTree(child: pty.IPty): void {
+  if (process.platform !== 'win32') {
+    killPosixTree(child.pid)
+    return
+  }
   void taskkillTree(child.pid).then(() => {
     try {
       child.kill()
@@ -164,4 +175,20 @@ function killTree(child: pty.IPty): void {
       return
     }
   })
+}
+
+function killPosixTree(pid: number): void {
+  try {
+    process.kill(-pid, 'SIGTERM')
+  } catch {
+    try { process.kill(pid, 'SIGTERM') } catch { return }
+  }
+  const forceKill = setTimeout(() => {
+    try {
+      process.kill(-pid, 'SIGKILL')
+    } catch {
+      try { process.kill(pid, 'SIGKILL') } catch { return }
+    }
+  }, 1500)
+  forceKill.unref()
 }

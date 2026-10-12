@@ -282,6 +282,14 @@ export function setActiveTab(paneId: string, termId: string): void {
   persistWorkspace()
 }
 
+export function cycleActiveTab(delta: number): void {
+  const { focusedId, panes } = store.state
+  const pane = panes.find((item) => item.id === focusedId)
+  if (!pane || pane.tabs.length < 2) return
+  const index = pane.tabs.findIndex((tab) => tab.id === pane.activeTabId)
+  setActiveTab(pane.id, pane.tabs[(index + delta + pane.tabs.length) % pane.tabs.length].id)
+}
+
 export async function restartTab(paneId: string, termId: string): Promise<void> {
   const pane = paneById(store.state, paneId)
   const tab = pane?.tabs.find((t) => t.id === termId)
@@ -808,9 +816,10 @@ export function initWhatsNew(): void {
   const decision = decideWhatsNew(info.version, lastSeen, CHANGELOG_ENTRIES)
   if (decision.show) {
     store.patch({ whatsNew: { version: info.version, from: decision.from, entries: decision.entries } })
-  } else if (decision.record) {
-    store.set((s) => ({ ...s, settings: { ...s.settings, lastSeenVersion: decision.record } }))
-    void saveSettings({ lastSeenVersion: decision.record })
+  } else if (decision.record || (settings.lastSeenVersion === null && hasExistingData)) {
+    const record = decision.record ?? info.version
+    store.set((s) => ({ ...s, settings: { ...s.settings, lastSeenVersion: record } }))
+    void saveSettings({ lastSeenVersion: record })
   }
 }
 

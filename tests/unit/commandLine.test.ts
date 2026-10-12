@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { quoteWindowsArg, windowsCommandLine } from '../../src/main/commandLine'
+import { ptyArguments, quoteWindowsArg, windowsCommandLine } from '../../src/main/commandLine'
 
 function parseCommandLine(line: string): string[] {
   const args: string[] = []
@@ -84,5 +84,12 @@ describe('windowsCommandLine', () => {
   it('joins with single spaces', () => {
     expect(windowsCommandLine(['a', 'b c'])).toBe('a "b c"')
     expect(windowsCommandLine([])).toBe('')
+  })
+})
+
+describe('ptyArguments', () => {
+  it('keeps POSIX arguments as an argv array and quotes Windows command lines', () => {
+    expect(ptyArguments(['one', 'two words'], 'darwin')).toEqual(['one', 'two words'])
+    expect(ptyArguments(['one', 'two words'], 'win32')).toBe('one "two words"')
   })
 })
