@@ -279,7 +279,7 @@ Lines that contain `error`, `failed`, `exception` (red), `warning` (amber) or `p
 
 ### Settings
 
-Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Highlights**, **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Dawsha keeps there). The Theme menu holds the themes and the background image.
+Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Highlights**, **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now, and Download / Install when available), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Dawsha keeps there). The Theme menu holds the themes and the background image.
 
 ### Usage
 

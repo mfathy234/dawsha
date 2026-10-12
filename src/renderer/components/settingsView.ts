@@ -33,6 +33,7 @@ import { entriesUpTo } from '../../shared/changelog'
 import { DEFAULT_PALETTE_SHORTCUT } from '../../shared/settingsSchema'
 import { formatShortcut, parseShortcut } from '../../shared/shortcuts'
 import { updateStatusLine } from '../../shared/updates'
+import { releaseTagUrl } from '../../shared/markdown'
 import { h } from '../dom'
 import { api } from '../api'
 import type { PaneonImportPreview } from '../../shared/paneonImport'
@@ -368,13 +369,29 @@ export class SettingsViewComponent {
   private updates(state: AppState): HTMLElement[] {
     const { update, settings, info } = state
     const busy = update.status === 'checking' || update.status === 'downloading' || update.mode === 'dev'
+    const controls: HTMLElement[] = []
+    if (update.status === 'available') {
+      controls.push(update.mode === 'portable'
+        ? h('button', { class: 'btn primary small', type: 'button', id: 'settings-update-download', onClick: () => openUpdateLink(releaseTagUrl(update.version ?? '')) }, 'Download')
+        : h('button', { class: 'btn primary small', type: 'button', id: 'settings-update-download', onClick: () => void runUpdateAction('download') }, 'Download and install'))
+    } else if (update.status === 'ready') {
+      controls.push(h('button', { class: 'btn primary small', type: 'button', id: 'settings-update-install', onClick: () => void runUpdateAction('restart') }, 'Install and restart'))
+    } else if (update.status === 'error') {
+      controls.push(h('button', { class: 'btn ghost small', type: 'button', id: 'settings-update-retry', onClick: () => void runUpdateAction('retry') }, 'Try again'))
+    }
+    if (update.status === 'downloading') controls.push(h('span', { class: 'set-value', id: 'settings-update-progress', role: 'status' }, `Downloading ${update.version ?? 'update'} · ${Math.round(update.percent)}%`))
+    controls.push(h('button', { class: 'btn ghost small', type: 'button', id: 'check-now', disabled: busy, onClick: () => void runUpdateAction('check') }, update.status === 'checking' ? 'Checking…' : 'Check now'))
+    const statusNotes: HTMLElement[] = [h('p', { class: 'hint', id: 'update-status' }, updateStatusLine(update, Date.now()))]
+    if (update.status === 'available' && update.mode === 'portable') statusNotes.push(h('p', { class: 'hint' }, 'Portable builds must be downloaded and installed manually.'))
+    if (update.status === 'ready') statusNotes.push(h('p', { class: 'hint' }, 'Your sessions reopen after the app restarts.'))
+    if (update.status === 'error' && update.error) statusNotes.push(h('p', { class: 'hint', role: 'alert' }, update.error))
     return [
       row('Current version', h('span', { class: 'set-value mono', id: 'settings-version' }, info.version || 'unknown')),
       row('Automatic checks', checkbox('auto-update-toggle', 'Check for updates automatically', settings.autoUpdateCheck, false, setAutoUpdateCheck)),
       row(
         'Status',
-        h('button', { class: 'btn ghost small', type: 'button', id: 'check-now', disabled: busy, onClick: () => void runUpdateAction('check') }, 'Check now'),
-        h('p', { class: 'hint', id: 'update-status' }, updateStatusLine(update, Date.now()))
+        h('div', { class: 'set-inline update-settings-actions' }, ...controls),
+        ...statusNotes
       )
     ]
   }

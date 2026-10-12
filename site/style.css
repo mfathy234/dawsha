@@ -195,7 +195,7 @@ html.lenis { scroll-behavior: auto; }
 .ill-hop { stroke-width: 2.6; flex: none; }
 .ill-lock { stroke-width: 1.8; }
 .sico { stroke-width: 1.5; position: absolute; top: 44px; right: 0; }
-.ill-desk { display: block; width: min(360px, 90%); height: auto; margin: 0 auto 28px; stroke-width: 1.5; }
+.closing-mark { display: block; width: 112px; height: 112px; margin: 0 auto 28px; }
 .works-row .ill-works { order: -1; }
 
 .code .tc { white-space: pre; }

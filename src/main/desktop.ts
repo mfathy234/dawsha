@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process'
 import { appendFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { BrowserWindow, Notification, shell } from 'electron'
-import { IPC } from '../shared/ipc'
 import { safeLink } from '../shared/markdown'
 import type { NotifyRequest, QuickOpenKind } from '../shared/types'
 
@@ -47,7 +46,8 @@ export async function openLink(url: string): Promise<void> {
   await shell.openExternal(href)
 }
 
-export function notifyUser(window: BrowserWindow | null, request: NotifyRequest): void {
+export function notifyUser(getWindow: () => BrowserWindow | null, request: NotifyRequest, onClick: (paneId: string) => void): void {
+  const window = getWindow()
   const unfocused = !window || window.isDestroyed() || !window.isFocused()
   const log = process.env.DAWSHA_NOTIFY_LOG
   if (log) return logTo(log, JSON.stringify({ ...request, flash: unfocused }))
@@ -55,11 +55,12 @@ export function notifyUser(window: BrowserWindow | null, request: NotifyRequest)
   if (!Notification.isSupported()) return
   const notification = new Notification({ title: request.title, body: request.body, silent: !request.sound })
   notification.on('click', () => {
-    if (!window || window.isDestroyed()) return
-    if (window.isMinimized()) window.restore()
-    window.show()
-    window.focus()
-    window.webContents.send(IPC.notifyClick, request.paneId)
+    const activeWindow = getWindow()
+    if (!activeWindow || activeWindow.isDestroyed()) return
+    if (activeWindow.isMinimized()) activeWindow.restore()
+    activeWindow.show()
+    activeWindow.focus()
+    onClick(request.paneId)
   })
   notification.show()
 }
