@@ -59,16 +59,8 @@
         <h1>كل وكلاء البرمجة بالذكاء الاصطناعي في نافذة واحدة واضحة.</h1>
         <p class="lead">شغّل Claude Code وCodex وGemini جنبًا إلى جنب في طرفيات واسعة وواضحة، مع مساحة مستقلة لكل مهمة.</p>
         <div class="cta">
-          <details class="download-picker">
-            <summary class="btn primary lg"><span>التحميل</span><span class="download-chevron" aria-hidden="true">⌄</span></summary>
-            <div class="download-options">
-              <div><strong>ويندوز</strong><span>x64</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup" target="_blank" rel="noopener noreferrer">المثبّت (.exe)</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable" target="_blank" rel="noopener noreferrer">النسخة المحمولة (.exe)</a></div>
-              <div><strong>macOS</strong><span>Apple Silicon</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="mac" target="_blank" rel="noopener noreferrer">ملف التثبيت (.dmg)</a></div>
-              <div><strong>لينكس</strong><span>x64</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-appimage" target="_blank" rel="noopener noreferrer">AppImage</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-deb" target="_blank" rel="noopener noreferrer">ديبيان / أوبونتو (.deb)</a></div>
-              <p>لم تجد الحزمة؟ راجع ملفات الإصدار.</p>
-            </div>
-          </details>
-          <a class="btn secondary lg" href="#download">كل التنزيلات</a>
+          <a class="btn primary lg download-cta" href="#download">اختر نظامك <span aria-hidden="true">↓</span></a>
+          <a class="btn secondary lg" href="https://github.com/mfathy234/dawsha/releases/latest" target="_blank" rel="noopener noreferrer">عرض كل الإصدارات</a>
         </div>
       </div>
       <figure class="shot hero-shot">
@@ -170,31 +162,22 @@ dawsha resume --last</code></pre>
     <div class="wrap">
       <h2 id="download-h">حمّل دوشة</h2>
       <p class="section-lead"><span data-version="">أحدث إصدار</span>، لويندوز 10/11 بمعمارية x64 وماك بمعالج Apple Silicon ولينكس x64. مجاني برخصة MIT.</p>
-      <div class="dl-grid">
-        <div class="dl-card primary-card">
-          <h3>المثبّت <span class="tag">موصى به</span></h3>
-          <p>يضيف أمر <code>dawsha</code> إلى PATH ويتحدث تلقائيًا.</p>
-          <a class="btn primary" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm-8,70.41-64-11.63V152h64ZM96,136H32a8,8,0,0,0-8,8v40a8,8,0,0,0,6.57,7.87l64,11.64a8.54,8.54,0,0,0,1.43.13,8,8,0,0,0,8-8V144A8,8,0,0,0,96,136Zm-8,50.05-48-8.73V152H88ZM213.13,33.86a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86ZM200,104H136V61.22l64-11.63ZM101.13,54.22a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM88,104H40V78.68L88,70Z"></path></svg><span>حمّل لويندوز</span></a>
-        </div>
-        <div class="dl-card">
-          <h3>محمول</h3>
-          <p>ملف تشغيل واحد دون تثبيت أو تغيير PATH. لا يتحدث تلقائيًا.</p>
-          <a class="btn secondary" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"></path></svg><span>النسخة المحمولة</span></a>
-        </div>
-        <div class="dl-card mac-card" data-platform-card="mac">
-          <div class="mac-copy">
-            <h3>ماك بمعالج Apple Silicon</h3>
-            <p>macOS 13 أو أحدث · ملف DMG بمعمارية ARM64 · اسحب دوشة إلى التطبيقات.</p>
-          </div>
-          <a class="btn secondary" href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="mac" target="_blank" rel="noopener noreferrer">تنزيل لنظام Mac</a>
-        </div>
-        <div class="dl-card mac-card" data-platform-card="linux">
-          <div class="mac-copy"><h3>لينكس</h3><p>x64 · ملف AppImage أو حزمة ديبيان / أوبونتو.</p></div>
-          <details class="download-picker">
-            <summary class="btn secondary">تنزيل لنظام لينكس <span class="download-chevron" aria-hidden="true">⌄</span></summary>
-            <div class="download-options"><div><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-appimage" target="_blank" rel="noopener noreferrer">AppImage</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-deb" target="_blank" rel="noopener noreferrer">ديبيان / أوبونتو (.deb)</a></div></div>
-          </details>
-        </div>
+      <div class="platform-grid">
+        <article class="platform-card" id="windows-download">
+          <div class="platform-heading"><svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5.1 10.7 4v7H2zm9.8-1.2L22 2.5V11h-10.2zM2 13h8.7v7L2 18.8zm9.8 0H22v8.5l-10.2-1.4z"></path></svg><h3>ويندوز</h3></div>
+          <p>ويندوز 10 أو 11 · x64</p>
+          <details class="platform-picker"><summary>اختر طريقة التنزيل</summary><div class="platform-downloads"><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup" target="_blank" rel="noopener noreferrer">المثبّت <span>موصى به</span></a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable" target="_blank" rel="noopener noreferrer">محمول <span>دون تثبيت</span></a></div></details>
+        </article>
+        <article class="platform-card" id="mac-download" data-platform-card="mac">
+          <div class="platform-heading"><svg class="platform-icon apple-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.54c.02 2.17 1.9 2.89 1.92 2.9-.02.05-.3 1.04-.98 2.06-.59.88-1.2 1.75-2.15 1.77-.94.02-1.24-.57-2.32-.57s-1.41.55-2.3.59c-.92.03-1.62-.95-2.22-1.82-1.21-1.76-2.14-4.97-.89-7.14.62-1.08 1.73-1.76 2.93-1.78.91-.02 1.77.61 2.33.61.55 0 1.59-.75 2.68-.64.46.02 1.76.18 2.6 1.42-.07.05-1.55.91-1.6 2.6ZM14.6 6.92c.49-.59.82-1.4.73-2.21-.71.03-1.56.47-2.06 1.05-.45.52-.85 1.35-.74 2.14.79.06 1.59-.4 2.07-.98Z"></path></svg><h3>macOS</h3></div>
+          <p>Apple Silicon · macOS 13 أو أحدث</p>
+          <details class="platform-picker"><summary>اختر طريقة التنزيل</summary><div class="platform-downloads"><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="mac" target="_blank" rel="noopener noreferrer">ملف تثبيت <span>.dmg</span></a></div></details>
+        </article>
+        <article class="platform-card" id="linux-download">
+          <div class="platform-heading"><svg class="platform-icon linux-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c-3.3 0-5.2 2.7-5.2 6.1v3.1c-.6.5-1.1 1.3-1.5 2.3l-1.6 3.7c-.4.9.2 1.8 1.2 1.8h2.6c.7 1 1.7 1.6 2.9 1.6h3.2c1.2 0 2.2-.6 2.9-1.6h2.6c1 0 1.6-.9 1.2-1.8l-1.6-3.7c-.4-1-1-1.8-1.5-2.3V8.3c0-3.4-1.9-6.1-5.2-6.1Zm-2 7.3a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm4 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm-2 1.2c1 0 1.9.5 2.5 1.3h-5a3.1 3.1 0 0 1 2.5-1.3Z"></path></svg><h3>لينكس</h3></div>
+          <p>x64 · AppImage أو ديبيان / أوبونتو</p>
+          <details class="platform-picker"><summary>اختر طريقة التنزيل</summary><div class="platform-downloads"><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-appimage" target="_blank" rel="noopener noreferrer">AppImage <span>محمول</span></a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-deb" target="_blank" rel="noopener noreferrer">Debian / Ubuntu <span>.deb</span></a></div></details>
+        </article>
       </div>
       <p class="note">تظهر حزم لينكس هنا بعد نشر أول إصدار له. إذا لم تتوفر الحزمة، يفتح الرابط أحدث إصدار.</p>
       <p class="note"><strong>حماية ويندوز.</strong> الإصدارات غير موقّعة رقميًا، لذلك قد يعرض ويندوز تحذير حماية. اختر <strong>مزيد من المعلومات</strong>، ثم <strong>تشغيل على أي حال</strong>.</p>
@@ -207,16 +190,8 @@ dawsha resume --last</code></pre>
       <img class="closing-mark brand-logo" src="../favicon.svg?v=0.2.0-2" width="112" height="112" alt="Dawsha logo"><h2 id="closing-h">لا تبحث عن النافذة المناسبة بعد الآن.</h2>
       <p class="section-lead">ضع كل وكيل أمام عينيك.</p>
       <div class="cta">
-        <details class="download-picker">
-            <summary class="btn primary lg"><span>التحميل</span><span class="download-chevron" aria-hidden="true">⌄</span></summary>
-            <div class="download-options">
-              <div><strong>ويندوز</strong><span>x64</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="setup" target="_blank" rel="noopener noreferrer">المثبّت (.exe)</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="portable" target="_blank" rel="noopener noreferrer">النسخة المحمولة (.exe)</a></div>
-              <div><strong>macOS</strong><span>Apple Silicon</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="mac" target="_blank" rel="noopener noreferrer">ملف التثبيت (.dmg)</a></div>
-              <div><strong>لينكس</strong><span>x64</span><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-appimage" target="_blank" rel="noopener noreferrer">AppImage</a><a href="https://github.com/mfathy234/dawsha/releases/latest" data-dl="linux-deb" target="_blank" rel="noopener noreferrer">ديبيان / أوبونتو (.deb)</a></div>
-              <p>لم تجد الحزمة؟ راجع ملفات الإصدار.</p>
-            </div>
-          </details>
-        <a class="btn secondary" href="https://github.com/mfathy234/dawsha" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"></path></svg><span>اعرضه على GitHub</span></a>
+        <a class="btn primary lg download-cta" href="#download">اختر نظامك <span aria-hidden="true">↓</span></a>
+        <a class="btn secondary lg download-cta" href="https://github.com/mfathy234/dawsha" target="_blank" rel="noopener noreferrer">اعرضه على GitHub</a>
       </div>
     </div>
   </section>

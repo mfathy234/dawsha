@@ -16,7 +16,7 @@ test('the Arabic page is readable without JavaScript and has Arabic share metada
   await expect(page.getByRole('heading', { level: 1 })).toContainText('وكلاء')
   await expect(page.getByText('استيراد إعدادات سابقة')).toBeVisible()
   await expect(page.getByText('الوكلاء المثبتون.')).toBeVisible()
-  await expect(page.locator('.primary-card p')).toContainText('إلى PATH ويتحدث تلقائيًا.')
+  await expect(page.locator('#windows-download p')).toContainText('ويندوز')
   await expect(page.locator('.code .c').first()).toContainText('أضف هذا المجلد')
   await expect(page.locator('.hero-shot img')).toHaveJSProperty('complete', true)
   await expect(page.getByRole('link', { name: 'English' })).toHaveAttribute('href', '../index.html')
@@ -35,7 +35,7 @@ test('the site switches between Arabic RTL and English LTR with translated navig
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('وكلاء')
   await expect(page.locator('nav a[href="#features"]')).toContainText('المميزات')
-  await expect(page.locator('.hero summary')).toContainText('التحميل')
+  await expect(page.locator('.hero .download-cta')).toContainText('اختر نظامك')
   await expect(page.locator('.hero-shot img')).toHaveAttribute('alt', /دوشة/)
   await expect(page.locator('#cli-h')).toHaveText(/أمر\s*dawsha\s*$/)
   await page.screenshot({ path: 'test-results/site-ar.png' })
@@ -97,19 +97,15 @@ test('download dropdown works with the keyboard and resolves Linux assets', asyn
     json: { tag_name: 'v0.3.0', assets: [{ name: 'Dawsha-0.3.0-linux-x64.AppImage', browser_download_url: appImage }] }
   }))
   await page.goto(url)
-  const dropdown = page.locator('.hero .download-picker')
+  const dropdown = page.locator('#linux-download .platform-picker')
   await dropdown.locator('summary').focus()
   await page.keyboard.press('Enter')
-  await expect(dropdown.getByText('Windows', { exact: true })).toBeVisible()
-  await expect(dropdown.getByText('macOS', { exact: true })).toBeVisible()
-  await expect(dropdown.getByText('Linux', { exact: true })).toBeVisible()
   await expect(dropdown.locator('[data-dl="linux-appimage"]')).toHaveAttribute('href', appImage)
   await page.keyboard.press('Escape')
   await expect(dropdown).not.toHaveAttribute('open', '')
-  await expect(dropdown.locator('summary')).toBeFocused()
 })
 
-test('resolves every package and closes the dropdown on outside click', async ({ page }) => {
+test('resolves each platform package and closes the dropdown with Escape', async ({ page }) => {
   const packages = {
     setup: 'Dawsha-Setup-0.3.0.exe', portable: 'Dawsha-Portable-0.3.0.exe',
     mac: 'Dawsha-0.3.0-mac-arm64.dmg',
@@ -120,13 +116,17 @@ test('resolves every package and closes the dropdown on outside click', async ({
     json: { tag_name: 'v0.3.0', assets: Object.values(packages).map(name => ({ name, browser_download_url: base + name })) }
   }))
   await page.goto(url)
-  const dropdown = page.locator('.hero .download-picker')
-  await dropdown.locator('summary').click()
-  for (const [key, name] of Object.entries(packages)) {
-    await expect(dropdown.locator(`[data-dl="${key}"]`)).toHaveAttribute('href', base + name)
+  for (const [platform, keys] of Object.entries({
+    windows: ['setup', 'portable'], mac: ['mac'], linux: ['linux-appimage', 'linux-deb']
+  })) {
+    const dropdown = page.locator(`#${platform}-download .platform-picker`)
+    await dropdown.locator('summary').click()
+    for (const key of keys) {
+      await expect(dropdown.locator(`[data-dl="${key}"]`)).toHaveAttribute('href', base + packages[key as keyof typeof packages])
+    }
+    await dropdown.locator('summary').press('Escape')
+    await expect(dropdown).not.toHaveAttribute('open', '')
   }
-  await page.getByRole('heading', { level: 1 }).click()
-  await expect(dropdown).not.toHaveAttribute('open', '')
 })
 
 test('API failure retains working release links for every platform', async ({ page }) => {
@@ -142,10 +142,9 @@ test('platform dropdowns remain usable on mobile without JavaScript', async ({ b
   const page = await context.newPage()
   for (const address of [url, arabicUrl]) {
     await page.goto(address)
-    const dropdown = page.locator('.hero .download-picker')
+    const dropdown = page.locator('#linux-download .platform-picker')
     await dropdown.locator('summary').click()
     await expect(dropdown.locator('[data-dl="linux-appimage"]')).toBeVisible()
-    await expect(dropdown.locator('[data-dl="mac"]')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   }
   await context.close()

@@ -1,5 +1,13 @@
 (() => {
   const translations = {
+    'Choose your platform': 'اختر نظامك', 'View all releases': 'عرض كل الإصدارات',
+    'View on GitHub': 'اعرضه على GitHub',
+    'Choose a download': 'اختر طريقة التنزيل', 'Installer': 'المثبّت', 'Recommended': 'موصى به',
+    'Portable': 'محمول', 'No installation': 'دون تثبيت', 'Disk image': 'ملف تثبيت',
+    'AppImage': 'AppImage',
+    'Windows 10 or 11 · x64': 'ويندوز 10 أو 11 · x64',
+    'Apple Silicon · macOS 13 or later': 'Apple Silicon · macOS 13 أو أحدث',
+    'x64 · AppImage or Debian / Ubuntu': 'x64 · AppImage أو ديبيان / أوبونتو',
     "All downloads": "كل التنزيلات",
     "Windows": "ويندوز",
     "Linux": "لينكس",
