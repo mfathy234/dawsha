@@ -815,20 +815,17 @@ button {
   flex-shrink: 1;
 }
 
-@container pane-header (max-width: 760px) {
+@container pane-header (max-width: 640px) {
   .pane-header .pane-prev,
   .pane-header .pane-next,
   .pane-header .pane-vscode,
-  .pane-header .pane-move,
-  .pane-header .pane-fresh,
-  .pane-header .chip-resumed,
   .pane-header .chip-compare,
-  .pane-header .chip-from,
-  .pane-header .chip-branch,
-  .pane-header .status,
-  .pane-header .attention-word,
-  .pane-header .pane-restart {
+  .pane-header .chip-from {
     display: none;
+  }
+
+  .pane-header {
+    gap: 6px;
   }
 
   .pane-header .spacer {
