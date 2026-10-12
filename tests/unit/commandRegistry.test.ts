@@ -32,13 +32,15 @@ describe('command registry', () => {
   })
 
   it('finds the command bound to a key event and respects the grid scope', () => {
+    const mac = navigator.platform.toLowerCase().includes('mac')
+    const primary: Record<string, boolean> = mac ? { metaKey: true } : { ctrlKey: true }
     registry.registerCommands(
       { id: 'new', title: 'New', group: 'Actions', keys: [bind('Ctrl+N')], run: () => undefined },
       { id: 'max', title: 'Max', group: 'Actions', keys: [bind('Ctrl+Enter')], scope: 'grid', run: () => undefined }
     )
-    expect(registry.commandForEvent(key('n', { ctrlKey: true }), stateOf('projects'))?.id).toBe('new')
-    expect(registry.commandForEvent(key('Enter', { ctrlKey: true }), stateOf('grid'))?.id).toBe('max')
-    expect(registry.commandForEvent(key('Enter', { ctrlKey: true }), stateOf('projects'))).toBeNull()
+    expect(registry.commandForEvent(key('n', primary), stateOf('projects'))?.id).toBe('new')
+    expect(registry.commandForEvent(key('Enter', primary), stateOf('grid'))?.id).toBe('max')
+    expect(registry.commandForEvent(key('Enter', primary), stateOf('projects'))).toBeNull()
     expect(registry.commandForEvent(key('n'), stateOf('grid'))).toBeNull()
   })
 

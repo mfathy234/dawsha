@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
-import { claudeFallbackDirs, resolveExecutable, splitArgs } from './executables'
+import { claudeFallbackDirs, platformExecutableDirs, resolveExecutable, splitArgs } from './executables'
 import { AGENT_NAMES, FULL_ACCESS_FLAGS } from '../shared/agents'
 import { promptArgs } from '../shared/compare'
 import type { AgentKind, SpawnRequest } from '../shared/types'
@@ -13,19 +13,20 @@ export interface LaunchSpec {
 
 const CODEX_VENDOR = join('@openai', 'codex-win32-x64', 'vendor', 'x86_64-pc-windows-msvc', 'bin', 'codex.exe')
 
-export const claudeCommand = (): string => process.env.DAWSHA_CLAUDE_COMMAND || 'claude.exe'
+export const claudeCommand = (platform = process.platform): string => process.env.DAWSHA_CLAUDE_COMMAND || (platform === 'win32' ? 'claude.exe' : 'claude')
 
 export const codexCommand = (): string => process.env.DAWSHA_CODEX_COMMAND || 'codex'
 
 export const geminiCommand = (): string => process.env.DAWSHA_GEMINI_COMMAND || 'gemini'
 
-export function shellCommand(): string {
-  if (process.env.DAWSHA_SHELL) return process.env.DAWSHA_SHELL
+export function shellCommand(platform = process.platform, env: NodeJS.ProcessEnv = process.env): string {
+  if (env.DAWSHA_SHELL) return env.DAWSHA_SHELL
+  if (platform === 'darwin') return env.SHELL || '/bin/zsh'
   return resolveExecutable('pwsh.exe') ? 'pwsh.exe' : 'powershell.exe'
 }
 
-export function agentCommand(agent: AgentKind): string {
-  return agent === 'claude' ? claudeCommand() : agent === 'codex' ? codexCommand() : geminiCommand()
+export function agentCommand(agent: AgentKind, platform = process.platform): string {
+  return agent === 'claude' ? claudeCommand(platform) : agent === 'codex' ? codexCommand() : geminiCommand()
 }
 
 export function locateCodexBinary(pathDirs: string[]): string | null {
@@ -38,10 +39,14 @@ export function locateCodexBinary(pathDirs: string[]): string | null {
   return null
 }
 
-function resolveCodex(pathDirs: string[]): LaunchSpec | null {
+function resolveCodex(pathDirs: string[], platform = process.platform): LaunchSpec | null {
   const command = codexCommand()
   if (process.env.DAWSHA_CODEX_COMMAND) {
-    const file = resolveExecutable(command)
+    const file = resolveExecutable(command, [], platform)
+    return file ? { file, args: [] } : null
+  }
+  if (platform !== 'win32') {
+    const file = resolveExecutable(command, [...pathDirs, ...platformExecutableDirs(platform)], platform)
     return file ? { file, args: [] } : null
   }
   const direct = resolveExecutable('codex.exe')
@@ -67,9 +72,13 @@ export function locateGeminiEntry(pathDirs: string[]): LaunchSpec | null {
   return null
 }
 
-function resolveGemini(pathDirs: string[]): LaunchSpec | null {
+function resolveGemini(pathDirs: string[], platform = process.platform): LaunchSpec | null {
   if (process.env.DAWSHA_GEMINI_COMMAND) {
-    const file = resolveExecutable(geminiCommand())
+    const file = resolveExecutable(geminiCommand(), [], platform)
+    return file ? { file, args: [] } : null
+  }
+  if (platform !== 'win32') {
+    const file = resolveExecutable(geminiCommand(), [...pathDirs, ...platformExecutableDirs(platform)], platform)
     return file ? { file, args: [] } : null
   }
   const entry = locateGeminiEntry(pathDirs)
@@ -101,22 +110,24 @@ export function agentArgs(
   return request.agent === 'codex' ? [...session, flag] : [flag, ...session]
 }
 
-export function shellArgs(file: string, command?: string): string[] {
+export function shellArgs(file: string, command?: string, platform = process.platform): string[] {
   const name = (file.split(/[\\/]/).pop() ?? file).toLowerCase()
-  if (command !== undefined) return name === 'cmd.exe' ? ['/d', '/s', '/c', command] : ['-NoLogo', '-Command', command]
+  if (name === 'cmd.exe' || name === 'cmd') return command === undefined ? [] : ['/d', '/s', '/c', command]
+  if (platform !== 'win32') return command === undefined ? (process.env.DAWSHA_SHELL ? [] : ['-l']) : ['-lc', command]
+  if (command !== undefined) return ['-NoLogo', '-Command', command]
   return process.env.DAWSHA_SHELL ? [] : ['-NoLogo']
 }
 
-export function launchSpec(request: SpawnRequest): LaunchSpec | string {
+export function launchSpec(request: SpawnRequest, platform = process.platform): LaunchSpec | string {
   if (request.agent === 'shell') {
-    const command = shellCommand()
-    const file = resolveExecutable(command)
+    const command = shellCommand(platform)
+    const file = resolveExecutable(command, [], platform)
     if (!file) return `Shell not found: ${command}`
-    return { file, args: shellArgs(file, request.command) }
+    return { file, args: shellArgs(file, request.command, platform) }
   }
   const pathDirs = (process.env.PATH ?? '').split(delimiter)
   if (request.agent === 'codex') {
-    const base = resolveCodex(pathDirs)
+    const base = resolveCodex(pathDirs, platform)
     if (!base) return `Could not find ${codexCommand()}. Install Codex CLI (npm i -g @openai/codex) or set DAWSHA_CODEX_COMMAND.`
     const overridden = Boolean(process.env.DAWSHA_CODEX_COMMAND)
     const extra = splitArgs(process.env.DAWSHA_CODEX_ARGS)
@@ -125,7 +136,7 @@ export function launchSpec(request: SpawnRequest): LaunchSpec | string {
     return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
   }
   if (request.agent === 'gemini') {
-    const base = resolveGemini(pathDirs)
+    const base = resolveGemini(pathDirs, platform)
     if (!base) return `Could not find ${geminiCommand()}. Install Gemini CLI (npm i -g @google/gemini-cli) or set DAWSHA_GEMINI_COMMAND.`
     const overridden = Boolean(process.env.DAWSHA_GEMINI_COMMAND)
     const extra = splitArgs(process.env.DAWSHA_GEMINI_ARGS)
@@ -133,8 +144,8 @@ export function launchSpec(request: SpawnRequest): LaunchSpec | string {
     if (typeof initial === 'string') return initial
     return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
   }
-  const command = claudeCommand()
-  const file = resolveExecutable(command, claudeFallbackDirs())
+  const command = claudeCommand(platform)
+  const file = resolveExecutable(command, [...claudeFallbackDirs(), ...platformExecutableDirs(platform)], platform)
   if (!file) return `Could not find ${command}. Install Claude Code or set DAWSHA_CLAUDE_COMMAND.`
   const initial = promptFor({ file, args: [] }, request)
   if (typeof initial === 'string') return initial

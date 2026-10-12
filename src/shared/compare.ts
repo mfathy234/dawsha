@@ -91,6 +91,7 @@ export function diffCommand(
 export function quoteForShell(path: string, shellCommand: string): string {
   const name = (shellCommand.split(/[\\/]/).pop() ?? shellCommand).toLowerCase()
   if (name === 'cmd.exe' || name === 'cmd') return `"${path}"`
+  if (!name.endsWith('.exe') && name !== 'powershell' && name !== 'pwsh') return `'${path.replace(/'/g, "'\\''")}'`
   return `'${path.replace(/'/g, "''")}'`
 }
 

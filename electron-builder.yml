@@ -9,11 +9,6 @@ files:
 extraResources:
   - from: build/dawsha-cli.cjs
     to: dawsha-cli.cjs
-  - from: build/path-edit.ps1
-    to: path-edit.ps1
-extraFiles:
-  - from: build/dawsha.cmd
-    to: dawsha.cmd
 asar: true
 asarUnpack:
   - node_modules/node-pty/**
@@ -21,6 +16,12 @@ npmRebuild: false
 nodeGypRebuild: false
 buildDependenciesFromSource: false
 win:
+  extraResources:
+    - from: build/path-edit.ps1
+      to: path-edit.ps1
+  extraFiles:
+    - from: build/dawsha.cmd
+      to: dawsha.cmd
   icon: build/icon.ico
   target:
     - target: nsis
@@ -40,6 +41,14 @@ nsis:
   installerHeaderIcon: build/icon.ico
 portable:
   artifactName: Dawsha-Portable-${version}.${ext}
+mac:
+  category: public.app-category.developer-tools
+  icon: build/icon.png
+  target:
+    - dmg
+    - zip
+  artifactName: Dawsha-${version}-mac-${arch}.${ext}
+  hardenedRuntime: true
 publish:
   provider: github
   owner: mfathy234

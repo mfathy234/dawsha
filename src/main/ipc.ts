@@ -38,7 +38,7 @@ import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type Bridg
 import type { OpsWatcher } from './opsWatcher'
 import type { StatusWatcher } from './statusWatcher'
 import { exportTranscript } from './transcriptExport'
-import { resolveExecutable } from './executables'
+import { platformExecutableDirs, resolveExecutable } from './executables'
 import type { PtyManager } from './ptyManager'
 import { readSessions } from './sessionsWatcher'
 import { collectProcessActivity } from './processActivity'
@@ -79,7 +79,7 @@ export function registerIpc(
   const locations = (): BridgeLocations => ({
     settingsPath: claudeSettingsPath(),
     ...bridgeDirs(app.getPath('userData')),
-    nodePath: resolveExecutable('node.exe')
+    nodePath: resolveExecutable(process.platform === 'win32' ? 'node.exe' : 'node', platformExecutableDirs())
   })
   const skillLocations = (): SkillLocations => ({
     claude: claudeHome(),

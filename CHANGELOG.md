@@ -3,6 +3,19 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-10-12
+
+### Added
+
+- Run Dawsha on Apple Silicon Macs with macOS 13 Ventura or newer, with native terminals, agent discovery, process activity, and Command-key shortcuts.
+- Build macOS DMG and ZIP packages and validate them on Apple Silicon GitHub Actions runners.
+- Add a persistent Sessions button in the top navigation so every view has a direct route back to sessions.
+
+### Changed
+
+- Refresh the New session split control to fit the current compact top bar and use consistent hover, focus, and pressed states.
+- Document macOS installation, data paths, and the signing requirement for in-app updates.
+
 ## [0.2.1] - 2026-10-12
 
 ### Added
@@ -172,7 +185,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Taskbar and notifications now show Dawsha's own icon and name.
 - Upgrading by hand from 0.3.0 now shows this What's new dialog too.
 
-## [0.3.0] - 2026-10-08
+## [0.3.0-legacy] - 2026-10-08
 
 ### Added
 

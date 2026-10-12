@@ -21,6 +21,7 @@ import { formatPercent, gauge, gaugeStage } from '../../shared/statusLine'
 import type { RateLimitWindow } from '../../shared/types'
 import { h, icon } from '../dom'
 import type { AppState } from '../state'
+import { bind, formatShortcut } from '../../shared/shortcuts'
 
 export class TopBarComponent {
   readonly el: HTMLElement
@@ -31,7 +32,7 @@ export class TopBarComponent {
       type: 'button',
       id: 'new-session',
       'aria-haspopup': 'listbox',
-      'aria-label': 'New session, Ctrl+N',
+      'aria-label': `New session, ${formatShortcut(bind('Ctrl+N'))}`,
       onClick: () => openQuickPick()
     },
     h('span', { class: 'new-session-icon', 'aria-hidden': 'true' }, icon(ICONS.plus)),
@@ -57,6 +58,7 @@ export class TopBarComponent {
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.palette)),
     h('span', { class: 'utility-label' }, 'Theme')
   )
+  private readonly sessions = h('button', { class: 'btn ghost', type: 'button', id: 'sessions-button', onClick: () => showView('grid') }, 'Sessions')
   private readonly projects = h('button', { class: 'btn ghost', type: 'button', id: 'projects-button' }, 'Projects')
   private readonly agentsDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly agents = h('button', { class: 'btn ghost', type: 'button', id: 'agents-button' }, 'Agents', this.agentsDot)
@@ -109,6 +111,7 @@ export class TopBarComponent {
       h('span', { class: 'app-title' }, 'Dawsha'),
       h('div', { class: 'split' }, this.newSession, this.chevron),
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
+        this.sessions,
         this.projects,
         this.agents,
         this.skills,
@@ -133,6 +136,7 @@ export class TopBarComponent {
   update(state: AppState, views: PaneView[]): void {
     this.updateLimits(state, views)
     const { sessions, busy } = countSessions(views)
+    this.sessions.setAttribute('aria-pressed', String(state.view === 'grid'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.agents.setAttribute('aria-pressed', String(state.view === 'agents'))
     this.skills.setAttribute('aria-pressed', String(state.view === 'skills'))

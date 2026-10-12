@@ -45,6 +45,9 @@ test('Skills lists installed agent and project skills and copies a selected path
     await expect(page.locator('.skill-row').first().locator('.skill-feedback')).toBeEmpty()
     await page.setViewportSize({ width: 960, height: 600 })
     expect(await page.locator('.topbar').evaluate((bar) => bar.scrollWidth <= bar.clientWidth)).toBe(true)
+    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
+    await expect(page.locator('.skills-view')).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Sessions', exact: true })).toHaveAttribute('aria-pressed', 'true')
   } finally {
     await closeApp(app)
   }

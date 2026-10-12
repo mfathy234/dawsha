@@ -286,7 +286,9 @@ export class PaneComponent {
       }, label)
       return button
     })
-    const hint = h('div', { class: 'popover-foot' }, 'Ctrl+Shift+Alt+← → moves the focused pane')
+    const hint = h('div', { class: 'popover-foot' }, navigator.platform.toLowerCase().includes('mac')
+      ? 'Cmd+Shift+Option+← → moves the focused pane'
+      : 'Ctrl+Shift+Alt+← → moves the focused pane')
     this.actionsMenu = h('div', { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Move pane to position' }, ...items, hint)
     this.actionsMenu.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return

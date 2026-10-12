@@ -1,7 +1,7 @@
 {
   "name": "dawsha",
   "productName": "Dawsha",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "One window for all your AI coding agents: a grid of readable terminals for Claude Code, Codex CLI and Gemini CLI",
   "homepage": "https://dawsha.pages.dev/",
   "repository": {
@@ -18,7 +18,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "tsc --noEmit -p tsconfig.json && electron-vite build",
-    "package": "npm run build && node scripts/release-notes.mjs --optional && electron-builder --win --config electron-builder.yml -c.releaseInfo.releaseNotesFile=release-notes.md",
+    "package": "npm run build && node scripts/release-notes.mjs --optional && electron-builder --config electron-builder.yml -c.releaseInfo.releaseNotesFile=release-notes.md",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "electron-vite build && playwright test",

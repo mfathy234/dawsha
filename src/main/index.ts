@@ -12,7 +12,7 @@ import { StatusWatcher } from './statusWatcher'
 import { OpsWatcher } from './opsWatcher'
 import { bridgeDirs, claudeSettingsPath, legacyUserDataDir, opsDirs } from './paths'
 import { applyPendingPaneonImport } from './paneonImport'
-import { resolveExecutable } from './executables'
+import { platformExecutableDirs, resolveExecutable } from './executables'
 import { migrateLegacyUserData } from './userDataMigration'
 import { CliRunner } from './cliRunner'
 import { startCliServer } from './cliServer'
@@ -26,7 +26,7 @@ import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline,
 const IMAGE_SCHEME = 'dawsha-image'
 const quitLog = createQuitLog()
 
-app.setAppUserModelId('io.github.mfathy234.dawsha')
+if (process.platform === 'win32') app.setAppUserModelId('io.github.mfathy234.dawsha')
 
 if (process.env.DAWSHA_USER_DATA) app.setPath('userData', process.env.DAWSHA_USER_DATA)
 
@@ -151,7 +151,7 @@ app.whenReady().then(() => {
         legacyDir,
         newDir: userData,
         claudeSettingsPath: claudeSettingsPath(),
-        nodePath: resolveExecutable('node.exe')
+        nodePath: resolveExecutable(process.platform === 'win32' ? 'node.exe' : 'node', platformExecutableDirs())
       })
     : null
   let importNote: string | null = null

@@ -64,3 +64,61 @@ jobs:
             --title "Dawsha ${version}" \
             "${notes[@]}" \
             --verify-tag
+  release-macos:
+    needs: release
+    runs-on: macos-14
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
+      CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Package signed and notarized macOS release when credentials are configured
+        shell: bash
+        run: |
+          credentials=("$CSC_LINK" "$CSC_KEY_PASSWORD" "$APPLE_ID" "$APPLE_APP_SPECIFIC_PASSWORD" "$APPLE_TEAM_ID")
+          configured=0
+          missing=0
+          for value in "${credentials[@]}"; do
+            if [ -n "$value" ]; then configured=$((configured + 1)); else missing=$((missing + 1)); fi
+          done
+          if [ "$configured" -eq 5 ]; then
+            npm run package -- --publish never
+          elif [ "$configured" -eq 0 ]; then
+            npm run package -- --publish never -c.mac.identity=null -c.mac.hardenedRuntime=false
+          else
+            echo "Configure all five macOS signing and notarization secrets, or leave all five empty."
+            exit 1
+          fi
+      - name: Check macOS update manifest and packages
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          grep -q "Dawsha-${version}-mac-arm64.zip" release/latest-mac.yml
+          test -f "release/Dawsha-${version}-mac-arm64.dmg"
+          test -f "release/Dawsha-${version}-mac-arm64.zip"
+          test -f "release/Dawsha-${version}-mac-arm64.zip.blockmap"
+      - name: Upload macOS release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release upload "${GITHUB_REF_NAME}" \
+            "release/Dawsha-${version}-mac-arm64.dmg" \
+            "release/Dawsha-${version}-mac-arm64.zip" \
+            "release/Dawsha-${version}-mac-arm64.zip.blockmap" \
+            "release/latest-mac.yml" \
+            --clobber

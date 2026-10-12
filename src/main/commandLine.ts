@@ -18,3 +18,7 @@ export function quoteWindowsArg(arg: string): string {
 }
 
 export const windowsCommandLine = (args: string[]): string => args.map(quoteWindowsArg).join(' ')
+
+export function ptyArguments(args: string[], platform = process.platform): string | string[] {
+  return platform === 'win32' ? windowsCommandLine(args) : args
+}

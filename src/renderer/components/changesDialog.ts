@@ -12,6 +12,7 @@ import { api } from '../api'
 import { h } from '../dom'
 import { confirmDialog, nextDialogId, present } from './dialogs'
 import { toast } from './toast'
+import { primaryModifierPressed } from '../../shared/shortcuts'
 
 export interface ChangesOptions {
   folder: string
@@ -242,7 +243,7 @@ export function openChangesDialog(options: ChangesOptions): Promise<void> {
     syncControls()
   })
   area.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && event.ctrlKey && !busy && selected().length > 0) {
+    if (event.key === 'Enter' && primaryModifierPressed(event) && !busy && selected().length > 0) {
       event.preventDefault()
       void runCommit(false)
     }

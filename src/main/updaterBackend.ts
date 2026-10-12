@@ -1,16 +1,12 @@
 import { autoUpdater } from 'electron-updater'
 import type { BackendEvent, UpdaterBackend } from './updateController'
 
-export const UPDATE_OWNER = 'mfathy234'
-export const UPDATE_REPO = 'dawsha'
-
 export function createGithubBackend(): UpdaterBackend {
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.allowPrerelease = false
   autoUpdater.allowDowngrade = false
   autoUpdater.logger = null
-  autoUpdater.setFeedURL({ provider: 'github', owner: UPDATE_OWNER, repo: UPDATE_REPO })
   autoUpdater.on('update-downloaded', () => {
     autoUpdater.autoInstallOnAppQuit = true
   })
