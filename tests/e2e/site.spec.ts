@@ -92,9 +92,9 @@ test('keeps platform choices linked to releases when assets are missing', async 
 })
 
 test('download dropdown works with the keyboard and resolves Linux assets', async ({ page }) => {
-  const appImage = 'https://github.com/mfathy234/dawsha/releases/download/v0.3.0/Dawsha-0.3.0-linux-x64.AppImage'
+  const appImage = 'https://github.com/mfathy234/dawsha/releases/download/v0.3.0/Dawsha-0.3.0-linux-x86_64.AppImage'
   await page.route('https://api.github.com/repos/mfathy234/dawsha/releases/latest', route => route.fulfill({
-    json: { tag_name: 'v0.3.0', assets: [{ name: 'Dawsha-0.3.0-linux-x64.AppImage', browser_download_url: appImage }] }
+    json: { tag_name: 'v0.3.0', assets: [{ name: 'Dawsha-0.3.0-linux-x86_64.AppImage', browser_download_url: appImage }] }
   }))
   await page.goto(url)
   const dropdown = page.locator('.hero .download-menu')
@@ -111,7 +111,7 @@ test('resolves each platform package and closes the dropdown with Escape', async
   const packages = {
     setup: 'Dawsha-Setup-0.3.0.exe', portable: 'Dawsha-Portable-0.3.0.exe',
     mac: 'Dawsha-0.3.0-mac-arm64.dmg',
-    'linux-appimage': 'Dawsha-0.3.0-linux-x64.AppImage', 'linux-deb': 'Dawsha-0.3.0-linux-x64.deb'
+    'linux-appimage': 'Dawsha-0.3.0-linux-x86_64.AppImage', 'linux-deb': 'Dawsha-0.3.0-linux-amd64.deb'
   }
   const base = 'https://github.com/mfathy234/dawsha/releases/download/v0.3.0/'
   await page.route('https://api.github.com/repos/mfathy234/dawsha/releases/latest', route => route.fulfill({
