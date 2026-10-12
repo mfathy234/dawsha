@@ -104,7 +104,7 @@ Dawsha only reads the agents' own folders. It never writes to `~/.codex` or `~/.
 
 ## Install
 
-1. Download the Windows installer or portable executable, or the Apple Silicon `.dmg`, from the [latest release](https://github.com/mfathy234/dawsha/releases/latest).
+1. Choose your platform from the [website's Download menu](https://dawsha.pages.dev/): Windows installer or portable executable, Apple Silicon `.dmg`, or Linux x64 `.AppImage` / `.deb`. Linux packages will be available after the first release built with Linux support; unavailable downloads open the [latest release](https://github.com/mfathy234/dawsha/releases/latest).
 2. On Windows, run the installer. The builds are not code signed, so SmartScreen may show "Windows protected your PC": choose **More info**, then **Run anyway**.
 3. On an Apple Silicon Mac, open the `.dmg` and drag Dawsha to Applications. macOS builds are not signed unless the release workflow has Apple signing credentials configured; Gatekeeper may require you to approve the app in Privacy & Security.
 
@@ -372,7 +372,7 @@ npm run icons        # regenerate build/icon.ico and build/icon.png from src/ren
 npm run screenshots  # regenerate docs/screenshots from fake demo projects
 ```
 
-Requirements: Windows or macOS, Node 24. The Electron binary downloads on first use. Windows packaging writes the Setup and Portable executables. macOS packaging writes a DMG and ZIP for the host architecture; unsigned local builds use `-c.mac.identity=null -c.mac.hardenedRuntime=false`. Signed macOS releases require Apple Developer ID certificate and notarization secrets in GitHub Actions.
+Requirements: Windows, macOS or Linux, Node 24. The Electron binary downloads on first use. Windows packaging writes the Setup and Portable executables. macOS packaging writes a DMG and ZIP for the host architecture; unsigned local builds use `-c.mac.identity=null -c.mac.hardenedRuntime=false`. Signed macOS releases require Apple Developer ID certificate and notarization secrets in GitHub Actions. On Linux, `npm run package -- --linux --x64 --publish never` creates AppImage and Debian packages. Linux shells use `$SHELL`, falling back to `/bin/bash`; `DAWSHA_SHELL` overrides this choice. Linux package execution must be verified on a Linux host before release.
 
 ## Testing
 
