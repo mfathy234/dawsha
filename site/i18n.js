@@ -1,6 +1,13 @@
 (() => {
   const translations = {
-    'Choose your platform': 'اختر نظامك', 'View all releases': 'عرض كل الإصدارات',
+    'Windows portable': 'نسخة ويندوز المحمولة', 'Windows 10/11 · Installer': 'ويندوز 10/11 · المثبّت',
+    'No installation · x64': 'دون تثبيت · x64', 'Apple Silicon · DMG': 'Apple Silicon · DMG',
+    'x64 · AppImage': 'x64 · AppImage', 'x64 · .deb': 'x64 · .deb',
+    'Linux Debian / Ubuntu': 'لينكس ديبيان / أوبونتو', 'Download installer': 'تنزيل المثبّت',
+    '.exe · Recommended': '.exe · موصى به', 'Download portable': 'تنزيل النسخة المحمولة',
+    '.exe': '.exe', 'Download for macOS': 'تنزيل لنظام macOS',
+    'Download AppImage': 'تنزيل AppImage', 'Download Debian / Ubuntu': 'تنزيل ديبيان / أوبونتو',
+    'More download options': 'خيارات تنزيل أخرى', 'View all releases': 'عرض كل الإصدارات',
     'View on GitHub': 'اعرضه على GitHub',
     'Choose a download': 'اختر طريقة التنزيل', 'Installer': 'المثبّت', 'Recommended': 'موصى به',
     'Portable': 'محمول', 'No installation': 'دون تثبيت', 'Disk image': 'ملف تثبيت',
