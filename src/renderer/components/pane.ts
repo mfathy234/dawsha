@@ -10,6 +10,7 @@ import {
   openDetails,
   openPaneFolder,
   restartTab,
+  restoreGrid,
   setActiveTab,
   togglePinned,
   showPaneDiff,
@@ -75,8 +76,8 @@ export class PaneComponent {
   private readonly details = h('aside', { class: 'pane-details', 'aria-label': 'Details', hidden: true })
   private detailsSignature = ''
   private actionsMenu: HTMLElement | null = null
-  private readonly restart = h('button', { class: 'btn small', type: 'button' }, 'Restart')
-  private readonly maxButton = h('span', { class: 'slot' })
+  private readonly restart = h('button', { class: 'btn small pane-restart', type: 'button' }, 'Restart')
+  private readonly maxButton = h('span', { class: 'slot pane-maximize-slot' })
   private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'pane-body' })
   private tabSignature = ''
@@ -337,6 +338,13 @@ export class PaneComponent {
     const showDetails = item('Details', () => openDetails(this.paneId), ICONS.info)
     const pinned = this.current?.pane.pinned === true
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
+    const maximized = store.state.maximizedId === this.paneId
+    const maximizeItem = item(
+      maximized ? 'Restore pane to grid' : 'Expand pane',
+      () => maximized ? restoreGrid() : toggleMaximize(this.paneId),
+      maximized ? ICONS.restore : ICONS.maximize,
+      'pane.maximize'
+    )
     const source = this.current?.agent ?? 'shell'
     const handoffs =
       source === 'shell'
@@ -350,6 +358,7 @@ export class PaneComponent {
     this.actionsMenu = h(
       'div',
       { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Pane actions' },
+      maximizeItem,
       first,
       studioItem,
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),

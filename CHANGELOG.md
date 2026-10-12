@@ -3,6 +3,20 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-10-12
+
+### Added
+
+- Show Download and Install actions, download progress and retry controls in Settings after checking for updates.
+- Open the pane named by a clicked notification, including after the workspace finishes loading.
+
+### Changed
+
+- Use Claude transcript titles for active sessions in the Projects sidebar when live session metadata has no title.
+- Keep pane expand and close controls visible in compact headers, add Restore pane to grid to the pane actions menu,
+  and allow long pane menus to scroll so lower actions such as saving snippets stay reachable.
+- Use the animated favicon mark beside the website's Switch heading and above the closing tagline in English and Arabic.
+
 ## [0.2.0] - 2026-10-11
 
 ### Added

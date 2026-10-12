@@ -68,6 +68,7 @@ function isSafeUrl(value: string): boolean {
 
 export function registerIpc(
   getWindow: () => BrowserWindow | null,
+  onNotifyClick: (paneId: string) => void,
   settings: SettingsStore,
   ptys: PtyManager,
   status: StatusWatcher,
@@ -150,7 +151,7 @@ export function registerIpc(
     const root = projectFolder(settings.get().projects, folder)
     return root && isInstructionName(name) ? openFile(root, { path: name }) : undefined
   })
-  ipcMain.on(IPC.notify, (_event, request: NotifyRequest) => notifyUser(getWindow(), request))
+  ipcMain.on(IPC.notify, (_event, request: NotifyRequest) => notifyUser(getWindow, request, onNotifyClick))
   ipcMain.handle(IPC.bridgePreview, () => bridgePreview(locations()))
   ipcMain.handle(IPC.bridgeStatus, () => bridgeStatus(locations()))
   ipcMain.handle(IPC.bridgeInstall, () => installBridge(locations()))

@@ -2,10 +2,11 @@ import { stepContextNotice, type ContextNotice } from '../shared/contextWarning'
 import { initialAttention, stepAttention, type Attention, type AttentionMemory } from '../shared/attention'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
 import { api } from './api'
-import { focusPane } from './actions'
+import { focusPaneFromNotification } from './actions'
 import { derivePanes, type PaneView } from './derive'
 import { store, type AppState } from './state'
 import { getTerminal } from './terminals'
+import { toast } from './components/toast'
 
 const PROMPT_POLL_MS = 1500
 const PROMPT_TAIL_ROWS = 24
@@ -87,5 +88,11 @@ export function installAttention(): void {
   window.addEventListener('focus', sync)
   window.addEventListener('blur', sync)
   sync()
-  api.onNotifyClick((paneId) => focusPane(paneId))
+  api.onNotifyClick((paneId) => {
+    if (!store.state.panes.some((pane) => pane.id === paneId)) {
+      toast('That session is no longer open.', 'info')
+      return
+    }
+    focusPaneFromNotification(paneId)
+  })
 }

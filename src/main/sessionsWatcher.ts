@@ -1,7 +1,9 @@
-import { readFile, readdir } from 'node:fs/promises'
+import { open, readFile, readdir, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { SessionFile } from '../shared/types'
+import { claudeProjectSlug, sessionTitle } from '../shared/projectSessions'
+import { claudeProjectsDir } from './paths'
 
 const POLL_MS = 3000
 
@@ -62,7 +64,32 @@ export async function readSessions(dir: string = sessionsDir()): Promise<Session
     if (state === 'alive') found.push(session)
     else if (state === 'denied') found.push({ ...session, permissionDenied: true })
   }
-  return found
+  return Promise.all(found.map(async (session) => {
+    if (session.name?.trim() && session.nameSource !== 'derived') return session
+    const transcript = join(claudeProjectsDir(), claudeProjectSlug(session.cwd), `${session.sessionId}.jsonl`)
+    try {
+      const info = await stat(transcript)
+      const handle = await open(transcript, 'r')
+      let head = ''
+      let tail = ''
+      try {
+        const headBuffer = Buffer.alloc(Math.min(info.size, 96 * 1024))
+        const headRead = await handle.read(headBuffer, 0, headBuffer.length, 0)
+        head = headBuffer.subarray(0, headRead.bytesRead).toString('utf8')
+        if (info.size > 96 * 1024) {
+          const tailBuffer = Buffer.alloc(Math.min(info.size, 48 * 1024))
+          const tailRead = await handle.read(tailBuffer, 0, tailBuffer.length, Math.max(0, info.size - tailBuffer.length))
+          tail = tailBuffer.subarray(0, tailRead.bytesRead).toString('utf8')
+        }
+      } finally {
+        await handle.close()
+      }
+      const title = sessionTitle(head, tail)
+      return title ? { ...session, name: title, nameSource: 'transcript' } : session
+    } catch {
+      return session
+    }
+  }))
 }
 
 export class SessionsWatcher {

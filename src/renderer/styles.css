@@ -817,9 +817,38 @@ button {
 
 @container pane-header (max-width: 640px) {
   .pane-header .pane-prev,
-  .pane-header .pane-next {
+  .pane-header .pane-next,
+  .pane-header .pane-vscode,
+  .pane-header .chip-compare,
+  .pane-header .chip-from {
     display: none;
   }
+
+  .pane-header {
+    gap: 6px;
+  }
+
+  .pane-header .spacer {
+    flex: 0 0 2px;
+  }
+
+  .pane-title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.pane-header > .pane-maximize-slot {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pane-header > .icon-btn {
+  flex: 0 0 28px;
 }
 
 .pane-fresh {
@@ -1504,6 +1533,9 @@ input[type='checkbox'] {
   position: fixed;
   top: auto;
   left: auto;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .seg {
@@ -3940,6 +3972,11 @@ body.dragging-ui {
 
 .set-inline .text-input {
   width: 200px;
+}
+
+.update-settings-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .set-stack,
