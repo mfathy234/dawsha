@@ -26,8 +26,8 @@
         setup: find(/setup.*\.exe$/i),
         portable: find(/portable.*\.exe$/i),
         mac: find(/mac-arm64\.dmg$/i),
-        'linux-appimage': find(/linux-x64\.AppImage$/i),
-        'linux-deb': find(/linux-x64\.deb$/i)
+        'linux-appimage': find(/linux-x86_64\.AppImage$/i),
+        'linux-deb': find(/linux-amd64\.deb$/i)
       };
       document.querySelectorAll('[data-dl]').forEach(function (a) {
         var url = urls[a.getAttribute('data-dl')];
