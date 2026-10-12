@@ -1,5 +1,5 @@
 (function () {
-  document.querySelectorAll('.platform-picker').forEach(function (picker) {
+  document.querySelectorAll('.download-menu').forEach(function (picker) {
     picker.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') {
         picker.open = false;

@@ -35,7 +35,7 @@ test('the site switches between Arabic RTL and English LTR with translated navig
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('وكلاء')
   await expect(page.locator('nav a[href="#features"]')).toContainText('المميزات')
-  await expect(page.locator('.hero .download-cta')).toContainText('اختر نظامك')
+  await expect(page.locator('.hero .download-action')).toContainText('حمّل لويندوز')
   await expect(page.locator('.hero-shot img')).toHaveAttribute('alt', /دوشة/)
   await expect(page.locator('#cli-h')).toHaveText(/أمر\s*dawsha\s*$/)
   await page.screenshot({ path: 'test-results/site-ar.png' })
@@ -97,12 +97,14 @@ test('download dropdown works with the keyboard and resolves Linux assets', asyn
     json: { tag_name: 'v0.3.0', assets: [{ name: 'Dawsha-0.3.0-linux-x64.AppImage', browser_download_url: appImage }] }
   }))
   await page.goto(url)
-  const dropdown = page.locator('#linux-download .platform-picker')
+  const dropdown = page.locator('.hero .download-menu')
   await dropdown.locator('summary').focus()
   await page.keyboard.press('Enter')
   await expect(dropdown.locator('[data-dl="linux-appimage"]')).toHaveAttribute('href', appImage)
+  await expect(dropdown.locator('.platform-icon')).toHaveCount(5)
   await page.keyboard.press('Escape')
   await expect(dropdown).not.toHaveAttribute('open', '')
+  await expect(dropdown.locator('summary')).toBeFocused()
 })
 
 test('resolves each platform package and closes the dropdown with Escape', async ({ page }) => {
@@ -116,16 +118,12 @@ test('resolves each platform package and closes the dropdown with Escape', async
     json: { tag_name: 'v0.3.0', assets: Object.values(packages).map(name => ({ name, browser_download_url: base + name })) }
   }))
   await page.goto(url)
-  for (const [platform, keys] of Object.entries({
-    windows: ['setup', 'portable'], mac: ['mac'], linux: ['linux-appimage', 'linux-deb']
-  })) {
-    const dropdown = page.locator(`#${platform}-download .platform-picker`)
-    await dropdown.locator('summary').click()
-    for (const key of keys) {
-      await expect(dropdown.locator(`[data-dl="${key}"]`)).toHaveAttribute('href', base + packages[key as keyof typeof packages])
-    }
-    await dropdown.locator('summary').press('Escape')
-    await expect(dropdown).not.toHaveAttribute('open', '')
+  await page.locator('.hero .download-menu summary').click()
+  for (const [key, name] of Object.entries(packages)) {
+    await expect(page.locator(`.hero .download-menu [data-dl="${key}"]`)).toHaveAttribute('href', base + name)
+  }
+  for (const [key, name] of Object.entries(packages)) {
+    await expect(page.locator(`#download [data-dl="${key}"]`)).toHaveAttribute('href', base + name)
   }
 })
 
@@ -142,9 +140,10 @@ test('platform dropdowns remain usable on mobile without JavaScript', async ({ b
   const page = await context.newPage()
   for (const address of [url, arabicUrl]) {
     await page.goto(address)
-    const dropdown = page.locator('#linux-download .platform-picker')
+    const dropdown = page.locator('.hero .download-menu')
     await dropdown.locator('summary').click()
     await expect(dropdown.locator('[data-dl="linux-appimage"]')).toBeVisible()
+    await expect(page.locator('#download .platform-download')).toHaveCount(5)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   }
   await context.close()
