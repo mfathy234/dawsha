@@ -82,9 +82,9 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           grep -q "^version: ${version}$" release/latest-linux.yml
-          grep -q "Dawsha-${version}-linux-x64.AppImage" release/latest-linux.yml
-          test -f "release/Dawsha-${version}-linux-x64.AppImage"
-          test -f "release/Dawsha-${version}-linux-x64.deb"
+          grep -q "Dawsha-${version}-linux-x86_64.AppImage" release/latest-linux.yml
+          test -f "release/Dawsha-${version}-linux-x86_64.AppImage"
+          test -f "release/Dawsha-${version}-linux-amd64.deb"
       - name: Upload Linux release assets
         shell: bash
         env:
@@ -92,8 +92,8 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           gh release upload "${GITHUB_REF_NAME}" \
-            "release/Dawsha-${version}-linux-x64.AppImage" \
-            "release/Dawsha-${version}-linux-x64.deb" \
+            "release/Dawsha-${version}-linux-x86_64.AppImage" \
+            "release/Dawsha-${version}-linux-amd64.deb" \
             "release/latest-linux.yml" \
             --clobber
   release-macos:
