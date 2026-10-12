@@ -327,12 +327,17 @@ test('a fresh install records the version and shows setup instead of What is new
   }
 })
 
-test('legacy data from 0.3.0 without a recorded version does not show a downgrade as new', async () => {
+test('legacy data from 0.3.0 without a recorded version shows the current release notes', async () => {
   const sandbox = createSandbox()
   const { lastSeenVersion: _dropped, ...legacy } = readSettings(sandbox)
   writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(legacy), 'utf8')
   const { app, page } = await launchApp(sandbox)
   try {
+    const dialog = page.getByRole('dialog', { name: `What's new in Dawsha ${APP_VERSION}` })
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText('Updated from 0.3.0')
+    await expect(dialog.locator('.wn-entry')).toHaveCount(1)
+    await dialog.locator('#wn-close').click()
     await expect(page.locator('.whats-new')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox).lastSeenVersion).toBe(APP_VERSION)
   } finally {

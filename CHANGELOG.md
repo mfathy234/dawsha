@@ -180,7 +180,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
   own folders and shows tokens per day (or hour) by agent, tokens and Claude Code cost by project and by agent, and a
   history of the 5 hour and weekly limits. Cost appears only where an agent reports one; nothing is estimated.
 
-## [0.4.0] - 2026-10-08
+## [0.4.0-legacy] - 2026-10-08
 
 ### Added
 

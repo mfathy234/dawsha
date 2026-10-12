@@ -87,7 +87,10 @@ export function decideWhatsNew(current: string, lastSeen: string | null, entries
   if (order === 0) return { show: false, record: null }
   if (order < 0) return { show: false, record: current }
   const newer = entries.filter(
-    (entry) => compareVersions(entry.version, lastSeen) > 0 && compareVersions(entry.version, current) <= 0
+    (entry) =>
+      !entry.version.endsWith('-legacy') &&
+      compareVersions(entry.version, lastSeen) > 0 &&
+      compareVersions(entry.version, current) <= 0
   )
   if (newer.length === 0) return { show: false, record: current }
   return { show: true, from: lastSeen, entries: newer }
