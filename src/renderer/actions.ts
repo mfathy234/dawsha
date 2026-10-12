@@ -414,6 +414,26 @@ export function focusPane(paneId: string, keepMaximized = false): void {
   persistWorkspace()
 }
 
+export function focusPaneFromNotification(paneId: string): void {
+  if (!store.state.panes.some((pane) => pane.id === paneId)) return
+  store.set((s) => ({
+    ...s,
+    focusedId: paneId,
+    view: 'grid',
+    maximizedId: s.maximizedId ? paneId : null,
+    detailsPaneId: null,
+    sidebarOverride: null,
+    onboardingOpen: false,
+    quickPickOpen: false,
+    paletteOpen: false,
+    layoutsOpen: false,
+    themePickerOpen: false,
+    updatePopoverOpen: false,
+    whatsNew: null
+  }))
+  persistWorkspace()
+}
+
 export function focusRelative(delta: number): void {
   const { panes, focusedId } = store.state
   if (panes.length === 0) return

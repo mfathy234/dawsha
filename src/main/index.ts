@@ -38,6 +38,8 @@ let mainWindow: BrowserWindow | null = null
 let cli: CliRunner | null = null
 let updates: UpdateController | null = null
 let quitting = false
+let rendererReady = false
+const pendingNotificationClicks: string[] = []
 
 const gotLock = app.requestSingleInstanceLock()
 
@@ -81,7 +83,22 @@ function send(channel: string, ...args: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...args)
 }
 
+function routeNotificationClick(paneId: string): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (!rendererReady) {
+    pendingNotificationClicks.push(paneId)
+    return
+  }
+  send(IPC.notifyClick, paneId)
+}
+
+ipcMain.on(IPC.cliReady, () => {
+  rendererReady = true
+  for (const paneId of pendingNotificationClicks.splice(0)) send(IPC.notifyClick, paneId)
+})
+
 function createWindow(): BrowserWindow {
+  rendererReady = false
   const window = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -97,6 +114,9 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
       sandbox: true
     }
+  })
+  window.webContents.on('did-start-loading', () => {
+    if (mainWindow === window) rendererReady = false
   })
   let flushedOnClose = false
   window.on('close', (event) => {
@@ -154,7 +174,7 @@ app.whenReady().then(() => {
   })
   const opsWatcher = new OpsWatcher(opsDirs(), (snapshots) => send(IPC.opsUpdate, snapshots))
   registerImageProtocol(store)
-  registerIpc(() => mainWindow, store, ptys, statusWatcher, opsWatcher, usage, warning)
+  registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning)
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
