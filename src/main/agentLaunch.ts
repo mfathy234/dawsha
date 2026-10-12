@@ -22,6 +22,7 @@ export const geminiCommand = (): string => process.env.DAWSHA_GEMINI_COMMAND || 
 export function shellCommand(platform = process.platform, env: NodeJS.ProcessEnv = process.env): string {
   if (env.DAWSHA_SHELL) return env.DAWSHA_SHELL
   if (platform === 'darwin') return env.SHELL || '/bin/zsh'
+  if (platform === 'linux') return env.SHELL || '/bin/bash'
   return resolveExecutable('pwsh.exe') ? 'pwsh.exe' : 'powershell.exe'
 }
 

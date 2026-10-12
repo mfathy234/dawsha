@@ -1,5 +1,18 @@
 (() => {
   const translations = {
+    "All downloads": "كل التنزيلات",
+    "Windows": "ويندوز",
+    "Linux": "لينكس",
+    "Installer (.exe)": "المثبّت (.exe)",
+    "Portable (.exe)": "النسخة المحمولة (.exe)",
+    "Disk image (.dmg)": "ملف التثبيت (.dmg)",
+    "Debian / Ubuntu (.deb)": "ديبيان / أوبونتو (.deb)",
+    "Download for Linux": "تنزيل لنظام لينكس",
+    "Missing a package? Check the release assets.": "لم تجد الحزمة؟ راجع ملفات الإصدار.",
+    "x64 · AppImage or Debian / Ubuntu package.": "x64 · ملف AppImage أو حزمة ديبيان / أوبونتو.",
+    "Linux packages appear here after the first Linux release. If a package is unavailable, the link opens the latest release.": "تظهر حزم لينكس هنا بعد نشر أول إصدار له. إذا لم تتوفر الحزمة، يفتح الرابط أحدث إصدار.",
+    ", Windows 10/11 x64, Apple Silicon Mac and Linux x64. Free under the MIT licence.": "، لويندوز 10/11 بمعمارية x64 وماك بمعالج Apple Silicon ولينكس x64. مجاني برخصة MIT.",
+    "Windows 10 or 11 (x64), an Apple Silicon Mac with macOS 13 or later, or Linux (x64). Install the agent CLIs you want to use: Claude Code, Codex CLI, Gemini CLI. Node.js 20+ is only needed to install Codex and Gemini from inside Dawsha.": "ويندوز 10 أو 11 بمعمارية x64، أو ماك بمعالج Apple Silicon وmacOS 13 أو أحدث، أو لينكس بمعمارية x64. ثبّت أدوات الوكلاء التي تريدها: Claude Code وCodex CLI وGemini CLI. تحتاج Node.js 20+ فقط لتثبيت Codex وGemini من داخل دوشة.",
     'Find and resume sessions': 'ابحث عن الجلسات واستأنفها',
     'Ctrl+Shift+R searches prompts and replies. Choose the current project or include all projects.': 'ابحث في الأسئلة والردود باستخدام Ctrl+Shift+R. اختر المشروع الحالي أو جميع المشاريع.',
     'Keep closed sessions': 'احتفظ بالجلسات المغلقة',
@@ -113,7 +126,7 @@
   const description = document.querySelector('meta[name="description"]');
   const englishDescription = description?.content;
   const arabicTitle = 'دوشة — كل وكلاء البرمجة في نافذة واحدة';
-  const arabicDescription = 'دوشة يجمع Claude Code وCodex وGemini في نافذة واحدة على ويندوز وأجهزة Mac بمعالج Apple Silicon. مجاني، محلي، وبدون حساب.';
+  const arabicDescription = 'دوشة يجمع Claude Code وCodex وGemini في نافذة واحدة على ويندوز وأجهزة Mac بمعالج Apple Silicon ولينكس. مجاني، محلي، وبدون حساب.';
   const metadata = [
     ['meta[property="og:title"]', arabicTitle],
     ['meta[name="twitter:title"]', arabicTitle],

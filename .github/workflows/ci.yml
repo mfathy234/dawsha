@@ -10,6 +10,28 @@ permissions:
   contents: read
 
 jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
+      - run: npm run package -- --linux --x64 --publish never
+      - name: Upload Linux test packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: Dawsha-${{ github.event.pull_request.number || github.run_number }}-linux-x64-test-build
+          path: |
+            release/Dawsha-*-linux-x64.AppImage
+            release/Dawsha-*-linux-x64.deb
+            release/latest-linux.yml
+          if-no-files-found: error
+          retention-days: 14
   macos:
     runs-on: macos-14
     timeout-minutes: 30

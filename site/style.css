@@ -129,6 +129,22 @@ section { padding: 88px 0; }
 .code .c { color: var(--muted); }
 
 .dl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 36px; }
+.download-picker { position: relative; text-align: start; }
+.download-picker[open] { z-index: 10; }
+.download-picker summary { list-style: none; cursor: pointer; }
+.download-picker summary::-webkit-details-marker { display: none; }
+.download-picker summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.download-chevron { margin-inline-start: 16px; }
+.download-picker[open] .download-chevron { transform: rotate(180deg); }
+.download-options { position: absolute; inset-inline-start: 0; top: calc(100% + 8px); width: 290px; max-width: calc(100vw - 32px); padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 16px 40px #0008; }
+.download-options > div { padding: 8px; }
+.download-options > div + div { border-top: 1px solid var(--border); }
+.download-options strong { color: var(--text); }
+.download-options span { float: inline-end; color: var(--muted); font-size: .85rem; }
+.download-options a { display: block; padding: 7px 8px; border-radius: var(--radius-sm); text-decoration: none; }
+.download-options a:hover, .download-options a:focus-visible { background: var(--border); }
+.download-options p { padding: 8px; color: var(--muted); font-size: .8rem; }
+.mac-card .download-options { inset-inline-start: auto; inset-inline-end: 0; }
 .dl-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 .dl-card[hidden] { display: none; }
 .mac-card { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; }
@@ -174,6 +190,9 @@ section { padding: 88px 0; }
   .hero { padding-top: 40px; }
   .btn { padding: 0 18px; }
   .cta .btn { flex: 1 1 100%; }
+  .cta .download-picker { flex: 1 1 100%; }
+  .download-picker summary { width: 100%; }
+  .mac-card .download-options { inset-inline-start: 0; inset-inline-end: auto; }
   .showcase, .dl-grid { grid-template-columns: 1fr; }
   .mac-card { flex-direction: column; align-items: flex-start; }
   .showcase { gap: 32px; }

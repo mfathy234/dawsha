@@ -213,6 +213,12 @@ describe('launchSpec', () => {
 })
 
 describe('shellArgs', () => {
+  it('selects the Linux login shell, with a bash fallback and explicit override', () => {
+    expect(shellCommand('linux', {})).toBe('/bin/bash')
+    expect(shellCommand('linux', { SHELL: '/bin/zsh' })).toBe('/bin/zsh')
+    expect(shellCommand('linux', { SHELL: '/bin/zsh', DAWSHA_SHELL: '/bin/fish' })).toBe('/bin/fish')
+    expect(shellArgs('/bin/bash', 'npm -v', 'linux')).toEqual(['-lc', 'npm -v'])
+  })
   it('opens a plain interactive shell without a command', () => {
     delete process.env.DAWSHA_SHELL
     expect(shellArgs('pwsh.exe', undefined, 'win32')).toEqual(['-NoLogo'])
