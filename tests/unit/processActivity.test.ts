@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collectProcessActivity, selectProcessActivity, type ProcessRecord } from '../../src/main/processActivity'
+import { collectProcessActivity, parsePosixProcesses, selectProcessActivity, type ProcessRecord } from '../../src/main/processActivity'
 
 const records: ProcessRecord[] = [
   { pid: 100, parentPid: 1, name: 'cmd.exe', startedAt: 1000 },
@@ -9,6 +9,15 @@ const records: ProcessRecord[] = [
 ]
 
 describe('native process activity', () => {
+  it('parses macOS ps rows and converts elapsed time to process start times', () => {
+    const parsed = parsePosixProcesses('  100     1  00:12.50 /bin/zsh\n  101   100  1-02:03:04 node')
+    expect(parsed).toHaveLength(2)
+    expect(parsed[0]).toMatchObject({ pid: 100, parentPid: 1, name: '/bin/zsh' })
+    expect(parsed[0].startedAt).toBeGreaterThan(0)
+    expect(parsed[1]).toMatchObject({ pid: 101, parentPid: 100, name: 'node' })
+    expect(parsed[1].startedAt!).toBeLessThan(parsed[0].startedAt!)
+  })
+
   it('returns only a PTY root and descendants, tagged to its tab', () => {
     expect(selectProcessActivity([{ tabId: 'tab-a', pid: 100, startedAt: 1000 }], records).map((p) => [p.tabId, p.pid, p.name])).toEqual([
       ['tab-a', 100, 'cmd.exe'], ['tab-a', 101, 'node.exe'], ['tab-a', 102, 'helper.exe']

@@ -9,7 +9,7 @@
 <p align="center"><a href="https://dawsha.pages.dev/">Website</a> · <a href="https://github.com/mfathy234/dawsha">GitHub repository</a></p>
 
 <p align="center">
-  A Windows desktop app that puts Claude Code, OpenAI Codex CLI and Google Gemini CLI side by side in a grid of
+  A desktop app for Windows and Apple Silicon Mac that puts Claude Code, OpenAI Codex CLI and Google Gemini CLI side by side in a grid of
   large, readable terminals, one per task, with live status, plan progress and needs-you alerts.
 </p>
 
@@ -96,7 +96,7 @@
 
 | Agent | Command | Install | Resume | Session titles and status |
 |---|---|---|---|---|
-| Claude Code | `claude.exe` | Native installer (`irm https://claude.ai/install.ps1 \| iex`) or npm | `claude -r <id>` | From Claude's session registry in `~/.claude/sessions` |
+| Claude Code | `claude` (`claude.exe` on Windows) | Native installer or npm | `claude -r <id>` | From Claude's session registry in `~/.claude/sessions` |
 | Codex CLI | `codex` | `npm i -g @openai/codex` | `codex resume <id>` | From rollout files in `~/.codex/sessions` |
 | Gemini CLI | `gemini` | `npm i -g @google/gemini-cli` | `gemini --resume <id>` | From chat files in `~/.gemini/tmp`; busy/idle from terminal activity |
 
@@ -104,12 +104,13 @@ Dawsha only reads the agents' own folders. It never writes to `~/.codex` or `~/.
 
 ## Install
 
-1. Download `Dawsha-Setup-<version>.exe` (installer) or `Dawsha-Portable-<version>.exe` from the [latest release](https://github.com/mfathy234/dawsha/releases/latest).
-2. Run it. The builds are not code signed, so Windows SmartScreen may show "Windows protected your PC": choose **More info**, then **Run anyway**.
+1. Download the Windows installer or portable executable, or the Apple Silicon `.dmg`, from the [latest release](https://github.com/mfathy234/dawsha/releases/latest).
+2. On Windows, run the installer. The builds are not code signed, so SmartScreen may show "Windows protected your PC": choose **More info**, then **Run anyway**.
+3. On an Apple Silicon Mac, open the `.dmg` and drag Dawsha to Applications. macOS builds are not signed unless the release workflow has Apple signing credentials configured; Gatekeeper may require you to approve the app in Privacy & Security.
 
-Requirements: Windows 10 or 11 (x64). Node.js 20+ is only needed for installing Codex and Gemini through the Agents view.
+Requirements: Windows 10 or 11 (x64), or Apple Silicon Mac running macOS 13 Ventura or newer. Node.js 20+ is only needed for installing Codex and Gemini through the Agents view.
 
-The installer also puts the `dawsha` command on your user PATH (open a new terminal after installing) and removes it again on uninstall. The portable build does not touch your PATH: run `Dawsha-Portable-<version>.exe` directly, or copy it somewhere and add that folder to your PATH yourself. Arguments given to the portable exe are forwarded to the running Dawsha, but its answers appear as a toast in the app instead of in the terminal.
+The Windows installer also puts the `dawsha` command on your user PATH and removes it again on uninstall. The portable build does not touch your PATH. The Mac `.dmg` installs the app bundle in Applications.
 
 ## Updates
 
@@ -121,7 +122,7 @@ The installed build (`Dawsha-Setup-<version>.exe`) updates itself from GitHub Re
 - The Theme popover has an **Updates** section: turn automatic checks off, see when Dawsha last checked, **Check now** and **What's new**.
 - After an update Dawsha shows **What's new** once, with the changes of every version since the one you had (read from the bundled `CHANGELOG.md`). A fresh install shows the setup instead.
 
-The portable build (`Dawsha-Portable-<version>.exe`) cannot replace itself: it tells you a new version exists and opens the release page. Development runs never check.
+The portable build (`Dawsha-Portable-<version>.exe`) cannot replace itself: it tells you a new version exists and opens the release page. macOS in-app updates work for signed and notarized releases; unsigned builds must be replaced manually from the release page. Development runs never check.
 
 Updates are not code signed, like the installer itself. Dawsha verifies the downloaded file against the SHA-512 in the release's `latest.yml` and does not require a publisher signature.
 
@@ -170,7 +171,7 @@ Tip: run `dawsha .` in any folder to open it in Dawsha.
 
 ### Layout
 
-| Panes | Layout |
+| Sessions | Layout |
 |---|---|
 | 1 | one full pane |
 | 2 | side by side |
@@ -346,13 +347,13 @@ With it on the agent edits files and runs commands without asking, so turn it of
 
 Both are optional and off until you turn them on.
 
-**Live session info (status-line bridge).** Claude Code runs a status-line command with the session as JSON on stdin. The Theme popover toggle **Show live session info** installs a small script (`%APPDATA%\Dawsha\bin\statusline-bridge.js`, run with `node`) as `statusLine` in `~/.claude/settings.json`. It first shows a confirmation naming that file and your current status line. The previous value is kept in `bin\bridge-state.json` and a full copy in `settings.json.dawsha-backup`; turning the toggle off restores it (a status line you changed after install is left alone). The script saves each payload to `%APPDATA%\Dawsha\status\<session_id>.json` and then runs your previous status line with the same input, so it keeps working. A settings file that is not valid JSON is reported and never touched. This is the only file Dawsha edits outside its own folder.
+**Live session info (status-line bridge).** Claude Code runs a status-line command with the session as JSON on stdin. The Theme popover toggle **Show live session info** installs a small script (`bin/statusline-bridge.js` inside Dawsha's user-data folder, run with `node`) as `statusLine` in `~/.claude/settings.json`. It first shows a confirmation naming that file and your current status line. The previous value is kept in `bin/bridge-state.json` and a full copy in `settings.json.dawsha-backup`; turning the toggle off restores it (a status line you changed after install is left alone). The script saves each payload to `status/<session_id>.json` and then runs your previous status line with the same input, so it keeps working. A settings file that is not valid JSON is reported and never touched. This is the only file Dawsha edits outside its own folder.
 
-**Activity and optional ops feed.** Each live pane discovers activity from its own app-launched process tree, so the activity drawer works for Claude, Codex and Gemini without a mod. A Claude Code mod can additionally write a snapshot to `%APPDATA%\dawsha\ops\<sessionId>.json` (the legacy `%APPDATA%\claude-grid\ops` folder is read too). Dawsha only reads these files: it polls every second, keeps the last good parse of a file that is mid-write, ignores unknown fields and needs only `v`, `sessionId` and `updatedAt`. A snapshot belongs only to the pane whose Claude session ID matches and adds plan and sub-agent detail. Context and available rate limits are displayed per pane; unavailable limits are not borrowed from another agent.
+**Activity and optional ops feed.** Each live pane discovers activity from its own app-launched process tree, so the activity drawer works for Claude, Codex and Gemini without a mod. A Claude Code mod can additionally write a snapshot to `ops/<sessionId>.json` inside Dawsha's user-data folder (the legacy Claude Grid ops folder is read too). Dawsha only reads these files: it polls every second, keeps the last good parse of a file that is mid-write, ignores unknown fields and needs only `v`, `sessionId` and `updatedAt`. A snapshot belongs only to the pane whose Claude session ID matches and adds plan and sub-agent detail. Context and available rate limits are displayed per pane; unavailable limits are not borrowed from another agent.
 
 ## Data and privacy
 
-Everything is in the Electron user-data folder, `%APPDATA%\Dawsha` for the installed app:
+Everything is in the Electron user-data folder: `%APPDATA%\Dawsha` on Windows or `~/Library/Application Support/Dawsha` on macOS:
 
 - `settings.json`: projects, theme, notification toggles, sidebar state, the open-panes workspace, saved layouts, snippets and the palette key.
 - `usage-history.json`: the last cost of each Claude Code session that reported one and the 5 hour and weekly limit readings, for the Usage view (written only when the live session info is on).
@@ -366,12 +367,12 @@ Dawsha has no telemetry and makes no network calls except the Agents view lookin
 npm install
 npm run dev          # development with hot reload
 npm run build        # type-check and build into out/
-npm run package      # unsigned Windows installer and portable exe in release/
+npm run package      # platform package: Windows exe or macOS dmg/zip in release/
 npm run icons        # regenerate build/icon.ico and build/icon.png from src/renderer/assets/logo.svg
 npm run screenshots  # regenerate docs/screenshots from fake demo projects
 ```
 
-Requirements: Windows, Node 24. The Electron binary downloads on first use. `npm run package` writes `release/Dawsha-Setup-<version>.exe` and `release/Dawsha-Portable-<version>.exe`.
+Requirements: Windows or macOS, Node 24. The Electron binary downloads on first use. Windows packaging writes the Setup and Portable executables. macOS packaging writes a DMG and ZIP for the host architecture; unsigned local builds use `-c.mac.identity=null -c.mac.hardenedRuntime=false`. Signed macOS releases require Apple Developer ID certificate and notarization secrets in GitHub Actions.
 
 ## Testing
 
@@ -424,7 +425,7 @@ scripts        icon generation
 
 ## Notes
 
-- `node-pty` is the Microsoft package (1.1.0). Its Windows prebuilds are N-API, so they load in Electron without a compiler.
+- `node-pty` is the Microsoft package (1.1.0). Its N-API bindings are built or selected for the host platform during `npm ci`.
 - The xterm WebGL renderer is used when available; xterm 6 has no canvas addon, so the fallback is the DOM renderer.
 - Releases are built by GitHub Actions from a `v*` tag. The GitHub release body is the matching `CHANGELOG.md` section, and the same text is embedded in `latest.yml` so the in-app notes match.
 

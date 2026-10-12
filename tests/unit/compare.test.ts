@@ -140,6 +140,7 @@ describe('diffCommand and quoting', () => {
   it('quotes paths for cmd and for PowerShell', () => {
     expect(quoteForShell('C:\\my dir', 'C:\\Windows\\System32\\cmd.exe')).toBe('"C:\\my dir"')
     expect(quoteForShell("C:\\it's", 'pwsh.exe')).toBe("'C:\\it''s'")
+    expect(quoteForShell("/Users/me/it's folder", '/bin/zsh')).toBe("'/Users/me/it'\\''s folder'")
   })
 
   it('knows when a worktree holds work', () => {

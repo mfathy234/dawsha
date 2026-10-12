@@ -9,6 +9,7 @@ import {
   type AgentPreset
 } from '../../shared/quickPick'
 import type { Project } from '../../shared/types'
+import { primaryModifierPressed } from '../../shared/shortcuts'
 import { clear, h, icon } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
@@ -54,7 +55,9 @@ export class QuickPickComponent {
       modeTabs('new'),
       this.input,
       this.list,
-      h('div', { class: 'popover-foot' }, 'Enter starts a session. Tab switches agent. Ctrl+R resumes')
+      h('div', { class: 'popover-foot' }, navigator.platform.toLowerCase().includes('mac')
+        ? 'Enter starts a session. Tab switches agent. Cmd+R resumes'
+        : 'Enter starts a session. Tab switches agent. Ctrl+R resumes')
     )
     this.selected = 0
     this.overrides = {}
@@ -84,7 +87,7 @@ export class QuickPickComponent {
   }
 
   private onKey(event: KeyboardEvent): void {
-    if (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'r') {
+    if (primaryModifierPressed(event) && !event.shiftKey && event.key.toLowerCase() === 'r') {
       event.preventDefault()
       event.stopPropagation()
       setQuickPickMode('resume')

@@ -40,7 +40,7 @@ export class GridComponent {
   private readonly panes = new Map<string, PaneComponent>()
   private readonly pairs = new Map<string, ComparePairComponent>()
   private readonly grid = h('div', { class: 'grid' })
-  private readonly strip = h('div', { class: 'pane-strip', role: 'tablist', 'aria-label': 'Panes' })
+  private readonly strip = h('div', { class: 'pane-strip', role: 'tablist', 'aria-label': 'Sessions' })
   private readonly empty = h('div', { class: 'empty' })
   private readonly bg = h('div', { class: 'bg-layer', 'aria-hidden': 'true' })
   private readonly gutters = new GridGutters((axis, sizes) => this.resize(axis, sizes))
@@ -226,10 +226,6 @@ export class GridComponent {
         )
       )
     }
-    this.strip.append(
-      h('span', { class: 'spacer' }),
-      h('span', { class: 'strip-hint' }, 'Esc  back to grid · Ctrl+Alt+← → switch')
-    )
   }
 
   private updateEmpty(state: AppState, count: number): void {
@@ -243,7 +239,9 @@ export class GridComponent {
         'p',
         {},
         hasProjects
-          ? 'Press Ctrl+N or pick a project in the sidebar. Claude starts in its folder right away.'
+          ? navigator.platform.toLowerCase().includes('mac')
+            ? 'Press Cmd+N or pick a project in the sidebar. Claude starts in its folder right away.'
+            : 'Press Ctrl+N or pick a project in the sidebar. Claude starts in its folder right away.'
           : 'A project is a name and a folder. Starting a session opens Claude in that folder.'
       ),
       hasProjects

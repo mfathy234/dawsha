@@ -1,7 +1,7 @@
 import { DEFAULT_FONT_SIZE } from '../shared/types'
 import { DEFAULT_PALETTE_SHORTCUT } from '../shared/settingsSchema'
 import { bind, formatShortcut, matchesBinding, parseShortcut, type KeyBinding, type KeyEventLike } from '../shared/shortcuts'
-import { closeDetails, openPalette, restoreGrid, setPaneFont, zoomPane } from './actions'
+import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, zoomPane } from './actions'
 import { commandForEvent } from './commands/registry'
 import { derivePanes } from './derive'
 import { store, type AppState } from './state'
@@ -61,13 +61,22 @@ function onKeyDown(event: KeyboardEvent): void {
     return
   }
   if (state.view !== 'grid') return
+  if (event.key === 'Tab' && state.focusedId) {
+    const focused = state.panes.find((pane) => pane.id === state.focusedId)
+    if (focused && focused.tabs.length > 1) {
+      consume(event)
+      cycleActiveTab(event.shiftKey ? -1 : 1)
+      return
+    }
+  }
   if (event.key === 'Escape' && escapeShouldRestore(event)) {
     consume(event)
     if (state.detailsPaneId !== null) closeDetails()
     else restoreGrid()
     return
   }
-  const ctrl = event.ctrlKey && !event.metaKey
+  const mac = navigator.platform.toLowerCase().includes('mac')
+  const ctrl = mac ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey
   const zoom = ctrl && !event.altKey ? zoomDelta(event) : null
   if (zoom !== null && state.focusedId) {
     consume(event)

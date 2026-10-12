@@ -2,16 +2,23 @@ import type { TabAgent } from './types'
 
 export type ClipboardContent = { kind: 'text'; text: string } | { kind: 'image'; path: string } | { kind: 'empty' }
 
-export type ShellKind = 'powershell' | 'cmd'
+export type ShellKind = 'powershell' | 'cmd' | 'posix'
 
-export const shellKindOf = (command: string): ShellKind => (/(^|[\\/])cmd(\.exe)?$/i.test(command.trim()) ? 'cmd' : 'powershell')
+export const shellKindOf = (command: string): ShellKind => {
+  const name = command.trim().split(/[\\/]/).pop()?.toLowerCase() ?? ''
+  if (name === 'cmd' || name === 'cmd.exe') return 'cmd'
+  if (name.endsWith('.exe') || name === 'pwsh' || name === 'powershell') return 'powershell'
+  return 'posix'
+}
 
 const PLAIN = /^[A-Za-z0-9_\-.:\\/]+$/
 
 function quotePath(path: string, agent: TabAgent | undefined, shell: ShellKind): string {
   if (agent === 'shell') {
     if (PLAIN.test(path)) return path
-    return shell === 'cmd' ? `"${path}"` : `'${path.replace(/'/g, "''")}'`
+    if (shell === 'cmd') return `"${path}"`
+    if (shell === 'posix') return `'${path.replace(/'/g, "'\\''")}'`
+    return `'${path.replace(/'/g, "''")}'`
   }
   return /\s/.test(path) ? `"${path}"` : path
 }

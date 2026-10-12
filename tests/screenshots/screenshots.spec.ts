@@ -47,6 +47,7 @@ test('generates the README screenshots from fake projects only', async () => {
   writeHistory(sandbox, folder)
   const { app, page } = await launchApp(sandbox, { ...demoEnv(), DAWSHA_SHARED_HOME: join(sandbox.root, 'shared-home') })
   try {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     await resize(app)
     for (const project of PROJECTS) {
       const agent = project.defaultAgent[0].toUpperCase() + project.defaultAgent.slice(1)
@@ -75,7 +76,8 @@ test('generates the README screenshots from fake projects only', async () => {
     await page.keyboard.press('Escape')
     await expect(page.locator('.pane.maximized')).toHaveCount(0)
 
-    await page.locator('.agents-toggle').first().click()
+    await settle(page, 1200)
+    await page.locator('.agents-toggle').first().evaluate((button) => (button as HTMLButtonElement).click())
 
     await page.getByRole('button', { name: 'Skills', exact: true }).click()
     await expect(page.locator('.skill-row')).toHaveCount(3)
@@ -89,7 +91,7 @@ test('generates the README screenshots from fake projects only', async () => {
     await expect(page.locator('.agents-drawer:visible')).toHaveCount(1)
     await settle(page)
     await page.screenshot({ path: join(OUT, 'agents-drawer.png') })
-    await page.locator('.agents-toggle').first().click()
+    await page.locator('.agents-toggle').first().evaluate((button) => (button as HTMLButtonElement).click())
 
     await page.locator('#projects-button').click()
     await expect(page.locator('.projects-view')).toBeVisible()
@@ -98,6 +100,7 @@ test('generates the README screenshots from fake projects only', async () => {
     await page.locator('#projects-button').click()
 
     await page.keyboard.press('Control+Shift+R')
+    await page.getByLabel('Search all projects').check()
     await expect(page.locator('.rp-row')).toHaveCount(8, { timeout: 20_000 })
     await page.locator('.rp-row').first().hover()
     await settle(page, 800)
@@ -187,7 +190,7 @@ test('generates the update and what is new screenshots', async () => {
   ].join('\n')
   const script = JSON.stringify({
     check: 'available',
-    info: { version: '0.1.1', releaseDate: '2026-10-15T09:00:00.000Z', releaseNotes: notes }
+    info: { version: '0.3.1', releaseDate: '2026-10-15T09:00:00.000Z', releaseNotes: notes }
   })
   const sandbox = createSandbox()
   seed(sandbox, true)
@@ -203,7 +206,7 @@ test('generates the update and what is new screenshots', async () => {
       await page.getByRole('button', { name: `New Claude session in ${project.name}`, exact: true }).click()
     }
     await expect(page.locator('.pane')).toHaveCount(2)
-    await expect(page.locator('#update-pill')).toHaveText('Update 0.1.1')
+    await expect(page.locator('#update-pill')).toHaveText('Update 0.3.1')
     await page.locator('#update-pill').click()
     await expect(page.locator('.update-popover')).toBeVisible()
     await settle(page, 1500)

@@ -128,21 +128,18 @@ export class SidebarComponent {
   private projectRows(state: AppState, project: AppState['settings']['projects'][number], views: PaneView[]): HTMLElement[] {
     const own = views.filter((v) => v.pane.projectId === project.id)
     const collapsed = state.collapsedProjects[project.id] === true
-    const toggle = h(
-      'button',
-      {
-        class: 'proj-icon',
-        type: 'button',
-        'aria-label': `${collapsed ? 'Expand' : 'Collapse'} ${project.name}`,
-        'aria-expanded': own.length > 0 ? String(!collapsed) : undefined,
-        onClick: () => toggleProjectExpanded(project.id)
-      },
-      icon(ICONS.folder)
+    const folder = h('span', { class: 'proj-icon', 'aria-hidden': 'true' }, icon(ICONS.folder))
+    const sessionsToggle = iconButton(
+      `${collapsed ? 'Show' : 'Hide'} sessions for ${project.name}`,
+      collapsed ? ICONS.chevronRight : ICONS.chevronDown,
+      () => toggleProjectExpanded(project.id),
+      'proj-collapse'
     )
+    sessionsToggle.setAttribute('aria-expanded', String(!collapsed))
     const row = h(
       'div',
       { class: 'proj-row' },
-      toggle,
+      folder,
       h('button', { class: 'proj-name', type: 'button', title: project.folder, onClick: () => void startSession(project.id) }, project.name),
       h('span', { class: 'proj-count' }, own.length > 0 ? String(own.length) : ''),
       iconButton(
@@ -151,6 +148,7 @@ export class SidebarComponent {
         () => void startSession(project.id),
         'small'
       ),
+      sessionsToggle,
       this.agentMenuButton(project)
     )
     const rows: HTMLElement[] = [row, ...this.todayTotal(state, project.id)]

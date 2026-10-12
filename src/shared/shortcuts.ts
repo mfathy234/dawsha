@@ -15,6 +15,8 @@ export interface KeyEventLike {
 
 const NAMED_KEYS = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Space', 'Home', 'End']
 const FUNCTION_KEY = /^F([1-9]|1[0-2])$/i
+const runtimePlatform = (): string => typeof navigator === 'undefined' ? '' : navigator.platform
+const isMac = (platform = runtimePlatform()): boolean => platform.toLowerCase().includes('mac') || platform === 'darwin'
 
 function normalizeKey(raw: string): string | null {
   if (raw.length === 1) return /[a-z0-9]/i.test(raw) ? raw.toLowerCase() : null
@@ -30,7 +32,7 @@ export function parseShortcut(text: string): KeyBinding | null {
   const binding: KeyBinding = { key: '', ctrl: false, shift: false, alt: false }
   for (const part of parts) {
     const word = part.toLowerCase()
-    if (word === 'ctrl' || word === 'control') binding.ctrl = true
+    if (word === 'ctrl' || word === 'control' || word === 'cmd' || word === 'command' || word === 'meta') binding.ctrl = true
     else if (word === 'shift') binding.shift = true
     else if (word === 'alt') binding.alt = true
     else return null
@@ -40,15 +42,20 @@ export function parseShortcut(text: string): KeyBinding | null {
   return { ...binding, key }
 }
 
-export function formatShortcut(binding: KeyBinding): string {
+export function formatShortcut(binding: KeyBinding, platform = runtimePlatform()): string {
   const key = binding.key.length === 1 ? binding.key.toUpperCase() : binding.key
-  return [binding.ctrl && 'Ctrl', binding.shift && 'Shift', binding.alt && 'Alt', key].filter(Boolean).join('+')
+  return [binding.ctrl && (isMac(platform) ? 'Cmd' : 'Ctrl'), binding.shift && 'Shift', binding.alt && 'Alt', key].filter(Boolean).join('+')
 }
 
-export function matchesBinding(event: KeyEventLike, binding: KeyBinding): boolean {
-  if (event.metaKey) return false
-  if (event.ctrlKey !== binding.ctrl || event.shiftKey !== binding.shift || event.altKey !== binding.alt) return false
+export function matchesBinding(event: KeyEventLike, binding: KeyBinding, platform = runtimePlatform()): boolean {
+  const mac = isMac(platform)
+  const primary = mac ? event.metaKey : event.ctrlKey
+  if (primary !== binding.ctrl || (mac ? event.ctrlKey : event.metaKey) || event.shiftKey !== binding.shift || event.altKey !== binding.alt) return false
   return binding.key.length === 1 ? event.key.toLowerCase() === binding.key : event.key === binding.key
+}
+
+export function primaryModifierPressed(event: Pick<KeyEventLike, 'ctrlKey' | 'metaKey'>, platform = runtimePlatform()): boolean {
+  return isMac(platform) ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey
 }
 
 export const bind = (text: string): KeyBinding => {

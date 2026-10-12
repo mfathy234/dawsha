@@ -106,6 +106,12 @@ test('the usage view totals tokens and cost per day, project and agent from loca
     await expect(page.locator('.usage-notes')).toContainText('Codex and Gemini write token counts only')
     await page.screenshot({ path: join(SCREENS, '60-usage.png') })
 
+    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
+    await expect(page.locator('.usage-view')).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Sessions', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await page.getByRole('button', { name: 'Usage', exact: true }).click()
+    await expect(page.locator('.usage-view')).toBeVisible()
+
     await page.getByRole('radio', { name: 'Cost' }).click()
     await expect(page.locator(`.usage-col[data-bucket="${today}"]`)).toHaveAttribute('data-total', '4.25')
     await expect(page.locator(`.usage-col[data-bucket="${today}"] .usage-seg`)).toHaveCount(1)

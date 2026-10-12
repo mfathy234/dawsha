@@ -13,16 +13,19 @@ describe('pasteText', () => {
     expect(imagePasteText('gemini', 'C:\Temp\p.png')).toBe('@C:\Temp\p.png ')
     expect(imagePasteText('shell', 'C:\\My Temp\\p.png')).toBe("'C:\\My Temp\\p.png' ")
     expect(imagePasteText('shell', 'C:\\My Temp\\p.png', 'cmd')).toBe('"C:\\My Temp\\p.png" ')
+    expect(imagePasteText('shell', '/Users/me/My Temp/p.png', 'posix')).toBe("'/Users/me/My Temp/p.png' ")
     expect(pasteText({ kind: 'image', path: 'C:\\My Temp\\p.png' }, 'gemini')).toBe('@"C:\\My Temp\\p.png" ')
   })
 
   it('quotes shell characters in names so a shell tab never runs part of a file name', () => {
     expect(imagePasteText('shell', 'C:\\dl\\report;curl x|sh.pdf')).toBe("'C:\\dl\\report;curl x|sh.pdf' ")
     expect(imagePasteText('shell', "C:\\dl\\it's $(evil).txt")).toBe("'C:\\dl\\it''s $(evil).txt' ")
+    expect(imagePasteText('shell', "/Users/me/it's $(evil).txt", 'posix')).toBe("'/Users/me/it'\\''s $(evil).txt' ")
     expect(imagePasteText('shell', 'C:\\dl\\a&b.txt', 'cmd')).toBe('"C:\\dl\\a&b.txt" ')
     expect(imagePasteText('shell', 'C:\\work\\acme-web\\src\\app.ts')).toBe('C:\\work\\acme-web\\src\\app.ts ')
     expect(shellKindOf('C:\\Windows\\System32\\cmd.exe')).toBe('cmd')
     expect(shellKindOf('pwsh.exe')).toBe('powershell')
+    expect(shellKindOf('/bin/zsh')).toBe('posix')
   })
 })
 

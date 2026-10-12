@@ -32,7 +32,8 @@ describe('migrateSettings', () => {
       gemini: true
     })
     expect(migrateSettings({ fullAccess: [] }).fullAccess).toEqual({ claude: true, codex: true, gemini: false })
-    expect(migrateSettings({ paletteShortcut: 'ctrl+alt+p' }).paletteShortcut).toBe('Ctrl+Alt+P')
+    const primaryModifier = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
+    expect(migrateSettings({ paletteShortcut: 'ctrl+alt+p' }).paletteShortcut).toBe(`${primaryModifier}+Alt+P`)
     expect(migrateSettings({ paletteShortcut: 'P' }).paletteShortcut).toBe('Ctrl+K')
     expect(migrateSettings({ paletteShortcut: 42 }).paletteShortcut).toBe('Ctrl+K')
   })
