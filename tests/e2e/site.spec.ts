@@ -20,6 +20,7 @@ test('the Arabic page is readable without JavaScript and has Arabic share metada
   await expect(page.locator('.code .c').first()).toContainText('أضف هذا المجلد')
   await expect(page.locator('.hero-shot img')).toHaveJSProperty('complete', true)
   await expect(page.getByRole('link', { name: 'English' })).toHaveAttribute('href', '../index.html')
+  expect(await page.locator('a[href^="https://github.com/"]').evaluateAll(links => links.every(link => (link as HTMLAnchorElement).target === '_blank'))).toBe(true)
   await context.close()
 })
 
@@ -27,6 +28,7 @@ test('the site switches between Arabic RTL and English LTR with translated navig
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Every AI coding agent')
+  expect(await page.locator('a[href^="https://github.com/"]').evaluateAll(links => links.every(link => (link as HTMLAnchorElement).target === '_blank'))).toBe(true)
   await page.screenshot({ path: 'test-results/site-en.png' })
   await page.getByRole('link', { name: 'العربية' }).click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
