@@ -1,6 +1,6 @@
 import { AGENT_NAMES, agentOf } from '../../shared/agents'
 import { filterProjects } from '../../shared/quickPick'
-import { projectTodayLabel, projectTodayTooltip } from '../../shared/sessionCost'
+import { projectTodayLabel, projectTodayShort, projectTodayTooltip } from '../../shared/sessionCost'
 import type { AgentKind, Project } from '../../shared/types'
 import { closePane, focusPane, openResumePicker, removeKeptSession, showView, startSession, toggleProjectExpanded, toggleSidebar } from '../actions'
 import type { PaneView } from '../derive'
@@ -57,7 +57,7 @@ export class SidebarComponent {
       projects.map((p) => [p.id, p.name, p.defaultAgent]),
       state.collapsedProjects,
       projects.map((p) => projectTodayLabel(state.usage.projectsToday[p.id])),
-      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent]),
+      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent, v.attention]),
       state.settings.keptSessions
     ])
     if (signature === this.signature) return
@@ -128,35 +128,37 @@ export class SidebarComponent {
   private projectRows(state: AppState, project: AppState['settings']['projects'][number], views: PaneView[]): HTMLElement[] {
     const own = views.filter((v) => v.pane.projectId === project.id)
     const collapsed = state.collapsedProjects[project.id] === true
-    const folder = h('span', { class: 'proj-icon', 'aria-hidden': 'true' }, icon(ICONS.folder))
     const sessionsToggle = iconButton(
       `${collapsed ? 'Show' : 'Hide'} sessions for ${project.name}`,
       collapsed ? ICONS.chevronRight : ICONS.chevronDown,
       () => toggleProjectExpanded(project.id),
-      'proj-collapse'
+      'small proj-collapse'
     )
     sessionsToggle.setAttribute('aria-expanded', String(!collapsed))
     const row = h(
       'div',
       { class: 'proj-row' },
-      folder,
       h('button', { class: 'proj-name', type: 'button', title: project.folder, onClick: () => void startSession(project.id) }, project.name),
-      h('span', { class: 'proj-count' }, own.length > 0 ? String(own.length) : ''),
+      ...this.todayTotal(state, project.id),
       iconButton(
         `New ${AGENT_NAMES[agentOf(project)]} session in ${project.name}`,
         ICONS.plus,
         () => void startSession(project.id),
         'small'
       ),
-      sessionsToggle,
-      this.agentMenuButton(project)
+      this.agentMenuButton(project),
+      sessionsToggle
     )
-    const rows: HTMLElement[] = [row, ...this.todayTotal(state, project.id)]
-    if (collapsed) return rows
+    const rows: HTMLElement[] = [row]
+    if (collapsed) {
+      if (own.length > 0) rows.push(h('div', { class: 'proj-hidden' }, `${own.length} session${own.length === 1 ? '' : 's'} hidden`))
+      return rows
+    }
     for (const view of own) {
       const selected = view.pane.id === state.focusedId
+      const stateLabel = view.attention === 'needs' ? 'needs you' : view.attention === 'done' ? 'done' : view.status
       rows.push(
-        h('div', { class: 'kept-session-row' },
+        h('div', { class: `kept-session-row${selected ? ' selected' : ''}` },
         h(
           'button',
           {
@@ -167,9 +169,10 @@ export class SidebarComponent {
           },
           agentMark(view.agent),
           h('span', { class: 'sess-name' }, view.title),
-          h('span', { class: 'sess-status' }, ' · ', h('span', { class: view.status }, view.status))
+          h('span', { class: `sess-dot ${view.status}${view.attention === 'none' ? '' : ` ${view.attention}`}`, title: stateLabel, 'aria-hidden': 'true' }),
+          h('span', { class: 'sr-only' }, `, ${stateLabel}`)
         ),
-        iconButton(`Close ${view.title} in ${project.name}`, ICONS.close, () => void closePane(view.pane.id), 'small')
+        iconButton(`Close ${view.title} in ${project.name}`, ICONS.close, () => void closePane(view.pane.id), 'small sess-close')
         )
       )
     }
@@ -177,10 +180,10 @@ export class SidebarComponent {
     const kept = state.settings.keptSessions.filter((session) => session.projectId === project.id && !openKeys.has(`${session.agent}:${session.sessionId}`))
     if (kept.length > 0) rows.push(h('div', { class: 'sess-group-label' }, `Closed sessions (${kept.length})`))
     for (const session of kept) {
-      rows.push(h('div', { class: 'kept-session-row' },
+      rows.push(h('div', { class: 'kept-session-row closed' },
         h('button', { class: 'sess-row', type: 'button', title: `Resume ${session.title}`, onClick: () => void startSession(project.id, session.agent, session.sessionId, true, session.title) },
           agentMark(session.agent), h('span', { class: 'sess-name' }, session.title)),
-        iconButton(`Remove ${session.title} from ${project.name}`, ICONS.close, () => removeKeptSession(session.agent, session.sessionId), 'small')
+        iconButton(`Remove ${session.title} from ${project.name}`, ICONS.close, () => removeKeptSession(session.agent, session.sessionId), 'small sess-close')
       ))
     }
     return rows
@@ -188,14 +191,15 @@ export class SidebarComponent {
 
   private todayTotal(state: AppState, projectId: string): HTMLElement[] {
     const today = state.usage.projectsToday[projectId]
+    const short = projectTodayShort(today)
     const label = projectTodayLabel(today)
-    return label ? [h('div', { class: 'proj-today', title: projectTodayTooltip(today) }, label)] : []
+    return short && label ? [h('span', { class: 'proj-today', title: projectTodayTooltip(today), 'aria-label': label }, short)] : []
   }
 
   private menu: HTMLElement | null = null
 
   private agentMenuButton(project: AppState['settings']['projects'][number]): HTMLElement {
-    const button = iconButton(`Choose agent for ${project.name}`, ICONS.chevronDown, () => this.toggleMenu(button, project), 'small')
+    const button = iconButton(`Choose agent for ${project.name}`, ICONS.more, () => this.toggleMenu(button, project), 'small proj-agent-menu')
     button.setAttribute('aria-haspopup', 'menu')
     return button
   }

@@ -1,7 +1,7 @@
 {
   "name": "dawsha",
   "productName": "Dawsha",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "One window for all your AI coding agents: a grid of readable terminals for Claude Code, Codex CLI and Gemini CLI",
   "homepage": "https://dawsha.pages.dev/",
   "repository": {
@@ -17,11 +17,16 @@
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:private-remote": "node scripts/private-remote.mjs dev",
     "build": "tsc --noEmit -p tsconfig.json && electron-vite build",
+    "build:private-remote": "node scripts/private-remote.mjs build",
     "package": "npm run build && node scripts/release-notes.mjs --optional && electron-builder --config electron-builder.yml -c.releaseInfo.releaseNotesFile=release-notes.md",
+    "package:private-remote": "node scripts/private-remote.mjs package",
+    "package:private-remote:inner": "npm run build && node scripts/release-notes.mjs --optional && electron-builder --config electron-builder.private-remote.yml -c.releaseInfo.releaseNotesFile=release-notes.md",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "electron-vite build && playwright test",
+    "test:e2e:private-remote": "node scripts/private-remote.mjs e2e",
     "icons": "node scripts/make-icons.mjs",
     "screenshots": "electron-vite build && playwright test -c playwright.screenshots.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
@@ -29,16 +34,20 @@
   "dependencies": {
     "@xterm/addon-fit": "0.11.0",
     "@xterm/addon-search": "0.16.0",
+    "@xterm/addon-serialize": "0.14.0",
     "@xterm/addon-web-links": "0.12.0",
     "@xterm/addon-webgl": "0.19.0",
+    "@xterm/headless": "6.0.0",
     "@xterm/xterm": "6.0.0",
     "electron-updater": "6.8.9",
-    "node-pty": "1.1.0"
+    "node-pty": "1.1.0",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",
     "@resvg/resvg-js": "2.6.2",
     "@types/node": "24.10.1",
+    "@types/ws": "^8.18.2",
     "electron": "44.7.0",
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",

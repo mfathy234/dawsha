@@ -43,7 +43,7 @@ test('compact header keeps New session, zoom, Settings and Theme usable at 960px
   try {
     await page.setViewportSize({ width: 960, height: 600 })
     const newSession = page.getByRole('button', { name: 'New session, Ctrl+N' })
-    await expect(newSession).toHaveText('New session')
+    await expect(newSession).toContainText('New session')
     for (const name of ['Decrease font size', 'Increase font size', 'Settings', 'Theme']) {
       await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
     }

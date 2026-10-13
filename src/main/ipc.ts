@@ -47,6 +47,8 @@ import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
+import type { RemoteAccessSettings } from '../shared/types'
+import type { createRemoteAccessController } from './remoteAccessController'
 
 function checkFolder(path: string): FolderCheck {
   if (typeof path !== 'string' || path.trim() === '') return { ok: false, error: 'Enter a folder.' }
@@ -74,7 +76,8 @@ export function registerIpc(
   status: StatusWatcher,
   ops: OpsWatcher,
   usage: UsageService,
-  initialWarning: string | null
+  initialWarning: string | null,
+  remoteAccess?: ReturnType<typeof createRemoteAccessController>
 ): void {
   const locations = (): BridgeLocations => ({
     settingsPath: claudeSettingsPath(),
@@ -95,6 +98,15 @@ export function registerIpc(
     return result
   })
   ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => settings.update(patch))
+  if (remoteAccess) {
+    ipcMain.handle(IPC.remoteAccessGet, () => remoteAccess.getState())
+    ipcMain.handle(IPC.remoteAccessEnable, () => remoteAccess.enable())
+    ipcMain.handle(IPC.remoteAccessDisable, () => remoteAccess.disable())
+    ipcMain.handle(IPC.remoteAccessPairing, () => remoteAccess.refreshPairing())
+    ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: Partial<RemoteAccessSettings>) => remoteAccess.setPermissions(patch))
+    ipcMain.handle(IPC.remoteAccessEmail, (_event, email: string) => remoteAccess.setAllowedEmail(email))
+    ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteAccess.revoke(id))
+  }
   ipcMain.handle(IPC.paneonImportPreview, () => previewPaneonImport(paneonUserDataDir(), app.getPath('userData')))
   ipcMain.handle(IPC.paneonImportQueue, () => queuePaneonImport(paneonUserDataDir(), app.getPath('userData')))
   ipcMain.handle(IPC.checkFolder, (_event, path: string) => checkFolder(path))

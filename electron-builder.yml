@@ -4,6 +4,7 @@ directories:
   output: release
 files:
   - out/**
+  - '!out/renderer-private/**'
   - package.json
   - build/icon.png
 extraResources:

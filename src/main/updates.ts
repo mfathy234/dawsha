@@ -13,6 +13,7 @@ export interface UpdatesOptions {
   send: (channel: string, ...args: unknown[]) => void
   shutdown: () => Promise<void>
   markQuitting: () => void
+  autoUpdates?: boolean
 }
 
 function numberFromEnv(name: string, fallback: number): number {
@@ -22,7 +23,9 @@ function numberFromEnv(name: string, fallback: number): number {
 
 export function setupUpdates(options: UpdatesOptions): UpdateController {
   const fake = process.env.DAWSHA_TEST_UPDATER === 'fake'
-  const mode = detectUpdateMode({ packaged: app.isPackaged, portableDir: process.env.PORTABLE_EXECUTABLE_DIR, fake })
+  const mode = options.autoUpdates === false
+    ? 'dev'
+    : detectUpdateMode({ packaged: app.isPackaged, portableDir: process.env.PORTABLE_EXECUTABLE_DIR, fake })
   const backend = mode === 'dev' ? createInertBackend() : fake ? createFakeBackend() : createGithubBackend()
   const controller = new UpdateController({
     backend,

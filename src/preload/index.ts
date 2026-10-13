@@ -1,9 +1,10 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
+import { isRemoteControlBuild } from '../shared/remoteBuild'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { UpdateState } from '../shared/updates'
-import type { CodexSession, GeminiSession, SessionFile, StatusInfo } from '../shared/types'
+import type { CodexSession, GeminiSession, SessionFile, StatusInfo, RemoteSessionStarted } from '../shared/types'
 
 function subscribe<T extends unknown[]>(channel: string, listener: (...args: T) => void): () => void {
   const handler = (_event: Electron.IpcRendererEvent, ...args: unknown[]): void => listener(...(args as T))
@@ -12,6 +13,17 @@ function subscribe<T extends unknown[]>(channel: string, listener: (...args: T) 
 }
 
 const api: GridApi = {
+  ...(isRemoteControlBuild ? {
+    remoteAccess: {
+      getState: () => ipcRenderer.invoke(IPC.remoteAccessGet),
+      enable: () => ipcRenderer.invoke(IPC.remoteAccessEnable),
+      disable: () => ipcRenderer.invoke(IPC.remoteAccessDisable),
+      refreshPairing: () => ipcRenderer.invoke(IPC.remoteAccessPairing),
+      setPermissions: (patch) => ipcRenderer.invoke(IPC.remoteAccessPermissions, patch),
+      setAllowedEmail: (email) => ipcRenderer.invoke(IPC.remoteAccessEmail, email),
+      revokeDevice: (id) => ipcRenderer.invoke(IPC.remoteAccessRevoke, id)
+    }
+  } : {}),
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   updateSettings: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
   paneonImportPreview: () => ipcRenderer.invoke(IPC.paneonImportPreview),
@@ -63,6 +75,7 @@ const api: GridApi = {
   kill: (id) => ipcRenderer.invoke(IPC.ptyKill, id),
   onData: (listener) => subscribe<[string, string]>(IPC.ptyData, listener),
   onExit: (listener) => subscribe<[string, number]>(IPC.ptyExit, listener),
+  onRemoteSessionStarted: (listener) => subscribe<[RemoteSessionStarted]>(IPC.remoteSessionStarted, listener),
   listProcessActivity: () => ipcRenderer.invoke(IPC.processActivityList),
   listSkills: () => ipcRenderer.invoke(IPC.skillsList),
   openSkill: (id) => ipcRenderer.invoke(IPC.skillsOpen, id),

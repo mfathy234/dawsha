@@ -118,6 +118,8 @@ export interface Settings {
   projects: Project[]
   theme: ThemeSettings
   sidebarCollapsed: boolean
+  sidebarWidth: number
+  othersCollapsed: boolean
   sessionInfo: SessionInfoSettings
   onboardingDismissed: boolean
   workspace: Workspace
@@ -129,10 +131,34 @@ export interface Settings {
   autoUpdateCheck: boolean
   paletteShortcut: string
   fullAccess: FullAccess
+  remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
 }
 
 export type FullAccess = Record<AgentKind, boolean>
+
+export interface RemoteAccessSettings {
+  allowedEmail: string
+  terminalInput: boolean
+  sessionControl: boolean
+}
+
+export interface RemoteAccessDevice {
+  id: string
+  name: string
+  pairedAt: number
+  lastSeenAt: number
+}
+
+export interface RemoteAccessState {
+  status: 'off' | 'setup-required' | 'available'
+  enabled: boolean
+  url: string | null
+  message: string
+  devices: RemoteAccessDevice[]
+  pairing: { code: string; expiresAt: number } | null
+  permissions: RemoteAccessSettings
+}
 
 export interface SettingsLoadResult {
   settings: Settings
@@ -253,6 +279,7 @@ export interface NotifyRequest {
 
 export interface SpawnRequest {
   id: string
+  projectId?: string
   agent: TabAgent
   cwd: string
   resume: boolean
@@ -262,6 +289,16 @@ export interface SpawnRequest {
   command?: string
   prompt?: string
   fullAccess?: boolean
+  desktopVisible?: boolean
+  remoteManaged?: boolean
+}
+
+export interface RemoteSessionStarted {
+  id: string
+  projectId: string
+  agent: AgentKind
+  pid: number
+  sessionId?: string
 }
 
 export type SpawnResult = { ok: true; pid: number } | { ok: false; error: string }

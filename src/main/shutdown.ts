@@ -5,10 +5,11 @@ export const KILL_TIMEOUT_MS = 2000
 export const STORAGE_TIMEOUT_MS = 1000
 export const HARD_DEADLINE_MS = 8000
 export const WATCHDOG_GRACE_MS = 500
+export const STOP_SERVICES_TIMEOUT_MS = 2500
 
 export interface ShutdownDeps {
   log: QuitLog
-  stopServices(): void
+  stopServices(): void | Promise<void>
   flushRenderer(): Promise<void>
   terminateAll(timeoutMs: number): Promise<void>
   flushStorage(): Promise<void>
@@ -42,11 +43,13 @@ async function phase(deps: ShutdownDeps, name: string, work: () => Promise<void>
 }
 
 export async function runPhases(deps: ShutdownDeps): Promise<void> {
-  try {
-    deps.stopServices()
-  } catch (error) {
-    deps.log(`stop services failed: ${(error as Error).message}`)
-  }
+  const stopResult = await bounded(async () => {
+    try { await deps.stopServices() } catch (error) {
+      deps.log(`stop services failed: ${(error as Error).message}`)
+      throw error
+    }
+  }, STOP_SERVICES_TIMEOUT_MS)
+  deps.log(`stop services ${stopResult}`)
   await phase(deps, 'flush', deps.flushRenderer, deps.flushTimeoutMs ?? FLUSH_TIMEOUT_MS)
   const kill = deps.killTimeoutMs ?? KILL_TIMEOUT_MS
   await phase(deps, 'terminateAll', () => deps.terminateAll(kill), kill + 500)

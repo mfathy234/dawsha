@@ -66,6 +66,18 @@ test('generates the README screenshots from fake projects only', async () => {
     await settle(page, 2500)
     await page.screenshot({ path: join(OUT, 'grid.png') })
 
+    await page.keyboard.press('Control+n')
+    await expect(page.locator('.new-dialog')).toBeVisible()
+    // The demo agents are Node scripts, so their --version is Node's. Show agent-like versions instead.
+    await page.locator('.nd-agent-version').evaluateAll((nodes) => {
+      const versions = ['v2.4.1', 'v0.61.0', 'v0.19.2']
+      nodes.forEach((node, index) => (node.textContent = versions[index] ?? node.textContent))
+    })
+    await settle(page, 600)
+    await page.screenshot({ path: join(OUT, 'new-session.png') })
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.new-dialog')).toHaveCount(0)
+
     const first = page.locator('.pane').first()
     await first.getByRole('button', { name: 'Maximize pane' }).click()
     await page.locator('.pane-info').first().click({ position: { x: 4, y: 10 } })

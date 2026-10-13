@@ -23,6 +23,13 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ onboardingDismissed: true }).onboardingDismissed).toBe(true)
   })
 
+  it('clamps the persisted project panel width and supplies a default', () => {
+    expect(migrateSettings({}).sidebarWidth).toBe(248)
+    expect(migrateSettings({ sidebarWidth: 150 }).sidebarWidth).toBe(208)
+    expect(migrateSettings({ sidebarWidth: 999 }).sidebarWidth).toBe(420)
+    expect(migrateSettings({ sidebarWidth: 'wide' }).sidebarWidth).toBe(248)
+  })
+
   it('keeps a valid palette shortcut in a normal form and falls back to Ctrl+K otherwise', () => {
     expect(migrateSettings({}).paletteShortcut).toBe('Ctrl+K')
     expect(migrateSettings({}).fullAccess).toEqual({ claude: true, codex: true, gemini: false })
@@ -36,6 +43,11 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ paletteShortcut: 'ctrl+alt+p' }).paletteShortcut).toBe(`${primaryModifier}+Alt+P`)
     expect(migrateSettings({ paletteShortcut: 'P' }).paletteShortcut).toBe('Ctrl+K')
     expect(migrateSettings({ paletteShortcut: 42 }).paletteShortcut).toBe('Ctrl+K')
+  })
+
+  it('defaults private remote permissions off and sanitizes them independently', () => {
+    expect(defaultSettings().remoteAccess).toEqual({ allowedEmail: '', terminalInput: false, sessionControl: false })
+    expect(migrateSettings({ remoteAccess: { terminalInput: true, sessionControl: 'yes' } }).remoteAccess).toEqual({ allowedEmail: '', terminalInput: true, sessionControl: false })
   })
 
   it('returns defaults for junk input', () => {

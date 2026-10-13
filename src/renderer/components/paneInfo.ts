@@ -1,11 +1,12 @@
 import { formatChanges } from '../../shared/gitChanges'
-import { formatAge, formatCost, formatPercent, gauge, gaugeStage } from '../../shared/statusLine'
+import { formatAge, formatCost, formatPercent, gaugeStage } from '../../shared/statusLine'
 import { formatTokens } from '../../shared/usage'
 import { formatResets, modelLetter } from '../../shared/opsFeed'
 import { contextLevel } from '../../shared/contextWarning'
 import type { PaneInfo } from '../derive'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
+import { chargeBar } from './chargeBar'
 
 export interface StripHandlers {
   title: string
@@ -61,7 +62,8 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
         h('span', { class: 'info-label' }, 'ctx '),
         h('span',
           { class: `info-gauge stage-${gaugeStage(info.contextPercent)} ctx-${contextLevel(info.contextPercent)}`, title: 'Context window used' },
-          `${gauge(info.contextPercent)} ${formatPercent(info.contextPercent)}`
+          chargeBar(info.contextPercent),
+          formatPercent(info.contextPercent)
         )
       )
     )
@@ -76,7 +78,9 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
         class: `info-limit${window ? ` stage-${gaugeStage(window.percent)}` : ' unavailable'}`,
         'data-pane-limit': key,
         title: window ? `${label}: ${formatPercent(window.percent)} used${reset ? `, ${reset}` : ', reset time unavailable'}` : `Waiting for Claude Code to report the ${label} limit`
-      }, window ? `${label} ${formatPercent(window.percent)}${reset ? ` · ${reset}` : ''}` : `${label} waiting`))
+      }, ...(window
+        ? [`${label} `, chargeBar(window.percent), formatPercent(window.percent), ...(reset ? [h('span', { class: 'info-reset' }, ` · ${reset}`)] : [])]
+        : [`${label} waiting`])))
     }
   }
   if (info.elapsed !== null) items.push(h('span', { class: 'info-elapsed', title: 'Session time' }, info.elapsed))
@@ -90,7 +94,7 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
             h('span', { class: 'add' }, `+${info.changes.added}`),
             ' ',
             h('span', { class: 'del' }, `−${info.changes.removed}`),
-            ` · ${info.changes.files} file${info.changes.files === 1 ? '' : 's'}`
+            h('span', { class: 'info-files' }, ` · ${info.changes.files} file${info.changes.files === 1 ? '' : 's'}`)
           ]
     items.push(
       h(

@@ -10,9 +10,7 @@ import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
 import { registerFileLinks, type FileLinkHost } from './terminalLinks'
 import { TerminalSearch } from './terminalSearch'
 import type { ThemeBundle } from './themeManager'
-
-export const TERMINAL_FONT =
-  '"JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Mono", Consolas, monospace'
+import { TERMINAL_FONT } from './terminalFont'
 
 const SHIFT_ENTER = '\x1b\r'
 

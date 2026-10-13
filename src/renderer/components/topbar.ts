@@ -17,7 +17,8 @@ import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
 import { countSessions, type PaneView } from '../derive'
 import { toolState } from '../../shared/agentTools'
-import { formatPercent, gauge, gaugeStage } from '../../shared/statusLine'
+import { formatPercent, gaugeStage } from '../../shared/statusLine'
+import { chargeBar } from './chargeBar'
 import type { RateLimitWindow } from '../../shared/types'
 import { h, icon } from '../dom'
 import type { AppState } from '../state'
@@ -36,7 +37,8 @@ export class TopBarComponent {
       onClick: () => openQuickPick()
     },
     h('span', { class: 'new-session-icon', 'aria-hidden': 'true' }, icon(ICONS.plus)),
-    h('span', { class: 'new-session-label' }, 'New session')
+    h('span', { class: 'new-session-label' }, 'New session'),
+    h('span', { class: 'new-session-kbd', 'aria-hidden': 'true' }, formatShortcut(bind('Ctrl+N')))
   )
   private readonly chevron = h(
     'button',
@@ -54,7 +56,7 @@ export class TopBarComponent {
   private agentMenu: HTMLElement | null = null
   readonly themeButton = h(
     'button',
-    { class: 'btn ghost topbar-tool', type: 'button', id: 'theme-button', 'aria-label': 'Theme', 'aria-haspopup': 'dialog', onClick: () => toggleThemePicker() },
+    { class: 'btn ghost topbar-tool', type: 'button', id: 'theme-button', 'aria-label': 'Theme', title: 'Theme', 'aria-haspopup': 'dialog', onClick: () => toggleThemePicker() },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.palette)),
     h('span', { class: 'utility-label' }, 'Theme')
   )
@@ -69,11 +71,12 @@ export class TopBarComponent {
     'Layouts'
   )
   private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
-  private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings' },
+  private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings', title: 'Settings' },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
     h('span', { class: 'utility-label' }, 'Settings')
   )
   private readonly count = h('span', { class: 'topbar-count', 'aria-live': 'polite' })
+  private readonly zoomValue = h('span', { class: 'zoom-value', title: 'Terminal text size of the focused pane' }, '15px')
   readonly updatePill = h('button', {
     class: 'update-pill',
     type: 'button',
@@ -124,11 +127,12 @@ export class TopBarComponent {
       this.limits,
       h('div', { class: 'topbar-tools' },
         h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', onClick: () => zoomAll(-1) }, 'A−'),
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', onClick: () => zoomAll(1) }, 'A+')
+          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: 'Smaller text', onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
+          this.zoomValue,
+          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: 'Larger text', onClick: () => zoomAll(1) }, icon(ICONS.plus))
         ),
-        this.settings,
-        this.themeButton
+        this.themeButton,
+        this.settings
       )
     )
   }
@@ -146,6 +150,8 @@ export class TopBarComponent {
     this.agentsDot.hidden = !updates
     this.agents.setAttribute('aria-label', updates ? 'Agents, updates available' : 'Agents')
     this.updatePillState(state)
+    const focused = state.panes.find((pane) => pane.id === state.focusedId) ?? state.panes[0]
+    this.zoomValue.textContent = focused ? `${focused.fontSize}px` : '15px'
     this.themeButton.setAttribute('aria-expanded', String(state.themePickerOpen))
     this.layoutsButton.setAttribute('aria-expanded', String(state.layoutsOpen))
     this.count.replaceChildren(
@@ -284,6 +290,8 @@ function limitItem(window: RateLimitWindow): HTMLElement {
     'span',
     { class: `limit stage-${gaugeStage(window.percent)}`, title: resetText(window), 'data-limit': window.key },
     h('span', { class: `limit-label${window.family ? ` fam-${window.family}` : ''}` }, window.label),
-    ` ${gauge(window.percent)} ${formatPercent(window.percent)}`
+    ' ',
+    chargeBar(window.percent),
+    formatPercent(window.percent)
   )
 }

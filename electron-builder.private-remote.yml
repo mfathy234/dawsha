@@ -1,0 +1,19 @@
+extends: ./electron-builder.yml
+appId: io.github.mfathy234.dawsha.private-remote
+productName: Dawsha Remote (Private)
+publish: []
+files:
+  - out/**
+  - out/renderer-private/**
+  - package.json
+  - build/icon.png
+win:
+  artifactName: Dawsha-Remote-Private-Setup-${version}.${ext}
+nsis:
+  artifactName: Dawsha-Remote-Private-Setup-${version}.${ext}
+portable:
+  artifactName: Dawsha-Remote-Private-Portable-${version}.${ext}
+mac:
+  artifactName: Dawsha-Remote-Private-${version}-mac-${arch}.${ext}
+linux:
+  artifactName: Dawsha-Remote-Private-${version}-linux-${arch}.${ext}
