@@ -22,6 +22,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Refresh the Remote Access copy URL and copy code controls.
 - Redesign the pane header: the title in normal case with its project and a status pill, and a status bar at the bottom with the model, usage bars, changes and branch.
 
+### Fixed
+
+- Make the `dawsha` command work on macOS and Linux: it now talks to the app over a Unix socket and ships in the macOS and Linux packages.
+
 ## [0.4.1] - 2026-10-12
 
 ### Fixed

@@ -113,6 +113,7 @@ Dawsha only reads the agents' own folders. It never writes to `~/.codex` or `~/.
 Requirements: Windows 10 or 11 (x64), or Apple Silicon Mac running macOS 13 Ventura or newer. Node.js 20+ is only needed for installing Codex and Gemini through the Agents view.
 
 The Windows installer also puts the `dawsha` command on your user PATH and removes it again on uninstall. The portable build does not touch your PATH. The Mac `.dmg` installs the app bundle in Applications.
+On macOS and Linux, link the bundled `dawsha` command onto your PATH once: `ln -s /Applications/Dawsha.app/Contents/Resources/dawsha /usr/local/bin/dawsha` on a Mac, or `ln -s /opt/Dawsha/resources/dawsha ~/.local/bin/dawsha` for the Linux `.deb`.
 
 ## Updates
 

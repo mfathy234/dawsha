@@ -1,13 +1,17 @@
+import { existsSync, unlinkSync } from 'node:fs'
 import { createServer, type Server } from 'node:net'
-import { userInfo } from 'node:os'
+import { tmpdir, userInfo } from 'node:os'
+import { join } from 'node:path'
 import type { CliReply, CliRequest } from '../shared/cli'
 
 const MAX_REQUEST_BYTES = 64 * 1024
 
 export function pipePath(): string {
   if (process.env.DAWSHA_PIPE) return process.env.DAWSHA_PIPE
-  const user = (process.env.USERNAME || userInfo().username || 'user').replace(/[^A-Za-z0-9_.-]/g, '_')
-  return `\\\\.\\pipe\\dawsha-${user}`
+  const user = (process.env.USERNAME || process.env.USER || userInfo().username || 'user').replace(/[^A-Za-z0-9_.-]/g, '_')
+  if (process.platform === 'win32') return `\\\\.\\pipe\\dawsha-${user}`
+  // A Unix socket outside Windows. Keep it short: macOS caps socket paths near 104 bytes.
+  return join(process.env.XDG_RUNTIME_DIR || tmpdir(), `dawsha-${user}.sock`)
 }
 
 export function isCliRequest(value: unknown): value is CliRequest {
@@ -51,6 +55,10 @@ export function startCliServer(run: (request: CliRequest) => Promise<CliReply>, 
     })
   })
   server.on('error', () => undefined)
+  // Only one Dawsha runs at a time (single-instance lock), so a socket file left here is from a crash.
+  if (process.platform !== 'win32' && existsSync(path)) {
+    try { unlinkSync(path) } catch { /* listen reports the failure */ }
+  }
   server.listen(path)
   return server
 }

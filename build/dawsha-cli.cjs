@@ -2,6 +2,7 @@
 
 const net = require('node:net')
 const os = require('node:os')
+const path = require('node:path')
 const { spawn } = require('node:child_process')
 
 const START_WAIT_MS = 30000
@@ -9,8 +10,9 @@ const RETRY_MS = 250
 
 function pipePath() {
   if (process.env.DAWSHA_PIPE) return process.env.DAWSHA_PIPE
-  const user = (process.env.USERNAME || os.userInfo().username || 'user').replace(/[^A-Za-z0-9_.-]/g, '_')
-  return '\\\\.\\pipe\\dawsha-' + user
+  const user = (process.env.USERNAME || process.env.USER || os.userInfo().username || 'user').replace(/[^A-Za-z0-9_.-]/g, '_')
+  if (process.platform === 'win32') return '\\\\.\\pipe\\dawsha-' + user
+  return path.join(process.env.XDG_RUNTIME_DIR || os.tmpdir(), 'dawsha-' + user + '.sock')
 }
 
 function send(request) {

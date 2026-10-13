@@ -59,7 +59,9 @@ export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
     opsDir: join(root, 'ops'),
     notifyLog: join(root, 'notify.log'),
     quitLog: join(root, 'quit.log'),
-    pipe: String.raw`\\.\pipe\dawsha-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+    pipe: process.platform === 'win32'
+      ? String.raw`\\.\pipe\dawsha-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+      : join(tmpdir(), `dawsha-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.sock`)
   }
 }
 
