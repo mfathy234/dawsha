@@ -1,4 +1,5 @@
 import { focusPane, openQuickPick, setSplits, showView } from '../actions'
+import { OthersPanelComponent } from './othersPanel'
 import { derivePanes, type PaneView } from '../derive'
 import { clear, h } from '../dom'
 import { pairOf } from '../../shared/compare'
@@ -42,6 +43,8 @@ export class GridComponent {
   private readonly grid = h('div', { class: 'grid' })
   private readonly strip = h('div', { class: 'pane-strip', role: 'tablist', 'aria-label': 'Sessions' })
   private readonly empty = h('div', { class: 'empty' })
+  private readonly others = new OthersPanelComponent()
+  private readonly stage = h('div', { class: 'grid-stage' }, this.grid, this.others.el)
   private readonly bg = h('div', { class: 'bg-layer', 'aria-hidden': 'true' })
   private readonly gutters = new GridGutters((axis, sizes) => this.resize(axis, sizes))
   private shape = { cols: 1, rows: 1 }
@@ -50,7 +53,7 @@ export class GridComponent {
   private splits: GridSplits = {}
 
   constructor() {
-    this.el = h('div', { class: 'grid-area' }, this.bg, this.strip, this.grid, this.gutters.el, this.empty)
+    this.el = h('div', { class: 'grid-area' }, this.bg, this.strip, this.stage, this.gutters.el, this.empty)
     new ResizeObserver(() => this.gutters.position()).observe(this.grid)
   }
 
@@ -60,6 +63,9 @@ export class GridComponent {
 
   update(state: AppState): void {
     const views = derivePanes(state)
+    // Unhide before panes mount so terminals measure a visible grid. When empty, a visible grid
+    // would take half the height and push the empty-state message below center.
+    this.stage.hidden = views.length === 0
     const units = unitsOf(views)
     this.syncPanes(views)
     const elements = this.syncUnits(units)
@@ -71,6 +77,8 @@ export class GridComponent {
       this.panes.get(view.pane.id)?.update(view, view.pane.id === state.focusedId, isMax)
     }
     this.updateStrip(views, state, maximized)
+    const visible = new Set(views.filter((view) => this.panes.get(view.pane.id)?.el.hidden === false).map((view) => view.pane.id))
+    this.others.update(state, views, visible, maximized)
     this.updateEmpty(state, views.length)
     this.restoreFocus(state)
   }

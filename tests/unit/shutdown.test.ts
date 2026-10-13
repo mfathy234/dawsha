@@ -44,6 +44,18 @@ describe('shutdown', () => {
     expect(deps.lines).toContain('terminateAll done')
   })
 
+  it('awaits async service cleanup before flushing renderer state', async () => {
+    let completeStop: (() => void) | undefined
+    const deps = makeDeps({ stopServices: () => new Promise<void>((resolve) => { completeStop = resolve }) })
+    const quit = runQuit(deps)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(deps.calls).toEqual([])
+    completeStop?.()
+    await vi.advanceTimersByTimeAsync(0)
+    await quit
+    expect(deps.calls).toEqual(['flush', 'terminate', 'storage', 'finish'])
+  })
+
   it('moves on when the renderer never answers the flush', async () => {
     const deps = makeDeps({ flushRenderer: never })
     const quit = runQuit(deps)

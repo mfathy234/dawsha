@@ -27,6 +27,8 @@
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
 - **Find work across sessions.** Search prompts and replies in the Resume picker. Leave **Search all projects** unchecked to search one project, or check it to search every project.
 - **Keep closed sessions in Projects.** Closing a pane keeps its resumable sessions under that project in the left sidebar. Resume one there or use its Remove button to clear it from Dawsha's list; the agent transcript stays on disk. Open sessions also have a Close button in the sidebar.
+- **Remote Control (Beta).** Enable Remote Access in Settings to pair your own browser with this running Dawsha installation. The app creates a temporary Cloudflare Quick Tunnel; remote input and session control are separate opt-in permissions, and paired browsers can be revoked at any time.
+- **Resize the Projects panel.** Drag its edge or focus the divider and use the arrow keys; Dawsha remembers the width between launches.
 - **Task history.** The Projects > Tasks tab groups related sessions, a task goal, notes and commit references in a dated history that remains after sessions close.
 - **Gemini tool activity.** Gemini panes show the latest tool from the agent's saved chat, with recent tool calls in the activity drawer when available.
 - **A command palette.** **Ctrl+K** searches your open sessions, actions, projects, snippets and layouts in one list and runs what you pick from the keyboard.
@@ -111,6 +113,7 @@ Dawsha only reads the agents' own folders. It never writes to `~/.codex` or `~/.
 Requirements: Windows 10 or 11 (x64), or Apple Silicon Mac running macOS 13 Ventura or newer. Node.js 20+ is only needed for installing Codex and Gemini through the Agents view.
 
 The Windows installer also puts the `dawsha` command on your user PATH and removes it again on uninstall. The portable build does not touch your PATH. The Mac `.dmg` installs the app bundle in Applications.
+On macOS and Linux, link the bundled `dawsha` command onto your PATH once: `ln -s /Applications/Dawsha.app/Contents/Resources/dawsha /usr/local/bin/dawsha` on a Mac, or `ln -s /opt/Dawsha/resources/dawsha ~/.local/bin/dawsha` for the Linux `.deb`.
 
 ## Updates
 

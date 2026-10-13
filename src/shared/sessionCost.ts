@@ -103,6 +103,13 @@ export function projectTodayLabel(today: ProjectToday | undefined): string | nul
   return parts.length === 0 ? null : `today ${parts.join(' · ')}`
 }
 
+// The single figure shown on a project row: today's cost when known, otherwise its tokens.
+export function projectTodayShort(today: ProjectToday | undefined): string | null {
+  if (!today) return null
+  if ((today.costUsd ?? 0) > 0) return formatUsd(today.costUsd as number)
+  return today.tokens > 0 ? formatTokens(today.tokens) : null
+}
+
 export function projectTodayTooltip(today: ProjectToday | undefined): string {
   if (!today) return ''
   const lines = AGENTS.flatMap((agent) => {

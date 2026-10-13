@@ -1,0 +1,225 @@
+import { createHash } from 'node:crypto'
+import { execFile as nodeExecFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { access, chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { delimiter, join } from 'node:path'
+
+const RELEASE_API = 'https://api.github.com/repos/cloudflare/cloudflared/releases/latest'
+const MAX_METADATA_BYTES = 1024 * 1024
+const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024
+const MAX_EXTRACTED_BYTES = 150 * 1024 * 1024
+const REQUEST_TIMEOUT_MS = 20_000
+const INSTALL_TIMEOUT_MS = 90_000
+const EXTRACT_TIMEOUT_MS = 15_000
+const ALLOWED_ASSET_HOSTS = new Set(['github.com', 'release-assets.githubusercontent.com', 'objects.githubusercontent.com'])
+const execFile = promisify(nodeExecFile)
+
+type Platform = 'win32' | 'darwin' | 'linux'
+type Fetcher = (url: string, init?: RequestInit) => Promise<Response>
+
+interface InstallerOptions {
+  userDataDir: string
+  platform?: NodeJS.Platform
+  arch?: string
+  env?: NodeJS.ProcessEnv
+  fetch?: Fetcher
+  probe?: (executable: string) => Promise<boolean>
+  extractArchive?: (archive: string, output: string) => Promise<void>
+  requestTimeoutMs?: number
+  installTimeoutMs?: number
+}
+
+interface ReleaseAsset { name: string; digest: string; browser_download_url: string }
+interface Release { tag_name: string; assets: ReleaseAsset[] }
+interface TimedResponse { response: Response; dispose(): void; timedOut(): boolean }
+
+async function fetchTimed(fetcher: Fetcher, url: string, init: RequestInit, deadline: number, timeoutMs: number): Promise<TimedResponse> {
+  const remaining = deadline - Date.now()
+  if (remaining <= 0) throw new Error('Cloudflare Tunnel setup timed out.')
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), Math.min(timeoutMs, remaining))
+  try {
+    const response = await fetcher(url, { ...init, signal: controller.signal })
+    return { response, dispose: () => clearTimeout(timeout), timedOut: () => controller.signal.aborted }
+  } catch (error) {
+    clearTimeout(timeout)
+    if (controller.signal.aborted) throw new Error('Cloudflare release request timed out.')
+    throw error
+  }
+}
+
+function targetFor(platform: NodeJS.Platform, arch: string): { asset: string; executable: string; archive: boolean } {
+  const normalized = platform as Platform
+  if (normalized === 'win32' && arch === 'x64') return { asset: 'cloudflared-windows-amd64.exe', executable: 'cloudflared.exe', archive: false }
+  if (normalized === 'darwin' && arch === 'x64') return { asset: 'cloudflared-darwin-amd64.tgz', executable: 'cloudflared', archive: true }
+  if (normalized === 'darwin' && arch === 'arm64') return { asset: 'cloudflared-darwin-arm64.tgz', executable: 'cloudflared', archive: true }
+  if (normalized === 'linux' && (arch === 'x64' || arch === 'arm64')) return { asset: `cloudflared-linux-${arch === 'x64' ? 'amd64' : 'arm64'}`, executable: 'cloudflared', archive: false }
+  throw new Error(`Cloudflare Tunnel does not support automatic installation for ${platform}/${arch}.`)
+}
+
+async function readBounded(response: Response, limit: number, label: string): Promise<Buffer> {
+  if (!response.ok) throw new Error(`${label} request failed with HTTP ${response.status}.`)
+  const length = Number(response.headers.get('content-length'))
+  if (Number.isFinite(length) && length > limit) throw new Error(`${label} exceeds the allowed download size.`)
+  if (!response.body) throw new Error(`${label} response did not provide a bounded stream.`)
+  const reader = response.body.getReader()
+  const chunks: Buffer[] = []
+  let total = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > limit) { await reader.cancel(); throw new Error(`${label} exceeds the allowed download size.`) }
+      chunks.push(Buffer.from(value))
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => undefined)
+    throw error
+  }
+  return Buffer.concat(chunks, total)
+}
+
+function validAssetUrl(value: string, releaseTag: string, assetName: string): URL {
+  let url: URL
+  try { url = new URL(value) } catch { throw new Error('Cloudflare release metadata contains an invalid asset URL.') }
+  if (url.protocol !== 'https:' || url.hostname !== 'github.com' || url.username || url.password || url.port ||
+      url.pathname !== `/cloudflare/cloudflared/releases/download/${encodeURIComponent(releaseTag)}/${encodeURIComponent(assetName)}` || url.search || url.hash) {
+    throw new Error('Only the exact official Cloudflare release asset can be installed.')
+  }
+  return url
+}
+
+async function fetchAsset(fetcher: Fetcher, start: URL, deadline: number, timeoutMs: number): Promise<TimedResponse> {
+  let url = start
+  for (let redirects = 0; redirects <= 5; redirects++) {
+    const timed = await fetchTimed(fetcher, url.href, { redirect: 'manual' }, deadline, timeoutMs)
+    const response = timed.response
+    if (response.status < 300 || response.status >= 400) return timed
+    const location = response.headers.get('location')
+    timed.dispose()
+    await response.body?.cancel().catch(() => undefined)
+    if (!location) throw new Error('Cloudflare release download returned an invalid redirect.')
+    const next = new URL(location, url)
+    if (next.protocol !== 'https:' || !ALLOWED_ASSET_HOSTS.has(next.hostname) || next.username || next.password || next.port) {
+      throw new Error('Cloudflare release download redirected outside the official asset hosts.')
+    }
+    url = next
+  }
+  throw new Error('Cloudflare release download exceeded the redirect limit.')
+}
+
+async function defaultProbe(executable: string): Promise<boolean> {
+  try {
+    const { stdout, stderr } = await execFile(executable, ['tunnel', '--help'], { timeout: 2500, windowsHide: true, maxBuffer: 64 * 1024 })
+    return `${stdout}\n${stderr}`.includes('--allowed-mail')
+  } catch { return false }
+}
+
+async function defaultExtract(archive: string, output: string): Promise<void> {
+  const { stdout } = await execFile('/usr/bin/tar', ['-xOzf', archive, 'cloudflared'], { timeout: EXTRACT_TIMEOUT_MS, windowsHide: true, maxBuffer: MAX_EXTRACTED_BYTES, encoding: 'buffer' })
+  await writeFile(output, stdout, { flag: 'wx' })
+}
+
+async function findPathBinary(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): Promise<string | null> {
+  const filename = platform === 'win32' ? 'cloudflared.exe' : 'cloudflared'
+  for (const directory of (env.PATH ?? '').split(delimiter).filter(Boolean)) {
+    const candidate = join(directory, filename)
+    try { await access(candidate, platform === 'win32' ? constants.F_OK : constants.X_OK); return candidate } catch { /* continue */ }
+  }
+  return null
+}
+
+export function createCloudflaredInstaller(options: InstallerOptions) {
+  const platform = options.platform ?? process.platform
+  const arch = options.arch ?? process.arch
+  const env = options.env ?? process.env
+  const fetcher = options.fetch ?? fetch
+  const probe = options.probe ?? defaultProbe
+  const extractArchive = options.extractArchive ?? defaultExtract
+  const requestTimeoutMs = options.requestTimeoutMs ?? REQUEST_TIMEOUT_MS
+  const installTimeoutMs = options.installTimeoutMs ?? INSTALL_TIMEOUT_MS
+  let resolving: Promise<string> | null = null
+
+  async function installManaged(): Promise<string> {
+    const deadline = Date.now() + installTimeoutMs
+    const target = targetFor(platform, arch)
+    const executablePath = join(options.userDataDir, 'bin', target.executable)
+    const manifestPath = join(options.userDataDir, 'bin', 'cloudflared-manifest.json')
+    const manifestBytes = await readFile(manifestPath).catch(() => null)
+    if (manifestBytes) {
+      try {
+        const manifest = JSON.parse(manifestBytes.toString('utf8')) as { executable: string; digest: string }
+        if (manifest.executable === target.executable && /^[a-f0-9]{64}$/.test(manifest.digest)) {
+          const cached = await readFile(executablePath)
+          if (createHash('sha256').update(cached).digest('hex') === manifest.digest && await probe(executablePath)) return executablePath
+        }
+      } catch { /* replace an absent or invalid managed cache */ }
+    }
+
+    let metadataTimed: TimedResponse
+    try { metadataTimed = await fetchTimed(fetcher, RELEASE_API, { headers: { accept: 'application/vnd.github+json' }, redirect: 'manual' }, deadline, requestTimeoutMs) }
+    catch (error) { throw new Error(`Could not reach Cloudflare's official release service: ${(error as Error).message}`) }
+    let metadataBytes: Buffer
+    try { metadataBytes = await readBounded(metadataTimed.response, MAX_METADATA_BYTES, 'Cloudflare release metadata') }
+    catch (error) { if (metadataTimed.timedOut()) throw new Error('Cloudflare release metadata request timed out.'); throw error }
+    finally { metadataTimed.dispose() }
+    let release: Release
+    try { release = JSON.parse(metadataBytes.toString('utf8')) as Release } catch { throw new Error('Cloudflare returned invalid release metadata.') }
+    if (!release || typeof release.tag_name !== 'string' || !/^\d{4}\.\d+\.\d+$/.test(release.tag_name) || !Array.isArray(release.assets)) {
+      throw new Error('Cloudflare returned invalid release metadata.')
+    }
+    const asset = release.assets.find((entry) => entry?.name === target.asset)
+    if (!asset || typeof asset.digest !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(asset.digest)) {
+      throw new Error('Cloudflare release is missing a valid SHA-256 digest for this platform.')
+    }
+    const assetUrl = validAssetUrl(asset.browser_download_url, release.tag_name, target.asset)
+    let downloadTimed: TimedResponse
+    try { downloadTimed = await fetchAsset(fetcher, assetUrl, deadline, requestTimeoutMs) }
+    catch (error) { throw new Error(`Could not download Cloudflare Tunnel: ${(error as Error).message}`) }
+    let downloaded: Buffer
+    try { downloaded = await readBounded(downloadTimed.response, MAX_DOWNLOAD_BYTES, 'Cloudflare Tunnel') }
+    catch (error) { if (downloadTimed.timedOut()) throw new Error('Cloudflare Tunnel download timed out.'); throw error }
+    finally { downloadTimed.dispose() }
+    const digest = createHash('sha256').update(downloaded).digest('hex')
+    if (digest !== asset.digest.slice('sha256:'.length)) throw new Error('Cloudflare Tunnel SHA-256 verification failed; the file was not installed.')
+
+    const binDir = join(options.userDataDir, 'bin')
+    await mkdir(binDir, { recursive: true })
+    const nonce = `${process.pid}-${Date.now()}`
+    const downloadPath = join(binDir, `.cloudflared-${nonce}.download`)
+    const extractedPath = join(binDir, `.cloudflared-${nonce}.extracted`)
+    const executableTemp = target.archive ? extractedPath : downloadPath
+    try {
+      await writeFile(downloadPath, downloaded, { flag: 'wx' })
+      if (target.archive) await extractArchive(downloadPath, extractedPath)
+      const executable = await readFile(executableTemp)
+      if (executable.length === 0 || executable.length > MAX_EXTRACTED_BYTES) throw new Error('Cloudflare Tunnel executable has an invalid size.')
+      if (platform !== 'win32') await chmod(executableTemp, 0o755)
+      const verifiedDigest = createHash('sha256').update(executable).digest('hex')
+      await rename(executableTemp, executablePath)
+      const manifestTemp = join(binDir, `.cloudflared-manifest-${nonce}.tmp`)
+      await writeFile(manifestTemp, JSON.stringify({ version: release.tag_name, executable: target.executable, digest: verifiedDigest }), { flag: 'wx' })
+      await rename(manifestTemp, manifestPath)
+    } finally {
+      const { unlink } = await import('node:fs/promises')
+      await Promise.all([downloadPath, extractedPath].map((path) => unlink(path).catch(() => undefined)))
+    }
+    if (!await probe(executablePath)) throw new Error('The installed Cloudflare Tunnel does not support the required --allowed-mail option.')
+    return executablePath
+  }
+
+  function ensureExecutable(): Promise<string> {
+    if (!resolving) {
+      resolving = (async () => {
+        const pathBinary = await findPathBinary(platform, env)
+        if (pathBinary && await probe(pathBinary)) return pathBinary
+        return installManaged()
+      })().finally(() => { resolving = null })
+    }
+    return resolving
+  }
+
+  return { ensureExecutable }
+}

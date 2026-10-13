@@ -3,6 +3,7 @@ import { DEFAULT_THEME_ID } from './themes'
 import { formatShortcut, parseShortcut } from './shortcuts'
 import { isVersion } from './version'
 import { sanitizeSplits } from './splits'
+import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './sidebarWidth'
 import { defaultHighlights, sanitizeHighlights } from './highlights'
 import {
   DEFAULT_FONT_SIZE,
@@ -14,6 +15,7 @@ import {
   type KeptSession,
   type ProjectTask,
   type Project,
+  type RemoteAccessSettings,
   type SavedLayout,
   type SavedPane,
   type SavedTab,
@@ -43,6 +45,7 @@ const makeId = (): string => {
 export const DEFAULT_PALETTE_SHORTCUT = 'Ctrl+K'
 
 export const defaultFullAccess = (): FullAccess => ({ claude: true, codex: true, gemini: false })
+export const defaultRemoteAccess = (): RemoteAccessSettings => ({ allowedEmail: '', terminalInput: false, sessionControl: false })
 
 export const defaultImage = (): BackgroundImage => ({ enabled: false, path: null, dim: 60, blur: 0 })
 
@@ -51,6 +54,8 @@ export const defaultSettings = (): Settings => ({
   projects: [],
   theme: { id: DEFAULT_THEME_ID, image: defaultImage() },
   sidebarCollapsed: false,
+  sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
+  othersCollapsed: false,
   sessionInfo: { notifications: true, sound: false },
   onboardingDismissed: false,
   workspace: { panes: [], focusedIndex: 0 },
@@ -62,6 +67,7 @@ export const defaultSettings = (): Settings => ({
   autoUpdateCheck: true,
   paletteShortcut: DEFAULT_PALETTE_SHORTCUT,
   fullAccess: defaultFullAccess(),
+  remoteAccess: defaultRemoteAccess(),
   highlights: defaultHighlights()
 })
 
@@ -242,6 +248,15 @@ function sanitizeFullAccess(value: unknown): FullAccess {
   return { claude: pick('claude'), codex: pick('codex'), gemini: pick('gemini') }
 }
 
+function sanitizeRemoteAccess(value: unknown): RemoteAccessSettings {
+  if (!isRecord(value)) return defaultRemoteAccess()
+  return {
+    allowedEmail: typeof value.allowedEmail === 'string' && value.allowedEmail.length <= 254 ? value.allowedEmail : '',
+    terminalInput: value.terminalInput === true,
+    sessionControl: value.sessionControl === true
+  }
+}
+
 function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSession[] {
   if (!Array.isArray(value)) return []
   const seen = new Set<string>()
@@ -296,6 +311,8 @@ export function migrateSettings(raw: unknown): Settings {
     projects,
     theme: { id: asString(theme.id) ?? defaults.theme.id, image: sanitizeImage(theme.image) },
     sidebarCollapsed: raw.sidebarCollapsed === true,
+    sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
+    othersCollapsed: raw.othersCollapsed === true,
     sessionInfo: {
       notifications: typeof info.notifications === 'boolean' ? info.notifications : defaults.sessionInfo.notifications,
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound
@@ -310,6 +327,7 @@ export function migrateSettings(raw: unknown): Settings {
     autoUpdateCheck: raw.autoUpdateCheck !== false,
     paletteShortcut: sanitizeShortcut(raw.paletteShortcut),
     fullAccess: sanitizeFullAccess(raw.fullAccess),
+    remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
     highlights: sanitizeHighlights(raw.highlights)
   }
 }

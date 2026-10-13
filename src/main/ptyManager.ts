@@ -9,6 +9,17 @@ import { platformExecutableDirs } from './executables'
 import type { QuitLog } from './quitLog'
 import type { AppInfo, SpawnRequest, SpawnResult } from '../shared/types'
 import type { ProcessRoot } from '../shared/processActivity'
+import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
+
+interface RemoteTerminalStateLike {
+  snapshot(id?: string): RemoteTerminalSnapshot[]
+  screen(id: string): Promise<RemoteTerminalScreen | null>
+  subscribe(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null
+  add(id: string, startedAt: number, metadata: { projectId: string | null; agent: SpawnRequest['agent']; remoteManaged?: boolean }, size: { cols: number; rows: number }): void
+  append(id: string, data: string): void
+  resize(id: string, cols: number, rows: number): void
+  remove(id: string): void
+}
 
 const FLUSH_MS = 8
 
@@ -23,6 +34,7 @@ interface Entry {
   buffer: string
   timer: NodeJS.Timeout | null
   killed: boolean
+  desktopVisible: boolean
 }
 
 function folderProblem(cwd: string): string | null {
@@ -35,8 +47,11 @@ function folderProblem(cwd: string): string | null {
 
 export class PtyManager {
   private readonly entries = new Map<string, Entry>()
+  private readonly remoteTerminals: RemoteTerminalStateLike | null
 
-  constructor(private readonly handlers: PtyHandlers) {}
+  constructor(private readonly handlers: PtyHandlers, remoteTerminals: RemoteTerminalStateLike | null = null) {
+    this.remoteTerminals = remoteTerminals
+  }
 
   info(userData: string): Omit<AppInfo, 'version'> {
     return { claudeCommand: claudeCommand(), codexCommand: codexCommand(), geminiCommand: geminiCommand(), shellCommand: shellCommand(), home: homedir(), userData }
@@ -46,6 +61,18 @@ export class PtyManager {
     return [...this.entries].map(([tabId, entry]) => ({ tabId, pid: entry.process.pid, startedAt: entry.startedAt }))
   }
 
+  remoteSnapshot(id?: string): RemoteTerminalSnapshot[] {
+    return this.remoteTerminals?.snapshot(id) ?? []
+  }
+
+  remoteScreen(id: string): Promise<RemoteTerminalScreen | null> {
+    return this.remoteTerminals?.screen(id) ?? Promise.resolve(null)
+  }
+
+  subscribeRemoteOutput(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null {
+    return this.remoteTerminals?.subscribe(id, listener) ?? null
+  }
+
   spawn(request: SpawnRequest): SpawnResult {
     const problem = folderProblem(request.cwd)
     if (problem) return { ok: false, error: problem }
@@ -53,14 +80,16 @@ export class PtyManager {
     if (typeof spec === 'string') return { ok: false, error: spec }
     this.kill(request.id)
     try {
+      const cols = Math.max(2, request.cols)
+      const rows = Math.max(1, request.rows)
       const child = pty.spawn(spec.file, ptyArguments(spec.args), {
         name: 'xterm-256color',
-        cols: Math.max(2, request.cols),
-        rows: Math.max(1, request.rows),
+        cols,
+        rows,
         cwd: request.cwd,
         env: this.environment()
       })
-      this.attach(request.id, child)
+      this.attach(request.id, child, request.projectId ?? null, request.agent, request.desktopVisible !== false, request.remoteManaged === true, { cols, rows })
       return { ok: true, pid: child.pid }
     } catch (error) {
       return { ok: false, error: `Could not start ${spec.file}: ${(error as Error).message}` }
@@ -79,12 +108,14 @@ export class PtyManager {
     } catch {
       return
     }
+    this.remoteTerminals?.resize(id, cols, rows)
   }
 
   kill(id: string): void {
     const entry = this.entries.get(id)
     if (!entry) return
     this.entries.delete(id)
+    this.remoteTerminals?.remove(id)
     entry.killed = true
     if (entry.timer) clearTimeout(entry.timer)
     killTree(entry.process)
@@ -95,10 +126,11 @@ export class PtyManager {
   }
 
   async terminateAll(timeoutMs: number, log: QuitLog = () => undefined): Promise<void> {
-    const entries = [...this.entries.values()]
+    const entries = [...this.entries.entries()]
     this.entries.clear()
-    const trees = entries.map((entry) => {
+    const trees = entries.map(([id, entry]) => {
       entry.killed = true
+      this.remoteTerminals?.remove(id)
       if (entry.timer) clearTimeout(entry.timer)
       if (process.platform === 'win32') return taskkillTree(entry.process.pid, log)
       killPosixTree(entry.process.pid)
@@ -126,12 +158,15 @@ export class PtyManager {
     return env
   }
 
-  private attach(id: string, child: pty.IPty): void {
-    const entry: Entry = { process: child, startedAt: Date.now(), buffer: '', timer: null, killed: false }
+  private attach(id: string, child: pty.IPty, projectId: string | null, agent: SpawnRequest['agent'], desktopVisible: boolean, remoteManaged: boolean, size: { cols: number; rows: number }): void {
+    const startedAt = Date.now()
+    const entry: Entry = { process: child, startedAt, buffer: '', timer: null, killed: false, desktopVisible }
     this.entries.set(id, entry)
+    this.remoteTerminals?.add(id, startedAt, { projectId, agent, remoteManaged }, size)
     child.onData((data) => {
       if (entry.killed) return
       entry.buffer += data
+      this.remoteTerminals?.append(id, data)
       if (entry.timer) return
       entry.timer = setTimeout(() => this.flush(id, entry), FLUSH_MS)
     })
@@ -139,7 +174,8 @@ export class PtyManager {
       if (entry.killed) return
       this.flush(id, entry)
       this.entries.delete(id)
-      this.handlers.onExit(id, exitCode)
+      this.remoteTerminals?.remove(id)
+      if (entry.desktopVisible) this.handlers.onExit(id, exitCode)
     })
   }
 
@@ -148,7 +184,7 @@ export class PtyManager {
     if (!entry.buffer) return
     const data = entry.buffer
     entry.buffer = ''
-    this.handlers.onData(id, data)
+    if (entry.desktopVisible) this.handlers.onData(id, data)
   }
 }
 

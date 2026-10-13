@@ -3,6 +3,29 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-10-13
+
+### Added
+
+- Add Remote Control (Beta) to public builds, with browser pairing, configurable permissions, revocable devices and a local Cloudflare Quick Tunnel.
+- Resize the Projects sidebar by dragging its edge or using the keyboard; the width is saved between launches.
+- Show the other sessions in a side panel when one pane is maximized, with live previews; collapse it to a strip of agent icons.
+- Start sessions from a New session dialog with project cards and agent cards that show each agent's version and usage limits.
+
+### Changed
+
+- Label Remote Control as beta in the desktop settings and browser interface.
+- Show context, 5 hour and weekly usage as charge bars that turn amber and red as they fill.
+- Redesign the project rows and session rows in the sidebar, with today's usage, new session, agent menu and close buttons on each row.
+- Refresh the top bar buttons: a solid New session button with its shortcut, raised tabs, a text size stepper and icon buttons for Theme and Settings.
+- Mirror remote terminals from a headless terminal so the browser shows the same screen as the desktop app, and fix sending prompts from the browser.
+- Refresh the Remote Access copy URL and copy code controls.
+- Redesign the pane header: the title in normal case with its project and a status pill, and a status bar at the bottom with the model, usage bars, changes and branch.
+
+### Fixed
+
+- Make the `dawsha` command work on macOS and Linux: it now talks to the app over a Unix socket and ships in the macOS and Linux packages.
+
 ## [0.4.1] - 2026-10-12
 
 ### Fixed
@@ -158,7 +181,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Clicking the update pill right as the app refreshed could be ignored, leaving the update popover closed. The pill now
   keeps its parts in place between refreshes, so the click always lands.
 
-## [0.5.0] - 2026-10-09
+## [0.5.0-legacy] - 2026-10-09
 
 ### Added
 

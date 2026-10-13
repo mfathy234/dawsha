@@ -1,11 +1,17 @@
+import { existsSync, writeFileSync } from 'node:fs'
 import { connect } from 'node:net'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { isCliRequest, pipePath, startCliServer } from '../../src/main/cliServer'
 import type { CliReply, CliRequest } from '../../src/shared/cli'
 
 const servers: { close(): void }[] = []
 let counter = 0
-const uniquePipe = (): string => `\\\\.\\pipe\\dawsha-unit-${process.pid}-${(counter += 1)}`
+const uniquePipe = (): string =>
+  process.platform === 'win32'
+    ? `\\\\.\\pipe\\dawsha-unit-${process.pid}-${(counter += 1)}`
+    : join(tmpdir(), `dawsha-unit-${process.pid}-${(counter += 1)}.sock`)
 
 afterEach(() => {
   for (const server of servers.splice(0)) server.close()
@@ -65,8 +71,28 @@ describe('pipePath and isCliRequest', () => {
     process.env.DAWSHA_PIPE = '\\\\.\\pipe\\custom'
     expect(pipePath()).toBe('\\\\.\\pipe\\custom')
     delete process.env.DAWSHA_PIPE
-    expect(pipePath()).toMatch(/^\\\\\.\\pipe\\dawsha-.+/)
+    if (process.platform === 'win32') expect(pipePath()).toMatch(/^\\\\\.\\pipe\\dawsha-.+/)
+    else expect(pipePath()).toMatch(/[\\/]dawsha-[^\\/]+\.sock$/)
     if (before !== undefined) process.env.DAWSHA_PIPE = before
+  })
+
+  it.skipIf(process.platform === 'win32')('replaces a socket file left behind by a crash', async () => {
+    const path = uniquePipe()
+    writeFileSync(path, '')
+    const server = startCliServer(async () => ({ ok: true, exit: 0, out: 'up' }), path)
+    servers.push(server)
+    await new Promise<void>((resolve) => server.once('listening', () => resolve()))
+    expect(existsSync(path)).toBe(true)
+    const reply = await new Promise<string>((resolve, reject) => {
+      const socket = connect(path)
+      let buffer = ''
+      socket.setEncoding('utf8')
+      socket.on('connect', () => socket.write(`${JSON.stringify({ args: [], cwd: '/' })}\n`))
+      socket.on('data', (chunk: string) => (buffer += chunk))
+      socket.on('end', () => resolve(buffer))
+      socket.on('error', reject)
+    })
+    expect(JSON.parse(reply)).toEqual({ ok: true, exit: 0, out: 'up' })
   })
 
   it('validates request shape', () => {

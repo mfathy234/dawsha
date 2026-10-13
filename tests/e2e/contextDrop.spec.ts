@@ -62,7 +62,8 @@ test('context warning: amber at 85, hint with Compact and Dismiss at 92, back at
     const hint = page.locator('.pane-hint')
 
     writeContext(sandbox, 41)
-    await expect(gauge).toHaveText('▰▰▱▱▱ 41%', { timeout: 15_000 })
+    await expect(gauge).toHaveText('41%', { timeout: 15_000 })
+    await expect(gauge.locator('.charge')).toHaveAttribute('data-filled', '4')
     await expect(gauge).not.toHaveClass(/ctx-amber|ctx-red/)
     await expect(hint).toBeHidden()
 

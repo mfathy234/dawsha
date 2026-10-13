@@ -31,10 +31,13 @@ import {
 import { compareVersions } from '../../shared/version'
 import { entriesUpTo } from '../../shared/changelog'
 import { DEFAULT_PALETTE_SHORTCUT } from '../../shared/settingsSchema'
+import { isRemoteControlBuild } from '../../shared/remoteBuild'
+import type { RemoteAccessSettings, RemoteAccessState } from '../../shared/types'
 import { formatShortcut, parseShortcut } from '../../shared/shortcuts'
 import { updateStatusLine } from '../../shared/updates'
 import { releaseTagUrl } from '../../shared/markdown'
-import { h } from '../dom'
+import { h, icon } from '../dom'
+import { ICONS } from '../icons'
 import { api } from '../api'
 import type { PaneonImportPreview } from '../../shared/paneonImport'
 import { confirmDialog } from './dialogs'
@@ -52,6 +55,7 @@ const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'changelog', label: 'Changelog', lede: 'Every released version, newest first.' },
   { id: 'about', label: 'About', lede: 'Version, links and where your data lives.' }
 ]
+if (isRemoteControlBuild) SECTIONS.push({ id: 'remote', label: 'Remote Access', lede: 'Reach this Dawsha installation from your own devices.' })
 
 const REPO_URL = 'https://github.com/mfathy234/dawsha'
 const LINKS = [
@@ -102,9 +106,14 @@ export class SettingsViewComponent {
   private editDraft: RuleDraft = emptyDraft()
   private editError: string | null = null
   private paneonImport: PaneonImportPreview | null = null
+  private remoteAccess: RemoteAccessState | null = null
+  private remoteError: string | null = null
+  private remoteBusy = false
+  private pairingExpiryTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
     void api.paneonImportPreview().then((preview) => { this.paneonImport = preview; this.refresh() }).catch(() => undefined)
+    if (isRemoteControlBuild) void this.loadRemoteAccess()
     this.nav.addEventListener('keydown', (event) => this.onNavKey(event))
     this.panel.addEventListener('click', (event) => {
       const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-link]')
@@ -128,6 +137,9 @@ export class SettingsViewComponent {
       state.settings.sessionInfo,
       state.settings.autoUpdateCheck,
       state.settings.highlights,
+      this.remoteAccess,
+      this.remoteError,
+      this.remoteBusy,
       this.addError,
       this.editIndex,
       this.editError,
@@ -161,7 +173,10 @@ export class SettingsViewComponent {
       this.navSection = section.id
       this.nav.replaceChildren(...SECTIONS.map((s) => this.tab(s, s.id === section.id)))
     }
-    this.title.textContent = section.label
+    this.title.replaceChildren(section.label)
+    if (section.id === 'remote') {
+      this.title.append(h('span', { id: 'remote-settings-beta', class: 'beta-badge' }, 'BETA'))
+    }
     this.lede.textContent = section.lede
     this.panel.setAttribute('aria-labelledby', `settings-tab-${section.id}`)
     this.panel.replaceChildren(...this.body(section.id, state))
@@ -206,11 +221,173 @@ export class SettingsViewComponent {
         return this.updates(state)
       case 'highlights':
         return this.highlights(state)
+      case 'remote':
+        return this.remoteAccessBody()
       case 'changelog':
         return this.changelog(state)
       default:
         return this.about(state)
     }
+  }
+
+  private async loadRemoteAccess(): Promise<void> {
+    const remote = api.remoteAccess
+    if (!remote) return
+    try {
+      this.remoteAccess = await remote.getState()
+      this.remoteError = null
+    } catch (error) {
+      this.remoteError = (error as Error).message || 'Remote Access status could not be loaded.'
+      if (this.remoteAccess?.pairing && this.remoteAccess.pairing.expiresAt <= Date.now()) {
+        this.remoteAccess = { ...this.remoteAccess, pairing: null }
+      }
+    }
+    this.refresh()
+  }
+
+  private async runRemoteAction(action: () => Promise<RemoteAccessState>): Promise<void> {
+    this.remoteBusy = true
+    this.remoteError = null
+    this.refresh()
+    try { this.remoteAccess = await action() } catch (error) {
+      this.remoteError = (error as Error).message || 'Remote Access could not be changed.'
+    } finally {
+      this.remoteBusy = false
+      this.refresh()
+    }
+  }
+
+  private remoteAccessBody(): HTMLElement[] {
+    const remote = api.remoteAccess
+    const state = this.remoteAccess
+    if (!remote) return []
+    if (this.pairingExpiryTimer) clearTimeout(this.pairingExpiryTimer)
+    this.pairingExpiryTimer = state?.enabled && state.pairing && state.pairing.expiresAt > Date.now()
+      ? setTimeout(() => {
+          this.pairingExpiryTimer = null
+          void this.loadRemoteAccess()
+        }, Math.max(0, state.pairing.expiresAt - Date.now()) + 50)
+      : null
+    const status = state?.status ?? 'off'
+    const enabled = state?.enabled === true
+    const mainAction = h('button', {
+      class: enabled ? 'btn ghost small' : 'btn primary small',
+      type: 'button',
+      id: 'remote-access-toggle',
+      disabled: this.remoteBusy,
+      onClick: () => void this.runRemoteAction(() => enabled ? remote.disable() : remote.enable())
+    }, this.remoteBusy ? (enabled ? 'Working…' : 'Preparing tunnel…') : enabled ? 'Stop Remote Access' : 'Start Remote Access')
+    const securityNote = h('p', { class: 'hint remote-hero-note' }, state?.permissions.allowedEmail
+      ? 'Cloudflare will send a PIN to this email before Dawsha asks for its pairing code. Cloudflare processes traffic through the public-facing URL.'
+      : 'With no PIN email, the short-lived Dawsha pairing code is the only login gate. Keep the public-facing URL private; Cloudflare processes proxied traffic.')
+    const statusLine = h('p', { class: `remote-status remote-status-${status}`, role: 'status' },
+      h('span', { class: 'remote-status-dot', 'aria-hidden': 'true' }), state?.message ?? 'Remote Access is off.')
+    const steps = enabled && state.url
+      ? h('div', { class: 'remote-steps' },
+          h('section', { class: 'remote-step' },
+            h('div', { class: 'remote-step-head' }, h('span', { class: 'remote-step-number' }, '1'), h('h4', {}, 'Open on your phone')),
+            h('div', { class: 'remote-field' },
+              h('code', { class: 'remote-url', title: state.url }, state.url),
+              this.copyButton('remote-copy-url', state.url, 'URL')),
+            h('p', { class: 'hint' }, 'Quick Tunnel links change each time Remote Access restarts.')),
+          h('section', { class: 'remote-step' },
+            h('div', { class: 'remote-step-head' }, h('span', { class: 'remote-step-number' }, '2'), h('h4', {}, 'Enter the pairing code')),
+            state.pairing
+              ? h('div', { class: 'remote-code-block' },
+                  h('code', { class: 'remote-pairing-code', 'aria-label': `Pairing code ${state.pairing.code.split('').join(' ')}` },
+                    ...state.pairing.code.split('').map((digit) => h('span', { class: 'remote-digit' }, digit))),
+                  h('div', { class: 'remote-code-actions' },
+                    this.copyButton('remote-copy-code', state.pairing.code, 'Pairing code', this.remoteBusy),
+                    h('button', { class: 'remote-icon-btn', type: 'button', id: 'remote-refresh-code', disabled: this.remoteBusy, onClick: () => void this.runRemoteAction(() => remote.refreshPairing()) }, icon(ICONS.refresh), 'New code'),
+                    this.pairingCountdown(state.pairing.expiresAt)))
+              : h('div', { class: 'remote-code-block remote-code-empty' },
+                  h('p', { class: 'hint' }, 'No active pairing code.'),
+                  h('button', { class: 'btn primary small', type: 'button', id: 'remote-refresh-code', disabled: this.remoteBusy, onClick: () => void this.runRemoteAction(() => remote.refreshPairing()) }, 'Create code')),
+            h('p', { class: 'hint' }, state.permissions.allowedEmail ? 'Enter it after the Cloudflare email PIN.' : 'Codes expire after a few minutes. Create a new one any time.')))
+      : null
+    const rows: HTMLElement[] = [
+      h('div', { class: `remote-hero${enabled ? ' on' : ''}` },
+        h('div', { class: 'remote-hero-head' },
+          h('div', { class: 'remote-hero-copy' },
+            h('h3', {}, enabled ? 'Connect your phone' : 'Use Dawsha from your phone'),
+            statusLine),
+          mainAction),
+        steps,
+        securityNote,
+        this.remoteError ? h('p', { class: 'note error set-note', role: 'alert' }, this.remoteError) : null)
+    ]
+    const allowedEmail = h('input', { class: 'text-input', type: 'email', value: state?.permissions.allowedEmail ?? '', placeholder: 'you@example.com', autocomplete: 'email', disabled: this.remoteBusy || enabled }) as HTMLInputElement
+    rows.push(row('Cloudflare PIN email (optional)', h('div', { class: 'remote-email-setting' }, allowedEmail,
+      h('button', { class: 'btn ghost small', type: 'button', disabled: this.remoteBusy || enabled, onClick: () => void this.runRemoteAction(() => remote.setAllowedEmail(allowedEmail.value)) }, 'Save email')),
+    h('p', { class: 'hint' }, 'Dawsha checks for a compatible Cloudflare Tunnel and installs a verified copy in app data if needed. First setup needs internet access; no administrator access is required.')))
+    if (!state) return rows
+
+    rows.push(row('Terminal input', checkbox('remote-terminal-input', 'Allow paired browsers to type into active terminals', state.permissions.terminalInput, this.remoteBusy, (value) => {
+      void this.runRemoteAction(() => remote.setPermissions({ terminalInput: value }))
+    }), h('p', { class: 'hint' }, 'This can send commands to the agent running in that terminal.')))
+
+    rows.push(row('Start or resume sessions', checkbox('remote-session-control', 'Allow paired browsers to start or resume the configured agent', state.permissions.sessionControl, this.remoteBusy, (value) => {
+      void (async () => {
+        if (value && !await confirmDialog({
+          title: 'Allow remote session control?',
+          body: 'New and resumed agents inherit their existing Dawsha full-access setting. With full access enabled, an agent can read and change files and run commands in the project.',
+          confirmLabel: 'Allow session control',
+          danger: false
+        })) {
+          this.refresh()
+          return
+        }
+        await this.runRemoteAction(() => remote.setPermissions({ sessionControl: value }))
+      })()
+    }), h('p', { class: 'hint' }, 'The browser can choose a supported agent for each configured project and resume that agent’s existing sessions.')))
+
+    const devices = state.devices.length
+      ? state.devices.map((device) => row(device.name,
+          h('button', { class: 'btn ghost small', type: 'button', disabled: this.remoteBusy, onClick: () => void this.runRemoteAction(() => remote.revokeDevice(device.id)) }, 'Revoke'),
+          h('p', { class: 'hint' }, `Paired ${new Date(device.pairedAt).toLocaleString()} · Last seen ${new Date(device.lastSeenAt).toLocaleString()}`)))
+      : [h('p', { class: 'hint remote-empty' }, 'No browsers are paired.')]
+    rows.push(row('Paired devices', h('div', { class: 'remote-device-list' }, ...devices),
+      h('p', { class: 'hint' }, 'Revocation takes effect immediately for that browser.')))
+    return rows
+  }
+
+  private copyButton(id: string, value: string, label: string, disabled = false): HTMLElement {
+    const text = h('span', {}, 'Copy')
+    const glyph = icon(ICONS.copy)
+    const button = h('button', { class: 'remote-icon-btn remote-copy-btn', type: 'button', id, disabled, 'aria-label': `Copy ${label.toLowerCase()}` }, glyph, text) as HTMLButtonElement
+    let reset = 0
+    button.addEventListener('click', () => void (async () => {
+      try {
+        await api.writeClipboard(value)
+        window.clearTimeout(reset)
+        button.classList.add('copied')
+        glyph.innerHTML = ICONS.check
+        text.textContent = 'Copied'
+        reset = window.setTimeout(() => {
+          button.classList.remove('copied')
+          glyph.innerHTML = ICONS.copy
+          text.textContent = 'Copy'
+        }, 1600)
+      } catch {
+        toast(`Could not copy ${label.toLowerCase()}.`)
+      }
+    })())
+    return button
+  }
+
+  private pairingCountdown(expiresAt: number): HTMLElement {
+    const label = h('span', { class: 'remote-expiry', title: `Expires ${new Date(expiresAt).toLocaleTimeString()}` })
+    const update = (): void => {
+      const seconds = Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
+      label.textContent = seconds > 90 ? `Expires in ${Math.ceil(seconds / 60)} min` : `Expires in ${seconds}s`
+      label.classList.toggle('soon', seconds <= 60)
+      // Keep ticking until the settings view re-renders and drops this label.
+      if (label.isConnected) shown = true
+      if (seconds > 0 && !(shown && !label.isConnected)) window.setTimeout(update, seconds > 90 ? 15_000 : 1000)
+    }
+    let shown = false
+    update()
+    return label
   }
 
   private general(state: AppState): HTMLElement[] {

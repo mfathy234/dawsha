@@ -6,6 +6,7 @@ import { mapTerm, store } from './state'
 import { currentBundle } from './themeManager'
 import { fileLinkHost, highlightHost, watchHighlights } from './terminalExtras'
 import { TerminalView } from './terminalView'
+import { PendingTerminalOutput } from './pendingTerminalOutput'
 
 export interface TerminalEvents {
   onZoom(termId: string, direction: 1 | -1): void
@@ -13,7 +14,7 @@ export interface TerminalEvents {
 }
 
 const views = new Map<string, TerminalView>()
-const pending = new Map<string, string[]>()
+const pending = new PendingTerminalOutput()
 let events: TerminalEvents = { onZoom: () => undefined, onFocus: () => undefined }
 
 export const setTerminalEvents = (value: TerminalEvents): void => {
@@ -57,8 +58,7 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     highlights: highlightHost()
   })
   views.set(id, view)
-  for (const chunk of pending.get(id) ?? []) view.write(chunk)
-  pending.delete(id)
+  for (const chunk of pending.take(id)) view.write(chunk)
   return view
 }
 
@@ -95,7 +95,10 @@ export function connectPtyStreams(onExit: (id: string, exitCode: number) => void
     noteOutput(id)
     const view = views.get(id)
     if (view) view.write(data)
-    else pending.set(id, [...(pending.get(id) ?? []), data])
+    else pending.append(id, data)
   })
-  api.onExit((id, exitCode) => onExit(id, exitCode))
+  api.onExit((id, exitCode) => {
+    pending.delete(id)
+    onExit(id, exitCode)
+  })
 }

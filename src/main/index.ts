@@ -22,6 +22,7 @@ import type { UpdateController } from './updateController'
 import { createQuitLog } from './quitLog'
 import { startQuitWatchdog } from './quitWatchdog'
 import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, runPhases, runQuit, type ShutdownDeps } from './shutdown'
+import { isPrivateRemoteBuild, isRemoteControlBuild } from '../shared/remoteBuild'
 
 const IMAGE_SCHEME = 'dawsha-image'
 const quitLog = createQuitLog()
@@ -129,7 +130,7 @@ function createWindow(): BrowserWindow {
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
   if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(process.env.ELECTRON_RENDERER_URL)
-  else void window.loadFile(join(__dirname, '../renderer/index.html'))
+  else void window.loadFile(join(__dirname, isPrivateRemoteBuild ? '../renderer-private/index.html' : '../renderer/index.html'))
   return window
 }
 
@@ -141,7 +142,7 @@ function registerImageProtocol(settings: SettingsStore): void {
   })
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   if (!gotLock) return
   Menu.setApplicationMenu(null)
   const userData = app.getPath('userData')
@@ -159,10 +160,13 @@ app.whenReady().then(() => {
   const store = new SettingsStore(join(userData, 'settings.json'))
   const loaded = store.load()
   const warning = [migration?.note, importNote, loaded.warning].filter(Boolean).join(' ') || null
+  const remoteTerminals = isRemoteControlBuild
+    ? new (await import('./remoteTerminalState')).RemoteTerminalState()
+    : null
   const ptys = new PtyManager({
     onData: (id, data) => send(IPC.ptyData, id, data),
     onExit: (id, code) => send(IPC.ptyExit, id, code)
-  })
+  }, remoteTerminals)
   const watcher = new SessionsWatcher((sessions) => send(IPC.sessionsUpdate, sessions))
   const codexWatcher = new CodexWatcher((sessions) => send(IPC.codexUpdate, sessions))
   const geminiWatcher = new GeminiWatcher((sessions) => send(IPC.geminiUpdate, sessions))
@@ -173,8 +177,17 @@ app.whenReady().then(() => {
     usage.recordStatus(infos)
   })
   const opsWatcher = new OpsWatcher(opsDirs(), (snapshots) => send(IPC.opsUpdate, snapshots))
+  const remoteAccess = isRemoteControlBuild
+    ? (await import('./remoteAccessController')).createRemoteAccessController({
+        userDataDir: userData,
+        assetDirectory: join(__dirname, isPrivateRemoteBuild ? '../renderer-private' : '../renderer'),
+        settings: store,
+        ptys,
+        getWindow: () => mainWindow
+      })
+    : undefined
   registerImageProtocol(store)
-  registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning)
+  registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess)
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
@@ -189,7 +202,7 @@ app.whenReady().then(() => {
   })
   const shutdownDeps: ShutdownDeps = {
     log: quitLog,
-    stopServices: () => {
+    stopServices: async () => {
       watcher.stop()
       codexWatcher.stop()
       geminiWatcher.stop()
@@ -197,6 +210,7 @@ app.whenReady().then(() => {
       opsWatcher.stop()
       updates?.stop()
       usage.flush()
+      await remoteAccess?.stop()
     },
     flushRenderer,
     flushStorage: async () => {
@@ -221,6 +235,7 @@ app.whenReady().then(() => {
     settings: store,
     send,
     shutdown,
+    autoUpdates: !isPrivateRemoteBuild,
     markQuitting: () => {
       quitting = true
     }

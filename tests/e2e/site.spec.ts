@@ -45,6 +45,7 @@ test('the site switches between Arabic RTL and English LTR with translated navig
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Every AI coding agent')
   for (const image of await page.locator('.shot img').all()) {
+    await image.scrollIntoViewIfNeeded()
     await expect(image).toHaveJSProperty('complete', true)
     expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0)
   }
@@ -172,10 +173,14 @@ test('Arabic has a shareable static URL and explains the release features in bot
   await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', /دوشة/)
   await expect(page.getByText('العد التنازلي لتجديد الحدود')).toBeVisible()
   await expect(page.getByText('استيراد إعدادات سابقة')).toBeVisible()
+  await expect(page.locator('.fgroup').nth(1).locator('li').filter({ hasText: '\u0627\u0644\u062a\u062d\u0643\u0645 \u0639\u0646 \u0628\u064f\u0639\u062f' })).toBeVisible()
+  await expect(page.getByText('\u0644\u0648\u062d\u0629 \u0645\u0634\u0627\u0631\u064a\u0639 \u0642\u0627\u0628\u0644\u0629 \u0644\u062a\u063a\u064a\u064a\u0631 \u0627\u0644\u062d\u062c\u0645')).toBeVisible()
   await expect(page.locator('link[rel="alternate"][hreflang="ar"]')).toHaveAttribute('href', /\/ar\/$/)
 
   await page.getByRole('link', { name: 'English' }).click()
   await expect(page).toHaveURL(url)
   await expect(page.getByText('Reset countdowns', { exact: true })).toBeVisible()
   await expect(page.getByText('Import existing settings', { exact: true })).toBeVisible()
+  await expect(page.locator('.fgroup').nth(1).locator('li').filter({ hasText: 'Remote Control' })).toBeVisible()
+  await expect(page.getByText('Resizable Projects panel')).toBeVisible()
 })

@@ -4,6 +4,7 @@ directories:
   output: release
 files:
   - out/**
+  - '!out/renderer-private/**'
   - package.json
   - build/icon.png
 extraResources:
@@ -49,8 +50,14 @@ mac:
     - zip
   artifactName: Dawsha-${version}-mac-${arch}.${ext}
   hardenedRuntime: true
+  extraResources:
+    - from: build/dawsha
+      to: dawsha
 linux:
   category: Development
+  extraResources:
+    - from: build/dawsha
+      to: dawsha
   icon: build/icon.png
   target:
     - target: AppImage

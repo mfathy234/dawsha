@@ -6,6 +6,7 @@ import {
   type CodexSession,
   type GeminiSession,
   type Project,
+  type RemoteSessionStarted,
   type QuickOpenKind,
   type ResumeSession,
   type SavedPane,
@@ -141,6 +142,7 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
   }
   const result = await api.spawn({
     id: termId,
+    projectId: project.id,
     agent: term.agent,
     cwd: pane.folder ?? project.folder,
     resume,
@@ -228,6 +230,26 @@ export async function startSession(
   const number = store.state.panes.findIndex((p) => p.id === pane.id) + 1
   void launch(pane.id, tab.id, resumeId !== undefined)
   return number
+}
+
+export function attachRemoteSession(session: RemoteSessionStarted): void {
+  if (!session || typeof session.id !== 'string' || typeof session.projectId !== 'string' || !['claude', 'codex', 'gemini'].includes(session.agent)) return
+  const existingPane = store.state.panes.find((pane) => pane.tabs.some((tab) => tab.id === session.id))
+  if (existingPane) return
+  const project = projectById(store.state, session.projectId)
+  if (!project) return
+  const tab: TermState = { ...makeTerm(session.agent, []), id: session.id, sessionId: session.sessionId, resumed: session.sessionId !== undefined, status: 'running', pid: session.pid, startedAt: Date.now() }
+  const pane: PaneState = {
+    id: newId(),
+    projectId: project.id,
+    tabs: [tab],
+    activeTabId: tab.id,
+    fontSize: clampFontSize(project.fontSize ?? DEFAULT_FONT_SIZE)
+  }
+  store.set((state) => ({ ...state, panes: [...state.panes, pane], focusedId: pane.id, view: 'grid', sidebarOverride: null }))
+  persistWorkspace()
+  void refreshBranches()
+  void refreshGitChanges()
 }
 
 export async function addTab(paneId: string, agent: TabAgent, input?: string): Promise<void> {
@@ -651,6 +673,12 @@ export async function resetHighlightRules(): Promise<void> {
 export function setPaletteShortcut(paletteShortcut: string): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, paletteShortcut } }))
   void saveSettings({ paletteShortcut })
+}
+
+export function toggleOthersPanel(): void {
+  const othersCollapsed = !store.state.settings.othersCollapsed
+  store.set((s) => ({ ...s, settings: { ...s.settings, othersCollapsed } }))
+  void saveSettings({ othersCollapsed })
 }
 
 export function setSidebarCollapsed(sidebarCollapsed: boolean): void {

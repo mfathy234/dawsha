@@ -3,6 +3,7 @@ import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import {
   flushWorkspace,
+  attachRemoteSession,
   initWhatsNew,
   focusPane,
   handleTerminalExit,
@@ -79,6 +80,7 @@ async function boot(): Promise<void> {
     }
   })
   connectPtyStreams(handleTerminalExit)
+  api.onRemoteSessionStarted(attachRemoteSession)
   api.onSessions((next) => store.patch({ sessions: next }))
   setStatusInfos(statusInfos)
   void refreshBridge()

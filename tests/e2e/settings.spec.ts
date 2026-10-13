@@ -30,6 +30,7 @@ test('Settings opens from the top bar and with Ctrl+comma, and every section ren
     await expect(page.locator('.settings-view')).toBeVisible()
     await expect(page.locator('#settings-button')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.settings-view h1')).toHaveText('Settings')
+    await expect(page.locator('#settings-tab-remote')).toHaveCount(1)
     await page.locator('#settings-button').click()
     await expect(page.locator('.settings-view')).toBeHidden()
 
@@ -50,12 +51,14 @@ test('Settings opens from the top bar and with Ctrl+comma, and every section ren
       updates: '#check-now',
       highlights: '#highlights-toggle',
       changelog: '#changelog-list',
-      about: '#open-data-folder'
+      about: '#open-data-folder',
+      remote: '#remote-access-toggle'
     }
     for (const [section, selector] of Object.entries(expected)) {
       await openSettings(page, section as SettingsSectionId)
       await expect(page.locator(selector)).toBeVisible()
     }
+    await expect(page.locator('#remote-settings-beta')).toHaveText('BETA')
     await page.screenshot({ path: 'test-results/screens/50-settings-about.png' })
 
     await openSettings(page, 'general')
@@ -64,7 +67,8 @@ test('Settings opens from the top bar and with Ctrl+comma, and every section ren
     await expect(page.locator('#settings-tab-notifications')).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('#settings-tab-notifications')).toBeFocused()
     await page.keyboard.press('End')
-    await expect(page.locator('#settings-tab-about')).toHaveAttribute('aria-selected', 'true')
+    const lastTab = '#settings-tab-remote'
+    await expect(page.locator(lastTab)).toHaveAttribute('aria-selected', 'true')
   } finally {
     await closeApp(app)
   }
@@ -139,6 +143,33 @@ test('sidebar and notification toggles persist, and Getting started opens from G
     await page.locator('#notify-toggle').click()
     await expect(page.locator('#sound-toggle')).toBeDisabled()
     await expect.poll(() => readSettings(sandbox.userData).sessionInfo?.notifications).toBe(false)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('project panel can be resized by pointer and keyboard, with its width saved', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const separator = page.getByRole('separator', { name: 'Resize project panel' })
+    await expect(separator).toHaveAttribute('aria-valuenow', '248')
+
+    await separator.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(separator).toHaveAttribute('aria-valuenow', '258')
+    await expect.poll(() => readSettings(sandbox.userData).sidebarWidth).toBe(258)
+
+    const bounds = await separator.boundingBox()
+    if (!bounds) throw new Error('Project panel resize handle is not visible')
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + 24)
+    await page.mouse.down()
+    await page.mouse.move(bounds.x + 42, bounds.y + 24)
+    await page.mouse.up()
+    await expect.poll(() => readSettings(sandbox.userData).sidebarWidth).toBeGreaterThan(280)
+    const persistedWidth = readSettings(sandbox.userData).sidebarWidth as number
+    await page.reload()
+    await expect(page.getByRole('separator', { name: 'Resize project panel' })).toHaveAttribute('aria-valuenow', String(persistedWidth))
   } finally {
     await closeApp(app)
   }

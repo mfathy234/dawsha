@@ -51,6 +51,7 @@ export class PaneComponent {
   readonly el: HTMLElement
   private readonly mark = h('span', { class: 'slot' })
   private readonly index = h('span', { class: 'pane-title' })
+  private readonly projectName = h('span', { class: 'pane-project', hidden: true })
   private readonly pin = h('span', { class: 'pane-pin', title: 'Pinned pane', role: 'img', 'aria-label': 'Pinned pane', hidden: true })
   private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
   private readonly resumed = h('span', { class: 'chip chip-resumed', hidden: true }, 'resumed')
@@ -69,6 +70,7 @@ export class PaneComponent {
   private readonly statusWord = h('span', { class: 'status' })
   private readonly attentionWord = h('span', { class: 'attention-word', hidden: true })
   private readonly info = h('div', { class: 'pane-info', hidden: true })
+  private readonly foot = h('div', { class: 'pane-foot', hidden: true })
   private infoSignature = ''
   private readonly hint = h('div', { class: 'pane-hint', role: 'status', hidden: true })
   private hintSignature = ''
@@ -94,11 +96,11 @@ export class PaneComponent {
       this.mark,
       this.pin,
       this.index,
+      this.projectName,
       this.fresh,
       this.resumed,
       this.compareChip,
       this.fromChip,
-      this.branch,
       this.statusWord,
       this.attentionWord,
       this.restart,
@@ -134,7 +136,8 @@ export class PaneComponent {
     })
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
     const content = h('div', { class: 'pane-content' }, work, this.details)
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.info, this.hint, this.drawer.el, content)
+    this.foot.append(this.info, this.branch)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.hint, this.drawer.el, content, this.foot)
     this.watchFileDrops()
     this.el.addEventListener('pointerdown', () => focusPane(paneId, true), true)
   }
@@ -144,6 +147,9 @@ export class PaneComponent {
     const title = view.title
     this.index.textContent = `${view.index + 1} · ${title}`
     this.updateMark(view.agent)
+    const projectName = view.named ? (view.project?.name ?? '') : ''
+    this.projectName.hidden = projectName === ''
+    this.projectName.textContent = projectName
     this.fresh.hidden = view.named
     const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
@@ -169,6 +175,7 @@ export class PaneComponent {
     this.statusWord.className = `status ${view.status}`
     this.updateAttention(view)
     this.updateInfo(view, maximized)
+    this.foot.hidden = this.info.hidden && this.branch.hidden
     this.updateHint(view)
     this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now, view.info.geminiTools)
     this.updateDetails(view, maximized)

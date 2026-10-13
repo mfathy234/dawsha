@@ -35,6 +35,9 @@ import type {
   SessionFile,
   Settings,
   SettingsLoadResult,
+  RemoteAccessSettings,
+  RemoteAccessState,
+  RemoteSessionStarted,
   SpawnRequest,
   SpawnResult,
   WorktreeRemoval,
@@ -44,6 +47,15 @@ import type {
 export interface GridApi {
   getSettings(): Promise<SettingsLoadResult>
   updateSettings(patch: Partial<Settings>): Promise<Settings>
+  remoteAccess?: {
+    getState(): Promise<RemoteAccessState>
+    enable(): Promise<RemoteAccessState>
+    disable(): Promise<RemoteAccessState>
+    refreshPairing(): Promise<RemoteAccessState>
+    setPermissions(patch: Partial<RemoteAccessSettings>): Promise<RemoteAccessState>
+    setAllowedEmail(email: string): Promise<RemoteAccessState>
+    revokeDevice(id: string): Promise<RemoteAccessState>
+  }
   paneonImportPreview(): Promise<PaneonImportPreview>
   queuePaneonImport(): Promise<void>
   pickFolder(): Promise<string | null>
@@ -93,6 +105,7 @@ export interface GridApi {
   kill(id: string): Promise<void>
   onData(listener: (id: string, data: string) => void): () => void
   onExit(listener: (id: string, exitCode: number) => void): () => void
+  onRemoteSessionStarted(listener: (session: RemoteSessionStarted) => void): () => void
   listProcessActivity(): Promise<ProcessActivity[]>
   listSkills(): Promise<SkillEntry[]>
   openSkill(id: string): Promise<void>

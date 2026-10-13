@@ -1,0 +1,19 @@
+#!/bin/sh
+# The dawsha command for macOS and Linux. Link it onto your PATH, for example:
+#   ln -s /Applications/Dawsha.app/Contents/Resources/dawsha /usr/local/bin/dawsha
+#   ln -s /opt/Dawsha/resources/dawsha ~/.local/bin/dawsha
+self="$0"
+while [ -L "$self" ]; do
+  target=$(readlink "$self")
+  case "$target" in
+    /*) self="$target" ;;
+    *) self="$(dirname "$self")/$target" ;;
+  esac
+done
+dir=$(cd "$(dirname "$self")" && pwd)
+if [ -x "$dir/../MacOS/Dawsha" ]; then
+  exe="$dir/../MacOS/Dawsha"
+else
+  exe="$dir/../dawsha"
+fi
+ELECTRON_RUN_AS_NODE=1 exec "$exe" "$dir/dawsha-cli.cjs" "$@"

@@ -59,7 +59,9 @@ export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
     opsDir: join(root, 'ops'),
     notifyLog: join(root, 'notify.log'),
     quitLog: join(root, 'quit.log'),
-    pipe: String.raw`\\.\pipe\dawsha-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+    pipe: process.platform === 'win32'
+      ? String.raw`\\.\pipe\dawsha-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+      : join(tmpdir(), `dawsha-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.sock`)
   }
 }
 
@@ -174,7 +176,7 @@ export function runCli(sandbox: Sandbox, args: string[], cwd: string = sandbox.r
   })
 }
 
-export type SettingsSectionId = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about'
+export type SettingsSectionId = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
 
 export async function openSettings(page: Page, section: SettingsSectionId = 'general'): Promise<void> {
   const button = page.locator('#settings-button')

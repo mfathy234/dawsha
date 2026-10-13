@@ -58,7 +58,7 @@ export type QuickPickMode = 'new' | 'resume'
 
 export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'settings'
 
-export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about'
+export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
 
 export type ProjectsTab = 'projects' | 'tasks' | 'snippets' | 'instructions'
 
