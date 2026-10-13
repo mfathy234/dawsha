@@ -30,7 +30,11 @@ test('Ctrl+V with a screenshot on the clipboard saves it and pastes its path', a
     })
     await page.bringToFront()
     await page.locator(`.term-host[data-term-id="${id}"] .xterm-helper-textarea`).focus()
-    await expect(page.locator(`.term-host[data-term-id="${id}"] .xterm-helper-textarea`)).toBeFocused()
+    // Check the page's active element: on hosted Windows runners the OS window can lose
+    // focus between steps, but Playwright delivers keys to the page either way.
+    await expect
+      .poll(() => page.evaluate(() => (document.activeElement?.closest('.term-host') as HTMLElement | null)?.dataset.termId ?? null))
+      .toBe(id)
     await page.keyboard.press('Control+v')
 
     await expect.poll(() => readdirSync(pasteDir).filter((name) => name.endsWith('.png')).length, { timeout: 15_000 }).toBe(1)
