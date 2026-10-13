@@ -5651,8 +5651,7 @@ body.dragging-ui {
 }
 
 @container pane-header (max-width: 520px) {
-  .pane-header .pane-project,
-  .pane-header .pane-fresh {
+  .pane-header .pane-project {
     display: none;
   }
 }
