@@ -14,6 +14,9 @@ test('Ctrl+V with a screenshot on the clipboard saves it and pastes its path', a
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
     await page.getByRole('menuitem', { name: 'Shell' }).click()
+    // Wait for the new Shell tab to become active before reading its terminal id.
+    await expect(page.locator('.tabs [role="tab"]')).toHaveCount(2)
+    await expect(page.locator('.tabs [role="tab"]').nth(1)).toHaveAttribute('aria-selected', 'true')
     const host = page.locator('.term-host.active')
     const id = (await host.getAttribute('data-term-id'))!
     await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/>\s*$/m)
