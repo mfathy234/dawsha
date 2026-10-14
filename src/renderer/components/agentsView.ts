@@ -16,6 +16,14 @@ import { clear, h } from '../dom'
 import { agentMark } from './agentMark'
 import type { AppState } from '../state'
 
+type NodeInfo = NonNullable<AppState['agents']['report']>['node']
+
+const DESCRIPTIONS: Record<AgentKind, string> = {
+  claude: "Anthropic's coding agent for your terminal.",
+  codex: "OpenAI's coding agent for your terminal.",
+  gemini: "Google's coding agent for your terminal."
+}
+
 export class AgentsViewComponent {
   readonly el = h('main', { class: 'agents-view', 'aria-label': 'Agents' })
   private readonly rows = h('div', { class: 'tool-list' })
@@ -59,7 +67,9 @@ export class AgentsViewComponent {
     this.signature = signature
     this.check.disabled = checking
     this.check.textContent = checking ? 'Checking…' : 'Check again'
-    this.updateAll.disabled = !report || !report.tools.some((tool) => toolState(tool) === 'update')
+    const updates = report ? report.tools.filter((tool) => toolState(tool) === 'update').length : 0
+    this.updateAll.disabled = updates === 0
+    this.updateAll.textContent = updates > 0 ? `Update ${updates} agent${updates === 1 ? '' : 's'}` : 'Update all'
     clear(this.rows)
     if (!report) {
       this.rows.append(h('p', { class: 'tool-empty' }, 'Checking installed agents…'))
@@ -67,13 +77,14 @@ export class AgentsViewComponent {
     }
     for (const agent of AGENTS) {
       const tool = report.tools.find((t) => t.agent === agent)
-      if (tool) this.rows.append(this.row(tool, report.node, state.settings.fullAccess[agent]))
+      if (tool) this.rows.append(this.card(tool, report.node, state.settings.fullAccess[agent]))
     }
   }
 
-  private row(tool: ToolReport, node: NonNullable<AppState['agents']['report']>['node'], fullAccess: boolean): HTMLElement {
+  private card(tool: ToolReport, node: NodeInfo, fullAccess: boolean): HTMLElement {
     const command = toolCommand(tool)
     const shown = this.shown.has(tool.agent)
+    const state = toolState(tool)
     const toggle = h(
       'button',
       {
@@ -89,22 +100,33 @@ export class AgentsViewComponent {
       },
       shown ? 'Hide command' : 'Show command'
     )
-    const row = h(
+    const card = h(
       'div',
-      { class: 'tool-block', 'data-agent': tool.agent },
+      { class: `tool-block${tool.present ? '' : ' missing'}`, 'data-agent': tool.agent, 'data-state': state },
       h(
         'div',
         { class: 'tool-row' },
         agentMark(tool.agent, 'tool-badge'),
         h('div', { class: 'tool-id' }, h('div', { class: 'tool-name' }, TOOL_NAMES[tool.agent]), h('div', { class: 'tool-source' }, sourceLine(tool))),
-        this.status(tool),
-        toggle,
-        this.action(tool, command, node)
-      )
+        this.status(tool)
+      ),
+      tool.present ? this.versions(tool) : h('p', { class: 'tool-desc' }, DESCRIPTIONS[tool.agent]),
+      this.fullAccessToggle(tool.agent, fullAccess),
+      h('div', { class: 'tool-actions' }, this.action(tool, command, node), toggle)
     )
-    row.append(this.fullAccessToggle(tool.agent, fullAccess))
-    if (shown) row.append(h('pre', { class: 'tool-command' }, command.text))
-    return row
+    if (shown) card.append(h('pre', { class: 'tool-command' }, command.text))
+    return card
+  }
+
+  private versions(tool: ToolReport): HTMLElement {
+    const line = (label: string, value: Node | string): HTMLElement =>
+      h('div', { class: 'tool-version' }, h('span', { class: 'tool-version-label' }, label), h('span', { class: 'tool-version-value' }, value))
+    return h(
+      'div',
+      { class: 'tool-versions' },
+      line('Installed', tool.installed ?? 'version unknown'),
+      line('Latest', tool.latest ?? h('span', { class: 'tool-flag muted' }, "couldn't check"))
+    )
   }
 
   private fullAccessToggle(agent: AgentKind, checked: boolean): HTMLElement {
@@ -116,31 +138,26 @@ export class AgentsViewComponent {
       'div',
       { class: 'tool-access' },
       h('label', { class: 'check', for: id }, input, 'Start with full access'),
-      h('span', { class: 'hint' }, `Runs without approval prompts (${FULL_ACCESS_FLAGS[agent]}). Applies to new sessions.`)
+      h('span', { class: 'hint' }, `Skips approval prompts (${FULL_ACCESS_FLAGS[agent]}). Applies to new sessions.`)
     )
   }
 
   private status(tool: ToolReport): HTMLElement {
     const state = toolState(tool)
-    const parts: (Node | string)[] = []
-    parts.push(tool.present ? `Installed ${tool.installed ?? 'version unknown'}` : 'Not installed')
-    if (tool.latest !== null) parts.push(` · Latest ${tool.latest} `)
-    if (state === 'update') parts.push(h('span', { class: 'tool-flag update' }, 'update available'))
-    else if (state === 'current') parts.push(h('span', { class: 'tool-flag current' }, 'up to date'))
-    else if (tool.latest === null) parts.push(` · `, h('span', { class: 'tool-flag muted' }, "couldn't check latest"))
-    return h('div', { class: 'tool-status', 'data-state': state }, ...parts)
+    const flag =
+      state === 'update'
+        ? h('span', { class: 'tool-flag update' }, 'Update ready')
+        : state === 'current'
+          ? h('span', { class: 'tool-flag current' }, 'Up to date')
+          : state === 'missing'
+            ? h('span', { class: 'tool-flag muted' }, 'Not installed')
+            : h('span', { class: 'tool-flag muted' }, 'Installed')
+    return h('div', { class: 'tool-status', 'data-state': state }, flag)
   }
 
-  private action(
-    tool: ToolReport,
-    command: ReturnType<typeof toolCommand>,
-    node: NonNullable<AppState['agents']['report']>['node']
-  ): HTMLElement {
+  private action(tool: ToolReport, command: ReturnType<typeof toolCommand>, node: NodeInfo): HTMLElement {
     const state = toolState(tool)
     const name = TOOL_NAMES[tool.agent]
-    if (state === 'current') {
-      return h('button', { class: 'btn ghost', type: 'button', disabled: true, 'aria-disabled': 'true' }, 'Up to date')
-    }
     if (command.needsNode && nodeProblem(node)) {
       return h(
         'button',
@@ -148,16 +165,23 @@ export class AgentsViewComponent {
         NODE_NOTE
       )
     }
-    const label = command.action === 'install' ? 'Install' : 'Update'
+    const [label, visible, primary] =
+      state === 'missing'
+        ? ['Install', 'Install', true]
+        : state === 'update'
+          ? ['Update', `Update to ${tool.latest}`, true]
+          : state === 'current'
+            ? ['Reinstall', 'Reinstall', false]
+            : ['Update', 'Update', false]
     return h(
       'button',
       {
-        class: `btn ${state === 'unknown' ? 'ghost' : 'primary'}`,
+        class: `btn ${primary ? 'primary' : 'ghost'}`,
         type: 'button',
         'aria-label': `${label} ${name}`,
         onClick: () => void runAgentTask([tool.agent])
       },
-      label
+      visible as string
     )
   }
 }

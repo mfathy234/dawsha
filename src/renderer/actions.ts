@@ -205,7 +205,7 @@ export function handleTerminalExit(termId: string, exitCode: number): void {
 
 export async function startSession(
   projectId: string,
-  agent?: AgentKind,
+  agent?: TabAgent,
   resumeId?: string,
   chip = false,
   titleHint?: string
