@@ -81,11 +81,11 @@ export async function repoRoot(folder: unknown): Promise<string | null> {
   return result.ok && root ? root : null
 }
 
-async function hasHead(root: string): Promise<boolean> {
+export async function hasHead(root: string): Promise<boolean> {
   return (await git(root, ['rev-parse', '--verify', '-q', 'HEAD'])).ok
 }
 
-async function readTextFile(path: string): Promise<string | null> {
+export async function readTextFile(path: string): Promise<string | null> {
   try {
     const info = await stat(path)
     if (!info.isFile() || info.size > MAX_TEXT_BYTES) return null
@@ -160,7 +160,7 @@ async function pushNow(folder: unknown): Promise<GitResult> {
   return pushed.ok ? { ok: true } : { ok: false, error: pushed.message }
 }
 
-function insideRoot(root: string, path: string): string | null {
+export function insideRoot(root: string, path: string): string | null {
   const full = resolve(root, path)
   const rel = relative(resolve(root), full)
   return rel === '' || rel.startsWith('..') || isAbsolute(rel) ? null : full
@@ -209,10 +209,11 @@ async function discardNow(request: DiscardRequest): Promise<GitResult> {
   return { ok: true }
 }
 
-function asAddedDiff(path: string, text: string): string {
+// A whole new file as a unified diff, so the viewer draws it like any other change.
+export function asAddedDiff(path: string, text: string): string {
   const lines = text.split('\n')
   if (lines[lines.length - 1] === '') lines.pop()
-  return [`new file: ${path}`, ...lines.map((line) => `+${line}`)].join('\n')
+  return [`--- /dev/null`, `+++ b/${path}`, `@@ -0,0 +1,${lines.length} @@`, ...lines.map((line) => `+${line}`)].join('\n')
 }
 
 export async function fileDiff(folder: unknown, path: unknown): Promise<GitDiffResult> {

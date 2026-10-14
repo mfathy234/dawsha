@@ -25,6 +25,7 @@ import { changedFiles, currentBranch, gitChanges, gitSync } from './git'
 import { listBranches, runGitQuick } from './gitQuick'
 import type { GitQuickRequest } from '../shared/gitBranches'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
+import { fileDiffSince, projectFiles, readProjectFile, sessionBaseline, sessionStatus } from './gitWorkspace'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
@@ -142,6 +143,11 @@ export function registerIpc(
   ipcMain.handle(IPC.gitPush, (_event, folder: string) => pushBranch(folder))
   ipcMain.handle(IPC.gitDiscard, (_event, request: DiscardRequest) => discardFiles(request))
   ipcMain.handle(IPC.gitDiff, (_event, folder: string, path: string) => fileDiff(folder, path))
+  ipcMain.handle(IPC.gitDiffSince, (_event, folder: unknown, path: unknown, baseline: unknown) => fileDiffSince(folder, path, baseline))
+  ipcMain.handle(IPC.gitBaseline, (_event, folder: unknown) => sessionBaseline(folder))
+  ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => sessionStatus(folder, baseline))
+  ipcMain.handle(IPC.projectFiles, (_event, folder: unknown) => projectFiles(folder))
+  ipcMain.handle(IPC.projectFile, (_event, folder: unknown, path: unknown) => readProjectFile(folder, path))
   ipcMain.handle(IPC.gitSync, (_event, folder: string) => gitSync(folder))
   ipcMain.handle(IPC.gitBranches, (_event, folder: string) => listBranches(folder))
   ipcMain.handle(IPC.gitQuick, (_event, request: GitQuickRequest) => runGitQuick(request))

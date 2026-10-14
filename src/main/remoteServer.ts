@@ -41,7 +41,6 @@ export interface RemoteServerOptions {
     screen(id: string): Promise<RemoteTerminalScreen | null>
     subscribe(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null
     write(id: string, data: string): void
-    resize(id: string, cols: number, rows: number): void
   }
   startSession(input: unknown, authorizeStart: () => boolean): Promise<{ ok: boolean; error?: string; id?: string }>
   stopSession(id: string): boolean
@@ -322,7 +321,8 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
           sendJson(response, 403, { error: 'Terminal control is disabled in Dawsha settings.' })
           return
         }
-        options.terminals.resize(body.id, body.cols as number, body.rows as number)
+        // Browsers mirror the desktop size and no longer resize the PTY: an agent redrawn for a
+        // phone-width PTY garbled the desktop pane. Accept old clients' requests and ignore them.
         sendJson(response, 200, { ok: true })
         return
       }

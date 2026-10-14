@@ -95,7 +95,7 @@
     'Layouts, snippets, instructions': 'التخطيطات والمقاطع والتعليمات',
     'Restore a setup by name, insert snippets, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.': 'استعد ترتيبك المحفوظ، وأدرج المقاطع، وأبقِ ملفات تعليمات الوكلاء متناسقة.',
     'Import existing settings': 'استيراد إعدادات سابقة', 'Bring in projects and preferences from an earlier setup, with a backup of your current Dawsha settings.': 'انقل مشاريعك وتفضيلاتك من إعداد سابق مع الاحتفاظ بنسخة احتياطية من إعدادات دوشة الحالية.',
-    'Themes': 'السمات', 'Eight themes with contrast checks and an optional background image.': 'ثماني سمات واضحة مع خيار إضافة صورة خلفية.',
+    'Themes': 'السمات', 'Seven themes, including card-style light and dark themes, with contrast checks and an optional background image.': 'سبع سمات، منها سمات فاتحة وداكنة بتصميم البطاقات، مع فحص للتباين وخيار إضافة صورة خلفية.',
     'Installed skills': 'المهارات المثبتة', 'Browse, open, copy and export skills for every agent, including project skills.': 'تصفح مهارات كل وكيل، بما فيها مهارات المشاريع، وافتحها وانسخها أو صدّرها.',
     'Resume any session': 'استأنف أي جلسة', 'Ctrl+Shift+R lists earlier sessions of all three agents.': 'يعرض Ctrl+Shift+R الجلسات السابقة لكل الوكلاء.',
     'Command palette': 'لوحة الأوامر', 'Ctrl+K finds sessions, projects, snippets and layouts.': 'ابحث عن الجلسات والمشاريع والمقاطع والتخطيطات بـ Ctrl+K.',

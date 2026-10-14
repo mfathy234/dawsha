@@ -27,6 +27,42 @@ export type GitCommitResult = { ok: true; hash: string; pushed: boolean } | { ok
 
 export type GitDiffResult = { ok: true; text: string } | { ok: false; error: string }
 
+// The repo as it was when a session started: a commit holding the tracked files' working-tree state
+// (from `git stash create`, or HEAD when the tree was clean) and the untracked files that existed then.
+export interface SessionBaseline {
+  ref: string | null
+  at: number
+  untracked: string[]
+}
+
+export const MAX_BASELINE_UNTRACKED = 2_000
+
+export function sanitizeBaseline(value: unknown): SessionBaseline | null {
+  if (typeof value !== 'object' || value === null) return null
+  const raw = value as Record<string, unknown>
+  const ref = typeof raw.ref === 'string' && /^[0-9a-f]{7,64}$/.test(raw.ref) ? raw.ref : null
+  const at = typeof raw.at === 'number' && Number.isFinite(raw.at) ? raw.at : null
+  const untracked = Array.isArray(raw.untracked)
+    ? raw.untracked.filter((item): item is string => typeof item === 'string').slice(0, MAX_BASELINE_UNTRACKED)
+    : []
+  return at === null ? null : { ref, at, untracked }
+}
+
+export type SessionBaselineResult = { ok: true; baseline: SessionBaseline } | { ok: false; error: string }
+
+export type SessionStatusResult =
+  | { ok: true; status: RepoStatus; since: number; fellBack: boolean }
+  | { ok: false; error: string }
+
+export type ProjectFilesResult =
+  | { ok: true; files: string[]; truncated: boolean; repo: boolean }
+  | { ok: false; error: string }
+
+export type ProjectFileResult =
+  | { ok: true; text: string; size: number }
+  | { ok: true; text: null; size: number; reason: 'binary' | 'large' }
+  | { ok: false; error: string }
+
 export interface CommitRequest {
   folder: string
   paths: string[]

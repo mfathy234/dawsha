@@ -1,5 +1,6 @@
 import { isAgent } from './agents'
-import { DEFAULT_THEME_ID } from './themes'
+import { sanitizeBaseline } from './gitStatus'
+import { DEFAULT_THEME_ID, resolveThemeId } from './themes'
 import { formatShortcut, parseShortcut } from './shortcuts'
 import { isVersion } from './version'
 import { sanitizeSplits } from './splits'
@@ -118,6 +119,8 @@ function sanitizeTab(value: unknown): SavedTab | null {
   if (sessionId && agent !== 'shell') tab.sessionId = sessionId
   if (value.agentsOpen === true && agent === 'claude') tab.agentsOpen = true
   if (isAgent(value.from) && agent !== 'shell') tab.from = value.from
+  const baseline = sanitizeBaseline(value.baseline)
+  if (baseline) tab.baseline = baseline
   return tab
 }
 
@@ -309,7 +312,7 @@ export function migrateSettings(raw: unknown): Settings {
   return {
     version: 2,
     projects,
-    theme: { id: asString(theme.id) ?? defaults.theme.id, image: sanitizeImage(theme.image) },
+    theme: { id: resolveThemeId(asString(theme.id) ?? defaults.theme.id), image: sanitizeImage(theme.image) },
     sidebarCollapsed: raw.sidebarCollapsed === true,
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,

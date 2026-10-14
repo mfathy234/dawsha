@@ -3,6 +3,26 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-10-14
+
+### Added
+
+- Pair a phone by scanning a QR code in Remote Access settings. The code travels in the link fragment, so it never reaches the server or Cloudflare.
+- Add the Dawsha Daylight light theme and the Dawsha Cards and Graphite Cards dark themes, which draw each pane as a card with the terminal inset.
+- Review changes side by side or unified, with line numbers, word highlights and folded unchanged lines. Move between files with J and K, and press Space to pick a file for the commit.
+- Switch Changes to This session to see only what changed after the session started. Dawsha records the starting point without touching your stash or working tree.
+- Browse the project in a new Files tab: a tree of every file git does not ignore, a filter by name and a read-only view where lines changed since the last commit are tinted.
+
+### Changed
+
+- The Changes dialog is now a full review view with Previous, Next, Open in editor and Revert file for each file.
+- Replace the Tokyo Night, Solarized Dark, Gruvbox Dark and Solarized Light themes with the new themes. Anyone using one of them moves to the closest new theme.
+
+### Fixed
+
+- Stop a paired phone from resizing the desktop terminal, which garbled agent output on the desktop when the phone could type.
+- Clicking a desktop notification reliably brings Dawsha forward and opens that session. Notifications could be cleaned up while still on screen, so their click did nothing.
+
 ## [0.5.0] - 2026-10-13
 
 ### Added

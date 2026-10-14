@@ -63,10 +63,15 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await expect.poll(() => host.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before)
     await expect(host).toHaveAttribute('data-term-background', '#2e3440')
     await expect(page.locator('.note')).toHaveCount(0)
-    await page.getByRole('radio', { name: /Solarized Light/ }).click()
+    await page.getByRole('radio', { name: /GitHub Light/ }).click()
     await expect(page.locator('.note')).toContainText('run /theme and pick light')
     await page.screenshot({ path: join(SCREENS, '4-light-theme.png') })
-    await page.getByRole('radio', { name: /Dawsha/ }).click()
+    // Daylight is a light app around dark terminals, so the light-terminal hint stays hidden.
+    await page.getByRole('radio', { name: /Dawsha Daylight/ }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-pane-style', 'cards')
+    await expect(page.locator('.note')).toHaveCount(0)
+    await page.locator('#theme-grid-dark').click()
+    await expect(page.locator('html')).toHaveAttribute('data-pane-style', 'flat')
     await page.keyboard.press('Escape')
     await expect(page.locator('.theme-picker')).toHaveCount(0)
 
