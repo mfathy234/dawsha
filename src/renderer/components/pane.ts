@@ -49,8 +49,8 @@ import { dismissContextHint, typeCompact } from '../contextActions'
 import { dropFiles, hasFiles } from '../fileDrop'
 import { sessionState, type SessionState } from '../../shared/sessionState'
 import { permissionPromptText } from '../../shared/permissionPrompt'
-import { formatAge } from '../../shared/statusLine'
-import { statePill } from './stateIcon'
+import { setStatePillSuffix, statePill } from './stateIcon'
+import { timeInState } from '../stateClock'
 
 const RESUMED_CHIP_MS = 60_000
 
@@ -201,11 +201,13 @@ export class PaneComponent {
   }
 
   private updateState(view: PaneView, state: SessionState): void {
-    const age = view.info.ageMs !== null ? formatAge(view.info.ageMs) : ''
-    const signature = `${state}|${age}`
-    if (signature !== this.stateSignature) {
-      this.stateSignature = signature
-      this.stateHost.replaceChildren(statePill(state, age))
+    const inState = timeInState(this.paneId, state, view.now)
+    if (state !== this.stateSignature) {
+      // Rebuild only on a state change: replacing the icon restarts the Working spinner.
+      this.stateSignature = state
+      this.stateHost.replaceChildren(statePill(state, inState))
+    } else {
+      setStatePillSuffix(this.stateHost, state, inState)
     }
     this.el.classList.toggle('attention', view.attention !== 'none')
     this.el.classList.toggle('needs-you', state === 'needs')

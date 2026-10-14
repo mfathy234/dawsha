@@ -44,3 +44,26 @@ export function countSessionStates(states: readonly SessionState[]): SessionCoun
 
 export const compareSessionStates = (a: SessionState, b: SessionState): number =>
   SESSION_STATE_ORDER.indexOf(a) - SESSION_STATE_ORDER.indexOf(b)
+
+export interface StateClock {
+  state: SessionState
+  since: number
+}
+
+/** Remembers when a session entered its current state. Same state keeps the same object. */
+export function stepStateClock(previous: StateClock | undefined, state: SessionState, now: number): StateClock {
+  return previous && previous.state === state ? previous : { state, since: now }
+}
+
+/**
+ * How long a session has been in its state, in whole minutes or more. Under a minute it is empty:
+ * a seconds counter would change the label on every update and make the pill jitter.
+ */
+export function formatTimeInState(ms: number): string {
+  const minutes = Math.floor(Math.max(0, ms) / 60_000)
+  if (minutes < 1) return ''
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 48) return `${hours}h`
+  return `${Math.floor(hours / 24)}d`
+}

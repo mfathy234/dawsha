@@ -5,6 +5,7 @@ import { ICONS } from '../icons'
 import { sessionState, type SessionState } from '../../shared/sessionState'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import { cardSummary, lastLines, sortByUrgency, stateWord } from '../../shared/topbarSummary'
+import { timeInState } from '../stateClock'
 import { getTerminal } from '../terminals'
 import type { AppState } from '../state'
 import { agentMark } from './agentMark'
@@ -49,7 +50,7 @@ export class OthersPanelComponent {
     }
     const signature = JSON.stringify([
       collapsed,
-      this.others.map(({ view, state: s }) => [view.pane.id, view.pane.activeTabId, view.title, s, stateWord(s, view.info.ageMs), view.agent, view.project?.name ?? 'project', cardSummary(view)])
+      this.others.map(({ view, state: s }) => [view.pane.id, view.pane.activeTabId, view.title, s, stateWord(s, timeInState(view.pane.id, s, view.now)), view.agent, view.project?.name ?? 'project', cardSummary(view)])
     ])
     if (signature === this.signature) return
     this.signature = signature
@@ -99,7 +100,7 @@ export class OthersPanelComponent {
 
   private card(entry: Entry): HTMLElement {
     const { view, state } = entry
-    const word = stateWord(state, view.info.ageMs)
+    const word = stateWord(state, timeInState(view.pane.id, state, view.now))
     const summary = cardSummary(view)
     const project = view.project?.name ?? 'project'
     const preview = h('div', { class: 'others-preview', 'aria-hidden': 'true' })
@@ -132,7 +133,7 @@ export class OthersPanelComponent {
       h('span', { class: 'others-strip-label', 'aria-hidden': 'true' }, 'Other sessions')
     )
     for (const { view, state } of this.others) {
-      const status = stateWord(state, null)
+      const status = stateWord(state, '')
       const project = view.project?.name ?? 'project'
       this.el.append(
         h(
