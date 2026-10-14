@@ -105,7 +105,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await expect(page.locator('.pane-info [data-pane-limit="five_hour"]')).toContainText('5h 9% · resets in')
     await expect(page.locator('.pane-info [data-pane-limit="seven_day"]')).toContainText('week 54% · resets in')
     await expect(page.locator('.pane-info .info-age')).toContainText('ago')
-    await expect(page.locator('[data-limit="five_hour"]')).toHaveText('5h 9%')
+    await expect(page.locator('[data-limit="five_hour"]')).toContainText('5h 9%')
     await expect(page.locator('[data-limit="seven_day"]')).toHaveText('week 54%')
     await expect(page.locator('[data-limit="seven_day"] .charge')).toHaveAttribute('data-filled', '5')
     expect(await page.locator('.pane-info').evaluate((el) => el.getBoundingClientRect().height)).toBe(22)

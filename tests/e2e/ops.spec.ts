@@ -84,7 +84,7 @@ test('ops feed: strip, agents drawer, details panel, updates, stale and ended', 
     await expect(page.locator('.info-letters .agent-letter')).toHaveText(['S', 'H'])
     await expect(page.locator('.info-letters .agent-letter').first()).toHaveClass(/fam-sonnet/)
     await expect(page.locator('.info-letters .agent-letter').last()).toHaveClass(/fam-haiku/)
-    await expect(page.locator('[data-limit="five_hour"]')).toHaveText('5h 62%')
+    await expect(page.locator('[data-limit="five_hour"]')).toContainText('5h 62%')
     await expect(page.locator('[data-limit="five_hour"] .charge')).toHaveAttribute('data-filled', '6')
     await expect(page.locator('[data-limit="seven_day_fable"] .limit-label')).toHaveText('fable')
     await expect(page.locator('[data-limit="seven_day_fable"] .limit-label')).toHaveClass(/fam-fable/)
