@@ -3,6 +3,21 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Pair a phone by scanning a QR code in Remote Access settings. The code travels in the link fragment, so it never reaches the server or Cloudflare.
+- Add the Dawsha Daylight light theme and the Dawsha Cards and Graphite Cards dark themes, which draw each pane as a card with the terminal inset.
+
+### Changed
+
+- Replace the Tokyo Night, Solarized Dark, Gruvbox Dark and Solarized Light themes with the new themes. Anyone using one of them moves to the closest new theme.
+
+### Fixed
+
+- Stop a paired phone from resizing the desktop terminal, which garbled agent output on the desktop when the phone could type.
+
 ## [0.5.0] - 2026-10-13
 
 ### Added

@@ -1,6 +1,6 @@
 import type { ITheme } from '@xterm/xterm'
 import { withAlpha } from '../shared/contrast'
-import { findTheme, type Theme } from '../shared/themes'
+import { findTheme, hasLightTerminal, type Theme } from '../shared/themes'
 import type { ThemeSettings } from '../shared/types'
 
 export interface ThemeBundle {
@@ -44,7 +44,7 @@ function buildBundle(settings: ThemeSettings): ThemeBundle {
     xterm: { ...theme.term, background },
     hostBackground: imageActive ? 'transparent' : theme.term.background,
     imageActive,
-    minimumContrastRatio: theme.kind === 'light' ? 4.5 : 1
+    minimumContrastRatio: hasLightTerminal(theme) ? 4.5 : 1
   }
 }
 
@@ -60,6 +60,7 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
   root.style.setProperty('--fam-fable', bundle.theme.kind === 'dark' ? term.brightWhite : term.foreground)
   root.dataset.theme = bundle.theme.id
   root.dataset.kind = bundle.theme.kind
+  root.dataset.paneStyle = bundle.theme.style ?? 'flat'
   root.classList.toggle('has-image', bundle.imageActive)
   root.style.setProperty('--image-blur', `${settings.image.blur}px`)
   const url = bundle.imageActive ? `url("dawsha-image://current/?v=${imageVersion}")` : 'none'

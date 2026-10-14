@@ -1,6 +1,6 @@
 import { setImage, setTheme, toggleThemePicker } from '../actions'
 import { api } from '../api'
-import { THEMES, findTheme } from '../../shared/themes'
+import { THEMES, findTheme, hasLightTerminal } from '../../shared/themes'
 import { h } from '../dom'
 import type { AppState } from '../state'
 
@@ -61,7 +61,7 @@ export class ThemePickerComponent {
     const children: (HTMLElement | null)[] = [
       h('h2', { class: 'popover-title' }, 'Theme'),
       h('div', { class: 'theme-list', role: 'radiogroup', 'aria-label': 'Theme' }, ...THEMES.map((t) => this.row(t.id, theme.id))),
-      active.kind === 'light' ? h('p', { class: 'note', id: 'light-note' }, LIGHT_NOTE) : null,
+      hasLightTerminal(active) ? h('p', { class: 'note', id: 'light-note' }, LIGHT_NOTE) : null,
       this.imageSection(state)
     ]
     this.root.replaceChildren(...children.filter((c): c is HTMLElement => c !== null))

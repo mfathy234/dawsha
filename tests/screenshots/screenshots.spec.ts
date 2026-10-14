@@ -122,7 +122,7 @@ test('generates the README screenshots from fake projects only', async () => {
     await expect(page.locator('.resume-picker')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Theme' }).click()
-    await page.locator('#theme-tokyo-night').click()
+    await page.locator('#theme-dawsha-daylight').click()
     await expect(page.locator('.theme-picker')).toBeVisible()
     await settle(page, 1200)
     await page.screenshot({ path: join(OUT, 'themes.png') })

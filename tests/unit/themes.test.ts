@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { contrastRatio } from '../../src/shared/contrast'
 import { CODEX_MARK, GEMINI_MARK } from '../../src/shared/agents'
-import { THEMES } from '../../src/shared/themes'
+import { DEFAULT_THEME_ID, THEMES, findTheme, hasLightTerminal, resolveThemeId } from '../../src/shared/themes'
 
 const MIN = 4.5
 
@@ -43,8 +43,13 @@ describe.each(THEMES)('theme $name', (theme) => {
     expect(contrastRatio(term.foreground, term.background)).toBeGreaterThanOrEqual(MIN)
   })
 
-  it('terminal background matches the pane surface', () => {
-    expect(term.background.toLowerCase()).toBe(app.surface.toLowerCase())
+  it('terminal background matches the pane surface, or sits in a visible well for card themes', () => {
+    if (theme.style === 'cards') {
+      expect(term.background.toLowerCase()).not.toBe(app.surface.toLowerCase())
+      expect(contrastRatio(term.background, app.surface)).toBeGreaterThan(1.05)
+    } else {
+      expect(term.background.toLowerCase()).toBe(app.surface.toLowerCase())
+    }
   })
 })
 
@@ -55,15 +60,31 @@ describe('theme set', () => {
     expect(THEMES.map((t) => t.name)).toEqual(
       expect.arrayContaining([
         'Dawsha',
+        'Dawsha Cards',
+        'Graphite Cards',
+        'Dawsha Daylight',
         'Nord',
-        'Tokyo Night',
         'Catppuccin Mocha',
-        'Solarized Dark',
-        'Gruvbox Dark',
-        'GitHub Light',
-        'Solarized Light'
+        'GitHub Light'
       ])
     )
+  })
+
+  it('maps retired themes to their closest current theme', () => {
+    expect(resolveThemeId('tokyo-night')).toBe('dawsha-cards')
+    expect(resolveThemeId('solarized-dark')).toBe('graphite-cards')
+    expect(resolveThemeId('gruvbox-dark')).toBe('graphite-cards')
+    expect(resolveThemeId('solarized-light')).toBe('dawsha-daylight')
+    expect(resolveThemeId('nord')).toBe('nord')
+    expect(resolveThemeId('no-such-theme')).toBe(DEFAULT_THEME_ID)
+    expect(findTheme('solarized-light').id).toBe('dawsha-daylight')
+  })
+
+  it('treats Daylight as a light app with a dark terminal', () => {
+    expect(findTheme('dawsha-daylight').kind).toBe('light')
+    expect(hasLightTerminal(findTheme('dawsha-daylight'))).toBe(false)
+    expect(hasLightTerminal(findTheme('github-light'))).toBe(true)
+    expect(hasLightTerminal(findTheme('grid-dark'))).toBe(false)
   })
 
   it('defines all 16 ansi colours for every theme', () => {

@@ -5748,3 +5748,34 @@ body.dragging-ui {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Card themes: each pane is a rounded card and its terminal sits inset in a darker well. */
+:root[data-pane-style='cards'] .pane {
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+:root[data-pane-style='cards'] .pane-header,
+:root[data-pane-style='cards'] .tabs {
+  background: transparent;
+  border-bottom: 0;
+}
+
+:root[data-pane-style='cards'] .pane-body {
+  margin: 0 10px 10px;
+}
+
+:root[data-pane-style='cards'] .pane-body .term-host {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+:root[data-pane-style='cards'] .pane-body .term-host .xterm {
+  padding: 10px 12px;
+}
+
+:root[data-pane-style='cards'] .pane-foot {
+  background: transparent;
+  border-top: 0;
+}

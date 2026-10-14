@@ -55,7 +55,7 @@
 - **Skills and agents inventory.** The **Skills** tab separates installed skills from agent definitions across user, plugin and project locations. Filter by AI provider, then open, copy a path or export an item to a folder you choose.
 - **Paneon settings import.** If Paneon settings are found, Settings > General offers an import. Dawsha backs up its current settings and applies Paneon projects, layouts, snippets and preferences the next time you open Dawsha; Paneon remains untouched.
 - **Settings in one place.** A Settings view (Ctrl+,) for the palette shortcut, notifications and live session info, full access per agent, updates, the full changelog and where your data lives.
-- **Themes.** Eight themes (Dawsha, Nord, Tokyo Night, Catppuccin Mocha, Solarized Dark, Gruvbox Dark, GitHub Light, Solarized Light) with contrast checks, plus an optional background image.
+- **Themes.** Seven themes (Dawsha, Dawsha Cards, Graphite Cards, Dawsha Daylight, Nord, Catppuccin Mocha, GitHub Light) with contrast checks, plus an optional background image. The Cards and Daylight themes draw each pane as a card with its terminal inset.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
 
 | Focus a pane and open its details | Sub-agents drawer |

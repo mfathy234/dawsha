@@ -1,5 +1,5 @@
 import { isAgent } from './agents'
-import { DEFAULT_THEME_ID } from './themes'
+import { DEFAULT_THEME_ID, resolveThemeId } from './themes'
 import { formatShortcut, parseShortcut } from './shortcuts'
 import { isVersion } from './version'
 import { sanitizeSplits } from './splits'
@@ -309,7 +309,7 @@ export function migrateSettings(raw: unknown): Settings {
   return {
     version: 2,
     projects,
-    theme: { id: asString(theme.id) ?? defaults.theme.id, image: sanitizeImage(theme.image) },
+    theme: { id: resolveThemeId(asString(theme.id) ?? defaults.theme.id), image: sanitizeImage(theme.image) },
     sidebarCollapsed: raw.sidebarCollapsed === true,
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,

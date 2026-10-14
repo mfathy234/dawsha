@@ -1,3 +1,5 @@
+import { luminance } from './contrast'
+
 export interface AppColors {
   background: string
   sidebar: string
@@ -43,6 +45,8 @@ export interface Theme {
   id: string
   name: string
   kind: 'dark' | 'light'
+  // 'cards' draws each pane as a rounded card with its terminal inset in a darker well.
+  style?: 'cards'
   app: AppColors
   term: TermColors
 }
@@ -85,6 +89,141 @@ export const THEMES: Theme[] = [
       cyan: '#22d3ee',
       white: '#d6dae3',
       brightBlack: '#5b6478',
+      brightRed: '#fca5a5',
+      brightGreen: '#6ee7b7',
+      brightYellow: '#fcd34d',
+      brightBlue: '#93c5fd',
+      brightMagenta: '#d8b4fe',
+      brightCyan: '#67e8f9',
+      brightWhite: '#f3f4f6'
+    }
+  },
+  {
+    id: 'dawsha-cards',
+    name: 'Dawsha Cards',
+    kind: 'dark',
+    style: 'cards',
+    app: {
+      background: '#0a0c10',
+      sidebar: '#0d1015',
+      surface: '#151922',
+      raised: '#1b202b',
+      border: '#232a36',
+      text: '#d9dee8',
+      muted: '#8a93a6',
+      accent: '#34d399',
+      onAccent: '#06281c',
+      busy: '#f5b54a',
+      idle: '#8a93a6',
+      exited: '#f87171',
+      danger: '#f87171',
+      onDanger: '#2a0b0b'
+    },
+    term: {
+      background: '#0b0d12',
+      foreground: '#d9dee8',
+      cursor: '#34d399',
+      cursorAccent: '#0b0d12',
+      selectionBackground: '#2b3a4f',
+      black: '#232833',
+      red: '#f87171',
+      green: '#34d399',
+      yellow: '#f5b54a',
+      blue: '#60a5fa',
+      magenta: '#c084fc',
+      cyan: '#22d3ee',
+      white: '#d6dae3',
+      brightBlack: '#5b6475',
+      brightRed: '#fca5a5',
+      brightGreen: '#6ee7b7',
+      brightYellow: '#fcd34d',
+      brightBlue: '#93c5fd',
+      brightMagenta: '#d8b4fe',
+      brightCyan: '#67e8f9',
+      brightWhite: '#f3f4f6'
+    }
+  },
+  {
+    id: 'graphite-cards',
+    name: 'Graphite Cards',
+    kind: 'dark',
+    style: 'cards',
+    app: {
+      background: '#0f0f0f',
+      sidebar: '#131313',
+      surface: '#1b1b1b',
+      raised: '#222222',
+      border: '#2d2d2d',
+      text: '#e6e6e6',
+      muted: '#9b9b9b',
+      accent: '#3ddc97',
+      onAccent: '#062a1b',
+      busy: '#f2b44c',
+      idle: '#9b9b9b',
+      exited: '#f47272',
+      danger: '#f47272',
+      onDanger: '#2a0b0b'
+    },
+    term: {
+      background: '#0d0d0d',
+      foreground: '#e6e6e6',
+      cursor: '#3ddc97',
+      cursorAccent: '#0d0d0d',
+      selectionBackground: '#3a3a3a',
+      black: '#232833',
+      red: '#f87171',
+      green: '#34d399',
+      yellow: '#f5b54a',
+      blue: '#60a5fa',
+      magenta: '#c084fc',
+      cyan: '#22d3ee',
+      white: '#d6dae3',
+      brightBlack: '#5b6475',
+      brightRed: '#fca5a5',
+      brightGreen: '#6ee7b7',
+      brightYellow: '#fcd34d',
+      brightBlue: '#93c5fd',
+      brightMagenta: '#d8b4fe',
+      brightCyan: '#67e8f9',
+      brightWhite: '#f3f4f6'
+    }
+  },
+  {
+    id: 'dawsha-daylight',
+    name: 'Dawsha Daylight',
+    kind: 'light',
+    style: 'cards',
+    app: {
+      background: '#eef1f0',
+      sidebar: '#e8ecea',
+      surface: '#fafbfb',
+      raised: '#ffffff',
+      border: '#d8dedb',
+      text: '#16201b',
+      muted: '#56625c',
+      accent: '#087049',
+      onAccent: '#ffffff',
+      busy: '#975800',
+      idle: '#56625c',
+      exited: '#b42323',
+      danger: '#b42323',
+      onDanger: '#ffffff'
+    },
+    term: {
+      background: '#16191f',
+      foreground: '#d9dee8',
+      cursor: '#34d399',
+      cursorAccent: '#16191f',
+      selectionBackground: '#2b3a4f',
+      black: '#232833',
+      red: '#f87171',
+      green: '#34d399',
+      yellow: '#f5b54a',
+      blue: '#60a5fa',
+      magenta: '#c084fc',
+      cyan: '#22d3ee',
+      white: '#d6dae3',
+      brightBlack: '#5b6475',
       brightRed: '#fca5a5',
       brightGreen: '#6ee7b7',
       brightYellow: '#fcd34d',
@@ -139,50 +278,6 @@ export const THEMES: Theme[] = [
     }
   },
   {
-    id: 'tokyo-night',
-    name: 'Tokyo Night',
-    kind: 'dark',
-    app: {
-      background: '#16161e',
-      sidebar: '#181821',
-      surface: '#1a1b26',
-      raised: '#292e42',
-      border: '#292e42',
-      text: '#c0caf5',
-      muted: '#8089b3',
-      accent: '#7aa2f7',
-      onAccent: '#10131f',
-      busy: '#e0af68',
-      idle: '#8089b3',
-      exited: '#f7768e',
-      danger: '#f7768e',
-      onDanger: '#1a0b10'
-    },
-    term: {
-      background: '#1a1b26',
-      foreground: '#c0caf5',
-      cursor: '#c0caf5',
-      cursorAccent: '#1a1b26',
-      selectionBackground: '#283457',
-      black: '#15161e',
-      red: '#f7768e',
-      green: '#9ece6a',
-      yellow: '#e0af68',
-      blue: '#7aa2f7',
-      magenta: '#bb9af7',
-      cyan: '#7dcfff',
-      white: '#a9b1d6',
-      brightBlack: '#414868',
-      brightRed: '#f7768e',
-      brightGreen: '#9ece6a',
-      brightYellow: '#e0af68',
-      brightBlue: '#7aa2f7',
-      brightMagenta: '#bb9af7',
-      brightCyan: '#7dcfff',
-      brightWhite: '#c0caf5'
-    }
-  },
-  {
     id: 'catppuccin-mocha',
     name: 'Catppuccin Mocha',
     kind: 'dark',
@@ -224,94 +319,6 @@ export const THEMES: Theme[] = [
       brightMagenta: '#f5c2e7',
       brightCyan: '#94e2d5',
       brightWhite: '#a6adc8'
-    }
-  },
-  {
-    id: 'solarized-dark',
-    name: 'Solarized Dark',
-    kind: 'dark',
-    app: {
-      background: '#00212b',
-      sidebar: '#00242f',
-      surface: '#002b36',
-      raised: '#073642',
-      border: '#0f4350',
-      text: '#93a1a1',
-      muted: '#8499a0',
-      accent: '#2fb5ab',
-      onAccent: '#00212b',
-      busy: '#d5a100',
-      idle: '#8499a0',
-      exited: '#ee6e6a',
-      danger: '#c42a27',
-      onDanger: '#fdf6e3'
-    },
-    term: {
-      background: '#002b36',
-      foreground: '#93a1a1',
-      cursor: '#93a1a1',
-      cursorAccent: '#002b36',
-      selectionBackground: '#073642',
-      black: '#073642',
-      red: '#dc322f',
-      green: '#859900',
-      yellow: '#b58900',
-      blue: '#268bd2',
-      magenta: '#d33682',
-      cyan: '#2aa198',
-      white: '#eee8d5',
-      brightBlack: '#586e75',
-      brightRed: '#cb4b16',
-      brightGreen: '#586e75',
-      brightYellow: '#657b83',
-      brightBlue: '#839496',
-      brightMagenta: '#6c71c4',
-      brightCyan: '#93a1a1',
-      brightWhite: '#fdf6e3'
-    }
-  },
-  {
-    id: 'gruvbox-dark',
-    name: 'Gruvbox Dark',
-    kind: 'dark',
-    app: {
-      background: '#1d2021',
-      sidebar: '#212425',
-      surface: '#282828',
-      raised: '#3c3836',
-      border: '#504945',
-      text: '#ebdbb2',
-      muted: '#a89984',
-      accent: '#fabd2f',
-      onAccent: '#1d2021',
-      busy: '#fe8019',
-      idle: '#a89984',
-      exited: '#ff6b57',
-      danger: '#ff6b57',
-      onDanger: '#1d2021'
-    },
-    term: {
-      background: '#282828',
-      foreground: '#ebdbb2',
-      cursor: '#ebdbb2',
-      cursorAccent: '#282828',
-      selectionBackground: '#504945',
-      black: '#282828',
-      red: '#cc241d',
-      green: '#98971a',
-      yellow: '#d79921',
-      blue: '#458588',
-      magenta: '#b16286',
-      cyan: '#689d6a',
-      white: '#a89984',
-      brightBlack: '#928374',
-      brightRed: '#fb4934',
-      brightGreen: '#b8bb26',
-      brightYellow: '#fabd2f',
-      brightBlue: '#83a598',
-      brightMagenta: '#d3869b',
-      brightCyan: '#8ec07c',
-      brightWhite: '#ebdbb2'
     }
   },
   {
@@ -357,51 +364,23 @@ export const THEMES: Theme[] = [
       brightCyan: '#3192aa',
       brightWhite: '#8c959f'
     }
-  },
-  {
-    id: 'solarized-light',
-    name: 'Solarized Light',
-    kind: 'light',
-    app: {
-      background: '#eee8d5',
-      sidebar: '#f3edda',
-      surface: '#fdf6e3',
-      raised: '#eee8d5',
-      border: '#d9d2bd',
-      text: '#475b62',
-      muted: '#566b72',
-      accent: '#14609a',
-      onAccent: '#fdf6e3',
-      busy: '#7a5800',
-      idle: '#566b72',
-      exited: '#c4291f',
-      danger: '#c4291f',
-      onDanger: '#fdf6e3'
-    },
-    term: {
-      background: '#fdf6e3',
-      foreground: '#475b62',
-      cursor: '#475b62',
-      cursorAccent: '#fdf6e3',
-      selectionBackground: '#eee8d5',
-      black: '#073642',
-      red: '#dc322f',
-      green: '#859900',
-      yellow: '#b58900',
-      blue: '#268bd2',
-      magenta: '#d33682',
-      cyan: '#2aa198',
-      white: '#eee8d5',
-      brightBlack: '#002b36',
-      brightRed: '#cb4b16',
-      brightGreen: '#586e75',
-      brightYellow: '#657b83',
-      brightBlue: '#839496',
-      brightMagenta: '#6c71c4',
-      brightCyan: '#93a1a1',
-      brightWhite: '#fdf6e3'
-    }
   }
 ]
 
-export const findTheme = (id: string): Theme => THEMES.find((t) => t.id === id) ?? THEMES[0]
+// Themes removed in 0.5 and the closest current theme for anyone who had picked one.
+const RETIRED_THEMES: Record<string, string> = {
+  'tokyo-night': 'dawsha-cards',
+  'solarized-dark': 'graphite-cards',
+  'gruvbox-dark': 'graphite-cards',
+  'solarized-light': 'dawsha-daylight'
+}
+
+export function resolveThemeId(id: string): string {
+  const current = RETIRED_THEMES[id] ?? id
+  return THEMES.some((t) => t.id === current) ? current : DEFAULT_THEME_ID
+}
+
+// Daylight is a light app with a dark terminal, so terminal behaviour follows the terminal's own background.
+export const hasLightTerminal = (theme: Theme): boolean => luminance(theme.term.background) > 0.4
+
+export const findTheme = (id: string): Theme => THEMES.find((t) => t.id === resolveThemeId(id)) ?? THEMES[0]
