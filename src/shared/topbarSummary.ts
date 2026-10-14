@@ -15,10 +15,6 @@ export function moreLabel(view: string): string {
   return match ? `More · ${match.label}` : 'More'
 }
 
-export function isMoreView(view: string): view is MoreView {
-  return MORE_VIEWS.some((item) => item.view === view)
-}
-
 /** "1h 39m", "39m", "2d 3h"; null when unknown or already past. */
 export function formatResetIn(resetsAt: number | null, now: number): string | null {
   if (resetsAt === null) return null

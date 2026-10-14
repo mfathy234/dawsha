@@ -153,6 +153,10 @@ function copySkillTree(source: string, destination: string): void {
 export function exportSkill(locations: SkillLocations, id: unknown, destinationFolder: string): string {
   const skill = resolveSkill(locations, id)
   if (!skill) throw new Error('Skill is no longer available.')
+  return exportEntry(skill, destinationFolder)
+}
+
+function exportEntry(skill: SkillEntry, destinationFolder: string): string {
   if (!isDirectory(destinationFolder)) throw new Error('Choose an existing destination folder.')
   if (!isSafeExportDestination(skill.path, destinationFolder)) throw new Error('Cannot export inside the skill folder.')
   const destination = join(resolve(destinationFolder), basename(skill.path))
@@ -193,7 +197,7 @@ export function exportSkills(locations: SkillLocations, ids: unknown, destinatio
     const target = join(folder, skill.agent, skill.kind === 'agent' ? 'agents' : 'skills')
     try {
       mkdirSync(target, { recursive: true })
-      exportSkill(locations, skill.id, target)
+      exportEntry(skill, target)
       exported += 1
     } catch (error) {
       skipped.push({ name: skill.name, reason: (error as Error).message.replace(/\.$/, '').toLowerCase() })

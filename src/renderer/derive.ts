@@ -73,8 +73,6 @@ export interface PaneView {
   activity: ProcessActivity[]
   opsLive: boolean
   live: StatusInfo | null
-  /** Where the session really works: its live cwd (for example a git worktree), else the project folder. */
-  workFolder: string | null
   agentsOpen: boolean
   detailsOpen: boolean
   now: number
@@ -96,7 +94,19 @@ function liveTabs(state: AppState, agent: TabAgent) {
   })
 }
 
+// State is replaced, never mutated, so one match per state object is safe to reuse. Terminal link
+// hover and the git polling loops ask for a pane's work folder far more often than state changes.
+const matchCache = new WeakMap<AppState, Matches>()
+
 export function matchAll(state: AppState): Matches {
+  const cached = matchCache.get(state)
+  if (cached) return cached
+  const matches = computeMatches(state)
+  matchCache.set(state, matches)
+  return matches
+}
+
+function computeMatches(state: AppState): Matches {
   const claudeRefs = liveTabs(state, 'claude').map(({ tab, cwd }) => ({
     id: tab.id,
     pid: tab.pid,
@@ -317,7 +327,6 @@ export function derivePanes(state: AppState): PaneView[] {
       activity: primary.status === 'exited' ? [] : (state.processActivity[primary.id] ?? []),
       opsLive,
       live: liveStatusFor(state, primary, matches),
-      workFolder: folder,
       agentsOpen: primary.agentsOpen === true,
       now: state.now,
       detailsOpen: state.detailsPaneId === pane.id && state.maximizedId === pane.id,
@@ -339,14 +348,3 @@ export function derivePanes(state: AppState): PaneView[] {
   })
 }
 
-export interface Counts {
-  sessions: number
-  busy: number
-}
-
-export function countSessions(views: PaneView[]): Counts {
-  return {
-    sessions: views.length,
-    busy: views.filter((v) => v.status === 'busy').length
-  }
-}

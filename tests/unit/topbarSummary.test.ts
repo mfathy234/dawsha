@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountLimits, cardSummary, formatResetIn, lastLines, sortByUrgency, isMoreView, limitText, moreLabel, stateWord } from '../../src/shared/topbarSummary'
+import { accountLimits, cardSummary, formatResetIn, lastLines, sortByUrgency, limitText, moreLabel, stateWord } from '../../src/shared/topbarSummary'
 import type { RateLimitWindow } from '../../src/shared/types'
 
 const win = (key: string, percent: number, resetsAt: number | null = null): RateLimitWindow => ({ key, label: key, percent, resetsAt })
@@ -32,8 +32,6 @@ describe('topbar summary helpers', () => {
   it('labels the More button', () => {
     expect(moreLabel('agents')).toBe('More · Agents')
     expect(moreLabel('grid')).toBe('More')
-    expect(isMoreView('layouts')).toBe(true)
-    expect(isMoreView('usage')).toBe(false)
   })
 
   it('builds the state word', () => {

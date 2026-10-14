@@ -1,6 +1,7 @@
 import {
   addTab,
   answerPermission,
+  permissionTail,
   enableBridge,
   closeDetails,
   closePane,
@@ -52,7 +53,6 @@ import { formatAge } from '../../shared/statusLine'
 import { statePill } from './stateIcon'
 
 const RESUMED_CHIP_MS = 60_000
-const PROMPT_TAIL_ROWS = 18
 
 export class PaneComponent {
   readonly el: HTMLElement
@@ -215,7 +215,7 @@ export class PaneComponent {
 
   private updatePermission(view: PaneView, state: SessionState): void {
     const needs = state === 'needs'
-    const command = needs && store.state.waiting[this.paneId] ? permissionPromptText(paneTerminal(this.paneId)?.tailText(PROMPT_TAIL_ROWS) ?? '') : ''
+    const command = needs && store.state.waiting[this.paneId] ? permissionPromptText(permissionTail(this.paneId)) : ''
     const signature = needs ? JSON.stringify([view.agent, command]) : ''
     if (signature === this.permissionSignature) return
     this.permissionSignature = signature

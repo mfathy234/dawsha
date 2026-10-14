@@ -311,6 +311,8 @@ export class TopBarComponent {
       event.preventDefault()
       items[event.key === 'Home' ? 0 : items.length - 1].focus()
     } else if (event.key === 'Tab') {
+      // Move focus back to the anchor before the menu leaves the DOM, so Tab continues from there.
+      this.chevron.focus()
       this.closeAgentMenu()
     }
   }
@@ -379,6 +381,7 @@ export class TopBarComponent {
       event.preventDefault()
       items[event.key === 'Home' ? 0 : items.length - 1].focus()
     } else if (event.key === 'Tab') {
+      this.more.focus()
       this.closeMoreMenu()
     }
   }

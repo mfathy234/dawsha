@@ -60,6 +60,9 @@ import { shouldRelaunchPlain } from '../shared/resumeFallback'
 import { sessionDisplayName } from '../shared/sessionMatch'
 import { applyTheme } from './themeManager'
 import { disposeTerminal, getTerminal } from './terminals'
+import { detectPermissionPrompt } from '../shared/permissionPrompt'
+
+const PERMISSION_TAIL_ROWS = 24
 
 const PERSIST_DELAY_MS = 300
 let persistTimer: number | undefined
@@ -495,13 +498,23 @@ export function focusNextAttention(): boolean {
 }
 
 /**
- * Answers the permission prompt in a pane's active tab. Agents put the "allow once" choice first, so
- * Enter accepts it and Escape declines; Dawsha re-detects the prompt from the screen afterwards.
+ * Answers the permission prompt in a pane's agent tab: the tab attention polling reads, never a shell
+ * tab beside it. Agents put the "allow once" choice first, so Enter accepts it and Escape declines.
+ * The screen is checked again first, because attention lags the terminal and a stray Enter would
+ * send whatever is in the prompt box.
  */
-export function answerPermission(paneId: string, allow: boolean): void {
-  const pane = paneById(store.state, paneId)
-  if (!pane || store.state.attention[paneId] !== 'needs') return
-  api.write(pane.activeTabId, allow ? '\r' : '\x1b')
+export function answerPermission(paneId: string, allow: boolean): boolean {
+  if (store.state.attention[paneId] !== 'needs') return false
+  const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
+  if (!tabId || !detectPermissionPrompt(getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '')) return false
+  api.write(tabId, allow ? '\r' : '\x1b')
+  return true
+}
+
+/** The agent tab's screen tail, used to show what a permission prompt asks. */
+export function permissionTail(paneId: string): string {
+  const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
+  return tabId ? (getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '') : ''
 }
 
 export function findInPane(paneId: string): void {
