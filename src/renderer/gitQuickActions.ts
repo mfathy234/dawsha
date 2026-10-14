@@ -3,7 +3,8 @@ import { api } from './api'
 import { refreshBranches, refreshGitChanges } from './actions'
 import { openBranchPicker } from './components/branchPicker'
 import { toast } from './components/toast'
-import { folderOfPane, paneById, store } from './state'
+import { workFolderOfPane } from './derive'
+import { paneById, store } from './state'
 
 const NO_REPO = 'This pane folder is not a git repository.'
 
@@ -11,7 +12,7 @@ type SimpleOp = 'pull' | 'fetch' | 'stash' | 'stashPop'
 
 function folderOf(paneId: string): string | null {
   const pane = paneById(store.state, paneId)
-  const folder = pane ? folderOfPane(store.state, pane) : null
+  const folder = pane ? workFolderOfPane(store.state, pane) : null
   if (!folder) return null
   if (store.state.gitChanges[folder] == null) {
     toast(NO_REPO)

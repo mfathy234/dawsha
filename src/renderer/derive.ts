@@ -6,6 +6,7 @@ import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsF
 import type { ProcessActivity } from '../shared/processActivity'
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { formatDuration, sessionUsage } from '../shared/sessionCost'
+import { pickWorkFolder } from '../shared/workFolder'
 import { lastOutputAt } from './ptyActivity'
 import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, RateLimitWindow, SessionFile, StatusInfo, TabAgent } from '../shared/types'
 import { folderOfPane, projectById, type AppState, type PaneState, type TermState } from './state'
@@ -72,6 +73,8 @@ export interface PaneView {
   activity: ProcessActivity[]
   opsLive: boolean
   live: StatusInfo | null
+  /** Where the session really works: its live cwd (for example a git worktree), else the project folder. */
+  workFolder: string | null
   agentsOpen: boolean
   detailsOpen: boolean
   now: number
@@ -118,6 +121,20 @@ function primaryTab(pane: PaneState): TermState {
   const active = pane.tabs.find((t) => t.id === pane.activeTabId) ?? pane.tabs[0]
   if (active.agent !== 'shell') return active
   return pane.tabs.find((t) => t.agent !== 'shell') ?? active
+}
+
+/** The pane's working folder, following its agent into a worktree when the agent reports one. */
+export function workFolderOfPane(state: AppState, pane: PaneState, matches: Matches = matchAll(state)): string | null {
+  const base = folderOfPane(state, pane)
+  const tab = primaryTab(pane)
+  if (tab.status === 'exited') return base
+  const liveCwd =
+    tab.agent === 'claude'
+      ? (liveStatusFor(state, tab, matches)?.cwd ?? matches.claude.get(tab.id)?.cwd)
+      : tab.agent === 'codex'
+        ? matches.codex.get(tab.id)?.cwd
+        : null
+  return pickWorkFolder(base, liveCwd)
 }
 
 function nameOf(tab: TermState, matches: Matches): string | null {
@@ -281,7 +298,7 @@ export function derivePanes(state: AppState): PaneView[] {
   const matches = matchAll(state)
   return state.panes.map((pane, index) => {
     const project = projectById(state, pane.projectId)
-    const folder = folderOfPane(state, pane)
+    const folder = workFolderOfPane(state, pane, matches)
     const primary = primaryTab(pane)
     const { title, named } = titleFor(pane, matches, project)
     const active = pane.tabs.find((t) => t.id === pane.activeTabId) ?? pane.tabs[0]
@@ -300,6 +317,7 @@ export function derivePanes(state: AppState): PaneView[] {
       activity: primary.status === 'exited' ? [] : (state.processActivity[primary.id] ?? []),
       opsLive,
       live: liveStatusFor(state, primary, matches),
+      workFolder: folder,
       agentsOpen: primary.agentsOpen === true,
       now: state.now,
       detailsOpen: state.detailsPaneId === pane.id && state.maximizedId === pane.id,
