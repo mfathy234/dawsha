@@ -57,6 +57,7 @@ interface MockControls {
   terminalEnded: boolean
   snapshotSize?: { cols: number; rows: number }
   outputSocket?: WebSocketRoute
+  pairBodies?: unknown[]
 }
 
 async function installApiMocks(page: Page, controls: MockControls): Promise<void> {
@@ -73,6 +74,7 @@ async function installApiMocks(page: Page, controls: MockControls): Promise<void
     const request = route.request()
     const path = new URL(request.url()).pathname
     if (path.endsWith('/api/pair') && request.method() === 'POST') {
+      controls.pairBodies?.push(request.postDataJSON())
       controls.paired = true
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ deviceId: 'device-1' }) })
       return
@@ -217,7 +219,9 @@ test('pairs a browser, respects permissions, and adapts to a phone screen', asyn
     await page.locator('#remote-nav-sessions').click()
     await page.locator('.running-card').click()
     await page.setViewportSize({ width: 1280, height: 851 })
-    await expect.poll(() => controls.resizes.some((resize) => resize.id === 'terminal-1')).toBe(true)
+    await expect(page.locator('#terminal-compose')).toBeVisible()
+    await page.waitForTimeout(300)
+    expect(controls.resizes, 'a browser that can type must still leave the desktop PTY size alone').toEqual([])
     controls.closeFirstOutput = true
     controls.outputConnections = 0
     await page.reload()
@@ -360,7 +364,7 @@ test('phone touch clients can send through the mobile composer', async () => {
   }
 })
 
-test('draws agent output at the PTY size and asks for a phone-sized PTY only when it can type', async () => {
+test('draws agent output at the PTY size and never resizes the desktop PTY, even when it can type', async () => {
   test.setTimeout(30_000)
   const { server, url } = await startStaticServer()
   let browser: Browser | undefined
@@ -380,21 +384,20 @@ test('draws agent output at the PTY size and asks for a phone-sized PTY only whe
     await page.waitForTimeout(300)
     expect(controls.resizes).toEqual([])
 
-    // Input enabled: request a size that fits the phone, then follow the PTY when it changes.
+    // Input enabled: still mirror the desktop size. Resizing the PTY to the phone made the agent
+    // redraw for ~40 columns and garbled the desktop pane.
     controls.canControl = true
     await page.reload()
     await page.locator('.running-card').click()
-    await expect.poll(() => controls.resizes.length).toBeGreaterThan(0)
-    const requested = controls.resizes.at(-1)!
-    expect(requested.cols).toBeLessThan(60)
-    expect(requested.cols).toBeGreaterThanOrEqual(30)
-    controls.outputSocket!.send(JSON.stringify({ event: 'resize', data: { cols: requested.cols, rows: requested.rows } }))
-    await expect(page.locator('#terminal-dimensions')).toHaveText(`${requested.cols} × ${requested.rows}`)
-    const requests = controls.resizes.length
+    await expect(page.locator('.xterm-rows')).toContainText('Remote session ready')
+    await expect(page.locator('#terminal-dimensions')).toHaveText('120 × 40')
     await page.waitForTimeout(500)
-    expect(controls.resizes.length, 'a matching PTY size must not trigger more resize requests').toBe(requests)
-    const fontSize = await page.locator('#terminal .xterm-rows').evaluate((element) => parseFloat(getComputedStyle(element).fontSize))
-    expect(fontSize).toBeGreaterThanOrEqual(12)
+    expect(controls.resizes, 'a browser must never resize the desktop PTY').toEqual([])
+
+    // When the desktop pane changes size, the phone follows it.
+    controls.outputSocket!.send(JSON.stringify({ event: 'resize', data: { cols: 100, rows: 30 } }))
+    await expect(page.locator('#terminal-dimensions')).toHaveText('100 × 30')
+    expect(controls.resizes).toEqual([])
   } finally {
     await browser?.close()
     await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
@@ -411,6 +414,60 @@ test('public build exposes beta Remote Access settings and stays off until confi
     await expect(page.locator('#remote-access-toggle')).toBeEnabled()
     await expect(page.getByText(/pairing code is the only login gate/i)).toBeVisible()
     await expect(page.locator('.remote-status-off')).toContainText('off')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('a scanned QR link pairs the phone without typing and clears the code from the address bar', async () => {
+  const { server, url } = await startStaticServer()
+  let browser: Browser | undefined
+  const controls: MockControls = { paired: false, canControl: false, writes: [], writeTimes: [], inputAttempts: [], inputFailures: 0, inputDelayMs: 0, resizes: [], sessions: [], stoppedSessionIds: new Set(), outputConnections: 0, closeFirstOutput: false, terminalEnded: false, pairBodies: [] }
+  try {
+    browser = await chromium.launch({ headless: true })
+    const page = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
+    })
+    await installApiMocks(page, controls)
+    await page.goto(`${url}#pair=654321`)
+    await expect(page.locator('#workspace-view')).toBeVisible()
+    expect(controls.pairBodies).toEqual([{ code: '654321', deviceName: 'iPhone · Safari' }])
+    expect(new URL(page.url()).hash).toBe('')
+  } finally {
+    await browser?.close()
+    await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
+  }
+})
+
+test('Remote Access settings show a QR code that opens the page with the pairing code', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    const url = 'https://quiet-river-1234.trycloudflare.com/dawsha/'
+    await app.evaluate(({ ipcMain }, tunnel) => {
+      ipcMain.removeHandler('remote-access:get')
+      ipcMain.handle('remote-access:get', () => ({
+        status: 'available',
+        enabled: true,
+        url: tunnel,
+        message: 'Remote Access is on.',
+        devices: [],
+        pairing: { code: '482913', expiresAt: Date.now() + 5 * 60_000 },
+        permissions: { allowedEmail: '', terminalInput: true, sessionControl: true }
+      }))
+    }, url)
+    // Settings reads the Remote Access state once at startup.
+    await page.reload()
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-remote').click()
+    const qr = page.locator('.remote-qr')
+    await expect(qr).toBeVisible()
+    await expect(qr).toHaveAttribute('data-qr', `${url}#pair=482913`)
+    await expect(qr.locator('svg[role="img"]')).toHaveAttribute('aria-label', /pairs your phone/)
+    await expect(page.locator('.remote-qr-card')).toContainText('Scan with your phone')
+    await expect(page.locator('.remote-manual')).toContainText('Or connect by hand')
+    await expect(page.locator('.remote-pairing-code')).toHaveAttribute('aria-label', 'Pairing code 4 8 2 9 1 3')
+    await page.screenshot({ path: 'test-results/screens/remote-access-qr.png' })
   } finally {
     await closeApp(app)
   }

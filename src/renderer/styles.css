@@ -5668,3 +5668,83 @@ body.dragging-ui {
     display: none;
   }
 }
+
+/* Remote Access: scan a QR code to open and pair, or connect by hand. */
+.remote-connect {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.remote-connect:has(> .remote-qr-card:only-child),
+.remote-connect:not(:has(> .remote-qr-card)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.remote-qr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: 12px;
+  background: var(--raised);
+}
+
+.remote-qr {
+  width: 100%;
+  max-width: 192px;
+  aspect-ratio: 1;
+  align-self: center;
+  padding: 6px;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.remote-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.remote-qr-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.remote-qr-copy h4 {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.remote-qr-copy .hint {
+  margin: 0;
+}
+
+.remote-manual {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.remote-manual-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.remote-manual .remote-steps {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 900px) {
+  .remote-connect {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

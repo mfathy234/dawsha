@@ -49,7 +49,6 @@ async function setup(
   const setScreenOutput = (value: string): void => { screenOutput = value }
   const getProjects = vi.fn(() => [project])
   const write = vi.fn()
-  const resize = vi.fn()
   const stopSession = vi.fn(() => true)
   const startSession = vi.fn(async () => ({ ok: true as const, pid: 123, id: 'new-term' }))
   const server = await startRemoteServer({
@@ -65,8 +64,7 @@ async function setup(
         outputListeners.add(listener)
         return () => outputListeners.delete(listener)
       },
-      write,
-      resize
+      write
     },
     startSession,
     stopSession,
@@ -77,7 +75,7 @@ async function setup(
   })
   const base = `http://127.0.0.1:${server.port}/dawsha/api`
   const headers = { Host: 'device.trycloudflare.com', Origin: 'https://device.trycloudflare.com', Cookie: `dawsha_remote=${paired.token}` }
-  return { server, base, headers, auth, pairing, paired, getProjects, write, resize, startSession, stopSession, outputListeners, terminal, setScreenOutput }
+  return { server, base, headers, auth, pairing, paired, getProjects, write, startSession, stopSession, outputListeners, terminal, setScreenOutput }
 }
 
 describe('private remote HTTP API', () => {
@@ -228,15 +226,18 @@ describe('private remote HTTP API', () => {
     } finally { await context.server.stop() }
   })
 
-  it('blocks read-only browsers from resizing host terminals', async () => {
+  it('never resizes host terminals: read-only browsers are refused and older clients are ignored', async () => {
     const onRequestComplete = vi.fn()
     const context = await setup(undefined, undefined, onRequestComplete)
-    context.auth.setPermissions({ terminalInput: false })
+    const body = JSON.stringify({ id: 'term-1', cols: 40, rows: 30 })
     try {
-      const resize = await request(`${context.base}/terminal/resize`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 'term-1', cols: 180, rows: 42 }) })
-      expect(resize.statusCode).toBe(403)
-      expect(context.resize).not.toHaveBeenCalled()
+      context.auth.setPermissions({ terminalInput: false })
+      const refused = await request(`${context.base}/terminal/resize`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body })
+      expect(refused.statusCode).toBe(403)
       expect(onRequestComplete).toHaveBeenCalledWith('POST', '/dawsha/api/terminal/resize', 403)
+      context.auth.setPermissions({ terminalInput: true })
+      const ignored = await request(`${context.base}/terminal/resize`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body })
+      expect(ignored.statusCode).toBe(200)
     } finally { await context.server.stop() }
   })
 

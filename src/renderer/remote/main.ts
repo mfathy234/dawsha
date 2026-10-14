@@ -1,6 +1,7 @@
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { AGENTS, AGENT_MARKS, AGENT_NAMES } from '../../shared/agents'
+import { deviceNameFromAgent, pairingCodeFromHash } from '../../shared/remotePairing'
 import { DEFAULT_THEME_ID, findTheme } from '../../shared/themes'
 import type { AgentKind } from '../../shared/types'
 import { TERMINAL_FONT } from '../terminalFont'
@@ -20,6 +21,11 @@ type BrowserView = 'sessions' | 'projects' | 'terminal'
 class RemoteRequestError extends Error {
   constructor(message: string, readonly status: number) { super(message) }
 }
+
+// A pairing code from a scanned QR link (#pair=123456). Drop it from the address bar at once
+// so it is not left in history or shared by accident.
+let scannedCode = pairingCodeFromHash(location.hash)
+if (scannedCode) history.replaceState(null, '', location.pathname + location.search)
 
 const pairView = document.querySelector<HTMLElement>('#pair-view')!
 const disconnectedView = document.querySelector<HTMLElement>('#disconnected-view')!
@@ -68,13 +74,10 @@ let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let terminalResizeObserver: ResizeObserver | null = null
 let controlBusy = false
-let lastTerminalSize = ''
-let terminalResizeQueue = Promise.resolve()
 let terminalResizeTimer = 0
 // The PTY's real size. The browser draws at exactly this size so full-screen agent TUIs line up.
 let ptySize: { cols: number; rows: number } | null = null
 // Cell size per pixel of font, measured at the preferred size so PTY size requests stay stable.
-let preferredCellRatio: { size: number; width: number; height: number } | null = null
 
 // Agent TUIs (Claude Code, Codex) treat text that arrives together with Enter as a paste and
 // leave it unsent, so the draft and its Enter are written separately with a short gap.
@@ -101,41 +104,15 @@ function terminalArea(): { width: number; height: number } {
   }
 }
 
-function requestPtyResize(id: string, cols: number, rows: number): void {
-  const size = `${id}:${cols}x${rows}`
-  if (size === lastTerminalSize) return
-  lastTerminalSize = size
-  terminalResizeQueue = terminalResizeQueue.then(async () => {
-    try {
-      await apiRequest('terminal/resize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, cols, rows })
-      })
-    } catch (error) {
-      if (lastTerminalSize === size) lastTerminalSize = ''
-      if (error instanceof RemoteRequestError && error.status === 401) showPair('This browser pairing has expired or was revoked.')
-      else if (error instanceof RemoteRequestError && error.status === 403) setNotice(error.message, true, terminalNotice)
-      else setNotice(error instanceof Error ? error.message : 'Terminal size could not be updated.', true, terminalNotice)
-    }
-  })
-}
-
 function fitTerminal(): void {
   if (!fitAddon || !terminal || currentView !== 'terminal' || !activeTerminalId || !state) return
   const area = terminalArea()
   if (area.width <= 0 || area.height <= 0) return
   const preferred = terminalFontSize()
   const ratio = cellRatios()
-  if (terminal.options.fontSize === preferred && terminalElement.querySelector('.xterm-screen')?.clientWidth) preferredCellRatio = { size: preferred, ...ratio }
-  const sizing = preferredCellRatio?.size === preferred ? preferredCellRatio : ratio
 
-  // A browser that can type asks the PTY to match its screen; the agent then redraws at that size.
-  if (state.permissions.terminalInput) {
-    const cols = Math.max(20, Math.min(400, Math.floor(area.width / (preferred * sizing.width))))
-    const rows = Math.max(8, Math.min(200, Math.floor(area.height / (preferred * sizing.height))))
-    if (!ptySize || ptySize.cols !== cols || ptySize.rows !== rows) requestPtyResize(activeTerminalId, cols, rows)
-  }
+  // The browser never resizes the PTY: the desktop pane owns its size, and an agent redrawn
+  // for a phone-width PTY would garble the desktop view. Mirror it and scale or scroll instead.
 
   terminalElement.classList.toggle('pty-sized', Boolean(ptySize))
   if (!ptySize) {
@@ -185,6 +162,13 @@ function showPair(message?: string): void {
   } else {
     pairError.textContent = ''
     pairError.hidden = true
+  }
+  const deviceInput = document.querySelector<HTMLInputElement>('#device-name')!
+  if (deviceInput.value === 'My browser') deviceInput.value = deviceNameFromAgent(navigator.userAgent)
+  if (scannedCode) {
+    document.querySelector<HTMLInputElement>('#pairing-code')!.value = scannedCode
+    scannedCode = null
+    pairForm.requestSubmit()
   }
 }
 

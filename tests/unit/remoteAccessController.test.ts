@@ -22,7 +22,7 @@ function fixture() {
   const controller = createRemoteAccessController({
     userDataDir,
     settings: store,
-    ptys: { remoteSnapshot: (id?: string) => [...remoteIds].filter((entry) => id === undefined || id === entry).map((id) => ({ id, startedAt: 1, cols: 80, rows: 24, projectId: 'p1', agent: 'codex' as const, remoteManaged: true })), remoteScreen: async () => null, subscribeRemoteOutput: () => null, write: () => undefined, resize: () => undefined, kill, spawn },
+    ptys: { remoteSnapshot: (id?: string) => [...remoteIds].filter((entry) => id === undefined || id === entry).map((id) => ({ id, startedAt: 1, cols: 80, rows: 24, projectId: 'p1', agent: 'codex' as const, remoteManaged: true })), remoteScreen: async () => null, subscribeRemoteOutput: () => null, write: () => undefined, kill, spawn },
     getWindow: () => null,
     tunnel,
     createServer,

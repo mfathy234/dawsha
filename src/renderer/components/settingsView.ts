@@ -17,6 +17,8 @@ import {
   showView
 } from '../actions'
 import { AGENTS, AGENT_NAMES, FULL_ACCESS_FLAGS } from '../../shared/agents'
+import { pairingLink } from '../../shared/remotePairing'
+import { qrSvg } from '../qr'
 import {
   HIGHLIGHT_COLORS,
   MAX_HIGHLIGHT_RULES,
@@ -282,6 +284,18 @@ export class SettingsViewComponent {
       : 'With no PIN email, the short-lived Dawsha pairing code is the only login gate. Keep the public-facing URL private; Cloudflare processes proxied traffic.')
     const statusLine = h('p', { class: `remote-status remote-status-${status}`, role: 'status' },
       h('span', { class: 'remote-status-dot', 'aria-hidden': 'true' }), state?.message ?? 'Remote Access is off.')
+    const qrTarget = enabled && state.url ? pairingLink(state.url, state.pairing?.code) : ''
+    const qr = enabled && state.url
+      ? h('section', { class: 'remote-qr-card' },
+          h('div', { class: 'remote-qr', 'data-qr': qrTarget },
+            qrSvg(qrTarget, state.pairing ? 'QR code that opens Dawsha and pairs your phone' : 'QR code that opens Dawsha on your phone')),
+          h('div', { class: 'remote-qr-copy' },
+            h('h4', {}, 'Scan with your phone'),
+            h('p', { class: 'hint' }, state.pairing
+              ? 'Point your camera at the code. It opens Dawsha and pairs this phone, no typing needed.'
+              : 'Point your camera at the code to open Dawsha, then create a pairing code.'),
+            state.pairing ? this.pairingCountdown(state.pairing.expiresAt) : null))
+      : null
     const steps = enabled && state.url
       ? h('div', { class: 'remote-steps' },
           h('section', { class: 'remote-step' },
@@ -312,7 +326,7 @@ export class SettingsViewComponent {
             h('h3', {}, enabled ? 'Connect your phone' : 'Use Dawsha from your phone'),
             statusLine),
           mainAction),
-        steps,
+        qr || steps ? h('div', { class: 'remote-connect' }, qr, h('div', { class: 'remote-manual' }, qr ? h('p', { class: 'remote-manual-label' }, 'Or connect by hand') : null, steps)) : null,
         securityNote,
         this.remoteError ? h('p', { class: 'note error set-note', role: 'alert' }, this.remoteError) : null)
     ]

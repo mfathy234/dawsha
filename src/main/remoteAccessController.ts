@@ -20,7 +20,6 @@ interface RemotePtys {
   remoteScreen(id: string): Promise<RemoteTerminalScreen | null>
   subscribeRemoteOutput(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null
   write(id: string, data: string): void
-  resize(id: string, cols: number, rows: number): void
   kill(id: string): void
   spawn(request: SpawnRequest): SpawnResult
 }
@@ -153,8 +152,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
           snapshot: (id) => options.ptys.remoteSnapshot(id),
           screen: (id) => options.ptys.remoteScreen(id),
           subscribe: (id, listener) => options.ptys.subscribeRemoteOutput(id, listener),
-          write: (id, data) => options.ptys.write(id, data),
-          resize: (id, cols, rows) => options.ptys.resize(id, cols, rows)
+          write: (id, data) => options.ptys.write(id, data)
         },
         startSession: async (input, authorizeStart) => {
           const result = await startRemoteSession(input, {
