@@ -1,5 +1,5 @@
 import { readdir, stat } from 'node:fs/promises'
-import { join, relative, sep } from 'node:path'
+import { join } from 'node:path'
 import {
   MAX_BASELINE_UNTRACKED,
   parseNumstatZ,
@@ -56,7 +56,10 @@ export async function projectFiles(folder: unknown): Promise<ProjectFilesResult>
     const walked = await walk(folder)
     return { ok: true, files: walked.files.sort(), truncated: walked.truncated, repo: false }
   }
-  const scope = relative(root, folder).split(sep).join('/')
+  // Ask git for the folder's place in the repo: comparing paths breaks when one side went through a symlink
+  // (macOS /var is /private/var) or a Windows short name.
+  const prefix = await git(folder, ['rev-parse', '--show-prefix'])
+  const scope = prefix.ok ? prefix.stdout.trim().replace(/\/$/, '') : ''
   const listed = await git(root, ['ls-files', '-z', '-c', '-o', '--exclude-standard', '--', scope || '.'])
   if (!listed.ok) return { ok: false, error: listed.message }
   const all = [...new Set(splitZ(listed.stdout))].sort()

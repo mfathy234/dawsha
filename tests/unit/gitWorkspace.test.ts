@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -29,6 +29,16 @@ describe('project files', () => {
     writeFileSync(join(repo, 'src', 'new.ts'), 'fresh\n')
     const result = await projectFiles(repo)
     expect(result).toEqual({ ok: true, files: ['.gitignore', 'README.md', 'src/a.ts', 'src/b.ts', 'src/new.ts'], truncated: false, repo: true })
+  })
+
+  it('lists a sub folder, also when it is reached through a symlink', async () => {
+    const repo = makeRepo()
+    expect(await projectFiles(join(repo, 'src'))).toMatchObject({ ok: true, files: ['src/a.ts', 'src/b.ts'] })
+    if (process.platform === 'win32') return
+    const link = join(mkdtempSync(join(tmpdir(), 'dawsha-link-')), 'linked')
+    symlinkSync(repo, link)
+    expect(await projectFiles(link)).toMatchObject({ ok: true, files: ['.gitignore', 'README.md', 'src/a.ts', 'src/b.ts'] })
+    expect(await projectFiles(join(link, 'src'))).toMatchObject({ ok: true, files: ['src/a.ts', 'src/b.ts'] })
   })
 
   it('reads a file and refuses paths outside the project', async () => {
