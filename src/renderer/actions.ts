@@ -496,6 +496,16 @@ export function focusNextAttention(): boolean {
   return target !== null
 }
 
+/**
+ * Answers the permission prompt in a pane's active tab. Agents put the "allow once" choice first, so
+ * Enter accepts it and Escape declines; Dawsha re-detects the prompt from the screen afterwards.
+ */
+export function answerPermission(paneId: string, allow: boolean): void {
+  const pane = paneById(store.state, paneId)
+  if (!pane || store.state.attention[paneId] !== 'needs') return
+  api.write(pane.activeTabId, allow ? '\r' : '\x1b')
+}
+
 export function findInPane(paneId: string): void {
   const pane = paneById(store.state, paneId)
   if (pane) getTerminal(pane.activeTabId)?.openSearch()
