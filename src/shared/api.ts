@@ -111,6 +111,7 @@ export interface GridApi {
   openInstruction(folder: string, name: string): Promise<void>
   notify(request: NotifyRequest): void
   onNotifyClick(listener: (paneId: string) => void): () => void
+  setAttentionBadge(count: number): void
   bridgePreview(): Promise<BridgePreview>
   bridgeStatus(): Promise<BridgeStatus>
   bridgeInstall(): Promise<BridgeResult>

@@ -15,7 +15,7 @@ import type {
 } from '../shared/types'
 import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
-import { findSolution, notifyUser, quickOpen } from './desktop'
+import { applyAttentionBadge, findSolution, notifyUser, quickOpen } from './desktop'
 import { existingFiles, openFile } from './fileOpen'
 import { projectFolder, readInstruction, writeInstruction } from './instructionFiles'
 import { isInstructionName, type InstructionWriteRequest } from '../shared/instructions'
@@ -170,6 +170,7 @@ export function registerIpc(
     return root && isInstructionName(name) ? openFile(root, { path: name }) : undefined
   })
   ipcMain.on(IPC.notify, (_event, request: NotifyRequest) => notifyUser(getWindow, request, onNotifyClick))
+  ipcMain.on(IPC.attentionBadge, (_event, count: unknown) => applyAttentionBadge(getWindow(), count))
   ipcMain.handle(IPC.bridgePreview, () => bridgePreview(locations()))
   ipcMain.handle(IPC.bridgeStatus, () => bridgeStatus(locations()))
   ipcMain.handle(IPC.bridgeInstall, () => installBridge(locations()))

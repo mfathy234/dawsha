@@ -70,6 +70,7 @@ const api: GridApi = {
   openInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsOpen, folder, name),
   notify: (request) => ipcRenderer.send(IPC.notify, request),
   onNotifyClick: (listener) => subscribe<[string]>(IPC.notifyClick, listener),
+  setAttentionBadge: (count) => ipcRenderer.send(IPC.attentionBadge, count),
   bridgePreview: () => ipcRenderer.invoke(IPC.bridgePreview),
   bridgeStatus: () => ipcRenderer.invoke(IPC.bridgeStatus),
   bridgeInstall: () => ipcRenderer.invoke(IPC.bridgeInstall),

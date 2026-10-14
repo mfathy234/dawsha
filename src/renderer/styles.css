@@ -6352,3 +6352,38 @@ body.dragging-ui {
 .state-pill.state-needs { background: var(--state-needs); color: var(--bg); font-weight: 600; }
 .state-pill.state-needs .state-pill-text { color: var(--bg); }
 .state-pill.state-needs .state-icon { color: var(--bg); --state-ink: var(--state-needs); }
+
+/* Pane, sidebar and attention badge polish. */
+.pane-state { display: inline-flex; align-items: center; flex: none; }
+.pane.needs-you { border-color: var(--state-needs); box-shadow: 0 0 0 1px color-mix(in srgb, var(--state-needs) 45%, transparent); }
+.pane-tab-add-slot { display: inline-flex; align-items: center; }
+.pane-tab-add-slot[hidden], .tabs[hidden] { display: none; }
+.pane-permission {
+  flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--state-needs) 55%, var(--border));
+  background: color-mix(in srgb, var(--state-needs) 10%, var(--surface));
+  font-size: 12.5px; color: var(--text);
+}
+.pane-permission[hidden] { display: none; }
+.pane-permission-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pane-permission-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pane-permission-command {
+  font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pane-permission .btn { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.pane-permission-key {
+  font-family: var(--font-mono); font-size: 10.5px; padding: 0 4px; border-radius: 3px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent); opacity: 0.8;
+}
+.pane-foot .chip-branch .chip-text { direction: rtl; text-align: left; white-space: nowrap; }
+.pane-foot .chip-branch .chip-text bdi { unicode-bidi: isolate; direction: ltr; }
+.info-enable-bridge { height: 20px; padding: 0 8px; font-size: 11.5px; }
+.agents-toggle { width: 22px; justify-content: center; padding: 0; }
+.sess-state { display: inline-flex; align-items: center; gap: 5px; flex: none; font-size: 11.5px; }
+.sess-state-word { color: var(--muted); }
+.needs-project { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 11.5px; }
+.needs-group { padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.needs-group .sess-group-label { color: var(--state-needs); font-weight: 600; }
+.needs-row { width: 100%; }
+@media (prefers-reduced-motion: reduce) { .pane.needs-you { transition: none; } }

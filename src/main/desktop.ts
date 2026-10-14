@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process'
 import { appendFileSync, readdirSync } from 'node:fs'
 import { delimiter, join } from 'node:path'
-import { BrowserWindow, Notification, shell } from 'electron'
+import { BrowserWindow, Notification, app, nativeImage, shell } from 'electron'
+import { OVERLAY_SIZE, badgeWindowTitle, normalizeBadgeCount, overlayBitmap } from '../shared/attentionBadge'
 import { safeLink } from '../shared/markdown'
 import { platformExecutableDirs, resolveExecutable } from './executables'
 import type { NotifyRequest, QuickOpenKind } from '../shared/types'
@@ -88,4 +89,14 @@ export function notifyUser(getWindow: () => BrowserWindow | null, request: Notif
   })
   keepAlive(notification)
   notification.show()
+}
+
+export function applyAttentionBadge(window: BrowserWindow | null, value: unknown): void {
+  const count = normalizeBadgeCount(value)
+  if (process.platform !== 'win32') app.setBadgeCount(count)
+  if (!window || window.isDestroyed()) return
+  window.setTitle(badgeWindowTitle(count))
+  if (process.platform !== 'win32') return
+  const image = count > 0 ? nativeImage.createFromBitmap(overlayBitmap(count), { width: OVERLAY_SIZE, height: OVERLAY_SIZE }) : null
+  window.setOverlayIcon(image, count > 0 ? `${count} waiting for you` : '')
 }
