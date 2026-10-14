@@ -277,3 +277,17 @@ html.lenis { scroll-behavior: auto; }
   .sico { top: 0; }
   .steps-fx .line { top: 16px; bottom: 16px; left: 15px; right: auto; width: 1px; height: auto; transform-origin: 50% 0; }
 }
+
+/* Demo clip under the hero: poster first, video only on screen (see demo.js). */
+.demo { padding: 8px 0 56px; }
+.demo .small-h { margin: 0 0 14px; text-align: center; }
+.demo-shot { position: relative; max-width: 960px; margin: 0 auto; }
+.demo-video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.demo-toggle { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 999px; background: rgb(12 14 18 / 0.78); color: var(--text); cursor: pointer; }
+.demo-toggle svg { fill: currentColor; }
+.demo-toggle .demo-play, .demo-toggle.paused .demo-pause { display: none; }
+.demo-toggle.paused .demo-play { display: block; }
+.demo-toggle:hover { border-color: var(--accent); }
+.demo-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[dir="rtl"] .demo-toggle { right: auto; left: 12px; }
+.demo-toggle[hidden] { display: none; }
