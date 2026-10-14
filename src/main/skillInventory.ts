@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, realpathSync } from 'node:fs'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
-import type { SkillEntry } from '../shared/skills'
+import type { BulkSkillExport, SkillEntry } from '../shared/skills'
 
 export interface SkillLocations {
   claude: string
@@ -166,4 +166,38 @@ export function exportSkill(locations: SkillLocations, id: unknown, destinationF
     copySkillTree(skill.path, destination)
   }
   return destination
+}
+
+/**
+ * Exports several skills or agents into `<destination>/dawsha-export/<agent>/<skills|agents>/`, so an
+ * "export all" keeps each provider's items apart. Items that fail (already exported, links, gone) are
+ * skipped with their reason instead of stopping the rest.
+ */
+export function exportSkills(locations: SkillLocations, ids: unknown, destinationFolder: string): BulkSkillExport {
+  if (!Array.isArray(ids) || ids.length === 0) throw new Error('Nothing to export.')
+  if (!isDirectory(destinationFolder)) throw new Error('Choose an existing destination folder.')
+  const all = listSkills(locations)
+  const folder = join(resolve(destinationFolder), 'dawsha-export')
+  const skipped: BulkSkillExport['skipped'] = []
+  let exported = 0
+  for (const id of new Set(ids)) {
+    const skill = typeof id === 'string' ? all.find((entry) => entry.id === id) : undefined
+    if (!skill) {
+      skipped.push({ name: String(id), reason: 'no longer available' })
+      continue
+    }
+    if (!isSafeExportDestination(skill.path, destinationFolder)) {
+      skipped.push({ name: skill.name, reason: 'destination is inside it' })
+      continue
+    }
+    const target = join(folder, skill.agent, skill.kind === 'agent' ? 'agents' : 'skills')
+    try {
+      mkdirSync(target, { recursive: true })
+      exportSkill(locations, skill.id, target)
+      exported += 1
+    } catch (error) {
+      skipped.push({ name: skill.name, reason: (error as Error).message.replace(/\.$/, '').toLowerCase() })
+    }
+  }
+  return { folder, exported, skipped }
 }

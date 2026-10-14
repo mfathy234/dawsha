@@ -6352,3 +6352,9 @@ body.dragging-ui {
 .state-pill.state-needs { background: var(--state-needs); color: var(--bg); font-weight: 600; }
 .state-pill.state-needs .state-pill-text { color: var(--bg); }
 .state-pill.state-needs .state-icon { color: var(--bg); --state-ink: var(--state-needs); }
+
+/* Skills: search and bulk export */
+.skill-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 4px 0 12px; }
+.skill-toolbar .skill-filters { margin: 0; }
+.skill-search { flex: 1 1 220px; min-width: 180px; max-width: 360px; height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font: inherit; }
+.skill-search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

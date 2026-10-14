@@ -85,6 +85,7 @@ const api: GridApi = {
   listSkills: () => ipcRenderer.invoke(IPC.skillsList),
   openSkill: (id) => ipcRenderer.invoke(IPC.skillsOpen, id),
   exportSkill: (id) => ipcRenderer.invoke(IPC.skillsExport, id),
+  exportSkills: (ids) => ipcRenderer.invoke(IPC.skillsExportMany, ids),
   readClipboard: () => ipcRenderer.invoke(IPC.clipboardRead),
   writeClipboard: (text) => ipcRenderer.invoke(IPC.clipboardWrite, text),
   openExternal: (url) => ipcRenderer.invoke(IPC.openExternal, url),

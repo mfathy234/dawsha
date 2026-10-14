@@ -19,7 +19,7 @@ import type {
 } from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
 import type { ProcessActivity } from './processActivity'
-import type { SkillEntry } from './skills'
+import type { BulkSkillExport, SkillEntry } from './skills'
 import type { PaneonImportPreview } from './paneonImport'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
@@ -126,6 +126,8 @@ export interface GridApi {
   listSkills(): Promise<SkillEntry[]>
   openSkill(id: string): Promise<void>
   exportSkill(id: string): Promise<string | null>
+  /** Asks for a folder once, then exports every id. Null when the folder picker is cancelled. */
+  exportSkills(ids: string[]): Promise<BulkSkillExport | null>
   readClipboard(): Promise<ClipboardContent>
   writeClipboard(text: string): Promise<void>
   openExternal(url: string): Promise<void>

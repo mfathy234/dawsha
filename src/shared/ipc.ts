@@ -31,6 +31,7 @@ export const IPC = {
   skillsList: 'skills:list',
   skillsOpen: 'skills:open',
   skillsExport: 'skills:export',
+  skillsExportMany: 'skills:export-many',
   clipboardRead: 'clipboard:read',
   clipboardWrite: 'clipboard:write',
   openExternal: 'shell:open-external',

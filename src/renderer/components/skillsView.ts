@@ -1,5 +1,6 @@
 import { api } from '../api'
 import { clear, h } from '../dom'
+import { filterSkills, skillExportLabel, skillExportSummary } from '../../shared/skillSearch'
 import type { SkillEntry } from '../../shared/skills'
 
 type Filter = 'all' | SkillEntry['agent']
@@ -11,6 +12,16 @@ export class SkillsViewComponent {
   private readonly status = h('p', { class: 'skill-status', role: 'status' })
   private readonly filters = h('div', { class: 'skill-filters', role: 'group', 'aria-label': 'Filter by AI provider' })
   private readonly kinds = h('div', { class: 'skill-kinds', role: 'group', 'aria-label': 'Inventory type' })
+  private readonly search = h('input', {
+    class: 'skill-search',
+    type: 'search',
+    placeholder: 'Search by name, path or project',
+    'aria-label': 'Search skills and agents',
+    onInput: () => this.render()
+  })
+  private readonly exportShown = h('button', { class: 'btn small', type: 'button', 'data-skill-export-shown': '', onClick: () => void this.exportVisible() })
+  private readonly exportStatus = h('span', { class: 'skill-feedback', role: 'status' })
+  private visible: SkillEntry[] = []
   private entries: SkillEntry[] = []
   private filter: Filter = 'all'
   private kind: Kind = 'skill'
@@ -35,7 +46,10 @@ export class SkillsViewComponent {
         h('div', {}, h('h1', {}, 'Skills'), h('p', { class: 'lede' }, 'Skills and agent definitions installed on this machine or in your projects.')),
         h('button', { class: 'btn ghost', type: 'button', onClick: () => void this.refresh() }, 'Refresh')
       ),
-      this.kinds, this.filters, this.status, this.rows
+      this.kinds,
+      h('div', { class: 'skill-toolbar' }, this.filters, this.search, this.exportShown, this.exportStatus),
+      this.status,
+      this.rows
     )
   }
 
@@ -62,10 +76,29 @@ export class SkillsViewComponent {
       button.setAttribute('aria-pressed', String(filter === this.filter))
       button.setAttribute('aria-label', `${filter === 'all' ? 'All' : filter === 'shared' ? 'Shared' : filter![0].toUpperCase() + filter!.slice(1)} ${this.kind === 'skill' ? 'skills' : 'agents'}`)
     }
-    const entries = this.entries.filter((entry) => entry.kind === this.kind && (this.filter === 'all' || entry.agent === this.filter))
+    const entries = filterSkills(this.entries, { kind: this.kind, agent: this.filter, query: this.search.value })
+    this.visible = entries
+    this.exportShown.textContent = skillExportLabel(entries.length, this.kind, this.filter)
+    this.exportShown.disabled = entries.length === 0
     clear(this.rows)
-    if (this.loaded && entries.length === 0) this.rows.append(h('p', { class: 'skill-empty' }, `No ${this.kind === 'skill' ? 'skills' : 'agents'} found for this filter.`))
+    const why = this.search.value.trim() ? 'this search' : 'this filter'
+    if (this.loaded && entries.length === 0) this.rows.append(h('p', { class: 'skill-empty' }, `No ${this.kind === 'skill' ? 'skills' : 'agents'} found for ${why}.`))
     for (const entry of entries) this.rows.append(this.row(entry))
+  }
+
+  private async exportVisible(): Promise<void> {
+    const ids = this.visible.map((entry) => entry.id)
+    if (ids.length === 0) return
+    this.exportStatus.textContent = ''
+    this.exportShown.disabled = true
+    try {
+      const result = await api.exportSkills(ids)
+      if (result) this.exportStatus.textContent = skillExportSummary(result)
+    } catch (error) {
+      this.exportStatus.textContent = error instanceof Error ? error.message : 'Export failed.'
+    } finally {
+      this.exportShown.disabled = this.visible.length === 0
+    }
   }
 
   private row(entry: SkillEntry): HTMLElement {
