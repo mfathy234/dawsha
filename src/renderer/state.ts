@@ -22,6 +22,7 @@ import type {
   StatusInfo,
   TabAgent
 } from '../shared/types'
+import type { SessionBaseline } from '../shared/gitStatus'
 
 export interface TermState {
   id: string
@@ -40,6 +41,7 @@ export interface TermState {
   command?: string
   prompt?: string
   from?: AgentKind
+  baseline?: SessionBaseline
   task?: { agents: AgentKind[]; before: ToolReport[] }
 }
 

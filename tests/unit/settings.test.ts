@@ -101,6 +101,30 @@ describe('migrateSettings', () => {
     expect(result.workspace.panes[0].activeIndex).toBe(1)
     expect(result.workspace.focusedIndex).toBe(0)
   })
+
+  it('keeps a valid session starting point on a tab and drops a broken one', () => {
+    const baseline = { ref: 'a1b2c3d4e5f6', at: 1_760_000_000_000, untracked: ['notes.txt', 7] }
+    const result = migrateSettings({
+      projects: [{ id: 'p', name: 'P', folder: 'C:\\p' }],
+      workspace: {
+        focusedIndex: 0,
+        panes: [
+          {
+            projectId: 'p',
+            tabs: [
+              { agent: 'claude', label: 'claude', baseline },
+              { agent: 'claude', label: 'claude', baseline: { ref: '--evil', at: 'soon' } }
+            ],
+            activeIndex: 0,
+            fontSize: 15
+          }
+        ]
+      }
+    })
+    const [kept, dropped] = result.workspace.panes[0].tabs
+    expect(kept.baseline).toEqual({ ref: 'a1b2c3d4e5f6', at: 1_760_000_000_000, untracked: ['notes.txt'] })
+    expect(dropped.baseline).toBeUndefined()
+  })
 })
 
 describe('agent settings migration', () => {

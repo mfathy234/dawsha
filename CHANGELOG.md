@@ -9,9 +9,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - Pair a phone by scanning a QR code in Remote Access settings. The code travels in the link fragment, so it never reaches the server or Cloudflare.
 - Add the Dawsha Daylight light theme and the Dawsha Cards and Graphite Cards dark themes, which draw each pane as a card with the terminal inset.
+- Review changes side by side or unified, with line numbers, word highlights and folded unchanged lines. Move between files with J and K, and press Space to pick a file for the commit.
+- Switch Changes to This session to see only what changed after the session started. Dawsha records the starting point without touching your stash or working tree.
+- Browse the project in a new Files tab: a tree of every file git does not ignore, a filter by name and a read-only view where lines changed since the last commit are tinted.
 
 ### Changed
 
+- The Changes dialog is now a full review view with Previous, Next, Open in editor and Revert file for each file.
 - Replace the Tokyo Night, Solarized Dark, Gruvbox Dark and Solarized Light themes with the new themes. Anyone using one of them moves to the closest new theme.
 
 ### Fixed

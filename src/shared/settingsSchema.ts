@@ -1,4 +1,5 @@
 import { isAgent } from './agents'
+import { sanitizeBaseline } from './gitStatus'
 import { DEFAULT_THEME_ID, resolveThemeId } from './themes'
 import { formatShortcut, parseShortcut } from './shortcuts'
 import { isVersion } from './version'
@@ -118,6 +119,8 @@ function sanitizeTab(value: unknown): SavedTab | null {
   if (sessionId && agent !== 'shell') tab.sessionId = sessionId
   if (value.agentsOpen === true && agent === 'claude') tab.agentsOpen = true
   if (isAgent(value.from) && agent !== 'shell') tab.from = value.from
+  const baseline = sanitizeBaseline(value.baseline)
+  if (baseline) tab.baseline = baseline
   return tab
 }
 

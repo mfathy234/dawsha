@@ -5,7 +5,18 @@ import type { FileRef } from './filePaths'
 import type { InstructionRead, InstructionWriteRequest, InstructionWriteResult } from './instructions'
 import type { WorktreeStatus } from './compare'
 import type { BranchListResult, GitQuickRequest, GitQuickResult, SyncCounts } from './gitBranches'
-import type { CommitRequest, DiscardRequest, GitCommitResult, GitDiffResult, RepoStatusResult } from './gitStatus'
+import type {
+  CommitRequest,
+  DiscardRequest,
+  GitCommitResult,
+  GitDiffResult,
+  ProjectFileResult,
+  ProjectFilesResult,
+  RepoStatusResult,
+  SessionBaseline,
+  SessionBaselineResult,
+  SessionStatusResult
+} from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
 import type { ProcessActivity } from './processActivity'
 import type { SkillEntry } from './skills'
@@ -81,6 +92,11 @@ export interface GridApi {
   gitPush(folder: string): Promise<GitResult>
   gitDiscard(request: DiscardRequest): Promise<GitResult>
   gitDiff(folder: string, path: string): Promise<GitDiffResult>
+  gitDiffSince(folder: string, path: string, baseline: SessionBaseline): Promise<GitDiffResult>
+  gitBaseline(folder: string): Promise<SessionBaselineResult>
+  gitSessionStatus(folder: string, baseline: SessionBaseline): Promise<SessionStatusResult>
+  projectFiles(folder: string): Promise<ProjectFilesResult>
+  projectFile(folder: string, path: string): Promise<ProjectFileResult>
   gitSync(folder: string): Promise<SyncCounts | null>
   gitBranches(folder: string): Promise<BranchListResult>
   gitQuick(request: GitQuickRequest): Promise<GitQuickResult>

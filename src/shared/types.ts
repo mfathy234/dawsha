@@ -1,3 +1,4 @@
+import type { SessionBaseline } from './gitStatus'
 import type { HighlightSettings } from './highlights'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
@@ -48,6 +49,7 @@ export interface SavedTab {
   sessionId?: string
   agentsOpen?: boolean
   from?: AgentKind
+  baseline?: SessionBaseline
 }
 
 export interface SavedPane {

@@ -1,3 +1,4 @@
+import type { SessionBaseline } from './gitStatus'
 import { sanitizeSplits } from './splits'
 import { LAYOUT_NAME_MAX, MAX_LAYOUTS } from './settingsSchema'
 import type { AgentKind, CompareLink, GridSplits, Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
@@ -10,6 +11,7 @@ export interface SnapshotTab {
   sessionId?: string
   agentsOpen?: boolean
   from?: AgentKind
+  baseline?: SessionBaseline
   task?: unknown
 }
 
@@ -54,7 +56,8 @@ export function snapshotWorkspace(
           titleHint: tab.titleHint,
           sessionId: tab.agent === 'shell' || detached ? undefined : sessionFor(tab),
           agentsOpen: tab.agentsOpen === true ? true : undefined,
-          from: tab.from
+          from: tab.from,
+          baseline: options.portable === true ? undefined : tab.baseline
         }))
       }
       if (options.portable !== true) {

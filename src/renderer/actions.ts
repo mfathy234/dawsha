@@ -124,6 +124,14 @@ export async function flushWorkspace(): Promise<void> {
   await saveWorkspace()
 }
 
+// Remember the repo as it is when a session starts, so Changes can show only what changed since.
+async function recordBaseline(termId: string, cwd: string): Promise<void> {
+  const result = await api.gitBaseline(cwd).catch(() => null)
+  if (!result?.ok) return
+  store.set((s) => mapTerm(s, termId, (t) => (t.baseline ? t : { ...t, baseline: result.baseline })))
+  persistWorkspace()
+}
+
 export async function launch(paneId: string, termId: string, resume: boolean): Promise<void> {
   await nextFrame()
   await nextFrame()
@@ -140,11 +148,13 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     store.set((s) => mapTerm(s, termId, (t) => ({ ...t, sessionId })))
     persistWorkspace()
   }
+  const cwd = pane.folder ?? project.folder
+  if (!term.baseline) void recordBaseline(termId, cwd)
   const result = await api.spawn({
     id: termId,
     projectId: project.id,
     agent: term.agent,
-    cwd: pane.folder ?? project.folder,
+    cwd,
     resume,
     sessionId,
     command: term.command,
@@ -295,7 +305,15 @@ export async function openChanges(paneId: string): Promise<void> {
     toast('This pane folder is not a git repository.')
     return
   }
-  await openChangesDialog({ folder, title: view.title, onChanged: () => void refreshGitChanges() })
+  const pane = paneById(store.state, paneId)
+  const tab = pane?.tabs.find((t) => t.id === pane.activeTabId)
+  await openChangesDialog({
+    folder,
+    title: view.title,
+    baseline: tab?.baseline,
+    sessionTitle: tab?.agent === 'shell' ? undefined : view.title,
+    onChanged: () => void refreshGitChanges()
+  })
   void refreshGitChanges()
 }
 
@@ -932,7 +950,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline })
   }
   return {
     id: newId(),
