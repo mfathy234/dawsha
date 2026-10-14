@@ -184,3 +184,44 @@ test('Arabic has a shareable static URL and explains the release features in bot
   await expect(page.locator('.fgroup').nth(1).locator('li').filter({ hasText: 'Remote Control' })).toBeVisible()
   await expect(page.getByText('Resizable Projects panel')).toBeVisible()
 })
+
+const countPlays = (): void => {
+  const w = window as unknown as { __plays: number }
+  w.__plays = 0
+  const original = HTMLMediaElement.prototype.play
+  HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+    w.__plays += 1
+    return original.call(this)
+  }
+}
+
+test('the demo clip stays out of the first load and plays only once it is on screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(countPlays)
+  await page.goto(url)
+  await page.waitForLoadState('load')
+  const video = page.locator('.demo-video')
+  await expect(video).toHaveAttribute('preload', 'none')
+  await expect(video).toHaveAttribute('poster', 'assets/demo-poster.jpg')
+  expect(await video.evaluate((el: HTMLVideoElement) => el.autoplay)).toBe(false)
+  await page.waitForTimeout(600)
+  expect(await page.evaluate(() => (window as unknown as { __plays: number }).__plays)).toBe(0)
+
+  await video.scrollIntoViewIfNeeded()
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __plays: number }).__plays)).toBeGreaterThan(0)
+  const toggle = page.locator('.demo-toggle')
+  await expect(toggle).toBeVisible()
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-label', 'Play the demo')
+  expect(await video.evaluate((el: HTMLVideoElement) => el.paused)).toBe(true)
+})
+
+test('with reduced motion the demo shows its poster and never starts', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.addInitScript(countPlays)
+  await page.goto(url)
+  await page.locator('.demo-video').scrollIntoViewIfNeeded()
+  await page.waitForTimeout(800)
+  expect(await page.evaluate(() => (window as unknown as { __plays: number }).__plays)).toBe(0)
+  await expect(page.locator('.demo-toggle')).toBeHidden()
+})

@@ -13,3 +13,5 @@ Linux packages are built on Ubuntu in CI and uploaded to tagged GitHub releases 
 Connect this repository to Cloudflare Pages and set the production branch to `main`. Leave the build command empty and set the build output directory to `site`. Cloudflare Pages will publish the site at `https://dawsha.pages.dev/`.
 
 The canonical, Open Graph, and Twitter image URLs in both HTML pages use this domain. The Arabic page generator sets the same canonical and language alternate URLs. `assets/og.png` is the 1200 × 630 social preview.
+
+The demo clip under the hero (`assets/demo.mp4`, H.264 with its index at the start) never loads with the page. It has `preload="none"` and a poster (`assets/demo-poster.jpg`), and `demo.js` starts it only after the page has loaded and while at least a quarter of it is on screen. It pauses when scrolled away. Visitors who prefer reduced motion see only the poster, and the video is never downloaded. Replace both files to update the clip.

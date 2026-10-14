@@ -35,10 +35,11 @@ try {
       if (comments[index]) element.textContent = comments[index]
     })
 
-    for (const element of document.querySelectorAll('link[href], script[src], img[src]')) {
-      const attribute = element.hasAttribute('src') ? 'src' : 'href'
-      const value = element.getAttribute(attribute)
-      if (value && !/^(?:[a-z]+:|\/\/|#|\/)/i.test(value)) element.setAttribute(attribute, `../${value}`)
+    for (const element of document.querySelectorAll('link[href], script[src], img[src], source[src], video[poster]')) {
+      for (const attribute of ['src', 'href', 'poster']) {
+        const value = element.getAttribute(attribute)
+        if (value && !/^(?:[a-z]+:|\/\/|#|\/)/i.test(value)) element.setAttribute(attribute, `../${value}`)
+      }
     }
     document.documentElement.classList.remove('js', 'lenis')
   })
