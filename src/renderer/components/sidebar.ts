@@ -7,12 +7,18 @@ import type { PaneView } from '../derive'
 import { clear, h, icon, iconButton } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
+import { stateIcon } from './stateIcon'
+import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
+import { needsCount } from '../../shared/attentionBadge'
+import { syncAttentionBadge } from '../attentionBadge'
 import type { AppState } from '../state'
 
 export function isSidebarCollapsed(state: AppState): boolean {
   const maximized = state.view === 'grid' && state.maximizedId !== null
   return state.sidebarOverride ?? (maximized || state.settings.sidebarCollapsed)
 }
+
+const viewState = (view: PaneView) => sessionState({ status: view.status, attention: view.attention })
 
 export class SidebarComponent {
   readonly el = h('aside', { class: 'sidebar', 'aria-label': 'Projects' })
@@ -46,6 +52,7 @@ export class SidebarComponent {
 
   private render(state: AppState | null, views: PaneView[]): void {
     if (!state) return
+    syncAttentionBadge(needsCount(views.map(viewState)))
     const collapsed = isSidebarCollapsed(state)
     const focusedView = views.find((v) => v.pane.id === state.focusedId)
     const projects = filterProjects(state.settings.projects, this.filterText)
@@ -86,6 +93,7 @@ export class SidebarComponent {
     const hadFocus = document.activeElement === this.filter
     clear(this.el)
     clear(this.list)
+    this.list.append(...this.needsGroup(state, views))
     for (const project of projects) this.list.append(...this.projectRows(state, project, views))
     if (projects.length === 0) {
       this.list.append(
@@ -156,7 +164,8 @@ export class SidebarComponent {
     }
     for (const view of own) {
       const selected = view.pane.id === state.focusedId
-      const stateLabel = view.attention === 'needs' ? 'needs you' : view.attention === 'done' ? 'done' : view.status
+      const sessionStateName = viewState(view)
+      const stateLabel = SESSION_STATE_LABELS[sessionStateName]
       rows.push(
         h('div', { class: `kept-session-row${selected ? ' selected' : ''}` },
         h(
@@ -169,8 +178,7 @@ export class SidebarComponent {
           },
           agentMark(view.agent),
           h('span', { class: 'sess-name' }, view.title),
-          h('span', { class: `sess-dot ${view.status}${view.attention === 'none' ? '' : ` ${view.attention}`}`, title: stateLabel, 'aria-hidden': 'true' }),
-          h('span', { class: 'sr-only' }, `, ${stateLabel}`)
+          h('span', { class: `sess-state state-${sessionStateName}`, title: stateLabel }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, stateLabel))
         ),
         iconButton(`Close ${view.title} in ${project.name}`, ICONS.close, () => void closePane(view.pane.id), 'small sess-close')
         )
@@ -187,6 +195,29 @@ export class SidebarComponent {
       ))
     }
     return rows
+  }
+
+  private needsGroup(state: AppState, views: PaneView[]): HTMLElement[] {
+    const waiting = views.filter((view) => viewState(view) === 'needs')
+    if (waiting.length === 0) return []
+    const rows = waiting.map((view) => {
+      const project = state.settings.projects.find((p) => p.id === view.pane.projectId)
+      return h(
+        'button',
+        {
+          class: `sess-row needs-row${view.pane.id === state.focusedId ? ' selected' : ''}`,
+          type: 'button',
+          title: project ? `${view.title} in ${project.name}` : view.title,
+          'aria-label': `${view.title}${project ? ` in ${project.name}` : ''}, needs you`,
+          onClick: () => focusPane(view.pane.id)
+        },
+        agentMark(view.agent),
+        h('span', { class: 'sess-name' }, view.title),
+        project ? h('span', { class: 'needs-project' }, project.name) : null,
+        h('span', { class: 'sess-state state-needs' }, stateIcon('needs'))
+      )
+    })
+    return [h('section', { class: 'needs-group', 'aria-label': 'Needs you' }, h('div', { class: 'sess-group-label' }, `Needs you (${waiting.length})`), ...rows)]
   }
 
   private todayTotal(state: AppState, projectId: string): HTMLElement[] {

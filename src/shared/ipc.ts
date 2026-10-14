@@ -65,6 +65,7 @@ export const IPC = {
   instructionsOpen: 'instructions:open',
   notify: 'app:notify',
   notifyClick: 'app:notify-click',
+  attentionBadge: 'app:attention-badge',
   bridgePreview: 'bridge:preview',
   bridgeStatus: 'bridge:status',
   bridgeInstall: 'bridge:install',

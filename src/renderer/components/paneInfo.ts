@@ -1,11 +1,10 @@
 import { formatChanges } from '../../shared/gitChanges'
 import { formatAge, formatCost, formatPercent, gaugeStage } from '../../shared/statusLine'
 import { formatTokens } from '../../shared/usage'
-import { formatResets, modelLetter } from '../../shared/opsFeed'
+import { modelLetter } from '../../shared/opsFeed'
 import { contextLevel } from '../../shared/contextWarning'
 import type { PaneInfo } from '../derive'
 import { h, icon } from '../dom'
-import { ICONS } from '../icons'
 import { chargeBar } from './chargeBar'
 
 export interface StripHandlers {
@@ -13,7 +12,12 @@ export interface StripHandlers {
   now: number
   onToggleAgents(): void
   onOpenChanges(): void
+  bridgeInstalled: boolean
+  onEnableBridge(): void
 }
+
+const ACTIVITY_ICON =
+  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
 
 function opsItems(info: PaneInfo, handlers: StripHandlers): HTMLElement[] {
   const ops = info.ops
@@ -43,8 +47,7 @@ function opsItems(info: PaneInfo, handlers: StripHandlers): HTMLElement[] {
         title: label,
         onClick: handlers.onToggleAgents
       },
-      'activity',
-      icon(info.agentsOpen ? ICONS.chevronUp : ICONS.chevronDown)
+      icon(ACTIVITY_ICON)
     )
   )
   return items
@@ -68,20 +71,20 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
       )
     )
   } else if (info.agent === 'claude') {
-    items.push(h('span', { class: 'info-context unavailable', title: 'Waiting for Claude Code status. Enable Show live session info in Settings, then send a prompt.' }, 'ctx waiting'))
-  }
-  if (info.agent === 'claude') {
-    for (const [key, label] of [['five_hour', '5h'], ['seven_day', 'week']] as const) {
-      const window = info.limits.find((entry) => entry.key === key)
-      const reset = window ? formatResets(window.resetsAt, handlers.now) : ''
-      items.push(h('span', {
-        class: `info-limit${window ? ` stage-${gaugeStage(window.percent)}` : ' unavailable'}`,
-        'data-pane-limit': key,
-        title: window ? `${label}: ${formatPercent(window.percent)} used${reset ? `, ${reset}` : ', reset time unavailable'}` : `Waiting for Claude Code to report the ${label} limit`
-      }, ...(window
-        ? [`${label} `, chargeBar(window.percent), formatPercent(window.percent), ...(reset ? [h('span', { class: 'info-reset' }, ` · ${reset}`)] : [])]
-        : [`${label} waiting`])))
-    }
+    items.push(
+      handlers.bridgeInstalled
+        ? h('span', { class: 'info-context unavailable', title: 'Waiting for Claude Code to report. Send a prompt and the context bar appears here.' }, 'ctx waiting')
+        : h(
+            'button',
+            {
+              class: 'btn small info-enable-bridge',
+              type: 'button',
+              title: 'Show context use and limits for Claude sessions. Asks before changing ~/.claude/settings.json.',
+              onClick: handlers.onEnableBridge
+            },
+            'Turn on live info'
+          )
+    )
   }
   if (info.elapsed !== null) items.push(h('span', { class: 'info-elapsed', title: 'Session time' }, info.elapsed))
   if (info.tokens !== null) items.push(h('span', { class: 'info-tokens', title: 'Session tokens' }, `${formatTokens(info.tokens)} tokens`))
