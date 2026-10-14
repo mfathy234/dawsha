@@ -99,6 +99,21 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     writeStatus(sandbox, 'sess-info-1')
     await expect(page.locator('.pane-info .info-model')).toHaveText('Opus 5.5', { timeout: 15_000 })
     await expect(page.locator('.pane-info .info-model')).toHaveClass(/fam-opus/)
+
+    // Working with live info on: each status update moves "last activity", but the pill must stay put.
+    // Rebuilding it restarts the spinner and made the header jitter ("Working · 2s" → "Working · 0s").
+    writeSession(sandbox, 'sess-info-1', 'busy')
+    const pill = page.locator('.pane .pane-state')
+    await expect(pill).toContainText('Working', { timeout: 15_000 })
+    await pill.locator('.state-icon').evaluate((el) => ((window as unknown as { __spinner?: Element }).__spinner = el))
+    for (let i = 0; i < 3; i++) {
+      await page.waitForTimeout(1_200)
+      writeStatus(sandbox, 'sess-info-1')
+    }
+    await page.waitForTimeout(1_500)
+    expect(await pill.locator('.state-icon').evaluate((el) => (window as unknown as { __spinner?: Element }).__spinner === el)).toBe(true)
+    await expect(pill).toHaveText('Working')
+    writeSession(sandbox, 'sess-info-1', 'idle')
     await expect(page.locator('.pane-info .info-gauge')).toHaveText('7%')
     await expect(page.locator('.pane-info .info-gauge .charge')).toHaveAttribute('data-filled', '1')
     await expect(page.locator('.pane-info .info-cost')).toHaveText('$0.34')

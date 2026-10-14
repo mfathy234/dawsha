@@ -21,8 +21,17 @@ export function stateIcon(state: SessionState): HTMLElement {
   return el
 }
 
+const pillText = (state: SessionState, suffix: string): string =>
+  suffix ? `${SESSION_STATE_LABELS[state]} · ${suffix}` : SESSION_STATE_LABELS[state]
+
 /** Icon plus word, e.g. "Needs you · 2m". */
 export function statePill(state: SessionState, suffix = ''): HTMLElement {
-  const text = suffix ? `${SESSION_STATE_LABELS[state]} · ${suffix}` : SESSION_STATE_LABELS[state]
-  return h('span', { class: `state-pill state-${state}` }, stateIcon(state), h('span', { class: 'state-pill-text' }, text))
+  return h('span', { class: `state-pill state-${state}` }, stateIcon(state), h('span', { class: 'state-pill-text' }, pillText(state, suffix)))
+}
+
+/** Updates only the pill's text, leaving the icon (and its spinner animation) in place. */
+export function setStatePillSuffix(host: Element, state: SessionState, suffix: string): void {
+  const text = host.querySelector('.state-pill-text')
+  const next = pillText(state, suffix)
+  if (text && text.textContent !== next) text.textContent = next
 }

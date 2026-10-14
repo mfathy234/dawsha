@@ -35,8 +35,8 @@ describe('topbar summary helpers', () => {
   })
 
   it('builds the state word', () => {
-    expect(stateWord('needs', 125_000)).toBe('needs you · 2m')
-    expect(stateWord('idle', null)).toBe('idle')
+    expect(stateWord('needs', '2m')).toBe('needs you · 2m')
+    expect(stateWord('idle', '')).toBe('idle')
   })
 })
 

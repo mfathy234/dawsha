@@ -28,6 +28,8 @@ import { h, icon } from '../dom'
 import type { AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 
+const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
+
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
 
 export class TopBarComponent {
@@ -132,9 +134,9 @@ export class TopBarComponent {
       this.limits,
       h('div', { class: 'topbar-tools' },
         h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: 'Smaller text', onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
+          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: `Smaller text in every pane (${ZOOM_MOD}+- for the focused pane only)`, onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
           this.zoomValue,
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: 'Larger text', onClick: () => zoomAll(1) }, icon(ICONS.plus))
+          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane (${ZOOM_MOD}+= for the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
         ),
         this.themeButton,
         this.settings

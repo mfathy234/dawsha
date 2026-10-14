@@ -1,5 +1,5 @@
 import type { RateLimitWindow } from './types'
-import { formatAge, formatPercent } from './statusLine'
+import { formatPercent } from './statusLine'
 import { SESSION_STATE_LABELS, compareSessionStates, type SessionState } from './sessionState'
 
 export type MoreView = 'agents' | 'skills' | 'layouts'
@@ -40,9 +40,10 @@ export function accountLimits(perPane: readonly RateLimitWindow[][], focusedInde
 }
 
 /** "needs you · 2m": the lowercase state word plus how long since the last activity when known. */
-export function stateWord(state: SessionState, ageMs: number | null): string {
+/** "needs you · 2m"; the suffix is time in that state (see formatTimeInState), empty to omit. */
+export function stateWord(state: SessionState, inState: string): string {
   const word = SESSION_STATE_LABELS[state].toLowerCase()
-  return ageMs === null ? word : `${word} · ${formatAge(ageMs)}`
+  return inState ? `${word} · ${inState}` : word
 }
 
 /** The last `count` non-empty lines of terminal text. */
