@@ -112,9 +112,9 @@ test('the usage view totals tokens and cost per day, project and agent from loca
     await expect(page.locator('.usage-notes')).toContainText('Codex and Gemini report tokens only')
     await page.screenshot({ path: join(SCREENS, '60-usage.png') })
 
-    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
+    await page.locator('#sessions-button').click()
     await expect(page.locator('.usage-view')).toBeHidden()
-    await expect(page.getByRole('button', { name: 'Sessions', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('#sessions-button')).toHaveAttribute('aria-pressed', 'true')
     await page.getByRole('button', { name: 'Usage', exact: true }).click()
     await expect(page.locator('.usage-view')).toBeVisible()
 

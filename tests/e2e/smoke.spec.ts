@@ -181,7 +181,7 @@ test('names panes from Claude session files and lays three panes out with a wide
     )
     await expect(page.locator('.pane-title', { hasText: 'User avatars' })).toHaveCount(1, { timeout: 15_000 })
     await expect(page.locator('.pane-fresh:visible')).toHaveCount(2)
-    await expect(page.locator('.pane-state .state-working')).toHaveCount(1)
+    await expect(page.locator('.pane-state .state-pill.state-working')).toHaveCount(1)
     await expect(page.locator('.topbar-count')).toContainText('1 working')
     await page.screenshot({ path: join(SCREENS, '9-three-panes-named.png') })
   } finally {
@@ -398,7 +398,7 @@ test('names and status of a Codex pane come from Codex rollout files', async () 
       'utf8'
     )
     await expect(page.locator('.pane-title', { hasText: 'Fix the invoice report' })).toHaveCount(1, { timeout: 15_000 })
-    await expect(page.locator('.pane-state .state-working')).toHaveCount(1)
+    await expect(page.locator('.pane-state .state-pill.state-working')).toHaveCount(1)
     await expect(page.locator('.topbar-count')).toContainText('1 working')
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.[0]?.sessionId).toBe(id)
   } finally {
