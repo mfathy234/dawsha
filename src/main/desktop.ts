@@ -53,6 +53,22 @@ export async function openLink(url: string): Promise<void> {
   await shell.openExternal(href)
 }
 
+// Electron can garbage-collect a Notification nobody references, and its click handler goes with it:
+// clicking the toast then neither raises Dawsha nor opens the session. Keep each one alive until it is
+// clicked, closed or fails, and cap the set so old toasts cannot pile up.
+const MAX_LIVE_NOTIFICATIONS = 20
+const liveNotifications = new Set<Notification>()
+
+export const liveNotificationCount = (): number => liveNotifications.size
+
+function keepAlive(notification: Notification): void {
+  liveNotifications.add(notification)
+  if (liveNotifications.size > MAX_LIVE_NOTIFICATIONS) liveNotifications.delete(liveNotifications.values().next().value as Notification)
+  const release = (): void => { liveNotifications.delete(notification) }
+  notification.on('close', release)
+  notification.on('failed', release)
+}
+
 export function notifyUser(getWindow: () => BrowserWindow | null, request: NotifyRequest, onClick: (paneId: string) => void): void {
   const window = getWindow()
   const unfocused = !window || window.isDestroyed() || !window.isFocused()
@@ -62,6 +78,7 @@ export function notifyUser(getWindow: () => BrowserWindow | null, request: Notif
   if (!Notification.isSupported()) return
   const notification = new Notification({ title: request.title, body: request.body, silent: !request.sound })
   notification.on('click', () => {
+    liveNotifications.delete(notification)
     const activeWindow = getWindow()
     if (!activeWindow || activeWindow.isDestroyed()) return
     if (activeWindow.isMinimized()) activeWindow.restore()
@@ -69,5 +86,6 @@ export function notifyUser(getWindow: () => BrowserWindow | null, request: Notif
     activeWindow.focus()
     onClick(request.paneId)
   })
+  keepAlive(notification)
   notification.show()
 }

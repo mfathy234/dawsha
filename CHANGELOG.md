@@ -17,6 +17,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Stop a paired phone from resizing the desktop terminal, which garbled agent output on the desktop when the phone could type.
+- Clicking a desktop notification reliably brings Dawsha forward and opens that session. Notifications could be cleaned up while still on screen, so their click did nothing.
 
 ## [0.5.0] - 2026-10-13
 
