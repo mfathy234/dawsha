@@ -108,7 +108,7 @@ export function installBuiltinCommands(): void {
     },
     {
       id: 'pane.next-attention',
-      title: 'Go to the next pane that needs you',
+      title: 'Go to the session that needs you',
       group: 'Actions',
       keywords: 'waiting done permission attention',
       ...withKeys('Ctrl+Shift+J'),

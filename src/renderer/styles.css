@@ -6392,3 +6392,128 @@ body.dragging-ui {
 .needs-group .sess-group-label { color: var(--state-needs); font-weight: 600; }
 .needs-row { width: 100%; }
 @media (prefers-reduced-motion: reduce) { .pane.needs-you { transition: none; } }
+
+/* Top bar polish: session summary chips, account limits, More menu, others panel cards. */
+.topbar-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sum-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sum-chip.state-working,
+.sum-chip.state-done {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.sum-needs {
+  border-color: var(--state-needs);
+  background: color-mix(in srgb, var(--state-needs) 14%, transparent);
+  color: var(--state-needs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sum-needs:hover {
+  background: color-mix(in srgb, var(--state-needs) 24%, transparent);
+}
+
+.sum-needs:focus-visible,
+.more-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sum-needs .kbd {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+}
+
+.topbar-limits {
+  gap: 12px;
+}
+
+.topbar-limits .limit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.more-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.more-chevron svg {
+  width: 12px;
+  height: 12px;
+}
+
+.more-item .update-dot {
+  margin-left: auto;
+}
+
+.more-item[aria-current='true'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.others-state {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.others-preview {
+  height: auto;
+  padding: 6px 10px;
+  white-space: normal;
+}
+
+.others-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.others-line:empty::before {
+  content: '\00a0';
+}
+
+.others-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.others-actions .others-open {
+  align-self: auto;
+  margin-left: auto;
+}
+
+.others-actions .others-open:first-child {
+  margin-left: 0;
+}

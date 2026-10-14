@@ -1,27 +1,30 @@
-import { focusPane, toggleOthersPanel } from '../actions'
+import { answerPermission, focusPane, openChanges, toggleOthersPanel } from '../actions'
 import type { PaneView } from '../derive'
 import { clear, h, iconButton } from '../dom'
 import { ICONS } from '../icons'
-import { formatPercent } from '../../shared/statusLine'
+import { sessionState, type SessionState } from '../../shared/sessionState'
+import { bind, formatShortcut } from '../../shared/shortcuts'
+import { cardSummary, lastLines, sortByUrgency, stateWord } from '../../shared/topbarSummary'
 import { getTerminal } from '../terminals'
 import type { AppState } from '../state'
 import { agentMark } from './agentMark'
-import { chargeBar } from './chargeBar'
+import { stateIcon } from './stateIcon'
 
-const PREVIEW_ROWS = 5
+const PREVIEW_LINES = 2
 const PREVIEW_MS = 1500
+const NEXT_KEY = formatShortcut(bind('Ctrl+Shift+J'))
 
-function statusText(view: PaneView): string {
-  if (view.attention === 'needs') return 'needs you'
-  if (view.attention === 'done') return 'done'
-  return view.status
+interface Entry {
+  view: PaneView
+  state: SessionState
 }
 
-// Last few non-empty terminal lines, so a card shows what the session is doing now.
-function previewText(view: PaneView): string {
-  const tail = getTerminal(view.pane.activeTabId)?.tailText(PREVIEW_ROWS * 4) ?? ''
-  const lines = tail.split('\n').map((line) => line.trimEnd()).filter((line) => line.trim() !== '')
-  return lines.slice(-PREVIEW_ROWS).join('\n')
+function previewLines(view: PaneView): string[] {
+  return lastLines(getTerminal(view.pane.activeTabId)?.tailText(PREVIEW_LINES * 6) ?? '', PREVIEW_LINES)
+}
+
+function fillPreview(preview: HTMLElement, lines: string[]): void {
+  preview.replaceChildren(...lines.map((line) => h('span', { class: 'others-line' }, line)))
 }
 
 // Sessions that are not on screen while one pane is maximized. Open by default, collapsible to a strip.
@@ -29,11 +32,12 @@ export class OthersPanelComponent {
   readonly el = h('aside', { class: 'others-panel', 'aria-label': 'Other sessions', hidden: true })
   private signature = ''
   private previews = new Map<string, HTMLElement>()
-  private others: PaneView[] = []
+  private others: Entry[] = []
   private timer: number | null = null
 
   update(state: AppState, views: PaneView[], visibleIds: Set<string>, maximized: boolean): void {
-    this.others = maximized ? views.filter((view) => !visibleIds.has(view.pane.id)) : []
+    const hidden = maximized ? views.filter((view) => !visibleIds.has(view.pane.id)) : []
+    this.others = sortByUrgency(hidden.map((view) => ({ view, state: sessionState(view) })))
     const collapsed = state.settings.othersCollapsed
     const show = this.others.length > 0
     this.el.hidden = !show
@@ -45,7 +49,7 @@ export class OthersPanelComponent {
     }
     const signature = JSON.stringify([
       collapsed,
-      this.others.map((view) => [view.pane.id, view.pane.activeTabId, view.title, view.status, view.attention, view.agent, (view.project?.name ?? 'project'), view.info.contextPercent])
+      this.others.map(({ view, state: s }) => [view.pane.id, view.pane.activeTabId, view.title, s, stateWord(s, view.info.ageMs), view.agent, view.project?.name ?? 'project', cardSummary(view)])
     ])
     if (signature === this.signature) return
     this.signature = signature
@@ -64,46 +68,57 @@ export class OthersPanelComponent {
       iconButton('Collapse other sessions', ICONS.expand, () => toggleOthersPanel(), 'small others-toggle')
     )
     const list = h('div', { class: 'others-list' })
-    for (const view of this.others) list.append(this.card(view))
-    this.el.append(head, list, h('p', { class: 'others-foot' }, 'Click a card to switch to it'))
+    for (const entry of this.others) list.append(this.card(entry))
+    this.el.append(head, list, h('p', { class: 'others-foot' }, `Sorted by what needs you first. ${NEXT_KEY} jumps to the next one.`))
   }
 
-  private card(view: PaneView): HTMLElement {
-    const status = statusText(view)
-    const needs = view.attention === 'needs'
-    const preview = h('pre', { class: 'others-preview', 'aria-hidden': 'true' }, previewText(view))
+  private actions(entry: Entry): HTMLElement[] {
+    const { view, state } = entry
+    const stop = (run: () => void) => (event: Event) => {
+      event.stopPropagation()
+      run()
+    }
+    const title = `${view.title} in ${view.project?.name ?? 'project'}`
+    const open = h(
+      'button',
+      { class: 'btn small others-open', type: 'button', 'aria-label': `Switch to ${title}`, onClick: stop(() => focusPane(view.pane.id)) },
+      'Switch to it'
+    )
+    if (state === 'needs') {
+      return [
+        h('button', { class: 'btn small primary others-allow', type: 'button', 'aria-label': `Allow for ${title}`, onClick: stop(() => answerPermission(view.pane.id, true)) }, 'Allow'),
+        h('button', { class: 'btn small others-deny', type: 'button', 'aria-label': `Deny for ${title}`, onClick: stop(() => answerPermission(view.pane.id, false)) }, 'Deny'),
+        open
+      ]
+    }
+    if (state === 'done') {
+      return [h('button', { class: 'btn small primary others-review', type: 'button', 'aria-label': `Review changes in ${title}`, onClick: stop(() => void openChanges(view.pane.id)) }, 'Review changes'), open]
+    }
+    return [open]
+  }
+
+  private card(entry: Entry): HTMLElement {
+    const { view, state } = entry
+    const word = stateWord(state, view.info.ageMs)
+    const summary = cardSummary(view)
+    const project = view.project?.name ?? 'project'
+    const preview = h('div', { class: 'others-preview', 'aria-hidden': 'true' })
+    fillPreview(preview, previewLines(view))
     this.previews.set(view.pane.id, preview)
-    const percent = view.info.contextPercent
     const card = h(
       'article',
-      { class: `others-card${needs ? ' attention' : ''}`, 'data-pane-id': view.pane.id },
+      { class: `others-card state-card-${state}${state === 'needs' ? ' attention' : ''}`, 'data-pane-id': view.pane.id, 'data-state': state },
       h(
         'div',
         { class: 'others-card-head' },
+        stateIcon(state),
         agentMark(view.agent),
         h('span', { class: 'others-title' }, `${view.index + 1} · ${view.title}`),
-        needs ? h('span', { class: 'attention-word needs' }, 'needs you') : h('span', { class: `status ${view.status}` }, status)
+        h('span', { class: `others-state state-${state}` }, word)
       ),
-      h(
-        'div',
-        { class: 'others-meta' },
-        ...(percent !== null ? [h('span', { class: 'others-ctx' }, 'ctx ', chargeBar(percent), formatPercent(percent))] : []),
-        h('span', { class: 'others-project' }, (view.project?.name ?? 'project'))
-      ),
+      h('div', { class: 'others-meta' }, h('span', { class: 'others-project' }, summary ? `${project} · ${summary}` : project)),
       preview,
-      h(
-        'button',
-        {
-          class: 'btn small others-open',
-          type: 'button',
-          'aria-label': `Open ${view.title} in ${(view.project?.name ?? 'project')}, ${status}`,
-          onClick: (event: Event) => {
-            event.stopPropagation()
-            focusPane(view.pane.id)
-          }
-        },
-        'Open'
-      )
+      h('div', { class: 'others-actions' }, ...this.actions(entry))
     )
     card.addEventListener('click', () => focusPane(view.pane.id))
     return card
@@ -116,21 +131,21 @@ export class OthersPanelComponent {
       iconButton('Show other sessions', ICONS.collapse, () => toggleOthersPanel(), 'others-toggle'),
       h('span', { class: 'others-strip-label', 'aria-hidden': 'true' }, 'Other sessions')
     )
-    for (const view of this.others) {
-      const status = statusText(view)
-      const dot = view.attention === 'needs' || view.status === 'busy' ? 'busy' : view.attention === 'done' ? 'done' : 'idle'
+    for (const { view, state } of this.others) {
+      const status = stateWord(state, null)
+      const project = view.project?.name ?? 'project'
       this.el.append(
         h(
           'button',
           {
-            class: `others-chip${view.attention === 'needs' ? ' attention' : ''}`,
+            class: `others-chip${state === 'needs' ? ' attention' : ''}`,
             type: 'button',
-            title: `${view.title} · ${(view.project?.name ?? 'project')} · ${status}`,
-            'aria-label': `${view.title} in ${(view.project?.name ?? 'project')}, ${status}`,
+            title: `${view.title} · ${project} · ${status}`,
+            'aria-label': `${view.title} in ${project}, ${status}`,
             onClick: () => focusPane(view.pane.id)
           },
           agentMark(view.agent),
-          h('span', { class: `others-dot ${dot}`, 'aria-hidden': 'true' })
+          stateIcon(state)
         )
       )
     }
@@ -146,11 +161,11 @@ export class OthersPanelComponent {
   }
 
   private refreshPreviews(): void {
-    for (const view of this.others) {
+    for (const { view } of this.others) {
       const preview = this.previews.get(view.pane.id)
       if (!preview) continue
-      const text = previewText(view)
-      if (preview.textContent !== text) preview.textContent = text
+      const lines = previewLines(view)
+      if (lines.join('\n') !== Array.from(preview.children, (child) => child.textContent).join('\n')) fillPreview(preview, lines)
     }
   }
 }

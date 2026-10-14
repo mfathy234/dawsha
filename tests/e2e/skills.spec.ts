@@ -19,7 +19,8 @@ test('Skills lists installed agent and project skills and copies a selected path
   }
   const { app, page } = await launchApp(sandbox, { DAWSHA_SHARED_HOME: join(sandbox.root, 'shared-home') })
   try {
-    await page.getByRole('button', { name: 'Skills', exact: true }).click()
+    await page.locator('#more-button').click()
+    await page.locator('#skills-menu-item').click()
     await expect(page.getByRole('heading', { name: 'Skills', level: 1 })).toBeVisible()
     await expect(page.locator('.skill-row')).toHaveCount(2)
     await expect(page.locator('.skill-row[data-agent="claude"]')).toContainText('Review')

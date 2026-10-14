@@ -38,8 +38,9 @@ test('Agents view shows versions, installs and updates in a visible tab and re-c
   const { env } = fakeEnv({ claude: '2.1.294', codex: '0.156.1', gemini: null })
   const { app, page } = await launchApp(createSandbox(), env)
   try {
-    await expect(page.locator('#agents-button .update-dot')).toBeVisible()
-    await page.getByRole('button', { name: /^Agents/ }).click()
+    await expect(page.locator('#more-button .update-dot')).toBeVisible()
+    await page.locator('#more-button').click()
+    await page.locator('#agents-menu-item').click()
     await expect(page.locator('.agents-view')).toBeVisible()
 
     await expect(row(page, 'claude').locator('.tool-status')).toContainText('Installed 2.1.294')
@@ -59,16 +60,18 @@ test('Agents view shows versions, installs and updates in a visible tab and re-c
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['install gemini'])
     await expect(page.locator('.toast.info')).toContainText('Gemini CLI 0.9.1 installed.', { timeout: 30_000 })
 
-    await page.getByRole('button', { name: /^Agents/ }).click()
+    await page.locator('#more-button').click()
+    await page.locator('#agents-menu-item').click()
     await expect(row(page, 'gemini').locator('.tool-flag.current')).toBeVisible()
 
     await page.locator('#agents-update-all').click()
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['install gemini', 'update claude'])
     await expect(page.locator('.toast.info').last()).toContainText('Claude Code updated to 2.1.301.', { timeout: 30_000 })
-    await page.getByRole('button', { name: /^Agents/ }).click()
+    await page.locator('#more-button').click()
+    await page.locator('#agents-menu-item').click()
     await expect(row(page, 'claude').locator('.tool-flag.current')).toBeVisible()
     await expect(page.locator('#agents-update-all')).toBeDisabled()
-    await expect(page.locator('#agents-button .update-dot')).toBeHidden()
+    await expect(page.locator('#more-button .update-dot')).toBeHidden()
   } finally {
     await closeApp(app)
   }
@@ -79,7 +82,8 @@ test('a failed install reports the exit code and keeps the tab', async () => {
   tools.failInstalls()
   const { app, page } = await launchApp(createSandbox(), env)
   try {
-    await page.getByRole('button', { name: /^Agents/ }).click()
+    await page.locator('#more-button').click()
+    await page.locator('#agents-menu-item').click()
     await row(page, 'gemini').getByRole('button', { name: 'Install Gemini CLI' }).click()
     await expect(page.locator('.toast.error')).toContainText('Gemini CLI was not installed (exit code 1)', { timeout: 30_000 })
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['install gemini'])
@@ -93,7 +97,8 @@ test('full access starts on for Claude and Codex, off for Gemini, and the choice
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox, env)
   try {
-    await page.getByRole('button', { name: /^Agents/ }).click()
+    await page.locator('#more-button').click()
+    await page.locator('#agents-menu-item').click()
     await expect(row(page, 'claude').getByLabel('Start with full access')).toBeChecked({ timeout: 20_000 })
     await expect(row(page, 'codex').getByLabel('Start with full access')).toBeChecked()
     await expect(row(page, 'gemini').getByLabel('Start with full access')).not.toBeChecked()
