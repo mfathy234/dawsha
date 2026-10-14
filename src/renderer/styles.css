@@ -6324,3 +6324,31 @@ body.dragging-ui {
   background: transparent;
   border-top: 0;
 }
+
+/* Session states: shared by pane header, sidebar, top bar and others panel. */
+:root {
+  --state-needs: var(--busy);
+  --state-working: #60a5fa;
+  --state-done: var(--accent);
+  --state-idle: var(--idle);
+  --state-exited: var(--exited);
+}
+.state-icon { display: inline-flex; flex: none; --state-ink: var(--bg); }
+.state-icon svg { width: 12px; height: 12px; }
+.state-needs { color: var(--state-needs); }
+.state-working { color: var(--state-working); }
+.state-done { color: var(--state-done); }
+.state-idle { color: var(--state-idle); }
+.state-exited { color: var(--state-exited); }
+.state-spin { animation: state-spin 1.1s linear infinite; transform-origin: 50% 50%; }
+@keyframes state-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .state-spin { animation: none; } }
+.state-pill {
+  display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px;
+  border-radius: 10px; font-size: 11.5px; font-weight: 500; white-space: nowrap;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.state-pill .state-pill-text { color: color-mix(in srgb, currentColor 75%, var(--text)); }
+.state-pill.state-needs { background: var(--state-needs); color: var(--bg); font-weight: 600; }
+.state-pill.state-needs .state-pill-text { color: var(--bg); }
+.state-pill.state-needs .state-icon { color: var(--bg); --state-ink: var(--state-needs); }
