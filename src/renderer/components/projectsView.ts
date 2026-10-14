@@ -1,19 +1,38 @@
-import { addProject, removeProject, showProjectsTab, updateProject } from '../actions'
+import { addProject, removeProject, showProjectsTab, startSession, updateProject } from '../actions'
 import { api } from '../api'
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
+import { countSessionStates, sessionState, type SessionState } from '../../shared/sessionState'
 import type { AgentKind, Project } from '../../shared/types'
-import { clear, h } from '../dom'
+import { derivePanes } from '../derive'
+import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
+import { ICONS } from '../icons'
 import type { AppState, ProjectsTab } from '../state'
+import { agentMark } from './agentMark'
 import { InstructionsPanelComponent } from './instructionsPanel'
 import { SnippetsPanelComponent } from './snippetsPanel'
+import { stateIcon } from './stateIcon'
 import { TasksPanelComponent } from './tasksPanel'
+
+const MAC = navigator.platform.toLowerCase().includes('mac')
+const FILE_MANAGER = MAC ? 'Finder' : 'Explorer'
 
 export class ProjectsViewComponent {
   readonly el = h('main', { class: 'projects-view', 'aria-label': 'Projects' })
-  private readonly rows = h('div', { class: 'proj-table' })
+  private readonly rows = h('div', { class: 'pv-list' })
   private readonly errors = new Map<string, string>()
-  private readonly drafts = new Map<string, { name?: string; folder?: string }>()
-  private readonly counts = new Map<string, HTMLElement>()
+  private readonly metas = new Map<string, HTMLElement>()
+  private readonly filterInput = h('input', {
+    class: 'text-input pv-filter',
+    type: 'search',
+    id: 'project-filter',
+    placeholder: 'Filter projects',
+    'aria-label': 'Filter projects',
+    autocomplete: 'off'
+  })
+  private filter = ''
+  private renaming: string | null = null
+  private menu: HTMLElement | null = null
+  private menuAnchor: HTMLElement | null = null
   private signature = ''
   private current: AppState | null = null
 
@@ -24,23 +43,20 @@ export class ProjectsViewComponent {
   private readonly projectsPanel = h('div', { class: 'proj-panel', role: 'tabpanel', id: 'panel-projects' })
 
   constructor() {
+    this.filterInput.addEventListener('input', () => {
+      this.filter = this.filterInput.value
+      this.signature = ''
+      if (this.current) this.update(this.current)
+    })
     this.projectsPanel.append(
       h('p', { class: 'lede' }, "Each project maps to a folder. Starting a session opens the project's default agent there."),
       h(
         'div',
-        { class: 'proj-table-head' },
-        h('span', {}, 'Name'),
-        h('span', {}, 'Folder'),
-        h('span', {}, 'Agent'),
-        h('span', {}, 'Sessions'),
-        h('span', {})
-      ),
-      this.rows,
-      h(
-        'div',
-        { class: 'proj-actions' },
+        { class: 'pv-toolbar' },
+        this.filterInput,
         h('button', { class: 'btn ghost', type: 'button', id: 'add-project', onClick: () => void this.add() }, 'Add project')
-      )
+      ),
+      this.rows
     )
     this.snippets.el.setAttribute('role', 'tabpanel')
     this.snippets.el.id = 'panel-snippets'
@@ -94,8 +110,9 @@ export class ProjectsViewComponent {
     this.snippets.update(state)
     this.tasks.update(state)
     this.instructions.update(state)
-    this.updateCounts(state)
-    const signature = JSON.stringify(state.settings.projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent]))
+    if (state.view !== 'projects') this.closeMenu()
+    this.updateMeta(state)
+    const signature = JSON.stringify([state.settings.projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent]), this.filter, this.renaming])
     if (signature === this.signature) return
     this.signature = signature
     this.rebuild(state)
@@ -107,122 +124,252 @@ export class ProjectsViewComponent {
     this.update(state)
   }
 
-  private updateCounts(state: AppState): void {
-    for (const [id, element] of this.counts) {
-      const total = state.panes.filter((p) => p.projectId === id).length
-      element.textContent = total === 0 ? 'none' : `${total} session${total === 1 ? '' : 's'}`
-      element.classList.toggle('muted', total === 0)
+  private matches(project: Project): boolean {
+    const needle = this.filter.trim().toLowerCase()
+    return needle === '' || project.name.toLowerCase().includes(needle)
+  }
+
+  private updateMeta(state: AppState): void {
+    if (this.metas.size === 0) return
+    const views = derivePanes(state)
+    for (const project of state.settings.projects) {
+      const meta = this.metas.get(project.id)
+      if (!meta) continue
+      const states: SessionState[] = views.filter((view) => view.pane.projectId === project.id).map((view) => sessionState(view))
+      const agent = agentOf(project)
+      const branch = state.branches[project.folder]
+      const children: Node[] = [h('span', { class: 'pv-agent', title: 'Default agent' }, agentMark(agent), AGENT_NAMES[agent])]
+      if (branch) children.push(h('span', { class: 'pv-branch', title: `Branch ${branch}` }, icon(ICONS.branch), branch))
+      children.push(this.sessionsLine(states))
+      meta.replaceChildren(...children)
     }
+  }
+
+  private sessionsLine(states: SessionState[]): HTMLElement {
+    const counts = countSessionStates(states)
+    if (counts.total === 0) return h('span', { class: 'pv-sessions muted' }, 'No sessions')
+    const part = (state: SessionState, count: number, label: string): HTMLElement | null =>
+      count > 0 ? h('span', { class: `pv-state state-${state}`, title: `${count} ${label}` }, stateIcon(state), String(count)) : null
+    return h(
+      'span',
+      { class: 'pv-sessions' },
+      `${counts.total} session${counts.total === 1 ? '' : 's'}`,
+      part('needs', counts.needs, 'need you'),
+      part('working', counts.working, 'working'),
+      part('done', counts.done, 'done')
+    )
   }
 
   private rebuild(state: AppState): void {
     clear(this.rows)
-    this.counts.clear()
-    if (state.settings.projects.length === 0) {
+    this.metas.clear()
+    const all = state.settings.projects
+    if (all.length === 0) {
       this.rows.append(h('p', { class: 'proj-empty' }, 'No projects yet. Add one to start a session.'))
       return
     }
-    for (const project of state.settings.projects) this.rows.append(this.row(project))
-    this.updateCounts(state)
+    const shown = all.filter((project) => this.matches(project))
+    if (shown.length === 0) {
+      this.rows.append(h('p', { class: 'proj-empty' }, `No project matches "${this.filter.trim()}".`))
+      return
+    }
+    for (const project of shown) this.rows.append(this.row(project))
+    this.updateMeta(state)
+    if (this.renaming) {
+      const input = this.rows.querySelector<HTMLInputElement>('.pv-rename')
+      requestAnimationFrame(() => {
+        input?.focus()
+        input?.select()
+      })
+    }
   }
 
   private row(project: Project): HTMLElement {
-    const draft = this.drafts.get(project.id) ?? {}
-    const name = h('input', { class: 'text-input', type: 'text', id: `name-${project.id}`, value: draft.name ?? project.name })
-    const folder = h('input', { class: 'text-input mono', type: 'text', id: `folder-${project.id}`, value: draft.folder ?? project.folder })
     const error = h('p', { class: 'field-error', id: `error-${project.id}`, role: 'alert', hidden: !this.errors.has(project.id) }, this.errors.get(project.id) ?? '')
-    const count = h('span', { class: 'proj-sessions' })
-    this.counts.set(project.id, count)
-
-    const setError = (message: string | null): void => {
-      if (message) this.errors.set(project.id, message)
-      else this.errors.delete(project.id)
-      error.textContent = message ?? ''
-      error.hidden = message === null
-      folder.classList.toggle('invalid', message !== null)
-    }
-    name.addEventListener('change', () => this.commitName(project, name, setError))
-    folder.addEventListener('change', () => void this.commitFolder(project, folder, setError))
-    folder.addEventListener('input', () => this.drafts.set(project.id, { ...this.drafts.get(project.id), folder: folder.value }))
-    const browse = h('button', { class: 'btn ghost', type: 'button', 'aria-label': `Browse folder for ${project.name}`, onClick: async () => {
-      const picked = await api.pickFolder()
-      if (!picked) return
-      folder.value = picked
-      await this.commitFolder(project, folder, setError)
-    } }, 'Browse')
-    const remove = h('button', { class: 'btn ghost', type: 'button', 'aria-label': `Remove ${project.name}`, onClick: () => void removeProject(project.id) }, 'Remove')
-    folder.classList.toggle('invalid', this.errors.has(project.id))
+    const meta = h('div', { class: 'pv-meta' })
+    this.metas.set(project.id, meta)
+    const more = iconButton(`More for ${project.name}`, ICONS.more, () => this.toggleMenu(project, more), 'pv-more')
+    more.setAttribute('aria-haspopup', 'menu')
     return h(
       'div',
-      { class: 'proj-line', 'data-project-id': project.id },
-      h('div', { class: 'cell' }, h('label', { for: name.id, class: 'sr-only' }, `Name of ${project.name}`), name),
-      h('div', { class: 'cell folder-cell' }, h('label', { for: folder.id, class: 'sr-only' }, `Folder of ${project.name}`), folder, browse),
-      this.agentControl(project),
-      count,
-      remove,
+      { class: 'pv-row', 'data-project-id': project.id },
+      h(
+        'div',
+        { class: 'pv-main' },
+        this.renaming === project.id ? this.renameInput(project) : h('div', { class: 'pv-name' }, project.name),
+        h('div', { class: `pv-folder${this.errors.has(project.id) ? ' invalid' : ''}`, title: project.folder }, project.folder)
+      ),
+      meta,
+      h(
+        'div',
+        { class: 'pv-actions' },
+        h(
+          'button',
+          { class: 'btn small', type: 'button', 'aria-label': `New session in ${project.name}`, onClick: () => void startSession(project.id) },
+          'New session'
+        ),
+        more
+      ),
       error
     )
   }
 
-  private agentControl(project: Project): HTMLElement {
+  private renameInput(project: Project): HTMLInputElement {
+    const input = h('input', {
+      class: 'text-input pv-rename',
+      type: 'text',
+      id: `name-${project.id}`,
+      value: project.name,
+      'aria-label': `Name of ${project.name}`
+    })
+    let done = false
+    const finish = (save: boolean): void => {
+      if (done) return
+      const value = input.value.trim()
+      if (save && !value) {
+        this.showRowError(project.id, 'Name cannot be empty.')
+        return
+      }
+      done = true
+      this.renaming = null
+      if (save && value !== project.name) updateProject(project.id, { name: value })
+      this.signature = ''
+      if (this.current) this.update(this.current)
+    }
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        finish(true)
+      } else if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        finish(false)
+      }
+    })
+    input.addEventListener('blur', () => finish(false))
+    return input
+  }
+
+  private showRowError(projectId: string, message: string | null): void {
+    if (message) this.errors.set(projectId, message)
+    else this.errors.delete(projectId)
+    const row = this.rows.querySelector(`[data-project-id="${projectId}"]`)
+    const error = row?.querySelector<HTMLElement>('.field-error')
+    if (!row || !error) return
+    error.textContent = message ?? ''
+    error.hidden = message === null
+    row.querySelector('.pv-folder')?.classList.toggle('invalid', message !== null)
+  }
+
+  private toggleMenu(project: Project, anchor: HTMLElement): void {
+    if (this.menu && this.menuAnchor === anchor) return this.closeMenu(true)
+    this.closeMenu()
     const current = agentOf(project)
-    const option = (agent: AgentKind): HTMLElement =>
+    const item = (label: string, run: () => void, extra: { danger?: boolean; agent?: AgentKind } = {}): HTMLButtonElement =>
       h(
         'button',
         {
-          class: `seg-btn${agent === current ? ' on' : ''}`,
+          class: `menu-item pv-menu-item${extra.danger ? ' danger-item' : ''}`,
           type: 'button',
-          role: 'radio',
-          'aria-checked': String(agent === current),
-          'data-agent': agent,
+          role: extra.agent ? 'menuitemradio' : 'menuitem',
+          'aria-checked': extra.agent ? String(extra.agent === current) : undefined,
+          'data-agent': extra.agent,
           onClick: () => {
-            if (agent !== current) updateProject(project.id, { defaultAgent: agent })
+            this.closeMenu()
+            run()
           }
         },
-        AGENT_NAMES[agent]
+        extra.agent ? agentMark(extra.agent) : null,
+        h('span', { class: 'menu-label' }, label),
+        extra.agent === current ? icon(ICONS.check) : null
       )
-    return h('div', { class: 'seg', role: 'radiogroup', 'aria-label': `Default agent for ${project.name}` }, ...AGENTS.map(option))
+    const agentItem = (agent: AgentKind): HTMLButtonElement =>
+      item(AGENT_NAMES[agent], () => agent !== current && updateProject(project.id, { defaultAgent: agent }), { agent })
+    const menu = h(
+      'div',
+      { class: 'popover menu pv-menu', role: 'menu', 'aria-label': `More for ${project.name}` },
+      item('Rename', () => this.startRename(project.id)),
+      item('Change folder…', () => void this.changeFolder(project)),
+      h('div', { class: 'pv-menu-label', role: 'presentation' }, 'Default agent'),
+      ...AGENTS.map(agentItem),
+      h('div', { class: 'pv-menu-sep', role: 'separator' }),
+      item(`Open in ${FILE_MANAGER}`, () => void api.quickOpen('explorer', project.folder)),
+      item('Open a terminal here', () => void startSession(project.id, 'shell')),
+      h('div', { class: 'pv-menu-sep', role: 'separator' }),
+      item(`Remove ${project.name}…`, () => void removeProject(project.id), { danger: true })
+    )
+    menu.addEventListener('keydown', (event) => this.menuKey(event))
+    document.body.append(menu)
+    placeNearAnchor(menu, anchor)
+    this.menu = menu
+    this.menuAnchor = anchor
+    anchor.setAttribute('aria-expanded', 'true')
+    menu.querySelector<HTMLElement>('[role^="menuitem"]')?.focus()
+    setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
   }
 
-  private commitName(project: Project, input: HTMLInputElement, setError: (m: string | null) => void): void {
-    const value = input.value.trim()
-    if (!value) {
-      input.value = project.name
-      setError('Name cannot be empty.')
+  private menuKey(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      this.closeMenu(true)
       return
     }
-    if (value !== project.name) updateProject(project.id, { name: value })
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    event.preventDefault()
+    const items = [...(this.menu?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [])]
+    const index = items.indexOf(document.activeElement as HTMLElement)
+    const next = (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+    items[next]?.focus()
   }
 
-  private async commitFolder(project: Project, input: HTMLInputElement, setError: (m: string | null) => void): Promise<void> {
-    const value = input.value.trim()
-    const check = await api.checkFolder(value)
+  private readonly outside = (event: Event): void => {
+    const target = event.target as Node
+    if (this.menu && !this.menu.contains(target) && !this.menuAnchor?.contains(target)) this.closeMenu()
+  }
+
+  private closeMenu(restoreFocus = false): void {
+    document.removeEventListener('pointerdown', this.outside, true)
+    this.menuAnchor?.removeAttribute('aria-expanded')
+    this.menu?.remove()
+    if (restoreFocus && this.menuAnchor?.isConnected) this.menuAnchor.focus()
+    this.menu = null
+    this.menuAnchor = null
+  }
+
+  private startRename(projectId: string): void {
+    this.renaming = projectId
+    this.signature = ''
+    if (this.current) this.update(this.current)
+  }
+
+  private async changeFolder(project: Project): Promise<void> {
+    const picked = await api.pickFolder()
+    if (!picked) return
+    const check = await api.checkFolder(picked)
     if (!check.ok) {
-      setError(check.error ?? 'This folder is not usable.')
+      this.showRowError(project.id, check.error ?? 'This folder is not usable.')
       return
     }
-    setError(null)
-    this.drafts.delete(project.id)
-    if (value !== project.folder) updateProject(project.id, { folder: value })
+    this.showRowError(project.id, null)
+    if (picked !== project.folder) updateProject(project.id, { folder: picked })
   }
 
   private async validateAll(projects: Project[]): Promise<void> {
     for (const project of projects) {
       const check = await api.checkFolder(project.folder)
-      const row = this.rows.querySelector(`[data-project-id="${project.id}"]`)
-      const error = row?.querySelector<HTMLElement>('.field-error')
-      if (!row || !error) continue
-      if (check.ok) this.errors.delete(project.id)
-      else this.errors.set(project.id, check.error ?? 'This folder is not usable.')
-      error.textContent = this.errors.get(project.id) ?? ''
-      error.hidden = !this.errors.has(project.id)
-      row.querySelector('.folder-cell input')?.classList.toggle('invalid', this.errors.has(project.id))
+      if (!this.rows.querySelector(`[data-project-id="${project.id}"]`)) continue
+      this.showRowError(project.id, check.ok ? null : (check.error ?? 'This folder is not usable.'))
     }
   }
 
   private async add(): Promise<void> {
     const project = await addProject()
     if (!project) return
-    requestAnimationFrame(() => document.getElementById(`name-${project.id}`)?.focus())
+    this.filter = ''
+    this.filterInput.value = ''
+    this.renaming = project.id
+    this.signature = ''
+    if (this.current) this.update(this.current)
   }
 }

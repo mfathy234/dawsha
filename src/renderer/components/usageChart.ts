@@ -1,11 +1,10 @@
 import { AGENTS, AGENT_NAMES, agentLabel } from '../../shared/agents'
-import { formatTokens, formatUsd, type LimitSeries, type UsageBucket, type UsageReport } from '../../shared/usage'
+import { formatTokens, formatUsd, type UsageBucket, type UsageReport } from '../../shared/usage'
 import type { AgentKind } from '../../shared/types'
 import { h } from '../dom'
 
 export type ChartMode = 'tokens' | 'cost'
 
-const SVG_NS = 'http://www.w3.org/2000/svg'
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 function amountOf(bucket: UsageBucket, agent: AgentKind, mode: ChartMode): number {
@@ -64,33 +63,4 @@ export function buildLegend(): HTMLElement {
     { class: 'usage-legend' },
     ...AGENTS.map((agent) => h('span', { class: 'usage-key' }, h('span', { class: `usage-swatch seg-${agent}` }), AGENT_NAMES[agent]))
   )
-}
-
-function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string>): SVGElementTagNameMap[K] {
-  const element = document.createElementNS(SVG_NS, tag)
-  for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, value)
-  return element
-}
-
-const WIDTH = 600
-const HEIGHT = 120
-
-export function buildLimitChart(report: UsageReport, series: LimitSeries[]): SVGSVGElement {
-  const chart = svg('svg', { viewBox: `0 0 ${WIDTH} ${HEIGHT}`, class: 'usage-limit-svg', preserveAspectRatio: 'none', role: 'img', 'aria-label': 'Limit usage over time' })
-  for (const level of [0, 50, 100]) {
-    const y = HEIGHT - (level / 100) * HEIGHT
-    chart.append(svg('line', { x1: '0', x2: String(WIDTH), y1: String(y), y2: String(y), class: 'usage-grid-line' }))
-  }
-  const span = Math.max(1, report.end - report.start)
-  series.forEach((entry, index) => {
-    const points = entry.points
-      .map((point) => `${(((point.at - report.start) / span) * WIDTH).toFixed(1)},${(HEIGHT - (point.percent / 100) * HEIGHT).toFixed(1)}`)
-      .join(' ')
-    chart.append(svg('polyline', { points, class: `usage-line usage-line-${index}`, fill: 'none' }))
-    const last = entry.points[entry.points.length - 1]
-    const x = ((last.at - report.start) / span) * WIDTH
-    const y = HEIGHT - (last.percent / 100) * HEIGHT
-    chart.append(svg('path', { d: `M${x.toFixed(1)} ${y.toFixed(1)}l0 0`, class: `usage-dot usage-line-${index}` }))
-  })
-  return chart
 }
