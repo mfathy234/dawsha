@@ -5,6 +5,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [0.5.3] - 2026-10-14
 
+### Changed
+
+- Say what the top bar text size buttons do: they resize every pane, while Ctrl+= and Ctrl+- (Cmd on macOS) resize only the focused pane.
+
 ### Fixed
 
 - Keep the session state pill steady. With live session info on, the Working pill rebuilt itself on every status update, restarting its spinner and making the pane header jitter. It now shows how long the session has been in its current state, in whole minutes, and only its text changes while the state holds. The focus view's side cards follow the same rule.
