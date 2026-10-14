@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from '
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { exportSkill, isSafeExportDestination, listSkills, resolveSkill } from '../../src/main/skillInventory'
+import { exportSkill, exportSkills, isSafeExportDestination, listSkills, resolveSkill } from '../../src/main/skillInventory'
 
 describe('skill inventory', () => {
   it('finds user and project skills by agent and deduplicates shared roots', () => {
@@ -126,5 +126,36 @@ describe('skill inventory', () => {
     expect(isSafeExportDestination(source, root)).toBe(true)
     expect(() => exportSkill(locations, id, child)).toThrow(/inside the skill/i)
     expect(existsSync(join(child, 'Review'))).toBe(false)
+  })
+})
+
+describe('exportSkills', () => {
+  it('exports a mixed selection into per-agent folders and skips what already exists', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dawsha-bulk-'))
+    const claude = join(root, '.claude')
+    const codex = join(root, '.codex')
+    mkdirSync(join(claude, 'skills', 'Review'), { recursive: true })
+    writeFileSync(join(claude, 'skills', 'Review', 'SKILL.md'), '# Review')
+    mkdirSync(join(codex, 'agents'), { recursive: true })
+    writeFileSync(join(codex, 'agents', 'architect.toml'), 'name = "architect"')
+    const locations = { claude, codex, gemini: join(root, '.gemini'), shared: join(root, '.agents'), projects: [] }
+    const ids = listSkills(locations).map((entry) => entry.id)
+    const destination = join(root, 'out')
+    mkdirSync(destination)
+
+    const first = exportSkills(locations, ids, destination)
+    expect(first).toEqual({ folder: join(destination, 'dawsha-export'), exported: 2, skipped: [] })
+    expect(existsSync(join(destination, 'dawsha-export', 'claude', 'skills', 'Review', 'SKILL.md'))).toBe(true)
+    expect(existsSync(join(destination, 'dawsha-export', 'codex', 'agents', 'architect.toml'))).toBe(true)
+
+    const again = exportSkills(locations, [...ids, 'deadbeef'], destination)
+    expect(again.exported).toBe(0)
+    expect(again.skipped.map((s) => s.reason)).toEqual(['a folder with that skill name already exists', 'a folder with that skill name already exists', 'no longer available'])
+  })
+
+  it('rejects an empty selection', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dawsha-bulk-'))
+    const locations = { claude: join(root, '.claude'), codex: join(root, '.codex'), gemini: join(root, '.gemini'), shared: join(root, '.agents'), projects: [] }
+    expect(() => exportSkills(locations, [], root)).toThrow(/nothing/i)
   })
 })

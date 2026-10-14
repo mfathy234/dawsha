@@ -15,7 +15,7 @@ import type {
 } from '../shared/types'
 import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
-import { findSolution, notifyUser, quickOpen } from './desktop'
+import { applyAttentionBadge, findSolution, notifyUser, quickOpen } from './desktop'
 import { existingFiles, openFile } from './fileOpen'
 import { projectFolder, readInstruction, writeInstruction } from './instructionFiles'
 import { isInstructionName, type InstructionWriteRequest } from '../shared/instructions'
@@ -30,7 +30,7 @@ import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
 import { bridgeDirs, claudeHome, claudeSettingsPath } from './paths'
-import { exportSkill, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
+import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
   import { previewPaneonImport, queuePaneonImport } from './paneonImport'
   import { paneonUserDataDir } from './paths'
 import { listAllSessions } from './sessionIndex'
@@ -133,6 +133,14 @@ export function registerIpc(
     if (selected.canceled || !selected.filePaths[0]) return null
     return exportSkill(skillLocations(), id, selected.filePaths[0])
   })
+  ipcMain.handle(IPC.skillsExportMany, async (_event, ids: unknown) => {
+    if (!Array.isArray(ids) || ids.length === 0) throw new Error('Nothing to export.')
+    const owner = getWindow()
+    const options = { properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'>, title: 'Export to folder' }
+    const selected = owner ? await dialog.showOpenDialog(owner, options) : await dialog.showOpenDialog(options)
+    if (selected.canceled || !selected.filePaths[0]) return null
+    return exportSkills(skillLocations(), ids, selected.filePaths[0])
+  })
   ipcMain.on(IPC.opsTrack, (_event, ids: unknown) => {
     ops.track(Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [])
   })
@@ -170,6 +178,7 @@ export function registerIpc(
     return root && isInstructionName(name) ? openFile(root, { path: name }) : undefined
   })
   ipcMain.on(IPC.notify, (_event, request: NotifyRequest) => notifyUser(getWindow, request, onNotifyClick))
+  ipcMain.on(IPC.attentionBadge, (_event, count: unknown) => applyAttentionBadge(getWindow(), count))
   ipcMain.handle(IPC.bridgePreview, () => bridgePreview(locations()))
   ipcMain.handle(IPC.bridgeStatus, () => bridgeStatus(locations()))
   ipcMain.handle(IPC.bridgeInstall, () => installBridge(locations()))

@@ -3,6 +3,35 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.2] - 2026-10-14
+
+### Added
+
+- Answer a permission prompt from the pane itself. A session that needs you shows an Allow and Deny bar above its footer, and the focus view's side panel has the same buttons.
+- See every session's state at a glance: needs you, working, done, idle or exited, each with its own icon shape so it does not rely on color.
+- Jump to what needs you from the top bar. It counts sessions that need you, are working or are done and not yet reviewed, and Ctrl+Shift+J goes to the next one that needs you.
+- Show the number of sessions that need you on the taskbar or dock icon and in the window title.
+- Turn on live session info from a pane footer. Claude panes without it show a Turn on live info button instead of an empty footer.
+- Search skills and agents by name, path or project, and export everything shown at once, for all agents or one agent, into a dawsha-export folder grouped by agent.
+- Follow a session into a git worktree. Open in VS Code, Explorer, Changes, Files, the branch chip and clickable file paths use the folder the agent is working in.
+
+### Changed
+
+- Show the 5 hour and weekly limits once in the top bar, with the reset time, instead of in every pane footer.
+- Hide the tab strip on panes with a single tab, so the header is one row. The + button moves into the header.
+- Cut long branch names from the start, so the end of the name stays visible.
+- Put Agents, Skills and Layouts under a More menu in the top bar.
+- Group sessions that need you at the top of the sidebar.
+- Sort the focus view's other sessions by what needs you first, with two readable preview lines and actions on each card.
+- Show projects as rows with New session and a More menu for rename, folder, default agent and remove, plus a filter.
+- Walk through first-run setup in three steps that end with starting your first session.
+- Show Usage summary tiles, Claude limit meters with reset times and pace, and sortable tables. Missing cost now reads "not reported".
+- Show agents as cards with clear update status and the full access switch.
+
+### Fixed
+
+- Fix the pane footer staying empty when live session info was off, with no hint about how to turn it on.
+
 ## [0.5.1] - 2026-10-14
 
 ### Added

@@ -180,7 +180,7 @@ test('generates the README screenshots from fake projects only', async () => {
   try {
     await resize(first.app)
     await expect(first.page.locator('.onboarding')).toBeVisible()
-    await expect(first.page.locator('#ob-agents')).toContainText('installed')
+    await expect(first.page.locator('#ob-agents')).toContainText('Ready')
     await settle(first.page, 800)
     await first.page.screenshot({ path: join(OUT, 'onboarding.png') })
   } finally {

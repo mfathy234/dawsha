@@ -1,7 +1,8 @@
 import { api } from './api'
 import type { FileLinkHost } from './terminalLinks'
 import type { HighlightHost } from './terminalHighlights'
-import { folderOfPane, store } from './state'
+import { workFolderOfPane } from './derive'
+import { store } from './state'
 import { currentBundle } from './themeManager'
 import type { TerminalView } from './terminalView'
 
@@ -12,7 +13,7 @@ const cache = new Map<string, { at: number; path: string | null }>()
 
 function folderOfTerm(id: string): string | null {
   const pane = store.state.panes.find((p) => p.tabs.some((t) => t.id === id))
-  return pane ? folderOfPane(store.state, pane) : null
+  return pane ? workFolderOfPane(store.state, pane) : null
 }
 
 async function existing(folder: string, paths: string[]): Promise<(string | null)[]> {

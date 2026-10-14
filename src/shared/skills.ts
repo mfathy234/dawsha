@@ -1,5 +1,11 @@
 import type { AgentKind } from './types'
 
+export interface BulkSkillExport {
+  folder: string
+  exported: number
+  skipped: { name: string; reason: string }[]
+}
+
 export interface SkillEntry {
   id: string
   name: string

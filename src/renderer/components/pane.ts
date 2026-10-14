@@ -1,5 +1,8 @@
 import {
   addTab,
+  answerPermission,
+  permissionTail,
+  enableBridge,
   closeDetails,
   closePane,
   closeTerminal,
@@ -44,6 +47,10 @@ import { enableDrag } from '../drag'
 import { canCompact, contextHintText, showContextHint } from '../../shared/contextWarning'
 import { dismissContextHint, typeCompact } from '../contextActions'
 import { dropFiles, hasFiles } from '../fileDrop'
+import { sessionState, type SessionState } from '../../shared/sessionState'
+import { permissionPromptText } from '../../shared/permissionPrompt'
+import { formatAge } from '../../shared/statusLine'
+import { statePill } from './stateIcon'
 
 const RESUMED_CHIP_MS = 60_000
 
@@ -67,8 +74,11 @@ export class PaneComponent {
   })
   private readonly branchName = h('span', { class: 'chip-text' })
   private readonly branchSync = h('span', { class: 'chip-sync', hidden: true })
-  private readonly statusWord = h('span', { class: 'status' })
-  private readonly attentionWord = h('span', { class: 'attention-word', hidden: true })
+  private readonly stateHost = h('span', { class: 'pane-state' })
+  private stateSignature = ''
+  private readonly permission = h('div', { class: 'pane-permission', role: 'alert', hidden: true })
+  private permissionSignature = ''
+  private readonly tabAdd = h('span', { class: 'pane-tab-add-slot', hidden: true })
   private readonly info = h('div', { class: 'pane-info', hidden: true })
   private readonly foot = h('div', { class: 'pane-foot', hidden: true })
   private infoSignature = ''
@@ -97,14 +107,14 @@ export class PaneComponent {
       this.pin,
       this.index,
       this.projectName,
+      this.stateHost,
       this.fresh,
       this.resumed,
       this.compareChip,
       this.fromChip,
-      this.statusWord,
-      this.attentionWord,
       this.restart,
       h('span', { class: 'spacer' }),
+      this.tabAdd,
       iconButton('Open in VS Code', ICONS.code, () => void openPaneFolder(paneId, 'vscode'), 'pane-vscode'),
       iconButton('Move pane', ICONS.layout, () => this.toggleMove(), 'pane-move'),
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
@@ -137,7 +147,7 @@ export class PaneComponent {
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
     const content = h('div', { class: 'pane-content' }, work, this.details)
     this.foot.append(this.info, this.branch)
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.hint, this.drawer.el, content, this.foot)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.hint, this.drawer.el, content, this.permission, this.foot)
     this.watchFileDrops()
     this.el.addEventListener('pointerdown', () => focusPane(paneId, true), true)
   }
@@ -166,17 +176,18 @@ export class PaneComponent {
     this.pin.hidden = view.pane.pinned !== true
     this.el.classList.toggle('pinned', view.pane.pinned === true)
     this.branch.hidden = !view.branch
-    this.branchName.textContent = view.branch ?? ''
+    this.branchName.replaceChildren(h('bdi', {}, view.branch ?? ''))
+    this.branchName.title = view.branch ?? ''
     const sync = formatSync(view.sync)
     this.branchSync.hidden = sync === ''
     this.branchSync.textContent = sync
     this.branch.title = view.sync ? `Git actions. ${describeSync(view.sync)} of ${view.branch ?? 'the upstream'}` : 'Git actions'
-    this.statusWord.textContent = view.status
-    this.statusWord.className = `status ${view.status}`
-    this.updateAttention(view)
+    const state = sessionState({ status: view.status, attention: view.attention })
+    this.updateState(view, state)
     this.updateInfo(view, maximized)
     this.foot.hidden = this.info.hidden && this.branch.hidden
     this.updateHint(view)
+    this.updatePermission(view, state)
     this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now, view.info.geminiTools)
     this.updateDetails(view, maximized)
     this.restart.hidden = !view.activeExited
@@ -189,24 +200,63 @@ export class PaneComponent {
     this.lastActiveTab = view.pane.activeTabId
   }
 
-  private updateAttention(view: PaneView): void {
-    const word = view.attention === 'needs' ? 'needs you' : view.attention === 'done' ? 'done' : ''
-    this.attentionWord.hidden = word === ''
-    this.attentionWord.textContent = word
-    this.attentionWord.className = `attention-word ${view.attention}`
+  private updateState(view: PaneView, state: SessionState): void {
+    const age = view.info.ageMs !== null ? formatAge(view.info.ageMs) : ''
+    const signature = `${state}|${age}`
+    if (signature !== this.stateSignature) {
+      this.stateSignature = signature
+      this.stateHost.replaceChildren(statePill(state, age))
+    }
     this.el.classList.toggle('attention', view.attention !== 'none')
+    this.el.classList.toggle('needs-you', state === 'needs')
     this.el.dataset.attention = view.attention
+    this.el.dataset.state = state
+  }
+
+  private updatePermission(view: PaneView, state: SessionState): void {
+    const needs = state === 'needs'
+    const command = needs && store.state.waiting[this.paneId] ? permissionPromptText(permissionTail(this.paneId)) : ''
+    const signature = needs ? JSON.stringify([view.agent, command]) : ''
+    if (signature === this.permissionSignature) return
+    this.permissionSignature = signature
+    this.permission.hidden = !needs
+    if (!needs) return this.permission.replaceChildren()
+    const name = AGENT_NAMES[view.agent]
+    const key = (label: string): HTMLElement => h('kbd', { class: 'pane-permission-key' }, label)
+    this.permission.replaceChildren(
+      h(
+        'div',
+        { class: 'pane-permission-text' },
+        h('span', { class: 'pane-permission-title' }, `${name} is waiting for your answer`),
+        command ? h('code', { class: 'pane-permission-command', title: command }, command) : null
+      ),
+      h(
+        'button',
+        { class: 'btn small primary', type: 'button', 'aria-label': `Allow ${name} to continue`, onClick: () => answerPermission(this.paneId, true) },
+        'Allow',
+        key('Enter')
+      ),
+      h(
+        'button',
+        { class: 'btn small', type: 'button', 'aria-label': `Deny ${name}`, onClick: () => answerPermission(this.paneId, false) },
+        'Deny',
+        key('Esc')
+      )
+    )
   }
 
   private updateInfo(view: PaneView, maximized: boolean): void {
     this.info.classList.toggle('clickable', maximized)
-    const signature = JSON.stringify([view.info, view.title, view.now])
+    const bridgeInstalled = store.state.bridge.installed
+    const signature = JSON.stringify([view.info, view.title, view.now, bridgeInstalled])
     if (signature === this.infoSignature) return
     this.infoSignature = signature
     const items = paneInfoStrip(view.info, {
       title: view.title.toUpperCase(),
       now: view.now,
       onOpenChanges: () => void openChanges(this.paneId),
+      bridgeInstalled,
+      onEnableBridge: () => void enableBridge(),
       onToggleAgents: () => {
         const tabId = view.primaryTabId
         toggleAgents(tabId)
@@ -456,9 +506,15 @@ export class PaneComponent {
   }
 
   private updateTabs(view: PaneView): void {
-    const signature = JSON.stringify(view.tabs)
+    const single = view.tabs.length === 1
+    this.tabs.hidden = single
+    this.tabAdd.hidden = !single
+    const signature = JSON.stringify([view.tabs, single])
     if (signature === this.tabSignature) return
     this.tabSignature = signature
+    const headerAdd = iconButton(`New terminal in ${view.title.toUpperCase()}`, ICONS.plus, () => this.toggleMenu(headerAdd), 'pane-tab-add')
+    headerAdd.setAttribute('aria-haspopup', 'menu')
+    this.tabAdd.replaceChildren(headerAdd)
     this.closeMenu()
     this.tabs.setAttribute('aria-label', `Terminals in ${view.title.toUpperCase()}`)
     clear(this.tabs)
@@ -535,7 +591,7 @@ export class PaneComponent {
         anchor.focus()
       }
     })
-    this.tabs.append(this.menu)
+    this.el.append(this.menu)
     placeNearAnchor(this.menu, anchor)
     first.focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)

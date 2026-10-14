@@ -41,7 +41,7 @@ import { api } from './api'
 import { openChangesDialog } from './components/changesDialog'
 import { confirmDialog } from './components/dialogs'
 import { toast } from './components/toast'
-import { derivePanes, matchAll } from './derive'
+import { derivePanes, matchAll, workFolderOfPane } from './derive'
 import { nextFrame } from './dom'
 import {
   AGENTS_PROJECT_ID,
@@ -49,7 +49,6 @@ import {
   mapTerm,
   newId,
   paneById,
-  folderOfPane,
   projectById,
   store,
   type AppState,
@@ -61,6 +60,9 @@ import { shouldRelaunchPlain } from '../shared/resumeFallback'
 import { sessionDisplayName } from '../shared/sessionMatch'
 import { applyTheme } from './themeManager'
 import { disposeTerminal, getTerminal } from './terminals'
+import { detectPermissionPrompt } from '../shared/permissionPrompt'
+
+const PERMISSION_TAIL_ROWS = 24
 
 const PERSIST_DELAY_MS = 300
 let persistTimer: number | undefined
@@ -206,7 +208,7 @@ export function handleTerminalExit(termId: string, exitCode: number): void {
 
 export async function startSession(
   projectId: string,
-  agent?: AgentKind,
+  agent?: TabAgent,
   resumeId?: string,
   chip = false,
   titleHint?: string
@@ -274,7 +276,7 @@ export async function addTab(paneId: string, agent: TabAgent, input?: string): P
 
 function paneFolder(paneId: string): string | null {
   const pane = paneById(store.state, paneId)
-  return pane ? folderOfPane(store.state, pane) : null
+  return pane ? workFolderOfPane(store.state, pane) : null
 }
 
 export async function openPaneFolder(paneId: string, kind: QuickOpenKind): Promise<void> {
@@ -292,8 +294,7 @@ export async function paneSolution(paneId: string): Promise<string | null> {
 }
 
 export function paneHasRepo(paneId: string): boolean {
-  const pane = paneById(store.state, paneId)
-  const folder = pane ? folderOfPane(store.state, pane) : null
+  const folder = paneFolder(paneId)
   return folder !== null && store.state.gitChanges[folder] != null
 }
 
@@ -494,6 +495,26 @@ export function focusNextAttention(): boolean {
   const target = nextAttentionPane(panes.map((p) => p.id), focusedId, attention)
   if (target) focusPane(target)
   return target !== null
+}
+
+/**
+ * Answers the permission prompt in a pane's agent tab: the tab attention polling reads, never a shell
+ * tab beside it. Agents put the "allow once" choice first, so Enter accepts it and Escape declines.
+ * The screen is checked again first, because attention lags the terminal and a stray Enter would
+ * send whatever is in the prompt box.
+ */
+export function answerPermission(paneId: string, allow: boolean): boolean {
+  if (store.state.attention[paneId] !== 'needs') return false
+  const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
+  if (!tabId || !detectPermissionPrompt(getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '')) return false
+  api.write(tabId, allow ? '\r' : '\x1b')
+  return true
+}
+
+/** The agent tab's screen tail, used to show what a permission prompt asks. */
+export function permissionTail(paneId: string): string {
+  const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
+  return tabId ? (getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '') : ''
 }
 
 export function findInPane(paneId: string): void {
@@ -872,8 +893,9 @@ export function initWhatsNew(): void {
 export async function refreshBranches(): Promise<void> {
   const state = store.state
   const folders = new Set<string>()
+  const matches = matchAll(state)
   for (const pane of state.panes) {
-    const folder = folderOfPane(state, pane)
+    const folder = workFolderOfPane(state, pane, matches)
     if (folder) folders.add(folder)
   }
   const entries = await Promise.all([...folders].map(async (f) => [f, await api.gitBranch(f)] as const))
@@ -1025,9 +1047,10 @@ export function setStatusInfos(infos: StatusInfo[]): void {
 function visibleFolders(state: AppState): string[] {
   if (state.view !== 'grid' || document.visibilityState !== 'visible') return []
   const folders = new Set<string>()
+  const matches = matchAll(state)
   for (const pane of state.panes) {
     if (state.maximizedId && state.maximizedId !== pane.id) continue
-    const folder = folderOfPane(state, pane)
+    const folder = workFolderOfPane(state, pane, matches)
     if (folder) folders.add(folder)
   }
   return [...folders]

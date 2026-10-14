@@ -6,6 +6,7 @@ import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsF
 import type { ProcessActivity } from '../shared/processActivity'
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { formatDuration, sessionUsage } from '../shared/sessionCost'
+import { pickWorkFolder } from '../shared/workFolder'
 import { lastOutputAt } from './ptyActivity'
 import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, RateLimitWindow, SessionFile, StatusInfo, TabAgent } from '../shared/types'
 import { folderOfPane, projectById, type AppState, type PaneState, type TermState } from './state'
@@ -93,7 +94,19 @@ function liveTabs(state: AppState, agent: TabAgent) {
   })
 }
 
+// State is replaced, never mutated, so one match per state object is safe to reuse. Terminal link
+// hover and the git polling loops ask for a pane's work folder far more often than state changes.
+const matchCache = new WeakMap<AppState, Matches>()
+
 export function matchAll(state: AppState): Matches {
+  const cached = matchCache.get(state)
+  if (cached) return cached
+  const matches = computeMatches(state)
+  matchCache.set(state, matches)
+  return matches
+}
+
+function computeMatches(state: AppState): Matches {
   const claudeRefs = liveTabs(state, 'claude').map(({ tab, cwd }) => ({
     id: tab.id,
     pid: tab.pid,
@@ -118,6 +131,20 @@ function primaryTab(pane: PaneState): TermState {
   const active = pane.tabs.find((t) => t.id === pane.activeTabId) ?? pane.tabs[0]
   if (active.agent !== 'shell') return active
   return pane.tabs.find((t) => t.agent !== 'shell') ?? active
+}
+
+/** The pane's working folder, following its agent into a worktree when the agent reports one. */
+export function workFolderOfPane(state: AppState, pane: PaneState, matches: Matches = matchAll(state)): string | null {
+  const base = folderOfPane(state, pane)
+  const tab = primaryTab(pane)
+  if (tab.status === 'exited') return base
+  const liveCwd =
+    tab.agent === 'claude'
+      ? (liveStatusFor(state, tab, matches)?.cwd ?? matches.claude.get(tab.id)?.cwd)
+      : tab.agent === 'codex'
+        ? matches.codex.get(tab.id)?.cwd
+        : null
+  return pickWorkFolder(base, liveCwd)
 }
 
 function nameOf(tab: TermState, matches: Matches): string | null {
@@ -281,7 +308,7 @@ export function derivePanes(state: AppState): PaneView[] {
   const matches = matchAll(state)
   return state.panes.map((pane, index) => {
     const project = projectById(state, pane.projectId)
-    const folder = folderOfPane(state, pane)
+    const folder = workFolderOfPane(state, pane, matches)
     const primary = primaryTab(pane)
     const { title, named } = titleFor(pane, matches, project)
     const active = pane.tabs.find((t) => t.id === pane.activeTabId) ?? pane.tabs[0]
@@ -321,14 +348,3 @@ export function derivePanes(state: AppState): PaneView[] {
   })
 }
 
-export interface Counts {
-  sessions: number
-  busy: number
-}
-
-export function countSessions(views: PaneView[]): Counts {
-  return {
-    sessions: views.length,
-    busy: views.filter((v) => v.status === 'busy').length
-  }
-}

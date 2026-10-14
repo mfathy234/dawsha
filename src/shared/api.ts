@@ -19,7 +19,7 @@ import type {
 } from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
 import type { ProcessActivity } from './processActivity'
-import type { SkillEntry } from './skills'
+import type { BulkSkillExport, SkillEntry } from './skills'
 import type { PaneonImportPreview } from './paneonImport'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
@@ -111,6 +111,7 @@ export interface GridApi {
   openInstruction(folder: string, name: string): Promise<void>
   notify(request: NotifyRequest): void
   onNotifyClick(listener: (paneId: string) => void): () => void
+  setAttentionBadge(count: number): void
   bridgePreview(): Promise<BridgePreview>
   bridgeStatus(): Promise<BridgeStatus>
   bridgeInstall(): Promise<BridgeResult>
@@ -126,6 +127,8 @@ export interface GridApi {
   listSkills(): Promise<SkillEntry[]>
   openSkill(id: string): Promise<void>
   exportSkill(id: string): Promise<string | null>
+  /** Asks for a folder once, then exports every id. Null when the folder picker is cancelled. */
+  exportSkills(ids: string[]): Promise<BulkSkillExport | null>
   readClipboard(): Promise<ClipboardContent>
   writeClipboard(text: string): Promise<void>
   openExternal(url: string): Promise<void>

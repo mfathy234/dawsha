@@ -1,4 +1,5 @@
 import {
+  focusNextAttention,
   openQuickPick,
   openSettings,
   openResumePicker,
@@ -15,7 +16,10 @@ import { openCompareDialog } from '../compareActions'
 import { ICONS } from '../icons'
 import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
-import { countSessions, type PaneView } from '../derive'
+import type { PaneView } from '../derive'
+import { countSessionStates, sessionState } from '../../shared/sessionState'
+import { MORE_VIEWS, accountLimits, limitText, moreLabel, type MoreView } from '../../shared/topbarSummary'
+import { stateIcon } from './stateIcon'
 import { toolState } from '../../shared/agentTools'
 import { formatPercent, gaugeStage } from '../../shared/statusLine'
 import { chargeBar } from './chargeBar'
@@ -23,6 +27,8 @@ import type { RateLimitWindow } from '../../shared/types'
 import { h, icon } from '../dom'
 import type { AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
+
+const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
 
 export class TopBarComponent {
   readonly el: HTMLElement
@@ -62,20 +68,27 @@ export class TopBarComponent {
   )
   private readonly sessions = h('button', { class: 'btn ghost', type: 'button', id: 'sessions-button', onClick: () => showView('grid') }, 'Sessions')
   private readonly projects = h('button', { class: 'btn ghost', type: 'button', id: 'projects-button' }, 'Projects')
-  private readonly agentsDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
-  private readonly agents = h('button', { class: 'btn ghost', type: 'button', id: 'agents-button' }, 'Agents', this.agentsDot)
-  private readonly skills = h('button', { class: 'btn ghost', type: 'button', id: 'skills-button' }, 'Skills')
-  readonly layoutsButton = h(
+  private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
+  private readonly moreText = h('span', { class: 'more-text' }, 'More')
+  private readonly more = h(
     'button',
-    { class: 'btn ghost', type: 'button', id: 'layouts-button', 'aria-haspopup': 'dialog', onClick: () => toggleLayouts() },
-    'Layouts'
+    { class: 'btn ghost more-button', type: 'button', id: 'more-button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: () => this.toggleMoreMenu() },
+    this.moreText,
+    h('span', { class: 'more-chevron', 'aria-hidden': 'true' }, icon(ICONS.chevronDown)),
+    this.moreDot
   )
+  readonly layoutsButton = this.more
+  private moreMenu: HTMLElement | null = null
+  private moreItems: Record<MoreView, HTMLElement> | null = null
+  private agentUpdates = false
+  private activeMore: MoreView | null = null
   private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
   private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings', title: 'Settings' },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
     h('span', { class: 'utility-label' }, 'Settings')
   )
-  private readonly count = h('span', { class: 'topbar-count', 'aria-live': 'polite' })
+  private readonly summary = h('div', { class: 'topbar-count', role: 'status', 'aria-live': 'polite' })
+  private summarySignature = ''
   private readonly zoomValue = h('span', { class: 'zoom-value', title: 'Terminal text size of the focused pane' }, '15px')
   readonly updatePill = h('button', {
     class: 'update-pill',
@@ -101,12 +114,6 @@ export class TopBarComponent {
       if (this.settings.getAttribute('aria-pressed') === 'true') showView('grid')
       else openSettings()
     })
-    this.agents.addEventListener('click', () => {
-      showView(this.agents.getAttribute('aria-pressed') === 'true' ? 'grid' : 'agents')
-    })
-    this.skills.addEventListener('click', () => {
-      showView(this.skills.getAttribute('aria-pressed') === 'true' ? 'grid' : 'skills')
-    })
     this.el = h(
       'header',
       { class: 'topbar' },
@@ -116,12 +123,10 @@ export class TopBarComponent {
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
         this.sessions,
         this.projects,
-        this.agents,
-        this.skills,
-        this.layoutsButton,
-        this.usage
+        this.usage,
+        this.more
       ),
-      this.count,
+      this.summary,
       this.updatePill,
       h('span', { class: 'spacer' }),
       this.limits,
@@ -139,26 +144,67 @@ export class TopBarComponent {
 
   update(state: AppState, views: PaneView[]): void {
     this.updateLimits(state, views)
-    const { sessions, busy } = countSessions(views)
     this.sessions.setAttribute('aria-pressed', String(state.view === 'grid'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
-    this.agents.setAttribute('aria-pressed', String(state.view === 'agents'))
-    this.skills.setAttribute('aria-pressed', String(state.view === 'skills'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
-    const updates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
-    this.agentsDot.hidden = !updates
-    this.agents.setAttribute('aria-label', updates ? 'Agents, updates available' : 'Agents')
+    this.agentUpdates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
+    this.updateMore(state)
     this.updatePillState(state)
     const focused = state.panes.find((pane) => pane.id === state.focusedId) ?? state.panes[0]
     this.zoomValue.textContent = focused ? `${focused.fontSize}px` : '15px'
     this.themeButton.setAttribute('aria-expanded', String(state.themePickerOpen))
-    this.layoutsButton.setAttribute('aria-expanded', String(state.layoutsOpen))
-    this.count.replaceChildren(
-      `${sessions} session${sessions === 1 ? '' : 's'}`,
-      ' · ',
-      h('span', { class: busy > 0 ? 'busy' : '' }, `${busy} busy`)
-    )
+    this.updateSummary(views)
+  }
+
+  private updateMore(state: AppState): void {
+    this.activeMore = state.layoutsOpen ? 'layouts' : state.view === 'agents' || state.view === 'skills' ? state.view : null
+    const label = moreLabel(this.activeMore ?? '')
+    this.more.setAttribute('aria-pressed', String(this.activeMore !== null))
+    this.more.setAttribute('aria-expanded', String(this.moreMenu !== null || state.layoutsOpen))
+    this.more.setAttribute('aria-label', this.agentUpdates ? `${label}, agent updates available` : label)
+    this.moreText.textContent = label
+    this.moreDot.hidden = !this.agentUpdates
+    for (const { view } of MORE_VIEWS) this.markMoreItem(view)
+  }
+
+  private markMoreItem(view: MoreView): void {
+    const item = this.moreItems?.[view]
+    if (!item) return
+    item.setAttribute('aria-current', String(this.activeMore === view))
+    const dot = item.querySelector<HTMLElement>('.update-dot')
+    if (dot) dot.hidden = !this.agentUpdates
+  }
+
+  private updateSummary(views: PaneView[]): void {
+    const counts = countSessionStates(views.map((view) => sessionState(view)))
+    const signature = JSON.stringify(counts)
+    if (signature === this.summarySignature) return
+    this.summarySignature = signature
+    const chips: HTMLElement[] = [h('span', { class: 'sum-chip' }, `${counts.total} session${counts.total === 1 ? '' : 's'}`)]
+    if (counts.working > 0) chips.push(h('span', { class: 'sum-chip state-working' }, stateIcon('working'), `${counts.working} working`))
+    if (counts.needs > 0) {
+      chips.push(
+        h(
+          'button',
+          {
+            class: 'sum-chip sum-needs',
+            type: 'button',
+            id: 'needs-chip',
+            title: `Go to the session that needs you (${NEEDS_KEY_HINT})`,
+            'aria-label': `${counts.needs} needs you, go to the next one, ${NEEDS_KEY_HINT}`,
+            onClick: () => {
+              if (!focusNextAttention()) showView('grid')
+            }
+          },
+          stateIcon('needs'),
+          `${counts.needs} needs you`,
+          h('span', { class: 'kbd', 'aria-hidden': 'true' }, NEEDS_KEY_HINT)
+        )
+      )
+    }
+    if (counts.done > 0) chips.push(h('span', { class: 'sum-chip state-done' }, stateIcon('done'), `${counts.done} to review`))
+    this.summary.replaceChildren(...chips)
   }
 
   private updatePillState(state: AppState): void {
@@ -265,17 +311,90 @@ export class TopBarComponent {
       event.preventDefault()
       items[event.key === 'Home' ? 0 : items.length - 1].focus()
     } else if (event.key === 'Tab') {
+      // Move focus back to the anchor before the menu leaves the DOM, so Tab continues from there.
+      this.chevron.focus()
       this.closeAgentMenu()
     }
   }
 
+  private readonly moreOutside = (event: Event): void => {
+    const target = event.target as Node
+    if (this.moreMenu && !this.moreMenu.contains(target) && !this.more.contains(target)) this.closeMoreMenu()
+  }
+
+  private closeMoreMenu(): void {
+    document.removeEventListener('pointerdown', this.moreOutside, true)
+    this.moreMenu?.remove()
+    this.moreMenu = null
+    this.moreItems = null
+    this.more.setAttribute('aria-expanded', 'false')
+  }
+
+  private openMore(view: MoreView): void {
+    this.closeMoreMenu()
+    if (view === 'layouts') toggleLayouts()
+    else showView(this.activeMore === view ? 'grid' : view)
+  }
+
+  private toggleMoreMenu(): void {
+    if (this.moreMenu) {
+      this.closeMoreMenu()
+      return
+    }
+    const entries = MORE_VIEWS.map(({ view, label }) => {
+      const item = h(
+        'button',
+        { class: 'menu-item more-item', type: 'button', role: 'menuitem', id: `${view}-menu-item`, 'data-view': view, onClick: () => this.openMore(view) },
+        label,
+        view === 'agents' ? h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' }) : ''
+      )
+      return [view, item] as const
+    })
+    this.moreItems = Object.fromEntries(entries) as unknown as Record<MoreView, HTMLElement>
+    const items = entries.map(([, item]) => item)
+    for (const { view } of MORE_VIEWS) this.markMoreItem(view)
+    const rect = this.more.getBoundingClientRect()
+    this.moreMenu = h(
+      'div',
+      { class: 'popover menu floating', role: 'menu', 'aria-label': 'More views', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 6)}px` },
+      ...items
+    )
+    this.moreMenu.addEventListener('keydown', (event) => this.onMoreKey(event, items))
+    this.more.setAttribute('aria-expanded', 'true')
+    document.body.appendChild(this.moreMenu)
+    items[0].focus()
+    setTimeout(() => document.addEventListener('pointerdown', this.moreOutside, true), 0)
+  }
+
+  private onMoreKey(event: KeyboardEvent, items: HTMLElement[]): void {
+    const current = items.indexOf(document.activeElement as HTMLElement)
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      this.closeMoreMenu()
+      this.more.focus()
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const step = event.key === 'ArrowDown' ? 1 : -1
+      items[(current + step + items.length) % items.length].focus()
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault()
+      items[event.key === 'Home' ? 0 : items.length - 1].focus()
+    } else if (event.key === 'Tab') {
+      this.more.focus()
+      this.closeMoreMenu()
+    }
+  }
+
   private updateLimits(state: AppState, views: PaneView[]): void {
-    const windows = views.find((view) => view.pane.id === state.focusedId)?.info.limits ?? []
-    const signature = JSON.stringify(windows)
+    const focusedIndex = views.findIndex((view) => view.pane.id === state.focusedId)
+    const windows = accountLimits(views.map((view) => view.info.limits), focusedIndex)
+    const items = windows.map((window) => ({ window, text: limitText(window, state.now), title: resetText(window) }))
+    const signature = JSON.stringify(items)
     if (signature === this.limitsSignature) return
     this.limitsSignature = signature
-    this.limits.hidden = windows.length === 0
-    this.limits.replaceChildren(...windows.map((window) => limitItem(window)))
+    this.limits.hidden = items.length === 0
+    this.limits.replaceChildren(...items.map((item) => limitItem(item.window, item.text, item.title)))
   }
 }
 
@@ -285,13 +404,14 @@ function resetText(window: RateLimitWindow): string {
   return `${window.label}: ${formatPercent(window.percent)} used, resets ${when}`
 }
 
-function limitItem(window: RateLimitWindow): HTMLElement {
+function limitItem(window: RateLimitWindow, text: string, title: string): HTMLElement {
   return h(
     'span',
-    { class: `limit stage-${gaugeStage(window.percent)}`, title: resetText(window), 'data-limit': window.key },
+    { class: `limit stage-${gaugeStage(window.percent)}`, title, 'data-limit': window.key },
     h('span', { class: `limit-label${window.family ? ` fam-${window.family}` : ''}` }, window.label),
     ' ',
     chargeBar(window.percent),
-    formatPercent(window.percent)
+    ' ',
+    h('span', { class: 'limit-value' }, text)
   )
 }
