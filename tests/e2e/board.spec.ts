@@ -95,8 +95,11 @@ test('sessions board: columns follow state, answer, review, peek, reply, filter 
     await expect(peek.locator(`.term-host[data-term-id="${second}"]`)).toBeVisible()
     await expect(page.locator('.pane .term-host')).toHaveCount(1)
     // A reply is never typed into a permission prompt, where Enter would pick its default answer.
+    // The earlier prompt's text is still in scrollback, so wait until the new one is drawn.
+    const prompts = async (): Promise<number> => (await bufferText(page, second)).split('npm test -- invoices').length - 1
+    const shown = await prompts()
     await feedTerminal(page, second, PROMPT)
-    await expect.poll(() => bufferText(page, second)).toContain('npm test -- invoices')
+    await expect.poll(prompts).toBeGreaterThan(shown)
     await peek.getByRole('textbox', { name: /^Message to/ }).fill('echo blockedreply')
     await peek.getByRole('button', { name: 'Send' }).click()
     await expect(page.locator('.toasts')).toContainText('Answer the permission')

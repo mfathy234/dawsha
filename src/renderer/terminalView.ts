@@ -122,12 +122,21 @@ export class TerminalView {
     return lines.join('\n')
   }
 
+  /**
+   * The last `rows` lines, ending at the last line with text on screen, so the empty rows of a tall terminal
+   * don't push a prompt drawn near the top out of view. When the screen is at least `rows` tall the tail stays
+   * on screen, so an older prompt in the scrollback can't be mistaken for a current one; an empty screen gives ''.
+   */
   tailText(rows: number): string {
     const buffer = this.term.buffer.active
+    const text = (row: number): string => buffer.getLine(row)?.translateToString(true) ?? ''
+    const top = buffer.baseY
+    let end = buffer.length - 1
+    while (end >= top && text(end).trim() === '') end -= 1
+    if (end < top) return ''
+    const start = this.term.rows >= rows ? Math.max(top, end - rows + 1) : Math.max(0, end - rows + 1)
     const lines: string[] = []
-    for (let row = Math.max(0, buffer.length - rows); row < buffer.length; row += 1) {
-      lines.push(buffer.getLine(row)?.translateToString(true) ?? '')
-    }
+    for (let row = start; row <= end; row += 1) lines.push(text(row))
     return lines.join('\n')
   }
 
