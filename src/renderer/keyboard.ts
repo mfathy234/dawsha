@@ -5,6 +5,7 @@ import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, zo
 import { commandForEvent } from './commands/registry'
 import { derivePanes } from './derive'
 import { store, type AppState } from './state'
+import { closeTimeline } from './timelineActions'
 
 const overlayOpen = (): boolean => document.querySelector('.overlay, .popover') !== null
 
@@ -44,7 +45,7 @@ function consume(event: KeyboardEvent): void {
   event.stopPropagation()
 }
 
-const inFindBar = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.term-find') != null
+const inFindBar = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.term-find, .timeline-search') != null
 
 function onKeyDown(event: KeyboardEvent): void {
   if (event.isComposing || overlayOpen() || inFindBar(event)) return
@@ -72,6 +73,7 @@ function onKeyDown(event: KeyboardEvent): void {
   if (event.key === 'Escape' && escapeShouldRestore(event)) {
     consume(event)
     if (state.detailsPaneId !== null) closeDetails()
+    else if (state.timelinePaneId !== null) closeTimeline()
     else restoreGrid()
     return
   }

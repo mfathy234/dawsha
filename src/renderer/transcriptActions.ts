@@ -6,7 +6,7 @@ import { derivePanes, matchAll } from './derive'
 import { folderOfPane, paneById, store } from './state'
 import { getTerminal } from './terminals'
 
-function sessionIdOf(tab: { id: string; agent: string; sessionId?: string }): string | undefined {
+export function sessionIdOf(tab: { id: string; agent: string; sessionId?: string }): string | undefined {
   if (tab.sessionId) return tab.sessionId
   const matches = matchAll(store.state)
   if (tab.agent === 'claude') return matches.claude.get(tab.id)?.sessionId

@@ -41,6 +41,7 @@ import {
   jumpPrompt
 } from '../terminalActions'
 import { exportTranscript } from '../transcriptActions'
+import { toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { registerCommands, registerProvider, type Command } from './registry'
 
@@ -231,6 +232,10 @@ export function installBuiltinCommands(): void {
       ...withKeys('Ctrl+Shift+G'),
       enabled: (state) => hasPane(state) && paneHasRepo(state.focusedId ?? ''),
       run: () => void (store.state.focusedId && openChanges(store.state.focusedId))
+    },
+    {
+      ...focusedAction('pane.timeline', 'Show session timeline', toggleTimeline, 'history events edits commands tests approvals search insights'),
+      ...withKeys('Ctrl+Shift+T')
     },
     focusedAction('pane.transcript', 'Export transcript…', exportTranscript, 'save markdown html conversation chat history'),
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),

@@ -23,6 +23,7 @@ import type { BulkSkillExport, SkillEntry } from './skills'
 import type { PaneonImportPreview } from './paneonImport'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
+import type { TimelineExportRequest, TimelineExportResult, TimelineRequest, TimelineResult } from './timeline'
 import type { TranscriptRequest, TranscriptResult } from './transcript'
 import type { UsageRange, UsageReport } from './usage'
 import type {
@@ -148,6 +149,8 @@ export interface GridApi {
   usageReport(range: UsageRange): Promise<UsageReport>
   usageSnapshot(): Promise<UsageSnapshot>
   exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
+  sessionTimeline(request: TimelineRequest): Promise<TimelineResult>
+  exportTimeline(request: TimelineExportRequest): Promise<TimelineExportResult>
   compareProbe(folder: string): Promise<RepoProbe>
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>

@@ -39,6 +39,8 @@ import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type Bridg
 import type { OpsWatcher } from './opsWatcher'
 import type { StatusWatcher } from './statusWatcher'
 import { exportTranscript } from './transcriptExport'
+import { exportTimeline, sessionTimeline } from './sessionTimeline'
+import type { TimelineExportRequest, TimelineRequest } from '../shared/timeline'
 import { platformExecutableDirs, resolveExecutable } from './executables'
 import type { PtyManager } from './ptyManager'
 import { readSessions } from './sessionsWatcher'
@@ -211,6 +213,8 @@ export function registerIpc(
   })
   ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
+  ipcMain.handle(IPC.timelineSession, (_event, request: TimelineRequest) => sessionTimeline(request))
+  ipcMain.handle(IPC.timelineExport, (_event, request: TimelineExportRequest) => exportTimeline(getWindow(), request))
   ipcMain.handle(IPC.compareProbe, (_event, folder: string) => probeRepo(folder))
   ipcMain.handle(IPC.compareCreate, (_event, folder: string, short: string) => createWorktrees(folder, short))
   ipcMain.handle(IPC.compareStatus, (_event, repo: string, path: string, branch: string) => worktreeStatus(repo, path, branch))

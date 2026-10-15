@@ -23,7 +23,7 @@ import { listGeminiChatFiles, projectSlugs, readGeminiChat } from './geminiWatch
 import { claudeProjectsDir } from './paths'
 import { listRolloutFiles } from './projectSessions'
 
-interface Found {
+export interface Found {
   path: string
   modifiedAt: number
 }
@@ -82,12 +82,16 @@ async function codexTitle(id: string): Promise<string | undefined> {
   }
 }
 
-async function loadSession(request: TranscriptRequest): Promise<{ parsed: ParsedSession; found: Found } | null> {
+export async function locateSession(request: Pick<TranscriptRequest, 'agent' | 'sessionId' | 'folder'>): Promise<Found | null> {
   const { agent, sessionId, folder } = request
   if (!sessionId || agent === 'shell' || !/^[\w-]+$/.test(sessionId)) return null
-  const found =
-    agent === 'claude' ? await findClaude(sessionId, folder) : agent === 'codex' ? await findCodex(sessionId) : await findGemini(sessionId, folder)
-  if (!found) return null
+  return agent === 'claude' ? findClaude(sessionId, folder) : agent === 'codex' ? findCodex(sessionId) : findGemini(sessionId, folder)
+}
+
+async function loadSession(request: TranscriptRequest): Promise<{ parsed: ParsedSession; found: Found } | null> {
+  const { agent, sessionId } = request
+  const found = await locateSession(request)
+  if (!found || !sessionId) return null
   try {
     if ((await stat(found.path)).size > TRANSCRIPT_MAX_BYTES) return null
     const text = await readFile(found.path, 'utf8')

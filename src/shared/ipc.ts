@@ -88,6 +88,8 @@ export const IPC = {
   usageGet: 'usage:get',
   usageSnapshot: 'usage:snapshot',
   transcriptExport: 'transcript:export',
+  timelineSession: 'timeline:session',
+  timelineExport: 'timeline:export',
   compareProbe: 'compare:probe',
   compareCreate: 'compare:create',
   compareStatus: 'compare:status',
