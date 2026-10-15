@@ -225,3 +225,53 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
   expect(await page.evaluate(() => (window as unknown as { __plays: number }).__plays)).toBe(0)
   await expect(page.locator('.demo-toggle')).toBeHidden()
 })
+
+const newSections = ['board', 'timeline', 'search', 'replay']
+
+test('New in 1.0 shows four feature rows with sized lazy images and a phone approvals point', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(url)
+  await expect(page.locator('.new-pill')).toContainText('New in 1.0')
+  await expect(page.locator('.new-pill')).toHaveAttribute('href', '#new')
+  await expect(page.locator('#new-h')).toHaveText('New in 1.0')
+  for (const id of newSections) {
+    const row = page.locator(`#new #${id}`)
+    await expect(row).toHaveCount(1)
+    const image = row.locator('img')
+    await expect(image).toHaveAttribute('loading', 'lazy')
+    await expect(image).toHaveAttribute('width', '1600')
+    await expect(image).toHaveAttribute('height', '1000')
+    expect(((await image.getAttribute('alt')) ?? '').length).toBeGreaterThan(20)
+  }
+  const phone = page.locator('#remote .phone img').first()
+  await expect(phone).toHaveAttribute('src', 'assets/remote-approvals.png')
+  await expect(phone).toHaveAttribute('width', '780')
+  await expect(phone).toHaveAttribute('height', '1688')
+  await expect(page.locator('#remote')).toContainText('Approve from your phone')
+  await expect(page.locator('#remote')).toContainText('Only a plain Yes can be allowed from the phone')
+  for (const image of await page.locator('#new img, #remote .phone img').all()) {
+    await image.scrollIntoViewIfNeeded()
+    await expect(image).toHaveJSProperty('complete', true)
+    expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0)
+  }
+})
+
+test('the Arabic page translates the new sections and the English page has no horizontal scroll at 375px', async ({ page }) => {
+  await page.goto(arabicUrl)
+  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.0')
+  await expect(page.locator('#board h3')).toHaveText('لوحة الجلسات')
+  await expect(page.locator('#timeline h3')).toHaveText('الخط الزمني للجلسة')
+  await expect(page.locator('#search h3')).toContainText('ابحث في كل الجلسات')
+  await expect(page.locator('#replay h3')).toHaveText('إعادة التشغيل')
+  await expect(page.locator('#remote')).toContainText('وافق من هاتفك')
+  await expect(page.getByText('انسخ احتياطيًا وانقل')).toBeVisible()
+  await expect(page.locator('.new-pill')).toContainText('الجديد في 1.0')
+  const english = await page.locator('#new, #remote, .new-pill').evaluateAll((nodes) => nodes.map((node) => node.textContent ?? '').join(' '))
+  expect(english).not.toMatch(/Sessions board|Approve from your phone|Session timeline/)
+  await expect(page.locator('#board img')).toHaveAttribute('alt', /لوحة الجلسات/)
+  for (const address of [url, arabicUrl]) {
+    await page.setViewportSize({ width: 375, height: 800 })
+    await page.goto(address)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
+  }
+})

@@ -55,6 +55,7 @@
     $('.section-lead').forEach((p) => reveal(p, { y: 12 }));
     $('.showcase .shot').forEach((f, i) => reveal(f, { delay: (i % 2) * 0.09, y: 24 }));
     reveal('.feature-shot', { y: 24 });
+    $('.feat-row').forEach((row) => reveal(row, { y: 24 }));
     $('.fgroup').forEach((grp, c) => reveal([$('h3', grp)[0], ...$('li', grp)], { trigger: grp, stagger: 0.04, delay: c * 0.1 }));
     reveal('.badges li', { trigger: '.works-row', stagger: 0.08, y: 10 });
     reveal('.dl-card', { trigger: '.dl-grid', stagger: 0.11, y: 24 });
