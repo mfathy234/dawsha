@@ -100,7 +100,7 @@ test('generates the board, timeline, search and replay screenshots from fake pro
     const search = panel.getByRole('searchbox', { name: 'Search all sessions' })
     await expect(search).toBeFocused()
     await search.fill('rate limit')
-    await expect(panel.locator('.tl-result')).toHaveCount(2, { timeout: 20_000 })
+    await expect(panel.locator('.tl-result')).toHaveCount(3, { timeout: 20_000 })
     await settle(page, 1500)
     await page.screenshot({ path: join(OUT, 'timeline-search.png') })
     await page.keyboard.press('Escape')

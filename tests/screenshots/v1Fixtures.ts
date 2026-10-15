@@ -101,8 +101,8 @@ export function writeClosedSessions(sandbox: Sandbox, folder: (name: string) => 
     jsonl([
       { type: 'session_meta', payload: { id: codexId, cwd: folder('mobile-shell'), timestamp: at(base(4) + 60) } },
       { type: 'turn_context', payload: { model: 'gpt-5.6-sol' } },
-      { type: 'event_msg', payload: { type: 'user_message', message: 'Push token refresh hammers the server on app start. Add a rate limit.' } },
-      { type: 'event_msg', payload: { type: 'agent_message', message: 'Adding a rate limit of one refresh per five minutes, stored across launches.' } }
+      { timestamp: at(base(4) + 55), type: 'event_msg', payload: { type: 'user_message', message: 'Push token refresh hammers the server on app start. Add a rate limit.' } },
+      { timestamp: at(base(4) + 54), type: 'event_msg', payload: { type: 'agent_message', message: 'Adding a rate limit of one refresh per five minutes, stored across launches.' } }
     ])
   )
   writeFileSync(join(sandbox.codexHome, 'session_index.jsonl'), `${JSON.stringify({ id: codexId, thread_name: 'Throttle push token refresh' })}\n`, { flag: 'a' })
