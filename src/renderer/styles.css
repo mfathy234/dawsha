@@ -7189,3 +7189,21 @@ button.tl-event:hover { background: var(--raised); }
 .tl-hint { color: var(--muted); font-size: 12px; }
 .tl-note { margin: 4px 6px 8px; color: var(--muted); font-size: 12px; }
 .tl-earlier { margin: 2px 6px 6px; }
+.tl-scope-row { display: inline-flex; align-self: flex-start; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.tl-scope { height: 26px; padding: 0 12px; border: 0; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.tl-scope + .tl-scope { border-left: 1px solid var(--border); }
+.tl-scope[aria-pressed='true'] { background: var(--raised); color: var(--text); font-weight: 600; }
+.tl-past { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.tl-past-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.tl-all-filters { display: flex; gap: 6px; margin: 2px 6px 6px; }
+.tl-select { flex: 1; min-width: 0; height: 28px; padding: 0 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
+.tl-results { display: flex; flex-direction: column; gap: 10px; padding: 0 2px 8px; }
+.tl-result { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 4px; }
+.tl-result button { border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; border-radius: 6px; }
+.tl-result button:hover { background: var(--raised); }
+.tl-result-head { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; }
+.tl-result-meta { color: var(--muted); font-size: 11.5px; }
+.tl-result-hit { display: grid; grid-template-columns: 40px 64px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 4px 8px; font-size: 12px; }
+.tl-result-kind { color: var(--muted); }
+.tl-result-snippet { overflow-wrap: anywhere; }
+.tl-result-more { padding: 4px 8px; color: var(--muted); font-size: 12px; }

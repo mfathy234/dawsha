@@ -41,7 +41,7 @@ import {
   jumpPrompt
 } from '../terminalActions'
 import { exportTranscript } from '../transcriptActions'
-import { toggleTimeline } from '../timelineActions'
+import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { registerCommands, registerProvider, type Command } from './registry'
 
@@ -236,6 +236,10 @@ export function installBuiltinCommands(): void {
     {
       ...focusedAction('pane.timeline', 'Show session timeline', toggleTimeline, 'history events edits commands tests approvals search insights'),
       ...withKeys('Ctrl+Shift+T')
+    },
+    {
+      ...focusedAction('timeline.search-all', 'Search all session timelines…', (id) => openTimelineWith(id, { scope: 'all' }), 'find prompts edits commands tests old closed past sessions history'),
+      ...withKeys('Ctrl+Alt+F')
     },
     focusedAction('pane.transcript', 'Export transcript…', exportTranscript, 'save markdown html conversation chat history'),
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),

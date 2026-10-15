@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { closeApp, createSandbox, launchApp, QUIT_BUDGET_MS, type Sandbox } from './helpers'
@@ -84,7 +84,7 @@ test('the timeline lists the session, filters it, searches it and shows insights
     await expect(panel.locator('.tl-event')).toHaveCount(2)
     await expect(panel.locator('.tl-event').first()).toContainText('23 passed · 1 failed')
     await expect(panel.locator('.tl-event').last()).toContainText('24 passed')
-    await panel.getByRole('button', { name: 'All' }).click()
+    await panel.getByRole('button', { name: 'All', exact: true }).click()
 
     const search = panel.getByRole('searchbox', { name: 'Search the timeline' })
     await search.fill('npm test')
@@ -168,6 +168,76 @@ test('new log lines appear while the timeline is open, and a half-written line w
     appendFileSync(log, line.slice(20) + '\n')
     await expect(panel.locator('.tl-event.tl-prompt')).toHaveCount(3, { timeout: 15_000 })
     await expect(panel.locator('.tl-summary')).toContainText('3 prompts')
+  } finally {
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
+  }
+})
+
+const CLOSED_ID = '22222222-3333-4444-8555-777777777777'
+
+function seedClosed(sandbox: Sandbox): void {
+  const dir = join(sandbox.claudeHome, 'projects', sandbox.projectFolder.replace(/[^A-Za-z0-9]/g, '-'))
+  const path = join(dir, `${CLOSED_ID}.jsonl`)
+  const records = [
+    { type: 'user', timestamp: stamp(0), message: { content: 'Why is the zebracache step slow?' } },
+    { type: 'assistant', timestamp: stamp(2), message: { content: [{ type: 'text', text: 'The zebracache key is missing.' }] } },
+    { type: 'assistant', timestamp: stamp(4), message: { content: [{ type: 'tool_use', id: 'c1', name: 'Bash', input: { command: 'echo zebracache' } }] } },
+    {
+      type: 'assistant',
+      timestamp: stamp(6),
+      message: { content: [{ type: 'tool_use', id: 'e1', name: 'Edit', input: { file_path: join(sandbox.projectFolder, 'ci', 'zebracache.yml'), old_string: 'a', new_string: 'b' } }] }
+    },
+    { type: 'ai-title', aiTitle: 'Investigate slow CI' }
+  ]
+  writeFileSync(path, records.map((r) => JSON.stringify(r)).join('\n') + '\n')
+  const old = new Date(Date.now() - 4 * 24 * 60 * 60_000)
+  utimesSync(path, old, old)
+}
+
+test('searching all sessions finds a closed session, opens it read-only at the match and resumes it', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  seedClosed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.keyboard.press('Control+Shift+R')
+    await expect(page.locator('.rp-row')).toHaveCount(2)
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
+
+    await page.keyboard.press('Control+Alt+F')
+    const panel = page.getByRole('complementary', { name: 'Timeline' })
+    await expect(panel).toBeVisible()
+    await expect(panel.getByRole('button', { name: 'All sessions' })).toHaveAttribute('aria-pressed', 'true')
+    const search = panel.getByRole('searchbox', { name: 'Search all sessions' })
+    await expect(search).toBeFocused()
+    await search.fill('zebracache')
+
+    const group = panel.getByRole('region', { name: 'Investigate slow CI' })
+    await expect(group).toBeVisible({ timeout: 20_000 })
+    await expect(panel.locator('.tl-result')).toHaveCount(1)
+    await expect(group.locator('.tl-result-hit')).toHaveCount(3)
+    await expect(group).toContainText('1 more in this session')
+    await expect(group.locator('mark.tl-hit').first()).toHaveText('zebracache')
+    await expect(group).toContainText('Claude')
+
+    await panel.getByRole('button', { name: 'Edits' }).click()
+    await expect(group.locator('.tl-result-hit')).toHaveCount(1, { timeout: 20_000 })
+    await expect(group).not.toContainText('more in this session')
+    await panel.getByRole('button', { name: 'All', exact: true }).click()
+    await expect(group.locator('.tl-result-hit')).toHaveCount(3, { timeout: 20_000 })
+
+    await group.locator('.tl-result-hit').nth(1).click()
+    await expect(panel.locator('.tl-past')).toContainText('Past session: Investigate slow CI')
+    await expect(panel.locator('.tl-event.current')).toContainText('The zebracache key is missing.', { timeout: 20_000 })
+    await expect(panel.locator('.tl-event.tl-prompt')).toContainText('Why is the zebracache step slow?')
+    await expect(panel.locator('.tl-state')).toHaveCount(0)
+
+    await panel.getByRole('button', { name: 'Back to results' }).click()
+    await expect(group).toBeVisible()
+    await group.getByRole('button', { name: 'Open Investigate slow CI' }).click()
+    await panel.getByRole('button', { name: 'Resume session' }).click()
+    await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }

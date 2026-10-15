@@ -112,6 +112,7 @@ const api: GridApi = {
   exportTranscript: (request) => ipcRenderer.invoke(IPC.transcriptExport, request),
   sessionTimeline: (request) => ipcRenderer.invoke(IPC.timelineSession, request),
   exportTimeline: (request) => ipcRenderer.invoke(IPC.timelineExport, request),
+  searchTimelines: (request) => ipcRenderer.invoke(IPC.timelineSearch, request),
   compareProbe: (folder) => ipcRenderer.invoke(IPC.compareProbe, folder),
   compareCreate: (folder, short) => ipcRenderer.invoke(IPC.compareCreate, folder, short),
   compareStatus: (repo, path, branch) => ipcRenderer.invoke(IPC.compareStatus, repo, path, branch),

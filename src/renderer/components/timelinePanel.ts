@@ -1,4 +1,4 @@
-import { openChanges } from '../actions'
+import { findOpenSession, focusOpenSession, openChanges, resumeInNewPane } from '../actions'
 import { api } from '../api'
 import { h, icon } from '../dom'
 import type { PaneView } from '../derive'
@@ -22,12 +22,16 @@ import {
   timelineSpan,
   type TimelineEvent,
   type TimelineFilter,
-  type TimelineInsights
+  type TimelineInsights,
+  type TimelineRequest
 } from '../../shared/timeline'
 import { formatTokens, formatUsd } from '../../shared/usage'
 import { folderOfPane, paneById, store } from '../state'
-import { closeTimeline, timelineRequest } from '../timelineActions'
+import { closeTimeline, openTimelineWith, takeTimelineIntent, timelineRequest, type TimelineIntent } from '../timelineActions'
 import { localEvents, localVersion } from '../timelineLog'
+import type { SearchHit } from '../../shared/timelineSearch'
+import type { ResumeSession } from '../../shared/types'
+import { AllSessionsSearch } from './timelineAllSearch'
 import { stateIcon } from './stateIcon'
 import { toast } from './toast'
 
@@ -102,8 +106,30 @@ export class TimelinePanel {
   private insightsOpen = true
   private signature = ''
   private lastState: SessionState | null = null
+  private scope: 'session' | 'all' = 'session'
+  private past: { session: ResumeSession; request: TimelineRequest | null; folder: string } | null = null
+  private pending: NonNullable<TimelineIntent['target']> | null = null
+  private spotlight: number | null = null
+  private readonly scopeButtons = [
+    h('button', { class: 'tl-scope', type: 'button', 'data-scope': 'session', 'aria-pressed': 'true' }, 'This session'),
+    h('button', { class: 'tl-scope', type: 'button', 'data-scope': 'all', 'aria-pressed': 'false' }, 'All sessions')
+  ]
+  private readonly pastTitle = h('span', { class: 'tl-past-title' })
+  private readonly pastBar = h('div', { class: 'tl-past', hidden: true })
+  private readonly all: AllSessionsSearch
 
   constructor(private readonly paneId: string) {
+    this.all = new AllSessionsSearch({
+      paneId: this.paneId,
+      query: () => this.query,
+      filter: () => this.filter,
+      project: () => {
+        const project = this.view?.project
+        return project ? { id: project.id, name: project.name } : null
+      },
+      projectName: (id) => store.state.settings.projects.find((entry) => entry.id === id)?.name ?? '',
+      open: (session, hit) => this.openResult(session, hit)
+    })
     const filterButtons = TIMELINE_FILTERS.map((entry) =>
       h('button', { class: 'tl-filter', type: 'button', 'data-filter': entry.id, 'aria-pressed': String(entry.id === this.filter), onClick: () => this.setFilter(entry.id) }, entry.label)
     )
@@ -111,11 +137,22 @@ export class TimelinePanel {
     const close = h('button', { class: 'icon-btn tl-close', type: 'button', 'aria-label': 'Close timeline', title: 'Close timeline', onClick: () => closeTimeline() }, '×')
     const head = h('div', { class: 'tl-head' }, h('h2', {}, 'Timeline'), this.summary, h('span', { class: 'spacer' }), close)
     const searchRow = h('div', { class: 'tl-search-row' }, this.search, this.count, this.prev, this.next)
-    const top = h('div', { class: 'tl-top' }, head, h('div', { class: 'tl-bar-wrap' }, this.bar, this.legend), this.filters, searchRow)
+    const scopeRow = h('div', { class: 'tl-scope-row', role: 'group', 'aria-label': 'Search scope' }, ...this.scopeButtons)
+    const resume = h('button', { class: 'btn small primary tl-resume', type: 'button', onClick: () => this.resumePast() }, 'Resume session')
+    const back = h('button', { class: 'btn small tl-back', type: 'button', onClick: () => this.leavePast() }, 'Back to results')
+    this.pastBar.append(this.pastTitle, h('span', { class: 'spacer' }), back, resume)
+    const top = h('div', { class: 'tl-top' }, head, this.pastBar, h('div', { class: 'tl-bar-wrap' }, this.bar, this.legend), this.filters, scopeRow, searchRow)
     const foot = h('div', { class: 'tl-foot' }, this.exportButton, h('span', { class: 'spacer' }), h('span', { class: 'tl-hint' }, 'Ctrl+Shift+T'))
-    this.el = h('aside', { class: 'timeline-panel', 'aria-label': 'Timeline', hidden: true }, top, this.insights, h('div', { class: 'tl-scroll' }, this.note, this.list, this.empty), foot)
+    this.el = h('aside', { class: 'timeline-panel', 'aria-label': 'Timeline', hidden: true }, top, this.insights, h('div', { class: 'tl-scroll' }, this.all.el, this.note, this.list, this.empty), foot)
+    for (const button of this.scopeButtons) button.addEventListener('click', () => this.setScope(button.dataset.scope === 'all' ? 'all' : 'session'))
     this.search.addEventListener('input', () => {
       this.query = this.search.value
+      this.spotlight = null
+      if (this.searchingAll()) {
+        this.all.schedule()
+        this.render(true)
+        return
+      }
       this.matchAt = this.visibleHits().length > 0 ? 0 : -1
       this.revealMatch = true
       this.render()
@@ -137,6 +174,8 @@ export class TimelinePanel {
       this.stop()
       return
     }
+    const intent = takeTimelineIntent(this.paneId)
+    if (intent) this.applyIntent(intent)
     const state = sessionState({ status: view.status, attention: view.attention })
     if (!this.opened) {
       this.opened = true
@@ -151,8 +190,98 @@ export class TimelinePanel {
     this.render()
   }
 
+  private searchingAll(): boolean {
+    return this.scope === 'all' && this.past === null
+  }
+
+  private resetLog(): void {
+    this.log = []
+    this.version = undefined
+    this.truncated = false
+    this.loaded = 'loading'
+    this.revision += 1
+    this.limit = ROW_LIMIT
+  }
+
+  private setScope(scope: 'session' | 'all'): void {
+    if (scope === this.scope && this.past === null) return
+    const wasPast = this.past !== null
+    this.scope = scope
+    this.past = null
+    this.spotlight = null
+    this.pending = null
+    if (wasPast) {
+      this.resetLog()
+      void this.fetch()
+    }
+    if (scope === 'all') {
+      if (this.filter === 'approvals') this.filter = 'all'
+      this.all.syncProjects()
+      if (this.query.trim() !== '') this.all.schedule(0)
+    } else {
+      this.all.cancel()
+    }
+    this.search.focus()
+    this.render(true)
+  }
+
+  private applyIntent(intent: TimelineIntent): void {
+    const wasPast = this.past !== null
+    this.past = null
+    this.scope = intent.scope ?? 'session'
+    if (intent.query !== undefined) {
+      this.query = intent.query
+      this.search.value = intent.query
+    }
+    if (intent.target) {
+      this.filter = 'all'
+      this.pending = intent.target
+    }
+    if (this.scope === 'all') {
+      this.all.syncProjects()
+      queueMicrotask(() => this.search.focus())
+    }
+    if (intent.scope === 'all' && this.query.trim() !== '') this.all.schedule(0)
+    if (wasPast) {
+      this.resetLog()
+      if (this.opened) void this.fetch()
+    }
+    this.render(true)
+  }
+
+  private openResult(session: ResumeSession, hit: SearchHit | undefined): void {
+    const target = hit ? { at: hit.at, kind: hit.kind, text: hit.text } : undefined
+    const open = findOpenSession(store.state, session.agent, session.id)
+    if (open) {
+      focusOpenSession(open)
+      openTimelineWith(open.paneId, { query: this.query, target })
+      return
+    }
+    const folder = store.state.settings.projects.find((entry) => entry.id === session.projectId)?.folder ?? ''
+    this.past = { session, folder, request: folder ? { agent: session.agent, sessionId: session.id, folder } : null }
+    this.pending = target ?? null
+    this.filter = 'all'
+    this.spotlight = null
+    this.resetLog()
+    void this.fetch()
+    this.render(true)
+  }
+
+  private leavePast(): void {
+    this.past = null
+    this.pending = null
+    this.spotlight = null
+    this.resetLog()
+    this.render(true)
+  }
+
+  private resumePast(): void {
+    if (this.past) void resumeInNewPane(this.past.session)
+  }
+
   dispose(): void {
     this.stop()
+    this.all.cancel()
     this.el.remove()
   }
 
@@ -165,11 +294,12 @@ export class TimelinePanel {
 
   private tick(): void {
     if (!this.el.isConnected) return this.stop()
+    if (this.scope === 'all') return
     void this.fetch()
   }
 
   private async fetch(): Promise<void> {
-    const request = timelineRequest(this.paneId)
+    const request = this.past ? this.past.request : timelineRequest(this.paneId)
     const token = ++this.token
     if (!request) {
       this.loaded = 'none'
@@ -194,15 +324,16 @@ export class TimelinePanel {
   }
 
   private folder(): string {
+    if (this.past) return this.past.folder
     const pane = paneById(store.state, this.paneId)
     return (pane ? folderOfPane(store.state, pane) : null) ?? ''
   }
 
   private events(): TimelineEvent[] {
     const folder = this.folder()
-    const key = `${this.revision}|${localVersion(this.paneId)}|${folder}`
+    const key = `${this.revision}|${this.past ? 'past' : localVersion(this.paneId)}|${folder}`
     if (this.merged?.key === key) return this.merged.events
-    const events = mergeTimeline(this.log, localEvents(this.paneId)).map((event) => relativeEvent(event, folder))
+    const events = mergeTimeline(this.log, this.past ? [] : localEvents(this.paneId)).map((event) => relativeEvent(event, folder))
     this.merged = { key, events }
     return events
   }
@@ -217,6 +348,8 @@ export class TimelinePanel {
 
   private setFilter(filter: TimelineFilter): void {
     this.filter = filter
+    this.spotlight = null
+    if (this.searchingAll()) this.all.schedule(0)
     this.matchAt = this.visibleHits().length > 0 ? 0 : -1
     this.revealMatch = true
     this.render(true)
@@ -224,6 +357,7 @@ export class TimelinePanel {
 
   private step(direction: 1 | -1): void {
     const hits = this.visibleHits()
+    this.spotlight = null
     this.matchAt = stepMatch(hits.length, this.matchAt, direction)
     this.revealMatch = true
     this.render(true)
@@ -232,7 +366,8 @@ export class TimelinePanel {
   private onSearchKey(event: KeyboardEvent): void {
     if (event.key === 'Enter') {
       event.preventDefault()
-      this.step(event.shiftKey ? -1 : 1)
+      if (this.searchingAll()) this.all.schedule(0)
+      else this.step(event.shiftKey ? -1 : 1)
     } else if (event.key === 'Escape') {
       event.preventDefault()
       event.stopPropagation()
@@ -240,6 +375,8 @@ export class TimelinePanel {
         this.search.value = ''
         this.query = ''
         this.matchAt = -1
+        this.spotlight = null
+        if (this.searchingAll()) this.all.schedule(0)
         this.render(true)
       } else {
         closeTimeline()
@@ -255,6 +392,10 @@ export class TimelinePanel {
     const tokens = view.info.tokens
     const signature = JSON.stringify([
       this.revision,
+      this.scope,
+      this.past?.session.id ?? '',
+      this.pending ? 1 : 0,
+      this.spotlight,
       localVersion(this.paneId),
       this.limit,
       this.filter,
@@ -269,11 +410,16 @@ export class TimelinePanel {
     ])
     if (!force && signature === this.signature) return
     this.signature = signature
+    this.renderScope()
+    if (this.searchingAll()) return this.renderAll()
+    this.all.el.hidden = true
+    this.list.hidden = false
     const events = this.events()
     const shown = filterEvents(events, this.filter)
+    if (this.pending && this.loaded === 'ready') this.reveal(shown)
     const hits = searchEvents(shown, this.query)
     if (this.matchAt >= hits.length) this.matchAt = hits.length > 0 ? 0 : -1
-    const live = view.status !== 'exited'
+    const live = view.status !== 'exited' && this.past === null
     const insights = computeInsights(events, now)
     this.renderHead(events, now, live, cost)
     this.renderBar(events, now)
@@ -281,6 +427,43 @@ export class TimelinePanel {
     this.renderCount(hits.length)
     this.renderInsights(insights, cost, tokens)
     this.renderList(shown, hits)
+  }
+
+  private renderScope(): void {
+    for (const button of this.scopeButtons) button.setAttribute('aria-pressed', String((button.dataset.scope === 'all') === (this.scope === 'all')))
+    const searching = this.searchingAll()
+    this.search.placeholder = searching ? 'Search every session' : 'Search prompts, files and commands'
+    this.search.setAttribute('aria-label', searching ? 'Search all sessions' : 'Search the timeline')
+    this.pastBar.hidden = this.past === null
+    this.pastTitle.textContent = this.past ? `Past session: ${this.past.session.title}` : ''
+    const approvals = this.filters.querySelector<HTMLElement>('[data-filter="approvals"]')
+    if (approvals) approvals.hidden = this.scope === 'all'
+    this.filters.hidden = false
+  }
+
+  private renderAll(): void {
+    this.all.el.hidden = false
+    for (const element of [this.bar, this.legend, this.insights, this.list, this.note, this.empty]) element.hidden = true
+    this.renderFilters()
+    this.summary.textContent = ''
+    const total = this.all.count()
+    this.count.textContent = this.query.trim() !== '' && total > 0 ? `${total} session${total === 1 ? '' : 's'}` : ''
+    this.prev.disabled = true
+    this.next.disabled = true
+  }
+
+  /** Finds the event a search result pointed at, selects it and scrolls to it. */
+  private reveal(shown: TimelineEvent[]): void {
+    const target = this.pending
+    if (!target) return
+    this.pending = null
+    let index = shown.findIndex((event) => event.at === target.at && event.kind === target.kind && event.text === target.text)
+    if (index < 0) index = shown.findIndex((event) => event.at === target.at && event.kind === target.kind)
+    if (index < 0) return
+    this.spotlight = index
+    this.revealMatch = true
+    const hits = searchEvents(shown, this.query)
+    this.matchAt = hits.indexOf(index)
   }
 
   private renderHead(events: TimelineEvent[], now: number, live: boolean, cost: number | null): void {
@@ -377,7 +560,7 @@ export class TimelinePanel {
   private renderList(shown: TimelineEvent[], hits: number[]): void {
     const scroll = this.list.parentElement
     const top = scroll?.scrollTop ?? 0
-    const active = hits[this.matchAt]
+    const active = this.spotlight ?? hits[this.matchAt]
     if (active !== undefined && shown.length - active > this.limit) this.limit = shown.length - active
     const start = Math.max(0, shown.length - this.limit)
     const hitSet = new Set(hits)
@@ -479,12 +662,12 @@ export class TimelinePanel {
     const events = this.events()
     const now = Math.max(view.now, Date.now())
     const text = renderTimelineMarkdown({
-      title: view.title,
+      title: this.past?.session.title ?? view.title,
       events,
       insights: computeInsights(events, now),
-      span: timelineSpan(events, now, view.status !== 'exited'),
+      span: timelineSpan(events, now, view.status !== 'exited' && this.past === null),
       prompts: events.filter((event) => event.kind === 'prompt').length,
-      costUsd: view.info.costUsd
+      costUsd: this.past ? null : view.info.costUsd
     })
     const name = timelineFileName(view.project?.name ?? basename(this.folder()), new Date())
     const result = await api.exportTimeline({ name, text })

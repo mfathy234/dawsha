@@ -90,6 +90,7 @@ export const IPC = {
   transcriptExport: 'transcript:export',
   timelineSession: 'timeline:session',
   timelineExport: 'timeline:export',
+  timelineSearch: 'timeline:search',
   compareProbe: 'compare:probe',
   compareCreate: 'compare:create',
   compareStatus: 'compare:status',

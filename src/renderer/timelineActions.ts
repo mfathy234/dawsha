@@ -1,4 +1,4 @@
-import type { TimelineRequest } from '../shared/timeline'
+import type { TimelineKind, TimelineRequest } from '../shared/timeline'
 import { paneById, folderOfPane, store } from './state'
 import { derivePanes } from './derive'
 import { sessionIdOf } from './transcriptActions'
@@ -35,4 +35,24 @@ export function timelineRequest(paneId: string): TimelineRequest | null {
   const folder = pane ? folderOfPane(state, pane) : null
   if (!pane || !tab || !folder || tab.agent === 'shell') return null
   return { agent: tab.agent, sessionId: sessionIdOf(tab), folder }
+}
+
+export interface TimelineIntent {
+  scope?: 'all'
+  query?: string
+  target?: { at: number; kind: TimelineKind; text: string }
+}
+
+const intents = new Map<string, TimelineIntent>()
+
+/** Opens a pane's timeline and tells it what to show first: the all-sessions search, or one event of its own session. */
+export function openTimelineWith(paneId: string, intent: TimelineIntent): void {
+  intents.set(paneId, intent)
+  openTimeline(paneId)
+}
+
+export function takeTimelineIntent(paneId: string): TimelineIntent | undefined {
+  const intent = intents.get(paneId)
+  intents.delete(paneId)
+  return intent
 }

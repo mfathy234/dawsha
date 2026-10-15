@@ -192,3 +192,13 @@ export async function exportTimeline(window: BrowserWindow | null, request: Time
     return { status: 'error', message: error instanceof Error ? error.message : 'Could not write the timeline.' }
   }
 }
+
+/** Parses a whole log file in one go (the last TIMELINE_MAX_BYTES of a big one), for searching past sessions. */
+export async function parseLogFile(agent: 'claude' | 'codex' | 'gemini', path: string, size: number): Promise<TimelineEvent[]> {
+  if (agent === 'gemini') return size > TIMELINE_MAX_BYTES ? [] : parseGeminiTimeline(await readWhole(path, size))
+  const parser = createLineParser(agent)
+  const { offset } = await startOffset(path, size)
+  const { text } = await readLines(path, offset, size)
+  parser.feed(text)
+  return parser.events()
+}
