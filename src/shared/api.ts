@@ -22,6 +22,7 @@ import type { RecordingStats, RecordingSummary } from './recordings'
 import type { ProcessActivity } from './processActivity'
 import type { BulkSkillExport, SkillEntry } from './skills'
 import type { PaneonImportPreview } from './paneonImport'
+import type { SettingsExportResult, SettingsImportRead } from './settingsTransfer'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
 import type { TimelineExportRequest, TimelineExportResult, TimelineRequest, TimelineResult } from './timeline'
@@ -61,6 +62,8 @@ import type {
 export interface GridApi {
   getSettings(): Promise<SettingsLoadResult>
   updateSettings(patch: Partial<Settings>): Promise<Settings>
+  exportSettings(): Promise<SettingsExportResult>
+  readSettingsImport(): Promise<SettingsImportRead>
   remoteAccess?: {
     getState(): Promise<RemoteAccessState>
     enable(): Promise<RemoteAccessState>

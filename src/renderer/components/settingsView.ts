@@ -48,6 +48,7 @@ import { CHANGELOG_ENTRIES } from '../changelog'
 import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
+import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
@@ -516,6 +517,14 @@ export class SettingsViewComponent {
       ),
       h('h3', { class: 'set-subhead', id: 'recordings-heading' }, 'Recordings'),
       ...recordingRows(state, () => this.refresh()),
+      h('h3', { class: 'set-subhead', id: 'transfer-heading' }, 'Back up and move'),
+      row(
+        'Settings file',
+        h('div', { class: 'set-inline' },
+          h('button', { class: 'btn ghost small', type: 'button', id: 'export-settings', onClick: () => void exportSettingsFromUi() }, 'Export settings…'),
+          h('button', { class: 'btn ghost small', type: 'button', id: 'import-settings', onClick: () => void importSettingsFromUi() }, 'Import settings…')),
+        h('p', { class: 'hint' }, 'Save your projects, snippets, layouts, highlight rules and preferences to one file to move Dawsha to another PC. Remote Access, open sessions and usage history are never included.')
+      ),
       ...(this.paneonImport?.available ? [row(
         'Paneon settings',
         h('button', {
