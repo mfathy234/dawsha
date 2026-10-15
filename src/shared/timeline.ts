@@ -333,9 +333,16 @@ export interface TimelineRequest {
   agent: 'claude' | 'codex' | 'gemini' | 'shell'
   sessionId?: string
   folder: string
+  /** The version of the events the caller already holds; an unchanged log answers 'unchanged'. */
+  version?: string
 }
 
-export type TimelineResult = { status: 'ok'; events: TimelineEvent[]; model?: string } | { status: 'no-session' }
+export type TimelineResult =
+  | { status: 'ok'; events: TimelineEvent[]; version: string; truncated: boolean }
+  | { status: 'unchanged' }
+  | { status: 'no-session' }
+
+export const TIMELINE_EXPORT_MAX = 5 * 1024 * 1024
 
 export interface TimelineExportRequest {
   name: string

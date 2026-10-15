@@ -622,6 +622,7 @@ export class PaneComponent {
   dispose(): void {
     this.closeMenu()
     this.closeActions()
+    this.timeline.dispose()
     this.el.remove()
   }
 }

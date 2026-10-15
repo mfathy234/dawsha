@@ -27,12 +27,13 @@ import {
 import { formatTokens, formatUsd } from '../../shared/usage'
 import { folderOfPane, paneById, store } from '../state'
 import { closeTimeline, timelineRequest } from '../timelineActions'
-import { localEvents } from '../timelineLog'
+import { localEvents, localVersion } from '../timelineLog'
 import { stateIcon } from './stateIcon'
 import { toast } from './toast'
 
 const REFRESH_MS = 4000
 const NOW_BUCKET_MS = 30_000
+const ROW_LIMIT = 500
 
 const KIND_SVG: Record<string, string> = {
   prompt: '<svg viewBox="0 0 12 12" width="12" height="12"><path d="M2 3h8M2 6h8M2 9h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
@@ -83,6 +84,12 @@ export class TimelinePanel {
   private readonly empty = h('p', { class: 'tl-empty', role: 'status' })
   private readonly exportButton = h('button', { class: 'btn small tl-export', type: 'button' }, 'Export as Markdown')
   private log: TimelineEvent[] = []
+  private revision = 0
+  private version: string | undefined
+  private truncated = false
+  private limit = ROW_LIMIT
+  private merged: { key: string; events: TimelineEvent[] } | null = null
+  private readonly note = h('p', { class: 'tl-note', hidden: true }, 'Earlier events are not shown: the session log is large.')
   private loaded: 'loading' | 'ready' | 'none' = 'loading'
   private view: PaneView | null = null
   private opened = false
@@ -106,7 +113,7 @@ export class TimelinePanel {
     const searchRow = h('div', { class: 'tl-search-row' }, this.search, this.count, this.prev, this.next)
     const top = h('div', { class: 'tl-top' }, head, h('div', { class: 'tl-bar-wrap' }, this.bar, this.legend), this.filters, searchRow)
     const foot = h('div', { class: 'tl-foot' }, this.exportButton, h('span', { class: 'spacer' }), h('span', { class: 'tl-hint' }, 'Ctrl+Shift+T'))
-    this.el = h('aside', { class: 'timeline-panel', 'aria-label': 'Timeline', hidden: true }, top, this.insights, h('div', { class: 'tl-scroll' }, this.list, this.empty), foot)
+    this.el = h('aside', { class: 'timeline-panel', 'aria-label': 'Timeline', hidden: true }, top, this.insights, h('div', { class: 'tl-scroll' }, this.note, this.list, this.empty), foot)
     this.search.addEventListener('input', () => {
       this.query = this.search.value
       this.matchAt = this.visibleHits().length > 0 ? 0 : -1
@@ -144,6 +151,11 @@ export class TimelinePanel {
     this.render()
   }
 
+  dispose(): void {
+    this.stop()
+    this.el.remove()
+  }
+
   private stop(): void {
     if (this.timer) clearInterval(this.timer)
     this.timer = null
@@ -162,15 +174,20 @@ export class TimelinePanel {
     if (!request) {
       this.loaded = 'none'
       this.log = []
-      this.render(true)
+      this.version = undefined
+      this.revision += 1
+      this.render()
       return
     }
-    const result = await api.sessionTimeline(request).catch(() => null)
+    const result = await api.sessionTimeline({ ...request, version: this.version }).catch(() => null)
     if (token !== this.token || !this.opened) return
     if (result?.status === 'ok') {
       this.log = result.events
+      this.version = result.version
+      this.truncated = result.truncated
+      this.revision += 1
       this.loaded = 'ready'
-    } else if (this.loaded === 'loading') {
+    } else if (result?.status !== 'unchanged' && this.loaded === 'loading') {
       this.loaded = 'none'
     }
     this.render()
@@ -183,7 +200,11 @@ export class TimelinePanel {
 
   private events(): TimelineEvent[] {
     const folder = this.folder()
-    return mergeTimeline(this.log, localEvents(this.paneId)).map((event) => relativeEvent(event, folder))
+    const key = `${this.revision}|${localVersion(this.paneId)}|${folder}`
+    if (this.merged?.key === key) return this.merged.events
+    const events = mergeTimeline(this.log, localEvents(this.paneId)).map((event) => relativeEvent(event, folder))
+    this.merged = { key, events }
+    return events
   }
 
   private visible(): TimelineEvent[] {
@@ -230,14 +251,12 @@ export class TimelinePanel {
     const view = this.view
     if (!view) return
     const now = Math.max(view.now, Date.now())
-    const events = this.events()
-    const shown = filterEvents(events, this.filter)
-    const hits = searchEvents(shown, this.query)
-    if (this.matchAt >= hits.length) this.matchAt = hits.length > 0 ? 0 : -1
     const cost = view.info.costUsd
     const tokens = view.info.tokens
     const signature = JSON.stringify([
-      events.map((event) => [event.at, event.kind, event.text, event.ok, event.added, event.removed, event.passed, event.failed, event.allowed]),
+      this.revision,
+      localVersion(this.paneId),
+      this.limit,
       this.filter,
       this.query,
       this.matchAt,
@@ -250,6 +269,10 @@ export class TimelinePanel {
     ])
     if (!force && signature === this.signature) return
     this.signature = signature
+    const events = this.events()
+    const shown = filterEvents(events, this.filter)
+    const hits = searchEvents(shown, this.query)
+    if (this.matchAt >= hits.length) this.matchAt = hits.length > 0 ? 0 : -1
     const live = view.status !== 'exited'
     const insights = computeInsights(events, now)
     this.renderHead(events, now, live, cost)
@@ -355,16 +378,36 @@ export class TimelinePanel {
     const scroll = this.list.parentElement
     const top = scroll?.scrollTop ?? 0
     const active = hits[this.matchAt]
+    if (active !== undefined && shown.length - active > this.limit) this.limit = shown.length - active
+    const start = Math.max(0, shown.length - this.limit)
     const hitSet = new Set(hits)
-    const rows = shown.map((event, index) => this.row(event, hitSet.has(index), index === active))
-    this.list.replaceChildren(...rows)
+    const rows = shown.slice(start).map((event, index) => this.row(event, hitSet.has(start + index), start + index === active))
+    const earlier =
+      start > 0
+        ? [
+            h(
+              'button',
+              {
+                class: 'btn small tl-earlier',
+                type: 'button',
+                onClick: () => {
+                  this.limit += ROW_LIMIT
+                  this.render(true)
+                }
+              },
+              `Show earlier events (${start})`
+            )
+          ]
+        : []
+    this.list.replaceChildren(...earlier, ...rows)
+    this.note.hidden = !this.truncated
     const message = this.emptyMessage(shown.length)
     this.empty.hidden = message === ''
     this.empty.textContent = message
     if (scroll) scroll.scrollTop = top
     if (this.revealMatch) {
       this.revealMatch = false
-      rows[active]?.scrollIntoView({ block: 'nearest' })
+      rows[active === undefined ? -1 : active - start]?.scrollIntoView({ block: 'nearest' })
     }
   }
 

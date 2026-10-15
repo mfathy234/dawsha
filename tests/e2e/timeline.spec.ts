@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { closeApp, createSandbox, launchApp, QUIT_BUDGET_MS, type Sandbox } from './helpers'
@@ -146,6 +146,28 @@ test('Ctrl+Shift+T and the palette toggle the timeline, and Escape closes it', a
     await expect(panel).toBeVisible()
     await page.getByRole('button', { name: 'Close timeline' }).click()
     await expect(panel).toBeHidden()
+  } finally {
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
+  }
+})
+
+test('new log lines appear while the timeline is open, and a half-written line waits for its end', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const log = join(sandbox.claudeHome, 'projects', sandbox.projectFolder.replace(/[^A-Za-z0-9]/g, '-'), `${SESSION_ID}.jsonl`)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await resumeSeeded(page)
+    await page.keyboard.press('Control+Shift+T')
+    const panel = page.getByRole('complementary', { name: 'Timeline' })
+    await expect(panel.locator('.tl-event.tl-prompt')).toHaveCount(2, { timeout: 20_000 })
+    const line = JSON.stringify({ type: 'user', timestamp: stamp(30), message: { content: 'A prompt added later' } })
+    appendFileSync(log, line.slice(0, 20))
+    await page.waitForTimeout(5000)
+    await expect(panel.locator('.tl-event.tl-prompt')).toHaveCount(2)
+    appendFileSync(log, line.slice(20) + '\n')
+    await expect(panel.locator('.tl-event.tl-prompt')).toHaveCount(3, { timeout: 15_000 })
+    await expect(panel.locator('.tl-summary')).toContainText('3 prompts')
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }

@@ -258,17 +258,16 @@ function resultText(content: unknown): string {
   return blockText(content, ['text'])
 }
 
-export function parseClaudeTimeline(text: string): TimelineEvent[] {
-  const builder = new Builder()
-  for (const record of records(text)) {
-    if (record.isSidechain === true) continue
+function claudeRecord(builder: Builder, record: Json): void {
+  {
+    if (record.isSidechain === true) return
     const at = asTime(record.timestamp)
     const message = isRecord(record.message) ? record.message : {}
     const content = message.content
     if (record.type === 'user' && record.isMeta !== true) {
       const prompt = blockText(content, ['text'])
       if (isPrompt(prompt)) builder.note(at, 'prompt', prompt.length > PROMPT_MAX ? flat(prompt, PROMPT_MAX) : prompt)
-      if (!Array.isArray(content)) continue
+      if (!Array.isArray(content)) return
       const patch = isRecord(record.toolUseResult) && Array.isArray(record.toolUseResult.structuredPatch) ? record.toolUseResult.structuredPatch.filter(isRecord) : undefined
       for (const part of content) {
         if (!isRecord(part) || part.type !== 'tool_result') continue
@@ -289,7 +288,6 @@ export function parseClaudeTimeline(text: string): TimelineEvent[] {
       }
     }
   }
-  return finish(builder)
 }
 
 function codexOutput(raw: unknown): Outcome {
@@ -305,13 +303,11 @@ function codexOutput(raw: unknown): Outcome {
   return { output, failed: exitCode !== undefined && exitCode !== 0, exitCode }
 }
 
-export function parseCodexTimeline(text: string): TimelineEvent[] {
-  const all = records(text)
-  const hasEvents = all.some(
-    (r) => r.type === 'event_msg' && isRecord(r.payload) && (r.payload.type === 'user_message' || r.payload.type === 'agent_message')
-  )
-  const builder = new Builder()
-  for (const record of all) {
+const hasConversationEvents = (all: Json[]): boolean =>
+  all.some((r) => r.type === 'event_msg' && isRecord(r.payload) && (r.payload.type === 'user_message' || r.payload.type === 'agent_message'))
+
+function codexRecord(builder: Builder, record: Json, hasEvents: boolean): void {
+  {
     const payload = isRecord(record.payload) ? record.payload : {}
     const at = asTime(record.timestamp)
     if (record.type === 'event_msg') {
@@ -319,26 +315,25 @@ export function parseCodexTimeline(text: string): TimelineEvent[] {
       if (hasEvents && payload.type === 'user_message' && isPrompt(message)) builder.note(at, 'prompt', flat(message, PROMPT_MAX))
       else if (hasEvents && payload.type === 'agent_message') builder.note(at, 'reply', flat(message, REPLY_MAX))
       else if (payload.type === 'error') builder.note(at, 'error', flat(message, ERROR_MAX))
-      continue
+      return
     }
-    if (record.type !== 'response_item') continue
+    if (record.type !== 'response_item') return
     if (payload.type === 'message' && !hasEvents) {
       const role = payload.role === 'user' ? 'prompt' : payload.role === 'assistant' ? 'reply' : null
       const body = blockText(payload.content, ['input_text', 'output_text'])
       if (role === 'reply') builder.note(at, 'reply', flat(body, REPLY_MAX))
       else if (role === 'prompt' && isPrompt(body)) builder.note(at, 'prompt', flat(body, PROMPT_MAX))
-      continue
+      return
     }
     const tool = codexTool(payload)
     if (tool) {
       builder.call(at, str(payload.call_id ?? payload.id), tool.name, tool.input)
-      continue
+      return
     }
     if (typeof payload.type === 'string' && payload.type.endsWith('_output')) {
       builder.result(at, str(payload.call_id), codexOutput(payload.output))
     }
   }
-  return finish(builder)
 }
 
 function geminiResult(call: Json): Outcome {
@@ -370,6 +365,42 @@ export function parseGeminiTimeline(text: string): TimelineEvent[] {
     })
   })
   return finish(builder)
+}
+
+/** Reads an append-only log in pieces. Tool results can arrive in a later piece than their call, so the parser keeps its state between pieces. */
+export interface TimelineParser {
+  /** Adds whole lines of log text. */
+  feed(text: string): void
+  events(): TimelineEvent[]
+}
+
+export function createLineParser(agent: 'claude' | 'codex'): TimelineParser {
+  const builder = new Builder()
+  let hasEvents = false
+  return {
+    feed(text) {
+      const all = records(text)
+      if (agent === 'claude') {
+        for (const record of all) claudeRecord(builder, record)
+        return
+      }
+      hasEvents = hasEvents || hasConversationEvents(all)
+      for (const record of all) codexRecord(builder, record, hasEvents)
+    },
+    events: () => finish(builder)
+  }
+}
+
+export function parseClaudeTimeline(text: string): TimelineEvent[] {
+  const parser = createLineParser('claude')
+  parser.feed(text)
+  return parser.events()
+}
+
+export function parseCodexTimeline(text: string): TimelineEvent[] {
+  const parser = createLineParser('codex')
+  parser.feed(text)
+  return parser.events()
 }
 
 export function parseTimeline(agent: 'claude' | 'codex' | 'gemini', text: string): TimelineEvent[] {

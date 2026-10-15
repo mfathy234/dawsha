@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifyTool, lineCount, parseClaudeTimeline, parseCodexTimeline, parseGeminiTimeline, parsePatch } from '../../src/shared/timelineParse'
+import { classifyTool, createLineParser, lineCount, parseClaudeTimeline, parseCodexTimeline, parseGeminiTimeline, parsePatch } from '../../src/shared/timelineParse'
 
 const lines = (...records: unknown[]): string => records.map((r) => JSON.stringify(r)).join('\n') + '\n'
 const T = (second: number): string => new Date(Date.UTC(2026, 9, 8, 9, 0, second)).toISOString()
@@ -150,5 +150,32 @@ describe('parseGeminiTimeline', () => {
     expect(events[2]).toMatchObject({ at: at(11), path: 'src/h.ts', added: 1, removed: 1 })
     expect(events[3]).toMatchObject({ passed: 1, failed: 1, ok: false })
     expect(events[5]).toMatchObject({ text: 'not found' })
+  })
+})
+
+describe('createLineParser', () => {
+  const records = [
+    { type: 'user', timestamp: T(0), message: { content: 'Run the tests' } },
+    { type: 'assistant', timestamp: T(5), message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'npm test' } }] } },
+    { type: 'user', timestamp: T(9), message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: 'Tests  24 passed (24)' }] } },
+    { type: 'user', timestamp: T(20), message: { content: 'Thanks' } }
+  ]
+
+  it('gives the same events when the log is fed in pieces, even when a result lands in a later piece', () => {
+    const whole = parseClaudeTimeline(lines(...records))
+    const parser = createLineParser('claude')
+    parser.feed(lines(records[0], records[1]))
+    expect(parser.events().find((e) => e.kind === 'test')?.ok).toBeUndefined()
+    parser.feed(lines(records[2]))
+    parser.feed(lines(records[3]))
+    expect(parser.events()).toEqual(whole)
+    expect(parser.events().find((e) => e.kind === 'test')).toMatchObject({ passed: 24, ok: true })
+  })
+
+  it('keeps the Codex conversation source chosen from the first piece', () => {
+    const parser = createLineParser('codex')
+    parser.feed(lines({ type: 'event_msg', timestamp: T(0), payload: { type: 'user_message', message: 'Hi' } }))
+    parser.feed(lines({ type: 'response_item', timestamp: T(1), payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'dup' }] } }))
+    expect(parser.events().map((e) => e.kind)).toEqual(['prompt'])
   })
 })

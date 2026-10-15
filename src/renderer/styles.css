@@ -7187,3 +7187,5 @@ button.tl-event:hover { background: var(--raised); }
 .tl-empty { margin: 16px 6px; color: var(--muted); }
 .tl-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); }
 .tl-hint { color: var(--muted); font-size: 12px; }
+.tl-note { margin: 4px 6px 8px; color: var(--muted); font-size: 12px; }
+.tl-earlier { margin: 2px 6px 6px; }

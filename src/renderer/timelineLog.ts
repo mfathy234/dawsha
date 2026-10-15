@@ -5,11 +5,13 @@ import type { TimelineEvent } from '../shared/timeline'
 const MAX_EVENTS = 500
 
 const logs = new Map<string, TimelineEvent[]>()
+const versions = new Map<string, number>()
 
 function append(paneId: string, event: Omit<TimelineEvent, 'id'>): void {
   const list = logs.get(paneId) ?? []
   const next = [...list, { ...event, id: `local-${list.length}` }]
   logs.set(paneId, next.length > MAX_EVENTS ? next.slice(next.length - MAX_EVENTS) : next)
+  versions.set(paneId, (versions.get(paneId) ?? 0) + 1)
 }
 
 /** Remembers a pane's session state change. Repeating the current state records nothing. */
@@ -24,8 +26,14 @@ export function recordApproval(paneId: string, allowed: boolean, screen: string,
   append(paneId, { at, kind: 'approval', allowed, source: 'desktop', text: permissionPromptText(screen) })
 }
 
+/** Changes whenever an event is added to the pane's log. */
+export const localVersion = (paneId: string): number => versions.get(paneId) ?? 0
+
 export const localEvents = (paneId: string): readonly TimelineEvent[] => logs.get(paneId) ?? []
 
 export function forgetTimelineLogs(liveIds: ReadonlySet<string>): void {
-  for (const id of logs.keys()) if (!liveIds.has(id)) logs.delete(id)
+  for (const id of logs.keys()) if (!liveIds.has(id)) {
+      logs.delete(id)
+      versions.delete(id)
+    }
 }
