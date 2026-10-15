@@ -356,3 +356,11 @@ svg { display: block; flex: none; }
 .deny-message:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
 .danger-button { color: #2a0b0b; background: var(--danger); }
 .danger-button:hover { background: #fca5a5; }
+
+/* Small phones: three tabs plus a badge must fit beside the logo and the sign-out button. */
+@media (max-width: 420px) {
+  .beta-badge { display: none; }
+  .remote-header { gap: 6px; }
+  .nav-button { padding: 0 7px; font-size: 12.5px; }
+  .nav-badge { min-width: 16px; height: 16px; margin-left: 3px; padding: 0 4px; font-size: 10px; }
+}

@@ -6426,6 +6426,16 @@ body.dragging-ui {
   font-weight: 400;
 }
 
+/* The shortcut stays in the chip's tooltip; on narrower windows the chip drops it so the layout switch fits. */
+@media (max-width: 1720px) {
+  .sum-needs .kbd { display: none; }
+}
+
+.topbar-count {
+  flex-shrink: 1;
+  overflow: hidden;
+}
+
 .topbar-limits {
   gap: 12px;
 }
