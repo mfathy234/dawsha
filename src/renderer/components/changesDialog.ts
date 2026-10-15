@@ -22,6 +22,8 @@ export interface ChangesOptions {
   // Where the pane's active session started, so the view can show only what changed since.
   baseline?: SessionBaseline
   sessionTitle?: string
+  // A file to select first, as a path inside the repository.
+  focusPath?: string
   onChanged(): void
 }
 
@@ -208,7 +210,7 @@ export function openChangesDialog(options: ChangesOptions): Promise<void> {
   let sessionSince: number | null = null
   let fellBack = false
   let busy = false
-  let current: string | null = null
+  let current: string | null = options.focusPath ?? null
   let loadToken = 0
   const unchecked = new Set<string>()
   const diffs = new Map<string, GitDiffResult>()

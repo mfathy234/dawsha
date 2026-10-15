@@ -51,6 +51,9 @@ import { sessionState, type SessionState } from '../../shared/sessionState'
 import { permissionPromptText } from '../../shared/permissionPrompt'
 import { setStatePillSuffix, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
+import { toggleTimeline } from '../timelineActions'
+import { recordState } from '../timelineLog'
+import { TimelinePanel } from './timelinePanel'
 
 const RESUMED_CHIP_MS = 60_000
 
@@ -87,6 +90,7 @@ export class PaneComponent {
   private readonly drawer = new AgentsDrawer()
   private readonly details = h('aside', { class: 'pane-details', 'aria-label': 'Details', hidden: true })
   private detailsSignature = ''
+  private readonly timeline: TimelinePanel
   private actionsMenu: HTMLElement | null = null
   private readonly restart = h('button', { class: 'btn small pane-restart', type: 'button' }, 'Restart')
   private readonly maxButton = h('span', { class: 'slot pane-maximize-slot' })
@@ -115,6 +119,7 @@ export class PaneComponent {
       this.restart,
       h('span', { class: 'spacer' }),
       this.tabAdd,
+      iconButton('Session timeline', ICONS.history, () => toggleTimeline(paneId), 'pane-timeline'),
       iconButton('Open in VS Code', ICONS.code, () => void openPaneFolder(paneId, 'vscode'), 'pane-vscode'),
       iconButton('Move pane', ICONS.layout, () => this.toggleMove(), 'pane-move'),
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
@@ -145,7 +150,8 @@ export class PaneComponent {
       toggleDetails(paneId)
     })
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
-    const content = h('div', { class: 'pane-content' }, work, this.details)
+    this.timeline = new TimelinePanel(paneId)
+    const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
     this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.hint, this.drawer.el, content, this.permission, this.foot)
     this.watchFileDrops()
@@ -190,6 +196,8 @@ export class PaneComponent {
     this.updatePermission(view, state)
     this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now, view.info.geminiTools)
     this.updateDetails(view, maximized)
+    this.timeline.update(view, maximized && view.timelineOpen)
+    this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
     this.restart.hidden = !view.activeExited
     this.updateMaximizeButton(maximized)
     this.updateTabs(view)
@@ -205,6 +213,7 @@ export class PaneComponent {
     if (state !== this.stateSignature) {
       // Rebuild only on a state change: replacing the icon restarts the Working spinner.
       this.stateSignature = state
+      recordState(this.paneId, state, Date.now())
       this.stateHost.replaceChildren(statePill(state, inState))
     } else {
       setStatePillSuffix(this.stateHost, state, inState)
@@ -427,6 +436,7 @@ export class PaneComponent {
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
+      item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
       item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),
@@ -612,6 +622,7 @@ export class PaneComponent {
   dispose(): void {
     this.closeMenu()
     this.closeActions()
+    this.timeline.dispose()
     this.el.remove()
   }
 }

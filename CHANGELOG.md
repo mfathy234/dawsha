@@ -5,6 +5,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Session timeline. Open it from the Timeline button in a pane header, the pane menu, the command palette (Show session timeline) or Ctrl+Shift+T. It lists a session's prompts, replies, file reads and edits (with added and removed lines), commands, test runs (with pass and fail counts for npm, pnpm, vitest, jest, pytest, go, cargo and dotnet), errors, state changes and the permissions you answered from Dawsha, each with its time. A state bar shows how long the session was working, needing you and done, using patterns as well as colour. Filter by All, Prompts, Edits, Commands, Approvals or Tests, search with highlighted matches and Enter or Shift+Enter to move between them, and open Insights for time spent in each state, how long you kept the agent waiting, the files edited most, commands run, test trends, permission prompts and cost. Click an edit to see that file in Changes, and export the timeline as Markdown. State changes and answers are kept in memory only, so they start fresh after a restart.
+- Search all sessions from the timeline. Switch the search box to All sessions, or use Search all session timelines… in the palette (Ctrl+Alt+F), to look through the prompts, replies, files, commands, test results and errors of every Claude, Codex and Gemini session of your projects, including closed ones. Results are grouped by session with up to three highlighted matches each, and can be narrowed by project, agent and event type. Clicking a result jumps to that event in the session's pane, or opens the past session read-only with a Resume session button.
+
 ### Changed
 
 - Ask before closing a session only while it is working. Idle, done and exited sessions close straight away.

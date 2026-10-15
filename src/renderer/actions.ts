@@ -39,6 +39,7 @@ import type { AgentPreset } from '../shared/quickPick'
 import { defaultHighlightRules, describeRules, sameRules, type HighlightSettings } from '../shared/highlights'
 import { api } from './api'
 import { openChangesDialog } from './components/changesDialog'
+import { recordApproval } from './timelineLog'
 import { confirmDialog } from './components/dialogs'
 import { toast } from './components/toast'
 import { derivePanes, matchAll, workFolderOfPane } from './derive'
@@ -299,7 +300,7 @@ export function paneHasRepo(paneId: string): boolean {
   return folder !== null && store.state.gitChanges[folder] != null
 }
 
-export async function openChanges(paneId: string): Promise<void> {
+export async function openChanges(paneId: string, focusPath?: string): Promise<void> {
   const folder = paneFolder(paneId)
   const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
   if (!folder || !view) return
@@ -314,6 +315,7 @@ export async function openChanges(paneId: string): Promise<void> {
     title: view.title,
     baseline: tab?.baseline,
     sessionTitle: tab?.agent === 'shell' ? undefined : view.title,
+    focusPath,
     onChanged: () => void refreshGitChanges()
   })
   void refreshGitChanges()
@@ -458,7 +460,8 @@ export function focusPane(paneId: string, keepMaximized = false): void {
     focusedId: paneId,
     view: 'grid',
     maximizedId: stays ? s.maximizedId : s.maximizedId ? paneId : null,
-    detailsPaneId: s.detailsPaneId === paneId ? paneId : null
+    detailsPaneId: s.detailsPaneId === paneId ? paneId : null,
+    timelinePaneId: s.timelinePaneId === paneId ? paneId : null
   }))
   persistWorkspace()
 }
@@ -507,6 +510,7 @@ export function answerPermission(paneId: string, allow: boolean): boolean {
   if (store.state.attention[paneId] !== 'needs') return false
   const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
   if (!tabId || !detectPermissionPrompt(getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '')) return false
+  recordApproval(paneId, allow, getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '', Date.now())
   api.write(tabId, allow ? '\r' : '\x1b')
   return true
 }
@@ -582,13 +586,14 @@ export function toggleMaximize(paneId?: string): void {
     view: 'grid',
     maximizedId: s.maximizedId === target ? null : target,
     detailsPaneId: null,
+    timelinePaneId: null,
     sidebarOverride: null
   }))
 }
 
 export function restoreGrid(): void {
   if (store.state.maximizedId) {
-    store.set((s) => ({ ...s, maximizedId: null, detailsPaneId: null, sidebarOverride: null }))
+    store.set((s) => ({ ...s, maximizedId: null, detailsPaneId: null, timelinePaneId: null, sidebarOverride: null }))
   }
 }
 
@@ -600,7 +605,7 @@ export function toggleAgents(termId: string): void {
 export function openDetails(paneId: string): void {
   if (!paneById(store.state, paneId)) return
   queueMicrotask(() => void refreshGitChanges())
-  store.set((s) => ({ ...s, focusedId: paneId, view: 'grid', maximizedId: paneId, detailsPaneId: paneId, sidebarOverride: null }))
+  store.set((s) => ({ ...s, focusedId: paneId, view: 'grid', maximizedId: paneId, detailsPaneId: paneId, timelinePaneId: null, sidebarOverride: null }))
 }
 
 export function closeDetails(): void {

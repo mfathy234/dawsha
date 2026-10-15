@@ -75,6 +75,7 @@ export interface PaneView {
   live: StatusInfo | null
   agentsOpen: boolean
   detailsOpen: boolean
+  timelineOpen: boolean
   now: number
 }
 
@@ -330,6 +331,7 @@ export function derivePanes(state: AppState): PaneView[] {
       agentsOpen: primary.agentsOpen === true,
       now: state.now,
       detailsOpen: state.detailsPaneId === pane.id && state.maximizedId === pane.id,
+      timelineOpen: state.timelinePaneId === pane.id && state.maximizedId === pane.id,
       branch: folder ? (state.branches[folder] ?? null) : null,
       sync: folder ? (state.gitSync[folder] ?? null) : null,
       activeExited: active.status === 'exited',
