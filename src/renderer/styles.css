@@ -7679,6 +7679,7 @@ button.tl-event:hover { background: var(--raised); }
 .replay-marker.resumed,
 .replay-marker.truncated {
   background: var(--busy);
+}
 
 .remote-approvals-head {
   margin-top: 18px;
