@@ -9,6 +9,7 @@
     'Download AppImage': 'تنزيل AppImage', 'Download Debian / Ubuntu': 'تنزيل ديبيان / أوبونتو',
     'More download options': 'خيارات تنزيل أخرى', 'View all releases': 'عرض كل الإصدارات',
     'View on GitHub': 'اعرضه على GitHub',
+    'Windows 10/11 · 64-bit installer': 'ويندوز 10/11 · مثبّت 64 بت', 'Other platforms': 'أنظمة أخرى', 'Linux AppImage': 'لينكس AppImage', 'Debian / Ubuntu': 'ديبيان / أوبونتو', 'Windows installer': 'مثبّت ويندوز', 'macOS': 'macOS',
     'Choose a download': 'اختر طريقة التنزيل', 'Installer': 'المثبّت', 'Recommended': 'موصى به',
     'Portable': 'محمول', 'No installation': 'دون تثبيت', 'Disk image': 'ملف تثبيت',
     'AppImage': 'AppImage',
