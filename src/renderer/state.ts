@@ -112,6 +112,7 @@ export interface AppState {
   processActivity: Record<string, ProcessActivity[]>
   detailsPaneId: string | null
   timelinePaneId: string | null
+  boardPeekId: string | null
   gitChanges: Record<string, GitChanges | null>
   usage: UsageSnapshot
   attention: Record<string, Attention>
@@ -160,6 +161,7 @@ export const initialState = (): AppState => ({
   processActivity: {},
   detailsPaneId: null,
   timelinePaneId: null,
+  boardPeekId: null,
   gitChanges: {},
   usage: emptySnapshot(),
   attention: {},

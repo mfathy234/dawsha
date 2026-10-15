@@ -4,6 +4,7 @@ import { AGENT_NAMES, AGENTS } from '../../shared/agents'
 import type { TimelineFilter } from '../../shared/timeline'
 import type { SessionHits } from '../../shared/timelineSearch'
 import type { AgentKind, ResumeSession } from '../../shared/types'
+import { FilterMenu } from './filterMenu'
 import { resultGroups, type ResultHandlers } from './timelineResults'
 
 const DEBOUNCE_MS = 250
@@ -20,8 +21,8 @@ export interface AllSearchDeps extends ResultHandlers {
 /** Searching every session log from the timeline panel: filters, a debounced request, and the grouped results. */
 export class AllSessionsSearch {
   readonly el: HTMLElement
-  private readonly projectSelect = h('select', { class: 'tl-select', 'aria-label': 'Project' }) as HTMLSelectElement
-  private readonly agentSelect = h('select', { class: 'tl-select', 'aria-label': 'Agent' }) as HTMLSelectElement
+  private readonly projectFilter = new FilterMenu({ name: 'Project', onChange: () => this.schedule(0) })
+  private readonly agentFilter = new FilterMenu({ name: 'Agent', onChange: () => this.schedule(0) })
   private readonly status = h('p', { class: 'tl-empty', role: 'status' })
   private readonly results = h('div', { class: 'tl-results' })
   private timer: ReturnType<typeof setTimeout> | null = null
@@ -30,24 +31,23 @@ export class AllSessionsSearch {
   private projectKey = ''
 
   constructor(private readonly deps: AllSearchDeps) {
-    this.agentSelect.append(h('option', { value: '' }, 'Any agent'), ...AGENTS.map((agent) => h('option', { value: agent }, AGENT_NAMES[agent])))
-    this.el = h('div', { class: 'tl-all', hidden: true }, h('div', { class: 'tl-all-filters' }, this.projectSelect, this.agentSelect), this.status, this.results)
-    this.projectSelect.addEventListener('change', () => this.schedule(0))
-    this.agentSelect.addEventListener('change', () => this.schedule(0))
+    this.agentFilter.setOptions([{ value: '', label: 'Any agent' }, ...AGENTS.map((agent) => ({ value: agent, label: AGENT_NAMES[agent], agent }))])
+    this.projectFilter.setOptions([{ value: '', label: 'All projects' }])
+    this.el = h('div', { class: 'tl-all', hidden: true }, h('div', { class: 'tl-all-filters' }, this.projectFilter.el, this.agentFilter.el), this.status, this.results)
   }
 
   /** Refreshes the project choices; call when the panel switches to this scope. */
   syncProjects(): void {
     const project = this.deps.project()
     const key = project ? `${project.id}:${project.name}` : ''
-    if (key === this.projectKey && this.projectSelect.options.length > 0) return
+    if (key === this.projectKey) return
     this.projectKey = key
-    const previous = this.projectSelect.value
-    this.projectSelect.replaceChildren(
-      h('option', { value: '' }, 'All projects'),
-      ...(project ? [h('option', { value: project.id }, `This project (${project.name})`)] : [])
-    )
-    this.projectSelect.value = project && previous === project.id ? previous : ''
+    const previous = this.projectFilter.value
+    this.projectFilter.setOptions([
+      { value: '', label: 'All projects' },
+      ...(project ? [{ value: project.id, label: `This project (${project.name})`, chip: 'This project' }] : [])
+    ])
+    this.projectFilter.setValue(project && previous === project.id ? previous : '')
   }
 
   /** Runs the search after a short pause, or at once with 0. A newer search replaces an older one. */
@@ -75,12 +75,12 @@ export class AllSessionsSearch {
   }
 
   private async run(token: number): Promise<void> {
-    const agent = this.agentSelect.value as AgentKind | ''
+    const agent = this.agentFilter.value as AgentKind | ''
     const result = await api
       .searchTimelines({
         id: `${this.deps.paneId}-${token}`,
         query: this.deps.query(),
-        projectId: this.projectSelect.value || undefined,
+        projectId: this.projectFilter.value || undefined,
         agent: agent || undefined,
         filter: this.deps.filter()
       })

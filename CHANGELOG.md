@@ -7,8 +7,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Switch the Sessions view between Grid and Board from the top bar, the palette ("Switch to board view" and "Switch to grid view") or Ctrl+Shift+B. The board has four columns: Needs you, Working, Done and Reviewed. Cards move by themselves as sessions change, and the choice is remembered.
+- Act on sessions straight from their cards. Allow or Deny a permission prompt, see the last lines of a working session, open Changes, Timeline or Replay on a finished one, and mark it reviewed with a button or by dragging it to Reviewed. Close all reviewed sessions at once after a confirmation.
+- Peek at any card. Click it to see the session's live terminal beside the board and send it a reply, then Open in grid to jump into the pane. Escape closes the peek.
+- Filter the board by project and agent.
+
 ### Changed
 
+- Replace the plain project and agent drop-downs in the all-sessions timeline search with styled filter menus that match the rest of the app, with agent logos, check marks and full keyboard support.
 - Ask before closing a session only while it is working. Idle, done and exited sessions close straight away.
 
 ### Fixed

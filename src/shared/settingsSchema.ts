@@ -1,4 +1,5 @@
 import { isAgent } from './agents'
+import { isSessionsLayout } from './board'
 import { sanitizeBaseline } from './gitStatus'
 import { DEFAULT_THEME_ID, resolveThemeId } from './themes'
 import { formatShortcut, parseShortcut } from './shortcuts'
@@ -67,6 +68,7 @@ export const defaultSettings = (): Settings => ({
   sidebarCollapsed: false,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   othersCollapsed: false,
+  sessionsLayout: 'grid',
   sessionInfo: { notifications: true, sound: false },
   onboardingDismissed: false,
   workspace: { panes: [], focusedIndex: 0 },
@@ -337,6 +339,7 @@ export function migrateSettings(raw: unknown): Settings {
     sidebarCollapsed: raw.sidebarCollapsed === true,
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,
+    sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
     sessionInfo: {
       notifications: typeof info.notifications === 'boolean' ? info.notifications : defaults.sessionInfo.notifications,
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound

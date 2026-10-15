@@ -160,6 +160,7 @@ Tip: run `dawsha .` in any folder to open it in Dawsha.
 | Ctrl+Shift+Alt+Left / Right | Move the focused pane one position earlier / later |
 | Ctrl+Shift+Alt+Home / End | Move the focused pane to the first / last position |
 | Ctrl+Shift+J | Go to the next pane that needs you (a permission prompt first, then a finished session) |
+| Ctrl+Shift+B | Switch the Sessions view between Grid and Board |
 | Ctrl+, | Open Settings |
 | Ctrl+Shift+F | Find in the focused terminal: Enter next, Shift+Enter previous, Esc closes |
 | Ctrl+Shift+G | Changes: review, commit, commit and push, or discard the pane's changed files |

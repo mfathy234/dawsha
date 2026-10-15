@@ -36,6 +36,7 @@ export class TerminalView {
   private readonly highlights: TerminalHighlights
   private opened = false
   private frame = 0
+  private lent: HTMLElement | null = null
 
   constructor(
     readonly id: string,
@@ -94,7 +95,8 @@ export class TerminalView {
   }
 
   mount(parent: HTMLElement): void {
-    if (this.el.parentElement !== parent) parent.appendChild(this.el)
+    const target = this.lent ?? parent
+    if (this.el.parentElement !== target) target.appendChild(this.el)
     if (this.opened) return
     this.opened = true
     this.term.open(this.el)
@@ -179,9 +181,21 @@ export class TerminalView {
     this.term.blur()
   }
 
+  /** Shows this terminal in another container (the board's peek) until it is returned; the pane stops reclaiming it. */
+  lendTo(parent: HTMLElement): void {
+    this.lent = parent
+    this.mount(parent)
+    this.setVisible(true)
+  }
+
+  returnLoan(): void {
+    this.lent = null
+  }
+
   setVisible(visible: boolean): void {
-    this.el.classList.toggle('active', visible)
-    if (visible) this.scheduleFit()
+    const shown = visible || this.lent !== null
+    this.el.classList.toggle('active', shown)
+    if (shown) this.scheduleFit()
   }
 
   setFontSize(size: number): void {

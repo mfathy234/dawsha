@@ -34,6 +34,7 @@ import { snapshotWorkspace } from '../shared/layouts'
 import { moveById, moveItem } from '../shared/reorder'
 import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
+import { leaveBoard } from './sessionsLayout'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { AgentPreset } from '../shared/quickPick'
 import { defaultHighlightRules, describeRules, sameRules, type HighlightSettings } from '../shared/highlights'
@@ -454,6 +455,7 @@ export async function discardPane(paneId: string): Promise<void> {
 }
 
 export function focusPane(paneId: string, keepMaximized = false): void {
+  leaveBoard()
   const state = store.state
   const stays = keepMaximized && state.maximizedId !== null
   if (state.view === 'grid' && state.focusedId === paneId && (stays || state.maximizedId === null || state.maximizedId === paneId)) return
@@ -470,6 +472,7 @@ export function focusPane(paneId: string, keepMaximized = false): void {
 
 export function focusPaneFromNotification(paneId: string): void {
   if (!store.state.panes.some((pane) => pane.id === paneId)) return
+  leaveBoard()
   store.set((s) => ({
     ...s,
     focusedId: paneId,
@@ -584,6 +587,7 @@ export function toggleMaximize(paneId?: string): void {
   queueMicrotask(() => void refreshGitChanges())
   const target = paneId ?? store.state.focusedId
   if (!target || !paneById(store.state, target)) return
+  leaveBoard()
   store.set((s) => ({
     ...s,
     focusedId: target,
@@ -608,6 +612,7 @@ export function toggleAgents(termId: string): void {
 
 export function openDetails(paneId: string): void {
   if (!paneById(store.state, paneId)) return
+  leaveBoard()
   queueMicrotask(() => void refreshGitChanges())
   store.set((s) => ({ ...s, focusedId: paneId, view: 'grid', maximizedId: paneId, detailsPaneId: paneId, timelinePaneId: null, sidebarOverride: null }))
 }

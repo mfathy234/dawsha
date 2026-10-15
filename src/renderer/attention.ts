@@ -7,6 +7,7 @@ import { derivePanes, type PaneView } from './derive'
 import { store, type AppState } from './state'
 import { getTerminal } from './terminals'
 import { toast } from './components/toast'
+import { boardShowing } from './sessionsLayout'
 
 const PROMPT_POLL_MS = 1500
 const PROMPT_TAIL_ROWS = 24
@@ -17,6 +18,7 @@ const contextMemories = new Map<string, ContextNotice>()
 
 function paneVisible(state: AppState, view: PaneView): boolean {
   if (state.view !== 'grid') return false
+  if (boardShowing(state)) return true
   return state.maximizedId === null || state.maximizedId === view.pane.id
 }
 
@@ -49,7 +51,7 @@ function evaluate(state: AppState): void {
     const step = stepAttention(memories.get(paneId) ?? initialAttention(), {
       status: view.status,
       waiting: view.fileWaiting || state.waiting[paneId] === true,
-      focused: state.focusedId === paneId,
+      focused: (boardShowing(state) ? state.boardPeekId : state.focusedId) === paneId,
       visible: paneVisible(state, view),
       windowFocused: state.windowFocused
     })
@@ -78,6 +80,13 @@ function pollPrompts(): void {
   const known = state.waiting
   const same = Object.keys(waiting).length === Object.keys(known).length && Object.keys(waiting).every((k) => known[k])
   if (!same) store.patch({ waiting })
+}
+
+/** Marks a done session as seen, the same way focusing its pane does, without opening it. */
+export function acknowledgeAttention(paneId: string): void {
+  const memory = memories.get(paneId)
+  if (memory && memory.attention === 'done') memories.set(paneId, { ...memory, attention: 'none' })
+  if (store.state.attention[paneId] === 'done') store.patch({ attention: { ...store.state.attention, [paneId]: 'none' } })
 }
 
 export function installAttention(): void {

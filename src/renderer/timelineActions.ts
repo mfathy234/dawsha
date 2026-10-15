@@ -2,9 +2,11 @@ import type { TimelineKind, TimelineRequest } from '../shared/timeline'
 import { paneById, folderOfPane, store } from './state'
 import { derivePanes } from './derive'
 import { sessionIdOf } from './transcriptActions'
+import { leaveBoard } from './sessionsLayout'
 
 export function openTimeline(paneId: string): void {
   if (!paneById(store.state, paneId)) return
+  leaveBoard()
   store.set((s) => ({
     ...s,
     focusedId: paneId,

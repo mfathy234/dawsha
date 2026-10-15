@@ -27,10 +27,12 @@ import type { RateLimitWindow } from '../../shared/types'
 import { h, icon } from '../dom'
 import type { AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
+import { setSessionsLayout } from '../sessionsLayout'
 
 const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
 
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
+const BOARD_KEY_HINT = formatShortcut(bind('Ctrl+Shift+B'))
 
 export class TopBarComponent {
   readonly el: HTMLElement
@@ -89,6 +91,8 @@ export class TopBarComponent {
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
     h('span', { class: 'utility-label' }, 'Settings')
   )
+  private readonly gridMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-grid', title: 'Show sessions as a grid', onClick: () => setSessionsLayout('grid') }, 'Grid')
+  private readonly boardMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-board', title: `Show sessions as a board (${BOARD_KEY_HINT})`, onClick: () => setSessionsLayout('board') }, 'Board')
   private readonly summary = h('div', { class: 'topbar-count', role: 'status', 'aria-live': 'polite' })
   private summarySignature = ''
   private readonly zoomValue = h('span', { class: 'zoom-value', title: 'Terminal text size of the focused pane' }, '15px')
@@ -131,6 +135,7 @@ export class TopBarComponent {
       this.summary,
       this.updatePill,
       h('span', { class: 'spacer' }),
+      h('div', { class: 'layout-switch', role: 'group', 'aria-label': 'Sessions layout' }, this.gridMode, this.boardMode),
       this.limits,
       h('div', { class: 'topbar-tools' },
         h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
@@ -147,6 +152,8 @@ export class TopBarComponent {
   update(state: AppState, views: PaneView[]): void {
     this.updateLimits(state, views)
     this.sessions.setAttribute('aria-pressed', String(state.view === 'grid'))
+    this.gridMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'grid'))
+    this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))

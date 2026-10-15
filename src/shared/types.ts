@@ -1,4 +1,5 @@
 import type { SessionBaseline } from './gitStatus'
+import type { SessionsLayout } from './board'
 import type { HighlightSettings } from './highlights'
 import type { RecordingSettings } from './recordings'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
@@ -123,6 +124,7 @@ export interface Settings {
   sidebarCollapsed: boolean
   sidebarWidth: number
   othersCollapsed: boolean
+  sessionsLayout: SessionsLayout
   sessionInfo: SessionInfoSettings
   onboardingDismissed: boolean
   workspace: Workspace
