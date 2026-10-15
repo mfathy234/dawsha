@@ -1336,16 +1336,20 @@ input[type='checkbox'] {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .dialog p {
   margin: 0;
   font-size: 14px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
   padding-top: 8px;
@@ -1354,6 +1358,11 @@ input[type='checkbox'] {
 .dialog .btn {
   height: 36px;
   padding: 0 16px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toasts {

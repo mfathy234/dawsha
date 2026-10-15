@@ -3,6 +3,16 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Ask before closing a session only while it is working. Idle, done and exited sessions close straight away.
+
+### Fixed
+
+- Keep the close confirmation small when a session has a long title. The title is shortened in the heading and on the button, and Cancel and Close stay on one row.
+
 ## [0.5.3] - 2026-10-14
 
 ### Changed

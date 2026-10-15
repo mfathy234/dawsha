@@ -61,6 +61,7 @@ import { sessionDisplayName } from '../shared/sessionMatch'
 import { applyTheme } from './themeManager'
 import { disposeTerminal, getTerminal } from './terminals'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
+import { closeCopy, confirmsClose } from '../shared/closeConfirm'
 
 const PERMISSION_TAIL_ROWS = 24
 
@@ -407,13 +408,12 @@ export async function closeTerminal(paneId: string, termId: string): Promise<voi
   const tab = pane?.tabs.find((t) => t.id === termId)
   if (!pane || !tab) return
   if (pane.tabs.length === 1) return closePane(paneId)
-  if (tab.agent !== 'shell' && tab.status !== 'exited') {
-    const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
-    const project = view?.project?.name ?? 'this project'
+  const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
+  if (tab.agent !== 'shell' && view?.primaryTabId === tab.id && confirmsClose(view.status)) {
+    const project = view.project?.name ?? 'this project'
     const confirmed = await confirmDialog({
-      title: `Close ${tab.label}?`,
-      body: `This stops the ${AGENT_NAMES[tab.agent]} terminal ${tab.label} in ${project}. Its files stay on disk.`,
-      confirmLabel: `Close ${tab.label}`
+      ...closeCopy(tab.label),
+      body: `${AGENT_NAMES[tab.agent]} is still working in this terminal in ${project}. Closing stops it. Its files stay on disk.`
     })
     if (!confirmed) return
   }
@@ -426,16 +426,16 @@ export async function closeTerminal(paneId: string, termId: string): Promise<voi
 export async function closePane(paneId: string): Promise<void> {
   const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
   if (!view) return
-  const title = view.title.toUpperCase()
+  if (!confirmsClose(view.status)) return discardPane(paneId)
   const project = view.project?.name ?? 'this project'
   const hasAgent = view.pane.tabs.some((t) => t.agent !== 'shell')
   const agentName = AGENT_NAMES[view.agent === 'shell' ? 'claude' : view.agent]
   const others = view.pane.tabs.length - 1
   const extra = others === 0 ? '' : others === 1 ? ' Its 1 other terminal stops too.' : ` Its ${others} other terminals stop too.`
   const body = hasAgent
-    ? `This stops the ${agentName} session ${title} in ${project}. Its files stay on disk.${extra}`
-    : `This closes the terminal${view.pane.tabs.length === 1 ? '' : 's'} in ${project}.`
-  const confirmed = await confirmDialog({ title: `Close ${title}?`, body, confirmLabel: `Close ${title}` })
+    ? `${agentName} is still working on it in ${project}. Closing stops it. Its files stay on disk.${extra}`
+    : `A command is still running in ${project}. Closing stops the terminal${view.pane.tabs.length === 1 ? '' : 's'}.`
+  const confirmed = await confirmDialog({ ...closeCopy(view.title), body })
   if (!confirmed) return
   await discardPane(paneId)
 }

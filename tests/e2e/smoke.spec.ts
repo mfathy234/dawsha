@@ -75,15 +75,9 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await page.keyboard.press('Escape')
     await expect(page.locator('.theme-picker')).toHaveCount(0)
 
+    // A session that is not working closes without asking (closeConfirm.spec covers a working one).
     await page.getByRole('button', { name: 'Close pane' }).click()
-    const dialog = page.getByRole('alertdialog')
-    await expect(dialog.getByRole('heading')).toHaveText('Close SMOKE?')
-    await expect(dialog).toContainText('This stops the Claude session SMOKE in Smoke. Its files stay on disk.')
-    await page.screenshot({ path: join(SCREENS, '5-close-confirm.png') })
-    await dialog.getByRole('button', { name: 'Cancel' }).click()
-    await expect(page.locator('.pane')).toHaveCount(1)
-    await page.getByRole('button', { name: 'Close pane' }).click()
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Close SMOKE' }).click()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
     await expect(page.locator('.pane')).toHaveCount(0)
     await expect(page.locator('.empty h2')).toHaveText('No sessions yet')
 

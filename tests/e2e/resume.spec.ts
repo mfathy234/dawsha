@@ -161,7 +161,6 @@ test('closed sessions stay under their project until removed there', async () =>
     await page.locator('.rp-row', { hasText: 'Add dark mode toggle' }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
     await page.getByRole('button', { name: 'Close pane' }).click()
-    await page.getByRole('alertdialog').getByRole('button', { name: /Close/ }).last().click()
     await expect(page.locator('.pane')).toHaveCount(0)
     await expect(page.locator('.kept-session-row')).toContainText('Add dark mode toggle')
     await expect.poll(() => readSettings(sandbox.userData).keptSessions?.length).toBe(1)
