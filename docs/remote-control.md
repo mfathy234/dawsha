@@ -1,6 +1,6 @@
 # Remote control
 
-Dawsha Remote Control is a **BETA** feature in the public 0.5.x release. It connects a paired browser to the Dawsha app running on your computer; Dawsha does not host your projects or sessions. Remote Access is off until you turn it on in Settings.
+Dawsha Remote Control is a **BETA** feature. It connects a paired browser to the Dawsha app running on your computer; Dawsha does not host your projects or sessions. Remote Access is off until you turn it on in Settings.
 
 ## Start Remote Control
 
@@ -9,6 +9,17 @@ On the computer running Dawsha, open **Settings → Remote Access** and choose *
 Open the displayed HTTPS URL on the browser you want to pair, enter the one-use code from Dawsha, and approve pairing. The code expires after five minutes and can only be used once; paired browsers expire after 30 days. You can revoke a browser from the device list in Settings. Stop Remote Access to close the listener and stop Dawsha's tunnel process. The temporary URL changes each time it starts.
 
 Remote access starts read-only. Terminal input and session start/resume each have a separate permission and remain off until enabled in Settings. Session access follows the agent's existing **Start with full access** preference, including any elevated permissions configured for local sessions.
+
+## Phone approvals
+
+Paired browsers with the approvals permission get an **Approvals** tab. It lists every session that is waiting on a permission prompt, with the agent, project, what it wants to run or edit and how long it has waited. Choose **Allow once**, or **Deny** with a reason; the reason is typed into the agent so it can change course. While the page is open in the background, a notification tells you when a session needs you.
+
+Safety rules, applied by the Dawsha app on your computer and not by the phone:
+
+- Only a plain "Yes" is ever sent from the phone. "Yes, and don't ask again" style choices are never chosen for you.
+- Before answering, Dawsha checks that the prompt on screen is still the one you saw. If it changed or was already answered, the phone gets a clear message and nothing is sent.
+- Edits to CI workflows, configuration files, `.git` and `.claude` can only be denied from the phone by default. Open Dawsha to allow them.
+- Approvals follow the same pairing, 30 day expiry and revoke controls as the rest of Remote Control, and answers are listed in a short history with the device that gave them.
 
 ## Network and privacy limits
 

@@ -36,6 +36,7 @@ export class TerminalView {
   private readonly highlights: TerminalHighlights
   private opened = false
   private frame = 0
+  private lent: HTMLElement | null = null
 
   constructor(
     readonly id: string,
@@ -94,7 +95,8 @@ export class TerminalView {
   }
 
   mount(parent: HTMLElement): void {
-    if (this.el.parentElement !== parent) parent.appendChild(this.el)
+    const target = this.lent ?? parent
+    if (this.el.parentElement !== target) target.appendChild(this.el)
     if (this.opened) return
     this.opened = true
     this.term.open(this.el)
@@ -120,11 +122,29 @@ export class TerminalView {
     return lines.join('\n')
   }
 
+  /**
+   * The last `rows` lines, ending at the last line with text on screen, so the empty rows of a tall terminal
+   * don't push a prompt drawn near the top out of view. When the screen is at least `rows` tall the tail stays
+   * on screen, so an older prompt in the scrollback can't be mistaken for a current one; an empty screen gives ''.
+   */
   tailText(rows: number): string {
     const buffer = this.term.buffer.active
+    const text = (row: number): string => buffer.getLine(row)?.translateToString(true) ?? ''
+    const top = buffer.baseY
+    let end = buffer.length - 1
+    while (end >= top && text(end).trim() === '') end -= 1
+    if (end < top) return ''
+    let start = this.term.rows >= rows ? Math.max(top, end - rows + 1) : Math.max(0, end - rows + 1)
+    // Start at the beginning of a wrapped line, and join wrapped rows back into the line the program printed.
+    while (start > 0 && buffer.getLine(start)?.isWrapped) start -= 1
     const lines: string[] = []
-    for (let row = Math.max(0, buffer.length - rows); row < buffer.length; row += 1) {
-      lines.push(buffer.getLine(row)?.translateToString(true) ?? '')
+    for (let row = start; row <= end; row += 1) {
+      const line = buffer.getLine(row)
+      // Keep trailing spaces of a row that continues on the next one, so words at the wrap stay apart.
+      const continues = row < end && buffer.getLine(row + 1)?.isWrapped === true
+      const value = line?.translateToString(!continues) ?? ''
+      if (line?.isWrapped && lines.length > 0) lines[lines.length - 1] += value
+      else lines.push(value)
     }
     return lines.join('\n')
   }
@@ -179,9 +199,21 @@ export class TerminalView {
     this.term.blur()
   }
 
+  /** Shows this terminal in another container (the board's peek) until it is returned; the pane stops reclaiming it. */
+  lendTo(parent: HTMLElement): void {
+    this.lent = parent
+    this.mount(parent)
+    this.setVisible(true)
+  }
+
+  returnLoan(): void {
+    this.lent = null
+  }
+
   setVisible(visible: boolean): void {
-    this.el.classList.toggle('active', visible)
-    if (visible) this.scheduleFit()
+    const shown = visible || this.lent !== null
+    this.el.classList.toggle('active', shown)
+    if (shown) this.scheduleFit()
   }
 
   setFontSize(size: number): void {

@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto
 import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
-export type RemotePermission = 'read' | 'terminalInput' | 'sessionControl'
+export type RemotePermission = 'read' | 'terminalInput' | 'sessionControl' | 'approvals'
 
 export interface StoredDevice {
   id: string
@@ -86,7 +86,7 @@ function isStoredDevice(value: unknown): value is StoredDevice {
 export function createRemoteAuth(store: DeviceStore, now: () => number = Date.now) {
   let devices = store.load()
   const lastPersistedSeen = new Map(devices.map((device) => [device.id, device.lastSeenAt]))
-  let permissions = { terminalInput: false, sessionControl: false }
+  let permissions = { terminalInput: false, sessionControl: false, approvals: false }
   let pairing: { code: string; expiresAt: number; attempts: number } | null = null
   const revocationListeners = new Set<(deviceId: string) => void>()
 
@@ -164,7 +164,8 @@ export function createRemoteAuth(store: DeviceStore, now: () => number = Date.no
   function setPermissions(next: Partial<typeof permissions>): void {
     permissions = {
       terminalInput: next.terminalInput ?? permissions.terminalInput,
-      sessionControl: next.sessionControl ?? permissions.sessionControl
+      sessionControl: next.sessionControl ?? permissions.sessionControl,
+      approvals: next.approvals ?? permissions.approvals
     }
   }
 

@@ -1,4 +1,5 @@
 import { isAgent } from './agents'
+import { isSessionsLayout } from './board'
 import { sanitizeBaseline } from './gitStatus'
 import { DEFAULT_THEME_ID, resolveThemeId } from './themes'
 import { formatShortcut, parseShortcut } from './shortcuts'
@@ -6,6 +7,7 @@ import { isVersion } from './version'
 import { sanitizeSplits } from './splits'
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './sidebarWidth'
 import { defaultHighlights, sanitizeHighlights } from './highlights'
+import { defaultRecordings, sanitizeRecordings } from './recordings'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -46,7 +48,16 @@ const makeId = (): string => {
 export const DEFAULT_PALETTE_SHORTCUT = 'Ctrl+K'
 
 export const defaultFullAccess = (): FullAccess => ({ claude: true, codex: true, gemini: false })
-export const defaultRemoteAccess = (): RemoteAccessSettings => ({ allowedEmail: '', terminalInput: false, sessionControl: false })
+export const defaultRemoteAccess = (): RemoteAccessSettings => ({
+  allowedEmail: '',
+  terminalInput: false,
+  sessionControl: false,
+  approvals: false,
+  approvalsNotify: true,
+  approvalsOnlyWhenAway: false,
+  approvalsAwayMinutes: 3,
+  approvalsAllowConfigEdits: false
+})
 
 export const defaultImage = (): BackgroundImage => ({ enabled: false, path: null, dim: 60, blur: 0 })
 
@@ -57,6 +68,7 @@ export const defaultSettings = (): Settings => ({
   sidebarCollapsed: false,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   othersCollapsed: false,
+  sessionsLayout: 'grid',
   sessionInfo: { notifications: true, sound: false },
   onboardingDismissed: false,
   workspace: { panes: [], focusedIndex: 0 },
@@ -69,7 +81,8 @@ export const defaultSettings = (): Settings => ({
   paletteShortcut: DEFAULT_PALETTE_SHORTCUT,
   fullAccess: defaultFullAccess(),
   remoteAccess: defaultRemoteAccess(),
-  highlights: defaultHighlights()
+  highlights: defaultHighlights(),
+  recordings: defaultRecordings()
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -251,12 +264,22 @@ function sanitizeFullAccess(value: unknown): FullAccess {
   return { claude: pick('claude'), codex: pick('codex'), gemini: pick('gemini') }
 }
 
+export function clampAwayMinutes(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(60, Math.max(1, Math.round(value))) : fallback
+}
+
 function sanitizeRemoteAccess(value: unknown): RemoteAccessSettings {
-  if (!isRecord(value)) return defaultRemoteAccess()
+  const defaults = defaultRemoteAccess()
+  if (!isRecord(value)) return defaults
   return {
     allowedEmail: typeof value.allowedEmail === 'string' && value.allowedEmail.length <= 254 ? value.allowedEmail : '',
     terminalInput: value.terminalInput === true,
-    sessionControl: value.sessionControl === true
+    sessionControl: value.sessionControl === true,
+    approvals: value.approvals === true,
+    approvalsNotify: typeof value.approvalsNotify === 'boolean' ? value.approvalsNotify : defaults.approvalsNotify,
+    approvalsOnlyWhenAway: value.approvalsOnlyWhenAway === true,
+    approvalsAwayMinutes: clampAwayMinutes(value.approvalsAwayMinutes, defaults.approvalsAwayMinutes),
+    approvalsAllowConfigEdits: value.approvalsAllowConfigEdits === true
   }
 }
 
@@ -316,6 +339,7 @@ export function migrateSettings(raw: unknown): Settings {
     sidebarCollapsed: raw.sidebarCollapsed === true,
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,
+    sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
     sessionInfo: {
       notifications: typeof info.notifications === 'boolean' ? info.notifications : defaults.sessionInfo.notifications,
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound
@@ -331,6 +355,7 @@ export function migrateSettings(raw: unknown): Settings {
     paletteShortcut: sanitizeShortcut(raw.paletteShortcut),
     fullAccess: sanitizeFullAccess(raw.fullAccess),
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
-    highlights: sanitizeHighlights(raw.highlights)
+    highlights: sanitizeHighlights(raw.highlights),
+    recordings: sanitizeRecordings(raw.recordings)
   }
 }

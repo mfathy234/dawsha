@@ -1,5 +1,7 @@
 import type { SessionBaseline } from './gitStatus'
+import type { SessionsLayout } from './board'
 import type { HighlightSettings } from './highlights'
+import type { RecordingSettings } from './recordings'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
 export type SessionStatus = 'busy' | 'idle'
@@ -122,6 +124,7 @@ export interface Settings {
   sidebarCollapsed: boolean
   sidebarWidth: number
   othersCollapsed: boolean
+  sessionsLayout: SessionsLayout
   sessionInfo: SessionInfoSettings
   onboardingDismissed: boolean
   workspace: Workspace
@@ -135,6 +138,7 @@ export interface Settings {
   fullAccess: FullAccess
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
+  recordings: RecordingSettings
 }
 
 export type FullAccess = Record<AgentKind, boolean>
@@ -143,6 +147,11 @@ export interface RemoteAccessSettings {
   allowedEmail: string
   terminalInput: boolean
   sessionControl: boolean
+  approvals: boolean
+  approvalsNotify: boolean
+  approvalsOnlyWhenAway: boolean
+  approvalsAwayMinutes: number
+  approvalsAllowConfigEdits: boolean
 }
 
 export interface RemoteAccessDevice {
@@ -290,6 +299,7 @@ export interface SpawnRequest {
   rows: number
   command?: string
   prompt?: string
+  title?: string
   fullAccess?: boolean
   desktopVisible?: boolean
   remoteManaged?: boolean

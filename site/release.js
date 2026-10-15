@@ -1,16 +1,35 @@
 (function () {
-  document.querySelectorAll('.download-menu').forEach(function (picker) {
-    picker.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') {
-        picker.open = false;
-        picker.querySelector('summary').focus();
-      }
-    });
-    document.addEventListener('click', function (event) {
-      if (!picker.contains(event.target)) picker.open = false;
-    });
-  });
   var API = 'https://api.github.com/repos/mfathy234/dawsha/releases/latest';
+  // Offer the visitor's own platform first. Without JavaScript the button stays on the Windows installer.
+  var ar = document.documentElement.lang === 'ar';
+  var PLATFORMS = {
+    mac: { dl: 'mac', title: ar ? 'تنزيل لنظام macOS' : 'Download for macOS', meta: ar ? 'Apple Silicon · ملف DMG' : 'Apple Silicon · DMG disk image' },
+    linux: { dl: 'linux-appimage', title: ar ? 'تنزيل لنظام لينكس' : 'Download for Linux', meta: ar ? 'x64 · AppImage' : 'x64 · AppImage' }
+  };
+  function detectPlatform() {
+    var hint = String((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent || '');
+    if (/android|iphone|ipad/i.test(navigator.userAgent || '')) return 'windows';
+    if (/mac/i.test(hint)) return 'mac';
+    if (/linux|x11/i.test(hint)) return 'linux';
+    return 'windows';
+  }
+  var platform = detectPlatform();
+  var main = document.querySelector('[data-main-download]');
+  if (main && PLATFORMS[platform]) {
+    var choice = PLATFORMS[platform];
+    var alt = document.querySelector('.download-alt-link[data-dl="' + choice.dl + '"]');
+    var altIcon = alt && alt.querySelector('.platform-icon');
+    var mainIcon = main.querySelector('.platform-icon');
+    if (altIcon && mainIcon) mainIcon.replaceWith(altIcon.cloneNode(true));
+    main.setAttribute('data-dl', choice.dl);
+    main.querySelector('.download-title').textContent = choice.title;
+    main.querySelector('.download-meta-text').textContent = choice.meta;
+    if (alt) alt.hidden = true;
+    var winInstaller = document.querySelector('.download-alt-link[data-platform="windows"][data-dl="setup"]');
+    if (winInstaller) winInstaller.hidden = false;
+  }
+  document.documentElement.setAttribute('data-platform', platform);
+
   fetch(API, { headers: { Accept: 'application/vnd.github+json' } })
     .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); })
     .then(function (rel) {
@@ -36,6 +55,9 @@
       var macCard = document.querySelector('[data-platform-card="mac"]');
       if (macCard && urls.mac) macCard.hidden = false;
       if (version) {
+        document.querySelectorAll('[data-version-tag]').forEach(function (el) {
+          el.textContent = 'v' + version;
+        });
         document.querySelectorAll('[data-version]').forEach(function (el) {
           el.textContent = (document.documentElement.lang === 'ar' ? 'الإصدار ' : 'Version ') + version;
         });

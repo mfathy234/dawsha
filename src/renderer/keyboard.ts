@@ -5,6 +5,9 @@ import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, zo
 import { commandForEvent } from './commands/registry'
 import { derivePanes } from './derive'
 import { store, type AppState } from './state'
+import { closeTimeline } from './timelineActions'
+import { closePeek } from './boardActions'
+import { boardShowing } from './sessionsLayout'
 
 const overlayOpen = (): boolean => document.querySelector('.overlay, .popover') !== null
 
@@ -39,12 +42,19 @@ function escapeShouldRestore(event: KeyboardEvent): boolean {
   return focused?.status !== 'busy'
 }
 
+function peekShouldClose(event: KeyboardEvent): boolean {
+  const inTerminal = (event.target as HTMLElement | null)?.closest('.xterm') != null
+  if (!inTerminal) return true
+  const peeked = derivePanes(store.state).find((v) => v.pane.id === store.state.boardPeekId)
+  return peeked?.status !== 'busy'
+}
+
 function consume(event: KeyboardEvent): void {
   event.preventDefault()
   event.stopPropagation()
 }
 
-const inFindBar = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.term-find') != null
+const inFindBar = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.term-find, .timeline-search') != null
 
 function onKeyDown(event: KeyboardEvent): void {
   if (event.isComposing || overlayOpen() || inFindBar(event)) return
@@ -61,6 +71,13 @@ function onKeyDown(event: KeyboardEvent): void {
     return
   }
   if (state.view !== 'grid') return
+  if (boardShowing(state)) {
+    if (event.key === 'Escape' && state.boardPeekId !== null && peekShouldClose(event)) {
+      consume(event)
+      closePeek()
+    }
+    return
+  }
   if (event.key === 'Tab' && state.focusedId) {
     const focused = state.panes.find((pane) => pane.id === state.focusedId)
     if (focused && focused.tabs.length > 1) {
@@ -72,6 +89,7 @@ function onKeyDown(event: KeyboardEvent): void {
   if (event.key === 'Escape' && escapeShouldRestore(event)) {
     consume(event)
     if (state.detailsPaneId !== null) closeDetails()
+    else if (state.timelinePaneId !== null) closeTimeline()
     else restoreGrid()
     return
   }

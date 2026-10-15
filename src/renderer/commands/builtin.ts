@@ -41,7 +41,9 @@ import {
   jumpPrompt
 } from '../terminalActions'
 import { exportTranscript } from '../transcriptActions'
+import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
+import { setSessionsLayout } from '../sessionsLayout'
 import { registerCommands, registerProvider, type Command } from './registry'
 
 const hasPane = (state: AppState): boolean => paneById(state, state.focusedId) !== undefined
@@ -232,6 +234,14 @@ export function installBuiltinCommands(): void {
       enabled: (state) => hasPane(state) && paneHasRepo(state.focusedId ?? ''),
       run: () => void (store.state.focusedId && openChanges(store.state.focusedId))
     },
+    {
+      ...focusedAction('pane.timeline', 'Show session timeline', toggleTimeline, 'history events edits commands tests approvals search insights'),
+      ...withKeys('Ctrl+Shift+T')
+    },
+    {
+      ...focusedAction('timeline.search-all', 'Search all session timelines…', (id) => openTimelineWith(id, { scope: 'all' }), 'find prompts edits commands tests old closed past sessions history'),
+      ...withKeys('Ctrl+Alt+F')
+    },
     focusedAction('pane.transcript', 'Export transcript…', exportTranscript, 'save markdown html conversation chat history'),
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),
     focusedAction('pane.close', 'Close the pane', closePane, 'stop session'),
@@ -248,6 +258,24 @@ export function installBuiltinCommands(): void {
       shortcut: 'Ctrl+,',
       keys: [{ key: ',', ctrl: true, shift: false, alt: false }],
       run: () => openSettings()
+    },
+    {
+      id: 'view.board',
+      title: 'Switch to board view',
+      group: 'Actions',
+      keywords: 'kanban columns layout',
+      ...withKeys('Ctrl+Shift+B'),
+      enabled: (state) => state.settings.sessionsLayout !== 'board',
+      run: () => setSessionsLayout('board')
+    },
+    {
+      id: 'view.grid-layout',
+      title: 'Switch to grid view',
+      group: 'Actions',
+      keywords: 'panes layout',
+      ...withKeys('Ctrl+Shift+B'),
+      enabled: (state) => state.settings.sessionsLayout === 'board',
+      run: () => setSessionsLayout('grid')
     },
     { id: 'view.grid', title: 'Back to the grid', group: 'Actions', searchOnly: true, run: () => showView('grid') },
     { id: 'app.theme', title: 'Choose a theme', group: 'Actions', keywords: 'colors background', run: () => toggleThemePicker(true) },

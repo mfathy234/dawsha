@@ -34,11 +34,14 @@ import { snapshotWorkspace } from '../shared/layouts'
 import { moveById, moveItem } from '../shared/reorder'
 import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
+import { leaveBoard } from './sessionsLayout'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { AgentPreset } from '../shared/quickPick'
 import { defaultHighlightRules, describeRules, sameRules, type HighlightSettings } from '../shared/highlights'
+import { sanitizeRecordings, type RecordingSettings } from '../shared/recordings'
 import { api } from './api'
 import { openChangesDialog } from './components/changesDialog'
+import { recordApproval } from './timelineLog'
 import { confirmDialog } from './components/dialogs'
 import { toast } from './components/toast'
 import { derivePanes, matchAll, workFolderOfPane } from './derive'
@@ -61,6 +64,7 @@ import { sessionDisplayName } from '../shared/sessionMatch'
 import { applyTheme } from './themeManager'
 import { disposeTerminal, getTerminal } from './terminals'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
+import { closeCopy, confirmsClose } from '../shared/closeConfirm'
 
 const PERMISSION_TAIL_ROWS = 24
 
@@ -161,6 +165,7 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     sessionId,
     command: term.command,
     prompt: term.prompt,
+    title: term.titleHint,
     fullAccess: term.agent !== 'shell' && state.settings.fullAccess[term.agent],
     cols: view?.cols ?? 120,
     rows: view?.rows ?? 30
@@ -298,7 +303,7 @@ export function paneHasRepo(paneId: string): boolean {
   return folder !== null && store.state.gitChanges[folder] != null
 }
 
-export async function openChanges(paneId: string): Promise<void> {
+export async function openChanges(paneId: string, focusPath?: string): Promise<void> {
   const folder = paneFolder(paneId)
   const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
   if (!folder || !view) return
@@ -313,6 +318,7 @@ export async function openChanges(paneId: string): Promise<void> {
     title: view.title,
     baseline: tab?.baseline,
     sessionTitle: tab?.agent === 'shell' ? undefined : view.title,
+    focusPath,
     onChanged: () => void refreshGitChanges()
   })
   void refreshGitChanges()
@@ -407,13 +413,12 @@ export async function closeTerminal(paneId: string, termId: string): Promise<voi
   const tab = pane?.tabs.find((t) => t.id === termId)
   if (!pane || !tab) return
   if (pane.tabs.length === 1) return closePane(paneId)
-  if (tab.agent !== 'shell' && tab.status !== 'exited') {
-    const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
-    const project = view?.project?.name ?? 'this project'
+  const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
+  if (tab.agent !== 'shell' && view?.primaryTabId === tab.id && confirmsClose(view.status)) {
+    const project = view.project?.name ?? 'this project'
     const confirmed = await confirmDialog({
-      title: `Close ${tab.label}?`,
-      body: `This stops the ${AGENT_NAMES[tab.agent]} terminal ${tab.label} in ${project}. Its files stay on disk.`,
-      confirmLabel: `Close ${tab.label}`
+      ...closeCopy(tab.label),
+      body: `${AGENT_NAMES[tab.agent]} is still working in this terminal in ${project}. Closing stops it. Its files stay on disk.`
     })
     if (!confirmed) return
   }
@@ -426,16 +431,16 @@ export async function closeTerminal(paneId: string, termId: string): Promise<voi
 export async function closePane(paneId: string): Promise<void> {
   const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
   if (!view) return
-  const title = view.title.toUpperCase()
+  if (!confirmsClose(view.status)) return discardPane(paneId)
   const project = view.project?.name ?? 'this project'
   const hasAgent = view.pane.tabs.some((t) => t.agent !== 'shell')
   const agentName = AGENT_NAMES[view.agent === 'shell' ? 'claude' : view.agent]
   const others = view.pane.tabs.length - 1
   const extra = others === 0 ? '' : others === 1 ? ' Its 1 other terminal stops too.' : ` Its ${others} other terminals stop too.`
   const body = hasAgent
-    ? `This stops the ${agentName} session ${title} in ${project}. Its files stay on disk.${extra}`
-    : `This closes the terminal${view.pane.tabs.length === 1 ? '' : 's'} in ${project}.`
-  const confirmed = await confirmDialog({ title: `Close ${title}?`, body, confirmLabel: `Close ${title}` })
+    ? `${agentName} is still working on it in ${project}. Closing stops it. Its files stay on disk.${extra}`
+    : `A command is still running in ${project}. Closing stops the terminal${view.pane.tabs.length === 1 ? '' : 's'}.`
+  const confirmed = await confirmDialog({ ...closeCopy(view.title), body })
   if (!confirmed) return
   await discardPane(paneId)
 }
@@ -450,6 +455,7 @@ export async function discardPane(paneId: string): Promise<void> {
 }
 
 export function focusPane(paneId: string, keepMaximized = false): void {
+  leaveBoard()
   const state = store.state
   const stays = keepMaximized && state.maximizedId !== null
   if (state.view === 'grid' && state.focusedId === paneId && (stays || state.maximizedId === null || state.maximizedId === paneId)) return
@@ -458,13 +464,15 @@ export function focusPane(paneId: string, keepMaximized = false): void {
     focusedId: paneId,
     view: 'grid',
     maximizedId: stays ? s.maximizedId : s.maximizedId ? paneId : null,
-    detailsPaneId: s.detailsPaneId === paneId ? paneId : null
+    detailsPaneId: s.detailsPaneId === paneId ? paneId : null,
+    timelinePaneId: s.timelinePaneId === paneId ? paneId : null
   }))
   persistWorkspace()
 }
 
 export function focusPaneFromNotification(paneId: string): void {
   if (!store.state.panes.some((pane) => pane.id === paneId)) return
+  leaveBoard()
   store.set((s) => ({
     ...s,
     focusedId: paneId,
@@ -506,7 +514,10 @@ export function focusNextAttention(): boolean {
 export function answerPermission(paneId: string, allow: boolean): boolean {
   if (store.state.attention[paneId] !== 'needs') return false
   const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
-  if (!tabId || !detectPermissionPrompt(getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '')) return false
+  const tail = tabId ? (getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '') : ''
+  if (!tabId || !detectPermissionPrompt(tail)) return false
+  recordApproval(paneId, allow, tail, Date.now())
+  void api.remoteAccess?.recordApproval(tabId, allow, tail).catch(() => undefined)
   api.write(tabId, allow ? '\r' : '\x1b')
   return true
 }
@@ -576,19 +587,21 @@ export function toggleMaximize(paneId?: string): void {
   queueMicrotask(() => void refreshGitChanges())
   const target = paneId ?? store.state.focusedId
   if (!target || !paneById(store.state, target)) return
+  leaveBoard()
   store.set((s) => ({
     ...s,
     focusedId: target,
     view: 'grid',
     maximizedId: s.maximizedId === target ? null : target,
     detailsPaneId: null,
+    timelinePaneId: null,
     sidebarOverride: null
   }))
 }
 
 export function restoreGrid(): void {
   if (store.state.maximizedId) {
-    store.set((s) => ({ ...s, maximizedId: null, detailsPaneId: null, sidebarOverride: null }))
+    store.set((s) => ({ ...s, maximizedId: null, detailsPaneId: null, timelinePaneId: null, sidebarOverride: null }))
   }
 }
 
@@ -599,8 +612,9 @@ export function toggleAgents(termId: string): void {
 
 export function openDetails(paneId: string): void {
   if (!paneById(store.state, paneId)) return
+  leaveBoard()
   queueMicrotask(() => void refreshGitChanges())
-  store.set((s) => ({ ...s, focusedId: paneId, view: 'grid', maximizedId: paneId, detailsPaneId: paneId, sidebarOverride: null }))
+  store.set((s) => ({ ...s, focusedId: paneId, view: 'grid', maximizedId: paneId, detailsPaneId: paneId, timelinePaneId: null, sidebarOverride: null }))
 }
 
 export function closeDetails(): void {
@@ -1068,6 +1082,12 @@ export function setSessionInfo(change: Partial<SessionInfoSettings>): void {
   const sessionInfo = { ...store.state.settings.sessionInfo, ...change }
   store.set((s) => ({ ...s, settings: { ...s.settings, sessionInfo } }))
   void saveSettings({ sessionInfo })
+}
+
+export function setRecordings(change: Partial<RecordingSettings>): void {
+  const recordings = sanitizeRecordings({ ...store.state.settings.recordings, ...change })
+  store.set((s) => ({ ...s, settings: { ...s.settings, recordings } }))
+  void saveSettings({ recordings })
 }
 
 export async function refreshBridge(): Promise<void> {

@@ -32,6 +32,8 @@ import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
 import { continueIn, continueLabel } from '../handoffActions'
 import { exportTranscript } from '../transcriptActions'
+import { replayPane, toggleRecordingPause } from '../replayActions'
+import { api } from '../api'
 import { saveSelectionAsSnippet } from '../snippetActions'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
@@ -51,6 +53,9 @@ import { sessionState, type SessionState } from '../../shared/sessionState'
 import { permissionPromptText } from '../../shared/permissionPrompt'
 import { setStatePillSuffix, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
+import { toggleTimeline } from '../timelineActions'
+import { recordState } from '../timelineLog'
+import { TimelinePanel } from './timelinePanel'
 
 const RESUMED_CHIP_MS = 60_000
 
@@ -87,6 +92,7 @@ export class PaneComponent {
   private readonly drawer = new AgentsDrawer()
   private readonly details = h('aside', { class: 'pane-details', 'aria-label': 'Details', hidden: true })
   private detailsSignature = ''
+  private readonly timeline: TimelinePanel
   private actionsMenu: HTMLElement | null = null
   private readonly restart = h('button', { class: 'btn small pane-restart', type: 'button' }, 'Restart')
   private readonly maxButton = h('span', { class: 'slot pane-maximize-slot' })
@@ -115,6 +121,8 @@ export class PaneComponent {
       this.restart,
       h('span', { class: 'spacer' }),
       this.tabAdd,
+      iconButton('Session timeline', ICONS.history, () => toggleTimeline(paneId), 'pane-timeline'),
+      iconButton('Replay session', ICONS.replay, () => void replayPane(paneId), 'pane-replay'),
       iconButton('Open in VS Code', ICONS.code, () => void openPaneFolder(paneId, 'vscode'), 'pane-vscode'),
       iconButton('Move pane', ICONS.layout, () => this.toggleMove(), 'pane-move'),
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
@@ -145,7 +153,8 @@ export class PaneComponent {
       toggleDetails(paneId)
     })
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
-    const content = h('div', { class: 'pane-content' }, work, this.details)
+    this.timeline = new TimelinePanel(paneId)
+    const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
     this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.hint, this.drawer.el, content, this.permission, this.foot)
     this.watchFileDrops()
@@ -190,6 +199,8 @@ export class PaneComponent {
     this.updatePermission(view, state)
     this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now, view.info.geminiTools)
     this.updateDetails(view, maximized)
+    this.timeline.update(view, maximized && view.timelineOpen)
+    this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
     this.restart.hidden = !view.activeExited
     this.updateMaximizeButton(maximized)
     this.updateTabs(view)
@@ -205,6 +216,7 @@ export class PaneComponent {
     if (state !== this.stateSignature) {
       // Rebuild only on a state change: replacing the icon restarts the Working spinner.
       this.stateSignature = state
+      recordState(this.paneId, state, Date.now())
       this.stateHost.replaceChildren(statePill(state, inState))
     } else {
       setStatePillSuffix(this.stateHost, state, inState)
@@ -396,6 +408,19 @@ export class PaneComponent {
       snippetItem.setAttribute('disabled', '')
       snippetItem.title = 'Select some text in the terminal first'
     }
+    const pauseItem = item('Pause recording', () => toggleRecordingPause(this.paneId), ICONS.history)
+    pauseItem.setAttribute('disabled', '')
+    pauseItem.title = 'This terminal is not being recorded'
+    const activeTab = this.current?.pane.activeTabId
+    if (activeTab) {
+      void api.setRecordingPaused(activeTab, null).then((paused) => {
+        if (paused === null) return
+        pauseItem.removeAttribute('disabled')
+        pauseItem.title = ''
+        const label = pauseItem.querySelector('.menu-label')
+        if (label) label.textContent = paused ? 'Resume recording' : 'Pause recording'
+      }, () => undefined)
+    }
     const showDetails = item('Details', () => openDetails(this.paneId), ICONS.info)
     const pinned = this.current?.pane.pinned === true
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
@@ -427,6 +452,9 @@ export class PaneComponent {
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
+      item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
+      item('Replay session', () => replayPane(this.paneId), ICONS.replay),
+      pauseItem,
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
       item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),
@@ -612,6 +640,7 @@ export class PaneComponent {
   dispose(): void {
     this.closeMenu()
     this.closeActions()
+    this.timeline.dispose()
     this.el.remove()
   }
 }

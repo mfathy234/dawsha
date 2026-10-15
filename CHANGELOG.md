@@ -3,6 +3,37 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] - 2026-10-15
+
+### Added
+
+- Session timeline. Open it from the Timeline button in a pane header, the pane menu, the command palette (Show session timeline) or Ctrl+Shift+T. It lists a session's prompts, replies, file reads and edits (with added and removed lines), commands, test runs (with pass and fail counts for npm, pnpm, vitest, jest, pytest, go, cargo and dotnet), errors, state changes and the permissions you answered from Dawsha, each with its time. A state bar shows how long the session was working, needing you and done, using patterns as well as colour. Filter by All, Prompts, Edits, Commands, Approvals or Tests, search with highlighted matches and Enter or Shift+Enter to move between them, and open Insights for time spent in each state, how long you kept the agent waiting, the files edited most, commands run, test trends, permission prompts and cost. Click an edit to see that file in Changes, and export the timeline as Markdown. State changes and answers are kept in memory only, so they start fresh after a restart.
+- Search all sessions from the timeline. Switch the search box to All sessions, or use Search all session timelines… in the palette (Ctrl+Alt+F), to look through the prompts, replies, files, commands, test results and errors of every Claude, Codex and Gemini session of your projects, including closed ones. Results are grouped by session with up to three highlighted matches each, and can be narrowed by project, agent and event type. Clicking a result jumps to that event in the session's pane, or opens the past session read-only with a Resume session button.
+- Replay any session. When you turn on Record sessions in Settings (off by default, because a recording keeps everything a terminal prints, including secrets you display), Dawsha records every terminal as a standard asciinema .cast file in its data folder (recordings/<date>/), readable only by you, with a small sidecar file naming the project, agent, title and folder. A recording stops at 32 MB and says so in the replay. Choose Pause recording in a pane's menu to stop capturing one terminal for a while. Choose Replay session in a pane's menu or with the Replay button in the pane header and the timeline, or Replay a session... in the command palette to pick from all recordings, newest first, searchable by title, project, agent and date. Works for sessions that have already exited.
+- The Replay view plays a recording in a read-only terminal at its recorded size, with Space to play or pause, 1x, 4x and 16x speed, Skip idle time, a scrubber with markers for prompts you sent, permission prompts and the end of the session, and previous and next marker buttons. Dragging the scrubber jumps to any moment. Esc or Back returns to where you were.
+- Search inside a recording. Matches are listed with their time, and choosing one jumps there and highlights the text. The At this point panel shows the time elapsed and a Copy screen text button.
+- New Recordings settings in General: turn recording on or off (off by default; with it off, Replay explains what recording stores and offers a Turn on recording button), how many days to keep recordings (14), a maximum total size (1 GB) with oldest-first cleanup at startup and once a day, Open recordings folder, and Delete all recordings... which asks first and names how many recordings and how much space it will free.
+- Approve or deny agent permission prompts from a paired phone (Remote Control, beta). A new Approvals tab lists every prompt waiting on you, with the command or edit, the agent and project, and how long it has waited. Allow once, or Deny with a quick reason or your own message that is typed into the agent. The phone also keeps a list of recent answers, desktop ones included.
+- A separate "Let paired phones answer permission prompts" permission in Settings > Remote Access, off by default, and enforced on every approval request. Paired phones keep the permissions they already have.
+- Phone notifications for new prompts, with Allow and Open buttons where the phone supports them (Deny is answered on the Approvals tab, so it can carry a reason), while the Dawsha page is open in the background. Optionally only when this computer has been idle for a few minutes. Alerts do not reach a closed browser.
+- A safety rule for the phone: edits outside the project folder, and to CI and config files (.github, YAML, package.json, lockfiles, .env), can only be denied from the phone unless you turn on "Phone can allow edits to CI and config files". Detection reads the prompt text, so it is best effort.
+- Switch the Sessions view between Grid and Board from the top bar, the palette ("Switch to board view" and "Switch to grid view") or Ctrl+Shift+B. The board has four columns: Needs you, Working, Done and Reviewed. Cards move by themselves as sessions change, and the choice is remembered.
+- Act on sessions straight from their cards. Allow or Deny a permission prompt, see the last lines of a working session, open Changes, Timeline or Replay on a finished one, and mark it reviewed with a button or by dragging it to Reviewed. Close all reviewed sessions at once after a confirmation.
+- Peek at any card. Click it to see the session's live terminal beside the board and send it a reply, then Open in grid to jump into the pane. Escape closes the peek, and you can also click into its terminal and type there.
+- Filter the board by project and agent.
+- Move Dawsha to a new PC with Settings > General > Back up and move, or the palette ("Export settings…" and "Import settings…"). Export saves your projects, snippets, layouts, highlight rules and preferences to one file. Import shows what will change, then lets you Merge (add what is new, keep what you have) or Replace (after a confirmation that names what is replaced). Projects whose folders are missing on the new PC are flagged. Remote Access, full-access settings, open sessions and usage history are never exported.
+
+### Changed
+
+- Ask before closing a session only while it is working. Idle, done and exited sessions close straight away.
+- Replace the plain project and agent drop-downs in the all-sessions timeline search with styled filter menus that match the rest of the app, with agent logos, check marks and full keyboard support.
+
+### Fixed
+
+- Notice a permission prompt drawn near the top of a tall terminal, for example after the agent clears the screen. Dawsha only looked at the last few rows, so such a prompt could go unnoticed, and Needs you showed up late.
+- Keep the top bar from overlapping at medium window widths, and fit the Remote Control tabs and their badge on small phones.
+- Keep the close confirmation small when a session has a long title. The title is shortened in the heading and on the button, and Cancel and Close stay on one row.
+
 ## [0.5.3] - 2026-10-14
 
 ### Changed

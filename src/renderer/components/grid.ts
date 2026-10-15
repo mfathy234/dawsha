@@ -1,4 +1,5 @@
 import { forgetStateClocks } from '../stateClock'
+import { forgetTimelineLogs } from '../timelineLog'
 import { focusPane, openQuickPick, setSplits, showView } from '../actions'
 import { OthersPanelComponent } from './othersPanel'
 import { derivePanes, type PaneView } from '../derive'
@@ -87,6 +88,7 @@ export class GridComponent {
   private syncPanes(views: PaneView[]): void {
     const ids = new Set(views.map((v) => v.pane.id))
     forgetStateClocks(ids)
+    forgetTimelineLogs(ids)
     for (const [id, component] of this.panes) {
       if (!ids.has(id)) {
         component.dispose()
@@ -264,7 +266,7 @@ export class GridComponent {
     if (state.focusedId === this.lastFocused) return
     this.lastFocused = state.focusedId
     const pane = state.panes.find((p) => p.id === state.focusedId)
-    if (!pane || state.view !== 'grid' || state.quickPickOpen || document.querySelector('.overlay')) return
+    if (!pane || state.view !== 'grid' || state.settings.sessionsLayout === 'board' || state.quickPickOpen || document.querySelector('.overlay')) return
     const active = document.activeElement
     if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
       if (!active.classList.contains('xterm-helper-textarea')) return

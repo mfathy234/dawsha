@@ -18,11 +18,15 @@ import type {
   SessionStatusResult
 } from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
+import type { RecordingStats, RecordingSummary } from './recordings'
 import type { ProcessActivity } from './processActivity'
 import type { BulkSkillExport, SkillEntry } from './skills'
 import type { PaneonImportPreview } from './paneonImport'
+import type { SettingsExportResult, SettingsImportRead } from './settingsTransfer'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
+import type { TimelineExportRequest, TimelineExportResult, TimelineRequest, TimelineResult } from './timeline'
+import type { TimelineSearchRequest, TimelineSearchResult } from './timelineSearch'
 import type { TranscriptRequest, TranscriptResult } from './transcript'
 import type { UsageRange, UsageReport } from './usage'
 import type {
@@ -58,6 +62,8 @@ import type {
 export interface GridApi {
   getSettings(): Promise<SettingsLoadResult>
   updateSettings(patch: Partial<Settings>): Promise<Settings>
+  exportSettings(): Promise<SettingsExportResult>
+  readSettingsImport(): Promise<SettingsImportRead>
   remoteAccess?: {
     getState(): Promise<RemoteAccessState>
     enable(): Promise<RemoteAccessState>
@@ -66,6 +72,7 @@ export interface GridApi {
     setPermissions(patch: Partial<RemoteAccessSettings>): Promise<RemoteAccessState>
     setAllowedEmail(email: string): Promise<RemoteAccessState>
     revokeDevice(id: string): Promise<RemoteAccessState>
+    recordApproval(terminalId: string, allowed: boolean, tail?: string): Promise<void>
   }
   paneonImportPreview(): Promise<PaneonImportPreview>
   queuePaneonImport(): Promise<void>
@@ -148,9 +155,20 @@ export interface GridApi {
   usageReport(range: UsageRange): Promise<UsageReport>
   usageSnapshot(): Promise<UsageSnapshot>
   exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
+  sessionTimeline(request: TimelineRequest): Promise<TimelineResult>
+  exportTimeline(request: TimelineExportRequest): Promise<TimelineExportResult>
+  searchTimelines(request: TimelineSearchRequest): Promise<TimelineSearchResult>
   compareProbe(folder: string): Promise<RepoProbe>
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>
   compareRemove(request: WorktreeRemoval): Promise<GitResult>
+  listRecordings(): Promise<RecordingSummary[]>
+  readRecording(id: string): Promise<string>
+  recordingStats(): Promise<RecordingStats>
+  deleteAllRecordings(): Promise<number>
+  openRecordingsFolder(): Promise<void>
+  setRecordingTitle(id: string, title: string): void
+  /** Pass null to read the state. Resolves to null when the terminal is not being recorded. */
+  setRecordingPaused(id: string, paused: boolean | null): Promise<boolean | null>
   onFlushRequest(listener: () => Promise<void>): void
 }

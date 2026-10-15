@@ -1,0 +1,71 @@
+import {
+  importToastText,
+  planImport,
+  replaceWarning,
+  type ImportPlan,
+  type ParsedTransfer,
+  type TransferMode
+} from '../shared/settingsTransfer'
+import { discardPane, saveSettings } from './actions'
+import { api } from './api'
+import { confirmDialog } from './components/dialogs'
+import { chooseImportMode } from './components/importPreviewDialog'
+import { toast } from './components/toast'
+import { newId, store } from './state'
+
+export async function exportSettingsFromUi(): Promise<void> {
+  try {
+    const result = await api.exportSettings()
+    if (result.status === 'saved') toast(`Settings saved to ${result.path}`, 'info')
+    else if (result.status === 'error') toast(result.message)
+  } catch (error) {
+    toast((error as Error).message || 'Could not export settings.')
+  }
+}
+
+async function missingFolders(transfer: ParsedTransfer): Promise<Set<string>> {
+  const folders = (transfer.data.projects ?? []).map((project) => project.folder)
+  const checks = await Promise.all(folders.map(async (folder) => ((await api.checkFolder(folder)).ok ? null : folder)))
+  return new Set(checks.filter((folder): folder is string => folder !== null))
+}
+
+function planFor(transfer: ParsedTransfer, mode: TransferMode, missing: Set<string>): ImportPlan {
+  return planImport({ current: store.state.settings, data: transfer.data, mode, missingFolders: missing, newId })
+}
+
+async function applyPlan(plan: ImportPlan): Promise<void> {
+  const projectIds = new Set((plan.patch.projects ?? store.state.settings.projects).map((project) => project.id))
+  const orphaned = store.state.panes.filter((pane) => !projectIds.has(pane.projectId))
+  for (const pane of orphaned) await discardPane(pane.id)
+  store.set((s) => ({ ...s, settings: { ...s.settings, ...plan.patch } }))
+  await saveSettings(plan.patch)
+  toast(importToastText(plan.summary), 'info')
+}
+
+export async function importSettingsFromUi(): Promise<void> {
+  try {
+    const read = await api.readSettingsImport()
+    if (read.status === 'cancelled') return
+    if (read.status === 'error') {
+      toast(read.message)
+      return
+    }
+    const missing = await missingFolders(read.transfer)
+    const mergePlan = planFor(read.transfer, 'merge', missing)
+    const mode = await chooseImportMode(mergePlan.summary, read.transfer)
+    if (!mode) return
+    const plan = mode === 'merge' ? mergePlan : planFor(read.transfer, 'replace', missing)
+    if (mode === 'replace') {
+      const open = store.state.panes.filter((pane) => !(plan.patch.projects ?? []).some((project) => project.id === pane.projectId)).length
+      const confirmed = await confirmDialog({
+        title: 'Replace your projects, snippets and layouts?',
+        body: replaceWarning(plan.summary, open),
+        confirmLabel: `Replace ${plan.summary.removedProjects.length} projects, ${plan.summary.replacedSnippets} snippets, ${plan.summary.replacedLayouts} layouts`
+      })
+      if (!confirmed) return
+    }
+    await applyPlan(plan)
+  } catch (error) {
+    toast((error as Error).message || 'Could not import settings.')
+  }
+}

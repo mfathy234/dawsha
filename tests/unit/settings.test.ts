@@ -46,8 +46,10 @@ describe('migrateSettings', () => {
   })
 
   it('defaults private remote permissions off and sanitizes them independently', () => {
-    expect(defaultSettings().remoteAccess).toEqual({ allowedEmail: '', terminalInput: false, sessionControl: false })
-    expect(migrateSettings({ remoteAccess: { terminalInput: true, sessionControl: 'yes' } }).remoteAccess).toEqual({ allowedEmail: '', terminalInput: true, sessionControl: false })
+    const off = { allowedEmail: '', terminalInput: false, sessionControl: false, approvals: false, approvalsNotify: true, approvalsOnlyWhenAway: false, approvalsAwayMinutes: 3, approvalsAllowConfigEdits: false }
+    expect(defaultSettings().remoteAccess).toEqual(off)
+    expect(migrateSettings({ remoteAccess: { terminalInput: true, sessionControl: 'yes' } }).remoteAccess).toEqual({ ...off, terminalInput: true })
+    expect(migrateSettings({ remoteAccess: { approvals: true, approvalsAwayMinutes: 500, approvalsNotify: 'no' } }).remoteAccess).toMatchObject({ approvals: true, approvalsAwayMinutes: 60, approvalsNotify: true })
   })
 
   it('returns defaults for junk input', () => {

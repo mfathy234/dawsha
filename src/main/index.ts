@@ -1,11 +1,13 @@
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { BrowserWindow, Menu, app, ipcMain, net, protocol, session } from 'electron'
+import { BrowserWindow, Menu, app, ipcMain, net, powerMonitor, protocol, session } from 'electron'
 import { IPC } from '../shared/ipc'
 import { CodexWatcher } from './codexWatcher'
 import { GeminiWatcher } from './geminiWatcher'
 import { registerIpc } from './ipc'
 import { PtyManager } from './ptyManager'
+import { Recorder } from './recorder'
+import { RecordingService } from './recordings'
 import { SessionsWatcher } from './sessionsWatcher'
 import { SettingsStore } from './settingsStore'
 import { StatusWatcher } from './statusWatcher'
@@ -163,10 +165,18 @@ app.whenReady().then(async () => {
   const remoteTerminals = isRemoteControlBuild
     ? new (await import('./remoteTerminalState')).RemoteTerminalState()
     : null
+  const recorder = new Recorder({
+    root: join(userData, 'recordings'),
+    enabled: () => store.get().recordings.enabled
+  })
+  const recordings = new RecordingService(join(userData, 'recordings'), recorder, () => store.get().recordings)
   const ptys = new PtyManager({
     onData: (id, data) => send(IPC.ptyData, id, data),
     onExit: (id, code) => send(IPC.ptyExit, id, code)
-  }, remoteTerminals)
+  }, remoteTerminals, {
+    recorder,
+    projectName: (projectId) => store.get().projects.find((project) => project.id === projectId)?.name ?? ''
+  })
   const watcher = new SessionsWatcher((sessions) => send(IPC.sessionsUpdate, sessions))
   const codexWatcher = new CodexWatcher((sessions) => send(IPC.codexUpdate, sessions))
   const geminiWatcher = new GeminiWatcher((sessions) => send(IPC.geminiUpdate, sessions))
@@ -183,11 +193,13 @@ app.whenReady().then(async () => {
         assetDirectory: join(__dirname, isPrivateRemoteBuild ? '../renderer-private' : '../renderer'),
         settings: store,
         ptys,
-        getWindow: () => mainWindow
+        getWindow: () => mainWindow,
+        idleSeconds: () => powerMonitor.getSystemIdleTime()
       })
     : undefined
   registerImageProtocol(store)
-  registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess)
+  registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings)
+  recordings.startSchedule()
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
@@ -210,10 +222,12 @@ app.whenReady().then(async () => {
       opsWatcher.stop()
       updates?.stop()
       usage.flush()
+      recordings.stopSchedule()
       await remoteAccess?.stop()
     },
     flushRenderer,
     flushStorage: async () => {
+      await recorder.closeAll()
       session.defaultSession.flushStorageData()
       await session.defaultSession.cookies.flushStore()
     },

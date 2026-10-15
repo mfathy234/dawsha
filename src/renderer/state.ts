@@ -58,7 +58,12 @@ export interface PaneState {
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'settings'
+export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'settings' | 'replay'
+
+export interface ReplayRef {
+  id: string
+  returnView: View
+}
 
 export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
 
@@ -92,6 +97,8 @@ export interface AppState {
   maximizedId: string | null
   splits: GridSplits
   view: View
+  replay: ReplayRef | null
+  replayPickerOpen: boolean
   settingsSection: SettingsSection
   projectsTab: ProjectsTab
   instructionsProject: string | null
@@ -104,6 +111,8 @@ export interface AppState {
   opsInfo: Record<string, OpsSnapshot>
   processActivity: Record<string, ProcessActivity[]>
   detailsPaneId: string | null
+  timelinePaneId: string | null
+  boardPeekId: string | null
   gitChanges: Record<string, GitChanges | null>
   usage: UsageSnapshot
   attention: Record<string, Attention>
@@ -137,6 +146,8 @@ export const initialState = (): AppState => ({
   maximizedId: null,
   splits: {},
   view: 'grid',
+  replay: null,
+  replayPickerOpen: false,
   settingsSection: 'general',
   projectsTab: 'projects',
   instructionsProject: null,
@@ -149,6 +160,8 @@ export const initialState = (): AppState => ({
   opsInfo: {},
   processActivity: {},
   detailsPaneId: null,
+  timelinePaneId: null,
+  boardPeekId: null,
   gitChanges: {},
   usage: emptySnapshot(),
   attention: {},

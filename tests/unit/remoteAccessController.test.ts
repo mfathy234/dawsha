@@ -22,7 +22,7 @@ function fixture() {
   const controller = createRemoteAccessController({
     userDataDir,
     settings: store,
-    ptys: { remoteSnapshot: (id?: string) => [...remoteIds].filter((entry) => id === undefined || id === entry).map((id) => ({ id, startedAt: 1, cols: 80, rows: 24, projectId: 'p1', agent: 'codex' as const, remoteManaged: true })), remoteScreen: async () => null, subscribeRemoteOutput: () => null, write: () => undefined, kill, spawn },
+    ptys: { remoteSnapshot: (id?: string) => [...remoteIds].filter((entry) => id === undefined || id === entry).map((id) => ({ id, startedAt: 1, cols: 80, rows: 24, projectId: 'p1', agent: 'codex' as const, remoteManaged: true })), remoteScreen: async () => null, remoteTail: async () => null, subscribeRemoteOutput: () => null, write: () => undefined, kill, spawn },
     getWindow: () => null,
     tunnel,
     createServer,
@@ -156,7 +156,23 @@ describe('Remote Access controller', () => {
     const context = fixture()
     await context.controller.setAllowedEmail('new@example.com')
     const state = await context.controller.setPermissions({ terminalInput: true })
-    expect(state.permissions).toEqual({ allowedEmail: 'new@example.com', terminalInput: true, sessionControl: false })
+    expect(state.permissions).toMatchObject({ allowedEmail: 'new@example.com', terminalInput: true, sessionControl: false, approvals: false })
     expect(context.settings().remoteAccess).toEqual(state.permissions)
+  })
+
+  it('stores the approval settings, keeps them off by default and clamps the idle minutes', async () => {
+    const context = fixture()
+    expect((await context.controller.getState()).permissions).toMatchObject({ approvals: false, approvalsAllowConfigEdits: false, approvalsOnlyWhenAway: false })
+    const state = await context.controller.setPermissions({ approvals: true, approvalsOnlyWhenAway: true, approvalsAwayMinutes: 500, approvalsAllowConfigEdits: true })
+    expect(state.permissions).toMatchObject({ approvals: true, approvalsOnlyWhenAway: true, approvalsAwayMinutes: 60, approvalsAllowConfigEdits: true, terminalInput: false })
+    expect(context.settings().remoteAccess.approvals).toBe(true)
+  })
+
+  it('rejects unknown or mistyped permission keys', async () => {
+    const context = fixture()
+    await expect(context.controller.setPermissions({ approvals: 'yes' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
+    await expect(context.controller.setPermissions({ approvalsAwayMinutes: '3' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
+    await expect(context.controller.setPermissions({ allowedEmail: 'x@y.com' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
+    expect(context.settings().remoteAccess.approvals).toBe(false)
   })
 })

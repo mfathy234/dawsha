@@ -34,9 +34,9 @@ export const TRANSCRIPT_MAX_BYTES = 64 * 1024 * 1024
 const NO_SESSION_NOTE = 'Terminal text only: no session file was found for this tab.'
 const EMPTY_NOTE = 'No messages in this session.'
 
-type Json = Record<string, unknown>
+export type Json = Record<string, unknown>
 
-const isRecord = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value)
+export const isRecord = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const C1 = /[\u0080-\u009f]/g
 
@@ -44,7 +44,7 @@ export function cleanText(text: string): string {
   return stripAnsi(text).replace(C1, '')
 }
 
-function flat(text: string, limit: number): string {
+export function flat(text: string, limit: number): string {
   const one = cleanText(text).replace(/\s+/g, ' ').trim()
   return one.length > limit ? `${one.slice(0, limit - 1)}…` : one
 }
@@ -64,7 +64,7 @@ export function toolArg(input: unknown): string {
   return keys.length === 0 ? '' : flat(JSON.stringify(input), TOOL_ARG_MAX)
 }
 
-function records(text: string): Json[] {
+export function records(text: string): Json[] {
   const out: Json[] = []
   for (const line of text.split('\n')) {
     if (!line.startsWith('{')) continue
@@ -78,7 +78,7 @@ function records(text: string): Json[] {
   return out
 }
 
-const asTime = (value: unknown): number | undefined => {
+export const asTime = (value: unknown): number | undefined => {
   if (typeof value !== 'string') return undefined
   const parsed = Date.parse(value)
   return Number.isNaN(parsed) ? undefined : parsed
@@ -95,7 +95,7 @@ class Span {
   }
 }
 
-function blockText(content: unknown, types: string[]): string {
+export function blockText(content: unknown, types: string[]): string {
   if (typeof content === 'string') return content
   if (!Array.isArray(content)) return ''
   return content
@@ -106,7 +106,7 @@ function blockText(content: unknown, types: string[]): string {
     .join('')
 }
 
-const isPrompt = (text: string): boolean => text.trim() !== '' && !text.trim().startsWith('<')
+export const isPrompt = (text: string): boolean => text.trim() !== '' && !text.trim().startsWith('<')
 
 function push(entries: TranscriptEntry[], kind: 'user' | 'assistant', text: string): void {
   const body = cleanText(text).trim()
@@ -153,7 +153,7 @@ export function parseClaudeSession(text: string): ParsedSession {
   return session
 }
 
-function parseJson(text: unknown): unknown {
+export function parseJson(text: unknown): unknown {
   if (typeof text !== 'string') return text
   try {
     return JSON.parse(text)
@@ -162,7 +162,7 @@ function parseJson(text: unknown): unknown {
   }
 }
 
-function codexTool(payload: Json): { name: unknown; input: unknown } | null {
+export function codexTool(payload: Json): { name: unknown; input: unknown } | null {
   if (payload.type === 'function_call') return { name: payload.name, input: parseJson(payload.arguments) }
   if (payload.type === 'custom_tool_call') return { name: payload.name, input: payload.input }
   if (payload.type === 'local_shell_call') {
@@ -203,7 +203,7 @@ export function parseCodexSession(text: string): ParsedSession {
   return session
 }
 
-function geminiMessages(text: string): { messages: Json[]; summary?: string; startedAt?: number; updatedAt?: number } {
+export function geminiMessages(text: string): { messages: Json[]; summary?: string; startedAt?: number; updatedAt?: number } {
   const order: string[] = []
   const byId = new Map<string, Json>()
   const anonymous: Json[] = []

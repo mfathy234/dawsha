@@ -32,7 +32,9 @@ import { installBuiltinCommands } from './commands/builtin'
 import { installCompareCommands } from './commands/compare'
 import { installHandoffCommands } from './commands/handoff'
 import { installLayoutCommands } from './commands/layouts'
+import { installReplayCommands } from './commands/replay'
 import { installSnippetCommands } from './commands/snippets'
+import { installSettingsTransferCommands } from './commands/settingsTransfer'
 import { installKeyboard } from './keyboard'
 import { store } from './state'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
@@ -76,6 +78,8 @@ async function boot(): Promise<void> {
     },
     onFocus: (termId) => {
       const paneId = paneOfTerm(termId)
+      // Typing into the board's peek must not leave the board for the grid.
+      if (paneId && store.state.boardPeekId === paneId && store.state.settings.sessionsLayout === 'board') return
       if (paneId) focusPane(paneId, true)
     }
   })
@@ -100,7 +104,9 @@ async function boot(): Promise<void> {
   installLayoutCommands()
   installCompareCommands()
   installHandoffCommands()
+  installReplayCommands()
   installSnippetCommands()
+  installSettingsTransferCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)
   initWhatsNew()

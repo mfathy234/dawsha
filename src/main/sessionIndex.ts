@@ -178,11 +178,7 @@ async function enrich(candidate: Candidate, names: Map<string, string>): Promise
   return session
 }
 
-export async function listAllSessions(
-  projects: Project[],
-  query: ResumeQuery = {},
-  homes: SessionHomes = defaultHomes()
-): Promise<ResumeSession[]> {
+async function gather(projects: Project[], query: ResumeQuery, homes: SessionHomes) {
   const scope = projects.filter((p) => !query.projectId || p.id === query.projectId)
   const wanted = (agent: AgentKind): boolean => !query.agent || query.agent === agent
   const [claude, codex, gemini, names] = await Promise.all([
@@ -192,6 +188,40 @@ export async function listAllSessions(
     readFile(join(homes.codex, 'session_index.jsonl'), 'utf8').then(parseSessionIndex, () => new Map<string, string>())
   ])
   const candidates = [...claude, ...codex, ...gemini].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, MAX_SCANNED)
+  return { scope, names, candidates }
+}
+
+export interface SessionSource {
+  session: ResumeSession
+  path: string
+}
+
+/** Every known session of the chosen projects and agent, newest first, with the log file each one lives in. */
+export async function listSessionSources(
+  projects: Project[],
+  query: Pick<ResumeQuery, 'projectId' | 'agent' | 'limit'> = {},
+  homes: SessionHomes = defaultHomes()
+): Promise<SessionSource[]> {
+  const { candidates, names } = await gather(projects, query, homes)
+  const limit = query.limit ?? MAX_SCANNED
+  const out: SessionSource[] = []
+  const seen = new Set<string>()
+  for (const candidate of candidates) {
+    if (out.length >= limit) break
+    const session = await enrich(candidate, names)
+    if (!session || seen.has(`${session.agent}:${session.id}`)) continue
+    seen.add(`${session.agent}:${session.id}`)
+    out.push({ session, path: candidate.path })
+  }
+  return out
+}
+
+export async function listAllSessions(
+  projects: Project[],
+  query: ResumeQuery = {},
+  homes: SessionHomes = defaultHomes()
+): Promise<ResumeSession[]> {
+  const { scope, names, candidates } = await gather(projects, query, homes)
   const limit = query.limit ?? RESUME_LIMIT
   const names_ = new Map(scope.map((p) => [p.id, p.name]))
   const sessions: ResumeSession[] = []

@@ -5,6 +5,7 @@ import { deviceNameFromAgent, pairingCodeFromHash } from '../../shared/remotePai
 import { DEFAULT_THEME_ID, findTheme } from '../../shared/themes'
 import type { AgentKind } from '../../shared/types'
 import { TERMINAL_FONT } from '../terminalFont'
+import { initApprovals, reconnectApprovals, refresh as refreshApprovals, setApprovalsEnabled, setApprovalsVisible } from './approvals'
 import './remote.css'
 
 interface RemoteSession { id: string; title: string; modifiedAt: number; agent: AgentKind }
@@ -14,9 +15,9 @@ interface RemoteState {
   device: { id: string; name: string } | null
   projects: RemoteProject[]
   terminals: RemoteTerminal[]
-  permissions: { read: boolean; terminalInput: boolean; sessionControl: boolean }
+  permissions: { read: boolean; terminalInput: boolean; sessionControl: boolean; approvals?: boolean }
 }
-type BrowserView = 'sessions' | 'projects' | 'terminal'
+type BrowserView = 'sessions' | 'projects' | 'terminal' | 'approvals'
 
 class RemoteRequestError extends Error {
   constructor(message: string, readonly status: number) { super(message) }
@@ -33,6 +34,8 @@ const workspaceView = document.querySelector<HTMLElement>('#workspace-view')!
 const sessionsView = document.querySelector<HTMLElement>('#sessions-view')!
 const projectsView = document.querySelector<HTMLElement>('#projects-view')!
 const terminalView = document.querySelector<HTMLElement>('#terminal-view')!
+const approvalsView = document.querySelector<HTMLElement>('#approvals-view')!
+const approvalsBadge = document.querySelector<HTMLElement>('#approvals-badge')!
 const connectionDot = document.querySelector<HTMLElement>('#connection-dot')!
 const connectionLabel = document.querySelector<HTMLElement>('#connection-label')!
 const pairForm = document.querySelector<HTMLFormElement>('#pair-form')!
@@ -808,16 +811,22 @@ function render(): void {
   document.querySelector<HTMLButtonElement>('#empty-new-session')!.hidden = !canStart
   const sessionsButton = document.querySelector<HTMLButtonElement>('#remote-nav-sessions')!
   const projectsButton = document.querySelector<HTMLButtonElement>('#remote-nav-projects')!
+  const approvalsButton = document.querySelector<HTMLButtonElement>('#remote-nav-approvals')!
   sessionsButton.classList.toggle('selected', currentView === 'sessions' || currentView === 'terminal')
   projectsButton.classList.toggle('selected', currentView === 'projects')
   sessionsButton.setAttribute('aria-pressed', String(currentView === 'sessions' || currentView === 'terminal'))
   projectsButton.setAttribute('aria-pressed', String(currentView === 'projects'))
+  approvalsButton.classList.toggle('selected', currentView === 'approvals')
+  approvalsButton.setAttribute('aria-pressed', String(currentView === 'approvals'))
+  approvalsView.hidden = currentView !== 'approvals'
+  setApprovalsEnabled(state.permissions.approvals === true)
+  setApprovalsVisible(currentView === 'approvals')
   sessionsView.hidden = currentView !== 'sessions'
   projectsView.hidden = currentView !== 'projects'
   terminalView.hidden = currentView !== 'terminal'
   if (currentView === 'sessions') renderSessionOverview()
   else if (currentView === 'projects') renderProjects()
-  else renderTerminal()
+  else if (currentView === 'terminal') renderTerminal()
 }
 
 async function loadState(initial: boolean): Promise<void> {
@@ -862,6 +871,18 @@ pairForm.addEventListener('submit', (event) => {
 document.querySelector<HTMLButtonElement>('#remote-retry')!.addEventListener('click', () => void loadState(true))
 document.querySelector<HTMLButtonElement>('#remote-nav-sessions')!.addEventListener('click', () => setView('sessions'))
 document.querySelector<HTMLButtonElement>('#remote-nav-projects')!.addEventListener('click', () => setView('projects'))
+document.querySelector<HTMLButtonElement>('#remote-nav-approvals')!.addEventListener('click', () => setView('approvals'))
+window.addEventListener('dawsha-open-approvals', () => setView('approvals'))
+initApprovals({
+  root: document.querySelector<HTMLElement>('#approvals-root')!,
+  host: {
+    request: apiRequest,
+    endpoint,
+    onBadge: (count) => { approvalsBadge.textContent = String(count); approvalsBadge.hidden = count === 0 },
+    onUnpaired: () => showPair('This browser was revoked from Dawsha. Pair again to reconnect.')
+  }
+})
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { reconnectApprovals(); void refreshApprovals() } })
 document.querySelector<HTMLButtonElement>('#remote-new-session')!.addEventListener('click', () => showSessionDialog(activeProjectId ?? undefined))
 document.querySelector<HTMLButtonElement>('#empty-new-session')!.addEventListener('click', () => showSessionDialog(activeProjectId ?? undefined))
 document.querySelector<HTMLButtonElement>('#terminal-back')!.addEventListener('click', () => setView('sessions'))
@@ -899,4 +920,8 @@ syncViewportHeight()
 window.addEventListener('focus', () => void loadState(false))
 window.setInterval(() => { if (!document.hidden && state) void loadState(false) }, 5000)
 
+if (location.hash === '#approvals') {
+  currentView = 'approvals'
+  history.replaceState(null, '', location.pathname + location.search)
+}
 void loadState(true)

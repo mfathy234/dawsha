@@ -39,6 +39,11 @@ import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type Bridg
 import type { OpsWatcher } from './opsWatcher'
 import type { StatusWatcher } from './statusWatcher'
 import { exportTranscript } from './transcriptExport'
+import { exportSettings, readSettingsImport } from './settingsTransfer'
+import { exportTimeline, sessionTimeline } from './sessionTimeline'
+import { searchTimelines } from './timelineSearch'
+import type { TimelineSearchRequest } from '../shared/timelineSearch'
+import type { TimelineExportRequest, TimelineRequest } from '../shared/timeline'
 import { platformExecutableDirs, resolveExecutable } from './executables'
 import type { PtyManager } from './ptyManager'
 import { readSessions } from './sessionsWatcher'
@@ -50,6 +55,7 @@ import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
 import type { RemoteAccessSettings } from '../shared/types'
 import type { createRemoteAccessController } from './remoteAccessController'
+import type { RecordingService } from './recordings'
 
 function checkFolder(path: string): FolderCheck {
   if (typeof path !== 'string' || path.trim() === '') return { ok: false, error: 'Enter a folder.' }
@@ -78,7 +84,8 @@ export function registerIpc(
   ops: OpsWatcher,
   usage: UsageService,
   initialWarning: string | null,
-  remoteAccess?: ReturnType<typeof createRemoteAccessController>
+  remoteAccess?: ReturnType<typeof createRemoteAccessController>,
+  recordings?: RecordingService
 ): void {
   const locations = (): BridgeLocations => ({
     settingsPath: claudeSettingsPath(),
@@ -99,6 +106,8 @@ export function registerIpc(
     return result
   })
   ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => settings.update(patch))
+  ipcMain.handle(IPC.settingsExport, () => exportSettings(getWindow(), settings.get()))
+  ipcMain.handle(IPC.settingsImportRead, () => readSettingsImport(getWindow()))
   if (remoteAccess) {
     ipcMain.handle(IPC.remoteAccessGet, () => remoteAccess.getState())
     ipcMain.handle(IPC.remoteAccessEnable, () => remoteAccess.enable())
@@ -106,6 +115,7 @@ export function registerIpc(
     ipcMain.handle(IPC.remoteAccessPairing, () => remoteAccess.refreshPairing())
     ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: Partial<RemoteAccessSettings>) => remoteAccess.setPermissions(patch))
     ipcMain.handle(IPC.remoteAccessEmail, (_event, email: string) => remoteAccess.setAllowedEmail(email))
+    ipcMain.handle(IPC.remoteApprovalAnswered, (_event, terminalId: string, allowed: boolean, tail?: string) => remoteAccess.recordDesktopApproval(terminalId, allowed, tail))
     ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteAccess.revoke(id))
   }
   ipcMain.handle(IPC.paneonImportPreview, () => previewPaneonImport(paneonUserDataDir(), app.getPath('userData')))
@@ -201,6 +211,22 @@ export function registerIpc(
     const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
     return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
   })
+  if (recordings) {
+    ipcMain.handle(IPC.recordingsList, () => recordings.list())
+    ipcMain.handle(IPC.recordingsRead, (_event, id: unknown) => recordings.read(id))
+    ipcMain.handle(IPC.recordingsStats, () => recordings.stats())
+    ipcMain.handle(IPC.recordingsDeleteAll, () => recordings.deleteAll())
+    ipcMain.handle(IPC.recordingsOpenFolder, async () => {
+      const error = await shell.openPath(await recordings.ensureRoot())
+      if (error) throw new Error(error)
+    })
+    ipcMain.handle(IPC.recordingsPause, (_event, id: unknown, paused: unknown) =>
+      typeof id === 'string' ? recordings.setPaused(id, typeof paused === 'boolean' ? paused : null) : null
+    )
+    ipcMain.on(IPC.recordingsTitle, (_event, id: unknown, title: unknown) => {
+      if (typeof id === 'string' && typeof title === 'string') recordings.setTitle(id, title)
+    })
+  }
   ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => ptys.spawn(request))
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))
   ipcMain.on(IPC.ptyResize, (_event, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))
@@ -211,6 +237,9 @@ export function registerIpc(
   })
   ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
+  ipcMain.handle(IPC.timelineSession, (_event, request: TimelineRequest) => sessionTimeline(request))
+  ipcMain.handle(IPC.timelineExport, (_event, request: TimelineExportRequest) => exportTimeline(getWindow(), request))
+  ipcMain.handle(IPC.timelineSearch, (_event, request: TimelineSearchRequest) => searchTimelines(request, settings.get().projects))
   ipcMain.handle(IPC.compareProbe, (_event, folder: string) => probeRepo(folder))
   ipcMain.handle(IPC.compareCreate, (_event, folder: string, short: string) => createWorktrees(folder, short))
   ipcMain.handle(IPC.compareStatus, (_event, repo: string, path: string, branch: string) => worktreeStatus(repo, path, branch))
