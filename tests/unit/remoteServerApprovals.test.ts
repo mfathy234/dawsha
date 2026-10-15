@@ -30,7 +30,7 @@ async function bodyJson(response: IncomingMessage): Promise<Record<string, any>>
 }
 
 const payload: ApprovalsPayload = {
-  items: [{ id: 't1', projectId: 'p1', projectName: 'billing-api', agent: 'codex', title: 'Codex needs you', text: 'Bash command\n npm test', kind: 'command', summary: 'npm test', fingerprint: '0123456789abcdef', since: 1, restriction: null, canAllow: true }],
+  items: [{ id: 't1', projectId: 'p1', projectName: 'billing-api', agent: 'codex', title: 'Codex needs you', text: 'Bash command\n npm test', kind: 'command', summary: 'npm test', fingerprint: '0123456789abcdef', since: 1, restriction: null, allowBlock: null, canAllow: true }],
   history: [],
   notify: true
 }
@@ -148,6 +148,16 @@ describe('approval endpoints', () => {
     } finally { await context.server.stop() }
   })
 
+  it('tells the phone why a deny reason was not sent', async () => {
+    const context = await setup()
+    context.auth.setPermissions({ approvals: true })
+    vi.mocked(context.approvals.answer).mockResolvedValueOnce({ ok: true, reasonSent: false, reasonFailure: 'new-prompt' })
+    try {
+      const response = await request(`${context.base}/approvals/answer`, { method: 'POST', headers: context.json, body: JSON.stringify({ ...context.answerBody, allow: false, reason: 'x' }) })
+      expect(await bodyJson(response)).toEqual({ ok: true, reasonSent: false, reasonFailure: 'new-prompt' })
+    } finally { await context.server.stop() }
+  })
+
   it('rate-limit answers per device', async () => {
     const context = await setup()
     context.auth.setPermissions({ approvals: true })
@@ -204,6 +214,22 @@ describe('approval stream', () => {
       socket.terminate()
       await vi.waitFor(() => expect(context.listeners.size).toBe(0))
     } finally { socket?.terminate(); await context.server.stop() }
+  })
+
+  it('has its own small cap, separate from terminal streams', async () => {
+    const context = await setup()
+    context.auth.setPermissions({ approvals: true })
+    const sockets: WebSocket[] = []
+    try {
+      for (let index = 0; index < 4; index += 1) {
+        const socket = open(context.server.port, context.headers)
+        sockets.push(socket)
+        await new Promise<void>((resolve, reject) => { socket.once('open', resolve); socket.once('error', reject) })
+      }
+      const fifth = open(context.server.port, context.headers)
+      sockets.push(fifth)
+      await expect(new Promise((resolve, reject) => { fifth.once('open', resolve); fifth.once('error', reject) })).rejects.toBeTruthy()
+    } finally { for (const socket of sockets) socket.terminate(); await context.server.stop() }
   })
 
   it('closes when the permission is turned off', async () => {

@@ -353,9 +353,9 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     return getState()
   }
 
-  async function recordDesktopApproval(terminalId: string, allowed: boolean): Promise<void> {
+  async function recordDesktopApproval(terminalId: string, allowed: boolean, tail?: string): Promise<void> {
     if (!server || typeof terminalId !== 'string' || typeof allowed !== 'boolean') return
-    await approvals.recordDesktopAnswer(terminalId, allowed)
+    await approvals.recordDesktopAnswer(terminalId, allowed, typeof tail === 'string' ? tail : undefined)
   }
 
   return { getState, recordDesktopApproval, enable, disable, refreshPairing, setPermissions, setAllowedEmail, revoke, stop }

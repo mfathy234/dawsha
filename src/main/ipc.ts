@@ -106,7 +106,7 @@ export function registerIpc(
     ipcMain.handle(IPC.remoteAccessPairing, () => remoteAccess.refreshPairing())
     ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: Partial<RemoteAccessSettings>) => remoteAccess.setPermissions(patch))
     ipcMain.handle(IPC.remoteAccessEmail, (_event, email: string) => remoteAccess.setAllowedEmail(email))
-    ipcMain.handle(IPC.remoteApprovalAnswered, (_event, terminalId: string, allowed: boolean) => remoteAccess.recordDesktopApproval(terminalId, allowed))
+    ipcMain.handle(IPC.remoteApprovalAnswered, (_event, terminalId: string, allowed: boolean, tail?: string) => remoteAccess.recordDesktopApproval(terminalId, allowed, tail))
     ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteAccess.revoke(id))
   }
   ipcMain.handle(IPC.paneonImportPreview, () => previewPaneonImport(paneonUserDataDir(), app.getPath('userData')))

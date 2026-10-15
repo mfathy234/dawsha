@@ -4,7 +4,12 @@ export type ApprovalKind = 'command' | 'edit' | 'other'
 export type ApprovalRestriction = 'outside-project' | 'config'
 export type ApprovalAnswerSource = 'phone' | 'desktop'
 
+export type ApprovalSelection = 'allow-once' | 'other' | 'unknown'
+export type AllowBlock = ApprovalRestriction | 'truncated' | 'kind' | 'selection'
+
 export interface ExtractedPrompt {
+  selected: ApprovalSelection
+  truncated: boolean
   text: string
   kind: ApprovalKind
   summary: string
@@ -23,6 +28,7 @@ export interface ApprovalItem {
   fingerprint: string
   since: number
   restriction: ApprovalRestriction | null
+  allowBlock: AllowBlock | null
   canAllow: boolean
 }
 
@@ -61,6 +67,9 @@ const OPTION_LINE = /^\W{0,3}\d\.\s+\S/
 const HINT_LINE = /Esc to cancel|esc to cancel/
 const COMMAND_HEADER = /\b(Bash command|run the following command|run this command|Run shell command|Allow execution|wants to run|Shell command)\b/i
 const EDIT_HEADER = /\b(Edit file|Create file|Write file|Update file|Overwrite file|make (?:this|the following) edits?|Apply (?:this )?(?:change|patch)|edit to|wants to (?:edit|create|write)|Do you want to (?:create|overwrite|write))\b/i
+const CURSOR_OPTION = /^[❯›▶●◉>]\s*(\d)\.\s+(.*)$/
+const ALLOW_ONCE_LABEL = /^(Yes|Allow once|Yes, proceed|Yes, just this once)\b/i
+const BROAD_LABEL = /(don'?t ask|do not ask|always|all edits|allow all|this session|every time|and allow|remember|from now on)/i
 const QUESTION = /Do you want to|Would you like to|Allow |Apply this/i
 
 export function stripAnsi(value: string): string {
@@ -125,6 +134,16 @@ function summarize(lines: string[], kind: ApprovalKind): string {
   return cap(pick.trim(), MAX_SUMMARY)
 }
 
+export function selectedOption(options: string[]): ApprovalSelection {
+  for (const line of options) {
+    const match = CURSOR_OPTION.exec(line)
+    if (!match) continue
+    const label = match[2].replace(/’/g, "'")
+    return match[1] === '1' && ALLOW_ONCE_LABEL.test(label) && !BROAD_LABEL.test(label) ? 'allow-once' : 'other'
+  }
+  return 'unknown'
+}
+
 export function extractPermissionPrompt(tail: string): ExtractedPrompt | null {
   if (!detectPermissionPrompt(stripAnsi(tail))) return null
   const lines = cleanLines(tail)
@@ -138,13 +157,17 @@ export function extractPermissionPrompt(tail: string): ExtractedPrompt | null {
   const found = lines.slice(windowStart, yes).findIndex((line) => COMMAND_HEADER.test(line) || EDIT_HEADER.test(line))
   const block = lines.slice(found >= 0 ? windowStart + found : Math.max(0, yes - CONTEXT_LINES), end + 1)
   const joined = block.join('\n')
+  const truncated = found < 0 || joined.length > MAX_PROMPT_TEXT
   const text = joined.length > MAX_PROMPT_TEXT ? `…${joined.slice(joined.length - MAX_PROMPT_TEXT + 1)}` : joined
   const kind = classifyPrompt(text)
-  return { text, kind, summary: summarize(block, kind), fingerprint: hashText(text) }
+  return { selected: selectedOption(lines.slice(yes, end + 1)), truncated, text, kind, summary: summarize(block, kind), fingerprint: hashText(text) }
 }
 
 const CONFIG_PATTERNS: RegExp[] = [
-  /(^|\/)\.github\//,
+  /(^|\/)\.(github|claude|git|husky|vscode)\//,
+  /(^|\/)\.npmrc$/,
+  /(^|\/)makefile$/,
+  /\.(sh|ps1|bat|cmd)$/,
   /(^|\/)\.gitlab-ci\.ya?ml$/,
   /\.ya?ml$/,
   /(^|\/)package\.json$/,

@@ -474,7 +474,7 @@ test('Remote Access settings show a QR code that opens the page with the pairing
   }
 })
 
-interface FakeApproval { id: string; projectId: string; projectName: string; agent: string; title: string; text: string; kind: string; summary: string; fingerprint: string; since: number; restriction: string | null; canAllow: boolean }
+interface FakeApproval { allowBlock: string | null; id: string; projectId: string; projectName: string; agent: string; title: string; text: string; kind: string; summary: string; fingerprint: string; since: number; restriction: string | null; canAllow: boolean }
 
 const approvalCard = (id: string, overrides: Partial<FakeApproval> = {}): FakeApproval => ({
   id,
@@ -488,6 +488,7 @@ const approvalCard = (id: string, overrides: Partial<FakeApproval> = {}): FakeAp
   fingerprint: '0123456789abcdef',
   since: Date.now() - 60_000,
   restriction: null,
+  allowBlock: null,
   canAllow: true,
   ...overrides
 })
@@ -528,7 +529,7 @@ test('phone approvals: list, allow, deny with a reason, and a restricted edit th
   const controls: MockControls = { paired: true, canControl: false, approvals: true, writes: [], writeTimes: [], inputAttempts: [], inputFailures: 0, inputDelayMs: 0, resizes: [], sessions: [], stoppedSessionIds: new Set(), outputConnections: 0, closeFirstOutput: false, terminalEnded: false }
   const pending = [
     approvalCard('terminal-1'),
-    approvalCard('terminal-2', { agent: 'claude', title: 'Claude needs you', projectName: 'mobile-shell', kind: 'edit', summary: 'Edit .github/workflows/ci.yml', text: 'Edit file\n.github/workflows/ci.yml\n 15 +   timeout-minutes: 20', fingerprint: 'fedcba9876543210', restriction: 'config', canAllow: false }),
+    approvalCard('terminal-2', { agent: 'claude', title: 'Claude needs you', projectName: 'mobile-shell', kind: 'edit', summary: 'Edit .github/workflows/ci.yml', text: 'Edit file\n.github/workflows/ci.yml\n 15 +   timeout-minutes: 20', fingerprint: 'fedcba9876543210', restriction: 'config', allowBlock: 'config', canAllow: false }),
     approvalCard('terminal-3', { fingerprint: '1111222233334444', summary: 'npm run build' })
   ]
   const answers: Array<{ id: string; allow: boolean; reason?: string }> = []
@@ -536,7 +537,7 @@ test('phone approvals: list, allow, deny with a reason, and a restricted edit th
     browser = await chromium.launch({ headless: true })
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     await installApiMocks(page, controls)
-    await installApprovalMocks(page, pending, answers)
+    const mocks = await installApprovalMocks(page, pending, answers)
     await page.goto(url)
     await expect(page.locator('#approvals-badge')).toHaveText('3')
     await page.locator('#remote-nav-approvals').click()
@@ -550,6 +551,11 @@ test('phone approvals: list, allow, deny with a reason, and a restricted edit th
     const allowBox = await page.locator('.approval-card').first().getByRole('button', { name: 'Allow once' }).boundingBox()
     expect(allowBox?.height).toBeGreaterThanOrEqual(44)
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
+    await expect(page.locator('.approval-card').first()).toContainText('Commands run with your user')
+    await page.locator('.approval-card').first().evaluate((element) => { element.setAttribute('data-keep', 'yes') })
+    mocks.pushed()
+    await page.waitForTimeout(200)
+    await expect(page.locator('.approval-card[data-keep="yes"]')).toHaveCount(1)
     await page.screenshot({ path: 'test-results/screens/remote-approvals.png' })
 
     await page.locator('.approval-card').first().getByRole('button', { name: 'Allow once' }).click()

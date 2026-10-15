@@ -42,6 +42,30 @@ const editPrompt = (file: string): string => box([
   '  3. No, and tell Claude what to do differently (esc)'
 ])
 
+describe('selected option and truncation', () => {
+  it('reads the highlighted option for Claude and Codex style prompts', () => {
+    expect(extractPermissionPrompt(bashPrompt)?.selected).toBe('allow-once')
+    expect(extractPermissionPrompt(bashPrompt.replace('❯ 1. Yes', '› 1. Yes, proceed (y)'))?.selected).toBe('allow-once')
+    expect(extractPermissionPrompt(bashPrompt.replace('❯ 1. Yes', '  1. Yes').replace('  2. Yes', '❯ 2. Yes'))?.selected).toBe('other')
+    expect(extractPermissionPrompt(bashPrompt.replace('❯ 1. Yes', '❯ 1. Yes, and don\u2019t ask again'))?.selected).toBe('other')
+    expect(extractPermissionPrompt(bashPrompt.replace('❯ 1. Yes', '  1. Yes'))?.selected).toBe('unknown')
+  })
+
+  it('marks a prompt truncated when its header is out of view or its text was capped', () => {
+    expect(extractPermissionPrompt(bashPrompt)?.truncated).toBe(false)
+    const noHeader = box(['  npm run build', 'Do you want to proceed?', '❯ 1. Yes', '  2. No'])
+    expect(extractPermissionPrompt(noHeader)?.truncated).toBe(true)
+    const long = box(['Bash command', `  ${'x'.repeat(4000)}`, 'Do you want to proceed?', '❯ 1. Yes', '  2. No'])
+    expect(extractPermissionPrompt(long)?.truncated).toBe(true)
+  })
+
+  it('restricts hook, tooling and script paths', () => {
+    for (const path of ['.claude/settings.json', '.git/hooks/pre-commit', '.husky/pre-push', '.npmrc', '.vscode/tasks.json', 'Makefile', 'scripts/deploy.sh', 'build.ps1', 'run.bat', 'x.cmd']) {
+      expect(isConfigPath(path), path).toBe(true)
+    }
+  })
+})
+
 describe('extractPermissionPrompt', () => {
   it('returns null when no permission prompt is showing', () => {
     expect(extractPermissionPrompt('')).toBeNull()

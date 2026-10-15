@@ -28,6 +28,7 @@ const REMOTE_API_PATHS = new Set([
 const MAX_BODY_BYTES = 16 * 1024
 const MAX_TERMINAL_INPUT = 4096
 const MAX_REASON_INPUT = 600
+const MAX_APPROVAL_CLIENTS = 4
 const APPROVALS_DISABLED = 'Answering permission prompts is turned off in Dawsha settings.'
 const MAX_OUTPUT_CLIENTS = 8
 const MAX_REMOTE_SESSIONS_PER_PROJECT = 15
@@ -176,6 +177,7 @@ async function serveAsset(options: RemoteServerOptions, pathname: string, respon
 
 export async function startRemoteServer(options: RemoteServerOptions): Promise<RemoteServerHandle> {
   const streams = new Set<WebSocket>()
+  const approvalStreams = new Set<WebSocket>()
   const cleanups = new Map<WebSocket, () => void>()
   const rateLimits = new Map<string, Map<string, { windowStarted: number; count: number }>>()
   let stopped = false
@@ -391,7 +393,7 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         sendJson(response, result.status, { error: result.error })
         return
       }
-      sendJson(response, 200, { ok: true, reasonSent: result.reasonSent })
+      sendJson(response, 200, { ok: true, reasonSent: result.reasonSent, ...(result.reasonFailure ? { reasonFailure: result.reasonFailure } : {}) })
       return
     }
 
@@ -581,10 +583,11 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
     const valid = !stopped && Boolean(approvals) && safeHost(hostname) && hostname.endsWith('.trycloudflare.com') &&
       expectedHosts.has(request.headers.host?.toLowerCase() ?? '') && request.headers.origin === origin && request.method === 'GET' &&
       Boolean(token && device && options.auth.can(token, 'approvals')) &&
-      Boolean(device && withinRateLimit(device.id, 'stream', 30)) && streams.size < MAX_OUTPUT_CLIENTS
+      Boolean(device && withinRateLimit(device.id, 'approvals-stream', 30)) && approvalStreams.size < MAX_APPROVAL_CLIENTS
     if (!valid || !approvals || !token || !device) { socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); socket.destroy(); return }
     websocketServer.handleUpgrade(request, socket, head, (ws) => {
       streams.add(ws)
+      approvalStreams.add(ws)
       let alive = true
       ws.on('pong', () => { alive = true })
       const send = (event: string, data: unknown): void => {
@@ -616,7 +619,7 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         }
       }, options.heartbeatIntervalMs ?? 15000)
       heartbeat.unref()
-      const cleanup = (): void => { clearInterval(heartbeat); removeSubscription(); removeRevoke(); streams.delete(ws); cleanups.delete(ws) }
+      const cleanup = (): void => { clearInterval(heartbeat); removeSubscription(); removeRevoke(); streams.delete(ws); approvalStreams.delete(ws); cleanups.delete(ws) }
       cleanups.set(ws, cleanup)
       ws.on('message', () => ws.close(1008, 'Approvals socket does not accept commands'))
       ws.on('close', cleanup)
