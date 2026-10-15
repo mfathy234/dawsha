@@ -134,9 +134,18 @@ export class TerminalView {
     let end = buffer.length - 1
     while (end >= top && text(end).trim() === '') end -= 1
     if (end < top) return ''
-    const start = this.term.rows >= rows ? Math.max(top, end - rows + 1) : Math.max(0, end - rows + 1)
+    let start = this.term.rows >= rows ? Math.max(top, end - rows + 1) : Math.max(0, end - rows + 1)
+    // Start at the beginning of a wrapped line, and join wrapped rows back into the line the program printed.
+    while (start > 0 && buffer.getLine(start)?.isWrapped) start -= 1
     const lines: string[] = []
-    for (let row = start; row <= end; row += 1) lines.push(text(row))
+    for (let row = start; row <= end; row += 1) {
+      const line = buffer.getLine(row)
+      // Keep trailing spaces of a row that continues on the next one, so words at the wrap stay apart.
+      const continues = row < end && buffer.getLine(row + 1)?.isWrapped === true
+      const value = line?.translateToString(!continues) ?? ''
+      if (line?.isWrapped && lines.length > 0) lines[lines.length - 1] += value
+      else lines.push(value)
+    }
     return lines.join('\n')
   }
 
