@@ -67,7 +67,12 @@ export class BoardComponent {
     const peeked = state.boardPeekId ? views.find((view) => view.pane.id === state.boardPeekId) : undefined
     if (state.boardPeekId !== null && !peeked) queueMicrotask(closePeek)
     this.peek.update(showing ? (peeked ?? null) : null)
-    if (!showing) return
+    if (!showing) {
+      // Close any open filter menu so it does not float over the grid.
+      this.projectFilter.dispose()
+      this.agentFilter.dispose()
+      return
+    }
     this.syncOptions(state, views)
     this.render(views)
   }

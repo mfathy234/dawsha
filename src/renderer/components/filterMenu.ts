@@ -26,6 +26,7 @@ export class FilterMenu {
   private options: FilterOption[] = []
   private current = ''
   private menu: HTMLElement | null = null
+  private listenTimer: ReturnType<typeof setTimeout> | null = null
   private items: HTMLElement[] = []
   private visible: FilterOption[] = []
   private search: HTMLInputElement | null = null
@@ -99,7 +100,10 @@ export class FilterMenu {
     this.el.setAttribute('aria-expanded', 'true')
     if (this.search) this.search.focus()
     else this.items[Math.max(0, this.items.findIndex((item) => item.getAttribute('aria-selected') === 'true'))]?.focus()
-    setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
+    this.listenTimer = setTimeout(() => {
+      this.listenTimer = null
+      document.addEventListener('pointerdown', this.outside, true)
+    }, 0)
   }
 
   private place(): void {
@@ -172,6 +176,8 @@ export class FilterMenu {
   }
 
   private close(refocus: boolean): void {
+    if (this.listenTimer !== null) clearTimeout(this.listenTimer)
+    this.listenTimer = null
     document.removeEventListener('pointerdown', this.outside, true)
     this.menu?.remove()
     this.menu = null

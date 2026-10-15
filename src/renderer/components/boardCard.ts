@@ -1,5 +1,5 @@
-import { answerPermission, openChanges, permissionTail } from '../actions'
-import { markReviewed, openPeek } from '../boardActions'
+import { openChanges, permissionTail } from '../actions'
+import { answerFromCard, markReviewed, openPeek } from '../boardActions'
 import type { PaneView } from '../derive'
 import { h } from '../dom'
 import { replayPane } from '../replayActions'
@@ -153,8 +153,8 @@ export class BoardCard {
       this.prompt = h('pre', { class: 'board-card-prompt' })
       this.body.append(this.prompt)
       this.actions.append(
-        h('button', { class: 'btn small primary', type: 'button', 'aria-label': `Allow for ${name}`, onClick: stop(() => answerPermission(paneId, true)) }, 'Allow'),
-        h('button', { class: 'btn small', type: 'button', 'aria-label': `Deny for ${name}`, onClick: stop(() => answerPermission(paneId, false)) }, 'Deny'),
+        h('button', { class: 'btn small primary', type: 'button', 'aria-label': `Allow for ${name}`, onClick: stop(() => answerFromCard(paneId, true)) }, 'Allow'),
+        h('button', { class: 'btn small', type: 'button', 'aria-label': `Deny for ${name}`, onClick: stop(() => answerFromCard(paneId, false)) }, 'Deny'),
         h('span', { class: 'board-spacer' }),
         h('button', { class: 'btn small ghost', type: 'button', 'aria-label': `Open ${name}`, onClick: stop(() => openPeek(paneId)) }, 'Open')
       )

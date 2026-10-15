@@ -1,6 +1,7 @@
 import { api } from './api'
 import { acknowledgeAttention } from './attention'
-import { closePane, focusPane } from './actions'
+import { answerPermission, closePane, focusPane, permissionTail } from './actions'
+import { detectPermissionPrompt } from '../shared/permissionPrompt'
 import { confirmDialog } from './components/dialogs'
 import { toast } from './components/toast'
 import { derivePanes } from './derive'
@@ -35,6 +36,11 @@ export function sendReply(paneId: string, text: string): boolean {
     toast(`${view.title} has exited. Restart it before replying.`)
     return false
   }
+  // Enter on a permission prompt picks its default answer, so a reply must never be typed into one.
+  if (store.state.attention[paneId] === 'needs' || detectPermissionPrompt(permissionTail(paneId))) {
+    toast(`Answer the permission in ${view.title} first.`)
+    return false
+  }
   terminal.insertText(reply)
   api.write(view.primaryTabId, '\r')
   return true
@@ -50,5 +56,18 @@ export async function closeReviewed(paneIds: readonly string[]): Promise<void> {
     confirmLabel: `Close ${count} ${noun}`
   })
   if (!confirmed) return
-  for (const id of paneIds) await closePane(id)
+  // A session may have started working or asked for permission while the dialog was open; leave those alone.
+  const stillReviewed = new Set(
+    derivePanes(store.state)
+      .filter((view) => view.status !== 'busy' && store.state.attention[view.pane.id] !== 'needs')
+      .map((view) => view.pane.id)
+  )
+  for (const id of paneIds) if (stillReviewed.has(id)) await closePane(id)
+}
+
+/** Answers a card's permission prompt, or opens the session when the prompt can't be read from the screen. */
+export function answerFromCard(paneId: string, allow: boolean): void {
+  if (answerPermission(paneId, allow)) return
+  toast('This prompt can’t be answered from the card. Opened the session so you can answer it there.')
+  openPeek(paneId)
 }
