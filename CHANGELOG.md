@@ -11,7 +11,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Act on sessions straight from their cards. Allow or Deny a permission prompt, see the last lines of a working session, open Changes, Timeline or Replay on a finished one, and mark it reviewed with a button or by dragging it to Reviewed. Close all reviewed sessions at once after a confirmation.
 - Peek at any card. Click it to see the session's live terminal beside the board and send it a reply, then Open in grid to jump into the pane. Escape closes the peek.
 - Filter the board by project and agent.
-- Move Dawsha to a new PC with Settings > General > Back up and move, or the palette ("Export settings…" and "Import settings…"). Export saves your projects, snippets, layouts, highlight rules and preferences to one file. Import shows what will change, then lets you Merge (add what is new, keep what you have) or Replace (after a confirmation that names what is replaced). Projects whose folders are missing on the new PC are flagged. Remote Access, open sessions and usage history are never exported.
+- Move Dawsha to a new PC with Settings > General > Back up and move, or the palette ("Export settings…" and "Import settings…"). Export saves your projects, snippets, layouts, highlight rules and preferences to one file. Import shows what will change, then lets you Merge (add what is new, keep what you have) or Replace (after a confirmation that names what is replaced). Projects whose folders are missing on the new PC are flagged. Remote Access, full-access settings, open sessions and usage history are never exported.
 
 ### Changed
 

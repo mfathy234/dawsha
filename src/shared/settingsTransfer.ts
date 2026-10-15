@@ -16,7 +16,6 @@ export const INCLUDED_KEYS = [
   'sessionsLayout',
   'recordings',
   'sessionInfo',
-  'fullAccess',
   'autoUpdateCheck',
   'sidebarCollapsed',
   'sidebarWidth',
@@ -30,7 +29,9 @@ export const EXCLUDED_KEYS = [
   'keptSessions',
   'tasks',
   'lastSeenVersion',
-  'onboardingDismissed'
+  'onboardingDismissed',
+  // Never carried between PCs: a shared file must not be able to switch agents to skipping permission prompts.
+  'fullAccess'
 ] as const satisfies readonly (keyof Settings)[]
 
 export type IncludedKey = (typeof INCLUDED_KEYS)[number]
@@ -87,7 +88,7 @@ export type ParseResult = { ok: true; transfer: ParsedTransfer } | { ok: false; 
 const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'snippets', 'layouts'] as const
-const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'fullAccess'] as const
+const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo'] as const
 const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'othersCollapsed'] as const
 
 function checkShapes(data: Raw): string | null {
@@ -195,7 +196,6 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['sessionsLayout', 'Sessions view'],
   ['recordings', 'Recording settings'],
   ['sessionInfo', 'Notifications'],
-  ['fullAccess', 'Agent full-access defaults'],
   ['autoUpdateCheck', 'Update checks'],
   ['sidebarCollapsed', 'Sidebar'],
   ['sidebarWidth', 'Sidebar'],

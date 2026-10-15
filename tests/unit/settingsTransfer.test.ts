@@ -135,6 +135,7 @@ describe('parseTransfer', () => {
   it('drops unknown keys and never carries remote access even when the file has it', () => {
     const data = parsed({
       remoteAccess: { allowedEmail: 'x@y.z', terminalInput: true },
+      fullAccess: { claude: true, codex: true, gemini: true },
       workspace: { panes: [] },
       keptSessions: [],
       whatever: 1,
@@ -237,9 +238,12 @@ describe('planImport replace', () => {
     expect(warning).toContain('2 open sessions')
   })
 
-  it('never touches remote access in the patch', () => {
+  it('never touches remote access or full access in the export or the patch', () => {
+    expect(INCLUDED_KEYS).not.toContain('fullAccess')
+    expect(Object.keys(buildTransferData(defaultSettings()))).not.toContain('fullAccess')
     const plan = run(rich(), parsed({ projects: [], sessionsLayout: 'board' }), 'replace')
     expect(Object.keys(plan.patch)).not.toContain('remoteAccess')
+    expect(Object.keys(plan.patch)).not.toContain('fullAccess')
     expect(importToastText(plan.summary)).toContain('Imported')
   })
 })
