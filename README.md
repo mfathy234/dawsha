@@ -53,10 +53,27 @@
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
 - **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab. Choose per agent whether sessions start with full access, on by default for Claude Code and Codex.
 - **Skills and agents inventory.** The **Skills** tab separates installed skills from agent definitions across user, plugin and project locations. Filter by AI provider, then open, copy a path or export an item to a folder you choose.
+- **Sessions board.** Switch the Sessions view from Grid to Board (Ctrl+Shift+B) for four columns: Needs you, Working, Done to review and Reviewed. Cards move by themselves as sessions change. Allow or Deny a permission prompt on the card, drag a finished session to Reviewed, click a card to peek at its live terminal and send a reply, and filter by project and agent.
+- **Session timeline.** Ctrl+Shift+T lists every prompt, edit, command, test run and approval of a session, with filters, search, insights (files touched most, commands run, test runs) and a Markdown export. **Ctrl+Alt+F** searches the timelines of all your sessions, including closed ones, and opens a match read only at the exact point.
+- **Replay.** Recorded terminals play back like a video, with markers for prompts and permission requests, search inside the recording, 4x and 16x speed and skipping of idle time. **Recording is opt-in**: it is off until you turn it on in Settings, recordings stay on your computer, you choose how many days and how many megabytes to keep, and you can pause recording per pane. Open Replay from the pane header, the timeline, the board or the palette.
+- **Phone approvals (beta).** The Remote Control page has an Approvals tab that lists the sessions waiting on you. Allow once, or Deny with a reason the agent reads. Notifications arrive while the page is open. Only a plain "Yes" can be allowed from the phone; edits to CI, config, `.git` and `.claude` files can only be denied by default.
+- **Back up and move.** Settings > Back up and move exports your settings to one JSON file, without remote-access secrets, and imports it on another computer with Merge or Replace.
 - **Paneon settings import.** If Paneon settings are found, Settings > General offers an import. Dawsha backs up its current settings and applies Paneon projects, layouts, snippets and preferences the next time you open Dawsha; Paneon remains untouched.
 - **Settings in one place.** A Settings view (Ctrl+,) for the palette shortcut, notifications and live session info, full access per agent, updates, the full changelog and where your data lives.
 - **Themes.** Seven themes (Dawsha, Dawsha Cards, Graphite Cards, Dawsha Daylight, Nord, Catppuccin Mocha, GitHub Light) with contrast checks, plus an optional background image. The Cards and Daylight themes draw each pane as a card with its terminal inset.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
+
+| Sessions board | Peek at a card |
+|---|---|
+| ![The sessions board with Needs you, Working, Done to review and Reviewed columns](docs/screenshots/board.png) | ![A board card peeked open beside the board with a reply box](docs/screenshots/board-peek.png) |
+
+| Session timeline | Search all sessions |
+|---|---|
+| ![A session timeline with filters, insights and events](docs/screenshots/timeline.png) | ![Searching all sessions for rate limit, with matches grouped by session](docs/screenshots/timeline-search.png) |
+
+| Replay | Phone approvals |
+|---|---|
+| ![A recorded session in Replay stopped at a permission prompt](docs/screenshots/replay.png) | ![The Remote Control Approvals tab on a phone](docs/screenshots/remote-approvals.png) |
 
 | Focus a pane and open its details | Sub-agents drawer |
 |---|---|
@@ -161,6 +178,8 @@ Tip: run `dawsha .` in any folder to open it in Dawsha.
 | Ctrl+Shift+Alt+Home / End | Move the focused pane to the first / last position |
 | Ctrl+Shift+J | Go to the next pane that needs you (a permission prompt first, then a finished session) |
 | Ctrl+Shift+B | Switch the Sessions view between Grid and Board |
+| Ctrl+Shift+T | Show or hide the focused session's timeline |
+| Ctrl+Alt+F | Search the timelines of all sessions, including closed ones |
 | Ctrl+, | Open Settings |
 | Ctrl+Shift+F | Find in the focused terminal: Enter next, Shift+Enter previous, Esc closes |
 | Ctrl+Shift+G | Changes: review, commit, commit and push, or discard the pane's changed files |
@@ -323,7 +342,7 @@ Resumed 'Add dark mode toggle' (Claude Code) in pane 4
 
 ### Closing
 
-Closing a pane or removing a project asks for confirmation that names the session or project, then stops the whole process tree. Quitting stops all terminals but remembers which panes were open.
+Removing a project always asks for confirmation. Closing a pane asks only while its session is working; idle, done and exited sessions close straight away. Both name the session or project, then stop the whole process tree. Quitting stops all terminals but remembers which panes were open.
 
 ### The Agents view
 
@@ -355,11 +374,16 @@ Both are optional and off until you turn them on.
 
 **Activity and optional ops feed.** Each live pane discovers activity from its own app-launched process tree, so the activity drawer works for Claude, Codex and Gemini without a mod. A Claude Code mod can additionally write a snapshot to `ops/<sessionId>.json` inside Dawsha's user-data folder (the legacy Claude Grid ops folder is read too). Dawsha only reads these files: it polls every second, keeps the last good parse of a file that is mid-write, ignores unknown fields and needs only `v`, `sessionId` and `updatedAt`. A snapshot belongs only to the pane whose Claude session ID matches and adds plan and sub-agent detail. Context and available rate limits are displayed per pane; unavailable limits are not borrowed from another agent.
 
+### Recording and Replay
+
+Recording is **opt-in** and off by default. Turn it on in Settings, in the recording section, to save what each terminal prints as an asciicast file under `recordings\<date>\` in the user-data folder. Recordings never leave your computer. Choose how many days to keep them and the most disk they may use; Dawsha removes the oldest first. Pause recording for one pane from its menu. Replay (pane header, timeline, board card or the palette) is read only and never changes your files.
+
 ## Data and privacy
 
 Everything is in the Electron user-data folder: `%APPDATA%\Dawsha` on Windows or `~/Library/Application Support/Dawsha` on macOS:
 
 - `settings.json`: projects, theme, notification toggles, sidebar state, the open-panes workspace, saved layouts, snippets and the palette key.
+- `recordings\`: terminal recordings, only when recording is turned on in Settings.
 - `usage-history.json`: the last cost of each Claude Code session that reported one and the 5 hour and weekly limit readings, for the Usage view (written only when the live session info is on).
 - `bin\` and `status\`: the status-line script and the saved status payloads (only when the live toggle was used; files older than 7 days are removed).
 

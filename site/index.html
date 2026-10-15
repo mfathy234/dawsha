@@ -42,6 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
+      <a href="#new">New in 1.0</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -58,6 +59,7 @@
     <div class="wrap hero-grid">
       <div class="hero-copy">
         <img class="logo hero-logo" src="favicon.svg?v=0.2.0-2" width="40" height="40" alt="Dawsha logo: a terminal inside a speech bubble">
+        <a class="new-pill" href="#new"><strong>New in 1.0</strong><span>Board, timeline, replay and phone approvals</span></a>
         <p class="eyebrow">For Claude Code, Codex CLI and Gemini CLI</p>
         <h1>Every AI coding agent, one readable window.</h1>
         <p class="lead">Run Claude Code, Codex and Gemini side by side in large, readable terminals, one session per task.</p>
@@ -105,6 +107,53 @@
         <li><span class="mark brand gemini" aria-hidden="true"><svg width="15" height="15" aria-hidden="true" focusable="false" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg></span> Gemini CLI</li>
       </ul>
       <p class="muted">Your own installs and sign-ins. Dawsha never handles credentials.</p>
+    </div>
+  </section>
+
+  <section id="new" aria-labelledby="new-h">
+    <div class="wrap">
+      <h2 id="new-h">New in 1.0</h2>
+      <p class="section-lead">See what every session needs, look back at what it did, and answer from your phone.</p>
+      <div class="feat-row" id="board">
+        <div class="feat-copy">
+          <h3>Sessions board</h3>
+          <p>Switch the grid to a board with four columns: Needs you, Working, Done to review and Reviewed. Cards move by themselves as sessions change.</p>
+          <ul><li>Allow or Deny a permission prompt right on the card.</li><li>Click a card to peek at the live terminal and send a reply.</li><li>Drag a finished session to Reviewed, or close all reviewed sessions at once.</li><li>Filter by project and agent. Ctrl+Shift+B switches between the board and the grid.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/board.png" width="1600" height="1000" alt="The sessions board with four columns, Needs you, Working, Done to review and Reviewed, each holding a session card">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="timeline">
+        <div class="feat-copy">
+          <h3>Session timeline</h3>
+          <p>Every prompt, edit, command and test run of a session in one list, with insights on the files touched most and how the test runs went.</p>
+          <ul><li>Filter by Prompts, Edits, Commands, Tests or Approvals, and search inside the session.</li><li>Click an edit to see exactly what changed.</li><li>Export the timeline as Markdown. Ctrl+Shift+T opens it.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/timeline.png" width="1600" height="1000" alt="A session with its timeline open, listing prompts, edits and test runs, with insights for the files touched most and the test results">
+        </figure>
+      </div>
+      <div class="feat-row" id="search">
+        <div class="feat-copy">
+          <h3>Search every session, even closed ones</h3>
+          <p>Ctrl+Alt+F searches the prompts, replies, edits and commands of all your sessions, including ones you closed days ago.</p>
+          <ul><li>Matches are grouped by session, with the agent, project and date.</li><li>Open a match read only at the exact point, or resume the session from there.</li><li>Narrow the search by project, agent or kind of event.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/timeline-search.png" width="1600" height="1000" alt="Searching all sessions for rate limit, with matches grouped under two closed Claude sessions from different projects">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="replay">
+        <div class="feat-copy">
+          <h3>Replay</h3>
+          <p>Watch a recorded terminal play back like a video. Recording is off until you turn it on in Settings, and recordings never leave your computer.</p>
+          <ul><li>Jump between markers for prompts, permission requests and the end of the session.</li><li>Search the recording and jump to a match.</li><li>Skip idle time, play at 4x or 16x, or copy the text on screen.</li><li>Choose how long to keep recordings and how much disk they may use, and pause recording per pane. Open Replay from the pane header or the timeline.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/replay.png" width="1600" height="1000" alt="Replay of a recorded Claude Code session stopped at a permission prompt, with markers on the playback bar and a search box for the recording">
+        </figure>
+      </div>
     </div>
   </section>
 
@@ -157,6 +206,8 @@
         <p class="section-lead">Step away from your desk and keep going. Turn on Remote Access in Settings, open the link on your phone and enter the pairing code. Your sessions keep running on your computer.</p>
         <ul class="remote-points">
           <li><strong>The real terminal</strong><span>Claude Code and Codex redraw at your phone's size, so tables, code and prompts line up.</span></li>
+          <li><strong>Approve from your phone</strong><span>The Approvals tab lists every session waiting on you. Allow once, or Deny with a reason the agent reads. Notifications arrive while the page is open.</span></li>
+          <li><strong>Safe by default</strong><span>Only a plain Yes can be allowed from the phone. Edits to CI, config, .git and .claude files can only be denied; open Dawsha to allow them.</span></li>
           <li><strong>Reply from anywhere</strong><span>Type a message and send it. Esc, the arrow keys, Tab, Enter and Ctrl+C are one tap away for menus and approvals.</span></li>
           <li><strong>Start or resume sessions</strong><span>Open a new session in any project, or pick up a recent one.</span></li>
           <li><strong>You set the limits</strong><span>Paired browsers start read only. Allow typing and session control separately, and revoke a browser at any time.</span></li>
@@ -165,7 +216,7 @@
       </div>
       <div class="phones">
         <figure class="phone">
-          <img loading="lazy" src="assets/remote-sessions.png" width="780" height="1688" alt="Dawsha Remote on a phone listing running Claude and Codex sessions and recent sessions to resume">
+          <img loading="lazy" src="assets/remote-approvals.png" width="780" height="1688" alt="Dawsha Remote on a phone showing the Approvals tab with three agents waiting, each with Allow once and Deny buttons, and a file edit that can only be denied">
         </figure>
         <figure class="phone phone-raised">
           <img loading="lazy" src="assets/remote-terminal.png" width="780" height="1688" alt="Dawsha Remote on a phone showing a Claude Code reply with numbered steps and a code block, above a message box">
@@ -182,9 +233,9 @@
         <figcaption><strong>Activity at a glance.</strong> Native processes and optional Claude sub-agent progress sit beside each session.</figcaption>
       </figure>
       <div class="fgroups">
-        <div class="fgroup"><h3>Run</h3><ul><li><strong>Three agents in one grid</strong><span>Up to 6 real terminals. Resize, drag, pin or maximize any session, Ctrl+Tab between them.</span></li><li><strong>The dawsha command</strong><span>Start, resume and open layouts from the terminal you already use.</span></li><li><strong>Commit and push</strong><span>Review the changed files, commit the ones you pick or commit and push. Pull, switch branch and stash in a click.</span></li><li><strong>Layouts, snippets, instructions</strong><span>Restore a setup by name, insert snippets, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.</span></li><li><strong>Import existing settings</strong><span>Bring in projects and preferences from an earlier setup, with a backup of your current Dawsha settings.</span></li><li><strong>Themes</strong><span>Seven themes, including card-style light and dark themes, with contrast checks and an optional background image.</span></li><li><strong>Installed skills</strong><span>Browse, open, copy and export skills for every agent, including project skills.</span></li></ul></div>
+        <div class="fgroup"><h3>Run</h3><ul><li><strong>Three agents in one grid</strong><span>Up to 6 real terminals. Resize, drag, pin or maximize any session, Ctrl+Tab between them.</span></li><li><strong>The dawsha command</strong><span>Start, resume and open layouts from the terminal you already use.</span></li><li><strong>Commit and push</strong><span>Review the changed files, commit the ones you pick or commit and push. Pull, switch branch and stash in a click.</span></li><li><strong>Layouts, snippets, instructions</strong><span>Restore a setup by name, insert snippets, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.</span></li><li><strong>Import existing settings</strong><span>Bring in projects and preferences from an earlier setup, with a backup of your current Dawsha settings.</span></li><li><strong>Back up and move</strong><span>Export your settings to one JSON file without remote-access secrets, then import it on another computer with Merge or Replace.</span></li><li><strong>Themes</strong><span>Seven themes, including card-style light and dark themes, with contrast checks and an optional background image.</span></li><li><strong>Installed skills</strong><span>Browse, open, copy and export skills for every agent, including project skills.</span></li></ul></div>
         <div class="fgroup"><h3>Switch<img class="ill ill-hop brand-logo" src="favicon.svg?v=0.2.0-2" width="38" height="38" alt="Dawsha logo"></h3><ul><li><strong>Remote Control <span class="beta-badge">Beta</span></strong><span>Pair a browser with your running Dawsha app. Input and session controls stay off until you enable them.</span></li><li><strong>Resizable Projects panel</strong><span>Drag the sidebar edge to set a width that suits your projects; Dawsha remembers it.</span></li><li><strong>Find and resume sessions</strong><span>Ctrl+Shift+R searches prompts and replies. Choose the current project or include all projects.</span></li><li><strong>Keep closed sessions</strong><span>Closed tabs stay under their project until you remove them there. Resume one whenever you need it.</span></li><li><strong>Project tasks</strong><span>Keep a task timeline with notes, commit references and linked sessions.</span></li><li><strong>Command palette</strong><span>Ctrl+K finds sessions, projects, snippets and layouts.</span></li><li><strong>Find and copy</strong><span>Search any terminal, open files in their matching apps, and copy the last reply or the prompt you are typing.</span></li><li><strong>Ask two agents</strong><span>One prompt, two worktrees, two answers to compare.</span></li><li><strong>Continue in another agent</strong><span>Hand a session over with an editable summary, or export it as Markdown.</span></li></ul></div>
-        <div class="fgroup"><h3>Stay informed</h3><ul><li><strong>Needs-you alerts</strong><span>An amber border and a notification when a session needs your input.</span></li><li><strong>Highlights and context</strong><span>Errors stand out, and a nearly full session warns you before it runs out.</span></li><li><strong>Reset countdowns</strong><span>Claude sessions show the 5-hour and weekly reset countdowns when Claude reports them.</span></li><li><strong>Cost and usage</strong><span>Time, tokens and cost for every session, plus a full usage view.</span></li><li><strong>Gemini tool activity</strong><span>See Gemini's recent tools beside its session and in the agents drawer.</span></li><li><strong>In-app updates</strong><span>The installed build updates itself while sessions keep running.</span></li><li class="has-ill"><strong>Local by default</strong><span>No account or telemetry. Remote Control is optional and routes traffic through Cloudflare.</span><svg class="ill ill-lock" width="56" height="42" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" style="--dd:0ms" d="M9 5 Q9 3 11 3 L53 3.3 Q55 3.5 55 6 L54.6 33 Q54.5 35 52.5 35 L11 34.8 Q9 34.5 9 32.5Z"/><path class="dr" pathLength="1" style="--dd:200ms" d="M3 40 Q3 38 6 38 L58 38.4 Q61 38.5 61 40.5 Q61 43 58 43 L6 43 Q3 42.8 3 40Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M27 38.5 Q32 41 37 38.5"/><path class="fd" d="M25.5 20.5 Q25.5 19 27 19 L37 19.2 Q38.5 19.4 38.5 21 L38.3 28 Q38.2 29.6 36.7 29.6 L27 29.5 Q25.5 29.4 25.5 28Z" fill="#34d399" fill-opacity=".25" stroke="#34d399"/><circle class="fd" cx="32" cy="24" r="1.2" fill="#34d399" stroke="none"/><path class="shk" stroke="#34d399" d="M28.5 19 L28.4 15.5 Q28.5 11.5 32 11.5 Q35.5 11.5 35.6 15.5 L35.5 19"/></svg></li></ul></div>
+        <div class="fgroup"><h3>Stay informed</h3><ul><li><strong>Needs-you alerts</strong><span>An amber border and a notification when a session needs your input.</span></li><li><strong>Close confirmation</strong><span>Dawsha asks before closing a session only while it is working. Idle, done and exited sessions close straight away.</span></li><li><strong>Highlights and context</strong><span>Errors stand out, and a nearly full session warns you before it runs out.</span></li><li><strong>Reset countdowns</strong><span>Claude sessions show the 5-hour and weekly reset countdowns when Claude reports them.</span></li><li><strong>Cost and usage</strong><span>Time, tokens and cost for every session, plus a full usage view.</span></li><li><strong>Gemini tool activity</strong><span>See Gemini's recent tools beside its session and in the agents drawer.</span></li><li><strong>In-app updates</strong><span>The installed build updates itself while sessions keep running.</span></li><li class="has-ill"><strong>Local by default</strong><span>No account or telemetry. Remote Control is optional and routes traffic through Cloudflare.</span><svg class="ill ill-lock" width="56" height="42" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" style="--dd:0ms" d="M9 5 Q9 3 11 3 L53 3.3 Q55 3.5 55 6 L54.6 33 Q54.5 35 52.5 35 L11 34.8 Q9 34.5 9 32.5Z"/><path class="dr" pathLength="1" style="--dd:200ms" d="M3 40 Q3 38 6 38 L58 38.4 Q61 38.5 61 40.5 Q61 43 58 43 L6 43 Q3 42.8 3 40Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M27 38.5 Q32 41 37 38.5"/><path class="fd" d="M25.5 20.5 Q25.5 19 27 19 L37 19.2 Q38.5 19.4 38.5 21 L38.3 28 Q38.2 29.6 36.7 29.6 L27 29.5 Q25.5 29.4 25.5 28Z" fill="#34d399" fill-opacity=".25" stroke="#34d399"/><circle class="fd" cx="32" cy="24" r="1.2" fill="#34d399" stroke="none"/><path class="shk" stroke="#34d399" d="M28.5 19 L28.4 15.5 Q28.5 11.5 32 11.5 Q35.5 11.5 35.6 15.5 L35.5 19"/></svg></li></ul></div>
       </div>
     </div>
   </section>
