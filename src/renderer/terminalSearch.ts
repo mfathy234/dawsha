@@ -4,7 +4,7 @@ import { searchCountLabel } from '../shared/terminalSearch'
 import { h, icon } from './dom'
 import { ICONS } from './icons'
 
-const DECORATIONS = {
+export const SEARCH_DECORATIONS = {
   matchBackground: '#4a3f1c',
   matchBorder: '#8a7432',
   matchOverviewRuler: '#d4a72c',
@@ -81,7 +81,7 @@ export class TerminalSearch {
   }
 
   private options(incremental: boolean): ISearchOptions {
-    return { ...this.flags, incremental, decorations: DECORATIONS }
+    return { ...this.flags, incremental, decorations: SEARCH_DECORATIONS }
   }
 
   private step(direction: 1 | -1, incremental = false): void {

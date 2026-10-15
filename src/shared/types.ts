@@ -1,5 +1,6 @@
 import type { SessionBaseline } from './gitStatus'
 import type { HighlightSettings } from './highlights'
+import type { RecordingSettings } from './recordings'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
 export type SessionStatus = 'busy' | 'idle'
@@ -135,6 +136,7 @@ export interface Settings {
   fullAccess: FullAccess
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
+  recordings: RecordingSettings
 }
 
 export type FullAccess = Record<AgentKind, boolean>
@@ -290,6 +292,7 @@ export interface SpawnRequest {
   rows: number
   command?: string
   prompt?: string
+  title?: string
   fullAccess?: boolean
   desktopVisible?: boolean
   remoteManaged?: boolean

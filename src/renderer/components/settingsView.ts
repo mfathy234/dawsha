@@ -47,9 +47,10 @@ import { toast } from './toast'
 import { CHANGELOG_ENTRIES } from '../changelog'
 import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
+import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
-  { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar and setup.' },
+  { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
   { id: 'notifications', label: 'Notifications & session info', lede: 'What Dawsha shows and tells you while sessions run.' },
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
   { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
@@ -139,6 +140,7 @@ export class SettingsViewComponent {
       state.settings.sessionInfo,
       state.settings.autoUpdateCheck,
       state.settings.highlights,
+      state.settings.recordings,
       this.remoteAccess,
       this.remoteError,
       this.remoteBusy,
@@ -155,6 +157,11 @@ export class SettingsViewComponent {
     if (signature === this.signature) return
     this.signature = signature
     this.render(state)
+  }
+
+  show(): void {
+    invalidateRecordingStats()
+    this.refresh()
   }
 
   private refresh(): void {
@@ -460,6 +467,8 @@ export class SettingsViewComponent {
         h('button', { class: 'btn ghost small', type: 'button', id: 'getting-started', onClick: () => openOnboarding() }, 'Getting started…'),
         h('p', { class: 'hint' }, 'Reopen the setup guide for projects, agents and session info.')
       ),
+      h('h3', { class: 'set-subhead', id: 'recordings-heading' }, 'Recordings'),
+      ...recordingRows(state, () => this.refresh()),
       ...(this.paneonImport?.available ? [row(
         'Paneon settings',
         h('button', {

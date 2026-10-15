@@ -37,6 +37,7 @@ import { forgetOutput } from './ptyActivity'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { AgentPreset } from '../shared/quickPick'
 import { defaultHighlightRules, describeRules, sameRules, type HighlightSettings } from '../shared/highlights'
+import { sanitizeRecordings, type RecordingSettings } from '../shared/recordings'
 import { api } from './api'
 import { openChangesDialog } from './components/changesDialog'
 import { recordApproval } from './timelineLog'
@@ -163,6 +164,7 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     sessionId,
     command: term.command,
     prompt: term.prompt,
+    title: term.titleHint,
     fullAccess: term.agent !== 'shell' && state.settings.fullAccess[term.agent],
     cols: view?.cols ?? 120,
     rows: view?.rows ?? 30
@@ -1073,6 +1075,12 @@ export function setSessionInfo(change: Partial<SessionInfoSettings>): void {
   const sessionInfo = { ...store.state.settings.sessionInfo, ...change }
   store.set((s) => ({ ...s, settings: { ...s.settings, sessionInfo } }))
   void saveSettings({ sessionInfo })
+}
+
+export function setRecordings(change: Partial<RecordingSettings>): void {
+  const recordings = sanitizeRecordings({ ...store.state.settings.recordings, ...change })
+  store.set((s) => ({ ...s, settings: { ...s.settings, recordings } }))
+  void saveSettings({ recordings })
 }
 
 export async function refreshBridge(): Promise<void> {

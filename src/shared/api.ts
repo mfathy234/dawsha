@@ -18,6 +18,7 @@ import type {
   SessionStatusResult
 } from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
+import type { RecordingStats, RecordingSummary } from './recordings'
 import type { ProcessActivity } from './processActivity'
 import type { BulkSkillExport, SkillEntry } from './skills'
 import type { PaneonImportPreview } from './paneonImport'
@@ -157,5 +158,13 @@ export interface GridApi {
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>
   compareRemove(request: WorktreeRemoval): Promise<GitResult>
+  listRecordings(): Promise<RecordingSummary[]>
+  readRecording(id: string): Promise<string>
+  recordingStats(): Promise<RecordingStats>
+  deleteAllRecordings(): Promise<number>
+  openRecordingsFolder(): Promise<void>
+  setRecordingTitle(id: string, title: string): void
+  /** Pass null to read the state. Resolves to null when the terminal is not being recorded. */
+  setRecordingPaused(id: string, paused: boolean | null): Promise<boolean | null>
   onFlushRequest(listener: () => Promise<void>): void
 }

@@ -32,6 +32,7 @@ import { installBuiltinCommands } from './commands/builtin'
 import { installCompareCommands } from './commands/compare'
 import { installHandoffCommands } from './commands/handoff'
 import { installLayoutCommands } from './commands/layouts'
+import { installReplayCommands } from './commands/replay'
 import { installSnippetCommands } from './commands/snippets'
 import { installKeyboard } from './keyboard'
 import { store } from './state'
@@ -100,6 +101,7 @@ async function boot(): Promise<void> {
   installLayoutCommands()
   installCompareCommands()
   installHandoffCommands()
+  installReplayCommands()
   installSnippetCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)

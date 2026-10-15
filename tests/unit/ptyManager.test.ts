@@ -33,6 +33,7 @@ vi.mock('../../src/main/agentLaunch', () => ({
 
 import { PtyManager } from '../../src/main/ptyManager'
 import { RemoteTerminalState } from '../../src/main/remoteTerminalState'
+import type { Recorder } from '../../src/main/recorder'
 
 describe('PtyManager desktop output delivery', () => {
   let cwd: string
@@ -83,5 +84,66 @@ describe('PtyManager desktop output delivery', () => {
     expect(onData).toHaveBeenCalledWith('desktop-1', 'desktop output')
     fake.exit?.({ exitCode: 0 })
     expect(onExit).toHaveBeenCalledWith('desktop-1', 0)
+  })
+})
+
+describe('PtyManager recording hooks', () => {
+  let cwd: string
+
+  beforeEach(() => {
+    fake.data = null
+    fake.exit = null
+    cwd = mkdtempSync(join(tmpdir(), 'dawsha-pty-recording-'))
+  })
+
+  afterEach(() => rmSync(cwd, { recursive: true, force: true }))
+
+  const fakeRecorder = () => ({
+    start: vi.fn(),
+    output: vi.fn(),
+    resize: vi.fn(),
+    input: vi.fn(),
+    stop: vi.fn()
+  })
+  const manager = (recorder: ReturnType<typeof fakeRecorder>, remote: RemoteTerminalState | null = null) =>
+    new PtyManager({ onData: vi.fn(), onExit: vi.fn() }, remote, { recorder: recorder as unknown as Recorder, projectName: () => 'Billing' })
+
+  it('starts one recording per spawn with the project name, title and size, and feeds output, resize, input and exit', () => {
+    const recorder = fakeRecorder()
+    const target = manager(recorder)
+    target.spawn({ id: 't1', projectId: 'p1', agent: 'claude', cwd, resume: false, cols: 90, rows: 30, title: 'Add retry' })
+    expect(recorder.start).toHaveBeenCalledTimes(1)
+    expect(recorder.start).toHaveBeenCalledWith('t1', { projectId: 'p1', projectName: 'Billing', agent: 'claude', title: 'Add retry', cwd }, { cols: 90, rows: 30 })
+
+    fake.data?.('out')
+    expect(recorder.output).toHaveBeenCalledWith('t1', 'out')
+    target.resize('t1', 100, 40)
+    expect(recorder.resize).toHaveBeenCalledWith('t1', 100, 40)
+    target.write('t1', 'hello\r')
+    expect(recorder.input).toHaveBeenCalledWith('t1', 'hello\r')
+    fake.exit?.({ exitCode: 2 })
+    expect(recorder.stop).toHaveBeenCalledWith('t1', 2)
+  })
+
+  it('records a remote-managed headless session exactly once, never through the remote mirror', () => {
+    const recorder = fakeRecorder()
+    const target = manager(recorder, new RemoteTerminalState())
+    target.spawn({ id: 'r1', projectId: 'p1', agent: 'codex', cwd, resume: false, cols: 80, rows: 24, desktopVisible: false, remoteManaged: true })
+    fake.data?.('mirrored')
+    expect(recorder.start).toHaveBeenCalledTimes(1)
+    expect(recorder.output).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops the recording when the pane is killed', () => {
+    const recorder = fakeRecorder()
+    const target = manager(recorder)
+    target.spawn({ id: 't1', projectId: 'p1', agent: 'claude', cwd, resume: false, cols: 80, rows: 24 })
+    target.kill('t1')
+    expect(recorder.stop).toHaveBeenCalledWith('t1')
+  })
+
+  it('works without a recorder', () => {
+    const target = new PtyManager({ onData: vi.fn(), onExit: vi.fn() })
+    expect(target.spawn({ id: 't1', projectId: 'p1', agent: 'claude', cwd, resume: false, cols: 80, rows: 24 }).ok).toBe(true)
   })
 })
