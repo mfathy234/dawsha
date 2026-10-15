@@ -1,6 +1,8 @@
 export const IPC = {
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
+  settingsExport: 'settings:export',
+  settingsImportRead: 'settings:import-read',
   remoteAccessGet: 'remote-access:get',
   remoteAccessEnable: 'remote-access:enable',
   remoteAccessDisable: 'remote-access:disable',

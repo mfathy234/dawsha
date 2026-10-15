@@ -39,6 +39,7 @@ import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type Bridg
 import type { OpsWatcher } from './opsWatcher'
 import type { StatusWatcher } from './statusWatcher'
 import { exportTranscript } from './transcriptExport'
+import { exportSettings, readSettingsImport } from './settingsTransfer'
 import { exportTimeline, sessionTimeline } from './sessionTimeline'
 import { searchTimelines } from './timelineSearch'
 import type { TimelineSearchRequest } from '../shared/timelineSearch'
@@ -105,6 +106,8 @@ export function registerIpc(
     return result
   })
   ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => settings.update(patch))
+  ipcMain.handle(IPC.settingsExport, () => exportSettings(getWindow(), settings.get()))
+  ipcMain.handle(IPC.settingsImportRead, () => readSettingsImport(getWindow()))
   if (remoteAccess) {
     ipcMain.handle(IPC.remoteAccessGet, () => remoteAccess.getState())
     ipcMain.handle(IPC.remoteAccessEnable, () => remoteAccess.enable())

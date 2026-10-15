@@ -27,6 +27,8 @@ const api: GridApi = {
   } : {}),
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   updateSettings: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
+  exportSettings: () => ipcRenderer.invoke(IPC.settingsExport),
+  readSettingsImport: () => ipcRenderer.invoke(IPC.settingsImportRead),
   paneonImportPreview: () => ipcRenderer.invoke(IPC.paneonImportPreview),
   queuePaneonImport: () => ipcRenderer.invoke(IPC.paneonImportQueue),
   pickFolder: () => ipcRenderer.invoke(IPC.pickFolder),

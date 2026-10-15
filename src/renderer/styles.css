@@ -7819,3 +7819,10 @@ button.tl-event:hover { background: var(--raised); }
 @media (prefers-reduced-motion: reduce) {
   .board-card { transition: none; }
 }
+
+.import-preview { width: min(520px, calc(100vw - 48px)); }
+.import-lines { margin: 4px 0 12px; padding-left: 18px; display: grid; gap: 4px; color: var(--text); }
+.import-modes { display: grid; gap: 8px; margin-bottom: 14px; }
+.import-mode { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.import-mode:has(input:checked) { border-color: var(--accent); background: var(--raised); }
+.import-mode > span { display: grid; gap: 2px; }
