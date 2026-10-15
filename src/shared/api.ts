@@ -159,5 +159,7 @@ export interface GridApi {
   deleteAllRecordings(): Promise<number>
   openRecordingsFolder(): Promise<void>
   setRecordingTitle(id: string, title: string): void
+  /** Pass null to read the state. Resolves to null when the terminal is not being recorded. */
+  setRecordingPaused(id: string, paused: boolean | null): Promise<boolean | null>
   onFlushRequest(listener: () => Promise<void>): void
 }

@@ -98,6 +98,7 @@ export const IPC = {
   recordingsDeleteAll: 'recordings:delete-all',
   recordingsOpenFolder: 'recordings:open-folder',
   recordingsTitle: 'recordings:title',
+  recordingsPause: 'recordings:pause',
   flushRequest: 'app:flush-request',
   flushDone: 'app:flush-done'
 } as const

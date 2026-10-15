@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { bufferText, closeApp, closeSettings, createSandbox, launchApp, openSettings, type Sandbox } from './helpers'
@@ -38,6 +38,13 @@ function endedSidecars(sandbox: Sandbox): number {
   }).length
 }
 
+function recordingOn(sandbox: Sandbox): Sandbox {
+  const file = join(sandbox.userData, 'settings.json')
+  const settings = JSON.parse(readFileSync(file, 'utf8'))
+  writeFileSync(file, JSON.stringify({ ...settings, recordings: { enabled: true, keepDays: 14, maxMegabytes: 1024 } }), 'utf8')
+  return sandbox
+}
+
 async function startSession(page: Page): Promise<string> {
   await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
   const host = page.locator('.term-host.active')
@@ -65,7 +72,7 @@ async function recordKnownSession(page: Page, sandbox: Sandbox): Promise<string>
 }
 
 test('an exited session is replayed from its pane menu: seek, search and jump, play and go back', async () => {
-  const sandbox = createSandbox()
+  const sandbox = recordingOn(createSandbox())
   const { app, page } = await launchApp(sandbox)
   try {
     await recordKnownSession(page, sandbox)
@@ -120,7 +127,7 @@ test('an exited session is replayed from its pane menu: seek, search and jump, p
 })
 
 test('the palette lists recordings, filters them and opens one', async () => {
-  const sandbox = createSandbox()
+  const sandbox = recordingOn(createSandbox())
   const { app, page } = await launchApp(sandbox)
   try {
     await recordKnownSession(page, sandbox)
@@ -146,40 +153,98 @@ test('the palette lists recordings, filters them and opens one', async () => {
   }
 })
 
-test('turning Record sessions off stops new recordings and the choice persists', async () => {
+test('recording is off by default; turning it on records new sessions and turning it off stops them', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
     const first = await startSession(page)
     await runCommand(page, first, 'echo FIRST-RUN', /^FIRST-RUN$/m)
-    await expect.poll(() => castFiles(sandbox).length, { timeout: SLOW }).toBe(1)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    expect(castFiles(sandbox)).toHaveLength(0)
 
     await openSettings(page, 'general')
-    await expect(page.locator('#recordings-enabled')).toBeChecked()
+    await expect(page.locator('#recordings-enabled')).not.toBeChecked()
     await expect(page.locator('#recordings-days')).toHaveValue('14')
     await expect(page.locator('#recordings-size')).toHaveValue('1024')
-    await page.locator('#recordings-enabled').uncheck()
+    await page.locator('#recordings-enabled').check()
     await expect
       .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.enabled, { timeout: SLOW })
-      .toBe(false)
+      .toBe(true)
     await closeSettings(page)
 
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     await expect(page.locator('.pane')).toHaveCount(2)
     const second = (await page.locator('.term-host.active').last().getAttribute('data-term-id'))!
-    await expect.poll(() => bufferText(page, second), { timeout: SLOW }).toMatch(/>\s*$/m)
+    await expect.poll(() => bufferText(page, second), { timeout: SLOW }).toMatch(/>s*$/m)
     await page.locator('.term-host.active').last().click()
     await runCommand(page, second, 'echo SECOND-RUN', /^SECOND-RUN$/m)
+    await expect.poll(() => castFiles(sandbox).length, { timeout: SLOW }).toBe(1)
+
+    await openSettings(page, 'general')
+    await page.locator('#recordings-enabled').uncheck()
+    await expect
+      .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.enabled, { timeout: SLOW })
+      .toBe(false)
+    await closeSettings(page)
+    await page.locator('.term-host.active').last().click()
+    await runCommand(page, second, 'echo THIRD-RUN', /^THIRD-RUN$/m)
     await new Promise((resolve) => setTimeout(resolve, 1500))
-    expect(castFiles(sandbox)).toHaveLength(1)
-    expect(readFileSync(castFiles(sandbox)[0], 'utf8')).not.toContain('SECOND-RUN')
+    expect(readFileSync(castFiles(sandbox)[0], 'utf8')).not.toContain('THIRD-RUN')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('with recording off, Replay shows what recording stores and a Turn on recording button', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await startSession(page)
+    await page.getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Replay session' }).click()
+    await expect(page.locator('.replay-picker')).toBeVisible()
+    await expect(page.locator('.replay-empty')).toContainText('everything each terminal prints')
+    await expect(page.locator('.replay-empty')).toContainText('14 days')
+    await expect(page.locator('.replay-empty')).toContainText('on this PC')
+    await page.locator('#replay-turn-on').click()
+    await expect
+      .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.enabled, { timeout: SLOW })
+      .toBe(true)
+    await expect(page.locator('.replay-picker .palette-empty')).toContainText('No recordings yet')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Pause recording stops capturing one terminal, marks it, and Resume continues', async () => {
+  const sandbox = recordingOn(createSandbox())
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const id = await startSession(page)
+    await runCommand(page, id, 'echo VISIBLE-ONE', /^VISIBLE-ONE$/m)
+    await page.getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Pause recording' }).click()
+    await expect(page.locator('.toast')).toContainText('Recording paused')
+    await page.locator('.term-host.active').click()
+    await runCommand(page, id, 'echo SECRET-HIDDEN', /^SECRET-HIDDEN$/m)
+    await page.getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Resume recording' }).click()
+    await page.locator('.term-host.active').click()
+    await runCommand(page, id, 'echo VISIBLE-TWO', /^VISIBLE-TWO$/m)
+    await expect.poll(() => castFiles(sandbox).length, { timeout: SLOW }).toBe(1)
+    await expect.poll(() => readFileSync(castFiles(sandbox)[0], 'utf8'), { timeout: SLOW }).toContain('VISIBLE-TWO')
+    const text = readFileSync(castFiles(sandbox)[0], 'utf8')
+    expect(text).toContain('VISIBLE-ONE')
+    expect(text).not.toContain('SECRET-HIDDEN')
+    expect(text).toContain('"paused"')
+    expect(text).toContain('"resumed"')
   } finally {
     await closeApp(app)
   }
 })
 
 test('Delete all recordings names the count and size, cancel keeps them, confirm removes them', async () => {
-  const sandbox = createSandbox()
+  const sandbox = recordingOn(createSandbox())
   const { app, page } = await launchApp(sandbox)
   try {
     await recordKnownSession(page, sandbox)

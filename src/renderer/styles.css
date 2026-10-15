@@ -7552,3 +7552,26 @@ th[aria-sort='descending'] .usage-sort {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.replay-limit {
+  color: var(--busy);
+  font-size: 12px;
+}
+
+.replay-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px 20px;
+}
+
+.replay-empty p {
+  margin: 0;
+}
+
+.replay-marker.paused,
+.replay-marker.resumed,
+.replay-marker.truncated {
+  background: var(--busy);
+}

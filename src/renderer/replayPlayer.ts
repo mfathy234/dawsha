@@ -48,6 +48,7 @@ export class ReplayPlayer {
   private frame = 0
   private lastFrame = 0
   private disposed = false
+  private readonly waiters = new Set<() => void>()
 
   constructor(
     private readonly cast: ParsedCast,
@@ -195,6 +196,8 @@ export class ReplayPlayer {
   dispose(): void {
     this.disposed = true
     this.playing = false
+    for (const release of this.waiters) release()
+    this.waiters.clear()
     cancelAnimationFrame(this.frame)
     this.term.dispose()
   }
@@ -237,12 +240,24 @@ export class ReplayPlayer {
     for (const step of plan.steps) {
       if (this.disposed) return
       if (step.type === 'resize') this.term.resize(step.cols, step.rows)
-      else await new Promise<void>((resolve) => this.term.write(step.data, resolve))
+      else await this.writeAndWait(step.data)
+      if (this.disposed) return
       await yieldToUi()
     }
     this.applied = count
     this.position = position
     this.emit()
+  }
+
+  private writeAndWait(data: string): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const release = (): void => {
+        this.waiters.delete(release)
+        resolve()
+      }
+      this.waiters.add(release)
+      this.term.write(data, release)
+    })
   }
 
   private emit(): void {

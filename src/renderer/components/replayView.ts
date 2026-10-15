@@ -1,5 +1,5 @@
 import { agentLabel } from '../../shared/agents'
-import { castDuration, parseCast, type ParsedCast } from '../../shared/cast'
+import { castDuration, parseCastAsync, type ParsedCast } from '../../shared/cast'
 import { formatDuration, type RecordingSummary } from '../../shared/recordings'
 import { buildSearchIndex, derivePermissionMarkers, type SearchIndex } from '../../shared/replaySearch'
 import { mergeMarkers, recordedMarkers, SPEEDS, type ReplayMarker, type Speed } from '../../shared/replayTiming'
@@ -15,7 +15,14 @@ import { ReplaySearchPanel } from './replaySearchPanel'
 
 const MAX_SCALE = 1.6
 const SEEK_STEP_SECONDS = 5
-const MARKER_LABELS = { prompt: 'Prompt sent', permission: 'Needs you', exit: 'Session ended' } as const
+const MARKER_LABELS = {
+  prompt: 'Prompt sent',
+  permission: 'Needs you',
+  exit: 'Session ended',
+  paused: 'Recording paused',
+  resumed: 'Recording resumed',
+  truncated: 'Recording stopped at size limit'
+} as const
 
 interface Loaded {
   id: string
@@ -45,6 +52,7 @@ export class ReplayViewComponent {
   private readonly subtitle = h('span', { class: 'replay-sub' })
   private readonly stageTime = h('span', { class: 'replay-stage-time mono' })
   private readonly stageNote = h('span', { class: 'replay-stage-note' })
+  private readonly limitNote = h('span', { class: 'replay-limit', role: 'status', hidden: true }, 'Recording stopped at size limit')
   private readonly stageBody = h('div', { class: 'replay-stage-body' })
   private readonly termSlot = h('div', { class: 'replay-term-slot' })
   private readonly status = h('p', { class: 'replay-status', role: 'status' })
@@ -131,10 +139,9 @@ export class ReplayViewComponent {
     this.subtitle.textContent = ''
     try {
       const [recordings, text] = await Promise.all([api.listRecordings(), api.readRecording(id)])
-      await new Promise((resolve) => setTimeout(resolve, 0))
-      if (this.loadingId !== id || !this.active) return
       const meta = recordings.find((recording) => recording.id === id)
-      const cast = parseCast(text)
+      const cast = await parseCastAsync(text)
+      if (this.loadingId !== id || !this.active) return
       if (!meta || !cast) throw new Error('This recording could not be read.')
       this.show({ id, meta, cast })
     } catch (error) {
@@ -152,6 +159,7 @@ export class ReplayViewComponent {
     const player = new ReplayPlayer(cast, Math.max(castDuration(cast.events), finished), currentBundle(), (state) => this.render(state))
     this.loaded = { id, meta, cast, player, markers, index }
     this.setStatus('')
+    this.limitNote.hidden = meta.endReason !== 'size-limit'
     this.title.textContent = meta.title || meta.projectName || 'Session'
     this.subtitle.textContent = [meta.projectName, agentLabel(meta.agent), whenLabel(meta)].filter(Boolean).join(' · ')
     this.search.attach(index, cast.events)
@@ -303,7 +311,7 @@ export class ReplayViewComponent {
       h('span', { class: 'replay-readonly' }, 'Read only. Nothing here changes your files.')
     )
     const stage = h('section', { class: 'replay-stage', 'aria-label': 'Recorded terminal' },
-      h('div', { class: 'replay-stage-head' }, this.stageTime, this.stageNote),
+      h('div', { class: 'replay-stage-head' }, this.stageTime, this.stageNote, h('span', { class: 'spacer' }), this.limitNote),
       h('div', { class: 'replay-stage-frame' }, this.stageBody, this.status)
     )
     this.stageBody.append(this.termSlot)

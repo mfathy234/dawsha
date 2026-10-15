@@ -32,7 +32,8 @@ import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
 import { continueIn, continueLabel } from '../handoffActions'
 import { exportTranscript } from '../transcriptActions'
-import { replayPane } from '../replayActions'
+import { replayPane, toggleRecordingPause } from '../replayActions'
+import { api } from '../api'
 import { saveSelectionAsSnippet } from '../snippetActions'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
@@ -397,6 +398,19 @@ export class PaneComponent {
       snippetItem.setAttribute('disabled', '')
       snippetItem.title = 'Select some text in the terminal first'
     }
+    const pauseItem = item('Pause recording', () => toggleRecordingPause(this.paneId), ICONS.history)
+    pauseItem.setAttribute('disabled', '')
+    pauseItem.title = 'This terminal is not being recorded'
+    const activeTab = this.current?.pane.activeTabId
+    if (activeTab) {
+      void api.setRecordingPaused(activeTab, null).then((paused) => {
+        if (paused === null) return
+        pauseItem.removeAttribute('disabled')
+        pauseItem.title = ''
+        const label = pauseItem.querySelector('.menu-label')
+        if (label) label.textContent = paused ? 'Resume recording' : 'Pause recording'
+      }, () => undefined)
+    }
     const showDetails = item('Details', () => openDetails(this.paneId), ICONS.info)
     const pinned = this.current?.pane.pinned === true
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
@@ -429,6 +443,7 @@ export class PaneComponent {
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
       item('Replay session', () => replayPane(this.paneId), ICONS.history),
+      pauseItem,
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
       item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),

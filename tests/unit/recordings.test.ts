@@ -62,19 +62,20 @@ describe('retention selection', () => {
 })
 
 describe('recording settings', () => {
-  it('defaults to on, 14 days and 1 GB', () => {
-    expect(defaultRecordings()).toEqual({ enabled: true, keepDays: 14, maxMegabytes: 1024 })
+  it('defaults to off, 14 days and 1 GB', () => {
+    expect(defaultRecordings()).toEqual({ enabled: false, keepDays: 14, maxMegabytes: 1024 })
     expect(defaultSettings().recordings).toEqual(defaultRecordings())
   })
 
   it('clamps and repairs stored values', () => {
-    expect(sanitizeRecordings({ enabled: false, keepDays: 9999, maxMegabytes: 1 })).toEqual({ enabled: false, keepDays: 365, maxMegabytes: 50 })
+    expect(sanitizeRecordings({ enabled: true, keepDays: 9999, maxMegabytes: 1 })).toEqual({ enabled: true, keepDays: 365, maxMegabytes: 50 })
     expect(sanitizeRecordings({ keepDays: 'many' })).toEqual(defaultRecordings())
     expect(sanitizeRecordings(null)).toEqual(defaultRecordings())
   })
 
   it('is kept by the settings migration', () => {
-    expect(migrateSettings({ recordings: { enabled: false } }).recordings.enabled).toBe(false)
+    expect(migrateSettings({ recordings: { enabled: true } }).recordings.enabled).toBe(true)
+    expect(migrateSettings({ recordings: { enabled: 'yes' } }).recordings.enabled).toBe(false)
     expect(migrateSettings({}).recordings).toEqual(defaultRecordings())
   })
 })
@@ -124,6 +125,7 @@ describe('recording search', () => {
     startedAt,
     endedAt: null,
     exitCode: null,
+    endReason: null,
     cols: 80,
     rows: 24,
     bytes: 1,

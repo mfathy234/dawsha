@@ -212,6 +212,9 @@ export function registerIpc(
       const error = await shell.openPath(await recordings.ensureRoot())
       if (error) throw new Error(error)
     })
+    ipcMain.handle(IPC.recordingsPause, (_event, id: unknown, paused: unknown) =>
+      typeof id === 'string' ? recordings.setPaused(id, typeof paused === 'boolean' ? paused : null) : null
+    )
     ipcMain.on(IPC.recordingsTitle, (_event, id: unknown, title: unknown) => {
       if (typeof id === 'string' && typeof title === 'string') recordings.setTitle(id, title)
     })

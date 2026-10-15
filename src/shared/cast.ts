@@ -20,7 +20,10 @@ export interface ParsedCast {
   events: CastEvent[]
 }
 
-export type CastMarkerKind = 'prompt' | 'permission' | 'exit'
+export type CastMarkerKind = 'prompt' | 'permission' | 'exit' | 'paused' | 'resumed' | 'truncated'
+
+export const MAX_COLS = 1000
+export const MAX_ROWS = 500
 
 const KINDS: readonly string[] = ['o', 'r', 'm']
 
@@ -41,7 +44,7 @@ export function parseResize(data: string): { cols: number; rows: number } | null
   if (!match) return null
   const cols = Number(match[1])
   const rows = Number(match[2])
-  return cols >= 2 && rows >= 1 ? { cols, rows } : null
+  return cols >= 2 && rows >= 1 ? { cols: Math.min(cols, MAX_COLS), rows: Math.min(rows, MAX_ROWS) } : null
 }
 
 function parseHeader(line: string): CastHeader | null {
@@ -53,8 +56,8 @@ function parseHeader(line: string): CastHeader | null {
     if (!Number.isFinite(width) || !Number.isFinite(height) || width < 2 || height < 1) return null
     const header: CastHeader = {
       version: 2,
-      width: Math.floor(width),
-      height: Math.floor(height),
+      width: Math.min(MAX_COLS, Math.floor(width)),
+      height: Math.min(MAX_ROWS, Math.floor(height)),
       timestamp: Number.isFinite(Number(raw.timestamp)) ? Number(raw.timestamp) : 0
     }
     if (typeof raw.title === 'string') header.title = raw.title
@@ -77,23 +80,48 @@ function parseEvent(line: string): CastEvent | null {
   }
 }
 
+const PARSE_BATCH_LINES = 20_000
+
+const yieldToLoop = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+
+function parseLines(lines: string[], first: number): ParsedCast | null {
+  const header = parseHeader(lines[first])
+  return header ? { header, events: [] } : null
+}
+
+function appendEvent(events: CastEvent[], line: string, last: number): number {
+  const event = parseEvent(line)
+  if (!event) return last
+  const t = Math.max(event.t, last)
+  events.push(t === event.t ? event : { ...event, t })
+  return t
+}
+
 export function parseCast(text: string): ParsedCast | null {
   const lines = text.split('\n')
   const first = lines.findIndex((line) => line.trim() !== '')
   if (first < 0) return null
-  const header = parseHeader(lines[first])
-  if (!header) return null
-  const events: CastEvent[] = []
+  const parsed = parseLines(lines, first)
+  if (!parsed) return null
   let last = 0
   for (let index = first + 1; index < lines.length; index += 1) {
-    if (lines[index] === '') continue
-    const event = parseEvent(lines[index])
-    if (!event) continue
-    const t = Math.max(event.t, last)
-    last = t
-    events.push(t === event.t ? event : { ...event, t })
+    if (lines[index] !== '') last = appendEvent(parsed.events, lines[index], last)
   }
-  return { header, events }
+  return parsed
+}
+
+export async function parseCastAsync(text: string, yielder: () => Promise<void> = yieldToLoop): Promise<ParsedCast | null> {
+  const lines = text.split('\n')
+  const first = lines.findIndex((line) => line.trim() !== '')
+  if (first < 0) return null
+  const parsed = parseLines(lines, first)
+  if (!parsed) return null
+  let last = 0
+  for (let index = first + 1; index < lines.length; index += 1) {
+    if (lines[index] !== '') last = appendEvent(parsed.events, lines[index], last)
+    if ((index - first) % PARSE_BATCH_LINES === 0) await yielder()
+  }
+  return parsed
 }
 
 export function castDuration(events: CastEvent[]): number {

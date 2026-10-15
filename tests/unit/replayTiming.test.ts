@@ -141,6 +141,15 @@ describe('markers', () => {
     expect(stepMarker(markers, timeline, 4.7, -1)).toBe(4)
   })
 
+  it('reads pause, resume and size-limit markers', () => {
+    const extra: CastEvent[] = [
+      { t: 1, kind: 'm', data: 'paused' },
+      { t: 2, kind: 'm', data: 'resumed' },
+      { t: 3, kind: 'm', data: 'truncated' }
+    ]
+    expect(recordedMarkers(extra).map((marker) => marker.kind)).toEqual(['paused', 'resumed', 'truncated'])
+  })
+
   it('merges marker lists in event order', () => {
     const merged = mergeMarkers([{ index: 5, t: 9, kind: 'exit' }], [{ index: 2, t: 1.2, kind: 'permission' }])
     expect(merged.map((marker) => marker.index)).toEqual([2, 5])

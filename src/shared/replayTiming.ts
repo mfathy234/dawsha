@@ -93,8 +93,8 @@ export function recordedMarkers(events: CastEvent[]): ReplayMarker[] {
   const markers: ReplayMarker[] = []
   events.forEach((event, index) => {
     if (event.kind !== 'm') return
-    if (event.data === 'prompt' || event.data === 'permission' || event.data === 'exit') {
-      markers.push({ index, t: event.t, kind: event.data })
+    if (['prompt', 'permission', 'exit', 'paused', 'resumed', 'truncated'].includes(event.data)) {
+      markers.push({ index, t: event.t, kind: event.data as CastMarkerKind })
     }
   })
   return markers

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { castDuration, castEventLine, castHeaderLine, parseCast, parseResize, resizeData, roundSeconds } from '../../src/shared/cast'
+import { castDuration, castEventLine, castHeaderLine, parseCast, parseCastAsync, parseResize, resizeData, roundSeconds } from '../../src/shared/cast'
 
 const header = { version: 2 as const, width: 120, height: 30, timestamp: 1_700_000_000, title: 'Demo' }
 
@@ -64,6 +64,26 @@ describe('cast parsing', () => {
   it('keeps event times from going backwards', () => {
     const text = castHeaderLine(header) + '[1,"o","a"]\n[0.5,"o","b"]\n'
     expect(parseCast(text)?.events.map((event) => event.t)).toEqual([1, 1])
+  })
+
+  it('clamps absurd sizes in the header and in resize events', () => {
+    const parsed = parseCast('{"version":2,"width":99999,"height":99999}' + String.fromCharCode(10))
+    expect(parsed?.header).toMatchObject({ width: 1000, height: 500 })
+    expect(parseResize('9999x9999')).toEqual({ cols: 1000, rows: 500 })
+  })
+
+  it('parses asynchronously to the same result, yielding between batches', async () => {
+    const lines = [castHeaderLine(header).trim()]
+    for (let i = 0; i < 45_000; i += 1) lines.push(JSON.stringify([i / 1000, 'o', 'x']))
+    const text = lines.join(String.fromCharCode(10))
+    let yields = 0
+    const parsed = await parseCastAsync(text, async () => {
+      yields += 1
+    })
+    expect(yields).toBe(2)
+    expect(parsed?.events).toHaveLength(45_000)
+    expect(parsed).toEqual(parseCast(text))
+    expect(await parseCastAsync('nope')).toBeNull()
   })
 
   it('handles a header-only recording', () => {

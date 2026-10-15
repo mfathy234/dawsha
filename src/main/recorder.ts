@@ -1,13 +1,14 @@
 import { appendFile, mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { castEventLine, castHeaderLine, resizeData, type CastKind, type CastMarkerKind } from '../shared/cast'
-import { recordingId, type RecordingMeta } from '../shared/recordings'
+import { MAX_RECORDING_BYTES, recordingId, type RecordingMeta } from '../shared/recordings'
 import type { TabAgent } from '../shared/types'
 
 export const FLUSH_INTERVAL_MS = 250
 export const FLUSH_BYTES = 64 * 1024
 export const COALESCE_MS = 20
-export const MAX_RECORDING_BYTES = 256 * 1024 * 1024
+const DIR_MODE = 0o700
+const FILE_MODE = 0o600
 const PROMPT_MARKER_GAP_MS = 1000
 
 export interface RecordingStart {
@@ -42,6 +43,8 @@ interface Session {
   timer: NodeJS.Timeout | null
   lastPromptMs: number
   closed: boolean
+  paused: boolean
+  truncated: boolean
 }
 
 export class Recorder {
@@ -78,6 +81,7 @@ export class Recorder {
       startedAt,
       endedAt: null,
       exitCode: null,
+      endReason: null,
       cols: size.cols,
       rows: size.rows
     }
@@ -95,7 +99,9 @@ export class Recorder {
       outputAt: 0,
       timer: null,
       lastPromptMs: -Infinity,
-      closed: false
+      closed: false,
+      paused: false,
+      truncated: false
     }
     this.sessions.set(terminalId, session)
     const header = castHeaderLine({
@@ -107,17 +113,18 @@ export class Recorder {
       env: { TERM: 'xterm-256color' }
     })
     this.enqueue(session, async () => {
-      await mkdir(dirname(castPath), { recursive: true })
-      await writeFile(castPath, header, 'utf8')
-      await writeFile(session.metaPath, JSON.stringify(session.meta), 'utf8')
-      session.written += header.length
+      await mkdir(this.options.root, { recursive: true, mode: DIR_MODE })
+      await mkdir(dirname(castPath), { recursive: true, mode: DIR_MODE })
+      await writeFile(castPath, header, { encoding: 'utf8', mode: FILE_MODE })
+      await writeFile(session.metaPath, JSON.stringify(session.meta), { encoding: 'utf8', mode: FILE_MODE })
     })
+    session.written += Buffer.byteLength(header)
     return id
   }
 
   output(terminalId: string, data: string): void {
     const session = this.sessions.get(terminalId)
-    if (!session || data === '') return
+    if (!session || data === '' || session.paused) return
     if (!this.options.enabled()) {
       this.stop(terminalId)
       return
@@ -143,7 +150,7 @@ export class Recorder {
 
   input(terminalId: string, data: string): void {
     const session = this.sessions.get(terminalId)
-    if (!session || session.meta.agent === 'shell' || !data.includes('\r')) return
+    if (!session || session.paused || session.meta.agent === 'shell' || !data.includes('\r')) return
     const now = this.elapsedMs(session)
     if (now - session.lastPromptMs < PROMPT_MARKER_GAP_MS) return
     session.lastPromptMs = now
@@ -153,6 +160,24 @@ export class Recorder {
   marker(terminalId: string, kind: CastMarkerKind): void {
     const session = this.sessions.get(terminalId)
     if (session) this.append(session, 'm', kind)
+  }
+
+  setPaused(terminalId: string, paused: boolean): boolean | null {
+    const session = this.sessions.get(terminalId)
+    if (!session) return null
+    if (session.paused === paused) return paused
+    if (paused) {
+      this.append(session, 'm', 'paused')
+      session.paused = true
+    } else {
+      session.paused = false
+      this.append(session, 'm', 'resumed')
+    }
+    return paused
+  }
+
+  isPaused(terminalId: string): boolean | null {
+    return this.sessions.get(terminalId)?.paused ?? null
   }
 
   setTitle(terminalId: string, title: string): void {
@@ -235,19 +260,30 @@ export class Recorder {
     const text = session.lines.join('')
     session.lines = []
     session.pendingBytes = session.output.length
-    if (session.written + text.length > MAX_RECORDING_BYTES) {
-      if (this.sessions.get(session.meta.terminalId) === session) this.stop(session.meta.terminalId)
+    const bytes = Buffer.byteLength(text)
+    if (session.written + bytes > MAX_RECORDING_BYTES) {
+      this.truncate(session)
       return
     }
-    this.enqueue(session, async () => {
-      await appendFile(session.castPath, text, 'utf8')
-      session.written += text.length
-    })
+    session.written += bytes
+    this.enqueue(session, () => appendFile(session.castPath, text, { encoding: 'utf8', mode: FILE_MODE }))
+  }
+
+  private truncate(session: Session): void {
+    if (session.truncated) return
+    session.truncated = true
+    session.lines = []
+    session.output = ''
+    session.pendingBytes = 0
+    session.meta = { ...session.meta, endReason: 'size-limit' }
+    const marker = castEventLine(this.elapsedMs(session) / 1000, 'm', 'truncated')
+    this.enqueue(session, () => appendFile(session.castPath, marker, { encoding: 'utf8', mode: FILE_MODE }))
+    if (this.sessions.get(session.meta.terminalId) === session) this.stop(session.meta.terminalId)
   }
 
   private writeMeta(session: Session): void {
     const body = JSON.stringify(session.meta)
-    this.enqueue(session, () => writeFile(session.metaPath, body, 'utf8'))
+    this.enqueue(session, () => writeFile(session.metaPath, body, { encoding: 'utf8', mode: FILE_MODE }))
   }
 
   private enqueue(session: Session, work: () => Promise<void>): void {

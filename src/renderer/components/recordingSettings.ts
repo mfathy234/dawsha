@@ -86,7 +86,7 @@ export function recordingRows(state: AppState, refresh: () => void): HTMLElement
     row(
       'Record sessions',
       h('label', { class: 'check', for: 'recordings-enabled' }, input, 'Record every terminal so it can be replayed'),
-      h('p', { class: 'hint' }, 'Recordings stay on this computer. They contain everything the terminal printed, so treat them like your terminal history.')
+      h('p', { class: 'hint' }, 'Off by default. Recordings keep everything a terminal prints, including secrets you display, in plain text on this PC. Pause one terminal from its pane menu.')
     ),
     row(
       'Keep recordings for',

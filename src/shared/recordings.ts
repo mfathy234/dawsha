@@ -11,6 +11,7 @@ export interface RecordingMeta {
   startedAt: number
   endedAt: number | null
   exitCode: number | null
+  endReason: 'size-limit' | null
   cols: number
   rows: number
 }
@@ -46,6 +47,8 @@ export interface RecordingSettings {
 
 export const DAY_MS = 86_400_000
 export const MEGABYTE = 1024 * 1024
+export const MAX_RECORDING_BYTES = 32 * MEGABYTE
+export const MAX_READ_BYTES = MAX_RECORDING_BYTES + MEGABYTE
 export const DEFAULT_KEEP_DAYS = 14
 export const DEFAULT_MAX_MEGABYTES = 1024
 export const MIN_KEEP_DAYS = 1
@@ -54,7 +57,7 @@ export const MIN_MAX_MEGABYTES = 50
 export const MAX_MAX_MEGABYTES = 51_200
 
 export const defaultRecordings = (): RecordingSettings => ({
-  enabled: true,
+  enabled: false,
   keepDays: DEFAULT_KEEP_DAYS,
   maxMegabytes: DEFAULT_MAX_MEGABYTES
 })
@@ -67,7 +70,7 @@ export function sanitizeRecordings(value: unknown): RecordingSettings {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return defaults
   const raw = value as Record<string, unknown>
   return {
-    enabled: raw.enabled !== false,
+    enabled: raw.enabled === true,
     keepDays: clampInt(raw.keepDays, MIN_KEEP_DAYS, MAX_KEEP_DAYS, defaults.keepDays),
     maxMegabytes: clampInt(raw.maxMegabytes, MIN_MAX_MEGABYTES, MAX_MAX_MEGABYTES, defaults.maxMegabytes)
   }

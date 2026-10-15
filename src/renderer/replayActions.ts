@@ -33,13 +33,30 @@ export async function replayPane(paneId: string): Promise<void> {
   try {
     const recordings = await api.listRecordings()
     const found = recordings.find((recording) => recording.terminalId === pane.activeTabId)
-    if (!found) {
-      toast(store.state.settings.recordings.enabled ? 'There is no recording for this session yet.' : 'Recording is off. Turn on Record sessions in Settings to replay future sessions.', 'info')
+    if (found) {
+      openReplay(found.id)
       return
     }
-    openReplay(found.id)
+    if (store.state.settings.recordings.enabled) toast('There is no recording for this session yet.', 'info')
+    else openReplayPicker()
   } catch (error) {
     toast((error as Error).message || 'Could not open the recording.')
+  }
+}
+
+export async function toggleRecordingPause(paneId: string): Promise<void> {
+  const pane = paneById(store.state, paneId)
+  if (!pane) return
+  try {
+    const current = await api.setRecordingPaused(pane.activeTabId, null)
+    if (current === null) {
+      toast('This session is not being recorded.', 'info')
+      return
+    }
+    const next = await api.setRecordingPaused(pane.activeTabId, !current)
+    toast(next ? 'Recording paused for this terminal.' : 'Recording resumed.', 'info')
+  } catch (error) {
+    toast((error as Error).message || 'Could not change recording.')
   }
 }
 

@@ -1,9 +1,9 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { parseCast } from '../../src/shared/cast'
-import { DAY_MS, MEGABYTE, type RecordingSettings } from '../../src/shared/recordings'
+import { DAY_MS, MAX_RECORDING_BYTES, MEGABYTE, type RecordingSettings } from '../../src/shared/recordings'
 import { Recorder } from '../../src/main/recorder'
 import { RecordingService } from '../../src/main/recordings'
 
@@ -184,6 +184,68 @@ describe('Recorder', () => {
     expect(errors.length).toBeGreaterThan(0)
   })
 
+  it('pauses and resumes per terminal with markers, dropping output and prompts while paused', async () => {
+    const recorder = make()
+    recorder.start('t', info, { cols: 80, rows: 24 })
+    expect(recorder.isPaused('t')).toBe(false)
+    recorder.output('t', 'before')
+    now += 100
+    expect(recorder.setPaused('t', true)).toBe(true)
+    expect(recorder.isPaused('t')).toBe(true)
+    recorder.output('t', 'hidden-secret')
+    recorder.input('t', 'x' + String.fromCharCode(13))
+    now += 100
+    expect(recorder.setPaused('t', false)).toBe(false)
+    recorder.output('t', 'after')
+    await recorder.closeAll()
+    const text = readFileSync(castFiles(root)[0], 'utf8')
+    expect(text).not.toContain('hidden-secret')
+    const events = parseCast(text)?.events ?? []
+    expect(events.map((event) => [event.kind, event.data])).toEqual([['o', 'before'], ['m', 'paused'], ['m', 'resumed'], ['o', 'after']])
+    expect(recorder.setPaused('unknown', true)).toBeNull()
+    expect(recorder.isPaused('unknown')).toBeNull()
+  })
+
+  it('stops at the size limit with a truncated marker and an end reason, and ignores later output', async () => {
+    const recorder = make()
+    recorder.start('t', info, { cols: 80, rows: 24 })
+    recorder.output('t', 'ok')
+    now += 100
+    recorder.output('t', 'x'.repeat(MAX_RECORDING_BYTES + 10))
+    now += 100
+    recorder.output('t', 'later')
+    await recorder.settle()
+    expect(recorder.activeIds().size).toBe(0)
+    const [file] = castFiles(root)
+    expect(statSync(file).size).toBeLessThan(MAX_RECORDING_BYTES)
+    const text = readFileSync(file, 'utf8')
+    expect(text).not.toContain('later')
+    const events = parseCast(text)?.events ?? []
+    expect(events[events.length - 1]).toMatchObject({ kind: 'm', data: 'truncated' })
+    const meta = JSON.parse(readFileSync(file.replace('.cast', '.json'), 'utf8'))
+    expect(meta.endReason).toBe('size-limit')
+    expect(typeof meta.endedAt).toBe('number')
+  })
+
+  it('counts bytes, not characters, toward the size limit', async () => {
+    const recorder = make()
+    recorder.start('t', info, { cols: 80, rows: 24 })
+    recorder.output('t', '€'.repeat(Math.ceil(MAX_RECORDING_BYTES / 3) + 100))
+    await recorder.settle()
+    expect(recorder.activeIds().size).toBe(0)
+  })
+
+  it.skipIf(process.platform === 'win32')('creates the folders and files readable only by the owner', async () => {
+    const recorder = make()
+    recorder.start('t', info, { cols: 80, rows: 24 })
+    recorder.output('t', 'data')
+    await recorder.closeAll()
+    const [file] = castFiles(root)
+    expect(statSync(file).mode & 0o077).toBe(0)
+    expect(statSync(file.replace('.cast', '.json')).mode & 0o077).toBe(0)
+    expect(statSync(root).mode & 0o077).toBe(0)
+  })
+
   it('updates the pane title in the sidecar', async () => {
     const recorder = make()
     recorder.start('t', { ...info, title: '' }, { cols: 80, rows: 24 })
@@ -222,7 +284,7 @@ describe('RecordingService', () => {
   }
 
   function setup(): { recorder: Recorder; service: RecordingService } {
-    let wall = clockNow
+    let wall = clockNow - 5_000_000
     const recorder = new Recorder({ root, enabled: () => true, wallClock: () => (wall += 1000) })
     return { recorder, service: new RecordingService(root, recorder, () => settings, () => clockNow) }
   }
@@ -287,6 +349,44 @@ describe('RecordingService', () => {
     writeFileSync(sidecar, JSON.stringify({ ...meta, endedAt: null }))
     await service.cleanup()
     expect((await service.list())[0].endedAt).not.toBeNull()
+  })
+
+  it('leaves a live recording alone even when its files look old', async () => {
+    const { recorder, service } = setup()
+    const id = recorder.start('live', info, { cols: 80, rows: 24 })
+    recorder.output('live', 'running')
+    await recorder.flush()
+    for (const ext of ['cast', 'json']) utimesSync(join(root, `${id}.${ext}`), new Date(clockNow - 60 * DAY_MS), new Date(clockNow - 60 * DAY_MS))
+    expect(await service.cleanup()).toEqual([])
+    expect((await service.list()).map((item) => item.id)).toEqual([id])
+    await recorder.closeAll()
+  })
+
+  it('skips recordings that started after the cleanup scan began', async () => {
+    let wall = clockNow + 10_000
+    const recorder = new Recorder({ root, enabled: () => true, wallClock: () => (wall += 1000) })
+    const service = new RecordingService(root, recorder, () => settings, () => clockNow)
+    const id = recorder.start('new', info, { cols: 80, rows: 24 })
+    recorder.output('new', 'x')
+    recorder.stop('new', 0)
+    await recorder.settle()
+    for (const ext of ['cast', 'json']) utimesSync(join(root, `${id}.${ext}`), new Date(clockNow - 60 * DAY_MS), new Date(clockNow - 60 * DAY_MS))
+    expect(await service.cleanup()).toEqual([])
+  })
+
+  it('removes old .cast files that lost their sidecar and keeps recent ones', async () => {
+    const { service } = setup()
+    const day = join(root, '2025-01-01')
+    mkdirSync(day, { recursive: true })
+    const old = join(day, 'old-orphan.cast')
+    const recent = join(day, 'recent-orphan.cast')
+    writeFileSync(old, 'x')
+    writeFileSync(recent, 'x')
+    utimesSync(old, new Date(clockNow - 60 * DAY_MS), new Date(clockNow - 60 * DAY_MS))
+    utimesSync(recent, new Date(clockNow - DAY_MS), new Date(clockNow - DAY_MS))
+    await service.cleanup()
+    expect(existsSync(old)).toBe(false)
+    expect(existsSync(recent)).toBe(true)
   })
 
   it('ignores folders and files it does not own', async () => {

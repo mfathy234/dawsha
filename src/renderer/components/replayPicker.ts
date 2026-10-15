@@ -3,7 +3,9 @@ import { filterRecordings, formatBytes, formatDuration, recordingSeconds, type R
 import { api } from '../api'
 import { clear, h, icon } from '../dom'
 import { ICONS } from '../icons'
+import { setRecordings } from '../actions'
 import { closeReplayPicker, openReplay } from '../replayActions'
+import { store } from '../state'
 import type { AppState } from '../state'
 import { agentMark } from './agentMark'
 
@@ -34,6 +36,7 @@ export class ReplayPickerComponent {
 
   update(state: AppState): void {
     if (state.replayPickerOpen && !this.overlay) this.open()
+    if (this.overlay && this.recordings.length === 0 && !this.loading) this.render()
     if (!state.replayPickerOpen && this.overlay) this.teardown()
   }
 
@@ -147,16 +150,25 @@ export class ReplayPickerComponent {
     this.selected = Math.min(this.selected, Math.max(0, this.shown.length - 1))
     clear(this.list)
     if (this.shown.length === 0) {
-      const text = this.loading
-        ? 'Loading recordings…'
-        : this.recordings.length === 0
-          ? 'No recordings yet. Sessions are recorded while Record sessions is on in Settings.'
-          : 'No recordings match that.'
-      this.list.append(h('p', { class: 'palette-empty' }, text))
+      this.list.append(this.emptyState())
       return
     }
     this.shown.forEach((recording, position) => this.list?.append(this.row(recording, position)))
     this.select(this.selected)
+  }
+
+  private emptyState(): HTMLElement {
+    if (this.loading) return h('p', { class: 'palette-empty' }, 'Loading recordings…')
+    if (this.recordings.length > 0) return h('p', { class: 'palette-empty' }, 'No recordings match that.')
+    const { recordings } = store.state.settings
+    if (recordings.enabled) {
+      return h('p', { class: 'palette-empty' }, 'No recordings yet. Sessions you start from now on are recorded.')
+    }
+    return h('div', { class: 'replay-empty' },
+      h('p', {}, 'Recording is off, so there is nothing to replay.'),
+      h('p', { class: 'hint' }, `When on, Dawsha stores everything each terminal prints (including anything secret you display) for ${recordings.keepDays} days. It stays on this PC and you can delete it any time in Settings.`),
+      h('button', { class: 'btn primary', type: 'button', id: 'replay-turn-on', onClick: () => setRecordings({ enabled: true }) }, 'Turn on recording')
+    )
   }
 
   private row(recording: RecordingSummary, position: number): HTMLElement {

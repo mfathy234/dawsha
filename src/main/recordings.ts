@@ -1,6 +1,8 @@
 import { mkdir, readdir, readFile, rm, rmdir, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
+  DAY_MS,
+  MAX_READ_BYTES,
   isRecordingId,
   selectRetention,
   type RecordingMeta,
@@ -11,7 +13,6 @@ import {
 } from '../shared/recordings'
 import type { Recorder } from './recorder'
 
-export const MAX_READ_BYTES = 128 * 1024 * 1024
 export const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000
 const DATE_FOLDER = /^\d{4}-\d{2}-\d{2}$/
 
@@ -37,6 +38,7 @@ function readMeta(text: string, id: string): RecordingMeta | null {
       startedAt: raw.startedAt,
       endedAt: typeof raw.endedAt === 'number' ? raw.endedAt : null,
       exitCode: typeof raw.exitCode === 'number' ? raw.exitCode : null,
+      endReason: raw.endReason === 'size-limit' ? 'size-limit' : null,
       cols: typeof raw.cols === 'number' ? raw.cols : 80,
       rows: typeof raw.rows === 'number' ? raw.rows : 24
     }
@@ -128,6 +130,10 @@ export class RecordingService {
     return readFile(path, 'utf8')
   }
 
+  setPaused(terminalId: string, paused: boolean | null): boolean | null {
+    return paused === null ? this.recorder.isPaused(terminalId) : this.recorder.setPaused(terminalId, paused)
+  }
+
   setTitle(terminalId: string, title: string): void {
     this.recorder.setTitle(terminalId, title)
   }
@@ -156,31 +162,58 @@ export class RecordingService {
   }
 
   async cleanup(): Promise<string[]> {
-    const live = this.recorder.activeIds()
-    const stored = await this.scan()
-    await this.finishOrphans(stored, live)
+    const scanStart = this.now()
+    const stored = (await this.scan()).filter((entry) => entry.meta.startedAt <= scanStart)
+    await this.finishOrphans(stored)
+    await this.removeOrphanCasts()
     const entries: RetentionEntry[] = stored.map((entry) => ({ id: entry.meta.id, bytes: entry.totalBytes, updatedAt: entry.updatedAt }))
     const { keepDays, maxMegabytes } = this.settings()
-    const doomed = selectRetention(entries, {
-      now: this.now(),
+    const selected = selectRetention(entries, {
+      now: scanStart,
       keepDays,
       maxBytes: maxMegabytes * 1024 * 1024,
-      protectedIds: live
+      protectedIds: this.recorder.activeIds()
     })
+    const live = this.recorder.activeIds()
+    const doomed = selected.filter((id) => !live.has(id))
     await this.remove(doomed)
     return doomed
   }
 
-  private async finishOrphans(stored: StoredRecording[], live: Set<string>): Promise<void> {
+  private async finishOrphans(stored: StoredRecording[]): Promise<void> {
     for (const entry of stored) {
-      if (entry.meta.endedAt !== null || live.has(entry.meta.id)) continue
+      if (entry.meta.endedAt !== null || this.recorder.activeIds().has(entry.meta.id)) continue
       const meta = { ...entry.meta, endedAt: Math.max(entry.meta.startedAt, Math.round(entry.updatedAt)) }
       try {
-        await writeFile(join(this.root, `${meta.id}.json`), JSON.stringify(meta), 'utf8')
+        await writeFile(join(this.root, `${meta.id}.json`), JSON.stringify(meta), { encoding: 'utf8', mode: 0o600 })
       } catch {
         continue
       }
     }
+  }
+
+  private async removeOrphanCasts(): Promise<void> {
+    const cutoff = this.now() - this.settings().keepDays * DAY_MS
+    let days: string[] = []
+    try {
+      days = (await readdir(this.root)).filter((name) => DATE_FOLDER.test(name))
+    } catch {
+      return
+    }
+    for (const day of days) {
+      let names: string[] = []
+      try {
+        names = await readdir(join(this.root, day))
+      } catch {
+        continue
+      }
+      for (const name of names) {
+        if (!name.endsWith('.cast') || names.includes(`${name.slice(0, -5)}.json`)) continue
+        const info = await sizeOf(join(this.root, day, name))
+        if (info && info.mtime < cutoff) await rm(join(this.root, day, name), { force: true }).catch(() => undefined)
+      }
+    }
+    await this.pruneEmptyFolders()
   }
 
   private async pruneEmptyFolders(): Promise<void> {
@@ -200,7 +233,7 @@ export class RecordingService {
   }
 
   async ensureRoot(): Promise<string> {
-    await mkdir(this.root, { recursive: true })
+    await mkdir(this.root, { recursive: true, mode: 0o700 })
     return this.root
   }
 
