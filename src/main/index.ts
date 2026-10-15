@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { BrowserWindow, Menu, app, ipcMain, net, protocol, session } from 'electron'
+import { BrowserWindow, Menu, app, ipcMain, net, powerMonitor, protocol, session } from 'electron'
 import { IPC } from '../shared/ipc'
 import { CodexWatcher } from './codexWatcher'
 import { GeminiWatcher } from './geminiWatcher'
@@ -193,7 +193,8 @@ app.whenReady().then(async () => {
         assetDirectory: join(__dirname, isPrivateRemoteBuild ? '../renderer-private' : '../renderer'),
         settings: store,
         ptys,
-        getWindow: () => mainWindow
+        getWindow: () => mainWindow,
+        idleSeconds: () => powerMonitor.getSystemIdleTime()
       })
     : undefined
   registerImageProtocol(store)

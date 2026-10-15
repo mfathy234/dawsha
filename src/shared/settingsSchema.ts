@@ -47,7 +47,16 @@ const makeId = (): string => {
 export const DEFAULT_PALETTE_SHORTCUT = 'Ctrl+K'
 
 export const defaultFullAccess = (): FullAccess => ({ claude: true, codex: true, gemini: false })
-export const defaultRemoteAccess = (): RemoteAccessSettings => ({ allowedEmail: '', terminalInput: false, sessionControl: false })
+export const defaultRemoteAccess = (): RemoteAccessSettings => ({
+  allowedEmail: '',
+  terminalInput: false,
+  sessionControl: false,
+  approvals: false,
+  approvalsNotify: true,
+  approvalsOnlyWhenAway: false,
+  approvalsAwayMinutes: 3,
+  approvalsAllowConfigEdits: false
+})
 
 export const defaultImage = (): BackgroundImage => ({ enabled: false, path: null, dim: 60, blur: 0 })
 
@@ -253,12 +262,22 @@ function sanitizeFullAccess(value: unknown): FullAccess {
   return { claude: pick('claude'), codex: pick('codex'), gemini: pick('gemini') }
 }
 
+export function clampAwayMinutes(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(60, Math.max(1, Math.round(value))) : fallback
+}
+
 function sanitizeRemoteAccess(value: unknown): RemoteAccessSettings {
-  if (!isRecord(value)) return defaultRemoteAccess()
+  const defaults = defaultRemoteAccess()
+  if (!isRecord(value)) return defaults
   return {
     allowedEmail: typeof value.allowedEmail === 'string' && value.allowedEmail.length <= 254 ? value.allowedEmail : '',
     terminalInput: value.terminalInput === true,
-    sessionControl: value.sessionControl === true
+    sessionControl: value.sessionControl === true,
+    approvals: value.approvals === true,
+    approvalsNotify: typeof value.approvalsNotify === 'boolean' ? value.approvalsNotify : defaults.approvalsNotify,
+    approvalsOnlyWhenAway: value.approvalsOnlyWhenAway === true,
+    approvalsAwayMinutes: clampAwayMinutes(value.approvalsAwayMinutes, defaults.approvalsAwayMinutes),
+    approvalsAllowConfigEdits: value.approvalsAllowConfigEdits === true
   }
 }
 

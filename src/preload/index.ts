@@ -21,7 +21,8 @@ const api: GridApi = {
       refreshPairing: () => ipcRenderer.invoke(IPC.remoteAccessPairing),
       setPermissions: (patch) => ipcRenderer.invoke(IPC.remoteAccessPermissions, patch),
       setAllowedEmail: (email) => ipcRenderer.invoke(IPC.remoteAccessEmail, email),
-      revokeDevice: (id) => ipcRenderer.invoke(IPC.remoteAccessRevoke, id)
+      revokeDevice: (id) => ipcRenderer.invoke(IPC.remoteAccessRevoke, id),
+      recordApproval: (terminalId, allowed, tail) => ipcRenderer.invoke(IPC.remoteApprovalAnswered, terminalId, allowed, tail)
     }
   } : {}),
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),

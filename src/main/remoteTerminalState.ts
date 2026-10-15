@@ -100,6 +100,22 @@ export class RemoteTerminalState {
     })
   }
 
+  /** The last lines of the mirrored screen (viewport plus a little scrollback), once pending output has been applied. */
+  tail(id: string, extraRows = 20): Promise<string | null> {
+    const terminal = this.terminals.get(id)
+    if (!terminal) return Promise.resolve(null)
+    return new Promise((resolveTail) => {
+      terminal.screen.write('', () => {
+        if (this.terminals.get(id) !== terminal) { resolveTail(null); return }
+        const buffer = terminal.screen.buffer.active
+        const first = Math.max(0, buffer.length - terminal.screen.rows - extraRows)
+        const lines: string[] = []
+        for (let index = first; index < buffer.length; index += 1) lines.push(buffer.getLine(index)?.translateToString(true) ?? '')
+        resolveTail(lines.join('\n'))
+      })
+    })
+  }
+
   subscribe(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null {
     const terminal = this.terminals.get(id)
     if (!terminal) return null

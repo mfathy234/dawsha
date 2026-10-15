@@ -362,6 +362,8 @@ export class SettingsViewComponent {
       })()
     }), h('p', { class: 'hint' }, 'The browser can choose a supported agent for each configured project and resume that agent’s existing sessions.')))
 
+    rows.push(...this.approvalRows(state))
+
     const devices = state.devices.length
       ? state.devices.map((device) => row(device.name,
           h('button', { class: 'btn ghost small', type: 'button', disabled: this.remoteBusy, onClick: () => void this.runRemoteAction(() => remote.revokeDevice(device.id)) }, 'Revoke'),
@@ -370,6 +372,51 @@ export class SettingsViewComponent {
     rows.push(row('Paired devices', h('div', { class: 'remote-device-list' }, ...devices),
       h('p', { class: 'hint' }, 'Revocation takes effect immediately for that browser.')))
     return rows
+  }
+
+  private approvalRows(state: RemoteAccessState): HTMLElement[] {
+    const remote = api.remoteAccess
+    if (!remote) return []
+    const access = state.permissions
+    const set = (patch: Partial<RemoteAccessSettings>) => void this.runRemoteAction(() => remote.setPermissions(patch))
+    const minutes = h('input', {
+      class: 'text-input remote-away-minutes',
+      id: 'remote-approvals-minutes',
+      type: 'number',
+      min: '1',
+      max: '60',
+      value: String(access.approvalsAwayMinutes),
+      disabled: this.remoteBusy || !access.approvals || !access.approvalsOnlyWhenAway,
+      'aria-label': 'Minutes without keyboard or mouse input before notifying'
+    }) as HTMLInputElement
+    minutes.addEventListener('change', () => set({ approvalsAwayMinutes: Number(minutes.value) }))
+    return [
+      h('div', { class: 'remote-approvals-head' },
+        h('h4', {}, 'Approvals from your phone'),
+        h('p', { class: 'hint' }, 'Answer permission prompts from a paired phone. Your agents keep running on this computer.')),
+      row('Phone approvals', checkbox('remote-approvals', 'Let paired phones answer permission prompts', access.approvals, this.remoteBusy, (value) => {
+        void (async () => {
+          if (value && !await confirmDialog({
+            title: 'Let paired phones answer permission prompts?',
+            body: 'A paired phone will be able to allow or deny the command or edit an agent is waiting on, from anywhere the phone can reach Dawsha. Allowing a prompt lets the agent run it on this computer.',
+            confirmLabel: 'Allow phone approvals',
+            danger: false
+          })) {
+            this.refresh()
+            return
+          }
+          set({ approvals: value })
+        })()
+      }),
+        h('p', { class: 'hint' }, 'A permission separate from terminal input and session control. It lets a phone allow or deny the prompt an agent is waiting on, nothing else.')),
+      row('Notifications', checkbox('remote-approvals-notify', 'Notify the phone when a session needs you', access.approvalsNotify, this.remoteBusy || !access.approvals, (value) => set({ approvalsNotify: value })),
+        h('p', { class: 'hint' }, 'Uses browser notifications on the phone while its page is open in the background. Allow and Deny buttons show where the phone supports them. Alerts do not reach a closed browser.')),
+      row('Only when I am away', checkbox('remote-approvals-away', 'Notify only when this computer has been idle', access.approvalsOnlyWhenAway, this.remoteBusy || !access.approvals || !access.approvalsNotify, (value) => set({ approvalsOnlyWhenAway: value })),
+        h('p', { class: 'hint' }, 'Counts time with no keyboard or mouse input here. Prompts stay answerable on the phone either way.')),
+      row('Idle minutes', minutes),
+      row('CI and config files', checkbox('remote-approvals-config', 'Phone can allow edits to CI and config files', access.approvalsAllowConfigEdits, this.remoteBusy || !access.approvals, (value) => set({ approvalsAllowConfigEdits: value })),
+        h('p', { class: 'hint' }, 'Off by default: edits outside the project, to .github, .yml, package.json, lockfiles and .env files can only be denied from the phone. Detection reads the prompt text, so it is best effort.'))
+    ]
   }
 
   private copyButton(id: string, value: string, label: string, disabled = false): HTMLElement {

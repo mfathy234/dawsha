@@ -21,6 +21,17 @@ describe('remote terminal state', () => {
     expect(screen?.output).not.toContain('first draft')
   })
 
+  it('reads the last screen lines for prompt detection once pending output is applied', async () => {
+    const state = new RemoteTerminalState()
+    state.add('tui', 10, { projectId: 'p1', agent: 'claude' }, { cols: 30, rows: 4 })
+    state.append('tui', 'old 1\r\nold 2\r\nold 3\r\nold 4\r\nDo you want to proceed?\r\n1. Yes\r\n2. No')
+    const tail = await state.tail('tui')
+    expect(tail).toContain('Do you want to proceed?')
+    expect(tail).toContain('1. Yes')
+    expect(tail?.split('\n').at(-1)).toBe('2. No')
+    expect(await state.tail('missing')).toBeNull()
+  })
+
   it('applies resizes in stream order and notifies subscribers', async () => {
     const state = new RemoteTerminalState()
     const listener = vi.fn()
