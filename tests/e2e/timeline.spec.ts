@@ -150,6 +150,10 @@ test('Ctrl+Shift+T and the palette toggle the timeline, and Escape closes it', a
     await expect(page.locator('.replay-empty')).toContainText('everything each terminal prints')
     await page.keyboard.press('Escape')
     await expect(page.locator('.replay-picker')).toBeHidden()
+    // The pane header has its own Replay button too.
+    await page.locator('.pane').first().getByRole('button', { name: 'Replay session' }).click()
+    await expect(page.locator('.replay-picker')).toBeVisible()
+    await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Close timeline' }).click()
     await expect(panel).toBeHidden()
   } finally {

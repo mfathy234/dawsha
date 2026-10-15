@@ -861,6 +861,16 @@ button {
   flex-shrink: 1;
 }
 
+.tl-replay {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tl-replay-icon {
+  display: inline-flex;
+}
+
 @container pane-header (max-width: 640px) {
   .pane-header .pane-prev,
   .pane-header .pane-next,

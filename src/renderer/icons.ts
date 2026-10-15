@@ -40,6 +40,7 @@ export const ICONS = {
   layout: svg(14, '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16 M3 12h9"/>'),
   palette: svg(16, '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10" r="1"/><path d="M12 21a2 2 0 0 1-2-2c0-1.5 1-1.5 1-3a2 2 0 0 1 2-2h3"/>'),
   play: svg(16, '<polygon points="7 4 20 12 7 20 7 4" fill="currentColor"/>'),
+  replay: svg(14, '<circle cx="12" cy="12" r="9"/><polygon points="10 8.5 16 12 10 15.5 10 8.5" fill="currentColor"/>'),
   pause: svg(16, '<rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/>'),
   skipBack: svg(16, '<polyline points="19 20 9 12 19 4" fill="currentColor"/><line x1="5" y1="19" x2="5" y2="5"/>'),
   skipForward: svg(16, '<polyline points="5 4 15 12 5 20" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/>'),
