@@ -95,18 +95,22 @@ test('sessions board: columns follow state, answer, review, peek, reply, filter 
     await expect(peek.locator(`.term-host[data-term-id="${second}"]`)).toBeVisible()
     await expect(page.locator('.pane .term-host')).toHaveCount(1)
     // A reply is never typed into a permission prompt, where Enter would pick its default answer.
-    // The earlier prompt's text is still in scrollback, so wait until the new one is drawn.
-    const prompts = async (): Promise<number> => (await bufferText(page, second)).split('npm test -- invoices').length - 1
-    const shown = await prompts()
-    await feedTerminal(page, second, PROMPT)
-    await expect.poll(prompts).toBeGreaterThan(shown)
+    // The prompt is printed by the pane's own shell, like a real agent would: on Windows the console repaints
+    // after the peek resizes it, which would wipe text fed straight into xterm.
+    const shell = async (command: string): Promise<void> => {
+      await peek.locator('.term-host').click()
+      await page.keyboard.type(command)
+      await page.keyboard.press('Enter')
+    }
+    await shell('echo Do you want to proceed? & echo 1. Yes & echo 2. No, and tell Claude what to do differently')
+    await expect.poll(async () => /^2\. No, and tell Claude/m.test(await bufferText(page, second))).toBe(true)
     await peek.getByRole('textbox', { name: /^Message to/ }).fill('echo blockedreply')
     await peek.getByRole('button', { name: 'Send' }).click()
     await expect(page.locator('.toasts')).toContainText('Answer the permission')
     await expect(peek.getByRole('textbox', { name: /^Message to/ })).toHaveValue('echo blockedreply')
     expect(await bufferText(page, second)).not.toContain('blockedreply')
-    await feedTerminal(page, second, CLEAR_SCREEN)
-    await expect.poll(() => bufferText(page, second)).not.toContain('npm test -- invoices')
+    await shell('cls')
+    await expect.poll(async () => /^2\. No, and tell Claude/m.test(await bufferText(page, second))).toBe(false)
     await expect(column(page, 'needs').locator('.board-card')).toHaveCount(0, { timeout: 15_000 })
     await peek.getByRole('textbox', { name: /^Message to/ }).fill('echo boardreply')
     await peek.getByRole('button', { name: 'Send' }).click()

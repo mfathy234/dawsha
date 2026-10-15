@@ -78,6 +78,8 @@ async function boot(): Promise<void> {
     },
     onFocus: (termId) => {
       const paneId = paneOfTerm(termId)
+      // Typing into the board's peek must not leave the board for the grid.
+      if (paneId && store.state.boardPeekId === paneId && store.state.settings.sessionsLayout === 'board') return
       if (paneId) focusPane(paneId, true)
     }
   })
