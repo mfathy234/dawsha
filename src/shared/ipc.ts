@@ -8,6 +8,7 @@ export const IPC = {
   remoteAccessPermissions: 'remote-access:permissions',
   remoteAccessEmail: 'remote-access:email',
   remoteAccessRevoke: 'remote-access:revoke',
+  remoteApprovalAnswered: 'remote-access:approval-answered',
   remoteSessionStarted: 'remote-session:started',
   paneonImportPreview: 'paneon-import:preview',
   paneonImportQueue: 'paneon-import:queue',

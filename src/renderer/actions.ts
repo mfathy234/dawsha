@@ -507,6 +507,7 @@ export function answerPermission(paneId: string, allow: boolean): boolean {
   if (store.state.attention[paneId] !== 'needs') return false
   const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
   if (!tabId || !detectPermissionPrompt(getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '')) return false
+  void api.remoteAccess?.recordApproval(tabId, allow).catch(() => undefined)
   api.write(tabId, allow ? '\r' : '\x1b')
   return true
 }

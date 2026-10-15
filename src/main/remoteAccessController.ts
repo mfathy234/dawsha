@@ -8,6 +8,8 @@ import { createCloudflaredInstaller } from './cloudflaredInstaller'
 import { startRemoteServer, type RemoteServerHandle, type RemoteServerOptions } from './remoteServer'
 import { startRemoteSession } from './remoteSessions'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
+import { createRemoteApprovals, type RemoteApprovals } from './remoteApprovals'
+import { clampAwayMinutes } from '../shared/settingsSchema'
 import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
 
 interface SettingsStoreLike {
@@ -18,6 +20,7 @@ interface SettingsStoreLike {
 interface RemotePtys {
   remoteSnapshot(id?: string): RemoteTerminalSnapshot[]
   remoteScreen(id: string): Promise<RemoteTerminalScreen | null>
+  remoteTail(id: string): Promise<string | null>
   subscribeRemoteOutput(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null
   write(id: string, data: string): void
   kill(id: string): void
@@ -40,8 +43,13 @@ const SAFE_REMOTE_PATHS = new Set([
   '/dawsha/api/session',
   '/dawsha/api/session/stop',
   '/dawsha/api/logout',
-  '/dawsha/api/terminal/output'
+  '/dawsha/api/terminal/output',
+  '/dawsha/api/approvals',
+  '/dawsha/api/approvals/answer',
+  '/dawsha/api/approvals/stream'
 ])
+
+const PERMISSION_KEYS = new Set(['terminalInput', 'sessionControl', 'approvals', 'approvalsNotify', 'approvalsOnlyWhenAway', 'approvalsAwayMinutes', 'approvalsAllowConfigEdits'])
 
 function appendRemoteDiagnostic(userDataDir: string, record: Record<string, unknown>): void {
   const filePath = join(userDataDir, 'remote-access.log')
@@ -63,6 +71,7 @@ export interface RemoteAccessControllerOptions {
   settings: SettingsStoreLike
   ptys: RemotePtys
   getWindow(): HostWindow | null
+  idleSeconds?(): number
   tunnel?: ReturnType<typeof createCloudflareQuickTunnel>
   createServer?: (options: RemoteServerOptions) => Promise<RemoteServerHandle>
 }
@@ -94,6 +103,19 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   let stopping = false
   let stoppingOperation: Promise<void> | null = null
   const remoteSessionIds = new Set<string>()
+  const approvals: RemoteApprovals = createRemoteApprovals({
+    terminals: {
+      snapshot: (id) => options.ptys.remoteSnapshot(id),
+      tail: (id) => options.ptys.remoteTail(id),
+      write: (id, data) => options.ptys.write(id, data)
+    },
+    getProjects: () => options.settings.get().projects,
+    getConfig: () => {
+      const access = options.settings.get().remoteAccess
+      return { allowConfigEdits: access.approvalsAllowConfigEdits, notify: access.approvalsNotify, onlyWhenAway: access.approvalsOnlyWhenAway, awayMinutes: access.approvalsAwayMinutes }
+    },
+    idleSeconds: () => options.idleSeconds?.() ?? 0
+  })
 
   async function sessions(project: Project, agent: AgentKind) {
     if (agent === 'claude') return listClaudeSessions(project.folder)
@@ -176,6 +198,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
           options.ptys.kill(id)
           return true
         },
+        approvals,
         assetDirectory: options.assetDirectory,
         onRequestError: (error, method, pathname) => {
           const record = {
@@ -243,6 +266,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     url = null
     hostname = null
     pairing = null
+    approvals.stop()
     for (const id of remoteSessionIds) options.ptys.kill(id)
     remoteSessionIds.clear()
     let failure: unknown
@@ -306,9 +330,10 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   }
 
   async function setPermissions(next: Partial<RemoteAccessSettings>): Promise<RemoteAccessState> {
-    if (!next || typeof next !== 'object' || Object.keys(next).some((key) => key !== 'terminalInput' && key !== 'sessionControl') ||
-        Object.values(next).some((value) => typeof value !== 'boolean')) throw new Error('Invalid Remote Access permissions.')
+    if (!next || typeof next !== 'object' || Object.keys(next).some((key) => !PERMISSION_KEYS.has(key)) ||
+        Object.entries(next).some(([key, value]) => key === 'approvalsAwayMinutes' ? typeof value !== 'number' || !Number.isFinite(value) : typeof value !== 'boolean')) throw new Error('Invalid Remote Access permissions.')
     const remoteAccess = { ...options.settings.get().remoteAccess, ...next }
+    remoteAccess.approvalsAwayMinutes = clampAwayMinutes(remoteAccess.approvalsAwayMinutes, 3)
     options.settings.update({ remoteAccess })
     auth.setPermissions(remoteAccess)
     return getState()
@@ -328,5 +353,10 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     return getState()
   }
 
-  return { getState, enable, disable, refreshPairing, setPermissions, setAllowedEmail, revoke, stop }
+  async function recordDesktopApproval(terminalId: string, allowed: boolean): Promise<void> {
+    if (!server || typeof terminalId !== 'string' || typeof allowed !== 'boolean') return
+    await approvals.recordDesktopAnswer(terminalId, allowed)
+  }
+
+  return { getState, recordDesktopApproval, enable, disable, refreshPairing, setPermissions, setAllowedEmail, revoke, stop }
 }

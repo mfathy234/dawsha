@@ -7111,3 +7111,18 @@ th[aria-sort='descending'] .usage-sort {
     grid-template-columns: 1fr;
   }
 }
+
+.remote-approvals-head {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.remote-approvals-head h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.remote-away-minutes {
+  width: 72px;
+}

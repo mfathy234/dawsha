@@ -143,6 +143,11 @@ export interface RemoteAccessSettings {
   allowedEmail: string
   terminalInput: boolean
   sessionControl: boolean
+  approvals: boolean
+  approvalsNotify: boolean
+  approvalsOnlyWhenAway: boolean
+  approvalsAwayMinutes: number
+  approvalsAllowConfigEdits: boolean
 }
 
 export interface RemoteAccessDevice {

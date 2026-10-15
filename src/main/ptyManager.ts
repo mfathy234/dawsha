@@ -14,6 +14,7 @@ import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot 
 interface RemoteTerminalStateLike {
   snapshot(id?: string): RemoteTerminalSnapshot[]
   screen(id: string): Promise<RemoteTerminalScreen | null>
+  tail(id: string): Promise<string | null>
   subscribe(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null
   add(id: string, startedAt: number, metadata: { projectId: string | null; agent: SpawnRequest['agent']; remoteManaged?: boolean }, size: { cols: number; rows: number }): void
   append(id: string, data: string): void
@@ -67,6 +68,10 @@ export class PtyManager {
 
   remoteScreen(id: string): Promise<RemoteTerminalScreen | null> {
     return this.remoteTerminals?.screen(id) ?? Promise.resolve(null)
+  }
+
+  remoteTail(id: string): Promise<string | null> {
+    return this.remoteTerminals?.tail(id) ?? Promise.resolve(null)
   }
 
   subscribeRemoteOutput(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null {

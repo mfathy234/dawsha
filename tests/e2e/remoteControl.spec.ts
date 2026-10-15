@@ -58,6 +58,7 @@ interface MockControls {
   snapshotSize?: { cols: number; rows: number }
   outputSocket?: WebSocketRoute
   pairBodies?: unknown[]
+  approvals?: boolean
 }
 
 async function installApiMocks(page: Page, controls: MockControls): Promise<void> {
@@ -96,7 +97,7 @@ async function installApiMocks(page: Page, controls: MockControls): Promise<void
           { id: 'terminal-1', projectId: 'project-1', agent: 'codex', startedAt: 1, output: 'Remote session ready\r\n' },
           ...(createdAgent && !controls.stoppedSessionIds.has(createdTerminalId) ? [{ id: createdTerminalId, projectId: 'project-1', agent: createdAgent, startedAt: 2, output: 'New session ready\r\n', remoteManaged: true }] : [])
         ].filter(() => !controls.terminalEnded),
-        permissions: { read: true, terminalInput: controls.canControl, sessionControl: controls.canControl }
+        permissions: { read: true, terminalInput: controls.canControl, sessionControl: controls.canControl, approvals: controls.approvals === true }
       }
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(state) })
       return
@@ -468,6 +469,190 @@ test('Remote Access settings show a QR code that opens the page with the pairing
     await expect(page.locator('.remote-manual')).toContainText('Or connect by hand')
     await expect(page.locator('.remote-pairing-code')).toHaveAttribute('aria-label', 'Pairing code 4 8 2 9 1 3')
     await page.screenshot({ path: 'test-results/screens/remote-access-qr.png' })
+  } finally {
+    await closeApp(app)
+  }
+})
+
+interface FakeApproval { id: string; projectId: string; projectName: string; agent: string; title: string; text: string; kind: string; summary: string; fingerprint: string; since: number; restriction: string | null; canAllow: boolean }
+
+const approvalCard = (id: string, overrides: Partial<FakeApproval> = {}): FakeApproval => ({
+  id,
+  projectId: 'project-1',
+  projectName: 'billing-api',
+  agent: 'codex',
+  title: 'Codex needs you',
+  text: 'Bash command\n  npm test\nDo you want to proceed?\n1. Yes\n2. No',
+  kind: 'command',
+  summary: 'npm test',
+  fingerprint: '0123456789abcdef',
+  since: Date.now() - 60_000,
+  restriction: null,
+  canAllow: true,
+  ...overrides
+})
+
+async function installApprovalMocks(page: Page, pending: FakeApproval[], answers: unknown[]): Promise<{ history: unknown[]; pushed: () => void }> {
+  const history: unknown[] = []
+  let socket: WebSocketRoute | undefined
+  const payload = () => ({ items: pending, history, notify: false })
+  await page.routeWebSocket('**/api/approvals/stream*', (route) => {
+    socket = route
+    route.send(JSON.stringify({ event: 'approvals', data: payload() }))
+  })
+  await page.route('**/dawsha/api/approvals**', async (route) => {
+    const request = route.request()
+    if (request.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload()) })
+      return
+    }
+    const body = request.postDataJSON() as { id: string; allow: boolean; reason?: string }
+    answers.push(body)
+    const index = pending.findIndex((item) => item.id === body.id)
+    if (index < 0) {
+      await route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"That prompt changed or was already answered."}' })
+      return
+    }
+    history.unshift({ id: String(history.length + 1), time: Date.now(), allowed: body.allow, summary: pending[index].summary, kind: pending[index].kind, agent: 'codex', projectName: 'billing-api', source: 'phone', device: 'Test phone', reason: Boolean(body.reason) })
+    pending.splice(index, 1)
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, reasonSent: Boolean(body.reason) }) })
+    socket?.send(JSON.stringify({ event: 'approvals', data: payload() }))
+  })
+  return { history, pushed: () => socket?.send(JSON.stringify({ event: 'approvals', data: payload() })) }
+}
+
+test('phone approvals: list, allow, deny with a reason, and a restricted edit that cannot be allowed', async () => {
+  test.setTimeout(60_000)
+  const { server, url } = await startStaticServer()
+  let browser: Browser | undefined
+  const controls: MockControls = { paired: true, canControl: false, approvals: true, writes: [], writeTimes: [], inputAttempts: [], inputFailures: 0, inputDelayMs: 0, resizes: [], sessions: [], stoppedSessionIds: new Set(), outputConnections: 0, closeFirstOutput: false, terminalEnded: false }
+  const pending = [
+    approvalCard('terminal-1'),
+    approvalCard('terminal-2', { agent: 'claude', title: 'Claude needs you', projectName: 'mobile-shell', kind: 'edit', summary: 'Edit .github/workflows/ci.yml', text: 'Edit file\n.github/workflows/ci.yml\n 15 +   timeout-minutes: 20', fingerprint: 'fedcba9876543210', restriction: 'config', canAllow: false }),
+    approvalCard('terminal-3', { fingerprint: '1111222233334444', summary: 'npm run build' })
+  ]
+  const answers: Array<{ id: string; allow: boolean; reason?: string }> = []
+  try {
+    browser = await chromium.launch({ headless: true })
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    await installApiMocks(page, controls)
+    await installApprovalMocks(page, pending, answers)
+    await page.goto(url)
+    await expect(page.locator('#approvals-badge')).toHaveText('3')
+    await page.locator('#remote-nav-approvals').click()
+    await expect(page.locator('#approvals-view')).toBeVisible()
+    await expect(page.locator('.approval-card')).toHaveCount(3)
+    await expect(page.locator('.approval-card').first()).toContainText('Codex')
+    await expect(page.locator('.approval-card').first()).toContainText('billing-api')
+    await expect(page.locator('.approval-card').first()).toContainText('npm test')
+    await expect(page.locator('.approval-card').nth(1)).toContainText('Open in Dawsha to allow')
+    await expect(page.locator('.approval-card').nth(1).getByRole('button', { name: 'Allow once' })).toHaveCount(0)
+    const allowBox = await page.locator('.approval-card').first().getByRole('button', { name: 'Allow once' }).boundingBox()
+    expect(allowBox?.height).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
+    await page.screenshot({ path: 'test-results/screens/remote-approvals.png' })
+
+    await page.locator('.approval-card').first().getByRole('button', { name: 'Allow once' }).click()
+    await expect.poll(() => answers).toEqual([{ id: 'terminal-1', fingerprint: '0123456789abcdef', allow: true }])
+    await expect(page.locator('.approval-card')).toHaveCount(2)
+    await expect(page.locator('#approvals-badge')).toHaveText('2')
+    await expect(page.locator('.history-row').first()).toContainText('Allowed')
+
+    await page.locator('.approval-card').nth(1).getByRole('button', { name: 'Deny…' }).click()
+    await expect(page.locator('#deny-dialog')).toBeVisible()
+    await expect(page.locator('.quick-reason')).toHaveText(['Stop and wait for me', 'Don\u2019t run anything, just explain', 'Use a different approach'])
+    expect(((await page.locator('.quick-reason').first().boundingBox())?.height ?? 0)).toBeGreaterThanOrEqual(44)
+    await page.screenshot({ path: 'test-results/screens/remote-approvals-deny.png' })
+    await page.locator('.quick-reason').nth(2).click()
+    await expect(page.locator('#deny-message')).toHaveValue('Use a different approach')
+    await page.locator('#deny-submit').click()
+    await expect.poll(() => answers.at(-1)).toEqual({ id: 'terminal-3', fingerprint: '1111222233334444', allow: false, reason: 'Use a different approach' })
+    await expect(page.locator('.approval-card')).toHaveCount(1)
+
+    await page.locator('.approval-card').first().getByRole('button', { name: 'Deny…' }).click()
+    await page.locator('#deny-submit').click()
+    await expect.poll(() => answers.at(-1)).toEqual({ id: 'terminal-2', fingerprint: 'fedcba9876543210', allow: false })
+    await expect(page.locator('#approvals-root .quiet-empty')).toContainText('Nothing is waiting for you')
+    await expect(page.locator('#approvals-badge')).toBeHidden()
+    await expect(page.locator('.history-row')).toHaveCount(3)
+  } finally {
+    await browser?.close()
+    await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
+  }
+})
+
+test('phone approvals: a prompt that already changed is refused with a clear message', async () => {
+  const { server, url } = await startStaticServer()
+  let browser: Browser | undefined
+  const controls: MockControls = { paired: true, canControl: false, approvals: true, writes: [], writeTimes: [], inputAttempts: [], inputFailures: 0, inputDelayMs: 0, resizes: [], sessions: [], stoppedSessionIds: new Set(), outputConnections: 0, closeFirstOutput: false, terminalEnded: false }
+  const pending = [approvalCard('terminal-1')]
+  const answers: unknown[] = []
+  try {
+    browser = await chromium.launch({ headless: true })
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    await installApiMocks(page, controls)
+    await installApprovalMocks(page, pending, answers)
+    await page.goto(url)
+    await page.locator('#remote-nav-approvals').click()
+    await expect(page.locator('.approval-card')).toHaveCount(1)
+    pending.splice(0, 1)
+    await page.locator('.approval-card').getByRole('button', { name: 'Allow once' }).click()
+    await expect(page.locator('#approvals-root .remote-notice')).toContainText('changed or was already answered')
+  } finally {
+    await browser?.close()
+    await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
+  }
+})
+
+test('phone approvals: a disabled permission shows a clear off state and no prompts', async () => {
+  const { server, url } = await startStaticServer()
+  let browser: Browser | undefined
+  const controls: MockControls = { paired: true, canControl: true, approvals: false, writes: [], writeTimes: [], inputAttempts: [], inputFailures: 0, inputDelayMs: 0, resizes: [], sessions: [], stoppedSessionIds: new Set(), outputConnections: 0, closeFirstOutput: false, terminalEnded: false }
+  const approvalRequests: string[] = []
+  try {
+    browser = await chromium.launch({ headless: true })
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    await installApiMocks(page, controls)
+    await page.route('**/dawsha/api/approvals**', async (route) => {
+      approvalRequests.push(route.request().url())
+      await route.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"Answering permission prompts is turned off in Dawsha settings."}' })
+    })
+    await page.goto(url)
+    await page.locator('#remote-nav-approvals').click()
+    await expect(page.locator('#approvals-root')).toContainText('Approvals are off')
+    await expect(page.locator('.approval-card')).toHaveCount(0)
+    await expect(page.locator('#approvals-badge')).toBeHidden()
+    expect(approvalRequests).toEqual([])
+    const refused = await page.evaluate(async () => (await fetch('./api/approvals', { credentials: 'same-origin' })).status)
+    expect(refused).toBe(403)
+  } finally {
+    await browser?.close()
+    await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
+  }
+})
+
+test('desktop settings: phone approvals are off by default and each setting persists through the main process', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-remote').click()
+    const approvals = page.locator('#remote-approvals')
+    await expect(approvals).not.toBeChecked()
+    await expect(page.locator('#remote-approvals-notify')).toBeDisabled()
+    await expect(page.locator('#remote-approvals-config')).toBeDisabled()
+    await approvals.check()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Allow phone approvals' }).click()
+    await expect(approvals).toBeChecked()
+    await expect(page.locator('#remote-approvals-notify')).toBeEnabled()
+    await expect(page.locator('#remote-approvals-config')).not.toBeChecked()
+    await page.locator('#remote-approvals-away').check()
+    await expect(page.locator('#remote-approvals-minutes')).toBeEnabled()
+    await page.locator('#remote-approvals-minutes').fill('7')
+    await page.locator('#remote-approvals-minutes').blur()
+    await page.locator('#remote-approvals-config').check()
+    const stored = await page.evaluate(async () => (await window.gridApi.remoteAccess!.getState()).permissions)
+    expect(stored).toMatchObject({ approvals: true, approvalsOnlyWhenAway: true, approvalsAwayMinutes: 7, approvalsAllowConfigEdits: true, terminalInput: false, sessionControl: false })
+    await page.screenshot({ path: 'test-results/screens/remote-approvals-settings.png' })
   } finally {
     await closeApp(app)
   }

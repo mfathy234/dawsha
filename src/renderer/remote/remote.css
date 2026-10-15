@@ -62,7 +62,7 @@ svg { display: block; flex: none; }
 .brand-name { color: #fff; }
 .beta-badge { display: inline-flex; align-items: center; padding: 3px 6px; border-radius: 999px; color: #fbbf24; background: rgba(245, 158, 11, .12); font-size: 9px; font-weight: 750; line-height: 1; letter-spacing: .08em; }
 .remote-nav { display: flex; align-items: center; gap: 2px; margin-left: 12px; padding: 3px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
-.nav-button { min-height: 32px; border: 0; border-radius: 999px; padding: 0 14px; color: var(--muted); background: transparent; font-size: 13px; font-weight: 550; transition: color .15s ease, background-color .15s ease; }
+.nav-button { min-height: 32px; display: inline-flex; align-items: center; white-space: nowrap; border: 0; border-radius: 999px; padding: 0 14px; color: var(--muted); background: transparent; font-size: 13px; font-weight: 550; transition: color .15s ease, background-color .15s ease; }
 .nav-button:hover { color: var(--text); }
 .nav-button.selected { color: #fff; background: var(--hover); box-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
 .new-session-button { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 0 14px 0 11px; color: var(--on-accent); background: var(--accent); font-size: 13px; font-weight: 650; }
@@ -253,8 +253,9 @@ svg { display: block; flex: none; }
   :root { --header-height: 56px; }
   .remote-header { gap: 8px; padding-right: 12px; padding-left: 12px; }
   .brand-name { display: none; }
-  .remote-nav { margin-left: 2px; }
-  .nav-button { min-height: 36px; padding: 0 14px; font-size: 14px; }
+  .remote-nav { min-width: 0; margin-left: 2px; }
+  .nav-button { min-height: 36px; padding: 0 8px; font-size: 13px; }
+  .nav-badge { margin-left: 4px; }
   .new-session-button { width: 40px; height: 40px; min-height: 40px; justify-content: center; padding: 0; color: var(--accent); background: rgba(52, 211, 153, .12); }
   .new-session-button:hover { background: rgba(52, 211, 153, .2); }
   .new-session-label, .logout-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
@@ -320,3 +321,38 @@ svg { display: block; flex: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Approvals */
+.nav-badge { min-width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; padding: 0 5px; border-radius: 9px; color: #2a0b0b; background: var(--danger); font-size: 11px; font-weight: 700; }
+.approval-list { display: flex; flex-direction: column; gap: 12px; }
+.approval-card { display: flex; flex-direction: column; gap: 10px; border-radius: 14px; padding: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.approval-head { display: flex; align-items: center; gap: 10px; }
+.approval-who { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.approval-who strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.approval-wait { color: var(--muted); font-size: 12px; }
+.approval-kind { flex: none; border-radius: 999px; padding: 2px 9px; color: var(--muted); background: var(--raised); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.approval-text { max-height: 260px; margin: 0; overflow: auto; border-radius: 10px; padding: 10px 12px; color: var(--text); background: var(--term-bg); box-shadow: inset 0 0 0 1px var(--line); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.approval-note, .approval-hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.approval-actions { display: flex; gap: 10px; }
+.approval-btn { min-height: 48px; flex: 1; border: 0; border-radius: 12px; padding: 0 14px; color: var(--text); background: var(--raised); box-shadow: inset 0 0 0 1px var(--line-strong); font-size: 15px; font-weight: 650; }
+.approval-btn.primary { color: var(--on-accent); background: var(--accent); box-shadow: none; }
+.approval-btn:disabled { cursor: wait; opacity: .6; }
+.approval-notify { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; border-radius: 12px; padding: 10px 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-size: 13px; }
+.approval-notify .quiet-button { min-height: 44px; }
+.approval-hint { margin-bottom: 14px; }
+.approval-history { margin-top: 28px; }
+.approval-history h2 { margin: 0 0 10px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.history-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.history-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.history-main { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-allowed { color: var(--accent); }
+.history-denied { color: var(--danger); }
+.history-meta { flex: none; color: var(--muted); font-size: 12px; }
+.deny-label { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.deny-quick { display: flex; flex-wrap: wrap; gap: 8px; }
+.quick-reason { min-height: 44px; border: 0; border-radius: 22px; padding: 8px 14px; color: var(--text); background: var(--raised); box-shadow: inset 0 0 0 1px var(--line-strong); font-size: 14px; text-align: left; }
+.quick-reason.on { color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.deny-message { width: 100%; border: 0; border-radius: 12px; padding: 12px 14px; color: #fff; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line-strong); font-size: 16px; resize: vertical; }
+.deny-message:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.danger-button { color: #2a0b0b; background: var(--danger); }
+.danger-button:hover { background: #fca5a5; }

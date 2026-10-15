@@ -66,6 +66,7 @@ export interface GridApi {
     setPermissions(patch: Partial<RemoteAccessSettings>): Promise<RemoteAccessState>
     setAllowedEmail(email: string): Promise<RemoteAccessState>
     revokeDevice(id: string): Promise<RemoteAccessState>
+    recordApproval(terminalId: string, allowed: boolean): Promise<void>
   }
   paneonImportPreview(): Promise<PaneonImportPreview>
   queuePaneonImport(): Promise<void>

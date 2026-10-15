@@ -3,6 +3,15 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Approve or deny agent permission prompts from a paired phone (Remote Control, beta). A new Approvals tab lists every prompt waiting on you, with the command or edit, the agent and project, and how long it has waited. Allow once, or Deny with a quick reason or your own message that is typed into the agent. The phone also keeps a list of recent answers, desktop ones included.
+- A separate "Let paired phones answer permission prompts" permission in Settings > Remote Access, off by default, and enforced on every approval request. Paired phones keep the permissions they already have.
+- Phone notifications for new prompts, with Allow and Deny buttons where the phone supports them, while the Dawsha page is open in the background. Optionally only when this computer has been idle for a few minutes. Alerts do not reach a closed browser.
+- A safety rule for the phone: edits outside the project folder, and to CI and config files (.github, YAML, package.json, lockfiles, .env), can only be denied from the phone unless you turn on "Phone can allow edits to CI and config files". Detection reads the prompt text, so it is best effort.
+
 ## [0.5.3] - 2026-10-14
 
 ### Changed

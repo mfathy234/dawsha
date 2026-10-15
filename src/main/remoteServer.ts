@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import type { Duplex } from 'node:stream'
 import { readFile } from 'node:fs/promises'
 import { basename, resolve } from 'node:path'
 import { WebSocket, WebSocketServer } from 'ws'
@@ -6,6 +7,7 @@ import { AGENTS } from '../shared/agents'
 import type { AgentKind, Project, ResumeEntry } from '../shared/types'
 import type { RemoteAuth } from './remoteAuth'
 import { REMOTE_TOKEN_TTL_MS } from './remoteAuth'
+import type { RemoteApprovals } from './remoteApprovals'
 import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
 
 const REMOTE_PREFIX = '/dawsha'
@@ -18,10 +20,15 @@ const REMOTE_API_PATHS = new Set([
   `${REMOTE_PREFIX}/api/session`,
   `${REMOTE_PREFIX}/api/session/stop`,
   `${REMOTE_PREFIX}/api/logout`,
-  `${REMOTE_PREFIX}/api/terminal/output`
+  `${REMOTE_PREFIX}/api/terminal/output`,
+  `${REMOTE_PREFIX}/api/approvals`,
+  `${REMOTE_PREFIX}/api/approvals/answer`,
+  `${REMOTE_PREFIX}/api/approvals/stream`
 ])
 const MAX_BODY_BYTES = 16 * 1024
 const MAX_TERMINAL_INPUT = 4096
+const MAX_REASON_INPUT = 600
+const APPROVALS_DISABLED = 'Answering permission prompts is turned off in Dawsha settings.'
 const MAX_OUTPUT_CLIENTS = 8
 const MAX_REMOTE_SESSIONS_PER_PROJECT = 15
 const RATE_WINDOW_MS = 60_000
@@ -42,6 +49,7 @@ export interface RemoteServerOptions {
     subscribe(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null
     write(id: string, data: string): void
   }
+  approvals?: RemoteApprovals
   startSession(input: unknown, authorizeStart: () => boolean): Promise<{ ok: boolean; error?: string; id?: string }>
   stopSession(id: string): boolean
   assetDirectory?: string
@@ -130,6 +138,7 @@ async function serveAsset(options: RemoteServerOptions, pathname: string, respon
   if (!options.assetDirectory) return false
   let filePath: string
   if (pathname === '/') filePath = resolve(options.assetDirectory, 'remote.html')
+  else if (pathname === '/sw.js') filePath = resolve(options.assetDirectory, 'remote-sw.js')
   else if (pathname.startsWith('/assets/')) {
     const fileName = pathname.slice('/assets/'.length)
     if (!/^[a-zA-Z0-9._-]+$/.test(fileName) || basename(fileName) !== fileName || fileName.includes('..')) return false
@@ -138,6 +147,18 @@ async function serveAsset(options: RemoteServerOptions, pathname: string, respon
 
   try {
     const body = await readFile(filePath)
+    if (pathname === '/sw.js') {
+      response.writeHead(200, {
+        'Content-Type': 'text/javascript; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Service-Worker-Allowed': `${REMOTE_PREFIX}/`,
+        'Content-Security-Policy': "default-src 'none'; connect-src 'self'",
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'no-referrer'
+      })
+      response.end(body)
+      return true
+    }
     response.writeHead(200, {
       'Content-Type': filePath.endsWith('remote.html') ? 'text/html; charset=utf-8' : contentType(filePath),
       'Cache-Control': filePath.endsWith('remote.html') ? 'no-store' : 'public, max-age=31536000, immutable',
@@ -268,7 +289,8 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         permissions: {
           read: true,
           terminalInput: options.auth.can(token, 'terminalInput'),
-          sessionControl: options.auth.can(token, 'sessionControl')
+          sessionControl: options.auth.can(token, 'sessionControl'),
+          approvals: Boolean(options.approvals) && options.auth.can(token, 'approvals')
         }
       })
       return
@@ -327,6 +349,49 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         return
       }
       sendJson(response, 400, { error: 'Invalid terminal control request.' })
+      return
+    }
+
+    if (path === '/api/approvals' && request.method === 'GET') {
+      if (!options.approvals || !options.auth.can(token, 'approvals')) {
+        sendJson(response, 403, { error: APPROVALS_DISABLED })
+        return
+      }
+      if (!withinRateLimit(device.id, 'approvals', 120)) {
+        sendJson(response, 429, { error: 'Too many requests. Try again shortly.' })
+        return
+      }
+      sendJson(response, 200, await options.approvals.snapshot())
+      return
+    }
+
+    if (path === '/api/approvals/answer' && request.method === 'POST') {
+      if (!options.approvals || !options.auth.can(token, 'approvals')) {
+        sendJson(response, 403, { error: APPROVALS_DISABLED })
+        return
+      }
+      if (!withinRateLimit(device.id, 'approvals-answer', 60)) {
+        sendJson(response, 429, { error: 'Too many answers. Try again shortly.' })
+        return
+      }
+      const body = await readJson(request, response)
+      if (body === null || response.writableEnded) return
+      if (!isRecord(body) || typeof body.id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(body.id) ||
+          typeof body.fingerprint !== 'string' || !/^[0-9a-f]{16}$/.test(body.fingerprint) || typeof body.allow !== 'boolean' ||
+          (body.reason !== undefined && (typeof body.reason !== 'string' || body.reason.length > MAX_REASON_INPUT))) {
+        sendJson(response, 400, { error: 'Invalid approval request.' })
+        return
+      }
+      if (!options.auth.authorize(token) || !options.auth.can(token, 'approvals')) {
+        sendJson(response, 403, { error: APPROVALS_DISABLED })
+        return
+      }
+      const result = await options.approvals.answer({ id: body.id, fingerprint: body.fingerprint, allow: body.allow, reason: body.reason, device: device.name })
+      if (!result.ok) {
+        sendJson(response, result.status, { error: result.error })
+        return
+      }
+      sendJson(response, 200, { ok: true, reasonSent: result.reasonSent })
       return
     }
 
@@ -441,6 +506,10 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
       socket.destroy()
       return
     }
+    if (url.pathname === `${REMOTE_PREFIX}/api/approvals/stream`) {
+      acceptApprovalsStream(request, socket, head, { hostname, expectedHosts, origin, token, device })
+      return
+    }
     const id = url.searchParams.get('id')
     const valid = !stopped && safeHost(hostname) && hostname.endsWith('.trycloudflare.com') &&
       expectedHosts.has(request.headers.host?.toLowerCase() ?? '') && request.headers.origin === origin &&
@@ -501,6 +570,59 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
       ws.on('error', cleanup)
     })
   })
+  function acceptApprovalsStream(
+    request: IncomingMessage,
+    socket: Duplex,
+    head: Buffer,
+    context: { hostname: string; expectedHosts: Set<string>; origin: string; token: string | null; device: ReturnType<RemoteServerOptions['auth']['authorize']> }
+  ): void {
+    const { hostname, expectedHosts, origin, token, device } = context
+    const approvals = options.approvals
+    const valid = !stopped && Boolean(approvals) && safeHost(hostname) && hostname.endsWith('.trycloudflare.com') &&
+      expectedHosts.has(request.headers.host?.toLowerCase() ?? '') && request.headers.origin === origin && request.method === 'GET' &&
+      Boolean(token && device && options.auth.can(token, 'approvals')) &&
+      Boolean(device && withinRateLimit(device.id, 'stream', 30)) && streams.size < MAX_OUTPUT_CLIENTS
+    if (!valid || !approvals || !token || !device) { socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); socket.destroy(); return }
+    websocketServer.handleUpgrade(request, socket, head, (ws) => {
+      streams.add(ws)
+      let alive = true
+      ws.on('pong', () => { alive = true })
+      const send = (event: string, data: unknown): void => {
+        if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < 256 * 1024) ws.send(JSON.stringify({ event, data }))
+        else if (ws.readyState === WebSocket.OPEN) ws.close(1013, 'Output buffer exceeded')
+      }
+      const stillAllowed = (): boolean => Boolean(options.auth.authorize(token)) && options.auth.can(token, 'approvals')
+      const removeSubscription = approvals.subscribe((payload) => {
+        try {
+          if (stillAllowed()) send('approvals', payload)
+          else { send('denied', {}); ws.close(1008, 'Approvals are turned off') }
+        } catch { ws.close(1011, 'Authorization check failed') }
+      })
+      void approvals.snapshot().then((payload) => send('approvals', payload), () => ws.close(1011, 'Approvals could not be read'))
+      const removeRevoke = options.auth.onRevoke((revokedId) => {
+        if (revokedId === device.id) { send('revoked', {}); ws.close(1008, 'Device revoked') }
+      })
+      const heartbeat = setInterval(() => {
+        try {
+          if (!options.auth.authorize(token)) { send('revoked', {}); ws.close(1008, 'Device authorization expired') }
+          else if (!options.auth.can(token, 'approvals')) { send('denied', {}); ws.close(1008, 'Approvals are turned off') }
+          else if (ws.readyState === WebSocket.OPEN) {
+            if (!alive) { ws.terminate(); return }
+            alive = false
+            ws.ping()
+          }
+        } catch {
+          if (ws.readyState === WebSocket.OPEN) ws.close(1011, 'Authorization check failed')
+        }
+      }, options.heartbeatIntervalMs ?? 15000)
+      heartbeat.unref()
+      const cleanup = (): void => { clearInterval(heartbeat); removeSubscription(); removeRevoke(); streams.delete(ws); cleanups.delete(ws) }
+      cleanups.set(ws, cleanup)
+      ws.on('message', () => ws.close(1008, 'Approvals socket does not accept commands'))
+      ws.on('close', cleanup)
+      ws.on('error', cleanup)
+    })
+  }
   server.requestTimeout = 10_000
   server.headersTimeout = 5_000
   await new Promise<void>((resolvePromise, reject) => {
