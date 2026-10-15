@@ -50,6 +50,7 @@ import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
 import type { RemoteAccessSettings } from '../shared/types'
 import type { createRemoteAccessController } from './remoteAccessController'
+import type { RecordingService } from './recordings'
 
 function checkFolder(path: string): FolderCheck {
   if (typeof path !== 'string' || path.trim() === '') return { ok: false, error: 'Enter a folder.' }
@@ -78,7 +79,8 @@ export function registerIpc(
   ops: OpsWatcher,
   usage: UsageService,
   initialWarning: string | null,
-  remoteAccess?: ReturnType<typeof createRemoteAccessController>
+  remoteAccess?: ReturnType<typeof createRemoteAccessController>,
+  recordings?: RecordingService
 ): void {
   const locations = (): BridgeLocations => ({
     settingsPath: claudeSettingsPath(),
@@ -201,6 +203,19 @@ export function registerIpc(
     const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
     return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
   })
+  if (recordings) {
+    ipcMain.handle(IPC.recordingsList, () => recordings.list())
+    ipcMain.handle(IPC.recordingsRead, (_event, id: unknown) => recordings.read(id))
+    ipcMain.handle(IPC.recordingsStats, () => recordings.stats())
+    ipcMain.handle(IPC.recordingsDeleteAll, () => recordings.deleteAll())
+    ipcMain.handle(IPC.recordingsOpenFolder, async () => {
+      const error = await shell.openPath(await recordings.ensureRoot())
+      if (error) throw new Error(error)
+    })
+    ipcMain.on(IPC.recordingsTitle, (_event, id: unknown, title: unknown) => {
+      if (typeof id === 'string' && typeof title === 'string') recordings.setTitle(id, title)
+    })
+  }
   ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => ptys.spawn(request))
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))
   ipcMain.on(IPC.ptyResize, (_event, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))

@@ -7,6 +7,7 @@ import { claudeCommand, codexCommand, geminiCommand, launchSpec, shellCommand } 
 import { ptyArguments } from './commandLine'
 import { platformExecutableDirs } from './executables'
 import type { QuitLog } from './quitLog'
+import type { Recorder } from './recorder'
 import type { AppInfo, SpawnRequest, SpawnResult } from '../shared/types'
 import type { ProcessRoot } from '../shared/processActivity'
 import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
@@ -22,6 +23,11 @@ interface RemoteTerminalStateLike {
 }
 
 const FLUSH_MS = 8
+
+export interface PtyRecording {
+  recorder: Recorder
+  projectName(projectId: string | null): string
+}
 
 export interface PtyHandlers {
   onData(id: string, data: string): void
@@ -49,7 +55,11 @@ export class PtyManager {
   private readonly entries = new Map<string, Entry>()
   private readonly remoteTerminals: RemoteTerminalStateLike | null
 
-  constructor(private readonly handlers: PtyHandlers, remoteTerminals: RemoteTerminalStateLike | null = null) {
+  constructor(
+    private readonly handlers: PtyHandlers,
+    remoteTerminals: RemoteTerminalStateLike | null = null,
+    private readonly recording: PtyRecording | null = null
+  ) {
     this.remoteTerminals = remoteTerminals
   }
 
@@ -90,6 +100,17 @@ export class PtyManager {
         env: this.environment()
       })
       this.attach(request.id, child, request.projectId ?? null, request.agent, request.desktopVisible !== false, request.remoteManaged === true, { cols, rows })
+      this.recording?.recorder.start(
+        request.id,
+        {
+          projectId: request.projectId ?? null,
+          projectName: this.recording.projectName(request.projectId ?? null),
+          agent: request.agent,
+          title: request.title ?? '',
+          cwd: request.cwd
+        },
+        { cols, rows }
+      )
       return { ok: true, pid: child.pid }
     } catch (error) {
       return { ok: false, error: `Could not start ${spec.file}: ${(error as Error).message}` }
@@ -97,7 +118,10 @@ export class PtyManager {
   }
 
   write(id: string, data: string): void {
-    this.entries.get(id)?.process.write(data)
+    const entry = this.entries.get(id)
+    if (!entry) return
+    entry.process.write(data)
+    this.recording?.recorder.input(id, data)
   }
 
   resize(id: string, cols: number, rows: number): void {
@@ -109,6 +133,7 @@ export class PtyManager {
       return
     }
     this.remoteTerminals?.resize(id, cols, rows)
+    this.recording?.recorder.resize(id, cols, rows)
   }
 
   kill(id: string): void {
@@ -116,6 +141,7 @@ export class PtyManager {
     if (!entry) return
     this.entries.delete(id)
     this.remoteTerminals?.remove(id)
+    this.recording?.recorder.stop(id)
     entry.killed = true
     if (entry.timer) clearTimeout(entry.timer)
     killTree(entry.process)
@@ -131,6 +157,7 @@ export class PtyManager {
     const trees = entries.map(([id, entry]) => {
       entry.killed = true
       this.remoteTerminals?.remove(id)
+      this.recording?.recorder.stop(id)
       if (entry.timer) clearTimeout(entry.timer)
       if (process.platform === 'win32') return taskkillTree(entry.process.pid, log)
       killPosixTree(entry.process.pid)
@@ -167,6 +194,7 @@ export class PtyManager {
       if (entry.killed) return
       entry.buffer += data
       this.remoteTerminals?.append(id, data)
+      this.recording?.recorder.output(id, data)
       if (entry.timer) return
       entry.timer = setTimeout(() => this.flush(id, entry), FLUSH_MS)
     })
@@ -175,6 +203,7 @@ export class PtyManager {
       this.flush(id, entry)
       this.entries.delete(id)
       this.remoteTerminals?.remove(id)
+      this.recording?.recorder.stop(id, exitCode)
       if (entry.desktopVisible) this.handlers.onExit(id, exitCode)
     })
   }

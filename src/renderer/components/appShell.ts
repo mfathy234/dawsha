@@ -3,10 +3,13 @@ import { h } from '../dom'
 import type { AppState } from '../state'
 import { store } from '../state'
 import { saveSettings } from '../actions'
+import { syncRecordingTitles } from '../replayActions'
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, MIN_SIDEBAR_WIDTH } from '../../shared/sidebarWidth'
 import { AgentsViewComponent } from './agentsView'
 import { GridComponent } from './grid'
 import { ProjectsViewComponent } from './projectsView'
+import { ReplayPickerComponent } from './replayPicker'
+import { ReplayViewComponent } from './replayView'
 import { LayoutsPopoverComponent } from './layoutsPopover'
 import { OnboardingComponent } from './onboarding'
 import { PaletteComponent } from './palette'
@@ -41,6 +44,8 @@ export class AppShell {
   private readonly skills = new SkillsViewComponent()
   private readonly usage = new UsageViewComponent()
   private readonly settings = new SettingsViewComponent()
+  private readonly replay = new ReplayViewComponent()
+  private readonly replayPicker = new ReplayPickerComponent()
   private readonly quickPick = new QuickPickComponent(() => this.topbar.newSession)
   private readonly resumePicker = new ResumePickerComponent(() => this.topbar.newSession)
   private readonly onboarding = new OnboardingComponent()
@@ -54,7 +59,7 @@ export class AppShell {
   private resizeWidth = DEFAULT_SIDEBAR_WIDTH
 
   constructor() {
-    const main = h('div', { class: 'main' }, this.grid.el, this.projects.el, this.agents.el, this.skills.el, this.usage.el, this.settings.el)
+    const main = h('div', { class: 'main' }, this.grid.el, this.projects.el, this.agents.el, this.skills.el, this.usage.el, this.settings.el, this.replay.el)
     this.sidebarResize.addEventListener('pointerdown', this.onResizeStart)
     this.sidebarResize.addEventListener('pointermove', this.onResizeMove)
     this.sidebarResize.addEventListener('pointerup', this.onResizeEnd)
@@ -116,6 +121,7 @@ export class AppShell {
 
   render(state: AppState): void {
     const views = derivePanes(state)
+    syncRecordingTitles(views)
     this.topbar.update(state, views)
     this.sidebar.update(state, views)
     this.setSidebarWidth(state.settings.sidebarWidth)
@@ -131,7 +137,9 @@ export class AppShell {
     this.usage.el.hidden = state.view !== 'usage'
     this.usage.update(state)
     this.settings.el.hidden = state.view !== 'settings'
-    if (state.view === 'settings') this.settings.update(state)
+    if (state.view === 'settings' && this.lastView !== 'settings') this.settings.show()
+    else if (state.view === 'settings') this.settings.update(state)
+    this.replay.update(state)
     this.lastView = state.view
     this.grid.update(state)
     this.quickPick.update(state, views)
@@ -142,5 +150,6 @@ export class AppShell {
     this.whatsNew.update(state)
     this.layoutsPopover.update(state)
     this.palette.update(state)
+    this.replayPicker.update(state)
   }
 }

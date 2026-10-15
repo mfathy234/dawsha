@@ -6,6 +6,7 @@ import { isVersion } from './version'
 import { sanitizeSplits } from './splits'
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './sidebarWidth'
 import { defaultHighlights, sanitizeHighlights } from './highlights'
+import { defaultRecordings, sanitizeRecordings } from './recordings'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -69,7 +70,8 @@ export const defaultSettings = (): Settings => ({
   paletteShortcut: DEFAULT_PALETTE_SHORTCUT,
   fullAccess: defaultFullAccess(),
   remoteAccess: defaultRemoteAccess(),
-  highlights: defaultHighlights()
+  highlights: defaultHighlights(),
+  recordings: defaultRecordings()
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -331,6 +333,7 @@ export function migrateSettings(raw: unknown): Settings {
     paletteShortcut: sanitizeShortcut(raw.paletteShortcut),
     fullAccess: sanitizeFullAccess(raw.fullAccess),
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
-    highlights: sanitizeHighlights(raw.highlights)
+    highlights: sanitizeHighlights(raw.highlights),
+    recordings: sanitizeRecordings(raw.recordings)
   }
 }

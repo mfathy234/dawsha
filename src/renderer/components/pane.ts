@@ -32,6 +32,7 @@ import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
 import { continueIn, continueLabel } from '../handoffActions'
 import { exportTranscript } from '../transcriptActions'
+import { replayPane } from '../replayActions'
 import { saveSelectionAsSnippet } from '../snippetActions'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
@@ -427,6 +428,7 @@ export class PaneComponent {
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
+      item('Replay session', () => replayPane(this.paneId), ICONS.history),
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
       item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),

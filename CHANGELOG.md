@@ -3,6 +3,15 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Replay any session. Dawsha now records every terminal as a standard asciinema .cast file in its data folder (recordings/<date>/), with a small sidecar file naming the project, agent, title and folder. Choose Replay session in a pane's menu, or Replay a session... in the command palette to pick from all recordings, newest first, searchable by title, project, agent and date. Works for sessions that have already exited.
+- The Replay view plays a recording in a read-only terminal at its recorded size, with Space to play or pause, 1x, 4x and 16x speed, Skip idle time, a scrubber with markers for prompts you sent, permission prompts and the end of the session, and previous and next marker buttons. Dragging the scrubber jumps to any moment. Esc or Back returns to where you were.
+- Search inside a recording. Matches are listed with their time, and choosing one jumps there and highlights the text. The At this point panel shows the time elapsed and a Copy screen text button.
+- New Recordings settings in General: turn recording on or off (on by default), how many days to keep recordings (14), a maximum total size (1 GB) with oldest-first cleanup at startup and once a day, Open recordings folder, and Delete all recordings... which asks first and names how many recordings and how much space it will free.
+
 ## [0.5.3] - 2026-10-14
 
 ### Changed

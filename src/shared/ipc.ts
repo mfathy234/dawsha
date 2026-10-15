@@ -92,6 +92,12 @@ export const IPC = {
   compareCreate: 'compare:create',
   compareStatus: 'compare:status',
   compareRemove: 'compare:remove',
+  recordingsList: 'recordings:list',
+  recordingsRead: 'recordings:read',
+  recordingsStats: 'recordings:stats',
+  recordingsDeleteAll: 'recordings:delete-all',
+  recordingsOpenFolder: 'recordings:open-folder',
+  recordingsTitle: 'recordings:title',
   flushRequest: 'app:flush-request',
   flushDone: 'app:flush-done'
 } as const
