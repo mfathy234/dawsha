@@ -29,6 +29,7 @@ import { formatTokens, formatUsd } from '../../shared/usage'
 import { folderOfPane, paneById, store } from '../state'
 import { closeTimeline, openTimelineWith, takeTimelineIntent, timelineRequest, type TimelineIntent } from '../timelineActions'
 import { localEvents, localVersion } from '../timelineLog'
+import { replayPane } from '../replayActions'
 import type { SearchHit } from '../../shared/timelineSearch'
 import type { ResumeSession } from '../../shared/types'
 import { AllSessionsSearch } from './timelineAllSearch'
@@ -135,7 +136,8 @@ export class TimelinePanel {
     )
     this.filters.append(...filterButtons)
     const close = h('button', { class: 'icon-btn tl-close', type: 'button', 'aria-label': 'Close timeline', title: 'Close timeline', onClick: () => closeTimeline() }, '×')
-    const head = h('div', { class: 'tl-head' }, h('h2', {}, 'Timeline'), this.summary, h('span', { class: 'spacer' }), close)
+    const replay = h('button', { class: 'btn small tl-replay', type: 'button', title: 'Replay this session’s terminal', onClick: () => void replayPane(this.paneId) }, 'Replay')
+    const head = h('div', { class: 'tl-head' }, h('h2', {}, 'Timeline'), this.summary, h('span', { class: 'spacer' }), replay, close)
     const searchRow = h('div', { class: 'tl-search-row' }, this.search, this.count, this.prev, this.next)
     const scopeRow = h('div', { class: 'tl-scope-row', role: 'group', 'aria-label': 'Search scope' }, ...this.scopeButtons)
     const resume = h('button', { class: 'btn small primary tl-resume', type: 'button', onClick: () => this.resumePast() }, 'Resume session')
