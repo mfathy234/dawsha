@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import type { OrchDecisionView, OrchPaneRequest, OrchResult, OrchRunView, OrchStartInput } from '../../shared/orch/api'
+import type { OrchDecisionView, OrchHandoffInput, OrchPaneRequest, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus } from '../../shared/orch/api'
 import { DEFAULT_PLAN_ID, priceLookupFor, type OrchSettings } from '../../shared/orch/profiles'
 import type { OrchAgent } from '../../shared/orch/types'
 import type { RunUsage } from '../../shared/orch/usage'
@@ -10,6 +10,7 @@ import { Dispatcher } from './dispatcher'
 import { startOrchMcpServer, type OrchMcpServer } from './mcpServer'
 import { OrchPaneBridge, type LaunchExtras } from './paneBridge'
 import { OrchService } from './service'
+import { buildSnapshot } from './snapshot'
 import { OrchStore } from './store'
 import { OrchUsageCollector, type UsageSourceInfo } from './usageCollector'
 import * as worktrees from './worktrees'
@@ -17,6 +18,7 @@ import * as worktrees from './worktrees'
 const POLL_MS = 5_000
 const USAGE_MS = 30_000
 const MAX_STALL_CHOICES = 4
+const NOTIFY_MS = 250
 
 export interface OrchRuntimeDeps {
   dbPath: string
@@ -29,6 +31,8 @@ export interface OrchRuntimeDeps {
   writePty: (tabId: string, data: string) => void
   openPane: (request: OrchPaneRequest) => void
   closePane: (agentId: string) => void
+  /** Something changed: the renderer should fetch a new snapshot. */
+  changed: () => void
 }
 
 /** Owns the orchestrator for the life of the app (experimental feature): store, server, dispatcher, panes. */
@@ -134,39 +138,38 @@ export class OrchRuntime {
     return { ok: true, value: run.id }
   }
 
+  snapshot(status: OrchStatus): OrchSnapshot {
+    return buildSnapshot(this.service, priceLookupFor(this.deps.settings()), status)
+  }
+
   runs(): OrchRunView[] {
-    const service = this.service
-    if (!service) return []
-    const open = service.openDecisions()
-    return service.runs().map((run) => {
-      const tasks = service.tasks(run.id)
-      return {
-        id: run.id,
-        kind: run.kind,
-        title: run.title,
-        stage: run.stage,
-        projectId: run.projectId ?? null,
-        createdAt: run.createdAt,
-        tasks: tasks.length,
-        tasksDone: tasks.filter((t) => t.status === 'approved' || t.status === 'cancelled').length,
-        openDecisions: open.filter((d) => d.runId === run.id).length
-      }
-    })
+    return this.snapshot({ enabled: true, running: this.running, error: null }).runs.map(({ id, kind, title, stage, projectId, createdAt, taskCount, tasksDone, openDecisions }) =>
+      ({ id, kind, title, stage, projectId, createdAt, taskCount, tasksDone, openDecisions }))
   }
 
   decisions(): OrchDecisionView[] {
+    return this.snapshot({ enabled: true, running: this.running, error: null }).decisions
+  }
+
+  /** The human picked another profile for a task ("Continue with…"). */
+  async handoff(input: OrchHandoffInput): Promise<OrchResult> {
+    if (!this.dispatcher) return { ok: false, error: 'The orchestrator is off.' }
+    const profile = this.deps.settings().profiles.find((p) => p.id === input.profileId)
+    if (!profile) return { ok: false, error: 'That profile no longer exists.' }
+    try {
+      await this.dispatcher.handoff(input.runId, input.taskKey, profile, input.note)
+      return { ok: true, value: undefined }
+    } catch (error) {
+      return { ok: false, error: (error as Error).message }
+    }
+  }
+
+  cancelRun(runId: string): OrchResult {
     const service = this.service
-    if (!service) return []
-    return service.openDecisions().map((d) => ({
-      id: d.id,
-      kind: d.kind,
-      runId: d.runId,
-      runTitle: service.run(d.runId)?.title ?? '',
-      question: d.question,
-      options: d.options,
-      context: d.context,
-      createdAt: d.createdAt
-    }))
+    if (!service?.run(runId)) return { ok: false, error: 'That run no longer exists.' }
+    for (const agent of service.agents(runId).filter((a) => !a.retiredAt)) this.deps.closePane(agent.id)
+    service.finishRun(runId, 'cancelled')
+    return { ok: true, value: undefined }
   }
 
   answer(decisionId: string, answer: string): OrchResult {
@@ -209,7 +212,10 @@ export class OrchRuntime {
       this.service = service
       this.server = server
       this.dispatcher = this.createDispatcher(service, server)
-      service.onChange(() => void this.dispatcher?.tick())
+      service.onChange(() => {
+        void this.dispatcher?.tick()
+        this.notifyChanged()
+      })
       this.timers = [
         setInterval(() => this.bridge.poll(), POLL_MS),
         setInterval(() => void this.collectUsage(), USAGE_MS)
@@ -247,5 +253,16 @@ export class OrchRuntime {
     if (!service) return
     const live = [...this.sources.values()].filter((s) => !service.agent(s.agentId)?.retiredAt)
     await this.collector.collect(service, live)
+  }
+
+  private notifyTimer: NodeJS.Timeout | null = null
+
+  /** Bursts of changes become one notification at most every NOTIFY_MS. */
+  private notifyChanged(): void {
+    if (this.notifyTimer) return
+    this.notifyTimer = setTimeout(() => {
+      this.notifyTimer = null
+      this.deps.changed()
+    }, NOTIFY_MS)
   }
 }

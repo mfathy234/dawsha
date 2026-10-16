@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import type { OrchDecisionView, OrchResult, OrchRunView, OrchStartInput, OrchStatus } from '../../shared/orch/api'
+import type { OrchDecisionView, OrchHandoffInput, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus } from '../../shared/orch/api'
 import { IPC } from '../../shared/ipc'
 import type { Settings, SpawnRequest } from '../../shared/types'
 import type { LaunchExtras } from './paneBridge'
@@ -15,6 +15,9 @@ export interface OrchestratorIpc {
   runs(): OrchRunView[]
   decisions(): OrchDecisionView[]
   answer(decisionId: string, answer: string): OrchResult
+  snapshot(): OrchSnapshot
+  handoff(input: OrchHandoffInput): Promise<OrchResult>
+  cancelRun(runId: string): OrchResult
 }
 
 export function createOrchestratorSwitch(runtime: OrchRuntime, log: (message: string) => void): OrchestratorIpc {
@@ -38,7 +41,10 @@ export function createOrchestratorSwitch(runtime: OrchRuntime, log: (message: st
     startRun: (input) => runtime.startRun(input),
     runs: () => runtime.runs(),
     decisions: () => runtime.decisions(),
-    answer: (decisionId, answer) => runtime.answer(decisionId, answer)
+    answer: (decisionId, answer) => runtime.answer(decisionId, answer),
+    snapshot: () => runtime.snapshot({ enabled, running: runtime.running, error }),
+    handoff: (input) => runtime.handoff(input),
+    cancelRun: (runId) => runtime.cancelRun(runId)
   }
 }
 
@@ -62,6 +68,17 @@ export function registerOrchestratorIpc(orchestrator: OrchestratorIpc): void {
   })
   ipcMain.handle(IPC.orchRuns, () => orchestrator.runs())
   ipcMain.handle(IPC.orchDecisions, () => orchestrator.decisions())
+  ipcMain.handle(IPC.orchSnapshot, () => orchestrator.snapshot())
+  ipcMain.handle(IPC.orchHandoff, (_event, input: unknown) => {
+    const raw = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>
+    if (!isText(raw.runId, 100) || !isText(raw.taskKey, 20) || !isText(raw.profileId, 100) || !isText(raw.note, 4000)) {
+      return { ok: false, error: 'The handoff could not be read.' }
+    }
+    return orchestrator.handoff({ runId: raw.runId, taskKey: raw.taskKey, profileId: raw.profileId, note: raw.note })
+  })
+  ipcMain.handle(IPC.orchCancelRun, (_event, runId: unknown) =>
+    isText(runId, 100) ? orchestrator.cancelRun(runId) : { ok: false, error: 'The run could not be read.' }
+  )
   ipcMain.handle(IPC.orchAnswer, (_event, decisionId: unknown, answer: unknown) =>
     isText(decisionId, 100) && isText(answer, 4000)
       ? orchestrator.answer(decisionId, answer)

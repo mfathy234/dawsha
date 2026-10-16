@@ -188,7 +188,8 @@ app.whenReady().then(async () => {
     projectFolder: (id) => store.get().projects.find((project) => project.id === id)?.folder ?? null,
     writePty: (tabId, data) => ptys.write(tabId, data),
     openPane: (request) => send(IPC.orchOpenPane, request),
-    closePane: (agentId) => send(IPC.orchClosePane, agentId)
+    closePane: (agentId) => send(IPC.orchClosePane, agentId),
+    changed: () => send(IPC.orchChanged)
   })
   ptys.observe({
     onOutput: (id, data) => orchestrator.onOutput(id, data),

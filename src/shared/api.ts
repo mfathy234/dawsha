@@ -25,7 +25,7 @@ import type { PaneonImportPreview } from './paneonImport'
 import type { SettingsExportResult, SettingsImportRead } from './settingsTransfer'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
-import type { OrchDecisionView, OrchPaneRequest, OrchResult, OrchRunView, OrchStartInput, OrchStatus } from './orch/api'
+import type { OrchDecisionView, OrchHandoffInput, OrchPaneRequest, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus } from './orch/api'
 import type { TimelineExportRequest, TimelineExportResult, TimelineRequest, TimelineResult } from './timeline'
 import type { TimelineSearchRequest, TimelineSearchResult } from './timelineSearch'
 import type { TranscriptRequest, TranscriptResult } from './transcript'
@@ -170,6 +170,10 @@ export interface GridApi {
   orchRuns(): Promise<OrchRunView[]>
   orchDecisions(): Promise<OrchDecisionView[]>
   orchAnswer(decisionId: string, answer: string): Promise<OrchResult>
+  orchSnapshot(): Promise<OrchSnapshot>
+  onOrchChanged(listener: () => void): () => void
+  orchHandoff(input: OrchHandoffInput): Promise<OrchResult>
+  orchCancelRun(runId: string): Promise<OrchResult>
   listRecordings(): Promise<RecordingSummary[]>
   readRecording(id: string): Promise<string>
   recordingStats(): Promise<RecordingStats>

@@ -17,7 +17,8 @@ function runtime() {
     projectFolder: (id) => (id === 'known' ? dir : null),
     writePty: () => undefined,
     openPane: () => undefined,
-    closePane: () => undefined
+    closePane: () => undefined,
+    changed: () => undefined
   })
 }
 

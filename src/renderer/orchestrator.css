@@ -1,0 +1,185 @@
+/* Orchestrator view: shared layout, tabs, pills and model badges. Screen styles live next to each screen
+   (components/orch/*.css). Colours come from the theme tokens in styles.css. */
+
+.orch-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  --orch-claude: #e8956b;
+  --orch-codex: #9ad0ff;
+  --orch-gemini: #8ab4f8;
+  --orch-local: #c4b5fd;
+  --orch-working: var(--state-working, #60a5fa);
+  --orch-waiting: var(--busy);
+  --orch-stalled: var(--danger);
+  --orch-done: var(--accent);
+}
+
+.orch-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.orch-title {
+  margin: 0 8px 10px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.orch-tabs {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.orch-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.orch-tab:hover { color: var(--text); }
+.orch-tab[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
+.orch-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.orch-badge {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--busy);
+  color: #2a1a00;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  text-align: center;
+}
+
+#orchestrator-button .orch-badge { margin-left: 6px; }
+
+.orch-notice {
+  margin: 10px 16px 0;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--busy) 50%, var(--border));
+  border-radius: var(--radius);
+  color: var(--busy);
+  font-size: 12px;
+}
+
+.orch-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 16px 24px;
+}
+
+.orch-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orch-empty {
+  max-width: 520px;
+  margin: 48px auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  color: var(--muted);
+}
+
+.orch-empty h2 { margin: 0; color: var(--text); font-size: 16px; }
+
+.orch-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.orch-panel-title {
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.orch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--raised);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.orch-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.orch-pill.tone-working { color: var(--orch-working); }
+.orch-pill.tone-waiting { color: var(--orch-waiting); }
+.orch-pill.tone-stalled { color: var(--orch-stalled); }
+.orch-pill.tone-idle { color: var(--muted); }
+.orch-pill.tone-done { color: var(--orch-done); }
+
+.orch-model {
+  display: inline-block;
+  max-width: 100%;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.orch-model.v-claude { color: var(--orch-claude); }
+.orch-model.v-codex { color: var(--orch-codex); }
+.orch-model.v-gemini { color: var(--orch-gemini); }
+.orch-model.v-local { color: var(--orch-local); }
+
+.orch-muted { color: var(--muted); }
+.orch-mono { font-family: var(--font-mono); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .orch-pill.tone-working::before { animation: orch-pulse 1.6s ease-in-out infinite; }
+}
+
+@keyframes orch-pulse { 50% { opacity: 0.35; } }

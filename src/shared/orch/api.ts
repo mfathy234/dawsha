@@ -1,5 +1,6 @@
 import type { OrchRunner } from './profiles'
-import type { DecisionKind, RunKind, RunStage } from './types'
+import type { DecisionKind, OrchEvent, OrchRole, OrchTask, RunKind, RunStage } from './types'
+import type { RunUsage } from './usage'
 
 // What the renderer and the main process exchange about the orchestrator.
 
@@ -37,6 +38,9 @@ export interface OrchDecisionView {
   options: string[]
   context: string
   createdAt: number
+  taskKey: string | null
+  agentRole: OrchRole | null
+  agentModel: string | null
 }
 
 export interface OrchRunView {
@@ -46,7 +50,7 @@ export interface OrchRunView {
   stage: RunStage
   projectId: string | null
   createdAt: number
-  tasks: number
+  taskCount: number
   tasksDone: number
   openDecisions: number
 }
@@ -55,4 +59,45 @@ export interface OrchStatus {
   enabled: boolean
   running: boolean
   error: string | null
+}
+
+/** What an agent is doing right now, as shown in the Agents list and on task cards. */
+export type OrchAgentState = 'working' | 'waiting' | 'stalled' | 'idle' | 'done'
+
+export interface OrchAgentRow {
+  id: string
+  role: OrchRole
+  runner: string
+  model: string
+  state: OrchAgentState
+  taskKey: string | null
+  retired: boolean
+}
+
+/** One run with everything the Orchestrator screens show for it. */
+export interface OrchRunDetail extends OrchRunView {
+  story: string
+  plan: string
+  projectPath: string
+  finishedAt: number | null
+  branch: string
+  tasks: OrchTask[]
+  agents: OrchAgentRow[]
+  usage: RunUsage
+  /** Newest last; at most the last 200. */
+  events: OrchEvent[]
+}
+
+/** The whole orchestrator state the renderer needs; pushed again after every change. */
+export interface OrchSnapshot {
+  status: OrchStatus
+  runs: OrchRunDetail[]
+  decisions: OrchDecisionView[]
+}
+
+export interface OrchHandoffInput {
+  runId: string
+  taskKey: string
+  profileId: string
+  note: string
 }

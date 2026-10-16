@@ -1,11 +1,11 @@
-import type { OrchDecisionView, OrchPaneRequest } from '../shared/orch/api'
+import type { OrchDecisionView, OrchPaneRequest, OrchStartInput } from '../shared/orch/api'
 import type { OrchProfile } from '../shared/orch/profiles'
 import { DEFAULT_FONT_SIZE, clampFontSize } from '../shared/types'
 import { discardPane, launch, makeTerm, persistWorkspace, saveSettings } from './actions'
 import { api } from './api'
-import { choiceDialog, promptDialog } from './components/dialogs'
+import { choiceDialog, confirmDialog, promptDialog } from './components/dialogs'
 import { toast } from './components/toast'
-import { newId, projectById, store, type PaneState, type TermState } from './state'
+import { newId, projectById, store, type OrchTab, type PaneState, type TermState } from './state'
 
 // Orchestrator in the renderer: panes the main process asks for, and the phase 2 start and answer commands.
 
@@ -41,10 +41,68 @@ export function closeOrchPane(agentId: string): void {
   if (pane) void discardPane(pane.id)
 }
 
+/** Fetches the orchestrator state again; called on start and whenever the main process says it changed. */
+export async function refreshOrch(): Promise<void> {
+  if (!store.state.settings.experimental.orchestrator) {
+    if (store.state.orch) store.patch({ orch: null })
+    return
+  }
+  try {
+    store.patch({ orch: await api.orchSnapshot() })
+  } catch {
+    // The next change notification tries again.
+  }
+}
+
+/** Opens the Orchestrator view on a tab, or on one run's dashboard. */
+export function showOrch(tab: OrchTab, runId: string | null = null): void {
+  store.patch({ view: 'orchestrator', orchTab: tab, orchRunId: runId })
+}
+
+export async function answerDecision(decisionId: string, answer: string): Promise<boolean> {
+  const result = await api.orchAnswer(decisionId, answer)
+  if (!result.ok) toast(result.error)
+  void refreshOrch()
+  return result.ok
+}
+
+export async function handoffTask(runId: string, taskKey: string, profileId: string, note: string): Promise<boolean> {
+  const result = await api.orchHandoff({ runId, taskKey, profileId, note })
+  toast(result.ok ? `${taskKey} continues on the new model in a new pane.` : result.error, result.ok ? 'info' : 'error')
+  void refreshOrch()
+  return result.ok
+}
+
+export async function cancelRun(runId: string, title: string): Promise<void> {
+  const confirmed = await confirmDialog({
+    title: `Cancel "${title}"?`,
+    body: 'Its agents stop and their panes close. The worktrees and branches stay on disk.',
+    confirmLabel: `Cancel "${title.slice(0, 40)}"`,
+    cancelLabel: 'Keep running',
+    danger: true
+  })
+  if (!confirmed) return
+  const result = await api.orchCancelRun(runId)
+  if (!result.ok) toast(result.error)
+  void refreshOrch()
+}
+
+export async function startRun(input: OrchStartInput): Promise<boolean> {
+  const result = await api.orchStartRun(input)
+  if (!result.ok) {
+    toast(result.error)
+    return false
+  }
+  toast(input.kind === 'bug' ? 'Bug fix started. Its agent opens in a new pane.' : 'Feature run started. The spec writer opens in a new pane.', 'info')
+  await refreshOrch()
+  showOrch('runs', result.value)
+  return true
+}
+
 export function setOrchestratorEnabled(enabled: boolean): void {
   const experimental = { ...store.state.settings.experimental, orchestrator: enabled }
   store.set((s) => ({ ...s, settings: { ...s.settings, experimental } }))
-  void saveSettings({ experimental })
+  void saveSettings({ experimental }).then(() => setTimeout(() => void refreshOrch(), 500))
 }
 
 export function setOrchestratorAutoTrust(autoTrust: boolean): void {

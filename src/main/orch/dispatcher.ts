@@ -226,20 +226,24 @@ export class Dispatcher {
       if (!task || !ACTIVE.includes(task.status) || task.assignee !== decision.agentId) continue
       const profile = settings.profiles.find((p) => p.name === target && p.role === task.role) ?? settings.profiles.find((p) => p.name === target)
       if (!profile) continue
-      const previous = task.assignee
       try {
-        const worktree = await this.folderFor(run, task.role, task)
-        const { agent } = this.deps.service.handoffTask(run.id, task.key, {
-          runner: agentRunnerName(profile),
-          model: profile.model || 'default',
-          note: `The previous agent stopped: ${decision.question}`
-        })
-        if (previous) this.deps.closePane(previous)
-        await this.openAgentPane(run, profile, agent, task, worktree)
+        await this.handoff(run.id, task.key, profile, `The previous agent stopped: ${decision.question}`)
       } catch (error) {
         this.deps.log(`orchestrator could not hand ${task.key} to ${target}: ${(error as Error).message}`)
       }
     }
+  }
+
+  /** Gives an unfinished task to a new agent on `profile`, in the same worktree, and opens its pane. */
+  async handoff(runId: string, taskKey: string, profile: OrchProfile, note: string): Promise<void> {
+    const run = this.deps.service.run(runId)
+    if (!run) throw new Error('That run no longer exists.')
+    const task = this.deps.service.task(taskKey, runId)
+    const previous = task.assignee
+    const worktree = await this.folderFor(run, task.role, task)
+    const { agent } = this.deps.service.handoffTask(runId, taskKey, { runner: agentRunnerName(profile), model: profile.model || 'default', note })
+    if (previous) this.deps.closePane(previous)
+    await this.openAgentPane(run, profile, agent, task, worktree)
   }
 
   private handoffTarget(decision: OrchDecision): string | null {
