@@ -22,7 +22,7 @@ interface Draft {
 const TITLE_MAX = 120
 
 const KIND_OPTIONS: { kind: RunKind; name: string; hint: string }[] = [
-  { kind: 'feature', name: 'Feature', hint: "Spec, lead, workers and reviews. Your plan's team." },
+  { kind: 'feature', name: 'Feature', hint: 'The lead reads it and starts only the agents the work needs.' },
   { kind: 'bug', name: 'Bug', hint: 'One agent fixes it on the model you pick. No subagents, no spec.' }
 ]
 
@@ -174,7 +174,7 @@ export class OrchNewRunView {
     })
     area.value = this.draft.story
     area.addEventListener('input', () => { this.draft = { ...this.draft, story: area.value } })
-    return field(bug ? 'Bug report' : 'User story', 'orch-nr-story', area, bug ? 'Paste an error, a stack trace or a ticket if you have one.' : 'Paste any story or ticket. The spec writer turns it into a spec you approve.')
+    return field(bug ? 'Bug report' : 'User story', 'orch-nr-story', area, bug ? 'Paste an error, a stack trace or a ticket if you have one.' : 'Paste any story or ticket. For larger or unclear work the lead asks for a spec you approve first.')
   }
 
   private titleField(): HTMLElement {

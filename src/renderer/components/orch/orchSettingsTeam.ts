@@ -61,7 +61,8 @@ function roleRow(settings: OrchSettings, plan: OrchPlan, role: OrchRole): HTMLEl
   const model = profile
     ? h('span', { class: 'orch-set-team-model' }, h('span', { class: 'orch-muted' }, profile.local ? 'Codex local' : profile.runner),
       modelCell(profile), profile.effort ? h('span', { class: 'orch-set-effort' }, effortLabel(profile)) : null)
-    : h('span', { class: 'orch-muted' }, 'Not used')
+    // A bug fix with no fixer profile runs on the lead's model.
+    : h('span', { class: 'orch-muted' }, role === 'fixer' ? "Uses the lead's model" : 'Not used')
   return h('div', { class: 'orch-set-team-row', role: 'listitem' },
     h('span', { class: 'orch-set-team-role' }, ROLE_LABEL[role]), model,
     h('div', { class: 'orch-set-team-change' }, change, picker))

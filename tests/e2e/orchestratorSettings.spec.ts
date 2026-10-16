@@ -37,7 +37,7 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
       const advanced = page.locator('.orch-set-advanced')
       await expect(advanced).not.toHaveAttribute('open', '')
       await expect(page.locator('#orch-set-profile-name')).toBeHidden()
-      await expect(page.locator('.orch-set-team')).toContainText('Not used')
+      await expect(page.locator('.orch-set-team')).toContainText("Uses the lead's model")
       await expect(page.locator('.orch-set-team .select-menu-trigger:visible')).toHaveCount(0)
       await expect(page.locator('.orch-set-actions #orch-set-plan-default')).toBeDisabled()
       await expect(page.locator('.orch-set-actions #orch-set-plan-default')).toHaveText('Default plan')
