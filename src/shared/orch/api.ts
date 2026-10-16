@@ -103,3 +103,9 @@ export interface OrchHandoffInput {
   profileId: string
   note: string
 }
+
+export type OrchExportFormat = 'dawsharun' | 'markdown'
+export interface OrchArchiveFileResult {
+  path: string
+  result: OrchResult<string>
+}

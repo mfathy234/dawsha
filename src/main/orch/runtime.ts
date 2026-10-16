@@ -1,3 +1,5 @@
+import { exportRunFile, exportRunFiles, importRunFiles } from './archiveFiles'
+import type { OrchExportFormat, OrchArchiveFileResult } from '../../shared/orch/api'
 import { randomUUID } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -164,9 +166,22 @@ export class OrchRuntime {
     }
   }
 
+  async exportRun(runId: string, format: OrchExportFormat): Promise<OrchResult<string | null>> {
+    return this.service ? exportRunFile(this.service, runId, format, this.deps.version, this.deps.log) : { ok: false, error: 'The orchestrator is off.' }
+  }
+
+  async exportRuns(runIds: string[]): Promise<OrchResult<OrchArchiveFileResult[]>> {
+    return this.service ? exportRunFiles(this.service, runIds, this.deps.version, this.deps.log) : { ok: false, error: 'The orchestrator is off.' }
+  }
+
+  async importRuns(): Promise<OrchResult<OrchArchiveFileResult[]>> {
+    return this.service ? importRunFiles(this.service, this.deps.log) : { ok: false, error: 'The orchestrator is off.' }
+  }
+
   cancelRun(runId: string): OrchResult {
     const service = this.service
     if (!service?.run(runId)) return { ok: false, error: 'That run no longer exists.' }
+    if (service.run(runId)?.imported) return { ok: false, error: 'Imported runs are read-only.' }
     for (const agent of service.agents(runId).filter((a) => !a.retiredAt)) this.deps.closePane(agent.id)
     service.finishRun(runId, 'cancelled')
     return { ok: true, value: undefined }
