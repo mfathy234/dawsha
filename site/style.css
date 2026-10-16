@@ -282,7 +282,8 @@ html.lenis { scroll-behavior: auto; }
 .new-pill:hover { border-color: var(--accent); color: var(--text); }
 .new-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-#new { border-top: 1px solid var(--border); }
+#new, #new-1-0 { border-top: 1px solid var(--border); }
+.feat-note { margin-top: 72px; max-width: 62ch; }
 .feat-row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; margin-top: 72px; }
 .feat-row:first-of-type { margin-top: 56px; }
 .feat-row.flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
