@@ -157,6 +157,10 @@ export class OrchStore {
     return parse<OrchDecision>(this.sql('SELECT data FROM decisions WHERE id = ?').get(id))
   }
 
+  listDecisions(runId: string): OrchDecision[] {
+    return parseAll<OrchDecision>(this.sql('SELECT data FROM decisions WHERE run_id = ? ORDER BY created_at, id').all(runId))
+  }
+
   openDecisions(): OrchDecision[] {
     return parseAll<OrchDecision>(this.sql('SELECT data FROM decisions WHERE open = 1 ORDER BY created_at, id').all())
   }

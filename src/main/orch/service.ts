@@ -276,6 +276,41 @@ export class OrchService {
     })
   }
 
+  decisions(runId: string): OrchDecision[] {
+    return this.store.listDecisions(runId)
+  }
+
+  /** A question from Dawsha itself (merge conflict, run finished), not from an agent. */
+  raiseDecision(runId: string, kind: OrchDecision['kind'], input: Pick<OrchDecision, 'question' | 'options' | 'context' | 'taskId'>): OrchDecision {
+    return this.tx(() => {
+      const decision: OrchDecision = {
+        id: randomId('dec'),
+        runId,
+        kind,
+        agentId: null,
+        urgency: 'normal',
+        answer: null,
+        createdAt: this.ctx.now(),
+        answeredAt: null,
+        recommended: null,
+        ...input
+      }
+      this.store.putDecision(decision)
+      this.ctx.log(runId, 'decision', `Dawsha asked you: ${input.question}`, input.taskId)
+      return decision
+    })
+  }
+
+  /** Ends the run: every agent's token stops working. */
+  finishRun(runId: string, stage: 'done' | 'cancelled' = 'done'): void {
+    this.tx(() => {
+      for (const agent of this.store.listAgents(runId).filter((a) => !a.retiredAt)) {
+        this.store.putAgent({ ...agent, taskId: null, retiredAt: this.ctx.now() })
+      }
+      this.setStage(runId, stage)
+    })
+  }
+
   markMerged(runId: string, key: string): void {
     this.tx(() => {
       const task = this.ctx.task(key, runId)
