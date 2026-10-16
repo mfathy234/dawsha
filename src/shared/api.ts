@@ -157,7 +157,8 @@ export interface GridApi {
   openUpdateLink(url: string): Promise<void>
   usageReport(range: UsageRange): Promise<UsageReport>
   usageSnapshot(): Promise<UsageSnapshot>
-  workReport(period: WorkPeriod): Promise<WorkReport>
+  /** `offset`: periods back from now (0 now, -1 the one before). */
+  workReport(period: WorkPeriod, offset?: number): Promise<WorkReport>
   exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
   sessionTimeline(request: TimelineRequest): Promise<TimelineResult>
   exportTimeline(request: TimelineExportRequest): Promise<TimelineExportResult>

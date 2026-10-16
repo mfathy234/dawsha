@@ -37,3 +37,6 @@
   .work-view .usage-legend { flex-wrap: wrap; }
   .work-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+.work-step { display: inline-flex; align-items: center; gap: 4px; }
+.work-step-btn { min-width: 32px; padding: 0 8px; font-size: 16px; line-height: 1; }
+.work-step-label { min-width: 120px; text-align: center; font-size: 13px; font-weight: 600; white-space: nowrap; }

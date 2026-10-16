@@ -14,6 +14,7 @@ import './workView.css'
 
 type WorkMode = 'sessions' | 'tickets'
 const MODES: { value: WorkMode; label: string }[] = [{ value: 'sessions', label: 'Sessions' }, { value: 'tickets', label: 'Tickets' }]
+const UNIT: Record<WorkPeriod, string> = { today: 'day', week: 'week', month: 'month' }
 const PERIODS: { value: WorkPeriod; label: string }[] = [{ value: 'today', label: 'Today' }, { value: 'week', label: 'This week' }, { value: 'month', label: 'This month' }]
 const duration = (ms: number): string => {
   const minutes = Math.floor(Math.max(0, ms) / 60_000)
@@ -31,14 +32,42 @@ export class WorkViewComponent {
   private token = 0
   private timer: number | undefined
   private mode: WorkMode = 'sessions'
+  /** Periods back from now: 0 is now, -1 the day, week or month before. */
+  private offset = 0
   private notes: TicketNotes = {}
   private readonly tickets = new TicketsPanel()
 
   /** An item's active time inside the shown period, the same measure the per-project totals use. */
   private itemTime(item: WorkItem): number {
+    const { start, end } = this.shownWindow()
+    return activeMs(item, start, end)
+  }
+
+  /** The period on screen, cut at now: the report's own range once it has loaded. */
+  private shownWindow(): { start: number; end: number } {
     const now = Date.now()
-    const { start, end } = workWindow(this.period, now)
-    return activeMs(item, start, Math.min(end, now))
+    const window = this.report ? { start: this.report.start, end: this.report.end } : workWindow(this.period, now)
+    return { start: window.start, end: Math.min(window.end, now) }
+  }
+
+  private step(by: number): void {
+    const next = Math.min(0, this.offset + by)
+    if (next === this.offset) return
+    this.offset = next
+    this.report = null
+    this.projectId = null
+    void this.load()
+  }
+
+  /** "Today", "Yesterday", "Thu, Oct 15"; "This week", "Oct 5 – Oct 11"; "This month", "September 2026". */
+  private periodLabel(): string {
+    if (this.offset === 0) return PERIODS.find(p => p.value === this.period)?.label ?? ''
+    if (!this.report) return '…'
+    const start = new Date(this.report.start)
+    if (this.period === 'today') return this.offset === -1 ? 'Yesterday' : start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+    if (this.period === 'month') return start.toLocaleDateString([], { month: 'long', year: 'numeric' })
+    const last = new Date(this.report.end - 1)
+    return `${start.toLocaleDateString([], { month: 'short', day: 'numeric' })} – ${last.toLocaleDateString([], { month: 'short', day: 'numeric' })}`
   }
 
   update(state: AppState): void {
@@ -61,7 +90,7 @@ export class WorkViewComponent {
     this.loading = true
     this.render()
     try {
-      const report = await api.workReport(this.period)
+      const report = await api.workReport(this.period, this.offset)
       if (token !== this.token) return
       this.report = report
       this.error = null
@@ -77,6 +106,7 @@ export class WorkViewComponent {
   private changePeriod(period: WorkPeriod): void {
     if (period === this.period) return
     this.period = period
+    this.offset = 0
     this.report = null
     this.projectId = null
     void this.load()
@@ -90,6 +120,10 @@ export class WorkViewComponent {
         class: `rp-tab${this.period === p.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.period === p.value),
         onClick: () => this.changePeriod(p.value)
       }, p.label))),
+      h('div', { class: 'work-step', role: 'group', 'aria-label': 'Move through periods' },
+        h('button', { class: 'btn ghost work-step-btn', type: 'button', id: 'work-prev', 'aria-label': `Previous ${UNIT[this.period]}`, title: `Previous ${UNIT[this.period]}`, disabled: this.loading && !this.report, onClick: () => this.step(-1) }, '‹'),
+        h('span', { class: 'work-step-label', id: 'work-period-label', 'aria-live': 'polite' }, this.periodLabel()),
+        h('button', { class: 'btn ghost work-step-btn', type: 'button', id: 'work-next', 'aria-label': `Next ${UNIT[this.period]}`, title: `Next ${UNIT[this.period]}`, disabled: this.offset === 0, onClick: () => this.step(1) }, '›')),
       h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Count by' }, ...MODES.map(m => h('button', {
         class: `rp-tab${this.mode === m.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.mode === m.value), id: `work-mode-${m.value}`,
         onClick: () => { this.mode = m.value; this.projectId = null; this.render() }
@@ -102,10 +136,8 @@ export class WorkViewComponent {
       return
     }
     if (this.mode === 'tickets') {
-      const now = Date.now()
-      const { start, end } = workWindow(this.period, now)
       this.el.append(...this.tickets.render(report, {
-        notes: this.notes, projectId: this.projectId, window: { start, end: Math.min(end, now) }, duration,
+        notes: this.notes, projectId: this.projectId, window: this.shownWindow(), duration,
         renderItem: (item) => this.item(item), setProject: (id) => { this.projectId = id; this.render() }, rerender: () => this.render()
       }))
       return

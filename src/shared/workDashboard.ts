@@ -23,6 +23,9 @@ export interface WorkItem {
 }
 export interface WorkReport {
   period: WorkPeriod
+  /** The shown period: [start, end) in local time. */
+  start: number
+  end: number
   total: number
   counts: WorkCounts
   items: WorkItem[]
@@ -60,8 +63,28 @@ export function activeMs(item: Pick<WorkItem, 'startedAt' | 'endedAt' | 'spans'>
 }
 
 /** One item is counted on its last activity day; time spent is its active time inside the period. */
-export function aggregateWork(input: readonly WorkItem[], period: WorkPeriod, now: number): WorkReport {
-  const { start, end } = workWindow(period, now)
+/** How far back to step: at most about ten years of days. */
+export const MAX_STEPS_BACK = 3650
+
+/** A moment inside the period `offset` steps from now (negative is the past; the future is now). */
+export function shiftAnchor(period: WorkPeriod, now: number, offset: number): number {
+  const steps = Math.max(-MAX_STEPS_BACK, Math.min(0, Math.trunc(offset)))
+  if (steps === 0) return now
+  const at = new Date(now)
+  at.setHours(12, 0, 0, 0)
+  if (period === 'today') at.setDate(at.getDate() + steps)
+  else if (period === 'week') at.setDate(at.getDate() + 7 * steps)
+  else {
+    // The first of the month first, so October 31 minus one month is September, not "September 31" = October 1.
+    at.setDate(1)
+    at.setMonth(at.getMonth() + steps)
+  }
+  return at.getTime()
+}
+
+/** Counts the period that contains `anchor` (now by default); nothing after `now` counts. */
+export function aggregateWork(input: readonly WorkItem[], period: WorkPeriod, now: number, anchor = now): WorkReport {
+  const { start, end } = workWindow(period, anchor)
   const items = input.filter(i => i.endedAt >= start && i.endedAt < end && i.endedAt <= now).sort((a, b) => b.endedAt - a.endedAt)
   const buckets: WorkReport['buckets'] = []
   for (const d = new Date(start); d.getTime() < end; d.setDate(d.getDate() + 1)) buckets.push({ key: dayKey(d.getTime()), counts: emptyCounts(), total: 0 })
@@ -79,7 +102,7 @@ export function aggregateWork(input: readonly WorkItem[], period: WorkPeriod, no
     day.counts[item.type]++
     day.total++
   }
-  return { period, total: items.length, counts, items, buckets, projects: [...projects.values()].sort((a, b) => b.total - a.total || a.project.localeCompare(b.project)) }
+  return { period, start, end, total: items.length, counts, items, buckets, projects: [...projects.values()].sort((a, b) => b.total - a.total || a.project.localeCompare(b.project)) }
 }
 
 /** One ticket: the work on one branch of one project (or one orchestrator run), however many sessions it took. */

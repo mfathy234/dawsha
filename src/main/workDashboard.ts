@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process'
 import { access } from 'node:fs/promises'
 import { Worker } from 'node:worker_threads'
 import { branchNameProblem } from '../shared/gitBranches'
-import { aggregateWork, classifyWork, ticketFromBranch, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../shared/workDashboard'
+import { aggregateWork, classifyWork, shiftAnchor, ticketFromBranch, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../shared/workDashboard'
 import type { Project, ResumeSession } from '../shared/types'
 import { activeSpans } from '../shared/sessionDetail'
 import { normalizePath } from '../shared/sessionMatch'
@@ -60,6 +60,8 @@ export interface WorkRun {
   eventTimes?: readonly number[]
   /** Finished tasks: a cancelled run that finished none did no work. */
   approvedTasks?: number
+  /** The branch an agent reported working on, when it is not the run's own branch. */
+  workBranch?: string | null
   events: readonly { at: number }[]
   workSessionIds?: readonly string[]
   stage?: string
@@ -81,6 +83,11 @@ function collectRunHistory(): void {
     for (const row of db.prepare("SELECT run_id, json_extract(data, '$.at') AS at FROM events").all() as { run_id: string; at: number }[]) {
       eventTimes.set(row.run_id, [...eventTimes.get(row.run_id) ?? [], row.at])
     }
+    // The branch the work really landed on when an agent named one (a lead can make its own feature branch).
+    const named = new Map<string, string>()
+    for (const row of db.prepare("SELECT run_id, json_extract(data, '$.branch') AS branch FROM tasks WHERE json_extract(data, '$.branch') IS NOT NULL ORDER BY json_extract(data, '$.updatedAt')").all() as { run_id: string; branch: string }[]) {
+      if (!row.branch.startsWith('orch/')) named.set(row.run_id, row.branch)
+    }
     const approved = new Map((db.prepare("SELECT run_id, COUNT(*) AS n FROM tasks WHERE status = 'approved' GROUP BY run_id").all() as { run_id: string; n: number }[]).map(r => [r.run_id, r.n]))
     const ids = new Map<string, string[]>()
     for (const row of db.prepare("SELECT run_id, json_extract(data, '$.launch.args') AS args FROM agents").all() as { run_id: string; args: string | null }[]) {
@@ -93,7 +100,7 @@ function collectRunHistory(): void {
       return { id: run.id, title: run.title, kind: run.kind, projectId: run.projectId ?? null, projectPath: run.projectPath,
         createdAt: run.createdAt, finishedAt: run.finishedAt, stage: run.stage, story: run.story, plan: run.plan,
         tasks: [{ updatedAt: tasks.get(run.id) ?? run.createdAt }], events: [{ at: events.get(run.id) ?? run.createdAt }], workSessionIds: ids.get(run.id) ?? [],
-        eventTimes: eventTimes.get(run.id) ?? [], approvedTasks: approved.get(run.id) ?? 0 }
+        eventTimes: eventTimes.get(run.id) ?? [], approvedTasks: approved.get(run.id) ?? 0, workBranch: named.get(run.id) ?? null }
     })
     parentPort!.postMessage(runs)
   } finally { db.close() }
@@ -155,7 +162,7 @@ export function runWorkItems(runs: readonly WorkRun[], projects: readonly Projec
     const spans = activeSpans([...run.eventTimes ?? [], ...own.flatMap(s => (s.activeSpans ?? []).flat())])
     const project = projects.find(p => p.id === run.projectId || normalizePath(p.folder) === normalizePath(run.projectPath))
     return { id: run.id, title: run.title, projectId: project?.id ?? run.projectId ?? run.projectPath, project: project?.name ?? run.projectPath,
-      type: run.kind, agent: 'orchestrator', branch: run.branch, ticket: ticketFromBranch(run.branch), startedAt: run.createdAt,
+      type: run.kind, agent: 'orchestrator', branch: run.workBranch ?? run.branch, ticket: ticketFromBranch(run.workBranch ?? run.branch), startedAt: run.createdAt,
       endedAt: run.finishedAt ?? Math.max(run.createdAt, ...run.tasks.map(t => t.updatedAt), ...run.events.map(e => e.at), ...sessions.filter(s => belongsToRun(s, run)).map(s => s.lastActivityAt ?? s.modifiedAt)),
       ...(spans.length > 0 ? { spans } : {}),
       run: { stage: run.stage ?? '', story: run.story ?? '', plan: run.plan ?? '' } }
@@ -170,10 +177,11 @@ export class WorkService {
   private cached: { key: string; at: number; job: Promise<WorkItem[]> } | null = null
   constructor(private readonly sources: SourceReader = readSources) {}
 
-  async report(period: WorkPeriod, projects: Project[], runs: readonly WorkRun[]): Promise<WorkReport> {
+  async report(period: WorkPeriod, projects: Project[], runs: readonly WorkRun[], offset = 0): Promise<WorkReport> {
     const now = Date.now()
+    const anchor = shiftAnchor(period, now, offset)
     // Include the week when it straddles the month boundary.
-    const since = Math.min(workWindow('month', now).start, workWindow('week', now).start)
+    const since = Math.min(workWindow('month', anchor).start, workWindow('week', anchor).start)
     const key = JSON.stringify([projects, runs, since])
     if (!this.cached || this.cached.key !== key || now - this.cached.at >= TTL) {
       const job = this.sources(projects, since).then(async sessions => [
@@ -183,6 +191,6 @@ export class WorkService {
       this.cached = { key, at: now, job }
       job.catch(() => { if (this.cached?.job === job) this.cached = null })
     }
-    return aggregateWork(await this.cached.job, period, now)
+    return aggregateWork(await this.cached.job, period, now, anchor)
   }
 }

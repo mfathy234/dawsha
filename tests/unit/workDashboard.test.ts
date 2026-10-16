@@ -134,3 +134,23 @@ describe('tickets', () => {
     expect(workTickets([item('s1', { branch: 'spike/x', type: 'conversation' })], 0, stamp(17, 0))[0].type).toBe('other')
   })
 })
+
+describe('stepping through periods', () => {
+  it('moves the anchor back a day, a week or a month, and never past now', async () => {
+    const { shiftAnchor } = await import('../../src/shared/workDashboard')
+    expect(workWindow('today', shiftAnchor('today', now, -1))).toEqual({ start: stamp(15, 0), end: stamp(16, 0) })
+    expect(workWindow('week', shiftAnchor('week', now, -1)).start).toBe(stamp(5, 0))
+    // From October 31 one month back is September, not October 1 again.
+    const lateMonth = new Date(2026, 9, 31, 12).getTime()
+    expect(new Date(workWindow('month', shiftAnchor('month', lateMonth, -1)).start).getMonth()).toBe(8)
+    expect(shiftAnchor('today', now, 3)).toBe(now)
+  })
+
+  it('counts a past period up to its own end and reports its range', () => {
+    const items = [item('yesterday', { endedAt: stamp(15, 23) }), item('today', { endedAt: stamp(16, 9) })]
+    const past = aggregateWork(items, 'today', now, stamp(15, 12))
+    expect(past.items.map((i) => i.id)).toEqual(['yesterday'])
+    expect([past.start, past.end]).toEqual([stamp(15, 0), stamp(16, 0)])
+    expect(aggregateWork(items, 'today', now).items.map((i) => i.id)).toEqual(['today'])
+  })
+})

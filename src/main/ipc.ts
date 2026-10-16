@@ -53,7 +53,7 @@ import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
 import { WorkService, readWorkRuns } from './workDashboard'
-import type { WorkPeriod } from '../shared/workDashboard'
+import { MAX_STEPS_BACK, type WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
 import type { RemoteAccessSettings } from '../shared/types'
@@ -250,10 +250,12 @@ export function registerIpc(
   })
   ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
   const work = new WorkService()
-  ipcMain.handle(IPC.workGet, async (_event, period: unknown) => {
+  ipcMain.handle(IPC.workGet, async (_event, period: unknown, offset: unknown) => {
     const valid: WorkPeriod = period === 'week' || period === 'month' ? period : 'today'
+    // Steps back from now; anything else is now.
+    const steps = typeof offset === 'number' && Number.isInteger(offset) && offset <= 0 && offset >= -MAX_STEPS_BACK ? offset : 0
     const runs = await readWorkRuns(join(app.getPath('userData'), 'orchestrator.db'))
-    return work.report(valid, settings.get().projects, runs)
+    return work.report(valid, settings.get().projects, runs, steps)
   })
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
   ipcMain.handle(IPC.timelineSession, (_event, request: TimelineRequest) => sessionTimeline(request))

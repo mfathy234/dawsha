@@ -193,3 +193,35 @@ test('the Tickets tab counts a branch once and keeps the name and link the user 
     await closeApp(app)
   }
 })
+
+test('steps back and forward through days, weeks and months', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.getByRole('button', { name: 'Work', exact: true }).click()
+    const label = page.locator('#work-period-label')
+    const total = page.locator('#work-total .usage-tile-value')
+    await expect(label).toHaveText('Today')
+    await expect(total).not.toHaveText('0')
+    await expect(page.locator('#work-next')).toBeDisabled()
+    // The seeded work is today: yesterday is empty, and coming back shows it again.
+    await page.locator('#work-prev').click()
+    await expect(label).toHaveText('Yesterday')
+    await expect(total).toHaveText('0')
+    await page.locator('#work-prev').click()
+    await expect(label).not.toHaveText('Yesterday')
+    await page.locator('#work-next').click()
+    await page.locator('#work-next').click()
+    await expect(label).toHaveText('Today')
+    await expect(total).not.toHaveText('0')
+    // A past week shows its dates; switching period goes back to now.
+    await page.getByRole('tab', { name: 'This week', exact: true }).click()
+    await page.locator('#work-prev').click()
+    await expect(label).toHaveText(/\S+ \d+ – \S+ \d+/)
+    await page.getByRole('tab', { name: 'This month', exact: true }).click()
+    await expect(label).toHaveText('This month')
+  } finally {
+    await closeApp(app)
+  }
+})
