@@ -129,6 +129,7 @@ const api: GridApi = {
   orchAnswer: (decisionId, answer) => ipcRenderer.invoke(IPC.orchAnswer, decisionId, answer),
   orchSnapshot: () => ipcRenderer.invoke(IPC.orchSnapshot),
   onOrchChanged: (listener) => subscribe<[]>(IPC.orchChanged, listener),
+  orchRestart: (runId, agentId) => ipcRenderer.invoke(IPC.orchRestart, runId, agentId),
   orchHandoff: (input) => ipcRenderer.invoke(IPC.orchHandoff, input),
   orchExportRun: (runId, format) => ipcRenderer.invoke(IPC.orchExportRun, runId, format),
   orchExportRuns: (ids) => ipcRenderer.invoke(IPC.orchExportRuns, ids),

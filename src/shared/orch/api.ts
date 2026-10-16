@@ -42,6 +42,8 @@ export interface OrchStartInput {
   story: string
   planId: string
   /** Bug runs: the profile for the single fixer; null uses the plan's main (lead) model. */
+  leadProfileId?: string | null
+  solo?: boolean
   fixerProfileId: string | null
 }
 
@@ -95,6 +97,8 @@ export interface OrchAgentRow {
 
 /** One run with everything the Orchestrator screens show for it. */
 export interface OrchRunDetail extends OrchRunView {
+  leadProfileId?: string | null
+  solo?: boolean
   imported?: { at: number; from: string }
   estimate?: import('./types').RunEstimate | null
   decisions?: import('./types').OrchDecision[]

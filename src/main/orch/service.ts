@@ -6,7 +6,7 @@ import { canUseTool } from '../../shared/orch/roles'
 import { TOOL_SCHEMAS, validateArgs, type ToolSchema } from '../../shared/orch/toolSchemas'
 import { summarizeRunUsage, type PriceLookup, type RunUsage } from '../../shared/orch/usage'
 import type { OrchLaunch } from '../../shared/orch/launch'
-import { moveTask } from '../../shared/orch/taskMachine'
+import { isFinal, moveTask } from '../../shared/orch/taskMachine'
 import type { AgentUsage, OrchAgent, OrchDecision, OrchEvent, OrchRole, OrchRun, OrchTask, OrchTaskState, RunKind, RunStage } from '../../shared/orch/types'
 import { applyAnswer } from './answers'
 import { ACTIVE, OrchContext, OrchToolError, RESERVED_NOTE_PREFIX, hashToken, randomId, statusText } from './context'
@@ -26,6 +26,10 @@ export interface CreateRunInput {
   plan: string
   /** Stop for the human to approve the spec; defaults to true. */
   specApproval?: boolean
+  /** Per-run lead selection; absent on older runs. */
+  leadProfileId?: string | null
+  /** The lead does all work without delegating. */
+  solo?: boolean
   /** Bug runs: the profile picked for the fixer. */
   fixerProfileId?: string | null
 }
@@ -34,6 +38,7 @@ export interface CreateRunInput {
 export const MAX_TASK_ATTEMPTS = 2
 
 export interface RegisterAgentInput {
+  profileId?: string
   runId: string
   role: OrchRole
   runner: string
@@ -41,6 +46,7 @@ export interface RegisterAgentInput {
 }
 
 export interface HandoffInput {
+  profileId?: string
   runner: string
   model: string
   /** Why the task changes hands, e.g. "Codex ran out of quota". Passed to the new agent. */
@@ -421,19 +427,47 @@ export class OrchService {
       const state = this.exportTaskState(runId, key)
       const previous = task.assignee ? this.store.getAgent(task.assignee) : undefined
       if (previous) this.store.putAgent({ ...previous, taskId: null, retiredAt: this.ctx.now() })
-      const agent = this.registerAgent({ runId, role: task.role, runner: input.runner, model: input.model })
+      const agent = this.registerAgent({ runId, role: task.role, runner: input.runner, model: input.model, profileId: input.profileId })
       const paused = task.status === 'blocked' || task.status === 'waiting_on_human'
       this.ctx.save({ ...task, assignee: agent.id, status: paused ? task.status : 'assigned', updatedAt: this.ctx.now() })
       this.store.putAgent({ ...agent, token: hashToken(agent.token), taskId: task.id })
       for (const decision of this.store.openDecisions().filter((d) => d.taskId === task.id)) {
         this.store.putDecision({ ...decision, agentId: agent.id })
       }
+      if (previous) this.redirectAgentContext(previous.id, agent.id)
       const note = input.note ? `\n\n## Note from the human\n${input.note}` : ''
       this.ctx.message(runId, 'dawsha', agent.id, task.id, state.brief + note)
       const from = previous ? `${previous.runner} · ${previous.model}` : 'nobody'
       this.ctx.log(runId, 'handoff', `${key} handed over from ${from} to ${input.runner} · ${input.model}`, task.id)
       return { agent: { ...agent, taskId: task.id }, state }
     })
+  }
+
+  /** Replace an idle/review-waiting agent without requeuing work or counting a failed attempt. */
+  replaceIdleAgent(agentId: string, input: HandoffInput): OrchAgent {
+    return this.tx(() => {
+      const previous = this.store.getAgent(agentId)
+      if (!previous || previous.retiredAt) throw new Error('That agent is no longer active.')
+      this.writable(previous.runId)
+      const run = this.store.getRun(previous.runId)
+      if (!run || run.stage === 'done' || run.stage === 'cancelled') throw new Error('This run is read-only.')
+      if (this.ctx.activeTaskOf(previous)) throw new Error('That agent acquired work; hand its task over instead.')
+      this.store.putAgent({ ...previous, taskId: null, retiredAt: this.ctx.now() })
+      const agent = this.registerAgent({ runId: previous.runId, role: previous.role, runner: input.runner, model: input.model, profileId: input.profileId })
+      const tasks = this.store.listTasks({ runId: previous.runId }).filter((t) => t.assignee === previous.id && !isFinal(t.status))
+      for (const task of tasks) this.ctx.save({ ...task, assignee: agent.id, updatedAt: this.ctx.now() })
+      this.store.putAgent({ ...agent, token: hashToken(agent.token), taskId: tasks[0]?.id ?? null })
+      this.redirectAgentContext(previous.id, agent.id)
+      this.ctx.log(previous.runId, 'restart', `${previous.role} restarted`, tasks[0]?.id ?? null)
+      return { ...agent, taskId: tasks[0]?.id ?? null }
+    })
+  }
+
+  private redirectAgentContext(previousId: string, nextId: string): void {
+    for (const decision of this.store.openDecisions().filter((d) => d.agentId === previousId)) {
+      this.store.putDecision({ ...decision, agentId: nextId })
+    }
+    for (const message of this.store.unreadFor(previousId)) this.store.putMessage({ ...message, to: nextId })
   }
 
   private checkBugAgent(input: RegisterAgentInput): void {

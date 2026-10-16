@@ -196,7 +196,7 @@ export class Dispatcher {
 
   private async startLead(run: OrchRun, plan: OrchPlan): Promise<void> {
     const live = this.deps.service.agents(run.id).some((a) => a.role === 'lead' && !a.retiredAt)
-    const profile = profileFor(this.deps.settings(), plan, 'lead')
+    const profile = this.deps.settings().profiles.find((p) => p.id === run.leadProfileId) ?? profileFor(this.deps.settings(), plan, 'lead')
     if (live || !profile) return
     await this.startAgent(run, profile, null)
   }
@@ -232,7 +232,7 @@ export class Dispatcher {
     const role = task?.role ?? 'lead'
     try {
       const worktree = await this.folderFor(run, role, task)
-      const agent = service.registerAgent({ runId: run.id, role, runner: agentRunnerName(profile), model: profile.model || 'default' })
+      const agent = service.registerAgent({ runId: run.id, role, profileId: profile.id, runner: agentRunnerName(profile), model: profile.model || 'default' })
       if (task) service.assignTask(run.id, task.key, agent.id)
       await this.openAgentPane(run, profile, agent, task, worktree)
       return true
@@ -243,11 +243,11 @@ export class Dispatcher {
     }
   }
 
-  private async openAgentPane(run: OrchRun, profile: OrchProfile, agent: OrchAgent, task: OrchTask | null, worktree: OrchWorktree): Promise<void> {
+  private async openAgentPane(run: OrchRun, profile: OrchProfile, agent: OrchAgent, task: OrchTask | null, worktree: OrchWorktree, restart = false): Promise<void> {
     const mcpUrl = this.deps.mcpUrl()
     if (!mcpUrl) throw new Error('The orchestrator server is not running.')
     const sessionId = profile.runner === 'codex' ? null : this.deps.newSessionId()
-    const prompt = firstMessage({ role: agent.role, runId: run.id, runTitle: run.title, branch: worktree.branch, extra: profile.prompt })
+    const prompt = firstMessage({ role: agent.role, runId: run.id, runTitle: run.title, branch: worktree.branch, extra: profile.prompt, solo: run.solo, restart })
     const launch = { ...buildLaunch({ profile, mcpUrl, configDir: this.deps.configDir(agent.id), sessionId: sessionId ?? undefined }), firstMessage: prompt }
     await this.deps.writeFiles(launch.files)
     this.deps.service.setLaunch(agent.id, launch)
@@ -283,16 +283,46 @@ export class Dispatcher {
   }
 
   /** Gives an unfinished task to a new agent on `profile`, in the same worktree, and opens its pane. */
-  async handoff(runId: string, taskKey: string, profile: OrchProfile, note: string): Promise<void> {
+  async handoff(runId: string, taskKey: string, profile: OrchProfile, note: string, restart = false): Promise<void> {
     const run = this.deps.service.run(runId)
     if (!run) throw new Error('That run no longer exists.')
     if (run.imported || FINISHED_STAGES.has(run.stage)) throw new Error('This run is read-only.')
     const task = this.deps.service.task(taskKey, runId)
     const previous = task.assignee
     const worktree = await this.folderFor(run, task.role, task)
-    const { agent } = this.deps.service.handoffTask(runId, taskKey, { runner: agentRunnerName(profile), model: profile.model || 'default', note })
+    if (restart && (this.deps.service.agent(previous ?? '')?.retiredAt || this.deps.service.task(taskKey, runId).assignee !== previous)) {
+      throw new Error('That agent is no longer active on this task.')
+    }
+    const { agent } = this.deps.service.handoffTask(runId, taskKey, { profileId: profile.id, runner: agentRunnerName(profile), model: profile.model || 'default', note })
     if (previous) this.deps.closePane(previous)
-    await this.openAgentPane(run, profile, agent, task, worktree)
+    await this.openAgentPane(run, profile, agent, task, worktree, restart)
+  }
+
+  /** Replace a live agent without changing its profile, task or worktree. */
+  async restart(runId: string, agentId: string): Promise<void> {
+    const { service } = this.deps
+    const run = service.run(runId)
+    if (!run) throw new Error('That run no longer exists.')
+    if (run.imported || FINISHED_STAGES.has(run.stage)) throw new Error('This run is read-only.')
+    const previous = service.agent(agentId)
+    if (!previous || previous.runId !== runId || previous.retiredAt) throw new Error('That agent is no longer active in this run.')
+    const profiles = this.deps.settings().profiles
+    const profile = previous.profileId ? profiles.find((p) => p.id === previous.profileId)
+      : profiles.find((p) => agentRunnerName(p) === previous.runner && (p.model || 'default') === previous.model)
+    if (!profile) throw new Error("That agent's profile no longer exists.")
+    if (!this.deps.mcpUrl()) throw new Error('The orchestrator server is not running.')
+    const task = service.activeTask(agentId)
+    if (task) return this.handoff(runId, task.key, profile, 'Continuing after a restart.', true)
+    const waiting = service.tasks(runId).find((t) => t.assignee === agentId && !isFinal(t.status)) ?? null
+    if (previous.role !== 'lead' && !waiting) throw new Error('That agent has no unfinished task to restart.')
+    const worktree = await this.folderFor(run, previous.role, waiting)
+    // Recheck after filesystem work, before retiring or opening a second agent.
+    if (service.agent(agentId)?.retiredAt) throw new Error('That agent is no longer active.')
+    const acquired = service.activeTask(agentId)
+    if (acquired) return this.handoff(runId, acquired.key, profile, 'Continuing after a restart.', true)
+    const agent = service.replaceIdleAgent(agentId, { profileId: profile.id, runner: agentRunnerName(profile), model: profile.model || 'default' })
+    this.deps.closePane(agentId)
+    await this.openAgentPane(run, profile, agent, waiting, worktree, true)
   }
 
   private handoffTarget(decision: OrchDecision): string | null {
