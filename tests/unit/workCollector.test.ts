@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
@@ -78,4 +78,59 @@ it('coalesces and caches run history before querying SQLite', async () => {
   expect(readWorkRuns(path)).toBe(first)
   await first
   expect(readWorkRuns(path)).toBe(first)
+})
+
+it('reads exact spans only for the requested period, stays lazy, and notices transcript changes on refresh', async () => {
+  const now = Date.now()
+  const path = join(mkdtempSync(join(tmpdir(), 'dawsha-work-exact-')), 'session.jsonl')
+  const start = now - 20 * 60_000
+  const records = (minutes: number[]) => minutes.map(m => JSON.stringify({ timestamp: new Date(start + m * 60_000).toISOString() })).join('\n')
+  writeFileSync(path, records([0, 4, 8, 12]))
+  const service = new WorkService(async () => [
+    { ...session({ startedAt: start, lastActivityAt: now - 60_000, activeSpans: [[start, start + 60_000]] }), sourcePath: path },
+    { ...session({ id: 'old', startedAt: 1000, lastActivityAt: 2000 }), sourcePath: path + '.missing' }
+  ])
+  const first = await service.report('today', projects, [])
+  expect(first.items).toHaveLength(1)
+  expect(first.projects[0].durationMs).toBe(12 * 60_000)
+  writeFileSync(path, records([0, 4, 8, 12, 16]))
+  const refreshed = await service.report('today', projects, [])
+  expect(refreshed.projects[0].durationMs).toBe(16 * 60_000)
+})
+
+it('includes exact child spans in a selected run without reading unrelated transcripts', async () => {
+  const now = Date.now(), start = now - 20 * 60_000
+  const path = join(mkdtempSync(join(tmpdir(), 'dawsha-work-child-')), 'session.jsonl')
+  writeFileSync(path, [0, 4, 8, 12].map(m => JSON.stringify({ timestamp: new Date(start + m * 60_000).toISOString() })).join('\n'))
+  const service = new WorkService(async () => [
+    { ...session({ id: 'child', startedAt: start, lastActivityAt: now - 60_000, activeSpans: [[start, start + 60_000]] }), sourcePath: path }
+  ])
+  const report = await service.report('today', projects, [{ id: 'run_x', title: 'Repair', kind: 'bug', projectId: 'p', projectPath: 'C:/project', branch: 'orch/x/run',
+    createdAt: start, finishedAt: now - 1000, tasks: [], events: [], workSessionIds: ['child'] }])
+  expect(report.items).toHaveLength(1)
+  expect(report.items[0].agent).toBe('orchestrator')
+  expect(report.projects[0].durationMs).toBe(12 * 60_000)
+})
+
+it('joins nearby child activity and run events while preserving long child intervals', () => {
+  const min = 60_000
+  const run = { id: 'run_x', title: 'Repair', kind: 'bug' as const, projectId: 'p', projectPath: 'C:/project', branch: 'orch/x/run',
+    createdAt: 0, finishedAt: 30 * min, tasks: [], events: [], eventTimes: [25 * min], workSessionIds: ['a', 'b'] }
+  const items = runWorkItems([run], projects, [
+    session({ id: 'a', activeSpans: [[0, 4 * min]] }), session({ id: 'b', activeSpans: [[8 * min, 22 * min]] })
+  ])
+  expect(items[0].spans).toEqual([[0, 26 * min]])
+})
+
+it('keeps readable work visible when another indexed transcript is deleted or inaccessible', async () => {
+  const now = Date.now(), start = now - 10 * 60_000
+  const path = join(mkdtempSync(join(tmpdir(), 'dawsha-work-missing-')), 'session.jsonl')
+  writeFileSync(path, JSON.stringify({ timestamp: new Date(start).toISOString() }))
+  const service = new WorkService(async () => [
+    { ...session({ startedAt: start, lastActivityAt: now - 1000 }), sourcePath: path },
+    { ...session({ id: 'missing', startedAt: start, lastActivityAt: now - 1000 }), sourcePath: path + '.missing' }
+  ])
+  const report = await service.report('today', projects, [])
+  expect(report.items).toHaveLength(1)
+  expect(report.projects[0].durationMs).toBe(60_000)
 })

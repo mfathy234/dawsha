@@ -12,6 +12,8 @@ import { store } from '../state'
 import type { TicketNotes } from '../../shared/ticketNotes'
 import { TicketsPanel } from './workTickets'
 import { selectMenu } from './selectMenu'
+import { formatWorkSummary } from '../../shared/workSummary'
+import { toast } from './toast'
 import './workView.css'
 
 type WorkMode = 'sessions' | 'tickets'
@@ -113,6 +115,18 @@ export class WorkViewComponent {
     void this.load()
   }
 
+  private async copySummary(): Promise<void> {
+    if (!this.report || this.loading) return
+    const text = formatWorkSummary(this.report, {
+      now: Date.now(), periodLabel: this.periodLabel(), mode: this.mode,
+      query: this.search, projectId: this.projectId, notes: this.notes
+    })
+    try {
+      await api.writeClipboard(text)
+      toast('Copied', 'info')
+    } catch { toast('Could not copy the summary. Try again.') }
+  }
+
   private render(): void {
     const focused = document.activeElement
     const restoreSearch = focused instanceof HTMLInputElement && focused.id === 'work-search'
@@ -132,6 +146,7 @@ export class WorkViewComponent {
         class: `rp-tab${this.mode === m.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.mode === m.value), id: `work-mode-${m.value}`,
         onClick: () => { this.mode = m.value; this.render() }
       }, m.label))), h('span', { class: 'spacer' }),
+      h('button', { class: 'btn ghost', type: 'button', disabled: this.loading || !this.report, onClick: () => void this.copySummary() }, 'Copy summary'),
       h('button', { class: 'btn ghost', type: 'button', disabled: this.loading, onClick: () => void this.load() }, 'Refresh')))
     this.el.append(this.filters())
     if (restoreSearch) {
@@ -167,7 +182,7 @@ export class WorkViewComponent {
     }
     if (this.period !== 'today') this.el.append(this.chart(report))
     this.el.append(this.projects(searched), this.items(report), h('p', { class: 'usage-local muted' },
-      'One item per session or orchestrator run, counted on its last activity day. Time spent is active time in this period (breaks over 5 minutes do not count), from a sample of each session, so long sessions can read low. The type comes from the branch and your own commits.'))
+      'One item per session or orchestrator run, counted on its last activity day. Time spent is active time in this period (breaks over 5 minutes do not count). The type comes from the branch and your own commits.'))
   }
 
   private setProject(id: string | null): void {

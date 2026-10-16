@@ -226,6 +226,40 @@ test('steps back and forward through days, weeks and months', async () => {
   }
 })
 
+test('copies the shown summary with ticket notes, search, project and period filters', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  const clipboard = () => app.evaluate(({ clipboard }) => clipboard.readText())
+  try {
+    await page.locator('#work-button').click()
+    const view = page.getByRole('main', { name: 'Work dashboard' })
+    const copy = view.getByRole('button', { name: 'Copy summary', exact: true })
+    await expect(view).toHaveAttribute('aria-busy', 'false')
+    await copy.click()
+    await expect.poll(clipboard).toContain('Total: 3 tickets, 3 conversations · 6m')
+    await expect(page.locator('.toast')).toHaveText('Copied')
+    expect(await clipboard()).not.toContain('Discuss architecture')
+    await view.getByRole('tab', { name: 'Tickets', exact: true }).click()
+    const login = view.locator('.work-ticket-row', { hasText: '#18550' })
+    await login.getByRole('button', { name: 'Edit' }).click()
+    await login.getByLabel('Ticket name').fill('Customer access')
+    await login.getByLabel('Ticket link').fill('https://issues.example/urgent')
+    await login.getByRole('button', { name: 'Save' }).click()
+    await view.getByRole('searchbox').fill('CUSTOMER urgent')
+    await view.getByRole('button', { name: 'Filter by Smoke', exact: true }).click()
+    await copy.click()
+    await expect.poll(clipboard).toContain('- Bug #18550 Customer access (fix/18550) · 1m\n  https://issues.example/urgent')
+    expect(await clipboard()).toContain('Total: 1 ticket, 0 conversations · 1m')
+    expect(await clipboard()).not.toContain('\nOther\n')
+    await page.locator('#work-prev').click()
+    await expect(view).toHaveAttribute('aria-busy', 'false')
+    await copy.click()
+    await expect.poll(clipboard).toContain('(Yesterday)')
+    expect(await clipboard()).toContain('Total: 0 tickets, 0 conversations · 0m')
+  } finally { await closeApp(app) }
+})
+
 test('searches work, synchronizes project filters, preserves them across tabs and periods, and shows mixed project chips', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
