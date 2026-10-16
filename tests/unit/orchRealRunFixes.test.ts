@@ -22,6 +22,16 @@ describe('orchestrator fixes from the first real runs', () => {
     expect(svc.call(lead, 'whoami', {})).toMatchObject({ run_title: 'Hide the server dropdown…', story: STORY, project_path: 'C:/work/platforms' })
   })
 
+  it('delivers the human answer to a lead that asked while planning, with no task of its own', () => {
+    const { svc, lead } = setup()
+    svc.call(lead, 'ask_human', { question: 'Which server key should provisioning use?' })
+    svc.answerDecision(svc.openDecisions()[0].id, 'A new config key, defaulting to "main"')
+    expect(svc.unreadCount(lead.id)).toBe(1)
+    expect(svc.call(lead, 'fetch_inbox', {})).toEqual([
+      expect.objectContaining({ from: 'human', body: expect.stringContaining('A new config key, defaulting to "main"') })
+    ])
+  })
+
   it('closes the open questions of a cancelled run, so the inbox and badges stop counting them', () => {
     const { svc, run, lead } = setup()
     svc.call(lead, 'ask_human', { question: 'Which repository?' })

@@ -26,6 +26,18 @@ async function main() {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'fake-orch-agent', version: '1' } })
   const me = await tool('whoami', {})
   say(`fake agent ${me.role} in run "${me.run_title}"`)
+  if (me.role === 'lead' && /^ASK:/.test(me.story)) {
+    // Like a real lead with an open question: ask while planning, wait for the answer, then plan one task.
+    await tool('ask_human', { question: me.story.slice(4).trim() })
+    const wait = setInterval(async () => {
+      const inbox = await tool('fetch_inbox', {})
+      if (!Array.isArray(inbox) || inbox.length === 0) return
+      clearInterval(wait)
+      say(`got answer: ${inbox[0].body}`)
+      await tool('create_task', { title: `Do it: ${inbox[0].body.split(': ').pop()}`, spec: 's', role: 'implementer' })
+    }, 500)
+    return
+  }
   if (me.role === 'lead') {
     // Like a real lead with a story that needs one: ask for a spec first, once.
     const tasks = await tool('list_tasks', {})

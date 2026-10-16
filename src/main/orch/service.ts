@@ -355,6 +355,8 @@ export class OrchService {
       this.ctx.log(decision.runId, 'decision', `You answered: ${answer}`, decision.taskId)
       const task = decision.taskId ? this.store.getTask(decision.taskId) : undefined
       if (task) applyAnswer(this.ctx, answered, task, answer.trim())
+      // An agent can ask without a task (the lead while planning): the answer still has to reach it.
+      else this.ctx.message(decision.runId, 'human', decision.agentId, null, `The human answered "${decision.question}": ${answer.trim()}`)
       return answered
     })
   }
