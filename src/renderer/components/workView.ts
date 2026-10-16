@@ -12,6 +12,8 @@ import { store } from '../state'
 import type { TicketNotes } from '../../shared/ticketNotes'
 import { TicketsPanel } from './workTickets'
 import { selectMenu } from './selectMenu'
+import { formatWorkSummary } from '../../shared/workSummary'
+import { toast } from './toast'
 import './workView.css'
 
 type WorkMode = 'sessions' | 'tickets'
@@ -113,6 +115,18 @@ export class WorkViewComponent {
     void this.load()
   }
 
+  private async copySummary(): Promise<void> {
+    if (!this.report || this.loading) return
+    const text = formatWorkSummary(this.report, {
+      now: Date.now(), periodLabel: this.periodLabel(), mode: this.mode,
+      query: this.search, projectId: this.projectId, notes: this.notes
+    })
+    try {
+      await api.writeClipboard(text)
+      toast('Copied', 'info')
+    } catch { toast('Could not copy the summary. Try again.') }
+  }
+
   private render(): void {
     const focused = document.activeElement
     const restoreSearch = focused instanceof HTMLInputElement && focused.id === 'work-search'
@@ -132,6 +146,7 @@ export class WorkViewComponent {
         class: `rp-tab${this.mode === m.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.mode === m.value), id: `work-mode-${m.value}`,
         onClick: () => { this.mode = m.value; this.render() }
       }, m.label))), h('span', { class: 'spacer' }),
+      h('button', { class: 'btn ghost', type: 'button', disabled: this.loading || !this.report, onClick: () => void this.copySummary() }, 'Copy summary'),
       h('button', { class: 'btn ghost', type: 'button', disabled: this.loading, onClick: () => void this.load() }, 'Refresh')))
     this.el.append(this.filters())
     if (restoreSearch) {
