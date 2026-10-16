@@ -112,7 +112,7 @@
 }
 
 .orch-tasks { overflow-x: auto; }
-.orch-tasks .orch-board { grid-template-columns: repeat(5, minmax(170px, 1fr)); padding: 12px; }
+.orch-tasks .orch-board { grid-template-columns: repeat(5, minmax(120px, 1fr)); padding: 12px; }
 .orch-side { display: grid; gap: 12px; min-width: 0; align-content: start; }
 .orch-panel-hint { color: var(--muted); font-size: 11px; font-weight: 400; letter-spacing: 0; text-transform: none; }
 

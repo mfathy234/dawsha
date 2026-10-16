@@ -20,6 +20,7 @@ export class OrchestratorViewComponent {
   readonly el = h('main', { class: 'orch-view', 'aria-label': 'Orchestrator' })
   private readonly tabs = h('div', { class: 'orch-tabs', role: 'tablist', 'aria-label': 'Orchestrator sections' })
   private readonly notice = h('div', { class: 'orch-notice', hidden: true })
+  private readonly reviewBadge = h('span', { class: 'orch-badge', hidden: true })
   private readonly body = h('div', { class: 'orch-body' })
   private readonly runs = new OrchRunsView()
   private readonly boards = new OrchBoardsView()
@@ -42,19 +43,23 @@ export class OrchestratorViewComponent {
     target.update(state)
   }
 
+  /** Tab buttons are built once and only updated, so they keep focus and stay clickable while runs change. */
   private renderTabs(state: AppState): void {
-    const waiting = state.orch?.decisions.length ?? 0
-    clear(this.tabs)
+    if (this.tabs.childElementCount === 0) {
+      for (const tab of TABS) {
+        this.tabs.append(
+          h('button', { class: 'orch-tab', type: 'button', role: 'tab', id: `orch-tab-${tab.id}`, onClick: () => showOrch(tab.id) }, tab.label)
+        )
+      }
+      this.tabs.querySelector('#orch-tab-review')?.append(this.reviewBadge)
+    }
     for (const tab of TABS) {
       const selected = state.orchRunId === null && state.orchTab === tab.id
-      const button = h(
-        'button',
-        { class: 'orch-tab', type: 'button', role: 'tab', id: `orch-tab-${tab.id}`, 'aria-selected': String(selected), onClick: () => showOrch(tab.id) },
-        tab.label,
-        tab.id === 'review' && waiting > 0 ? h('span', { class: 'orch-badge' }, String(waiting)) : null
-      )
-      this.tabs.append(button)
+      this.tabs.querySelector(`#orch-tab-${tab.id}`)?.setAttribute('aria-selected', String(selected))
     }
+    const waiting = state.orch?.decisions.length ?? 0
+    this.reviewBadge.hidden = waiting === 0
+    this.reviewBadge.textContent = String(waiting)
   }
 
   private renderNotice(state: AppState): void {

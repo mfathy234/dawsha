@@ -190,7 +190,12 @@ export class OrchBoardsView {
   private renderBoard(cards: readonly BoardCard[]): void {
     clear(this.boardHost)
     const hasRuns = (this.state?.orch?.runs.length ?? 0) > 0
-    const emptyText = hasRuns ? 'No tasks match these filters.' : 'No runs yet. Start one from New run and its tasks show up here.'
+    const hiddenDone = this.filter.status === 'open' || !this.filter.includeFinished
+    const emptyText = !hasRuns
+      ? 'No runs yet. Start one from New run and its tasks show up here.'
+      : hiddenDone
+        ? 'No open tasks match these filters. Done tasks and finished runs are hidden: set Status to All and tick Include finished runs to see them.'
+        : 'No tasks match these filters.'
     this.boardHost.append(renderTaskBoard(cards, { showProject: this.filter.projectId === '', showRun: true, onOpen: (card) => showOrch('runs', card.runId), emptyText }))
     this.summary.textContent = 'Each card carries its run tag. Click a card to open its run. Finished runs are hidden unless you include them.'
   }

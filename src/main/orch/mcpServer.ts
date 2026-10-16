@@ -8,6 +8,8 @@ import { OrchToolError, type OrchService } from './service'
 
 export const ORCH_MCP_PATH = '/mcp'
 const MAX_BODY_BYTES = 1024 * 1024
+/** Oversized uploads are drained up to this size so the client still gets its 413. */
+const MAX_DRAIN_BYTES = 16 * 1024 * 1024
 const REQUEST_TIMEOUT_MS = 30_000
 const HEADERS_TIMEOUT_MS = 10_000
 const DEFAULT_PROTOCOL = '2025-06-18'
@@ -52,29 +54,35 @@ function send(res: ServerResponse, status: number, body?: unknown, headers: Reco
 }
 
 /** Resolves the body, or null once it passes the limit (the connection is then closed). */
+/**
+ * Resolves the body, or null when it is over the limit (a 413 has then been sent). An oversized upload is
+ * read to its end before answering, up to MAX_DRAIN_BYTES, so the client receives the 413 instead of a reset;
+ * anything bigger is cut off.
+ */
 function readBody(req: IncomingMessage, res: ServerResponse): Promise<string | null> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
     let size = 0
-    let done = false
+    let tooBig = false
+    const refuse = (): void => {
+      send(res, 413, { error: 'Request too large.' }, { connection: 'close' })
+      resolve(null)
+    }
     req.on('data', (chunk: Buffer) => {
-      if (done) return
       size += chunk.length
       if (size <= MAX_BODY_BYTES) {
         chunks.push(chunk)
         return
       }
-      done = true
-      send(res, 413, { error: 'Request too large.' }, { connection: 'close' })
-      res.once('finish', () => req.destroy())
-      resolve(null)
+      tooBig = true
+      chunks.length = 0
+      if (size > MAX_DRAIN_BYTES) {
+        req.destroy()
+        resolve(null)
+      }
     })
-    req.on('end', () => {
-      if (!done) resolve(Buffer.concat(chunks).toString('utf8'))
-    })
-    req.on('error', (error) => {
-      if (!done) reject(error)
-    })
+    req.on('end', () => (tooBig ? refuse() : resolve(Buffer.concat(chunks).toString('utf8'))))
+    req.on('error', (error) => (tooBig ? resolve(null) : reject(error)))
   })
 }
 
@@ -133,6 +141,10 @@ export function startOrchMcpServer(service: OrchService, options: OrchMcpOptions
   }
 
   const respond = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    // A client that resets the connection (for example after a 413) must not become an uncaught error
+    // in Dawsha's main process.
+    req.on('error', () => undefined)
+    res.on('error', () => undefined)
     if ((req.url ?? '').split('?')[0] !== ORCH_MCP_PATH) return send(res, 404)
     // Browsers send Origin; refusing foreign ones (and foreign Host names) stops web pages from
     // reaching agents through DNS rebinding.
@@ -144,9 +156,9 @@ export function startOrchMcpServer(service: OrchService, options: OrchMcpOptions
     if (req.method !== 'POST') return send(res, 405, undefined, { allow: 'POST' })
     const agent = service.agentForToken((req.headers.authorization ?? '').replace(/^Bearer\s+/i, ''))
     if (!agent) return send(res, 401, { error: 'Unknown agent token.' })
-    if (Number(req.headers['content-length'] ?? 0) > MAX_BODY_BYTES) {
-      req.resume()
-      return send(res, 413, { error: 'Request too large.' }, { connection: 'close' })
+    if (Number(req.headers['content-length'] ?? 0) > MAX_DRAIN_BYTES) {
+      req.destroy()
+      return
     }
     const text = await readBody(req, res)
     if (text === null) return
