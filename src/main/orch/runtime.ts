@@ -93,7 +93,7 @@ export class OrchRuntime {
   // ---- Spawn and pane events (from the pty layer) ----
 
   /** Extras for an orchestrated spawn; null for ordinary panes. */
-  prepareSpawn(request: SpawnRequest): LaunchExtras | { error: string } | null {
+  prepareSpawn(request: SpawnRequest): LaunchExtras | { error: string; retired?: boolean } | null {
     if (!request.orchAgentId) return null
     if (!this.service) return { error: 'The orchestrator is off. Turn it on in Settings → Experimental, then reopen this pane.' }
     const extras = this.bridge.prepare(request)

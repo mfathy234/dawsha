@@ -11,7 +11,7 @@ import { validSpecRunId } from './specs'
 export interface OrchestratorIpc {
   /** Starts or stops the runtime to match Settings → Experimental. */
   apply(settings: Settings): void
-  prepareSpawn(request: SpawnRequest): LaunchExtras | { error: string } | null
+  prepareSpawn(request: SpawnRequest): LaunchExtras | { error: string; retired?: boolean } | null
   status(): OrchStatus
   startRun(input: OrchStartInput): OrchResult<string>
   runs(): OrchRunView[]

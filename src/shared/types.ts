@@ -325,7 +325,8 @@ export interface RemoteSessionStarted {
   sessionId?: string
 }
 
-export type SpawnResult = { ok: true; pid: number } | { ok: false; error: string }
+/** `retired`: the pane belongs to an orchestrator agent that has finished, so the pane can simply go away. */
+export type SpawnResult = { ok: true; pid: number } | { ok: false; error: string; retired?: boolean }
 
 export interface RepoProbe {
   isRepo: boolean

@@ -98,12 +98,12 @@ export class OrchPaneBridge {
   }
 
   /** Extras for an orchestrated spawn, or an error to show in the pane. Plain spawns return null. */
-  prepare(request: SpawnRequest): LaunchExtras | { error: string } | null {
+  prepare(request: SpawnRequest): LaunchExtras | { error: string; retired?: boolean } | null {
     if (!request.orchAgentId) return null
     const service = this.deps.service()
     const agent = service?.agent(request.orchAgentId)
     if (!service || !agent || agent.retiredAt || !agent.launch) {
-      return { error: 'This orchestrator agent has finished or the orchestrator is off. You can close this pane.' }
+      return { error: 'This orchestrator agent has finished or the orchestrator is off. You can close this pane.', retired: Boolean(agent?.retiredAt) }
     }
     for (const file of agent.launch.files) {
       mkdirSync(dirname(file.path), { recursive: true })

@@ -172,6 +172,15 @@ const SOURCE: Record<CostSource, { marker: string; title: string }> = {
   none: { marker: '–', title: 'No usage yet' }
 }
 
+/**
+ * A run's total cost for headers and lists. Prices come from Settings → Prices; without any, there is no cost to
+ * show (not "$0.00"), and a partly priced total says so.
+ */
+export function totalCostLabel(costUsd: number, complete: boolean): string {
+  if (complete) return formatUsd(costUsd)
+  return costUsd > 0 ? `${formatUsd(costUsd)} + unpriced` : 'No prices set'
+}
+
 function costText(costUsd: number | null, source: CostSource): string {
   if (source === 'unpriced') return 'no price'
   if (source === 'none' || costUsd === null) return '–'

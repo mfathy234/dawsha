@@ -1,7 +1,7 @@
 import { selectMenu, syncSelectMenu } from '../selectMenu'
 import type { OrchRunDetail } from '../../../shared/orch/api'
+import { totalCostLabel } from '../../../shared/orch/board'
 import { historyResult, historyRuns, type HistoryFilter } from '../../../shared/orch/history'
-import { formatUsd } from '../../../shared/usage'
 import { clear, h } from '../../dom'
 import { exportHistoryRun, exportHistoryRuns, importHistoryRuns, showOrch } from '../../orchActions'
 import type { AppState } from '../../state'
@@ -108,8 +108,8 @@ export class OrchHistoryView {
         h('div', { class: 'orch-muted orch-history-sub' }, run.imported ? `imported from ${run.imported.from} · read-only` : `${result} · ${run.branch}`)),
       h('td', {}, this.projectName(run.projectPath)), h('td', {}, plan), h('td', {}, pill(result, result === 'cancelled' ? 'idle' : 'done')),
       h('td', { class: 'num' }, String(run.taskCount)), h('td', { class: 'num' }, String(run.decisions?.length ?? 0)),
-      h('td', { class: 'num' }, `${formatUsd(run.usage.total.costUsd)}${run.usage.total.complete ? '' : ' (incomplete)'}`),
-      h('td', {}, h('time', { datetime: new Date(at).toISOString() }, new Date(at).toLocaleString())),
+      h('td', { class: 'num' }, totalCostLabel(run.usage.total.costUsd, run.usage.total.complete)),
+      h('td', {}, h('time', { datetime: new Date(at).toISOString() }, new Date(at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }))),
       h('td', {}, h('div', { class: 'orch-actions' }, h('button', { class: 'btn orch-small', type: 'button', onClick: () => showOrch('runs', run.id) }, 'Open'),
         h('button', { class: 'btn orch-small', type: 'button', disabled: this.busy, onClick: () => void this.action(() => exportHistoryRun(run.id, 'markdown')) }, 'Export as Markdown'))))
   }

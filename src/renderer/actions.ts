@@ -177,6 +177,11 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     )
     return
   }
+  // A restored pane of an orchestrator agent that has finished has nothing left to do: remove it quietly.
+  if (result.retired && term.orchAgentId) {
+    void discardPane(paneId)
+    return
+  }
   view?.writeLine(`\x1b[31m${result.error}\x1b[0m`)
   store.set((s) => mapTerm(s, termId, (t) => ({ ...t, status: 'exited', pid: undefined })))
   toast(result.error)

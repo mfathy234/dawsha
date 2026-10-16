@@ -169,6 +169,9 @@ function titleFor(pane: PaneState, matches: Matches, project: Project | undefine
     const name = nameOf(tab, matches)
     if (name) return { title: name, named: true }
   }
+  // An orchestrator agent's pane is named for its role and model ("Lead · opus") until its session has a name.
+  const orch = ordered.find((t) => t.orchAgentId && t.titleHint)
+  if (orch?.titleHint) return { title: orch.titleHint, named: true }
   return { title: project?.name ?? 'Session', named: false }
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OrchAgentRow, OrchRunDetail } from '../../src/shared/orch/api'
-import { boardCards, DEFAULT_BOARD_FILTER, groupByColumn, projectTabs, timelineEvents, usageRows } from '../../src/shared/orch/board'
+import { boardCards, DEFAULT_BOARD_FILTER, groupByColumn, projectTabs, timelineEvents, totalCostLabel, usageRows } from '../../src/shared/orch/board'
 import type { OrchTask } from '../../src/shared/orch/types'
 import type { RunUsage } from '../../src/shared/orch/usage'
 
@@ -97,6 +97,15 @@ describe('groupByColumn', () => {
     const groups = groupByColumn(boardCards(runs, projects, DEFAULT_BOARD_FILTER))
     expect(groups.map((g) => g.id)).toEqual(['todo', 'progress', 'review', 'needs', 'done'])
     expect(groups.map((g) => g.cards.length)).toEqual([1, 1, 0, 1, 0])
+  })
+})
+
+describe('totalCostLabel', () => {
+  it('says no prices are set instead of showing $0.00, and marks a partly priced total', () => {
+    expect(totalCostLabel(0, false)).toBe('No prices set')
+    expect(totalCostLabel(0.9, false)).toBe('$0.90 + unpriced')
+    expect(totalCostLabel(0.9, true)).toBe('$0.90')
+    expect(totalCostLabel(0, true)).toBe('$0.00')
   })
 })
 

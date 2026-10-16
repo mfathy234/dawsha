@@ -86,7 +86,7 @@ describe('orchestrator dispatcher', () => {
   })
 
   it('starts a feature with the lead alone, and a small change gets one implementer and its reviewer', async () => {
-    const { svc, dispatcher, panes, merges } = setup()
+    const { svc, dispatcher, panes, merges, closed } = setup()
     const run = svc.startRun({ projectPath: 'C:/work/app', title: 'Hide server field', story: 'Hide one field.', plan: 'default' })
     expect(svc.tasks(run.id)).toEqual([])
     await dispatcher.tick()
@@ -122,6 +122,8 @@ describe('orchestrator dispatcher', () => {
     await dispatcher.tick()
     expect(svc.run(run.id)?.stage).toBe('done')
     expect(svc.agents(run.id).every((a) => a.retiredAt)).toBe(true)
+    // The finished agents' panes close with the run.
+    expect([...closed].sort()).toEqual(panes.map((p) => p.agentId).sort())
   })
 
   it('writes a spec only when the lead asks for one, holds other work until it is approved, then tells the lead', async () => {

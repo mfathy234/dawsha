@@ -104,7 +104,11 @@ ipcMain.on(IPC.cliReady, () => {
 
 function createWindow(): BrowserWindow {
   rendererReady = false
+  // Automated tests set DAWSHA_OFFSCREEN=1: the window renders as usual but off-screen, out of the taskbar and
+  // without taking focus, so test runs do not pop windows up on the user's desktop.
+  const offscreen = process.env.DAWSHA_OFFSCREEN === '1'
   const window = new BrowserWindow({
+    ...(offscreen ? { x: -32000, y: -32000, skipTaskbar: true, show: false } : {}),
     width: 1440,
     height: 900,
     minWidth: 960,
@@ -120,6 +124,7 @@ function createWindow(): BrowserWindow {
       sandbox: true
     }
   })
+  if (offscreen) window.showInactive()
   window.webContents.on('did-start-loading', () => {
     if (mainWindow === window) rendererReady = false
   })

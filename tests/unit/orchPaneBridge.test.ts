@@ -64,7 +64,8 @@ describe('orchestrator pane bridge', () => {
   it('refuses to start a retired agent', () => {
     const { svc, agent, bridge, request } = setup()
     svc.releaseAgent(agent.id, 'closed')
-    expect(bridge.prepare(request())).toEqual({ error: expect.stringContaining('finished') })
+    // retired: the renderer then removes the pane quietly instead of showing an error.
+    expect(bridge.prepare(request())).toEqual({ error: expect.stringContaining('finished'), retired: true })
   })
 
   it('turns a usage-limit banner into a stall decision offering other models', async () => {

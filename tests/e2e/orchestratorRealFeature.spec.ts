@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
 
-// Real Claude Code and Codex CLIs on the default plan; costs real tokens. Run with:
+// Real Claude Code CLIs on the default plan; costs real tokens. Run with:
 //   ORCH_REAL=1 npx playwright test orchestratorRealFeature
 // Uses the machine's own CLI config (hooks included), like a user's run.
 const REAL = process.env.ORCH_REAL === '1'
@@ -52,6 +52,8 @@ test('real feature run: the lead reads the full story and uses a small team', as
   let shot = 0
   const capture = async (name: string): Promise<void> => {
     shot += 1
+    // Let the tab's short fade-in finish, so the shot shows what a person sees.
+    await page.waitForTimeout(400)
     await page.screenshot({ path: join(SHOTS, `${String(shot).padStart(2, '0')}-${name}.png`) }).catch(() => undefined)
   }
   try {
@@ -92,12 +94,25 @@ test('real feature run: the lead reads the full story and uses a small team', as
     const short = run.id.replace(/^run_/, '').slice(0, 8)
     const source = git(repo, 'show', `orch/${short}/run:src/price.js`)
     expect(source).toMatch(/toFixed\(2\)|Intl\.NumberFormat/)
+    // Every screen shows the run, as the user sees it.
+    const view = page.locator('.orch-view')
     await page.locator('#orch-tab-runs').click()
+    await expect(view).toContainText('Run finished')
     await capture('all-runs')
     await page.locator('#orch-tab-boards').click()
+    await expect(page.locator('.orch-projtab').first()).toBeVisible()
     await capture('boards')
     await page.locator('#orch-tab-review').click()
+    await expect(view).toContainText('is finished on branch orch/')
     await capture('review')
+    // Finish like the user would: Mark as done. The run ends and its agents' panes close, without error toasts.
+    await page.getByRole('button', { name: 'Send' }).click()
+    await expect.poll(async () => (await snapshot(page)).runs[0].stage, { timeout: 30_000 }).toBe('done')
+    await expect(page.locator('.pane')).toHaveCount(0, { timeout: 15_000 })
+    await expect(page.locator('.toast.error')).toHaveCount(0)
+    await page.locator('#orch-tab-history').click()
+    await expect(view).toContainText('done')
+    await capture('history')
   } finally {
     await closeApp(app)
   }

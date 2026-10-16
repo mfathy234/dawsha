@@ -119,7 +119,11 @@ export class Dispatcher {
   private finishIfAnswered(run: OrchRun): boolean {
     if (run.stage !== 'merge') return false
     const answered = this.deps.service.decisions(run.id).some((d) => d.kind === 'run-complete' && d.answer !== null)
-    if (answered) this.deps.service.finishRun(run.id)
+    if (answered) {
+      // The agents have nothing left to do: close their panes with the run, as cancelling does.
+      for (const agent of this.deps.service.agents(run.id).filter((a) => !a.retiredAt)) this.deps.closePane(agent.id)
+      this.deps.service.finishRun(run.id)
+    }
     return true
   }
 

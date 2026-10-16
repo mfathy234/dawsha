@@ -1,8 +1,7 @@
 import { selectMenu } from '../selectMenu'
 import type { OrchAgentRow, OrchRunDetail } from '../../../shared/orch/api'
-import { boardCards, DEFAULT_BOARD_FILTER, isFinishedRun, timelineEvents, usageRows } from '../../../shared/orch/board'
+import { boardCards, DEFAULT_BOARD_FILTER, isFinishedRun, timelineEvents, totalCostLabel, usageRows } from '../../../shared/orch/board'
 import type { OrchProfile } from '../../../shared/orch/profiles'
-import { formatUsd } from '../../../shared/usage'
 import { focusPane } from '../../actions'
 import { clear, h } from '../../dom'
 import { cancelRun, handoffTask, showOrch } from '../../orchActions'
@@ -78,7 +77,8 @@ export class OrchRunView {
     const story = this.story(run)
     if (story) this.el.append(story)
     this.el.append(this.dashboard(run, state))
-    if (run.kind === 'feature') {
+    // Only runs where the lead asked for a spec have one to review.
+    if (run.kind === 'feature' && run.tasks.some((t) => t.role === 'spec-writer')) {
       const open = state.orch?.decisions.some((d) => d.runId === run.id && d.kind === 'spec-approval')
       const link = h('button', { class: open ? 'btn primary' : 'btn', type: 'button', onClick: () => showOrch('spec', run.id) }, open ? 'Review spec' : 'Spec')
       this.el.insertBefore(link, this.el.children[2])
@@ -107,7 +107,7 @@ export class OrchRunView {
     const total = run.usage.total
     const done = run.tasks.length > 0 ? run.tasks.filter((t) => t.status === 'approved' || t.status === 'cancelled').length : run.tasksDone
     const count = run.tasks.length > 0 ? run.tasks.length : run.taskCount
-    const cost = `${formatUsd(total.costUsd)}${total.complete ? '' : ' (incomplete)'}`
+    const cost = totalCostLabel(total.costUsd, total.complete)
     const kpi = (value: string, label: string, tone = ''): HTMLElement => h('div', { class: 'orch-kpi' }, h('b', { class: tone }, value), h('span', {}, label))
     return h(
       'div',
@@ -271,7 +271,7 @@ export class OrchRunView {
     const body = rows.map((r) =>
       h('tr', {}, h('td', {}, ROLE_LABEL[r.role], ' ', modelBadge(r.runner, r.model)), h('td', { class: 'num' }, r.input), h('td', { class: 'num' }, r.output), h('td', { class: 'num' }, r.cache), h('td', { class: 'num' }, r.cost, ' ', marker(r)))
     )
-    const foot = h('tr', { class: 'tot' }, h('td', {}, `Total · ${total.agents} ${total.agents === 1 ? 'agent' : 'agents'}`), h('td', { class: 'num' }, total.input), h('td', { class: 'num' }, total.output), h('td', { class: 'num' }, total.cache), h('td', { class: 'num' }, total.cost, total.incomplete ? ' (incomplete)' : ''))
+    const foot = h('tr', { class: 'tot' }, h('td', {}, `Total · ${total.agents} ${total.agents === 1 ? 'agent' : 'agents'}`), h('td', { class: 'num' }, total.input), h('td', { class: 'num' }, total.output), h('td', { class: 'num' }, total.cache), h('td', { class: 'num' }, total.incomplete && total.cost === '$0.00' ? 'No prices set' : total.incomplete ? `${total.cost} + unpriced` : total.cost))
     const table = h('table', { class: 'orch-table' }, h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Agent'), h('th', { scope: 'col', class: 'num' }, 'In'), h('th', { scope: 'col', class: 'num' }, 'Out'), h('th', { scope: 'col', class: 'num' }, 'Cache'), h('th', { scope: 'col', class: 'num' }, 'Cost'))), h('tbody', {}, ...body, foot))
     return h(
       'div',
