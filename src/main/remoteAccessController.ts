@@ -5,6 +5,7 @@ import { IPC } from '../shared/ipc'
 import { createFileDeviceStore, createRemoteAuth, type DeviceStore, type RemoteAuth } from './remoteAuth'
 import { createCloudflareQuickTunnel, type QuickTunnelHandle } from './cloudflareQuickTunnel'
 import { createCloudflaredInstaller } from './cloudflaredInstaller'
+import { waitForTunnelHostname, type ReachabilityOptions } from './tunnelReachability'
 import { startRemoteServer, type RemoteServerHandle, type RemoteServerOptions } from './remoteServer'
 import { startRemoteSession } from './remoteSessions'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
@@ -49,6 +50,11 @@ const SAFE_REMOTE_PATHS = new Set([
   '/dawsha/api/approvals/stream'
 ])
 
+const FIRST_REACHABLE_WINDOW_MS = 45_000
+const SECOND_REACHABLE_WINDOW_MS = 90_000
+const READY_GRACE_MS = 4_000
+const UNREACHABLE_MESSAGE = 'Cloudflare created a tunnel, but its public address is still not reachable after about two minutes. This is usually a temporary Cloudflare or DNS problem. Start Remote Access again to retry.'
+
 const PERMISSION_KEYS = new Set(['terminalInput', 'sessionControl', 'approvals', 'approvalsNotify', 'approvalsOnlyWhenAway', 'approvalsAwayMinutes', 'approvalsAllowConfigEdits'])
 
 function appendRemoteDiagnostic(userDataDir: string, record: Record<string, unknown>): void {
@@ -74,6 +80,8 @@ export interface RemoteAccessControllerOptions {
   idleSeconds?(): number
   tunnel?: ReturnType<typeof createCloudflareQuickTunnel>
   createServer?: (options: RemoteServerOptions) => Promise<RemoteServerHandle>
+  waitForHostname?: (hostname: string, options: ReachabilityOptions) => Promise<boolean>
+  readyGraceMs?: number
 }
 
 export function createRemoteAccessController(options: RemoteAccessControllerOptions) {
@@ -95,6 +103,11 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   let url: string | null = null
   let hostname: string | null = null
   let tunnel: QuickTunnelHandle | null = null
+  let localPort = 0
+  let ready = false
+  let generation = 0
+  const waitForHostname = options.waitForHostname ?? waitForTunnelHostname
+  const log = (event: string, detail: Record<string, unknown> = {}): void => appendRemoteDiagnostic(options.userDataDir, { time: new Date().toISOString(), event, ...detail })
   let removeTunnelExit: (() => void) | null = null
   let pairing: { code: string; expiresAt: number } | null = null
   let setupError: string | null = storageError
@@ -137,11 +150,13 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
 
   async function getState(): Promise<RemoteAccessState> {
     const enabled = server !== null && url !== null
-    if (enabled && pairing && pairing.expiresAt <= Date.now()) pairing = auth.createPairingCode()
+    if (ready && pairing && pairing.expiresAt <= Date.now()) pairing = auth.createPairingCode()
     const status: RemoteAccessState['status'] = enabled
-      ? 'available'
+      ? (ready ? 'available' : 'connecting')
       : setupError ? 'setup-required' : 'off'
-    const message = status === 'available'
+    const message = status === 'connecting'
+      ? 'Cloudflare is publishing your tunnel address. This can take up to a minute; this page updates on its own.'
+      : status === 'available'
       ? options.settings.get().remoteAccess.allowedEmail.trim()
         ? 'Cloudflare email PIN and Dawsha pairing are both required.'
         : 'Dawsha pairing is required. Keep this public tunnel URL and its short-lived code private.'
@@ -149,12 +164,72 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     return {
       status,
       enabled,
-      url: enabled ? url : null,
+      url: ready ? url : null,
       message,
       devices: auth.listDevices(),
-      pairing: enabled && pairing && pairing.expiresAt > Date.now() ? pairing : null,
+      pairing: ready && pairing && pairing.expiresAt > Date.now() ? pairing : null,
       permissions: options.settings.get().remoteAccess
     }
+  }
+
+  function adopt(active: QuickTunnelHandle): void {
+    const parsed = new URL(active.url)
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash ||
+        !/^[a-z0-9-]+.trycloudflare.com$/.test(parsed.hostname)) throw new Error('cloudflared returned an unsupported Quick Tunnel URL.')
+    hostname = parsed.hostname
+    url = `${active.url}/dawsha/`
+    removeTunnelExit?.()
+    removeTunnelExit = active.onExit((error) => {
+      log('tunnel-exit', { message: error.message })
+      setupError = `Cloudflare Quick Tunnel stopped: ${error.message}`
+      void deactivate().catch(() => undefined)
+    })
+  }
+
+  async function connect(email: string | undefined): Promise<boolean> {
+    const mine = ++generation
+    const cancelled = (): boolean => mine !== generation || !server
+    for (const window of [FIRST_REACHABLE_WINDOW_MS, SECOND_REACHABLE_WINDOW_MS]) {
+      const host = hostname
+      if (!host) return false
+      const reachable = await waitForHostname(host, {
+        timeoutMs: window,
+        isCancelled: cancelled,
+        onAttempt: (attempt, error) => log('hostname-wait', { host, attempt, error: error instanceof Error ? error.message : String(error) })
+      })
+      if (cancelled()) return false
+      if (reachable) {
+        ready = true
+        pairing = auth.createPairingCode()
+        log('hostname-ready', { host })
+        return true
+      }
+      if (window === SECOND_REACHABLE_WINDOW_MS) break
+      log('hostname-restart', { host })
+      try {
+        const old = tunnel
+        removeTunnelExit?.()
+        removeTunnelExit = null
+        tunnel = null
+        if (old) await old.stop().catch(() => undefined)
+        const next = await tunnelFactory.start(localPort, email)
+        if (cancelled()) { await next.stop().catch(() => undefined); return false }
+        tunnel = next
+        adopt(next)
+      } catch (error) {
+        log('hostname-restart-failed', { message: (error as Error).message })
+        return fail((error as Error).message || UNREACHABLE_MESSAGE, mine)
+      }
+    }
+    log('hostname-unreachable', { host: hostname })
+    return fail(UNREACHABLE_MESSAGE, mine)
+  }
+
+  async function fail(message: string, mine: number): Promise<false> {
+    if (mine !== generation) return false
+    await deactivate().catch(() => undefined)
+    setupError = message
+    return false
   }
 
   async function enableOnce(): Promise<RemoteAccessState> {
@@ -221,26 +296,29 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
           })
         }
       })
-      const activeTunnel = await tunnelFactory.start(localServer.port, email || undefined)
+      localPort = localServer.port
+      const activeTunnel = await tunnelFactory.start(localPort, email || undefined)
       tunnel = activeTunnel
-      const parsed = new URL(activeTunnel.url)
-      if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) throw new Error('cloudflared returned an unsupported Quick Tunnel URL.')
-      hostname = parsed.hostname
-      if (!/^[a-z0-9-]+\.trycloudflare\.com$/.test(hostname)) throw new Error('cloudflared returned an unsupported Quick Tunnel URL.')
+      adopt(activeTunnel)
       server = localServer
-      url = `${activeTunnel.url}/dawsha/`
-      removeTunnelExit = activeTunnel.onExit((error) => {
-        setupError = `Cloudflare Quick Tunnel stopped: ${error.message}`
-        void deactivate().catch(() => undefined)
-      })
-      if (!server || !url) throw new Error('Cloudflare Quick Tunnel stopped during startup.')
-      pairing = auth.createPairingCode()
+      ready = false
       setupError = null
+      const connection = connect(email || undefined)
+      const grace = options.readyGraceMs ?? READY_GRACE_MS
+      let graceTimer: NodeJS.Timeout | undefined
+      const outcome = await Promise.race([connection, new Promise<'pending'>((resolve) => { graceTimer = setTimeout(() => resolve('pending'), grace) })])
+      clearTimeout(graceTimer)
+      if (outcome === false) throw new Error(setupError ?? UNREACHABLE_MESSAGE)
       return getState()
     } catch (error) {
       if (localServer) await localServer.stop().catch(() => undefined)
       if (tunnel) { await tunnel.stop().catch(() => undefined); tunnel = null }
       hostname = null
+      server = null
+      url = null
+      ready = false
+      generation += 1
+      log('enable-failed', { message: (error as Error).message })
       setupError = (error as Error).message || 'Cloudflare Quick Tunnel could not be started.'
       throw error
     }
@@ -266,6 +344,8 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     url = null
     hostname = null
     pairing = null
+    ready = false
+    generation += 1
     approvals.stop()
     for (const id of remoteSessionIds) options.ptys.kill(id)
     remoteSessionIds.clear()

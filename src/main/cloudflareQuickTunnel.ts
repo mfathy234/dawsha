@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process'
-import { Resolver } from 'node:dns/promises'
 import { setTimeout as delay } from 'node:timers/promises'
 
 export interface TunnelProcess {
@@ -19,18 +18,7 @@ export interface QuickTunnelHandle {
 }
 
 const START_TIMEOUT_MS = 20_000
-const DNS_READY_TIMEOUT_MS = 20_000
-const DNS_RETRY_MS = 500
 const MAX_LOG_BYTES = 64 * 1024
-
-async function resolveQuickTunnelHost(hostname: string): Promise<string[]> {
-  const resolver = new Resolver({ timeout: 1_000, tries: 1 })
-  try {
-    return await resolver.resolve4(hostname)
-  } finally {
-    resolver.cancel()
-  }
-}
 
 function validEmail(email: string): boolean {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -44,10 +32,7 @@ function parseTunnelUrl(log: string): string | null {
 
 export function createCloudflareQuickTunnel(
   run: TunnelSpawn = (command, args, options) => spawn(command, args, options) as unknown as TunnelProcess,
-  resolveExecutable: () => Promise<string> = async () => 'cloudflared',
-  resolveHost: (hostname: string) => Promise<unknown> = resolveQuickTunnelHost,
-  dnsReadyTimeoutMs = DNS_READY_TIMEOUT_MS,
-  dnsRetryMs = DNS_RETRY_MS
+  resolveExecutable: () => Promise<string> = async () => 'cloudflared'
 ) {
   async function start(port: number, email?: string): Promise<QuickTunnelHandle> {
     if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('The local remote-control port is invalid.')
@@ -115,26 +100,6 @@ export function createCloudflareQuickTunnel(
       if (exitState.error) throw new Error(`Cloudflare Quick Tunnel failed to start: ${exitState.error.message}`)
       if (exited) throw new Error('cloudflared exited before returning a Quick Tunnel URL. Check its version and the --allowed-mail option.')
       throw new Error('Timed out waiting for the Cloudflare Quick Tunnel URL.')
-    }
-    const hostname = new URL(url).hostname
-    const dnsDeadline = Date.now() + dnsReadyTimeoutMs
-    let lastDnsError: unknown
-    while (Date.now() < dnsDeadline) {
-      if (exited || spawnError) break
-      try {
-        await resolveHost(hostname)
-        lastDnsError = null
-        break
-      } catch (error) {
-        lastDnsError = error
-        await delay(Math.min(dnsRetryMs, Math.max(1, dnsDeadline - Date.now())))
-      }
-    }
-    if (lastDnsError || exited || spawnError) {
-      const tunnelError = exited || spawnError ? exitState.error : null
-      await terminateChild()
-      if (tunnelError) throw new Error(`Cloudflare Quick Tunnel stopped before its hostname became reachable: ${tunnelError.message}`)
-      throw new Error('Cloudflare created a tunnel URL, but its DNS name is not reachable yet. Wait a moment and try again.')
     }
     return {
       url,

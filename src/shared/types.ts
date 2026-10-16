@@ -174,7 +174,7 @@ export interface RemoteAccessDevice {
 }
 
 export interface RemoteAccessState {
-  status: 'off' | 'setup-required' | 'available'
+  status: 'off' | 'setup-required' | 'connecting' | 'available'
   enabled: boolean
   url: string | null
   message: string
