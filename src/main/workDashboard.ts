@@ -4,10 +4,11 @@ import { Worker } from 'node:worker_threads'
 import { branchNameProblem } from '../shared/gitBranches'
 import { aggregateWork, classifyWork, shiftAnchor, ticketFromBranch, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../shared/workDashboard'
 import type { Project, ResumeSession } from '../shared/types'
-import { activeSpans } from '../shared/sessionDetail'
+import { activeSpans, ACTIVE_GAP_MS } from '../shared/sessionDetail'
 import { normalizePath } from '../shared/sessionMatch'
 import { listSessionSources } from './sessionIndex'
 import { runBranch } from './orch/worktrees'
+import { WorkSpanReader } from './workSpans'
 
 const TTL = 10_000
 const commitCache = new Map<string, { at: number; job: Promise<string[]> }>()
@@ -159,7 +160,13 @@ export function runWorkItems(runs: readonly WorkRun[], projects: readonly Projec
   // A cancelled run that finished nothing is not work done (a wrong project, a false start).
   return runs.filter(run => !(run.stage === 'cancelled' && (run.approvedTasks ?? 0) === 0)).map(run => {
     const own = sessions.filter(s => belongsToRun(s, run))
-    const spans = activeSpans([...run.eventTimes ?? [], ...own.flatMap(s => (s.activeSpans ?? []).flat())])
+    const spans: [number, number][] = []
+    // Child spans can be hours long: treating just their endpoints as activity loses the middle.
+    for (const [start, end] of [...activeSpans(run.eventTimes ?? []), ...own.flatMap(s => s.activeSpans ?? [])].sort((a, b) => a[0] - b[0])) {
+      const last = spans.at(-1)
+      if (last && start - last[1] <= ACTIVE_GAP_MS) last[1] = Math.max(last[1], end)
+      else spans.push([start, end])
+    }
     const project = projects.find(p => p.id === run.projectId || normalizePath(p.folder) === normalizePath(run.projectPath))
     return { id: run.id, title: run.title, projectId: project?.id ?? run.projectId ?? run.projectPath, project: project?.name ?? run.projectPath,
       type: run.kind, agent: 'orchestrator', branch: run.workBranch ?? run.branch, ticket: ticketFromBranch(run.workBranch ?? run.branch), startedAt: run.createdAt,
@@ -169,12 +176,14 @@ export function runWorkItems(runs: readonly WorkRun[], projects: readonly Projec
   })
 }
 
-type SourceReader = (projects: Project[], since: number) => Promise<ResumeSession[]>
-const readSources: SourceReader = async (projects, since) => (await listSessionSources(projects, {}, undefined, since)).map(s => s.session)
+type WorkSession = ResumeSession & { sourcePath?: string }
+type SourceReader = (projects: Project[], since: number) => Promise<WorkSession[]>
+const readSources: SourceReader = async (projects, since) => (await listSessionSources(projects, {}, undefined, since)).map(s => ({ ...s.session, sourcePath: s.path }))
 
 /** Lazy collection: opening the dashboard triggers work, never app startup. */
 export class WorkService {
-  private cached: { key: string; at: number; job: Promise<WorkItem[]> } | null = null
+  private cached: { key: string; at: number; job: Promise<WorkSession[]> } | null = null
+  private readonly spans = new WorkSpanReader()
   constructor(private readonly sources: SourceReader = readSources) {}
 
   async report(period: WorkPeriod, projects: Project[], runs: readonly WorkRun[], offset = 0): Promise<WorkReport> {
@@ -184,13 +193,32 @@ export class WorkService {
     const since = Math.min(workWindow('month', anchor).start, workWindow('week', anchor).start)
     const key = JSON.stringify([projects, runs, since])
     if (!this.cached || this.cached.key !== key || now - this.cached.at >= TTL) {
-      const job = this.sources(projects, since).then(async sessions => [
-        ...await sessionWorkItems(sessions, projects, runs.map(r => r.branch), workCommits, runs.flatMap(r => r.workSessionIds ?? [])),
-        ...runWorkItems(runs, projects, sessions)
-      ])
+      const job = this.sources(projects, since)
       this.cached = { key, at: now, job }
       job.catch(() => { if (this.cached?.job === job) this.cached = null })
     }
-    return aggregateWork(await this.cached.job, period, now, anchor)
+    const indexed = await this.cached.job
+    const { start, end } = workWindow(period, anchor)
+    const inPeriod = (at: number): boolean => at >= start && at < end && at <= now
+    const selectedRuns = new Set(runWorkItems(runs, projects, indexed).filter(item => inPeriod(item.endedAt)).map(item => item.id))
+    const candidates = indexed.filter(session => inPeriod(session.lastActivityAt ?? session.modifiedAt) ||
+      (session.startedAt < Math.min(end, now) && (session.lastActivityAt ?? session.modifiedAt) >= start && runs.some(run => selectedRuns.has(run.id) && belongsToRun(session, run))))
+    const sessions: WorkSession[] = []
+    let next = 0
+    // Bound worker count and memory while keeping parsing off Electron's event loop.
+    await Promise.all(Array.from({ length: Math.min(4, candidates.length) }, async () => {
+      while (next < candidates.length) {
+        const session = candidates[next++]
+        try {
+          sessions.push(session.sourcePath ? { ...session, activeSpans: await this.spans.read(session.sourcePath, session.agent) } : session)
+        } catch {
+          // Deleted/rotated or inaccessible transcripts are skipped, just as in the index.
+        }
+      }
+    }))
+    return aggregateWork([
+      ...await sessionWorkItems(sessions, projects, runs.map(r => r.branch), workCommits, runs.flatMap(r => r.workSessionIds ?? [])),
+      ...runWorkItems(runs.filter(run => selectedRuns.has(run.id)), projects, sessions)
+    ], period, now, anchor)
   }
 }

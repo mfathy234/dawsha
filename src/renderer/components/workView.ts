@@ -182,7 +182,7 @@ export class WorkViewComponent {
     }
     if (this.period !== 'today') this.el.append(this.chart(report))
     this.el.append(this.projects(searched), this.items(report), h('p', { class: 'usage-local muted' },
-      'One item per session or orchestrator run, counted on its last activity day. Time spent is active time in this period (breaks over 5 minutes do not count), from a sample of each session, so long sessions can read low. The type comes from the branch and your own commits.'))
+      'One item per session or orchestrator run, counted on its last activity day. Time spent is active time in this period (breaks over 5 minutes do not count). The type comes from the branch and your own commits.'))
   }
 
   private setProject(id: string | null): void {
