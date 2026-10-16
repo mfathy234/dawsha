@@ -94,7 +94,7 @@ export class OrchRunView {
   }
 
   private header(run: OrchRunDetail): HTMLElement {
-    const finished = isFinishedRun(run)
+    const finished = Boolean(run.imported) || isFinishedRun(run)
     const total = run.usage.total
     const done = run.tasks.length > 0 ? run.tasks.filter((t) => t.status === 'approved' || t.status === 'cancelled').length : run.tasksDone
     const count = run.tasks.length > 0 ? run.tasks.length : run.taskCount
@@ -114,7 +114,8 @@ export class OrchRunView {
           run.branch ? ' · branch ' : null,
           run.branch ? h('span', { class: 'orch-mono' }, run.branch) : null
         ),
-        this.stages(run)
+        this.stages(run),
+        run.imported ? h('p', { class: 'orch-muted' }, `Imported from ${run.imported.from} · read-only`) : finished ? h('p', { class: 'orch-muted' }, 'Finished · read-only') : null
       ),
       h(
         'div',
@@ -181,7 +182,7 @@ export class OrchRunView {
     const { rows } = usageRows({ ...run.usage, agents: cost ? [cost] : [] })
     const row = rows[0]
     const pane = state.panes.find((p) => p.tabs.some((t) => t.orchAgentId === agent.id))
-    const canHandoff = !agent.retired && agent.taskKey !== null && HANDOFF_STATES.has(agent.state)
+    const canHandoff = !run.imported && !isFinishedRun(run) && !agent.retired && agent.taskKey !== null && HANDOFF_STATES.has(agent.state)
     const open = h('button', { class: 'btn orch-small', type: 'button', disabled: pane ? undefined : true, title: pane ? 'Focus this agent’s pane' : 'This agent has no open pane', onClick: () => pane && focusPane(pane.id) }, 'Open pane')
     const actions = h('div', { class: 'orch-actions' }, open, canHandoff ? h('button', { class: 'btn orch-small', type: 'button', onClick: () => this.openHandoff(agent, state) }, 'Continue with…') : null)
     const main = h(
@@ -193,7 +194,7 @@ export class OrchRunView {
       h('td', { class: 'num' }, row ? row.cost : '–'),
       h('td', {}, actions)
     )
-    return this.handoff?.agentId === agent.id ? [main, this.handoffRow(run, agent, state)] : [main]
+    return !run.imported && !isFinishedRun(run) && this.handoff?.agentId === agent.id ? [main, this.handoffRow(run, agent, state)] : [main]
   }
 
   private openHandoff(agent: OrchAgentRow, state: AppState): void {

@@ -64,7 +64,7 @@ export type QuickPickMode = 'new' | 'resume'
 export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'settings' | 'replay' | 'orchestrator'
 
 /** Tabs of the Orchestrator view. A selected run (orchRunId) shows its dashboard instead. */
-export type OrchTab = 'runs' | 'boards' | 'review' | 'new'
+export type OrchTab = 'runs' | 'boards' | 'review' | 'history' | 'new'
 
 export interface ReplayRef {
   id: string
