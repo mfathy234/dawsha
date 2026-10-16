@@ -48,6 +48,7 @@ class SelectMenu {
   private menu: HTMLElement | null = null
   private items: HTMLButtonElement[] = []
   private active = -1
+  private signature = ''
   private readonly removal = new MutationObserver(() => {
     if (!this.trigger.isConnected || !this.trigger.getClientRects().length) this.close(false)
   })
@@ -75,11 +76,16 @@ class SelectMenu {
   }
 
   sync(): void {
+    const signature = JSON.stringify([
+      this.select.disabled, this.select.selectedIndex,
+      [...this.select.options].map((option) => [option.value, option.label, option.disabled])
+    ])
     this.text.textContent = this.select.selectedOptions[0]?.label ?? ''
     this.trigger.disabled = this.select.disabled
     const label = this.select.getAttribute('aria-label') ?? [...this.select.labels ?? []].map((el) => el.textContent?.trim()).join(' ')
     this.label.textContent = label || 'Options'
-    if (this.menu) this.close(false)
+    if (this.menu && signature !== this.signature) this.close(false)
+    this.signature = signature
   }
 
   private readonly outside = (event: Event): void => {
