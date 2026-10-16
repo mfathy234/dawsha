@@ -2,15 +2,15 @@
 
 .orch-projtabs {
   display: flex;
-  gap: 6px;
+  gap: var(--orch-space-2);
   flex-wrap: wrap;
 }
 
 .orch-projtab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
+  gap: var(--orch-space-2);
+  padding: var(--orch-space-1) var(--orch-space-3);
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface);
@@ -30,11 +30,11 @@
 .orch-col-count {
   display: inline-block;
   min-width: 18px;
-  padding: 0 6px;
+  padding: 0 var(--orch-space-2);
   border-radius: 9px;
   background: var(--raised);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 17px;
   text-align: center;
 }
@@ -43,15 +43,15 @@
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: 10px 14px;
-  padding: 10px 12px;
+  gap: var(--orch-space-3) var(--orch-space-4);
+  padding: var(--orch-space-3) var(--orch-space-3);
   border-bottom: 1px solid var(--border);
 }
 
 .orch-filter {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--orch-space-1);
   min-width: 0;
 }
 
@@ -59,14 +59,14 @@
 
 .orch-filter-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .orch-search,
 .orch-select {
   min-width: 0;
   max-width: 100%;
-  padding: 5px 8px;
+  padding: var(--orch-space-1) var(--orch-space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--raised);
@@ -79,30 +79,30 @@
 .orch-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 0;
+  gap: var(--orch-space-2);
+  padding: var(--orch-space-1) 0;
   color: var(--text);
   cursor: pointer;
 }
 
 .orch-toggle-input { accent-color: var(--accent); }
 
-.orch-board-host { padding: 12px; min-width: 0; }
+.orch-board-host { padding: var(--orch-panel-padding); min-width: 0; }
 
 .orch-board {
   display: grid;
   grid-template-columns: repeat(5, minmax(200px, 1fr));
-  gap: 10px;
+  gap: var(--orch-space-3);
   overflow-x: auto;
-  padding-bottom: 6px;
+  padding-bottom: var(--orch-space-2);
 }
 
 .orch-col {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--orch-space-2);
   min-width: 0;
-  padding: 8px;
+  padding: var(--orch-space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
@@ -123,14 +123,14 @@
 
 .orch-col.needs .orch-col-head { color: var(--busy); }
 
-.orch-col-cards { display: flex; flex-direction: column; gap: 8px; }
+.orch-col-cards { display: flex; flex-direction: column; gap: var(--orch-space-2); }
 
 .orch-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--orch-space-2);
   width: 100%;
-  padding: 8px 10px;
+  padding: var(--orch-space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -147,14 +147,14 @@
 .orch-card-id {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--orch-space-2);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .orch-run-tag {
   max-width: 60%;
-  padding: 0 6px;
+  padding: 0 var(--orch-space-2);
   border-radius: 4px;
   background: var(--raised);
   overflow: hidden;
@@ -162,30 +162,38 @@
   white-space: nowrap;
 }
 
-.orch-card-title { font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.orch-card-title { font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 
 .orch-card-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--orch-space-2);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   min-width: 0;
 }
 
 .orch-card-role { color: var(--muted); }
 
+.orch-card-meta .orch-model {
+  flex: 0 0 100%;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+
 .orch-chip {
-  padding: 0 7px;
+  padding: 0 var(--orch-space-2);
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--accent);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .orch-board-empty {
-  padding: 24px 12px;
+  padding: var(--orch-space-5) var(--orch-space-3);
   color: var(--muted);
   text-align: center;
 }

@@ -49,7 +49,7 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
       await expect(page.frameLocator('.orch-spec iframe').getByRole('heading', { name: 'Export dialog v1' })).toBeVisible()
       while (await page.locator('.toast').count()) await page.locator('.toast').first().click()
       mkdirSync('test-results/screens', { recursive: true })
-      await page.screenshot({ path: `test-results/screens/orch-spec-review${theme === 'dawsha-daylight' ? '-light' : ''}.png` })
+      await page.screenshot({ path: `test-results/screens/orch-spec-review${theme === 'dawsha-daylight' ? '-light' : ''}.png`, animations: 'disabled' })
       await screen.getByRole('button', { name: 'Request changes', exact: true }).click()
       await expect(page.locator('.orch-run')).toBeVisible()
       await expect.poll(async () => {

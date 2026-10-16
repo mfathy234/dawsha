@@ -1,25 +1,28 @@
-.spec-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
-.spec-document, .spec-mockups, .spec-comments { padding: 16px; min-width: 0; }
-.orch-spec h2, .orch-spec h3 { margin: 0 0 12px; }
-.spec-toolbar, .spec-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.spec-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--orch-space-5); align-items: start; }
+.spec-document, .spec-mockups, .spec-comments { padding: var(--orch-panel-padding); min-width: 0; }
+.orch-spec h3 { font-size: 15px; }
+.spec-markdown h2 { font-size: 20px; letter-spacing: -0.01em; }
+.spec-markdown h4 { font-size: 13px; }
+.orch-spec h2, .orch-spec h3 { margin: 0 0 var(--orch-space-3); }
+.spec-toolbar, .spec-actions { display: flex; align-items: center; gap: var(--orch-space-2); flex-wrap: wrap; margin-bottom: var(--orch-space-3); }
 .spec-toolbar h3 { margin: 0; margin-right: auto; }
 .spec-toolbar .btn { max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
 .spec-toolbar [aria-pressed='true'] { border-color: var(--accent); background: var(--raised); }
 .orch-spec .btn:focus-visible, .orch-spec select:focus-visible, .orch-spec textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.spec-markdown { line-height: 1.65; overflow-wrap: anywhere; }
+.spec-markdown { line-height: 1.5; overflow-wrap: anywhere; }
 .spec-markdown code { font-family: var(--font-mono); background: var(--raised); }
-.spec-markdown h3, .spec-markdown h4 { margin-top: 16px; }
+.spec-markdown h3, .spec-markdown h4 { margin-top: var(--orch-space-4); }
 .spec-question { color: var(--busy); }
-.spec-answer { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
+.spec-answer { padding: var(--orch-space-3); border: 1px solid var(--border); border-radius: var(--radius); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
 .spec-viewport { position: relative; width: 100%; min-width: 0; overflow: hidden; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
 .spec-viewport iframe { display: block; height: 720px; border: 0; transform-origin: top left; }
-.spec-comments { display: flex; flex-direction: column; gap: 12px; }
-.spec-comments label { display: flex; flex-direction: column; gap: 6px; }
-.spec-comments textarea { height: auto; min-height: 64px; padding: 10px; font: inherit; resize: vertical; }
+.spec-comments { display: flex; flex-direction: column; gap: var(--orch-space-3); }
+.spec-comments label { display: flex; flex-direction: column; gap: var(--orch-space-2); }
+.spec-comments textarea { height: auto; min-height: 64px; padding: var(--orch-space-3); font: inherit; resize: vertical; }
 .spec-comments ul { margin: 0; padding-left: 20px; }
-.spec-comments li { padding: 6px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
-.spec-comments li .btn { margin-left: 12px; }
+.spec-comments li { padding: var(--orch-space-2) 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.spec-comments li .btn { margin-left: var(--orch-space-3); }
 .spec-actions { justify-content: flex-end; margin: 0; }
 .orch-spec > .orch-back, .orch-spec > .btn, .spec-comments > .btn { align-self: flex-start; }
-.orch-spec > h2 { font-size: 18px; line-height: 1.25; letter-spacing: -0.01em; }
+.orch-spec > h2 { font-size: 20px; line-height: 1.25; letter-spacing: -0.01em; }
 @media (max-width: 900px) { .spec-columns { grid-template-columns: minmax(0, 1fr); } }

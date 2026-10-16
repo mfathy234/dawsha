@@ -11,7 +11,7 @@ const SCREENS = 'test-results/screens'
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', ['-c', 'core.autocrlf=false', '-c', 'user.name=Test User', '-c', 'user.email=test@example.invalid', ...args], { cwd, encoding: 'utf8' }).trim()
 
-const shot = (page: Page, name: string): Promise<Buffer> => page.screenshot({ path: join(SCREENS, `orch-${name}.png`) })
+const shot = (page: Page, name: string): Promise<Buffer> => page.screenshot({ path: join(SCREENS, `orch-${name}.png`), animations: 'disabled' })
 
 for (const theme of ['dawsha-night', 'dawsha-daylight']) {
   test(`run stages show accessible progress and wrap without controls in ${theme}`, async () => {
@@ -220,5 +220,38 @@ test('toasts keep the newest three and dismiss info before errors', async () => 
     await expect(page.locator('.toast.error')).toHaveText('persistent error')
     await page.locator('.toast.error').click()
     await expect(page.locator('.toast')).toHaveCount(0)
+  } finally { await closeApp(app) }
+})
+
+test('orchestrator gives text room and respects motion preferences in both themes', async () => {
+  const sandbox = createSandbox()
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({
+    version: 2, lastSeenVersion: APP_VERSION, onboardingDismissed: true,
+    experimental: { orchestrator: true }, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }]
+  }))
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.setViewportSize({ width: 1800, height: 1000 })
+    await page.locator('#orchestrator-button').click()
+    for (const theme of ['grid-dark', 'dawsha-daylight']) {
+      await page.locator('#theme-button').click()
+      await page.locator(`#theme-${theme}`).click()
+      await page.keyboard.press('Escape')
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+      await page.locator('#orch-tab-new').click()
+      const column = page.locator('.orch-nr')
+      await expect(column).toHaveCSS('max-width', '1200px')
+      await expect(page.locator('.orch-nr-form')).toHaveCSS('padding', '20px')
+      await expect(page.locator('.orch-view')).toHaveCSS('font-size', '13px')
+      await expect(page.locator('.orch-title')).toHaveCSS('font-size', '20px')
+      const bounds = await column.boundingBox()
+      const center = await page.locator('.orch-body').evaluate((el) => el.getBoundingClientRect().left + el.clientWidth / 2)
+      expect(Math.abs(bounds!.x + bounds!.width / 2 - center)).toBeLessThan(2)
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      await page.locator('#orch-tab-history').click()
+      await expect(page.locator('.orch-history')).toHaveCSS('animation-duration', '0.12s')
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await expect(page.locator('.orch-history')).toHaveCSS('animation-name', 'none')
+    }
   } finally { await closeApp(app) }
 })

@@ -35,6 +35,15 @@ test('History exports a finished bug run and imports it as a read-only run', asy
     const rows = page.locator('.orch-history tbody tr')
     await expect(rows).toHaveCount(1, { timeout: 15000 })
     await expect(rows.first()).toContainText('History export crash')
+    expect(await page.getByLabel('Search history', { exact: true }).evaluate((el: HTMLInputElement) => {
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')!
+      const style = getComputedStyle(el)
+      context.font = style.font
+      return el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) >= context.measureText(el.placeholder).width
+    })).toBe(true)
+    await expect(rows.first().locator('.orch-actions')).toHaveCSS('flex-wrap', 'nowrap')
+    expect((await rows.first().boundingBox())!.height).toBeGreaterThanOrEqual(40)
     await rows.first().getByRole('checkbox').check()
     await page.getByRole('button', { name: 'Export selected (1)', exact: true }).click()
     await expect.poll(() => existsSync(path)).toBe(true)
@@ -66,10 +75,12 @@ test('History exports a finished bug run and imports it as a read-only run', asy
     await expect.poll(() => existsSync(md)).toBe(true)
     expect(readFileSync(md, 'utf8')).toContain('Guarded the empty range')
     mkdirSync('test-results/screens', { recursive: true })
-    await page.screenshot({ path: 'test-results/screens/orch-history.png' })
+    await page.screenshot({ path: 'test-results/screens/orch-history.png', animations: 'disabled' })
     // Narrow light-theme rendering preserves access to filters and the scrollable table.
     await page.setViewportSize({ width: 700, height: 800 })
-    await page.evaluate(() => document.documentElement.setAttribute('data-kind', 'light'))
+    await page.locator('#theme-button').click()
+    await page.locator('#theme-dawsha-daylight').click()
+    await page.keyboard.press('Escape')
     await expect(page.getByLabel('Search history', { exact: true })).toBeVisible()
   } finally { await closeApp(app) }
 })
