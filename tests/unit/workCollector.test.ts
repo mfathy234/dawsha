@@ -34,6 +34,8 @@ it('reads commits from the recorded branch and time window, all authors, safely'
     GIT_AUTHOR_NAME: 'Work Test', GIT_AUTHOR_EMAIL: 'work@example.invalid', GIT_COMMITTER_NAME: 'Work Test', GIT_COMMITTER_EMAIL: 'work@example.invalid',
     GIT_AUTHOR_DATE: '2026-10-16T10:30:00Z', GIT_COMMITTER_DATE: '2026-10-16T10:30:00Z' } }).toString()
   git('init', '-b', 'feature/123')
+  // This case exercises all authors; do not inherit the developer's global author filter.
+  git('config', 'user.email', '')
   git('commit', '--allow-empty', '-m', 'feat: stock')
   git('checkout', '-b', 'fix/456')
   git('commit', '--allow-empty', '-m', 'fix: unrelated')
