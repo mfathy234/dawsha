@@ -48,6 +48,10 @@ describe('orchestrator launch builder', () => {
 })
 
 describe('first message', () => {
+  it('requires the spec writer to commit spec and mockups before completing', () => {
+    const text = firstMessage({ role: 'spec-writer', runId: 'run_a', runTitle: 'Export' })
+    expect(text).toMatch(/commit.*spec\.md.*mockups.*before.*complete_task/i)
+  })
   it('tells the agent its run, branch, duties and the rules in one paragraph', () => {
     const text = firstMessage({ role: 'ui', runId: 'run_abc', runTitle: 'Export usage as CSV', branch: 'orch/abc/t-5', extra: 'Prefer existing components.' })
     expect(text).toContain('"Export usage as CSV"')

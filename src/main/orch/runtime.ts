@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import type { OrchDecisionView, OrchHandoffInput, OrchPaneRequest, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus } from '../../shared/orch/api'
+import type { OrchDecisionView, OrchHandoffInput, OrchPaneRequest, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus, OrchSpecView, OrchSpecContent } from '../../shared/orch/api'
 import { DEFAULT_PLAN_ID, priceLookupFor, type OrchSettings } from '../../shared/orch/profiles'
 import type { OrchAgent } from '../../shared/orch/types'
 import type { RunUsage } from '../../shared/orch/usage'
@@ -12,6 +12,7 @@ import { OrchPaneBridge, type LaunchExtras } from './paneBridge'
 import { OrchService } from './service'
 import { buildSnapshot } from './snapshot'
 import { OrchStore } from './store'
+import { listSpecVersions, readSpecVersion, snapshotSpec } from './specs'
 import { OrchUsageCollector, type UsageSourceInfo } from './usageCollector'
 import * as worktrees from './worktrees'
 
@@ -45,6 +46,9 @@ export class OrchRuntime {
   private readonly sources = new Map<string, UsageSourceInfo>()
   private readonly collector = new OrchUsageCollector()
   private readonly bridge: OrchPaneBridge
+  private specQueue: Promise<void> = Promise.resolve()
+  private readonly specSeen = new Set<string>()
+  private readonly specErrors = new Set<string>()
   service: OrchService | null = null
 
   constructor(private readonly deps: OrchRuntimeDeps) {
@@ -69,6 +73,9 @@ export class OrchRuntime {
 
   async stop(): Promise<void> {
     if (this.starting) await this.starting.catch(() => undefined)
+    await this.specQueue
+    this.specSeen.clear()
+    this.specErrors.clear()
     for (const timer of this.timers) clearInterval(timer)
     this.timers = []
     const server = this.server
@@ -186,6 +193,54 @@ export class OrchRuntime {
     return this.service?.runUsage(runId, priceLookupFor(this.deps.settings())) ?? null
   }
 
+  private get specsRoot(): string { return join(dirname(this.deps.configRoot), 'specs') }
+
+  async spec(runId: string): Promise<OrchSpecView | null> {
+    await this.specQueue
+    if (!this.service?.run(runId)) return null
+    if (this.specErrors.has(runId)) throw new Error('The spec could not be saved. Check its files and try again with a revised spec.')
+    try {
+      const decisions = this.service.decisions(runId)
+      const versions = (await listSpecVersions(this.specsRoot, runId)).map((v) => ({ ...v, answer: decisions.find((d) => d.id === v.decisionId)?.answer ?? null }))
+      const latest = versions.at(-1)
+      const current = latest ? await readSpecVersion(this.specsRoot, runId, latest.version) : null
+      return current ? { runId, versions, current } : null
+    } catch (error) {
+      this.deps.log(`orchestrator spec read failed for ${runId}: ${String(error)}`)
+      throw new Error('The saved spec could not be read.')
+    }
+  }
+
+  async specVersion(runId: string, version: number): Promise<OrchSpecContent | null> {
+    await this.specQueue
+    if (!this.service?.run(runId)) return null
+    try { return await readSpecVersion(this.specsRoot, runId, version) } catch (error) {
+      this.deps.log(`orchestrator spec version read failed for ${runId}: ${String(error)}`)
+      throw new Error('That spec version could not be read.')
+    }
+  }
+
+  private captureSpecs(service: OrchService): void {
+    for (const decision of service.openDecisions().filter((d) => d.kind === 'spec-approval' && !this.specSeen.has(d.id))) {
+      this.specSeen.add(decision.id)
+      this.specQueue = this.specQueue.then(async () => {
+        try {
+          const versions = await listSpecVersions(this.specsRoot, decision.runId)
+          if (versions.some((v) => v.decisionId === decision.id)) return
+          const run = service.run(decision.runId)
+          if (!run) return
+          const worktree = await worktrees.runWorktree(run.projectPath, run.id)
+          await snapshotSpec(join(worktree.path, '.dawsha', 'runs', run.id), this.specsRoot, run.id, { decisionId: decision.id, createdAt: decision.createdAt })
+          this.specErrors.delete(run.id)
+        } catch (error) {
+          this.specErrors.add(decision.runId)
+          this.deps.log(`orchestrator spec snapshot failed for ${decision.runId}: ${String(error)}`)
+        }
+        this.notifyChanged()
+      })
+    }
+  }
+
   // ---- Internals ----
 
   private planOf(runId: string) {
@@ -213,9 +268,11 @@ export class OrchRuntime {
       this.server = server
       this.dispatcher = this.createDispatcher(service, server)
       service.onChange(() => {
+        this.captureSpecs(service)
         void this.dispatcher?.tick()
         this.notifyChanged()
       })
+      this.captureSpecs(service)
       this.timers = [
         setInterval(() => this.bridge.poll(), POLL_MS),
         setInterval(() => void this.collectUsage(), USAGE_MS)

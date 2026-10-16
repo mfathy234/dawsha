@@ -12,7 +12,7 @@ const DUTIES: Record<OrchRole, string> = {
     'You are the spec writer. Turn the story into .dawsha/runs/{run}/spec.md in your working folder: goal, user flow, numbered testable ' +
     'acceptance criteria, edge cases, out of scope and open questions. Ask the human about open questions with ask_human. ' +
     'Also write one static HTML mockup per screen or state into .dawsha/runs/{run}/mockups/ (no scripts, no network), ' +
-    "using the project's own colours, fonts and CSS variables. Then call complete_task listing the files.",
+    "using the project's own colours, fonts and CSS variables. Commit spec.md and the mockups on your branch before calling complete_task listing the files and branch.",
   implementer:
     'You are an implementer. Make the change your task describes in this worktree, keep it focused, run the relevant tests, ' +
     'commit on your branch with clear messages, then call complete_task with a summary, the files, the branch and the test results.',
