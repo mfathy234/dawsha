@@ -1,7 +1,8 @@
 // A stand-in for Claude Code in orchestrator e2e tests: it connects to Dawsha's orch MCP server the way the
 // real CLI would (URL from --mcp-config, token from DAWSHA_ORCH_TOKEN), takes its task, commits a change in
 // its worktree, completes the task, then stays open like an interactive agent.
-const { readFileSync, writeFileSync } = require('node:fs')
+const { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } = require('node:fs')
+const { join } = require('node:path')
 const { execFileSync } = require('node:child_process')
 
 const args = process.argv.slice(2)
@@ -25,10 +26,38 @@ async function main() {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'fake-orch-agent', version: '1' } })
   const me = await tool('whoami', {})
   say(`fake agent ${me.role} in run "${me.run_title}"`)
+  if (me.role === 'lead') return setInterval(() => undefined, 60_000)
   const task = await tool('get_my_task', {})
   say(`working on ${task.key}: ${task.title}`)
   writeFileSync('fix.txt', `fixed: ${task.title}\n`)
   const git = (...a) => execFileSync('git', ['-c', 'user.name=Fake Agent', '-c', 'user.email=fake@example.invalid', ...a], { encoding: 'utf8' })
+  if (me.role === 'spec-writer') {
+    let version = 0
+    const completeSpec = async () => {
+      version++
+      const folder = join('.dawsha', 'runs', me.run_id)
+      mkdirSync(join(folder, 'mockups'), { recursive: true })
+      writeFileSync(join(folder, 'spec.md'), `# Goal v${version}\n\nExport **CSV** safely.\n\n- Empty range supported`)
+      const previous = join(folder, 'mockups', 'export-dialog.html')
+      if (version >= 3 && existsSync(previous)) unlinkSync(previous)
+      const name = version >= 3 ? 'export-results.html' : 'export-dialog.html'
+      writeFileSync(join(folder, 'mockups', name), `<style>body{background:#fff;color:#18232f;font:16px system-ui;padding:24px}button{padding:8px 16px}section{border:1px solid #ccc;padding:24px}</style><h1>Export dialog v${version}</h1><section><h2>Export usage</h2><p>Save the selected date range as CSV.</p><button>Cancel</button> <button>Export CSV</button></section><script>document.body.dataset.scriptRan='yes'</script>`)
+      git('add', folder)
+      git('commit', '-q', '-m', `docs: spec v${version}`)
+      await tool('complete_task', { summary: `Spec v${version}`, files: [join(folder, 'spec.md'), join(folder, 'mockups', name)] })
+    }
+    await completeSpec()
+    let busy = false
+    setInterval(async () => {
+      if (busy) return
+      busy = true
+      try {
+        const current = await tool('get_my_task', {})
+        if (current.status === 'in_progress') await completeSpec()
+      } catch (error) { say(error.message) } finally { busy = false }
+    }, 500)
+    return
+  }
   git('add', 'fix.txt')
   git('commit', '-q', '-m', `fix: ${task.title}`)
   const result = await tool('complete_task', { summary: 'Guarded the empty range', files: ['fix.txt'], tests: 'none' })

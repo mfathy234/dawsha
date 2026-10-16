@@ -7,6 +7,7 @@ import { OrchNewRunView } from './newRunView'
 import { OrchReviewView } from './reviewView'
 import { OrchRunView } from './runView'
 import { OrchRunsView } from './runsView'
+import { OrchSpecView } from './specView'
 
 const TABS: { id: OrchTab; label: string }[] = [
   { id: 'runs', label: 'All runs' },
@@ -27,6 +28,7 @@ export class OrchestratorViewComponent {
   private readonly review = new OrchReviewView()
   private readonly newRun = new OrchNewRunView()
   private readonly run = new OrchRunView()
+  private readonly spec = new OrchSpecView()
   private shown: HTMLElement | null = null
 
   constructor() {
@@ -38,7 +40,7 @@ export class OrchestratorViewComponent {
     if (!state.settings.experimental.orchestrator) return this.showOff()
     this.renderNotice(state)
     const runOpen = state.orchRunId !== null && state.orch?.runs.some((r) => r.id === state.orchRunId)
-    const target = runOpen ? this.run : { runs: this.runs, boards: this.boards, review: this.review, new: this.newRun }[state.orchTab]
+    const target = state.orchTab === 'spec' && runOpen ? this.spec : runOpen ? this.run : { runs: this.runs, boards: this.boards, review: this.review, new: this.newRun, spec: this.runs }[state.orchTab]
     this.show(target.el)
     target.update(state)
   }
