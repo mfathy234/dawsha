@@ -20,6 +20,13 @@ const TRUST_RETRY_MS = 1_500
 const TRUST_DOWNS = 3
 /** After the trust prompt, an agent that has not called the orch server by then gets its first message typed. */
 const FIRST_MESSAGE_AFTER_MS = 5_000
+/**
+ * The CLI can drop the starting prompt it was given (a busy start-up hook, bypass mode): an agent that has not
+ * called the orch server this long after spawning, with an idle screen, gets its first message typed once.
+ */
+const FIRST_MESSAGE_FALLBACK_MS = 20_000
+/** Shown by Claude Code while it is working on a prompt. */
+const BUSY = /esc to interrupt/i
 
 export interface LaunchExtras {
   args: string[]
@@ -49,6 +56,9 @@ interface Watched {
   trustDownAt: number
   /** When the trust menu was first seen; 0 until then. */
   trustSeenAt: number
+  startedAt: number
+  /** The first message was typed, or the agent no longer needs it. */
+  firstMessageDone: boolean
   /** A hidden terminal that renders the pane like the user sees it; detection reads its screen. */
   screen: Terminal
   lastOutputAt: number
@@ -101,6 +111,8 @@ export class OrchPaneBridge {
       trustDowns: 0,
       trustDownAt: 0,
       trustSeenAt: 0,
+      startedAt: this.now(),
+      firstMessageDone: false,
       screen: new Terminal({ cols: Math.max(2, request.cols), rows: Math.max(1, request.rows), scrollback: 200, allowProposedApi: true }),
       lastOutputAt: this.now(),
       lastNudgeAt: 0,
@@ -184,11 +196,20 @@ export class OrchPaneBridge {
   }
 
   private deliverFirstMessage(tabId: string, watched: Watched): void {
-    if (this.watched.get(tabId) !== watched) return
+    if (this.watched.get(tabId) !== watched || watched.firstMessageDone) return
+    watched.firstMessageDone = true
     const agent = this.deps.service()?.agent(watched.agentId)
     const message = agent?.launch?.firstMessage
     if (!agent || agent.retiredAt || agent.lastCallAt || !message) return
     this.type(tabId, message)
+  }
+
+  /** Not while a trust menu waits for an answer, and not while the CLI shows it is working. */
+  private firstMessageDue(watched: Watched, agent: OrchAgent, now: number): boolean {
+    if (agent.lastCallAt) watched.firstMessageDone = true
+    if (watched.firstMessageDone || now - watched.startedAt < FIRST_MESSAGE_FALLBACK_MS) return false
+    if (watched.trustSeenAt && !watched.trustAnswered) return false
+    return !BUSY.test(this.screenText(watched))
   }
 
   private recheckTrust(tabId: string, watched: Watched): void {
@@ -216,6 +237,10 @@ export class OrchPaneBridge {
       if (!agent || agent.retiredAt) continue
       const quietFor = now - watched.lastOutputAt
       if (quietFor < QUIET_BEFORE_NUDGE_MS) continue
+      if (this.firstMessageDue(watched, agent, now)) {
+        this.deliverFirstMessage(tabId, watched)
+        continue
+      }
       if (service.unreadCount(agent.id) > 0 && now - watched.lastNudgeAt >= NUDGE_EVERY_MS) {
         watched.lastNudgeAt = now
         this.type(tabId, 'Dawsha: you have new messages. Call fetch_inbox, then continue your task.')

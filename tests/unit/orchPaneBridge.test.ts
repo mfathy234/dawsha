@@ -128,6 +128,45 @@ describe('orchestrator pane bridge', () => {
     expect(second.writes).toEqual(['\r'])
   })
 
+  it('types the first message once when the CLI dropped its starting prompt and sits idle', async () => {
+    const { svc, agent, bridge, writes, request, advance } = setup()
+    svc.setLaunch(agent.id, { ...svc.agent(agent.id)!.launch!, firstMessage: 'You are the fixer. Call whoami.' })
+    bridge.prepare(request())
+    // A start-up hook prints a lot, then Claude waits at an empty prompt; no trust prompt is shown.
+    bridge.onOutput('tab-1', 'SessionStart says: <persisted-output> recent context ...\r\n> \r\n')
+    await bridge.settle('tab-1')
+    advance(10_000)
+    bridge.poll()
+    expect(writes).toEqual([])
+    advance(15_000)
+    bridge.poll()
+    expect(writes).toEqual(['You are the fixer. Call whoami.'])
+    advance(400)
+    bridge.poll()
+    advance(30_000)
+    bridge.poll()
+    expect(writes.filter((w) => w.startsWith('You are'))).toHaveLength(1)
+  })
+
+  it('does not type the first message while the CLI is still working on it, or after the agent connected', async () => {
+    const busy = setup()
+    busy.svc.setLaunch(busy.agent.id, { ...busy.svc.agent(busy.agent.id)!.launch!, firstMessage: 'Hello' })
+    busy.bridge.prepare(busy.request())
+    busy.bridge.onOutput('tab-1', '✻ Thinking… (12s · esc to interrupt)\r\n')
+    await busy.bridge.settle('tab-1')
+    busy.advance(30_000)
+    busy.bridge.poll()
+    expect(busy.writes).toEqual([])
+
+    const connected = setup()
+    connected.svc.setLaunch(connected.agent.id, { ...connected.svc.agent(connected.agent.id)!.launch!, firstMessage: 'Hello' })
+    connected.bridge.prepare(connected.request())
+    connected.svc.call(connected.agent, 'whoami', {})
+    connected.advance(30_000)
+    connected.bridge.poll()
+    expect(connected.writes).toEqual([])
+  })
+
   it('repeats a lost Down a few times but never presses Enter while the cursor is on "No"', async () => {
     const { bridge, writes, request, advance } = setup()
     bridge.prepare(request({ cwd: 'C:/wt/fix', cols: 60, rows: 12 }))
