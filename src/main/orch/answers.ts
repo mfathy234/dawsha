@@ -6,6 +6,7 @@ const APPROVE = 'approve'
 const TRY_AGAIN = 'try again'
 const APPROVE_ANYWAY = 'approve anyway'
 const CANCEL_TASK = 'cancel task'
+const WAIT = 'wait'
 
 /** Lower-cased, trimmed, without trailing punctuation: "Approve." and "approve" mean the same. */
 export const normalizeAnswer = (answer: string): string => answer.trim().toLowerCase().replace(/[.!\s]+$/, '')
@@ -14,6 +15,7 @@ export const normalizeAnswer = (answer: string): string => answer.trim().toLower
 export function applyAnswer(ctx: OrchContext, decision: OrchDecision, task: OrchTask, answer: string): void {
   const tell = (body: string): void => ctx.message(decision.runId, 'human', decision.agentId, task.id, body)
   if (decision.kind === 'spec-approval') return applySpecAnswer(ctx, task, answer, tell)
+  if (decision.kind === 'stall' && task.status === 'stalled') return applyStallAnswer(ctx, task, answer, tell)
   if (task.status !== 'blocked' && task.status !== 'waiting_on_human') {
     tell(`The human answered "${decision.question}": ${answer}`)
     return
@@ -28,6 +30,20 @@ export function applyAnswer(ctx: OrchContext, decision: OrchDecision, task: Orch
   if (decision.kind === 'escalation') return applyEscalationAnswer(ctx, task, resumed, answer, tell)
   ctx.save(resumed)
   tell(`The human answered "${decision.question}": ${answer}`)
+}
+
+/** A stalled task: "Wait" resumes it; picking another model is done by the UI through a handoff. */
+function applyStallAnswer(ctx: OrchContext, task: OrchTask, answer: string, tell: (body: string) => void): void {
+  const choice = normalizeAnswer(answer)
+  if (choice === CANCEL_TASK) {
+    ctx.move(task, 'cancelled')
+    tell(`The human cancelled ${task.key}.`)
+    return
+  }
+  if (choice === WAIT || choice === TRY_AGAIN) {
+    ctx.move(task, 'in_progress')
+    tell(`The human asked you to continue ${task.key}.`)
+  }
 }
 
 function applySpecAnswer(ctx: OrchContext, task: OrchTask, answer: string, tell: (body: string) => void): void {

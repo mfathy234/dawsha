@@ -1,3 +1,5 @@
+import type { OrchLaunch } from './launch'
+
 export const ORCH_ROLES = ['lead', 'spec-writer', 'implementer', 'ui', 'code-reviewer', 'ux-reviewer', 'tester', 'fixer'] as const
 export type OrchRole = (typeof ORCH_ROLES)[number]
 
@@ -43,6 +45,10 @@ export interface OrchTask {
   pausedFrom: TaskStatus | null
   createdAt: number
   updatedAt: number
+  /** Times an agent was started on it and lost (pane closed, CLI exited). */
+  attempts?: number
+  /** When its branch was merged into the run branch. */
+  mergedAt?: number | null
 }
 
 /** A feature gets the whole team; a bug is fixed by one agent with no subagents. */
@@ -60,6 +66,12 @@ export interface OrchRun {
   stage: RunStage
   createdAt: number
   finishedAt: number | null
+  /** Dawsha project the run belongs to. */
+  projectId?: string | null
+  /** Stop for the human to approve the spec (from the plan). Defaults to true. */
+  specApproval?: boolean
+  /** Bug runs: the profile the user picked for the fixer. */
+  fixerProfileId?: string | null
 }
 
 export interface OrchAgent {
@@ -75,6 +87,8 @@ export interface OrchAgent {
   usage: AgentUsage | null
   /** Set when the agent is replaced or its run ends; its token stops working. */
   retiredAt?: number | null
+  /** How Dawsha starts its pane (no token inside); kept so a restored pane can start again. */
+  launch?: OrchLaunch | null
 }
 
 export interface AgentUsage {
@@ -106,7 +120,7 @@ export interface OrchNote {
   updatedAt: number
 }
 
-export type DecisionKind = 'question' | 'spec-approval' | 'escalation'
+export type DecisionKind = 'question' | 'spec-approval' | 'escalation' | 'stall' | 'merge-conflict' | 'run-complete'
 
 export interface OrchDecision {
   id: string

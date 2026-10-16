@@ -129,8 +129,13 @@ function sendToReview(ctx: OrchContext, me: OrchAgent, done: OrchTask, reviewer:
 }
 
 function sendSpecToHuman(ctx: OrchContext, me: OrchAgent, done: OrchTask): unknown {
-  ctx.move(done, 'done_pending_review')
   const run = ctx.store.getRun(me.runId)
+  if (run?.specApproval === false) {
+    ctx.move(done, 'approved')
+    ctx.log(me.runId, 'task', `${done.key} spec approved (this plan has no spec stop)`, done.id)
+    return { status: 'approved' }
+  }
+  ctx.move(done, 'done_pending_review')
   ctx.newDecision(me, 'spec-approval', {
     question: `Approve the spec for "${run?.title ?? done.title}"?`,
     options: ['Approve', 'Request changes'],

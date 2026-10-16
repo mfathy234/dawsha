@@ -2,7 +2,9 @@ import { randomBytes } from 'node:crypto'
 import { canUseTool } from '../../shared/orch/roles'
 import { TOOL_SCHEMAS, validateArgs, type ToolSchema } from '../../shared/orch/toolSchemas'
 import { summarizeRunUsage, type PriceLookup, type RunUsage } from '../../shared/orch/usage'
-import type { AgentUsage, OrchAgent, OrchDecision, OrchEvent, OrchRole, OrchRun, OrchTask, OrchTaskState, RunKind } from '../../shared/orch/types'
+import type { OrchLaunch } from '../../shared/orch/launch'
+import { moveTask } from '../../shared/orch/taskMachine'
+import type { AgentUsage, OrchAgent, OrchDecision, OrchEvent, OrchRole, OrchRun, OrchTask, OrchTaskState, RunKind, RunStage } from '../../shared/orch/types'
 import { applyAnswer } from './answers'
 import { ACTIVE, OrchContext, OrchToolError, RESERVED_NOTE_PREFIX, hashToken, randomId, statusText } from './context'
 import type { OrchStore } from './store'
@@ -15,10 +17,18 @@ export interface CreateRunInput {
   /** Defaults to 'feature'. */
   kind?: RunKind
   projectPath: string
+  projectId?: string | null
   title: string
   story: string
   plan: string
+  /** Stop for the human to approve the spec; defaults to true. */
+  specApproval?: boolean
+  /** Bug runs: the profile picked for the fixer. */
+  fixerProfileId?: string | null
 }
+
+/** A pane or CLI that dies this many times on one task makes Dawsha ask the human. */
+export const MAX_TASK_ATTEMPTS = 2
 
 export interface RegisterAgentInput {
   runId: string
@@ -42,14 +52,53 @@ export interface HandoffInput {
 export class OrchService {
   private readonly ctx: OrchContext
   private readonly handlers: Record<string, ToolHandler>
+  private readonly listeners = new Set<() => void>()
+  private depth = 0
 
   constructor(private readonly store: OrchStore, now: () => number = Date.now) {
     this.ctx = new OrchContext(store, now)
     this.handlers = createToolHandlers(this.ctx)
   }
 
+  /** Called after every change that was committed; never for failed ones. */
+  onChange(listener: () => void): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  /** Runs fn in one transaction and tells listeners once the outermost one commits. */
+  private tx<T>(fn: () => T): T {
+    this.depth += 1
+    let result: T
+    try {
+      result = this.store.transaction(fn)
+    } finally {
+      this.depth -= 1
+    }
+    if (this.depth === 0) for (const listener of this.listeners) listener()
+    return result
+  }
+
+  /** What the UI calls: a feature run also gets its spec task, made from the story. */
+  startRun(input: CreateRunInput): OrchRun {
+    return this.tx(() => {
+      const run = this.createRun(input)
+      if (run.kind === 'feature') {
+        const task = this.ctx.newTask(run.id, {
+          title: `Write the spec for "${run.title}"`,
+          spec: `Story:\n${run.story}`,
+          role: 'spec-writer',
+          dependsOn: [],
+          acceptance: []
+        })
+        this.ctx.log(run.id, 'task', `${task.key} created for spec-writer: ${task.title}`, task.id)
+      }
+      return run
+    })
+  }
+
   createRun(input: CreateRunInput): OrchRun {
-    return this.store.transaction(() => {
+    return this.tx(() => {
       const kind: RunKind = input.kind ?? 'feature'
       const run: OrchRun = {
         id: randomId('run'),
@@ -61,7 +110,10 @@ export class OrchService {
         // A bug skips the spec and planning stages: one fixer works straight from the report.
         stage: kind === 'bug' ? 'build' : 'spec',
         createdAt: this.ctx.now(),
-        finishedAt: null
+        finishedAt: null,
+        projectId: input.projectId ?? null,
+        specApproval: input.specApproval !== false,
+        fixerProfileId: input.fixerProfileId ?? null
       }
       this.store.putRun(run)
       this.ctx.log(run.id, 'run', `${kind === 'bug' ? 'Bug fix' : 'Run'} started: ${run.title}`, null)
@@ -75,7 +127,7 @@ export class OrchService {
 
   /** Returns the agent with its plain token (shown once, for the pane's MCP config); only a hash is stored. */
   registerAgent(input: RegisterAgentInput): OrchAgent {
-    return this.store.transaction(() => {
+    return this.tx(() => {
       const run = this.store.getRun(input.runId)
       if (!run) throw new Error(`Run ${input.runId} not found.`)
       if (run.kind === 'bug') this.checkBugAgent(input)
@@ -104,7 +156,7 @@ export class OrchService {
   }
 
   call(agent: OrchAgent, tool: string, args: unknown): unknown {
-    return this.store.transaction(() => {
+    return this.tx(() => {
       const me = this.store.getAgent(agent.id)
       if (!me || me.retiredAt) throw new OrchToolError('This agent was replaced and can no longer work on the run.')
       if (!canUseTool(me.role, tool)) throw new OrchToolError(`The ${me.role} role is not allowed to use ${tool}.`)
@@ -116,6 +168,120 @@ export class OrchService {
 
   task(key: string, runId: string): OrchTask {
     return this.ctx.task(key, runId)
+  }
+
+  run(id: string): OrchRun | undefined {
+    return this.store.getRun(id)
+  }
+
+  runs(): OrchRun[] {
+    return this.store.listRuns()
+  }
+
+  agent(id: string): OrchAgent | undefined {
+    return this.store.getAgent(id)
+  }
+
+  agents(runId: string): OrchAgent[] {
+    return this.store.listAgents(runId)
+  }
+
+  setStage(runId: string, stage: RunStage): void {
+    this.tx(() => {
+      const run = this.store.getRun(runId)
+      if (!run || run.stage === stage) return
+      const finished = stage === 'done' || stage === 'cancelled'
+      this.store.putRun({ ...run, stage, finishedAt: finished ? this.ctx.now() : run.finishedAt })
+      this.ctx.log(runId, 'run', `Stage: ${stage}`, null)
+    })
+  }
+
+  /** Saves how the agent's pane is started (no token inside), so a restored pane can start it again. */
+  setLaunch(agentId: string, launch: OrchLaunch): void {
+    this.tx(() => {
+      const agent = this.store.getAgent(agentId)
+      if (!agent) throw new Error(`Agent ${agentId} not found.`)
+      this.store.putAgent({ ...agent, launch })
+    })
+  }
+
+  /** A new token each time the pane starts; the previous one stops working. Returns the plain token. */
+  rotateToken(agentId: string): string {
+    return this.tx(() => {
+      const agent = this.store.getAgent(agentId)
+      if (!agent || agent.retiredAt) throw new Error(`Agent ${agentId} is not active.`)
+      const token = randomBytes(24).toString('base64url')
+      this.store.putAgent({ ...agent, token: hashToken(token) })
+      return token
+    })
+  }
+
+  /** Gives a waiting task to a specific agent; its get_my_task then returns it. */
+  assignTask(runId: string, key: string, agentId: string): OrchTask {
+    return this.tx(() => {
+      const task = this.ctx.task(key, runId)
+      const agent = this.store.getAgent(agentId)
+      if (!agent || agent.retiredAt) throw new Error(`Agent ${agentId} is not active.`)
+      const assigned = this.ctx.save({ ...moveTask(task, 'assigned', this.ctx.now()), assignee: agentId })
+      this.store.putAgent({ ...agent, taskId: task.id })
+      this.ctx.log(runId, 'task', `${key} assigned to ${agent.role} (${agent.runner} · ${agent.model})`, task.id)
+      return assigned
+    })
+  }
+
+  /** The agent's pane closed or its CLI exited: retire it and put its task back, or ask the human. */
+  releaseAgent(agentId: string, reason: string): void {
+    this.tx(() => {
+      const agent = this.store.getAgent(agentId)
+      if (!agent || agent.retiredAt) return
+      const task = this.ctx.activeTaskOf(agent)
+      this.store.putAgent({ ...agent, taskId: null, retiredAt: this.ctx.now() })
+      if (!task) return
+      const attempts = (task.attempts ?? 0) + 1
+      if (attempts < MAX_TASK_ATTEMPTS) {
+        this.ctx.save({ ...task, status: 'todo', assignee: null, pausedFrom: null, attempts, updatedAt: this.ctx.now() })
+        this.ctx.log(agent.runId, 'task', `${task.key} back in the queue: ${reason}`, task.id)
+        return
+      }
+      this.ctx.save({ ...task, status: 'blocked', pausedFrom: 'todo', assignee: null, attempts, updatedAt: this.ctx.now() })
+      this.ctx.newDecision(agent, 'stall', {
+        question: `${task.key} "${task.title}" stopped ${attempts} times. Last time: ${reason}`,
+        options: ['Try again', 'Cancel task'],
+        recommended: null,
+        context: task.summary ?? task.spec,
+        taskId: task.id
+      })
+      this.ctx.log(agent.runId, 'task', `${task.key} stopped ${attempts} times, asking you`, task.id)
+    })
+  }
+
+  /** Quota hit or no progress: the task waits and the human picks another model, or waits. */
+  reportStall(agentId: string, message: string, options: string[]): OrchDecision {
+    return this.tx(() => {
+      const agent = this.store.getAgent(agentId)
+      if (!agent) throw new Error(`Agent ${agentId} not found.`)
+      const task = this.ctx.activeTaskOf(agent)
+      if (!task) throw new Error(`Agent ${agentId} has no task.`)
+      const open = this.store.openDecisions().find((d) => d.taskId === task.id && d.kind === 'stall')
+      if (open) return open
+      if (task.status === 'in_progress' || task.status === 'assigned') this.ctx.move(task, 'stalled')
+      this.ctx.log(agent.runId, 'task', `${task.key} stalled: ${message}`, task.id)
+      return this.ctx.newDecision(agent, 'stall', {
+        question: `${task.key} "${task.title}" stopped: ${message}`,
+        options,
+        recommended: null,
+        context: message,
+        taskId: task.id
+      })
+    })
+  }
+
+  markMerged(runId: string, key: string): void {
+    this.tx(() => {
+      const task = this.ctx.task(key, runId)
+      this.ctx.save({ ...task, mergedAt: this.ctx.now() })
+      this.ctx.log(runId, 'merge', `${key} merged into the run branch`, task.id)
+    })
   }
 
   tasks(runId: string): OrchTask[] {
@@ -131,7 +297,7 @@ export class OrchService {
   }
 
   answerDecision(id: string, answer: string): OrchDecision {
-    return this.store.transaction(() => {
+    return this.tx(() => {
       const decision = this.store.getDecision(id)
       if (!decision) throw new Error(`Decision ${id} not found.`)
       if (decision.answer !== null) throw new Error(`Decision ${id} was already answered.`)
@@ -147,7 +313,7 @@ export class OrchService {
 
   /** Called by the runner with the CLI session's latest cumulative token counts. */
   reportUsage(agentId: string, usage: AgentUsage): void {
-    this.store.transaction(() => {
+    this.tx(() => {
       const agent = this.store.getAgent(agentId)
       if (!agent) throw new Error(`Agent ${agentId} not found.`)
       this.store.putAgent({ ...agent, usage })
@@ -181,7 +347,7 @@ export class OrchService {
    * chose to). The task keeps its branch, review round and history; the new agent gets a brief.
    */
   handoffTask(runId: string, key: string, input: HandoffInput): { agent: OrchAgent; state: OrchTaskState } {
-    return this.store.transaction(() => {
+    return this.tx(() => {
       const task = this.ctx.task(key, runId)
       if (!ACTIVE.includes(task.status)) {
         throw new Error(`${key} is ${statusText(task.status)}; only unfinished work that is not waiting for review can be handed over.`)
