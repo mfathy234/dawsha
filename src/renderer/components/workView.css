@@ -1,5 +1,14 @@
 .work-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .work-view .usage-head { flex-wrap: wrap; }
+.work-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.work-search { position: relative; flex: 1 1 240px; max-width: 480px; }
+.work-search .text-input { width: 100%; padding-right: 38px; }
+.work-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.work-search-clear { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); padding: 4px 8px; }
+.work-project-chip, .work-selected-project { color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.work-project-chip { font-size: 11px; padding: 2px 7px; }
+.work-selected-project { display: inline-flex; align-items: center; gap: 4px; padding-left: 9px; font-size: 12px; }
+.work-selected-project .btn { padding: 4px 8px; }
 .work-projects h2 { margin-bottom: 12px; }
 .work-table-scroll { overflow-x: auto; }
 .work-items { list-style: none; padding: 0; margin: 0; }

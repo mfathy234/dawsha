@@ -1,5 +1,6 @@
 import { setTicketNote, type TicketNote, type TicketNotes } from '../../shared/ticketNotes'
 import { WORK_LABELS, WORK_TYPES, workTickets, type WorkItem, type WorkReport, type WorkTicket } from '../../shared/workDashboard'
+import { filterWorkTickets } from '../../shared/workSearch'
 import { saveSettings } from '../actions'
 import { api } from '../api'
 import { h } from '../dom'
@@ -10,6 +11,7 @@ const TICKET_TYPES = WORK_TYPES.filter((t) => t !== 'conversation')
 
 export interface TicketsContext {
   notes: TicketNotes
+  query: string
   projectId: string | null
   window: { start: number; end: number }
   duration: (ms: number) => string
@@ -22,14 +24,16 @@ export interface TicketsContext {
 /** The Tickets tab of the Work view: one row per branch or run, with the user's own name and link. */
 export class TicketsPanel {
   private editing: string | null = null
+  private focusEditor = false
   private error: string | null = null
-  /** What the user typed, kept when an error redraws the form. */
+  /** What the user typed, kept when search, filters or an error redraw the form. */
   private draft: TicketNote | null = null
 
   render(report: WorkReport, ctx: TicketsContext): HTMLElement[] {
     const all = workTickets(report.items, ctx.window.start, ctx.window.end)
-    const tickets = all.filter((t) => !ctx.projectId || t.projectId === ctx.projectId)
-    return [this.tiles(all), this.projects(all, ctx), this.list(tickets, ctx),
+    const searched = filterWorkTickets(all, ctx.query, null, ctx.notes)
+    const tickets = filterWorkTickets(searched, '', ctx.projectId, ctx.notes)
+    return [this.tiles(tickets), this.projects(searched, ctx), this.list(tickets, ctx),
       h('p', { class: 'usage-local muted' }, 'One ticket per branch in a project (or per orchestrator run), however many sessions it took. Chats on main or develop are not tickets. Give a ticket your own name or a link with Edit.')]
   }
 
@@ -59,7 +63,9 @@ export class TicketsPanel {
       h('div', { class: 'usage-panel-head' }, h('h2', {}, `Tickets · ${tickets.length}`),
         ctx.projectId ? h('button', { class: 'btn ghost', type: 'button', onClick: () => ctx.setProject(null) }, 'All projects') : null),
       tickets.length === 0
-        ? h('p', { class: 'usage-empty' }, 'No tickets in this period. Work on a feature or fix branch, or an orchestrator run, shows up here.')
+        ? h('p', { class: 'usage-empty', role: 'status' }, ctx.query.trim()
+          ? `No matches for “${ctx.query.trim()}”. Clear the search to see more work.`
+          : ctx.projectId ? 'No tickets for this project in this period.' : 'No tickets in this period. Work on a feature or fix branch, or an orchestrator run, shows up here.')
         : h('ul', { class: 'work-tickets' }, ...tickets.map((t) => this.ticket(t, ctx))))
   }
 
@@ -73,10 +79,11 @@ export class TicketsPanel {
       h('div', { class: 'work-ticket-head' },
         h('strong', { class: 'work-ticket-name' }, note?.name || ticket.title),
         h('span', { class: `work-chip work-${ticket.type}` }, WORK_LABELS[ticket.type]),
+        !ctx.projectId ? h('span', { class: 'work-project-chip' }, ticket.project) : null,
         ticket.ticket ? h('span', { class: 'work-ticket' }, ticket.ticket) : null,
         link,
         h('span', { class: 'spacer' }),
-        h('button', { class: 'btn small ghost', type: 'button', 'aria-expanded': String(this.editing === ticket.key), onClick: () => { this.editing = this.editing === ticket.key ? null : ticket.key; this.error = null; this.draft = null; ctx.rerender() } }, 'Edit')),
+        h('button', { class: 'btn small ghost', type: 'button', 'aria-expanded': String(this.editing === ticket.key), onClick: () => { this.editing = this.editing === ticket.key ? null : ticket.key; this.focusEditor = this.editing !== null; this.error = null; this.draft = null; ctx.rerender() } }, 'Edit')),
       h('p', { class: 'work-item-meta' }, ticket.project, ' · ', ticket.branch ?? 'Orchestrator run', ' · ', `${sessions} ${sessions === 1 ? 'session' : 'sessions'}`, ' · ',
         new Date(ticket.lastAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), ' · ', ctx.duration(ticket.activeMs)),
       this.editing === ticket.key ? this.form(ticket, note, ctx) : null,
@@ -89,6 +96,9 @@ export class TicketsPanel {
     const name = h('input', { class: 'text-input', type: 'text', value: typed?.name ?? '', placeholder: ticket.title, maxlength: 120, 'aria-label': 'Ticket name' })
     // Plain text: the browser's URL field silently refuses links typed without https://, which are added on save.
     const link = h('input', { class: 'text-input', type: 'text', inputmode: 'url', spellcheck: false, value: typed?.link ?? '', placeholder: 'https://… (issue, work item or PR)', 'aria-label': 'Ticket link' })
+    const keepDraft = (): void => { this.draft = { name: name.value, link: link.value } }
+    name.addEventListener('input', keepDraft)
+    link.addEventListener('input', keepDraft)
     const save = (next: TicketNote): void => {
       try {
         const notes = setTicketNote(ctx.notes, ticket.key, next)
@@ -113,7 +123,10 @@ export class TicketsPanel {
         h('button', { class: 'btn ghost', type: 'button', onClick: () => { this.editing = null; this.error = null; this.draft = null; ctx.rerender() } }, 'Cancel'),
         h('button', { class: 'btn primary', type: 'submit' }, 'Save')))
     form.addEventListener('submit', (event) => { event.preventDefault(); save({ name: name.value, link: link.value }) })
-    queueMicrotask(() => name.focus())
+    if (this.focusEditor) {
+      this.focusEditor = false
+      queueMicrotask(() => name.focus())
+    }
     return form
   }
 }

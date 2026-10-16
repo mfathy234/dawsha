@@ -1,4 +1,5 @@
-import { activeMs, WORK_TYPES, WORK_LABELS, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../../shared/workDashboard'
+import { activeMs, WORK_TYPES, WORK_LABELS, workTickets, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../../shared/workDashboard'
+import { filterWorkReport, workProjectOptions } from '../../shared/workSearch'
 import { agentLabel } from '../../shared/agents'
 import { api } from '../api'
 import { resumeInNewPane } from '../actions'
@@ -10,6 +11,7 @@ import { present } from './dialogs'
 import { store } from '../state'
 import type { TicketNotes } from '../../shared/ticketNotes'
 import { TicketsPanel } from './workTickets'
+import { selectMenu } from './selectMenu'
 import './workView.css'
 
 type WorkMode = 'sessions' | 'tickets'
@@ -26,6 +28,8 @@ export class WorkViewComponent {
   private period: WorkPeriod = 'today'
   private report: WorkReport | null = null
   private projectId: string | null = null
+  private projectLabel = ''
+  private search = ''
   private visible = false
   private loading = false
   private error: string | null = null
@@ -55,7 +59,6 @@ export class WorkViewComponent {
     if (next === this.offset) return
     this.offset = next
     this.report = null
-    this.projectId = null
     void this.load()
   }
 
@@ -94,7 +97,6 @@ export class WorkViewComponent {
       if (token !== this.token) return
       this.report = report
       this.error = null
-      if (!report.projects.some(p => p.projectId === this.projectId)) this.projectId = null
     } catch {
       if (token !== this.token) return
       this.error = 'Could not read your work history. Try refreshing.'
@@ -108,11 +110,13 @@ export class WorkViewComponent {
     this.period = period
     this.offset = 0
     this.report = null
-    this.projectId = null
     void this.load()
   }
 
   private render(): void {
+    const focused = document.activeElement
+    const restoreSearch = focused instanceof HTMLInputElement && focused.id === 'work-search'
+    const selection = restoreSearch ? [focused.selectionStart, focused.selectionEnd] : null
     this.el.setAttribute('aria-busy', String(this.loading))
     this.el.replaceChildren(h('div', { class: 'usage-head' },
       h('h1', {}, 'Work'),
@@ -126,33 +130,86 @@ export class WorkViewComponent {
         h('button', { class: 'btn ghost work-step-btn', type: 'button', id: 'work-next', 'aria-label': `Next ${UNIT[this.period]}`, title: `Next ${UNIT[this.period]}`, disabled: this.offset === 0, onClick: () => this.step(1) }, '›')),
       h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Count by' }, ...MODES.map(m => h('button', {
         class: `rp-tab${this.mode === m.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.mode === m.value), id: `work-mode-${m.value}`,
-        onClick: () => { this.mode = m.value; this.projectId = null; this.render() }
+        onClick: () => { this.mode = m.value; this.render() }
       }, m.label))), h('span', { class: 'spacer' }),
       h('button', { class: 'btn ghost', type: 'button', disabled: this.loading, onClick: () => void this.load() }, 'Refresh')))
+    this.el.append(this.filters())
+    if (restoreSearch) {
+      const input = this.el.querySelector<HTMLInputElement>('#work-search')!
+      input.focus()
+      if (selection) input.setSelectionRange(selection[0], selection[1])
+    }
     if (this.error) this.el.append(h('p', { class: 'field-error', role: 'alert' }, this.error))
-    const report = this.report
-    if (!report) {
+    const source = this.report
+    if (!source) {
       if (this.loading) this.el.append(h('p', { class: 'usage-empty', role: 'status' }, 'Reading your work history…'))
       return
     }
     if (this.mode === 'tickets') {
-      this.el.append(...this.tickets.render(report, {
-        notes: this.notes, projectId: this.projectId, window: this.shownWindow(), duration,
-        renderItem: (item) => this.item(item), setProject: (id) => { this.projectId = id; this.render() }, rerender: () => this.render()
+      this.el.append(...this.tickets.render(source, {
+        notes: this.notes, query: this.search, projectId: this.projectId, window: this.shownWindow(), duration,
+        renderItem: (item) => this.item(item), setProject: (id) => this.setProject(id), rerender: () => this.render()
       }))
       return
     }
+    const searched = filterWorkReport(source, this.search, null, this.shownWindow().end)
+    const report = filterWorkReport(source, this.search, this.projectId, this.shownWindow().end)
     const tile = (id: string, label: string, count: number) => h('div', { class: 'usage-tile', id: `work-${id}` },
       h('span', { class: 'usage-tile-label' }, label), h('span', { class: 'usage-tile-value' }, String(count)))
     this.el.append(h('div', { class: 'usage-tiles work-tiles', role: 'group', 'aria-label': 'Work summary' },
       ...WORK_TYPES.map(type => tile(type, WORK_LABELS[type], report.counts[type])), tile('total', 'Total', report.total)))
     if (report.total === 0) {
-      this.el.append(h('p', { class: 'usage-empty' }, 'No work in this period. Sessions in your Dawsha projects and orchestrator runs appear here.'))
+      this.el.append(h('p', { class: 'usage-empty', role: 'status' }, this.search.trim()
+        ? `No matches for “${this.search.trim()}”. Clear the search to see more work.`
+        : this.projectId ? 'No work for this project in this period.' : 'No work in this period. Sessions in your Dawsha projects and orchestrator runs appear here.'))
+      if (searched.total) this.el.append(this.projects(searched))
       return
     }
     if (this.period !== 'today') this.el.append(this.chart(report))
-    this.el.append(this.projects(report), this.items(report), h('p', { class: 'usage-local muted' },
+    this.el.append(this.projects(searched), this.items(report), h('p', { class: 'usage-local muted' },
       'One item per session or orchestrator run, counted on its last activity day. Time spent is active time in this period (breaks over 5 minutes do not count), from a sample of each session, so long sessions can read low. The type comes from the branch and your own commits.'))
+  }
+
+  private setProject(id: string | null): void {
+    this.projectId = id
+    this.projectLabel = this.report?.projects.find(p => p.projectId === id)?.project ?? this.projectLabel
+    this.render()
+  }
+
+  private clearSearch(): void {
+    this.search = ''
+    this.render()
+    this.el.querySelector<HTMLInputElement>('#work-search')?.focus()
+  }
+
+  private filters(): HTMLElement {
+    const input = h('input', { class: 'text-input', id: 'work-search', type: 'search', value: this.search,
+      placeholder: 'Search work…', 'aria-label': 'Search work',
+      onInput: (event: Event) => {
+        if ((event as InputEvent).isComposing) return
+        this.search = (event.target as HTMLInputElement).value
+        this.render()
+      },
+      onCompositionend: (event: Event) => { this.search = (event.target as HTMLInputElement).value; this.render() },
+      onKeydown: (event: Event) => {
+        if ((event as KeyboardEvent).key === 'Escape') { event.preventDefault(); event.stopPropagation(); this.clearSearch() }
+      }
+    })
+    const rows = this.report ? this.mode === 'sessions' ? this.report.items : workTickets(this.report.items, this.shownWindow().start, this.shownWindow().end) : []
+    const options = workProjectOptions(rows)
+    // A retained selection stays removable even in a period with no work from that project.
+    if (this.projectId && !options.some(p => p.projectId === this.projectId)) options.push({ projectId: this.projectId, project: this.projectLabel, count: 0 })
+    const select = h('select', { id: 'work-project-filter', 'aria-label': 'Filter by project',
+      onChange: (event: Event) => this.setProject((event.target as HTMLSelectElement).value || null)
+    }, h('option', { value: '' }, `All projects (${rows.length})`),
+    ...options.map(p => h('option', { value: p.projectId }, `${p.project} (${p.count})`)))
+    select.value = this.projectId ?? ''
+    return h('div', { class: 'work-filters', role: 'group', 'aria-label': 'Search and project filters' },
+      h('div', { class: 'work-search' }, input,
+        this.search ? h('button', { class: 'btn ghost work-search-clear', type: 'button', 'aria-label': 'Clear search', onClick: () => this.clearSearch() }, '×') : null),
+      selectMenu(select),
+      this.projectId ? h('span', { class: 'work-selected-project' }, this.projectLabel,
+        h('button', { class: 'btn ghost', type: 'button', 'aria-label': 'Remove project filter', onClick: () => this.setProject(null) }, '×')) : null)
   }
 
   private chart(report: WorkReport): HTMLElement {
@@ -171,20 +228,21 @@ export class WorkViewComponent {
       h('div', { class: 'work-table-scroll' }, h('table', { class: 'usage-table', id: 'work-by-project' },
         h('thead', {}, h('tr', {}, ...['Project', ...WORK_TYPES.map(t => WORK_LABELS[t]), 'Total', 'Time spent'].map((text, i) => h('th', { scope: 'col', class: i ? 'num' : '' }, text)))),
         h('tbody', {}, ...report.projects.map(row => h('tr', { 'data-project': row.projectId },
-          h('td', {}, h('button', { class: 'usage-sort', type: 'button', 'aria-label': `Filter by ${row.project}`, 'aria-pressed': String(this.projectId === row.projectId), onClick: () => { this.projectId = this.projectId === row.projectId ? null : row.projectId; this.render() } }, row.project)),
+          h('td', {}, h('button', { class: 'usage-sort', type: 'button', 'aria-label': `Filter by ${row.project}`, 'aria-pressed': String(this.projectId === row.projectId), onClick: () => this.setProject(this.projectId === row.projectId ? null : row.projectId) }, row.project)),
           ...WORK_TYPES.map(t => h('td', { class: 'num' }, String(row.counts[t]))), h('td', { class: 'num' }, String(row.total)), h('td', { class: 'num' }, duration(row.durationMs))))))))
   }
 
   private items(report: WorkReport): HTMLElement {
-    const items = report.items.filter(item => !this.projectId || item.projectId === this.projectId)
+    const items = report.items
     return h('section', { class: 'usage-panel', 'aria-label': 'Items' },
-      h('div', { class: 'usage-panel-head' }, h('h2', {}, `Items · ${items.length}`), this.projectId ? h('button', { class: 'btn ghost', type: 'button', onClick: () => { this.projectId = null; this.render() } }, 'All projects') : null),
+      h('div', { class: 'usage-panel-head' }, h('h2', {}, `Items · ${items.length}`), this.projectId ? h('button', { class: 'btn ghost', type: 'button', onClick: () => this.setProject(null) }, 'All projects') : null),
       h('ul', { class: 'work-items' }, ...items.map(item => this.item(item))))
   }
 
   private item(item: WorkItem): HTMLElement {
     return h('li', {}, h('button', { class: 'work-item', type: 'button', onClick: () => void this.open(item) },
-      h('span', { class: 'work-item-main' }, h('strong', {}, item.title), h('span', { class: `work-chip work-${item.type}` }, WORK_LABELS[item.type]), item.ticket ? h('span', { class: 'work-ticket' }, item.ticket) : null),
+      h('span', { class: 'work-item-main' }, h('strong', {}, item.title), h('span', { class: `work-chip work-${item.type}` }, WORK_LABELS[item.type]),
+        !this.projectId ? h('span', { class: 'work-project-chip' }, item.project) : null, item.ticket ? h('span', { class: 'work-ticket' }, item.ticket) : null),
       h('span', { class: 'work-item-meta' }, item.project, ' · ', item.agent === 'orchestrator' ? 'Orchestrator' : agentLabel(item.agent), ' · ', item.branch ?? 'Unknown branch',
         ' · ', new Date(item.endedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), ' · ', duration(this.itemTime(item)))))
   }
