@@ -48,7 +48,8 @@ export class OrchRuntime {
       service: () => this.service,
       write: deps.writePty,
       stallOptions: (agent) => this.stallOptions(agent),
-      quietMinutes: (agent) => this.planOf(agent.runId).taskMinutes
+      quietMinutes: (agent) => this.planOf(agent.runId).taskMinutes,
+      autoTrust: () => this.deps.settings().autoTrust
     })
   }
 
@@ -101,6 +102,10 @@ export class OrchRuntime {
 
   onEnd(tabId: string, reason: string): void {
     this.bridge.onClosed(tabId, reason)
+  }
+
+  onResize(tabId: string, cols: number, rows: number): void {
+    this.bridge.onResize(tabId, cols, rows)
   }
 
   onStatus(infos: readonly StatusInfo[]): void {

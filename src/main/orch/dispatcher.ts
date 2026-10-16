@@ -199,7 +199,8 @@ export class Dispatcher {
     const mcpUrl = this.deps.mcpUrl()
     if (!mcpUrl) throw new Error('The orchestrator server is not running.')
     const sessionId = profile.runner === 'codex' ? null : this.deps.newSessionId()
-    const launch = buildLaunch({ profile, mcpUrl, configDir: this.deps.configDir(agent.id), sessionId: sessionId ?? undefined })
+    const prompt = firstMessage({ role: agent.role, runId: run.id, runTitle: run.title, branch: worktree.branch, extra: profile.prompt })
+    const launch = { ...buildLaunch({ profile, mcpUrl, configDir: this.deps.configDir(agent.id), sessionId: sessionId ?? undefined }), firstMessage: prompt }
     await this.deps.writeFiles(launch.files)
     this.deps.service.setLaunch(agent.id, launch)
     this.deps.openPane({
@@ -209,7 +210,7 @@ export class Dispatcher {
       folder: worktree.path,
       runner: profile.runner,
       title: `${ROLE_LABEL[agent.role]} · ${profile.model || profile.runner}${task ? ` · ${task.key}` : ''}`,
-      prompt: firstMessage({ role: agent.role, runId: run.id, runTitle: run.title, branch: worktree.branch, extra: profile.prompt }),
+      prompt,
       sessionId
     })
   }

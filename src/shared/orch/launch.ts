@@ -21,6 +21,8 @@ export interface OrchLaunch {
   env: Record<string, string>
   /** Config files to write before spawning. */
   files: { path: string; content: string }[]
+  /** The agent's first message; typed into the pane if the CLI dropped its starting prompt. */
+  firstMessage?: string
 }
 
 const CODEX_EFFORT: Record<Effort, string> = { low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'xhigh' }
@@ -40,7 +42,8 @@ function claudeLaunch(input: LaunchInput): OrchLaunch {
       '--mcp-config', mcpPath,
       '--allowedTools', `mcp__${ORCH_SERVER_NAME}`
     ],
-    env: {},
+    // Token usage is read from the transcript, so it must be written even inside a nested Claude session.
+    env: { CLAUDE_CODE_FORCE_SESSION_PERSISTENCE: '1' },
     files: [{ path: mcpPath, content: JSON.stringify(mcp, null, 2) }]
   }
 }

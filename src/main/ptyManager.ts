@@ -62,6 +62,7 @@ export interface PtyObserver {
   onOutput(id: string, data: string): void
   /** The pane's process ended: the user closed it or the CLI exited. Not called on app shutdown. */
   onEnd(id: string, reason: string): void
+  onResize?(id: string, cols: number, rows: number): void
 }
 
 export class PtyManager {
@@ -157,6 +158,7 @@ export class PtyManager {
     }
     this.remoteTerminals?.resize(id, cols, rows)
     this.recording?.recorder.resize(id, cols, rows)
+    for (const observer of this.observers) observer.onResize?.(id, cols, rows)
   }
 
   /** notify=false when a tab is restarted in place: its observers keep watching the new process. */

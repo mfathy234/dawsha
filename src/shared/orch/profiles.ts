@@ -39,6 +39,8 @@ export interface OrchSettings {
   defaultPlanId: string
   /** USD per million tokens, keyed `runner:model`. */
   prices: Record<string, ModelPrice>
+  /** Answer Claude's "do you trust this folder" prompt for worktrees the orchestrator creates. */
+  autoTrust: boolean
 }
 
 export const DEFAULT_PLAN_ID = 'default'
@@ -96,7 +98,8 @@ export function defaultOrchSettings(): OrchSettings {
     profiles: DEFAULT_PROFILES.map((p) => ({ ...p })),
     plans: DEFAULT_PLANS.map((p) => ({ ...p, roles: { ...p.roles } })),
     defaultPlanId: DEFAULT_PLAN_ID,
-    prices: {}
+    prices: {},
+    autoTrust: true
   }
 }
 
@@ -211,5 +214,5 @@ export function sanitizeOrchSettings(value: unknown): OrchSettings {
   const defaultPlanId = typeof value.defaultPlanId === 'string' && plans.some((p) => p.id === value.defaultPlanId)
     ? value.defaultPlanId
     : DEFAULT_PLAN_ID
-  return { profiles: ordered, plans, defaultPlanId, prices: sanitizePrices(value.prices) }
+  return { profiles: ordered, plans, defaultPlanId, prices: sanitizePrices(value.prices), autoTrust: value.autoTrust !== false }
 }

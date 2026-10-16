@@ -1,17 +1,25 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
+import { Terminal } from '@xterm/headless'
 import { dirname } from 'node:path'
 import { ORCH_TOKEN_ENV } from '../../shared/orch/launch'
 import { detectLimit, type LimitRunner } from '../../shared/orch/quota'
+import { TRUST_DOWN, TRUST_ENTER, trustPromptStep } from '../../shared/orch/trustPrompt'
 import type { OrchAgent } from '../../shared/orch/types'
 import type { SpawnRequest } from '../../shared/types'
 import type { OrchService } from './service'
 
-const TAIL_CHARS = 4000
+/** Lines above the visible screen that are still checked for prompts and limit messages. */
+const CHECKED_SCROLLBACK = 20
 const NUDGE_EVERY_MS = 60_000
 const QUIET_BEFORE_NUDGE_MS = 3_000
 const SUBMIT_DELAY_MS = 400
 const SUBMIT_CHECK_MS = 5_000
 const SUBMIT_TRIES = 3
+/** A Down press on the trust menu that changed nothing is repeated after this long, at most TRUST_DOWNS times. */
+const TRUST_RETRY_MS = 1_500
+const TRUST_DOWNS = 3
+/** After the trust prompt, an agent that has not called the orch server by then gets its first message typed. */
+const FIRST_MESSAGE_AFTER_MS = 5_000
 
 export interface LaunchExtras {
   args: string[]
@@ -26,6 +34,8 @@ export interface PaneBridgeDeps {
   stallOptions: (agent: OrchAgent) => string[]
   /** Minutes of silence on a working task before Dawsha asks whether the agent is stuck. */
   quietMinutes: (agent: OrchAgent) => number
+  /** Answer Claude's folder trust prompt for the agent's own worktree (user setting). */
+  autoTrust: () => boolean
   now?: () => number
   setTimer?: (fn: () => void, ms: number) => void
 }
@@ -33,7 +43,14 @@ export interface PaneBridgeDeps {
 interface Watched {
   agentId: string
   runner: LimitRunner
-  tail: string
+  folder: string
+  trustAnswered: boolean
+  trustDowns: number
+  trustDownAt: number
+  /** When the trust menu was first seen; 0 until then. */
+  trustSeenAt: number
+  /** A hidden terminal that renders the pane like the user sees it; detection reads its screen. */
+  screen: Terminal
   lastOutputAt: number
   lastNudgeAt: number
   quietNudged: boolean
@@ -79,7 +96,12 @@ export class OrchPaneBridge {
     this.watched.set(request.id, {
       agentId: agent.id,
       runner: runnerOf(agent),
-      tail: '',
+      folder: request.cwd,
+      trustAnswered: false,
+      trustDowns: 0,
+      trustDownAt: 0,
+      trustSeenAt: 0,
+      screen: new Terminal({ cols: Math.max(2, request.cols), rows: Math.max(1, request.rows), scrollback: 200, allowProposedApi: true }),
       lastOutputAt: this.now(),
       lastNudgeAt: 0,
       quietNudged: false,
@@ -96,14 +118,81 @@ export class OrchPaneBridge {
   onOutput(tabId: string, data: string): void {
     const watched = this.watched.get(tabId)
     if (!watched) return
-    watched.tail = (watched.tail + data).slice(-TAIL_CHARS)
     watched.lastOutputAt = this.now()
     watched.quietNudged = false
+    watched.screen.write(data, () => this.inspect(tabId, watched))
+  }
+
+  onResize(tabId: string, cols: number, rows: number): void {
+    const watched = this.watched.get(tabId)
+    if (watched && cols >= 2 && rows >= 1) watched.screen.write('', () => watched.screen.resize(cols, rows))
+  }
+
+  /** Resolves once everything written to the pane's hidden screen has been rendered and checked. */
+  settle(tabId: string): Promise<void> {
+    const watched = this.watched.get(tabId)
+    return watched ? new Promise((resolve) => watched.screen.write('', resolve)) : Promise.resolve()
+  }
+
+  private screenText(watched: Watched): string {
+    const buffer = watched.screen.buffer.active
+    const first = Math.max(0, buffer.length - watched.screen.rows - CHECKED_SCROLLBACK)
+    const lines: string[] = []
+    for (let index = first; index < buffer.length; index += 1) lines.push(buffer.getLine(index)?.translateToString(true) ?? '')
+    return lines.join('\n')
+  }
+
+  private inspect(tabId: string, watched: Watched): void {
+    if (this.watched.get(tabId) !== watched) return
+    const text = this.screenText(watched)
+    this.answerTrust(tabId, watched, text)
     if (watched.limitReported) return
-    const hit = detectLimit(watched.runner, watched.tail)
+    const hit = detectLimit(watched.runner, text)
     if (!hit) return
     watched.limitReported = true
     this.stall(watched, hit.resetsAt ? `${hit.message} (resets ${hit.resetsAt})` : hit.message)
+  }
+
+  /** Claude asks whether it may work in the new worktree; with the user's consent, say yes once. */
+  /**
+   * One step at a time, decided from the rendered screen: Down while the cursor is on "No, exit", Enter only
+   * once the screen shows it on "Yes". A lost keystroke can therefore never make Claude exit.
+   */
+  private answerTrust(tabId: string, watched: Watched, text: string): void {
+    if (watched.trustAnswered || !this.deps.autoTrust()) return
+    const step = trustPromptStep(watched.runner, text, watched.folder)
+    if (step === 'enter') {
+      watched.trustAnswered = true
+      this.deps.write(tabId, TRUST_ENTER)
+      // Claude drops its starting prompt when the trust prompt comes first.
+      this.setTimer(() => this.deliverFirstMessage(tabId, watched), FIRST_MESSAGE_AFTER_MS)
+      return
+    }
+    if (step !== 'down' || watched.trustDowns >= TRUST_DOWNS) return
+    // The menu is drawn a moment before Claude reads keys, so a Down sent at once is lost: wait first,
+    // and look again after every press without depending on new output.
+    if (!watched.trustSeenAt) {
+      watched.trustSeenAt = this.now()
+      this.setTimer(() => this.recheckTrust(tabId, watched), TRUST_RETRY_MS)
+      return
+    }
+    if (this.now() - watched.trustSeenAt < TRUST_RETRY_MS || this.now() - watched.trustDownAt < TRUST_RETRY_MS) return
+    watched.trustDowns += 1
+    watched.trustDownAt = this.now()
+    this.deps.write(tabId, TRUST_DOWN)
+    this.setTimer(() => this.recheckTrust(tabId, watched), TRUST_RETRY_MS)
+  }
+
+  private deliverFirstMessage(tabId: string, watched: Watched): void {
+    if (this.watched.get(tabId) !== watched) return
+    const agent = this.deps.service()?.agent(watched.agentId)
+    const message = agent?.launch?.firstMessage
+    if (!agent || agent.retiredAt || agent.lastCallAt || !message) return
+    this.type(tabId, message)
+  }
+
+  private recheckTrust(tabId: string, watched: Watched): void {
+    if (this.watched.get(tabId) === watched && !watched.trustAnswered) this.answerTrust(tabId, watched, this.screenText(watched))
   }
 
   /** The pane was closed or its CLI exited: the agent is done and its unfinished task goes back. */
@@ -111,6 +200,7 @@ export class OrchPaneBridge {
     const watched = this.watched.get(tabId)
     if (!watched) return
     this.watched.delete(tabId)
+    watched.screen.dispose()
     this.deps.service()?.releaseAgent(watched.agentId, reason)
   }
 
@@ -120,6 +210,8 @@ export class OrchPaneBridge {
     if (!service) return
     const now = this.now()
     for (const [tabId, watched] of this.watched) {
+      // A Down that arrived before the menu took input changes nothing on screen; look again.
+      if (!watched.trustAnswered) this.inspect(tabId, watched)
       const agent = service.agent(watched.agentId)
       if (!agent || agent.retiredAt) continue
       const quietFor = now - watched.lastOutputAt

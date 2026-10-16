@@ -47,6 +47,12 @@ export function setOrchestratorEnabled(enabled: boolean): void {
   void saveSettings({ experimental })
 }
 
+export function setOrchestratorAutoTrust(autoTrust: boolean): void {
+  const orchestrator = { ...store.state.settings.orchestrator, autoTrust }
+  store.set((s) => ({ ...s, settings: { ...s.settings, orchestrator } }))
+  void saveSettings({ orchestrator })
+}
+
 function currentProjectId(): string | null {
   const { panes, focusedId, settings } = store.state
   return panes.find((p) => p.id === focusedId)?.projectId ?? settings.projects[0]?.id ?? null

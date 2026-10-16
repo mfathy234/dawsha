@@ -190,7 +190,11 @@ app.whenReady().then(async () => {
     openPane: (request) => send(IPC.orchOpenPane, request),
     closePane: (agentId) => send(IPC.orchClosePane, agentId)
   })
-  ptys.observe({ onOutput: (id, data) => orchestrator.onOutput(id, data), onEnd: (id, reason) => orchestrator.onEnd(id, reason) })
+  ptys.observe({
+    onOutput: (id, data) => orchestrator.onOutput(id, data),
+    onEnd: (id, reason) => orchestrator.onEnd(id, reason),
+    onResize: (id, cols, rows) => orchestrator.onResize(id, cols, rows)
+  })
   const watcher = new SessionsWatcher((sessions) => send(IPC.sessionsUpdate, sessions))
   const codexWatcher = new CodexWatcher((sessions) => send(IPC.codexUpdate, sessions))
   const geminiWatcher = new GeminiWatcher((sessions) => send(IPC.geminiUpdate, sessions))

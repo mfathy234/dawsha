@@ -9,6 +9,7 @@ import type { SpawnRequest } from '../../src/shared/types'
 
 function setup() {
   let now = 1_000_000
+  let trust = true
   const timers: { at: number; fn: () => void }[] = []
   const writes: string[] = []
   const svc = new OrchService(new OrchStore(':memory:'), () => now)
@@ -22,6 +23,7 @@ function setup() {
     write: (_tab, data) => writes.push(data),
     stallOptions: () => ['Continue with Codex', 'Wait'],
     quietMinutes: () => 10,
+    autoTrust: () => trust,
     now: () => now,
     setTimer: (fn, ms) => timers.push({ at: now + ms, fn })
   })
@@ -34,7 +36,7 @@ function setup() {
   }
   const request = (over: Partial<SpawnRequest> = {}): SpawnRequest =>
     ({ id: 'tab-1', agent: 'claude', cwd: 'C:/wt', resume: false, cols: 80, rows: 24, orchAgentId: agent.id, ...over })
-  return { svc, run, agent, bridge, writes, advance, request, dir }
+  return { svc, run, agent, bridge, writes, advance, request, dir, setTrust: (value: boolean) => (trust = value) }
 }
 
 describe('orchestrator pane bridge', () => {
@@ -65,13 +67,78 @@ describe('orchestrator pane bridge', () => {
     expect(bridge.prepare(request())).toEqual({ error: expect.stringContaining('finished') })
   })
 
-  it('turns a usage-limit banner into a stall decision offering other models', () => {
+  it('turns a usage-limit banner into a stall decision offering other models', async () => {
     const { svc, run, agent, bridge, request } = setup()
     bridge.prepare(request())
     svc.call(agent, 'get_my_task', {})
     bridge.onOutput('tab-1', 'working...\r\n\x1b[31mClaude usage limit reached. Your limit will reset at 5pm\x1b[0m\r\n')
+    await bridge.settle('tab-1')
     expect(svc.task('T-1', run.id).status).toBe('stalled')
     expect(svc.openDecisions()).toEqual([expect.objectContaining({ kind: 'stall', options: ['Continue with Codex', 'Wait'], question: expect.stringContaining('5pm') })])
+  })
+
+  it("answers Claude's trust prompt step by step for the agent's own worktree, and only when allowed", async () => {
+    const { bridge, writes, request, setTrust, advance } = setup()
+    const screen = (folder: string, onYes = false): string =>
+      `\x1b[2J\x1b[H Accessing workspace:\r\n ${folder}\r\n Quick safety check\r\n ${onYes ? ' ' : '❯'} No, exit\r\n ${onYes ? '❯' : ' '} Yes, I trust this folder\r\n Enter to confirm · Esc to cancel\r\n`
+    const show = async (tab: string, folder: string, onYes = false): Promise<void> => {
+      bridge.onOutput(tab, screen(folder, onYes))
+      await bridge.settle(tab)
+    }
+    bridge.prepare(request({ id: 'tab-2', cwd: 'C:/wt/other' }))
+    await show('tab-2', 'C:/somewhere/else')
+    expect(writes).toEqual([])
+    bridge.prepare(request({ cwd: 'C:/wt/fix' }))
+    setTrust(false)
+    await show('tab-1', 'C:/wt/fix')
+    expect(writes).toEqual([])
+    setTrust(true)
+    await show('tab-1', 'C:/wt/fix')
+    // The menu takes keys only a moment after it appears, so Dawsha waits before pressing Down.
+    expect(writes).toEqual([])
+    advance(1_500)
+    expect(writes).toEqual(['\x1b[B'])
+    // The cursor has not moved yet: nothing more until the screen shows it on "Yes".
+    await show('tab-1', 'C:/wt/fix')
+    expect(writes).toEqual(['\x1b[B'])
+    await show('tab-1', 'C:/wt/fix', true)
+    expect(writes).toEqual(['\x1b[B', '\r'])
+    await show('tab-1', 'C:/wt/fix', true)
+    expect(writes).toEqual(['\x1b[B', '\r'])
+  })
+
+  it('types the first message after the trust prompt when the agent has not connected, and not when it has', async () => {
+    const { svc, agent, bridge, writes, request, advance } = setup()
+    svc.setLaunch(agent.id, { ...svc.agent(agent.id)!.launch!, firstMessage: 'You are the fixer. Call whoami.' })
+    const yesScreen = '\x1b[2J\x1b[H Accessing workspace:\r\n C:/wt/fix\r\n Quick safety check\r\n   No, exit\r\n ❯ Yes, I trust this folder\r\n Enter to confirm · Esc to cancel\r\n'
+    bridge.prepare(request({ cwd: 'C:/wt/fix' }))
+    bridge.onOutput('tab-1', yesScreen)
+    await bridge.settle('tab-1')
+    expect(writes).toEqual(['\r'])
+    advance(5_000)
+    expect(writes).toEqual(['\r', 'You are the fixer. Call whoami.'])
+
+    const second = setup()
+    second.svc.setLaunch(second.agent.id, { ...second.svc.agent(second.agent.id)!.launch!, firstMessage: 'Hello' })
+    second.bridge.prepare(second.request({ cwd: 'C:/wt/fix' }))
+    second.bridge.onOutput('tab-1', yesScreen)
+    await second.bridge.settle('tab-1')
+    second.svc.call(second.agent, 'whoami', {})
+    second.advance(5_000)
+    expect(second.writes).toEqual(['\r'])
+  })
+
+  it('repeats a lost Down a few times but never presses Enter while the cursor is on "No"', async () => {
+    const { bridge, writes, request, advance } = setup()
+    bridge.prepare(request({ cwd: 'C:/wt/fix', cols: 60, rows: 12 }))
+    // Like Claude's interface: each line placed with a cursor position instead of a newline.
+    const at = (row: number, text: string): string => `\x1b[${row};1H${text}`
+    bridge.onOutput('tab-1', ['\x1b[2J', at(2, ' Accessing workspace:'), at(3, ' C:/wt/fix'), at(4, ' Quick safety check: trust it?'), at(6, ' ❯ No, exit'), at(7, '   Yes, I trust this folder'), at(9, ' Enter to confirm · Esc to cancel')].join(''))
+    await bridge.settle('tab-1')
+    expect(writes).toEqual([])
+    // No new output at all: Dawsha re-checks on its own timer and gives up after three presses.
+    for (let i = 0; i < 6; i += 1) advance(1_500)
+    expect(writes).toEqual(['\x1b[B', '\x1b[B', '\x1b[B'])
   })
 
   it('releases the task when the pane closes', () => {

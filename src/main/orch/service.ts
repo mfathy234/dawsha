@@ -162,7 +162,8 @@ export class OrchService {
       if (!canUseTool(me.role, tool)) throw new OrchToolError(`The ${me.role} role is not allowed to use ${tool}.`)
       const problem = validateArgs(tool, args ?? {})
       if (problem) throw new OrchToolError(problem)
-      return this.handlers[tool](me, (args ?? {}) as Record<string, unknown>)
+      this.store.putAgent({ ...me, lastCallAt: this.ctx.now() })
+      return this.handlers[tool]({ ...me, lastCallAt: this.ctx.now() }, (args ?? {}) as Record<string, unknown>)
     })
   }
 

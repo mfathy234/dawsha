@@ -49,7 +49,7 @@ import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
-import { setOrchestratorEnabled } from '../orchActions'
+import { setOrchestratorAutoTrust, setOrchestratorEnabled } from '../orchActions'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
@@ -145,6 +145,7 @@ export class SettingsViewComponent {
       state.settings.highlights,
       state.settings.recordings,
       state.settings.experimental,
+      state.settings.orchestrator.autoTrust,
       this.remoteAccess,
       this.remoteError,
       this.remoteBusy,
@@ -242,6 +243,11 @@ export class SettingsViewComponent {
             'Orchestrator',
             checkbox('settings-orchestrator', 'Turn on', state.settings.experimental.orchestrator, false, setOrchestratorEnabled),
             h('p', { class: 'note set-note' }, 'A lead agent plans work and gives tasks to other agents in their own panes and worktrees, on the models you choose. Start runs from the command palette: "Orchestrator: fix a bug" or "build a feature".')
+          ),
+          row(
+            'Trust orchestrator worktrees',
+            checkbox('settings-orchestrator-trust', 'Answer for me', state.settings.orchestrator.autoTrust, !state.settings.experimental.orchestrator, setOrchestratorAutoTrust),
+            h('p', { class: 'note set-note' }, 'Claude Code asks whether it may work in each new worktree. Dawsha answers Yes only for the worktree it just created from your project, once per agent. Turn this off to answer yourself.')
           )
         ]
       case 'changelog':

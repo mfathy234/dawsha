@@ -89,6 +89,8 @@ export interface OrchAgent {
   retiredAt?: number | null
   /** How Dawsha starts its pane (no token inside); kept so a restored pane can start again. */
   launch?: OrchLaunch | null
+  /** Last time the agent called any orch tool; null until it first connects. */
+  lastCallAt?: number | null
 }
 
 export interface AgentUsage {
