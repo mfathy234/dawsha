@@ -59,3 +59,21 @@ describe('orchestrator fixes from the first real runs', () => {
     expect(bridge.prepare({ ...request, id: 'tab-2' })).toMatchObject({ resume: true, args: ['--model', 'opus'] })
   })
 })
+
+describe('spec runs, as a real spec run showed', () => {
+  it('keeps the lead from taking the build itself while the spec is being written', () => {
+    const { svc, lead } = setup()
+    svc.call(lead, 'create_task', { title: 'Write the spec', spec: 's', role: 'spec-writer' })
+    expect(() => svc.call(lead, 'create_task', { title: 'Build it', spec: 's', role: 'implementer', self: true })).toThrow(/spec.*approved/i)
+  })
+
+  it('sends a spec writer that asks for approval to complete_task, which is how the spec reaches the human', () => {
+    const { svc, run, lead } = setup()
+    svc.call(lead, 'create_task', { title: 'Write the spec', spec: 's', role: 'spec-writer' })
+    const writer = svc.registerAgent({ runId: run.id, role: 'spec-writer', runner: 'claude', model: 'sonnet' })
+    svc.call(writer, 'get_my_task', {})
+    expect(() => svc.call(writer, 'ask_human', { question: 'Approve this receipt spec before I build?' })).toThrow(/complete_task/)
+    // Real questions about the requirements still go to the human.
+    expect(svc.call(writer, 'ask_human', { question: 'Should the receipt show tax separately?' })).toMatchObject({ status: 'waiting' })
+  })
+})

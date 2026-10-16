@@ -66,6 +66,11 @@ function createTask(ctx: OrchContext, me: OrchAgent, args: Args): OrchTask {
   }
   const self = args.self === true
   const role = (self ? 'lead' : str(args.role)) as OrchRole
+  // Building waits for the spec: the lead's own build task too, not only other agents' (held by the dispatcher).
+  const specPending = ctx.store.listTasks({ runId: me.runId }).some((t) => t.role === 'spec-writer' && !isFinal(t.status))
+  if (self && specPending) {
+    throw new OrchToolError('A spec is being written. Wait until you are told it is approved, then take the build task.')
+  }
   if (role === 'code-reviewer' || role === 'ux-reviewer') {
     throw new OrchToolError('Reviews are not separate tasks. Set review: true on the task whose work should be reviewed.')
   }
@@ -260,7 +265,13 @@ function putAgentNote(ctx: OrchContext, me: OrchAgent, key: string, text: string
   return ctx.putNote(me.runId, key, text, me.id)
 }
 
+/** A spec writer asking the human to approve its spec: that is what complete_task does. */
+const ASKS_APPROVAL = /approv/i
+
 function askHuman(ctx: OrchContext, me: OrchAgent, args: Args): unknown {
+  if (me.role === 'spec-writer' && ASKS_APPROVAL.test(str(args.question))) {
+    throw new OrchToolError('Do not ask for approval with ask_human. Commit spec.md and the mockups in .dawsha/runs/<run id>/ and call complete_task: that sends the spec to the human to approve. Use ask_human only for open questions about the requirements.')
+  }
   const task = ctx.activeTaskOf(me)
   const open = ctx.store.openDecisions().filter((d) => d.agentId === me.id)
   const pending = task ? open.find((d) => d.taskId === task.id) : undefined
