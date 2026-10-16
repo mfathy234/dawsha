@@ -183,3 +183,15 @@
 }
 
 @keyframes orch-pulse { 50% { opacity: 0.35; } }
+
+/* Press feedback shows the moment a control is pressed, not on release. */
+.orch-view :is(.btn, .orch-tab, .orch-back, .orch-chip):active:not(:disabled) { transform: scale(0.97); }
+@media (prefers-reduced-motion: no-preference) {
+  .orch-view :is(.btn, .orch-tab, .orch-back, .orch-chip) { transition: transform 100ms ease-out, border-color 120ms, background-color 120ms; }
+}
+
+/* More contrast: solid edges on panels, cards and chips, and full-strength muted text. */
+@media (prefers-contrast: more) {
+  .orch-view .orch-panel, .orch-view .orch-card, .orch-view .orch-chip, .orch-view .btn { border-color: var(--text); }
+  .orch-view .orch-muted { color: var(--text); }
+}

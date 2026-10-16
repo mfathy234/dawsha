@@ -11,6 +11,8 @@ import './specView.css'
 interface Draft { comments: SpecComment[]; text: string; target: string; note: string }
 const button = (label: string, click: () => void, primary = false): HTMLButtonElement =>
   h('button', { class: primary ? 'btn primary' : 'btn', type: 'button', onClick: click }, label)
+/** Same back link as the run dashboard's "← All runs", so the way back looks the same on every run screen. */
+const backLink = (click: () => void): HTMLButtonElement => h('button', { class: 'orch-back', type: 'button', onClick: click }, '← Back to run')
 
 /** Saved specs and static, isolated mockups. Draft feedback survives navigation between runs. */
 export class OrchSpecView {
@@ -55,7 +57,7 @@ export class OrchSpecView {
     } catch {
       if (request !== this.request) return
       toast('The spec could not be loaded. Try again.', 'error')
-      this.el.replaceChildren(button('Back to run', () => showOrch('runs', runId)), h('p', { role: 'alert' }, 'The spec could not be loaded.'), button('Retry', () => void this.load(runId)))
+      this.el.replaceChildren(backLink(() => showOrch('runs', runId)), h('p', { role: 'alert' }, 'The spec could not be loaded.'), button('Retry', () => void this.load(runId)))
     }
   }
 
@@ -71,7 +73,7 @@ export class OrchSpecView {
   private render(): void {
     this.resize.disconnect()
     clear(this.el)
-    this.el.append(button('Back to run', () => showOrch('runs', this.runId)), h('h2', {}, `Spec review · ${this.title}`))
+    this.el.append(backLink(() => showOrch('runs', this.runId)), h('h2', {}, `Spec review · ${this.title}`))
     const content = this.selected
     if (!this.view || !content) {
       this.el.append(h('div', { class: 'orch-empty' }, 'The spec writer has not finished yet.'), button('Refresh', () => void this.load(this.runId)))
@@ -170,7 +172,12 @@ export class OrchSpecView {
         draft.text = ''
         this.render()
       }),
-      h('ul', {}, ...draft.comments.map((c, i) => h('li', {}, h('span', {}, `[${c.target}] ${c.text}`), button(`Remove comment ${i + 1}`, () => { draft.comments = draft.comments.filter((_, index) => index !== i); this.render() })))),
+      h('ul', {}, ...draft.comments.map((c, i) => {
+        const remove = button('Remove', () => { draft.comments = draft.comments.filter((_, index) => index !== i); this.render() })
+        remove.classList.add('small')
+        remove.setAttribute('aria-label', `Remove comment ${i + 1}: ${c.text}`)
+        return h('li', {}, h('span', {}, `[${c.target}] ${c.text}`), remove)
+      })),
       h('label', {}, 'Note (optional) ', note))
   }
 

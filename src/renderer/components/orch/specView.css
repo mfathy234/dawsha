@@ -20,4 +20,6 @@
 .spec-comments li { padding: 6px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .spec-comments li .btn { margin-left: 12px; }
 .spec-actions { justify-content: flex-end; margin: 0; }
+.orch-spec > .orch-back, .orch-spec > .btn, .spec-comments > .btn { align-self: flex-start; }
+.orch-spec > h2 { font-size: 18px; line-height: 1.25; letter-spacing: -0.01em; }
 @media (max-width: 900px) { .spec-columns { grid-template-columns: minmax(0, 1fr); } }
