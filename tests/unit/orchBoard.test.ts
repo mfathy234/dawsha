@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OrchAgentRow, OrchRunDetail } from '../../src/shared/orch/api'
-import { boardCards, DEFAULT_BOARD_FILTER, groupByColumn, projectTabs, timelineEvents, totalCostLabel, usageRows } from '../../src/shared/orch/board'
+import { boardCards, boardRuns, DEFAULT_BOARD_FILTER, defaultRunProject, groupByColumn, projectTabs, timelineEvents, totalCostLabel, usageRows } from '../../src/shared/orch/board'
 import type { OrchTask } from '../../src/shared/orch/types'
 import type { RunUsage } from '../../src/shared/orch/usage'
 
@@ -97,6 +97,26 @@ describe('groupByColumn', () => {
     const groups = groupByColumn(boardCards(runs, projects, DEFAULT_BOARD_FILTER))
     expect(groups.map((g) => g.id)).toEqual(['todo', 'progress', 'review', 'needs', 'done'])
     expect(groups.map((g) => g.cards.length)).toEqual([1, 1, 0, 1, 0])
+  })
+})
+
+describe('boardRuns', () => {
+  it('lists the runs the board covers, also ones without tasks, and finished ones only when included', () => {
+    const planning = run({ id: 'r4', title: 'Planning', tasks: [] })
+    expect(boardRuns([...runs, planning], DEFAULT_BOARD_FILTER).map((r) => r.id)).toEqual(['r1', 'r3', 'r4'])
+    expect(boardRuns(runs, { ...DEFAULT_BOARD_FILTER, includeFinished: true }).map((r) => r.id)).toEqual(['r1', 'r2', 'r3'])
+    expect(boardRuns(runs, { ...DEFAULT_BOARD_FILTER, projectId: 'p1' }).map((r) => r.id)).toEqual(['r1'])
+  })
+})
+
+describe('defaultRunProject', () => {
+  const recent = [run({ id: 'a', projectId: 'p1', createdAt: 1 }), run({ id: 'b', projectId: 'p2', createdAt: 2 })]
+  it('uses the open run, then the latest run, then the focused pane, then the first project', () => {
+    expect(defaultRunProject(projects, recent, 'a', 'p1')).toBe('p1')
+    expect(defaultRunProject(projects, recent, null, 'p1')).toBe('p2')
+    expect(defaultRunProject(projects, [], null, 'p2')).toBe('p2')
+    expect(defaultRunProject(projects, [], null, null)).toBe('p1')
+    expect(defaultRunProject(projects, [run({ projectId: 'gone', createdAt: 5 })], null, null)).toBe('p1')
   })
 })
 

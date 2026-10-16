@@ -123,10 +123,24 @@ function cardsOf(run: OrchRunDetail, projects: readonly ProjectRef[]): BoardCard
   })
 }
 
+/** The runs the board covers with `filter`; shown as their own row, so a run is visible before it has tasks. */
+export function boardRuns<T extends Pick<OrchRunDetail, 'id' | 'stage' | 'projectId'>>(runs: readonly T[], filter: BoardFilter): T[] {
+  return runs.filter((r) => (filter.includeFinished || filter.runId === r.id || !isFinishedRun(r)) && (!filter.runId || r.id === filter.runId) && (!filter.projectId || r.projectId === filter.projectId))
+}
+
+/**
+ * The project New run starts with: what the user is looking at in the Orchestrator (the open run), else the
+ * project of their latest run, else the focused pane's, else the first.
+ */
+export function defaultRunProject(projects: readonly ProjectRef[], runs: readonly Pick<OrchRunDetail, 'id' | 'projectId' | 'createdAt'>[], openRunId: string | null, focusedProjectId: string | null): string | null {
+  const known = (id: string | null | undefined): string | null => (id && projects.some((p) => p.id === id) ? id : null)
+  const latest = [...runs].sort((a, b) => b.createdAt - a.createdAt)[0]
+  return known(runs.find((r) => r.id === openRunId)?.projectId) ?? known(latest?.projectId) ?? known(focusedProjectId) ?? projects[0]?.id ?? null
+}
+
 export function boardCards(runs: readonly OrchRunDetail[], projects: readonly ProjectRef[], filter: BoardFilter): BoardCard[] {
   const query = filter.query.trim().toLowerCase()
-  return runs
-    .filter((r) => (filter.includeFinished || filter.runId === r.id || !isFinishedRun(r)) && (!filter.runId || r.id === filter.runId) && (!filter.projectId || r.projectId === filter.projectId))
+  return boardRuns(runs, filter)
     .flatMap((r) => cardsOf(r, projects))
     .filter((c) => {
       if (filter.status === 'open' && c.column === 'done') return false

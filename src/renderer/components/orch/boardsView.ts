@@ -1,6 +1,7 @@
 import { selectMenu, syncSelectMenu } from '../selectMenu'
 import {
   boardCards,
+  boardRuns,
   DEFAULT_BOARD_FILTER,
   groupByColumn,
   modelName,
@@ -13,7 +14,8 @@ import { ORCH_ROLES } from '../../../shared/orch/types'
 import { clear, h } from '../../dom'
 import { showOrch } from '../../orchActions'
 import type { AppState } from '../../state'
-import { modelBadge, ROLE_LABEL, STATUS_LABEL } from './orchUi'
+import type { OrchRunDetail } from '../../../shared/orch/api'
+import { modelBadge, pill, ROLE_LABEL, STATUS_LABEL } from './orchUi'
 import './boardsView.css'
 
 export interface TaskBoardOptions {
@@ -114,6 +116,8 @@ export class OrchBoardsView {
   readonly el = h('section', { class: 'orch-section orch-boards' })
   private readonly tabs = h('div', { class: 'orch-projtabs', role: 'tablist', 'aria-label': 'Projects' })
   private readonly boardHost = h('div', { class: 'orch-board-host' })
+  /** One card per run the board covers, so a run shows up before it has tasks (the lead is still planning). */
+  private readonly runsRow = h('div', { class: 'orch-board-runs', role: 'list', 'aria-label': 'Runs on this board' })
   private readonly summary = h('div', { class: 'orch-boards-note orch-muted' })
   private readonly search = h('input', { class: 'orch-search', type: 'search', placeholder: 'Search titles, specs, feedback…', id: 'orch-board-search' })
   private readonly runSelect = new FilterSelect('Run', (value) => this.setFilter({ runId: value }))
@@ -130,7 +134,7 @@ export class OrchBoardsView {
     this.search.addEventListener('input', () => this.setFilter({ query: this.search.value }))
     const searchLabel = h('label', { class: 'orch-filter orch-filter-search', for: 'orch-board-search' }, h('span', { class: 'orch-filter-label' }, 'Search'), this.search)
     const bar = h('div', { class: 'orch-filterbar' }, searchLabel, this.runSelect.el, this.statusSelect.el, this.roleSelect.el, this.modelSelect.el, this.needsToggle.el, this.finishedToggle.el)
-    this.el.append(this.tabs, h('div', { class: 'orch-panel orch-boards-panel' }, bar, this.boardHost), this.summary)
+    this.el.append(this.tabs, this.runsRow, h('div', { class: 'orch-panel orch-boards-panel' }, bar, this.boardHost), this.summary)
   }
 
   update(state: AppState): void {
@@ -140,11 +144,12 @@ export class OrchBoardsView {
     const tabs = projectTabs(runs, projects, this.filter)
     if (!tabs.some((t) => t.id === this.filter.projectId)) this.filter = { ...this.filter, projectId: '' }
     const cards = boardCards(runs, projects, this.filter)
-    const signature = JSON.stringify([tabs, cards.map((c) => [c.id, c.status, c.title, c.agent, c.reviewRound, c.attempts, c.runTag, c.projectName]), this.filter, runs.map((r) => [r.id, r.title, r.projectId, r.stage])])
+    const signature = JSON.stringify([tabs, cards.map((c) => [c.id, c.status, c.title, c.agent, c.reviewRound, c.attempts, c.runTag, c.projectName]), this.filter, runs.map((r) => [r.id, r.title, r.projectId, r.stage, r.taskCount, r.tasksDone])])
     if (signature === this.signature) return
     this.signature = signature
     this.renderTabs(tabs)
     this.syncFilters(state)
+    this.renderRuns(boardRuns(runs, this.filter))
     this.renderBoard(cards)
   }
 
@@ -158,6 +163,17 @@ export class OrchBoardsView {
     this.filter = { ...this.filter, ...change }
     this.signature = ''
     if (this.state) this.update(this.state)
+  }
+
+  private renderRuns(runs: OrchRunDetail[]): void {
+    clear(this.runsRow)
+    this.runsRow.hidden = runs.length === 0
+    for (const run of runs) {
+      const tone = run.stage === 'cancelled' ? 'idle' : run.stage === 'done' ? 'done' : 'working'
+      const progress = run.taskCount === 0 ? (run.stage === 'cancelled' || run.stage === 'done' ? 'no tasks' : 'planning') : `${run.tasksDone}/${run.taskCount} tasks`
+      this.runsRow.append(h('button', { class: 'orch-board-run', type: 'button', role: 'listitem', title: `Open ${run.title}`, onClick: () => showOrch('runs', run.id) },
+        h('span', { class: 'orch-board-run-title' }, run.title), pill(run.stage, tone), h('span', { class: 'orch-muted' }, progress)))
+    }
   }
 
   private renderTabs(tabs: ReturnType<typeof projectTabs>): void {

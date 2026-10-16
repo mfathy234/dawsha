@@ -1,5 +1,6 @@
 import { selectMenu } from '../selectMenu'
 import type { RunKind } from '../../../shared/orch/types'
+import { defaultRunProject } from '../../../shared/orch/board'
 import { fixerProfileOf, type OrchPlan, type OrchProfile, type OrchSettings } from '../../../shared/orch/profiles'
 import { openSettings } from '../../actions'
 import { h } from '../../dom'
@@ -81,8 +82,8 @@ export class OrchNewRunView {
   private projectId(state: AppState): string | null {
     const { projects } = state.settings
     if (this.draft.projectId && projects.some((p) => p.id === this.draft.projectId)) return this.draft.projectId
-    const focused = state.panes.find((p) => p.id === state.focusedId)?.projectId
-    return projects.find((p) => p.id === focused)?.id ?? projects[0]?.id ?? null
+    const focused = state.panes.find((p) => p.id === state.focusedId)?.projectId ?? null
+    return defaultRunProject(projects, state.orch?.runs ?? [], state.orchRunId, focused)
   }
 
   private plan(settings: OrchSettings): OrchPlan | undefined {

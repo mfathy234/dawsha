@@ -205,3 +205,13 @@
   .orch-select { max-width: none; }
   .orch-filter { flex: 1 1 140px; }
 }
+
+.orch-board-runs { display: flex; flex-wrap: wrap; gap: var(--orch-space-2); }
+.orch-board-run {
+  display: inline-flex; align-items: center; gap: var(--orch-space-2); max-width: 420px;
+  padding: var(--orch-space-2) var(--orch-space-3); border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--raised); color: var(--text); font: inherit; font-size: 13px; cursor: pointer;
+}
+.orch-board-run:hover { border-color: var(--muted); }
+.orch-board-run:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.orch-board-run-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
