@@ -142,11 +142,13 @@ test('inserting a snippet types it into the focused terminal without sending it 
     await page.keyboard.type('zebra')
     await expect(page.locator('.palette-row')).toHaveCount(0)
     await page.locator('#palette-input').fill('review')
-    await expect(page.locator('.palette-group')).toHaveText(['Snippets'])
-    await expect(page.locator('.palette-row')).toContainText('Insert "Review the diff"')
-    await expect(page.locator('.palette-row .palette-kbd')).toHaveText('Alt+1')
+    // "review" also finds the orchestrator's Human review action, so look at the snippet row itself.
+    await expect(page.locator('.palette-group').filter({ hasText: 'Snippets' })).toHaveCount(1)
+    const snippetRow = page.locator('.palette-row').filter({ hasText: 'Insert "Review the diff"' })
+    await expect(snippetRow).toHaveCount(1)
+    await expect(snippetRow.locator('.palette-kbd')).toHaveText('Alt+1')
     await page.screenshot({ path: join(SCREENS, '37-palette-snippets.png') })
-    await page.keyboard.press('Enter')
+    await snippetRow.click()
     await expect.poll(() => flat(page, id), { timeout: SLOW }).toContain('GOT "Review the staged changes and list risks."')
     expect(await bufferText(page, id)).not.toContain('is not recognized')
   } finally {

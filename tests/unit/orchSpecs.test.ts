@@ -20,6 +20,17 @@ async function setup() {
 }
 
 describe('spec versions', () => {
+  it('accepts links above the worktree and the spec store, like /var on macOS', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'orch-spec-'))
+    await mkdir(join(root, 'real'))
+    await symlink(join(root, 'real'), join(root, 'link'), 'junction')
+    const run = join(root, 'link', 'wt', '.dawsha', 'runs', 'run_a')
+    await mkdir(run, { recursive: true })
+    await writeFile(join(run, 'spec.md'), '# Goal')
+    const specs = join(root, 'link', 'specs')
+    await expect(snapshotSpec(run, specs, 'run_a')).resolves.toMatchObject({ version: 1 })
+    expect(await readSpecVersion(specs, 'run_a', 1)).toMatchObject({ spec: '# Goal' })
+  })
   it('refuses a directory replaced by an outside junction while opening a file', async () => {
     const { root, run, specs } = await setup()
     const outside = join(root, 'outside')
