@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { setTimeout as delay } from 'node:timers/promises'
+import { proxyFromEnv, withProxyEnv } from './proxyConfig'
 
 export interface TunnelProcess {
   stdout: { on(event: 'data', listener: (chunk: Buffer | string) => void): unknown }
@@ -9,7 +10,7 @@ export interface TunnelProcess {
   kill(signal?: NodeJS.Signals): boolean
 }
 
-export type TunnelSpawn = (command: string, args: string[], options: { shell: false; windowsHide: true; stdio: ['ignore', 'pipe', 'pipe'] }) => TunnelProcess
+export type TunnelSpawn = (command: string, args: string[], options: { shell: false; windowsHide: true; stdio: ['ignore', 'pipe', 'pipe']; env?: NodeJS.ProcessEnv }) => TunnelProcess
 
 export interface QuickTunnelHandle {
   url: string
@@ -32,7 +33,8 @@ function parseTunnelUrl(log: string): string | null {
 
 export function createCloudflareQuickTunnel(
   run: TunnelSpawn = (command, args, options) => spawn(command, args, options) as unknown as TunnelProcess,
-  resolveExecutable: () => Promise<string> = async () => 'cloudflared'
+  resolveExecutable: () => Promise<string> = async () => 'cloudflared',
+  env: NodeJS.ProcessEnv = process.env
 ) {
   async function start(port: number, email?: string): Promise<QuickTunnelHandle> {
     if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('The local remote-control port is invalid.')
@@ -42,8 +44,11 @@ export function createCloudflareQuickTunnel(
       const executable = await resolveExecutable()
       const args = ['tunnel', '--url', `http://127.0.0.1:${port}`]
       if (email) args.push('--allowed-mail', email)
+      const proxy = proxyFromEnv(env)
+      if (proxy) args.push('--protocol', 'http2')
       child = run(executable, args, {
-        shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe']
+        shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
+        ...(proxy ? { env: withProxyEnv(env, proxy) } : {})
       })
     } catch (error) {
       throw new Error(`Cloudflare Tunnel could not start. ${(error as Error).message}`)
