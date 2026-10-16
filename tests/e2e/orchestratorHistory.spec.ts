@@ -72,4 +72,4 @@ test('History exports a finished bug run and imports it as a read-only run', asy
     await page.evaluate(() => document.documentElement.setAttribute('data-kind', 'light'))
     await expect(page.getByLabel('Search history', { exact: true })).toBeVisible()
   } finally { await closeApp(app) }
-})
+})
