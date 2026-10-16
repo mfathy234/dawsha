@@ -205,11 +205,16 @@ app.whenReady().then(async () => {
   cli = new CliRunner(() => mainWindow)
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
   app.on('will-quit', () => cliServer.close())
-  const orchestrator = new OrchRuntime(join(userData, 'orchestrator.db'), app.getVersion())
+  const orchestrator = new OrchRuntime(join(userData, 'orchestrator.db'), app.getVersion(), quitLog)
   if (store.get().experimental.orchestrator) {
     orchestrator.start().catch((error: unknown) => quitLog(`orchestrator did not start: ${(error as Error).message}`))
   }
-  app.on('will-quit', () => void orchestrator.stop())
+  app.on('will-quit', (event) => {
+    if (!orchestrator.running) return
+    // Close the server and database cleanly, then quit again (stop() leaves running false).
+    event.preventDefault()
+    void orchestrator.stop().finally(() => app.quit())
+  })
   void cli.executeFromArgv(process.argv, process.cwd())
   mainWindow.webContents.once('did-finish-load', () => {
     watcher.start()

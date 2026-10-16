@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { REVIEWER_FOR, canUseTool } from '../../shared/orch/roles'
 import { isFinal, moveTask, pauseTask, resumeTask } from '../../shared/orch/taskMachine'
 import { TOOL_SCHEMAS, validateArgs, type ToolSchema } from '../../shared/orch/toolSchemas'
@@ -19,6 +19,9 @@ import type {
 import type { OrchStore } from './store'
 
 export const MAX_REVIEW_ROUNDS = 2
+export const MAX_TASKS_PER_RUN = 60
+/** Open questions one agent may have waiting on the human at once. */
+export const MAX_OPEN_DECISIONS_PER_AGENT = 3
 
 /** A tool call the agent got wrong; reported back to it as a tool error, not a crash. */
 export class OrchToolError extends Error {}
@@ -50,6 +53,9 @@ type Args = Record<string, unknown>
 type Handler = (me: OrchAgent, args: Args) => unknown
 
 const ACTIVE: readonly TaskStatus[] = ['assigned', 'in_progress', 'stalled', 'blocked', 'waiting_on_human']
+const IN_REVIEW: readonly TaskStatus[] = ['done_pending_review', 'in_review']
+/** Notes under these keys are written by Dawsha and the human only. */
+const RESERVED_NOTE_PREFIX = 'decision:'
 const APPROVE = 'approve'
 const TRY_AGAIN = 'try again'
 const APPROVE_ANYWAY = 'approve anyway'
@@ -75,6 +81,10 @@ function buildBrief(state: OrchTaskState): string {
   ].filter(Boolean).join('\n\n')
 }
 
+/** Lower-cased, trimmed, without trailing punctuation: "Approve." and "approve" mean the same. */
+const normalizeAnswer = (answer: string): string => answer.trim().toLowerCase().replace(/[.!\s]+$/, '')
+const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex')
+
 const randomId = (prefix: string): string => `${prefix}_${randomBytes(5).toString('hex')}`
 const str = (value: unknown): string => (typeof value === 'string' ? value : '')
 const strList = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [])
@@ -92,7 +102,7 @@ export class OrchService {
     submit_review: (me, args) => this.submitReview(me, args),
     send_message: (me, args) => this.sendMessage(me, args),
     fetch_inbox: (me) => this.fetchInbox(me),
-    put_note: (me, args) => this.putNote(me.runId, str(args.key), str(args.text), me.id),
+    put_note: (me, args) => this.putAgentNote(me, str(args.key), str(args.text)),
     get_notes: (me) => this.store.listNotes(me.runId).map(({ key, text, author }) => ({ key, text, author })),
     ask_human: (me, args) => this.askHuman(me, args)
   }
@@ -102,6 +112,10 @@ export class OrchService {
   // ---- Host API (used by Dawsha itself, never by agents) ----
 
   createRun(input: CreateRunInput): OrchRun {
+    return this.store.transaction(() => this.openRun(input))
+  }
+
+  private openRun(input: CreateRunInput): OrchRun {
     const kind: RunKind = input.kind ?? 'feature'
     const run: OrchRun = {
       id: randomId('run'),
@@ -124,7 +138,12 @@ export class OrchService {
     return run
   }
 
+  /** Returns the agent with its plain token (shown once, for the pane's MCP config); only a hash is stored. */
   registerAgent(input: RegisterAgentInput): OrchAgent {
+    return this.store.transaction(() => this.addAgent(input))
+  }
+
+  private addAgent(input: RegisterAgentInput): OrchAgent {
     const run = this.store.getRun(input.runId)
     if (!run) throw new Error(`Run ${input.runId} not found.`)
     if (run.kind === 'bug') this.checkBugAgent(input)
@@ -137,13 +156,13 @@ export class OrchService {
       usage: null,
       retiredAt: null
     }
-    this.store.putAgent(agent)
+    this.store.putAgent({ ...agent, token: hashToken(agent.token) })
     this.log(input.runId, 'agent', `${input.role} joined (${input.runner} · ${input.model})`, null)
     return agent
   }
 
   agentForToken(token: string): OrchAgent | undefined {
-    const agent = token ? this.store.agentByToken(token) : undefined
+    const agent = token ? this.store.agentByToken(hashToken(token)) : undefined
     return agent && !agent.retiredAt ? agent : undefined
   }
 
@@ -153,9 +172,11 @@ export class OrchService {
 
   /** Called by the runner with the CLI session's latest cumulative token counts. */
   reportUsage(agentId: string, usage: AgentUsage): void {
-    const agent = this.store.getAgent(agentId)
-    if (!agent) throw new Error(`Agent ${agentId} not found.`)
-    this.store.putAgent({ ...agent, usage })
+    this.store.transaction(() => {
+      const agent = this.store.getAgent(agentId)
+      if (!agent) throw new Error(`Agent ${agentId} not found.`)
+      this.store.putAgent({ ...agent, usage })
+    })
   }
 
   runUsage(runId: string, prices: PriceLookup): RunUsage {
@@ -167,6 +188,10 @@ export class OrchService {
   }
 
   call(agent: OrchAgent, tool: string, args: unknown): unknown {
+    return this.store.transaction(() => this.callTool(agent, tool, args))
+  }
+
+  private callTool(agent: OrchAgent, tool: string, args: unknown): unknown {
     const me = this.store.getAgent(agent.id)
     if (!me || me.retiredAt) throw new OrchToolError('This agent was replaced and can no longer work on the run.')
     if (!canUseTool(me.role, tool)) throw new OrchToolError(`The ${me.role} role is not allowed to use ${tool}.`)
@@ -190,12 +215,16 @@ export class OrchService {
   }
 
   answerDecision(id: string, answer: string): OrchDecision {
+    return this.store.transaction(() => this.recordAnswer(id, answer))
+  }
+
+  private recordAnswer(id: string, answer: string): OrchDecision {
     const decision = this.store.getDecision(id)
     if (!decision) throw new Error(`Decision ${id} not found.`)
     if (decision.answer !== null) throw new Error(`Decision ${id} was already answered.`)
     const answered: OrchDecision = { ...decision, answer, answeredAt: this.now() }
     this.store.putDecision(answered)
-    this.putNote(decision.runId, `decision:${id}`, `Q: ${decision.question}\nA: ${answer}`, 'human')
+    this.putNote(decision.runId, `${RESERVED_NOTE_PREFIX}${id}`, `Q: ${decision.question}\nA: ${answer}`, 'human')
     this.log(decision.runId, 'decision', `You answered: ${answer}`, decision.taskId)
     const task = decision.taskId ? this.store.getTask(decision.taskId) : undefined
     if (task) this.applyAnswer(answered, task, answer.trim())
@@ -225,26 +254,29 @@ export class OrchService {
    * chose to). The task keeps its branch, review round and history; the new agent gets a brief.
    */
   handoffTask(runId: string, key: string, input: HandoffInput): { agent: OrchAgent; state: OrchTaskState } {
+    return this.store.transaction(() => this.moveToNewAgent(runId, key, input))
+  }
+
+  private moveToNewAgent(runId: string, key: string, input: HandoffInput): { agent: OrchAgent; state: OrchTaskState } {
     const task = this.task(key, runId)
-    if (isFinal(task.status)) throw new Error(`${key} is ${task.status} and cannot be handed over.`)
+    if (!ACTIVE.includes(task.status)) {
+      throw new Error(`${key} is ${task.status.replace(/_/g, ' ')}; only unfinished work that is not waiting for review can be handed over.`)
+    }
     const state = this.exportTaskState(runId, key)
     const previous = task.assignee ? this.store.getAgent(task.assignee) : undefined
     if (previous) this.store.putAgent({ ...previous, taskId: null, retiredAt: this.now() })
     const agent = this.registerAgent({ runId, role: task.role, runner: input.runner, model: input.model })
     const paused = task.status === 'blocked' || task.status === 'waiting_on_human'
-    const working = task.status === 'in_progress' || task.status === 'stalled' || task.status === 'assigned'
-    this.save({ ...task, assignee: agent.id, status: working ? 'assigned' : task.status, updatedAt: this.now() })
-    this.store.putAgent({ ...agent, taskId: task.id })
-    if (paused) {
-      for (const decision of this.store.openDecisions().filter((d) => d.taskId === task.id)) {
-        this.store.putDecision({ ...decision, agentId: agent.id })
-      }
+    this.save({ ...task, assignee: agent.id, status: paused ? task.status : 'assigned', updatedAt: this.now() })
+    this.store.putAgent({ ...agent, token: hashToken(agent.token), taskId: task.id })
+    for (const decision of this.store.openDecisions().filter((d) => d.taskId === task.id)) {
+      this.store.putDecision({ ...decision, agentId: agent.id })
     }
     const note = input.note ? `\n\n## Note from the human\n${input.note}` : ''
     this.message(runId, 'dawsha', agent.id, task.id, state.brief + note)
     const from = previous ? `${previous.runner} · ${previous.model}` : 'nobody'
     this.log(runId, 'handoff', `${key} handed over from ${from} to ${input.runner} · ${input.model}`, task.id)
-    return { agent: this.store.getAgent(agent.id) ?? agent, state }
+    return { agent: { ...agent, taskId: task.id }, state }
   }
 
   // ---- Tools ----
@@ -266,6 +298,9 @@ export class OrchService {
   }
 
   private createTask(me: OrchAgent, args: Args): OrchTask {
+    if (this.store.nextTaskNumber(me.runId) > MAX_TASKS_PER_RUN) {
+      throw new OrchToolError(`This run already has ${MAX_TASKS_PER_RUN} tasks. Ask the human before adding more.`)
+    }
     const dependsOn = strList(args.depends_on)
     for (const key of dependsOn) this.task(key, me.runId)
     const task = this.newTask(me.runId, {
@@ -285,6 +320,9 @@ export class OrchService {
       if (current.status !== 'assigned') return current
       return this.save(moveTask(current, 'in_progress', this.now()))
     }
+    const waiting = this.store.listTasks({ runId: me.runId }).find((task) => task.assignee === me.id && IN_REVIEW.includes(task.status))
+    if (waiting) return { task: null, message: `${waiting.key} is in review. Wait for the result in fetch_inbox before taking new work.` }
+    this.cancelStaleReviews(me.runId)
     const next = this.nextReadyTask(me)
     if (!next) return { task: null, message: 'No task is ready for your role right now.' }
     const claimed = this.save({ ...moveTask(next, 'in_progress', this.now()), assignee: me.id })
@@ -366,6 +404,10 @@ export class OrchService {
     if (!review.reviewOf) throw new OrchToolError('Your current task is not a review.')
     const comments = str(args.comments)
     const original = this.task(review.reviewOf, me.runId)
+    if (!IN_REVIEW.includes(original.status)) {
+      this.save(moveTask(review, 'cancelled', this.now()))
+      return { status: 'cancelled', message: `${original.key} is ${original.status.replace(/_/g, ' ')}; this review is no longer needed.` }
+    }
     this.save({ ...moveTask(review, 'approved', this.now()), summary: comments })
     if (args.verdict === APPROVE) {
       this.save(moveTask(original, 'approved', this.now()))
@@ -414,6 +456,12 @@ export class OrchService {
 
   private askHuman(me: OrchAgent, args: Args): unknown {
     const task = this.activeTaskOf(me)
+    const open = this.store.openDecisions().filter((d) => d.agentId === me.id)
+    const pending = task ? open.find((d) => d.taskId === task.id) : undefined
+    if (pending) return { decision_id: pending.id, status: 'waiting', message: 'You already asked the human about this task. Wait for the answer in fetch_inbox.' }
+    if (open.length >= MAX_OPEN_DECISIONS_PER_AGENT) {
+      throw new OrchToolError(`You have ${open.length} questions waiting for the human. Wait for answers before asking more.`)
+    }
     const recommended = typeof args.recommended === 'number' ? args.recommended : null
     const decision = this.newDecision(me, 'question', {
       question: str(args.question),
@@ -432,9 +480,13 @@ export class OrchService {
 
   private applyAnswer(decision: OrchDecision, task: OrchTask, answer: string): void {
     const now = this.now()
-    const lower = answer.toLowerCase()
+    const lower = normalizeAnswer(answer)
     const tell = (body: string): void => this.message(decision.runId, 'human', decision.agentId, task.id, body)
     if (decision.kind === 'spec-approval') {
+      if (task.status !== 'done_pending_review') {
+        tell(`The human answered about the spec of ${task.key}: ${answer}`)
+        return
+      }
       if (lower === APPROVE) {
         this.save(moveTask(task, 'approved', now))
         tell('The human approved the spec.')
@@ -469,6 +521,17 @@ export class OrchService {
   }
 
   // ---- Helpers ----
+
+  /** Review tasks whose original was cancelled, approved or handed back are no longer needed. */
+  private cancelStaleReviews(runId: string): void {
+    const tasks = this.store.listTasks({ runId })
+    for (const review of tasks.filter((task) => task.reviewOf && task.status === 'todo')) {
+      const original = tasks.find((task) => task.key === review.reviewOf)
+      if (original && IN_REVIEW.includes(original.status)) continue
+      this.save(moveTask(review, 'cancelled', this.now()))
+      this.log(runId, 'task', `${review.key} cancelled: ${review.reviewOf} no longer needs this review`, review.id)
+    }
+  }
 
   private checkBugAgent(input: RegisterAgentInput): void {
     if (input.role !== 'fixer') throw new Error('Bug runs use one fixer agent and no subagents.')
@@ -558,6 +621,13 @@ export class OrchService {
   private message(runId: string, from: string, to: string | null, taskId: string | null, body: string): void {
     if (!to) return
     this.store.putMessage({ id: randomId('msg'), runId, from, to, taskId, body, createdAt: this.now(), readAt: null })
+  }
+
+  private putAgentNote(me: OrchAgent, key: string, text: string): unknown {
+    if (key.startsWith(RESERVED_NOTE_PREFIX)) throw new OrchToolError(`Note keys starting with "${RESERVED_NOTE_PREFIX}" are reserved for the human's answers.`)
+    const existing = this.store.listNotes(me.runId).find((note) => note.key === key)
+    if (existing?.author === 'human') throw new OrchToolError(`The note "${key}" was written by the human and cannot be changed.`)
+    return this.putNote(me.runId, key, text, me.id)
   }
 
   private putNote(runId: string, key: string, text: string, author: string): unknown {

@@ -67,6 +67,9 @@ export const TOOL_SCHEMAS: readonly ToolSchema[] = [
   }, ['question'])
 ]
 
+export const MAX_STRING_LENGTH = 20_000
+export const MAX_LIST_ITEMS = 50
+
 const BY_NAME = new Map(TOOL_SCHEMAS.map((schema) => [schema.name, schema]))
 
 export const toolSchema = (name: string): ToolSchema | undefined => BY_NAME.get(name)
@@ -83,6 +86,10 @@ export function validateArgs(name: string, args: unknown): string | null {
     if (value === undefined || value === null) continue
     if (prop.type === 'array') {
       if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) return `"${key}" must be a list of strings.`
+      if (value.length > MAX_LIST_ITEMS) return `"${key}" can have at most ${MAX_LIST_ITEMS} items.`
+      if (value.some((item) => item.length > MAX_STRING_LENGTH)) return `Items in "${key}" can be at most ${MAX_STRING_LENGTH} characters.`
+    } else if (typeof value === 'string' && value.length > MAX_STRING_LENGTH) {
+      return `"${key}" can be at most ${MAX_STRING_LENGTH} characters.`
     } else if (typeof value !== prop.type) {
       return `"${key}" must be a ${prop.type}.`
     } else if (prop.type === 'string' && prop.enum && !prop.enum.includes(value as string)) {

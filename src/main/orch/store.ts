@@ -6,19 +6,24 @@ import type { OrchAgent, OrchDecision, OrchEvent, OrchMessage, OrchNote, OrchRun
 // Each row keeps the whole object as JSON in `data`; the other columns exist only to filter and sort.
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, data TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, status TEXT NOT NULL, role TEXT NOT NULL, created_at INTEGER NOT NULL, data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, num INTEGER NOT NULL, status TEXT NOT NULL, role TEXT NOT NULL, created_at INTEGER NOT NULL, data TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS tasks_run ON tasks (run_id, status);
 CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, token TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, to_agent TEXT NOT NULL, read_at INTEGER, created_at INTEGER NOT NULL, data TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS messages_to ON messages (to_agent, read_at);
+CREATE INDEX IF NOT EXISTS messages_run ON messages (run_id);
 CREATE TABLE IF NOT EXISTS notes (run_id TEXT NOT NULL, key TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY (run_id, key));
 CREATE TABLE IF NOT EXISTS decisions (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, open INTEGER NOT NULL, created_at INTEGER NOT NULL, data TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS events (seq INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, data TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS events_run ON events (run_id);
 `
+/** Bump with a migration step in the constructor when the tables change. */
+const SCHEMA_VERSION = 1
 
 type Row = { data: string }
 const parse = <T>(row: unknown): T | undefined => (row ? (JSON.parse((row as Row).data) as T) : undefined)
 const parseAll = <T>(rows: unknown[]): T[] => rows.map((row) => JSON.parse((row as Row).data) as T)
+const taskNumber = (key: string): number => Number(key.replace(/^\D+/, '')) || 0
 
 export interface TaskFilter {
   runId?: string
@@ -28,16 +33,38 @@ export interface TaskFilter {
 export class OrchStore {
   private readonly db: DatabaseSync
   private readonly cache = new Map<string, StatementSync>()
+  private depth = 0
 
   constructor(path: string) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true })
     this.db = new DatabaseSync(path)
     if (path !== ':memory:') this.db.exec('PRAGMA journal_mode = WAL')
     this.db.exec(SCHEMA)
+    this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`)
   }
 
   close(): void {
     this.db.close()
+  }
+
+  /** Runs fn atomically: every write inside lands, or none does. Nested calls join the outer one. */
+  transaction<T>(fn: () => T): T {
+    if (this.depth > 0) {
+      this.depth += 1
+      try { return fn() } finally { this.depth -= 1 }
+    }
+    this.db.exec('BEGIN IMMEDIATE')
+    this.depth = 1
+    try {
+      const result = fn()
+      this.db.exec('COMMIT')
+      return result
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    } finally {
+      this.depth = 0
+    }
   }
 
   private sql(text: string): StatementSync {
@@ -62,8 +89,8 @@ export class OrchStore {
   }
 
   putTask(task: OrchTask): void {
-    this.sql('INSERT OR REPLACE INTO tasks (id, run_id, status, role, created_at, data) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(task.id, task.runId, task.status, task.role, task.createdAt, JSON.stringify(task))
+    this.sql('INSERT OR REPLACE INTO tasks (id, run_id, num, status, role, created_at, data) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(task.id, task.runId, taskNumber(task.key), task.status, task.role, task.createdAt, JSON.stringify(task))
   }
 
   getTask(id: string): OrchTask | undefined {
@@ -76,7 +103,7 @@ export class OrchStore {
     if (filter.runId) { where.push('run_id = ?'); args.push(filter.runId) }
     if (filter.status) { where.push('status = ?'); args.push(filter.status) }
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : ''
-    return parseAll<OrchTask>(this.sql(`SELECT data FROM tasks ${clause} ORDER BY created_at, id`).all(...args))
+    return parseAll<OrchTask>(this.sql(`SELECT data FROM tasks ${clause} ORDER BY created_at, num`).all(...args))
   }
 
   nextTaskNumber(runId: string): number {

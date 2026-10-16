@@ -9,7 +9,11 @@ export class OrchRuntime {
   private starting: Promise<OrchMcpServer> | null = null
   service: OrchService | null = null
 
-  constructor(private readonly dbPath: string, private readonly version: string) {}
+  constructor(
+    private readonly dbPath: string,
+    private readonly version: string,
+    private readonly log: (message: string) => void = () => undefined
+  ) {}
 
   get running(): boolean {
     return this.server !== null
@@ -35,7 +39,7 @@ export class OrchRuntime {
     const store = new OrchStore(this.dbPath)
     const service = new OrchService(store)
     try {
-      const server = await startOrchMcpServer(service, { version: this.version })
+      const server = await startOrchMcpServer(service, { version: this.version, log: this.log })
       this.store = store
       this.service = service
       this.server = server
