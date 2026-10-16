@@ -94,7 +94,7 @@ export class OrchService {
     if (this.store.getRun(runId)?.imported) throw new Error('Imported runs are read-only.')
   }
 
-  /** A feature started from the UI also gets its initial spec task. */
+  /** A feature started from the UI starts with its lead, which sizes the team. */
   startRun(input: CreateRunInput): OrchRun {
     return this.tx(() => createStoredRun(this.ctx, input, true))
   }
@@ -169,6 +169,15 @@ export class OrchService {
   activeTask(agentId: string): OrchTask | undefined {
     const agent = this.store.getAgent(agentId)
     return agent ? this.ctx.activeTaskOf(agent) : undefined
+  }
+
+  /** A message from Dawsha itself to every live agent with `role` in the run; returns how many got it. */
+  notifyRole(runId: string, role: OrchRole, body: string): number {
+    return this.tx(() => {
+      const agents = this.store.listAgents(runId).filter((agent) => agent.role === role && !agent.retiredAt)
+      for (const agent of agents) this.ctx.message(runId, 'dawsha', agent.id, null, body)
+      return agents.length
+    })
   }
 
   unreadCount(agentId: string): number {

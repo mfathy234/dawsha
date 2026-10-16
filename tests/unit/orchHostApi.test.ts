@@ -11,16 +11,24 @@ function setup(extra: Partial<Parameters<OrchService['startRun']>[0]> = {}) {
   return { svc, run, changes }
 }
 
+/** As the lead does for a story that needs one: a spec-writer task, T-1. */
+function withSpecTask(extra: Partial<Parameters<OrchService['startRun']>[0]> = {}) {
+  const ctx = setup(extra)
+  const lead = ctx.svc.registerAgent({ runId: ctx.run.id, role: 'lead', runner: 'claude', model: 'opus' })
+  ctx.svc.call(lead, 'create_task', { title: 'Write the spec', spec: 'Story: As a user I want a CSV.', role: 'spec-writer' })
+  return ctx
+}
+
 describe('orchestrator host API for the dispatcher', () => {
-  it('starts a feature run with a spec task made from the story and remembers its project', () => {
+  it('starts a feature run at planning with no tasks, for its lead to size, and remembers its project', () => {
     const { svc, run } = setup()
-    expect(run).toMatchObject({ kind: 'feature', stage: 'spec', projectId: 'proj-1', specApproval: true })
-    expect(svc.task('T-1', run.id)).toMatchObject({ role: 'spec-writer', status: 'todo', spec: expect.stringContaining('As a user I want a CSV.') })
+    expect(run).toMatchObject({ kind: 'feature', stage: 'plan', projectId: 'proj-1', specApproval: true })
+    expect(svc.tasks(run.id)).toEqual([])
     expect(svc.runs().map((r) => r.id)).toEqual([run.id])
   })
 
   it('approves the spec without asking when the plan has no spec stop', () => {
-    const { svc, run } = setup({ specApproval: false })
+    const { svc, run } = withSpecTask({ specApproval: false })
     const writer = svc.registerAgent({ runId: run.id, role: 'spec-writer', runner: 'claude', model: 'sonnet' })
     svc.call(writer, 'get_my_task', {})
     svc.call(writer, 'complete_task', { summary: 'spec v1' })
@@ -39,7 +47,7 @@ describe('orchestrator host API for the dispatcher', () => {
   })
 
   it('assigns a task to a specific agent, which then gets it from get_my_task', () => {
-    const { svc, run } = setup()
+    const { svc, run } = withSpecTask()
     const writer = svc.registerAgent({ runId: run.id, role: 'spec-writer', runner: 'claude', model: 'sonnet' })
     svc.assignTask(run.id, 'T-1', writer.id)
     expect(svc.task('T-1', run.id)).toMatchObject({ status: 'assigned', assignee: writer.id })
@@ -58,7 +66,7 @@ describe('orchestrator host API for the dispatcher', () => {
   })
 
   it('puts a task back in the queue when its pane dies, and asks the human after a second failure', () => {
-    const { svc, run } = setup()
+    const { svc, run } = withSpecTask()
     const first = svc.registerAgent({ runId: run.id, role: 'spec-writer', runner: 'claude', model: 'sonnet' })
     svc.assignTask(run.id, 'T-1', first.id)
     svc.releaseAgent(first.id, 'The Claude pane closed')
@@ -72,7 +80,7 @@ describe('orchestrator host API for the dispatcher', () => {
   })
 
   it('reports a quota hit as a stall decision offering other models, and resumes on "Wait"', () => {
-    const { svc, run } = setup()
+    const { svc, run } = withSpecTask()
     const writer = svc.registerAgent({ runId: run.id, role: 'spec-writer', runner: 'claude', model: 'sonnet' })
     svc.assignTask(run.id, 'T-1', writer.id)
     svc.call(writer, 'get_my_task', {})
@@ -85,7 +93,7 @@ describe('orchestrator host API for the dispatcher', () => {
   })
 
   it('moves the run through its stages and records merged tasks', () => {
-    const { svc, run } = setup()
+    const { svc, run } = withSpecTask()
     svc.setStage(run.id, 'build')
     expect(svc.run(run.id)?.stage).toBe('build')
     svc.markMerged(run.id, 'T-1')

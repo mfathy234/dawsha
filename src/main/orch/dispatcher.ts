@@ -2,6 +2,7 @@ import type { OrchPaneRequest } from '../../shared/orch/api'
 import { agentRunnerName, buildLaunch } from '../../shared/orch/launch'
 import { DEFAULT_PLAN_ID, fixerProfileOf, profileFor, type OrchPlan, type OrchProfile, type OrchSettings } from '../../shared/orch/profiles'
 import { firstMessage } from '../../shared/orch/rolePrompts'
+import { isFinal } from '../../shared/orch/taskMachine'
 import type { OrchAgent, OrchDecision, OrchRole, OrchRun, OrchTask } from '../../shared/orch/types'
 import { ACTIVE } from './context'
 import type { OrchService } from './service'
@@ -84,12 +85,18 @@ export class Dispatcher {
     if (this.finishIfAnswered(run)) return
     const tasks = this.deps.service.tasks(run.id)
     const plan = this.planOf(run)
-    if (run.stage === 'spec' && tasks.some((t) => t.role === 'spec-writer' && t.status === 'approved')) {
+    const specPending = tasks.some((t) => t.role === 'spec-writer' && !isFinal(t.status))
+    // The lead starts the run alone and decides the team, including whether a spec is needed at all.
+    if (run.stage === 'plan' && !this.deps.service.agents(run.id).some((a) => a.role === 'lead')) await this.startLead(run, plan)
+    if (run.stage === 'plan' && specPending) this.deps.service.setStage(run.id, 'spec')
+    if (run.stage === 'spec' && !specPending && tasks.some((t) => t.role === 'spec-writer' && t.status === 'approved')) {
       this.deps.service.setStage(run.id, 'plan')
-      await this.startLead(run, plan)
-      return
+      const told = this.deps.service.notifyRole(run.id, 'lead', 'The spec is approved. Read it, then create the remaining tasks for the smallest team that can do the work.')
+      if (told === 0) await this.startLead(run, plan)
+      const fresh = this.deps.service.run(run.id)
+      return fresh ? this.advance(fresh) : undefined
     }
-    if (run.stage === 'plan' && tasks.some((t) => !RUN_BRANCH_ROLES.includes(t.role))) this.deps.service.setStage(run.id, 'build')
+    if (run.stage === 'plan' && !specPending && tasks.some((t) => !RUN_BRANCH_ROLES.includes(t.role))) this.deps.service.setStage(run.id, 'build')
     if (this.allDone(run, tasks)) {
       this.deps.service.setStage(run.id, 'merge')
       this.deps.service.raiseDecision(run.id, 'run-complete', {
@@ -100,7 +107,7 @@ export class Dispatcher {
       })
       return
     }
-    await this.startReadyTasks(run, plan, tasks)
+    await this.startReadyTasks(run, plan, specPending ? tasks.filter((t) => t.role === 'spec-writer') : tasks)
   }
 
   private allDone(run: OrchRun, tasks: OrchTask[]): boolean {

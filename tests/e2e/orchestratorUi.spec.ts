@@ -46,9 +46,9 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
       const track = page.getByRole('list', { name: 'Stages', exact: true })
       const items = track.locator('li:not(.cancelled)')
       for (const kind of ['bug', 'feature'] as const) {
-        const labels = kind === 'bug' ? ['Build', 'Merge', 'Done'] : ['Spec', 'Plan', 'Build', 'Merge', 'Done']
+        const labels = kind === 'bug' ? ['Build', 'Merge', 'Done'] : ['Plan', 'Build', 'Merge', 'Done']
         const stages = kind === 'bug' ? ['build', 'review', 'merge', 'done', 'cancelled'] as const
-          : ['spec', 'plan', 'build', 'review', 'merge', 'done', 'cancelled'] as const
+          : ['plan', 'build', 'review', 'merge', 'done', 'cancelled'] as const
         for (const stage of stages) {
           await publish(kind, stage)
           const at = labels.indexOf(stage === 'review' ? 'Build' : stage[0].toUpperCase() + stage.slice(1))

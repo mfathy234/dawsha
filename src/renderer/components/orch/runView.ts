@@ -7,7 +7,7 @@ import { clear, h } from '../../dom'
 import { cancelRun, handoffTask, showOrch } from '../../orchActions'
 import type { AppState } from '../../state'
 import { renderTaskBoard } from './boardsView'
-import { AGENT_STATE_LABEL, elapsed, modelBadge, pill, ROLE_LABEL, stagesOf } from './orchUi'
+import { AGENT_STATE_LABEL, currentStageIndex, elapsed, modelBadge, pill, ROLE_LABEL, stagesOf } from './orchUi'
 import './runView.css'
 
 const TIMELINE_LIMIT = 100
@@ -139,7 +139,7 @@ export class OrchRunView {
 
   private stages(run: OrchRunDetail): HTMLElement {
     const stages = stagesOf(run)
-    const at = run.stage === 'review' ? stages.findIndex((s) => s.id === 'build') : stages.findIndex((s) => s.id === run.stage)
+    const at = currentStageIndex(run)
     const finished = run.stage === 'done'
     return h(
       'ol',

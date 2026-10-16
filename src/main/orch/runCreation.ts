@@ -2,7 +2,8 @@ import type { OrchRun, RunKind } from '../../shared/orch/types'
 import { randomId, type OrchContext } from './context'
 import type { CreateRunInput } from './service'
 
-export function createStoredRun(ctx: OrchContext, input: CreateRunInput, withSpec: boolean): OrchRun {
+/** `leadFirst`: a feature starts with its lead, who decides whether it needs a spec and which roles to use. */
+export function createStoredRun(ctx: OrchContext, input: CreateRunInput, leadFirst: boolean): OrchRun {
   const kind: RunKind = input.kind ?? 'feature'
   const run: OrchRun = {
     id: randomId('run'),
@@ -12,7 +13,7 @@ export function createStoredRun(ctx: OrchContext, input: CreateRunInput, withSpe
     story: input.story,
     plan: input.plan,
     // A bug skips the spec and planning stages: one fixer works straight from the report.
-    stage: kind === 'bug' ? 'build' : 'spec',
+    stage: kind === 'bug' ? 'build' : leadFirst ? 'plan' : 'spec',
     createdAt: ctx.now(),
     finishedAt: null,
     projectId: input.projectId ?? null,
@@ -24,13 +25,6 @@ export function createStoredRun(ctx: OrchContext, input: CreateRunInput, withSpe
   if (kind === 'bug') {
     const task = ctx.newTask(run.id, { title: run.title, spec: run.story, role: 'fixer', dependsOn: [], acceptance: [] })
     ctx.log(run.id, 'task', `${task.key} created for fixer: ${task.title}`, task.id)
-  }
-  if (withSpec && run.kind === 'feature') {
-    const task = ctx.newTask(run.id, {
-      title: `Write the spec for "${run.title}"`, spec: `Story:\n${run.story}`,
-      role: 'spec-writer', dependsOn: [], acceptance: []
-    })
-    ctx.log(run.id, 'task', `${task.key} created for spec-writer: ${task.title}`, task.id)
   }
   return run
 }

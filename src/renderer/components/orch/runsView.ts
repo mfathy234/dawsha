@@ -12,7 +12,7 @@ import {
 import { clear, h } from '../../dom'
 import { answerDecision, showOrch } from '../../orchActions'
 import type { AppState } from '../../state'
-import { ROLE_LABEL, elapsed, modelBadge, pill, stagesOf, timeAgo } from './orchUi'
+import { ROLE_LABEL, currentStageIndex, elapsed, modelBadge, pill, stagesOf, timeAgo } from './orchUi'
 import './runsView.css'
 
 const KIND_LABEL = { bug: 'Bug fix', feature: 'Feature' } as const
@@ -126,8 +126,7 @@ export class OrchRunsView {
 
   private stages(run: OrchRunDetail): HTMLElement {
     const stages = stagesOf(run)
-    const index = stages.findIndex((s) => s.id === run.stage)
-    const current = index < 0 && run.stage === 'review' ? stages.findIndex((s) => s.id === 'build') : index
+    const current = currentStageIndex(run)
     return h(
       'ol',
       { class: 'run-stages', 'aria-label': 'Progress' },

@@ -15,18 +15,33 @@ export const ROLE_LABEL: Record<OrchRole, string> = {
   fixer: 'Fixer'
 }
 
-/** Stages shown in a run's progress line. Bug runs skip Spec and Plan. */
+/** Stages shown in a run's progress line. The lead plans first; Spec appears only when it asked for one. */
 export const FEATURE_STAGES: { id: RunStage; label: string }[] = [
-  { id: 'spec', label: 'Spec' },
   { id: 'plan', label: 'Plan' },
+  { id: 'spec', label: 'Spec' },
   { id: 'build', label: 'Build' },
   { id: 'merge', label: 'Merge' },
   { id: 'done', label: 'Done' }
 ]
+/** Bug runs skip Spec and Plan. */
 export const BUG_STAGES = FEATURE_STAGES.filter((s) => s.id !== 'spec' && s.id !== 'plan')
+const NO_SPEC_STAGES = FEATURE_STAGES.filter((s) => s.id !== 'spec')
 
-export const stagesOf = (run: Pick<OrchRunDetail, 'kind'>): { id: RunStage; label: string }[] =>
-  run.kind === 'bug' ? BUG_STAGES : FEATURE_STAGES
+const hasSpec = (run: Pick<OrchRunDetail, 'tasks'>): boolean => (run.tasks ?? []).some((t) => t.role === 'spec-writer')
+
+export const stagesOf = (run: Pick<OrchRunDetail, 'kind' | 'tasks'>): { id: RunStage; label: string }[] =>
+  run.kind === 'bug' ? BUG_STAGES : hasSpec(run) ? FEATURE_STAGES : NO_SPEC_STAGES
+
+/**
+ * Index of the current step. After an approved spec the lead plans again before building; that counts as Build,
+ * since the track never steps backwards.
+ */
+export function currentStageIndex(run: Pick<OrchRunDetail, 'kind' | 'tasks' | 'stage'>): number {
+  const stages = stagesOf(run)
+  const specDone = (run.tasks ?? []).some((t) => t.role === 'spec-writer' && t.status === 'approved')
+  const stage = run.stage === 'review' || (run.stage === 'plan' && specDone) ? 'build' : run.stage
+  return stages.findIndex((s) => s.id === stage)
+}
 
 export type BoardColumn = 'todo' | 'progress' | 'review' | 'needs' | 'done'
 

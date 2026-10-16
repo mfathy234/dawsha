@@ -26,7 +26,12 @@ async function main() {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'fake-orch-agent', version: '1' } })
   const me = await tool('whoami', {})
   say(`fake agent ${me.role} in run "${me.run_title}"`)
-  if (me.role === 'lead') return setInterval(() => undefined, 60_000)
+  if (me.role === 'lead') {
+    // Like a real lead with a story that needs one: ask for a spec first, once.
+    const tasks = await tool('list_tasks', {})
+    if (Array.isArray(tasks) && tasks.length === 0) await tool('create_task', { title: `Write the spec for "${me.run_title}"`, spec: 'Spec the story.', role: 'spec-writer' })
+    return setInterval(() => undefined, 60_000)
+  }
   const task = await tool('get_my_task', {})
   say(`working on ${task.key}: ${task.title}`)
   writeFileSync('fix.txt', `fixed: ${task.title}\n`)
