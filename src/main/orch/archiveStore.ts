@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { buildArchive, parseArchive, type RunArchive } from '../../shared/orch/runArchive'
 import type { OrchRun } from '../../shared/orch/types'
-import { randomId } from './context'
+import { randomId, RESERVED_NOTE_PREFIX } from './context'
 import type { OrchStore } from './store'
 
 export function exportStoredRun(store: OrchStore, runId: string, version: string, at: number): RunArchive {
@@ -16,7 +16,8 @@ export function importStoredRun(store: OrchStore, input: RunArchive, at: number,
   const parsed = parseArchive(JSON.stringify(input))
   if (!parsed.ok) throw new Error(parsed.error)
   const a = parsed.archive
-  const runId = store.getRun(a.run.id) ? randomId('run') : a.run.id
+  let runId = a.run.id
+  while (store.getRun(runId) || a.tasks.some((task) => store.getTask(`${runId}:${task.key}`))) runId = randomId('run')
   const taskIds = new Map(a.tasks.map((t) => [t.id, `${runId}:${t.key}`]))
   const agentIds = new Map(a.agents.map((agent) => [agent.id, randomId('archived-agent')]))
   const decisionIds = new Map(a.decisions.map((d) => [d.id, randomId('dec')]))
@@ -31,7 +32,8 @@ export function importStoredRun(store: OrchStore, input: RunArchive, at: number,
     retiredAt: at || 1, token: randomBytes(32).toString('hex') })
   for (const d of a.decisions) store.putDecision({ ...d, id: decisionIds.get(d.id)!, runId, taskId: taskRef(d.taskId), agentId: d.agentId === null ? null : agentRef(d.agentId) })
   for (const n of a.notes) {
-    const key = n.key.startsWith('human:') ? `human:${decisionIds.get(n.key.slice(6)) ?? n.key.slice(6)}` : n.key
+    const decisionId = n.key.startsWith(RESERVED_NOTE_PREFIX) ? decisionIds.get(n.key.slice(RESERVED_NOTE_PREFIX.length)) : undefined
+    const key = decisionId ? `${RESERVED_NOTE_PREFIX}${decisionId}` : n.key
     store.putNote({ ...n, key, runId, author: agentRef(n.author) })
   }
   for (const e of a.events) store.addEvent({ ...e, runId, taskId: taskRef(e.taskId) })

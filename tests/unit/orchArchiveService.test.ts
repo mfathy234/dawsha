@@ -51,6 +51,38 @@ describe('service run archives', () => {
     expect(buildSnapshot(svc, () => null, { enabled: true, running: true, error: null }).runs.find((r) => r.id === imported.id)?.imported).toEqual(imported.imported)
   })
 
+  it('rejects archived messages targeting a live agent outside the archive', () => {
+    const { svc, store, run, agent } = setup()
+    const archive = svc.exportRun(run.id)
+    const foreign = svc.startRun({ kind: 'bug', projectPath: 'C:/repo', title: 'Live', story: 's', plan: 'default' })
+    const live = svc.registerAgent({ runId: foreign.id, role: 'fixer', runner: 'claude', model: 'x' })
+    const hostile = { ...archive, messages: [{ ...archive.messages[0], from: agent.id, to: live.id, readAt: null }] }
+    expect(() => svc.importRun(hostile)).toThrow(/references/i)
+    expect(store.unreadFor(live.id)).toEqual([])
+    expect(svc.runs()).toHaveLength(2)
+  })
+
+  it('remaps decision note keys with their decision IDs', () => {
+    const { svc, store, run, decision } = setup()
+    svc.answerDecision(decision.id, 'Yes')
+    const imported = svc.importRun(svc.exportRun(run.id))
+    const newDecision = svc.decisions(imported.id)[0]
+    expect(store.listNotes(imported.id).some((n) => n.key === `decision:${newDecision.id}` && n.text.includes('Yes'))).toBe(true)
+  })
+
+  it('cannot overwrite another run through a crafted task namespace collision', () => {
+    const { svc, store, run } = setup()
+    const task = svc.tasks(run.id)[0]
+    store.putRun({ ...run, id: 'archive:suffix' })
+    store.putTask({ ...task, id: 'archive:suffix:T-1', runId: 'archive:suffix', summary: 'Keep this' })
+    const archive = svc.exportRun(run.id)
+    const imported = svc.importRun({ ...archive, run: { ...archive.run, id: 'archive' },
+      tasks: [{ ...task, id: 'archive:suffix:T-1', key: 'suffix:T-1', runId: 'archive', assignee: null }],
+      agents: [], decisions: [], notes: [], messages: [], events: [] })
+    expect(imported.id).not.toBe('archive')
+    expect(svc.task('T-1', 'archive:suffix').summary).toBe('Keep this')
+  })
+
   it('preserves completed stage and id in an empty store; imports agents retired', () => {
     const { svc, run } = setup()
     svc.finishRun(run.id)

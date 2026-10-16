@@ -1,4 +1,4 @@
-﻿import { ORCH_ROLES, TASK_STATUSES, type OrchAgent, type OrchDecision, type OrchEvent, type OrchMessage, type OrchNote, type OrchRun, type OrchTask } from './types'
+import { ORCH_ROLES, TASK_STATUSES, type OrchAgent, type OrchDecision, type OrchEvent, type OrchMessage, type OrchNote, type OrchRun, type OrchTask } from './types'
 
 export const ARCHIVE_MAX_BYTES = 20 * 1024 * 1024
 export type ArchiveAgent = Omit<OrchAgent, 'token' | 'launch'>
@@ -84,13 +84,14 @@ function consistent(a: RunArchive): boolean {
   const agents = new Set(a.agents.map((agent) => agent.id))
   const taskRef = (value: string | null): boolean => value === null || tasks.has(value)
   const agentRef = (value: string | null): boolean => value === null || agents.has(value)
+  const identity = (value: string): boolean => value === 'human' || value === 'dawsha' || agents.has(value)
   return [a.tasks, a.agents, a.decisions, a.notes, a.events, a.messages].every((rows) => rows.every((row) => row.runId === a.run.id)) &&
     [a.tasks, a.agents, a.decisions, a.messages].every((rows) => unique(rows.map((r) => r.id))) &&
     unique(a.tasks.map((t) => t.key)) && unique(a.notes.map((n) => n.key)) &&
     a.tasks.every((t) => t.id === `${a.run.id}:${t.key}` && agentRef(t.assignee) && t.dependsOn.every((k) => keys.has(k)) && (t.reviewOf === null || keys.has(t.reviewOf))) &&
     a.agents.every((agent) => taskRef(agent.taskId)) &&
     a.decisions.every((d) => taskRef(d.taskId) && agentRef(d.agentId) && (d.recommended === null || d.recommended < d.options.length)) &&
-    a.events.every((e) => taskRef(e.taskId)) && a.messages.every((m) => taskRef(m.taskId))
+    a.events.every((e) => taskRef(e.taskId)) && a.messages.every((m) => taskRef(m.taskId) && identity(m.from) && identity(m.to)) && a.notes.every((n) => identity(n.author))
 }
 
 export function parseArchive(text: string): { ok: true; archive: RunArchive } | { ok: false; error: string } {
@@ -112,7 +113,7 @@ const cell = (text: string): string => text.replace(/\|/g, '\\|').replace(/\r?\n
 export function archiveToMarkdown(a: RunArchive): string {
   const lines = [
     `# ${a.run.title}`, '', '## Story', a.run.story, '', '## Outcome',
-    `${a.run.stage} Â· Plan: ${a.run.plan} Â· Project: ${a.run.projectPath}`, '', '## Tasks'
+    `${a.run.stage} · Plan: ${a.run.plan} · Project: ${a.run.projectPath}`, '', '## Tasks'
   ]
   for (const task of a.tasks) lines.push(`### ${task.key}: ${task.title} (${task.status})`, task.summary ?? 'No summary.', '')
   lines.push('## Decisions')
@@ -123,6 +124,6 @@ export function archiveToMarkdown(a: RunArchive): string {
     lines.push(`| ${agent.role} | ${cell(agent.runner)} | ${cell(agent.model)} | ${u?.inputTokens ?? 0} | ${u?.outputTokens ?? 0} | ${u?.cacheReadTokens ?? 0} | ${u?.cacheWriteTokens ?? 0} | ${u?.reportedCostUsd ?? 'unpriced'} |`)
   }
   lines.push('', '## Timeline')
-  for (const event of a.events) lines.push(`- ${new Date(event.at).toISOString()} Â· ${event.text}`)
+  for (const event of a.events) lines.push(`- ${new Date(event.at).toISOString()} · ${event.text}`)
   return lines.join('\n') + '\n'
 }
