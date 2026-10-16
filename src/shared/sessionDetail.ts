@@ -15,6 +15,25 @@ export interface SessionEvidence {
   orchestrated?: true
   startedAt?: number
   endedAt?: number
+  /** When the session was actually active: activity less than ACTIVE_GAP_MS apart, merged into spans. */
+  spans?: [number, number][]
+}
+
+/** Activity further apart than this is a break, not work. */
+export const ACTIVE_GAP_MS = 5 * 60_000
+/** A lone message still counts as a minute of work. */
+const MIN_SPAN_MS = 60_000
+
+/** Merges activity times into the spans the session was active in. */
+export function activeSpans(times: readonly number[], gap = ACTIVE_GAP_MS): [number, number][] {
+  const sorted = [...times].filter(Number.isFinite).sort((a, b) => a - b)
+  const spans: [number, number][] = []
+  for (const at of sorted) {
+    const last = spans.at(-1)
+    if (last && at - last[1] <= gap) last[1] = at
+    else spans.push([at, at])
+  }
+  return spans.map(([start, end]) => [start, Math.max(end, start + MIN_SPAN_MS)])
 }
 
 /** Metadata from the same bounded sample used by the session index. Gemini stores no git branch. */
@@ -27,9 +46,11 @@ export function sessionEvidence(agent: AgentKind, text: string): SessionEvidence
       if (isRecord(whole)) entries = [whole]
     } catch { /* JSONL is handled by records. */ }
   }
+  const times: number[] = []
   const takeTime = (value: unknown): void => {
     const at = asTime(value)
     if (at === undefined) return
+    times.push(at)
     evidence.startedAt = Math.min(evidence.startedAt ?? at, at)
     evidence.endedAt = Math.max(evidence.endedAt ?? at, at)
   }
@@ -53,6 +74,7 @@ export function sessionEvidence(agent: AgentKind, text: string): SessionEvidence
       if (Array.isArray(record.messages)) for (const m of record.messages) if (isRecord(m)) takeTime(m.timestamp)
     }
   }
+  if (times.length > 0) evidence.spans = activeSpans(times)
   return evidence
 }
 

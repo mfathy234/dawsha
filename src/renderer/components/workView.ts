@@ -1,4 +1,4 @@
-import { WORK_TYPES, WORK_LABELS, type WorkItem, type WorkPeriod, type WorkReport } from '../../shared/workDashboard'
+import { activeMs, WORK_TYPES, WORK_LABELS, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../../shared/workDashboard'
 import { agentLabel } from '../../shared/agents'
 import { api } from '../api'
 import { resumeInNewPane } from '../actions'
@@ -26,6 +26,13 @@ export class WorkViewComponent {
   private error: string | null = null
   private token = 0
   private timer: number | undefined
+
+  /** An item's active time inside the shown period, the same measure the per-project totals use. */
+  private itemTime(item: WorkItem): number {
+    const now = Date.now()
+    const { start, end } = workWindow(this.period, now)
+    return activeMs(item, start, Math.min(end, now))
+  }
 
   update(state: AppState): void {
     const visible = state.view === 'work'
@@ -88,7 +95,7 @@ export class WorkViewComponent {
     }
     if (this.period !== 'today') this.el.append(this.chart(report))
     this.el.append(this.projects(report), this.items(report), h('p', { class: 'usage-local muted' },
-      'One item per session or orchestrator run, counted on its last activity day. Time is elapsed first-to-last activity, not active coding time. Missing branches stay unknown; commit evidence uses the current checkout when no branch was recorded.'))
+      'One item per session or orchestrator run, counted on its last activity day. Time spent is active time in this period (breaks over 5 minutes do not count), from a sample of each session, so long sessions can read low. The type comes from the branch and your own commits.'))
   }
 
   private chart(report: WorkReport): HTMLElement {
@@ -122,7 +129,7 @@ export class WorkViewComponent {
     return h('li', {}, h('button', { class: 'work-item', type: 'button', onClick: () => void this.open(item) },
       h('span', { class: 'work-item-main' }, h('strong', {}, item.title), h('span', { class: `work-chip work-${item.type}` }, WORK_LABELS[item.type]), item.ticket ? h('span', { class: 'work-ticket' }, item.ticket) : null),
       h('span', { class: 'work-item-meta' }, item.project, ' · ', item.agent === 'orchestrator' ? 'Orchestrator' : agentLabel(item.agent), ' · ', item.branch ?? 'Unknown branch',
-        ' · ', new Date(item.endedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), ' · ', duration(item.endedAt - item.startedAt))))
+        ' · ', new Date(item.endedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), ' · ', duration(this.itemTime(item)))))
   }
 
   private async open(item: WorkItem): Promise<void> {
@@ -142,7 +149,7 @@ export class WorkViewComponent {
     const close = h('button', { class: 'btn ghost', type: 'button' }, 'Close')
     const dialog = h('div', { class: 'dialog work-run-preview', role: 'dialog', 'aria-modal': 'true', 'aria-label': item.title },
       h('h2', {}, item.title), h('p', { class: 'muted' }, `${item.project} · ${WORK_LABELS[item.type]} · ${item.run?.stage ?? ''}`),
-      h('p', {}, item.branch, ' · ', duration(item.endedAt - item.startedAt)),
+      h('p', {}, item.branch, ' · ', duration(this.itemTime(item))),
       h('p', {}, 'Saved run · read-only. The orchestrator remains off.'),
       item.run?.story ? h('p', { class: 'work-run-story' }, item.run.story) : null,
       item.run?.plan ? h('details', {}, h('summary', {}, 'Plan'), h('pre', {}, item.run.plan)) : null,

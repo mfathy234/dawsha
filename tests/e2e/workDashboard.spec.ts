@@ -67,6 +67,8 @@ test('work dashboard counts agent sessions, filters projects, resumes and suppor
   const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', ...args], { cwd: sandbox.projectFolder, windowsHide: true,
     env: { ...process.env, GIT_AUTHOR_DATE: new Date(Date.now() - 30_000).toISOString(), GIT_COMMITTER_DATE: new Date(Date.now() - 30_000).toISOString() } })
   git('init', '-q', '-b', 'main')
+  // Like a real repo: the user's email is configured, so only their own commits count.
+  git('config', 'user.email', 'test@example.invalid')
   git('commit', '--allow-empty', '-qm', 'docs: explain architecture')
   const { app, page } = await launchApp(sandbox)
   try {

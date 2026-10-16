@@ -257,6 +257,8 @@ export interface ResumeSession {
   /** Transcript metadata reused by the work dashboard. */
   workBranch?: string | null
   lastActivityAt?: number
+  /** When the session was active (from its sampled activity); work time is counted from these. */
+  activeSpans?: [number, number][]
   orchestrated?: true
   agent: AgentKind
   id: string

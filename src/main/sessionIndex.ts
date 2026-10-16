@@ -134,6 +134,7 @@ function build(candidate: Candidate, id: string, title: string, detail: SessionD
     modifiedAt: candidate.modifiedAt,
     startedAt: evidence.startedAt ?? detail.startedAt ?? candidate.modifiedAt,
     lastActivityAt: evidence.endedAt ?? candidate.modifiedAt,
+    ...(evidence.spans ? { activeSpans: evidence.spans } : {}),
     workBranch: evidence.branch,
     ...(evidence.orchestrated ? { orchestrated: true as const } : {}),
     messageCount: detail.messages,

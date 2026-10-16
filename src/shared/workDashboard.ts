@@ -16,6 +16,8 @@ export interface WorkItem {
   ticket: string | null
   startedAt: number
   endedAt: number
+  /** When the work was active; without them, the whole start-to-end span counts. */
+  spans?: [number, number][]
   session?: ResumeSession
   run?: { stage: string; story: string; plan: string }
 }
@@ -51,7 +53,13 @@ function dayKey(at: number): string {
   const d = new Date(at)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-/** One item is counted on its last activity day; elapsed durations span the whole item. */
+/** Active time of an item inside [start, end): the overlap of its active spans with the window. */
+export function activeMs(item: Pick<WorkItem, 'startedAt' | 'endedAt' | 'spans'>, start: number, end: number): number {
+  const spans = item.spans && item.spans.length > 0 ? item.spans : [[item.startedAt, item.endedAt] as [number, number]]
+  return spans.reduce((sum, [from, to]) => sum + Math.max(0, Math.min(to, end) - Math.max(from, start)), 0)
+}
+
+/** One item is counted on its last activity day; time spent is its active time inside the period. */
 export function aggregateWork(input: readonly WorkItem[], period: WorkPeriod, now: number): WorkReport {
   const { start, end } = workWindow(period, now)
   const items = input.filter(i => i.endedAt >= start && i.endedAt < end && i.endedAt <= now).sort((a, b) => b.endedAt - a.endedAt)
@@ -65,7 +73,7 @@ export function aggregateWork(input: readonly WorkItem[], period: WorkPeriod, no
     const row = projects.get(item.projectId) ?? { projectId: item.projectId, project: item.project, counts: emptyCounts(), total: 0, durationMs: 0 }
     row.counts[item.type]++
     row.total++
-    row.durationMs += Math.max(0, item.endedAt - item.startedAt)
+    row.durationMs += activeMs(item, start, Math.min(end, now))
     projects.set(item.projectId, row)
     const day = days.get(dayKey(item.endedAt))!
     day.counts[item.type]++

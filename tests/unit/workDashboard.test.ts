@@ -68,7 +68,8 @@ describe('aggregation', () => {
     ], 'today', now)
     expect(report.total).toBe(4)
     expect(report.counts).toEqual({ feature: 1, bug: 1, other: 1, conversation: 1 })
-    expect(report.projects.map(p => [p.project, p.total, p.durationMs])).toEqual([['Alpha', 3, 90000000], ['Beta', 1, 3600000]])
+    // Time spent is the part inside today only: an item that started yesterday counts from midnight.
+    expect(report.projects.map(p => [p.project, p.total, p.durationMs])).toEqual([['Alpha', 3, 39600000], ['Beta', 1, 3600000]])
     expect(report.items.map(i => i.id)).toEqual(['two', 'three', 'four', 'one'])
     expect(report.buckets[0].counts).toEqual(report.counts)
   })
@@ -80,5 +81,21 @@ describe('aggregation', () => {
     expect(report.projects[0].durationMs).toBe(0)
     expect(aggregateWork([], 'month', now).buckets).toHaveLength(31)
     expect(aggregateWork([], 'today', now).total).toBe(0)
+  })
+})
+
+describe('active time', () => {
+  it('merges activity into spans and counts only the active part inside the period', async () => {
+    const { activeSpans } = await import('../../src/shared/sessionDetail')
+    const { activeMs } = await import('../../src/shared/workDashboard')
+    const min = 60_000
+    // Two bursts an hour apart: 10 and 4 minutes of work, not the 74 minutes from first to last.
+    const spans = activeSpans([0, 3 * min, 6 * min, 10 * min, 70 * min, 74 * min])
+    expect(spans).toEqual([[0, 10 * min], [70 * min, 74 * min]])
+    expect(activeMs({ startedAt: 0, endedAt: 74 * min, spans }, 0, 100 * min)).toBe(14 * min)
+    // Only the part inside the period counts: a session left open across days.
+    expect(activeMs({ startedAt: 0, endedAt: 74 * min, spans }, 72 * min, 100 * min)).toBe(2 * min)
+    // A lone message is a minute of work.
+    expect(activeSpans([5 * min])).toEqual([[5 * min, 6 * min]])
   })
 })
