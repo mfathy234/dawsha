@@ -1,9 +1,10 @@
 import { ipcMain } from 'electron'
-import type { OrchDecisionView, OrchHandoffInput, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus } from '../../shared/orch/api'
+import type { OrchDecisionView, OrchHandoffInput, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus, OrchSpecView, OrchSpecContent } from '../../shared/orch/api'
 import { IPC } from '../../shared/ipc'
 import type { Settings, SpawnRequest } from '../../shared/types'
 import type { LaunchExtras } from './paneBridge'
 import type { OrchRuntime } from './runtime'
+import { validSpecRunId } from './specs'
 
 /** What the IPC layer needs from the orchestrator. */
 export interface OrchestratorIpc {
@@ -18,6 +19,8 @@ export interface OrchestratorIpc {
   snapshot(): OrchSnapshot
   handoff(input: OrchHandoffInput): Promise<OrchResult>
   cancelRun(runId: string): OrchResult
+  spec(runId: string): Promise<OrchSpecView | null>
+  specVersion(runId: string, version: number): Promise<OrchSpecContent | null>
 }
 
 export function createOrchestratorSwitch(runtime: OrchRuntime, log: (message: string) => void): OrchestratorIpc {
@@ -44,7 +47,9 @@ export function createOrchestratorSwitch(runtime: OrchRuntime, log: (message: st
     answer: (decisionId, answer) => runtime.answer(decisionId, answer),
     snapshot: () => runtime.snapshot({ enabled, running: runtime.running, error }),
     handoff: (input) => runtime.handoff(input),
-    cancelRun: (runId) => runtime.cancelRun(runId)
+    cancelRun: (runId) => runtime.cancelRun(runId),
+    spec: (runId) => runtime.spec(runId),
+    specVersion: (runId, version) => runtime.specVersion(runId, version)
   }
 }
 
@@ -61,6 +66,10 @@ function parseStartInput(value: unknown): OrchStartInput | null {
 }
 
 export function registerOrchestratorIpc(orchestrator: OrchestratorIpc): void {
+  ipcMain.handle(IPC.orchSpec, (_event, runId: unknown) => validSpecRunId(runId) ? orchestrator.spec(runId) : null)
+  ipcMain.handle(IPC.orchSpecVersion, (_event, runId: unknown, version: unknown) =>
+    validSpecRunId(runId) && typeof version === 'number' && Number.isSafeInteger(version) && version > 0
+      ? orchestrator.specVersion(runId, version) : null)
   ipcMain.handle(IPC.orchStatus, () => orchestrator.status())
   ipcMain.handle(IPC.orchStartRun, (_event, input: unknown) => {
     const parsed = parseStartInput(input)
