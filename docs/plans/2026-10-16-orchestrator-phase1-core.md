@@ -441,3 +441,16 @@ when the flag is on (db at `userData/orchestrator.db`), stop on `will-quit`.
 Run `npm run typecheck`, `npm run test:unit`. Then a manual smoke test: start the runtime from a scratch
 script, register an agent, and connect a real Claude Code session with
 `claude --mcp-config <json with the server url and bearer header>` and ask it to call `whoami`.
+
+## Results (2026-10-16)
+
+- All tasks done; `npm run test:unit` 1220 passed, typecheck clean, `electron-vite build` keeps `node:sqlite`
+  external and Electron 44 (Node 24.21, SQLite 3.53) loads it.
+- Smoke test `npx vite-node scripts/orch-smoke.ts claude|codex`: both a real Claude Code (haiku) and a real
+  Codex CLI connected, called `whoami`, `get_my_task`, `complete_task`, and the task ended `approved`.
+- Facts for the phase 2 runners:
+  - Claude Code: `--mcp-config <json>` with `{ type: "http", url, headers: { Authorization: "Bearer …" } }`,
+    `--allowedTools mcp__dawsha-orch`.
+  - Codex: `-c mcp_servers.dawsha-orch.url=…`, `bearer_token_env_var`, and
+    `default_tools_approval_mode="approve"` (values: auto, prompt, writes, approve); without it Codex refuses
+    MCP calls in non-interactive runs.
