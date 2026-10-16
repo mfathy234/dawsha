@@ -35,6 +35,8 @@ export interface OrchTask {
   /** Key of the task this one reviews, for review tasks. */
   reviewOf: string | null
   reviewRound: number
+  /** The lead asked for a code review of this work before it counts as done. */
+  review?: boolean
   /** Agent id working on it. */
   assignee: string | null
   summary: string | null
@@ -74,6 +76,15 @@ export interface OrchRun {
   specApproval?: boolean
   /** Bug runs: the profile the user picked for the fixer. */
   fixerProfileId?: string | null
+  /** The lead's size estimate, made before it picks a team. */
+  estimate?: RunEstimate | null
+}
+
+export const ESTIMATE_SIZES = ['small', 'medium', 'large'] as const
+export type EstimateSize = (typeof ESTIMATE_SIZES)[number]
+export interface RunEstimate {
+  size: EstimateSize
+  reason: string
 }
 
 export interface OrchAgent {

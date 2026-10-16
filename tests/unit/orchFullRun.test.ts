@@ -34,7 +34,7 @@ describe('a full orchestrated run over MCP', () => {
     expect(svc.task('T-1', run.id).status).toBe('approved')
 
     // The lead plans two tasks; the tester waits for the implementer.
-    await lead.callTool('create_task', { title: 'CSV writer', spec: 'Write it.', role: 'implementer', acceptance: ['UTF-8 BOM'] })
+    await lead.callTool('create_task', { title: 'CSV writer', spec: 'Write it.', role: 'implementer', review: true, acceptance: ['UTF-8 BOM'] })
     await lead.callTool('create_task', { title: 'Check criteria', spec: 'Test it.', role: 'tester', depends_on: ['T-2'] })
     expect((await tester.callTool('get_my_task')).json.task).toBeNull()
 

@@ -124,6 +124,10 @@ export class OrchRunView {
           run.branch ? h('span', { class: 'orch-mono' }, run.branch) : null
         ),
         this.stages(run),
+        // The lead's size estimate decides the team: small and medium are done by the lead alone.
+        run.estimate
+          ? h('p', { class: 'orch-run-estimate' }, h('strong', {}, `Estimate: ${run.estimate.size}`), ` · ${run.estimate.size === 'large' ? 'team' : 'lead works alone'} · `, h('span', { class: 'orch-muted' }, run.estimate.reason))
+          : run.kind === 'feature' && run.stage === 'plan' ? h('p', { class: 'orch-muted orch-run-estimate' }, 'The lead is sizing the work…') : null,
         run.imported ? h('p', { class: 'orch-muted' }, `Imported from ${run.imported.from} · read-only`) : finished ? h('p', { class: 'orch-muted' }, 'Finished · read-only') : null
       ),
       h(

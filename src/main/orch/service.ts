@@ -307,15 +307,8 @@ export class OrchService {
   /** Ends the run: every agent's token stops working. */
   finishRun(runId: string, stage: 'done' | 'cancelled' = 'done'): void {
     this.tx(() => {
-      for (const agent of this.store.listAgents(runId).filter((a) => !a.retiredAt)) {
-        this.store.putAgent({ ...agent, taskId: null, retiredAt: this.ctx.now() })
-      }
-      // Questions of a finished run can no longer be acted on.
-      const answer = stage === 'cancelled' ? 'Run cancelled' : 'Run finished'
-      for (const decision of this.store.listDecisions(runId).filter((d) => d.answer === null)) {
-        this.store.putDecision({ ...decision, answer, answeredAt: this.ctx.now() })
-      }
-      this.setStage(runId, stage)
+      this.writable(runId)
+      this.ctx.finishRun(runId, stage)
     })
   }
 

@@ -35,8 +35,8 @@ describe('orchestrator safety (review fixes)', () => {
 
   it('keeps an agent on one task while its work is in review, so a rejection lands on the right task', () => {
     const { svc, run, lead, impl, rev } = setup()
-    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer' })
-    svc.call(lead, 'create_task', { title: 'B', spec: 's', role: 'implementer' })
+    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer', review: true })
+    svc.call(lead, 'create_task', { title: 'B', spec: 's', role: 'implementer', review: true })
     svc.call(impl, 'get_my_task', {})
     svc.call(impl, 'complete_task', { summary: 'A done' })
     expect(svc.call(impl, 'get_my_task', {})).toMatchObject({ task: null, message: expect.stringContaining('T-1 is in review') })
@@ -48,7 +48,7 @@ describe('orchestrator safety (review fixes)', () => {
 
   it('only hands over unfinished work that is not waiting for review, and moves open decisions', () => {
     const { svc, run, lead, impl } = setup()
-    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer' })
+    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer', review: true })
     expect(() => svc.handoffTask(run.id, 'T-1', { runner: 'claude', model: 'sonnet' })).toThrow(/todo/)
     svc.call(impl, 'get_my_task', {})
     svc.call(impl, 'ask_human', { question: 'Which format?' })
@@ -70,7 +70,7 @@ describe('orchestrator safety (review fixes)', () => {
 
   it('protects the human answers in notes from agents', () => {
     const { svc, lead, impl } = setup()
-    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer' })
+    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer', review: true })
     svc.call(impl, 'get_my_task', {})
     const asked = svc.call(impl, 'ask_human', { question: 'Q?' }) as { decision_id: string }
     svc.answerDecision(asked.decision_id, 'Yes')
@@ -79,7 +79,7 @@ describe('orchestrator safety (review fixes)', () => {
 
   it('reuses an open question instead of opening another, and caps questions per agent', () => {
     const { svc, lead, impl } = setup()
-    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer' })
+    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer', review: true })
     svc.call(impl, 'get_my_task', {})
     const first = svc.call(impl, 'ask_human', { question: 'One?' }) as { decision_id: string }
     const second = svc.call(impl, 'ask_human', { question: 'Two?' }) as { decision_id: string }
@@ -92,7 +92,7 @@ describe('orchestrator safety (review fixes)', () => {
 
   it('cancels a review whose original was cancelled instead of approving it', () => {
     const { svc, run, lead, impl, rev } = setup()
-    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer' })
+    svc.call(lead, 'create_task', { title: 'A', spec: 's', role: 'implementer', review: true })
     svc.call(impl, 'get_my_task', {})
     svc.call(impl, 'block_task', { reason: 'missing API key' })
     svc.answerDecision(svc.openDecisions()[0].id, 'Cancel task')

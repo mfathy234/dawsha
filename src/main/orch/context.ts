@@ -23,7 +23,7 @@ export const strList = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []
 export const statusText = (status: TaskStatus): string => status.replace(/_/g, ' ')
 
-export type NewTaskInput = Pick<OrchTask, 'title' | 'spec' | 'role' | 'dependsOn' | 'acceptance'> & { reviewOf?: string }
+export type NewTaskInput = Pick<OrchTask, 'title' | 'spec' | 'role' | 'dependsOn' | 'acceptance'> & { reviewOf?: string; review?: boolean }
 export type NewDecisionInput = Pick<OrchDecision, 'question' | 'options' | 'recommended' | 'context' | 'taskId'> & {
   urgency?: OrchDecision['urgency']
 }
@@ -45,6 +45,23 @@ export class OrchContext {
 
   move(task: OrchTask, to: TaskStatus): OrchTask {
     return this.save(moveTask(task, to, this.now()))
+  }
+
+  /** Retires the run's agents, closes its open questions and sets the final stage. */
+  finishRun(runId: string, stage: 'done' | 'cancelled', why?: string): void {
+    const run = this.store.getRun(runId)
+    if (!run || run.stage === 'done' || run.stage === 'cancelled') return
+    for (const agent of this.store.listAgents(runId).filter((a) => !a.retiredAt)) {
+      this.store.putAgent({ ...agent, taskId: null, retiredAt: this.now() })
+    }
+    // Questions of a finished run can no longer be acted on.
+    const answer = stage === 'cancelled' ? 'Run cancelled' : 'Run finished'
+    for (const decision of this.store.listDecisions(runId).filter((d) => d.answer === null)) {
+      this.store.putDecision({ ...decision, answer, answeredAt: this.now() })
+    }
+    if (why) this.log(runId, 'run', why, null)
+    this.store.putRun({ ...run, stage, finishedAt: this.now() })
+    this.log(runId, 'run', `Stage: ${stage}`, null)
   }
 
   log(runId: string, kind: string, text: string, taskId: string | null): void {
@@ -76,6 +93,7 @@ export class OrchContext {
       acceptance: input.acceptance,
       reviewOf: input.reviewOf ?? null,
       reviewRound: 0,
+      review: input.review === true,
       assignee: null,
       summary: null,
       files: [],

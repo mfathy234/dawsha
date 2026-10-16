@@ -15,8 +15,8 @@ function setup() {
 describe('OrchService tasks', () => {
   it('lets the lead create tasks and a worker claim them in dependency order', () => {
     const { svc, lead, impl } = setup()
-    const a = svc.call(lead, 'create_task', { title: 'Query', spec: 's', role: 'implementer' }) as { key: string }
-    svc.call(lead, 'create_task', { title: 'Writer', spec: 's', role: 'implementer', depends_on: [a.key] })
+    const a = svc.call(lead, 'create_task', { title: 'Query', spec: 's', role: 'implementer', review: true }) as { key: string }
+    svc.call(lead, 'create_task', { title: 'Writer', spec: 's', role: 'implementer', review: true, depends_on: [a.key] })
     const mine = svc.call(impl, 'get_my_task', {}) as { key: string; status: string }
     expect(mine).toMatchObject({ key: 'T-1', status: 'in_progress' })
     expect(svc.call(impl, 'get_my_task', {})).toMatchObject({ key: 'T-1' })
@@ -27,7 +27,7 @@ describe('OrchService tasks', () => {
   })
   it('sends finished implementer work to review and runs the reject/approve loop', () => {
     const { svc, lead, impl, rev } = setup()
-    svc.call(lead, 'create_task', { title: 'Writer', spec: 's', role: 'implementer' })
+    svc.call(lead, 'create_task', { title: 'Writer', spec: 's', role: 'implementer', review: true })
     svc.call(impl, 'get_my_task', {})
     svc.call(impl, 'complete_task', { summary: 'done', files: ['a.ts'] })
     const review = svc.call(rev, 'get_my_task', {}) as { key: string; reviewOf: string }
@@ -43,7 +43,7 @@ describe('OrchService tasks', () => {
   })
   it('escalates to the human after the second rejection', () => {
     const { svc, lead, impl, rev } = setup()
-    svc.call(lead, 'create_task', { title: 'W', spec: 's', role: 'implementer' })
+    svc.call(lead, 'create_task', { title: 'W', spec: 's', role: 'implementer', review: true })
     for (let round = 0; round < 2; round += 1) {
       svc.call(impl, 'get_my_task', {})
       svc.call(impl, 'complete_task', { summary: 'try' })

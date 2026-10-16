@@ -53,8 +53,17 @@ export async function refreshOrch(): Promise<void> {
     const orch = await api.orchSnapshot()
     notifyNewDecisions(orch)
     store.patch({ orch })
+    closeRetiredAgentPanes(orch)
   } catch {
     // The next change notification tries again.
+  }
+}
+
+/** A pane whose agent is done (task finished, run finished or cancelled) has nothing left to do: close it. */
+function closeRetiredAgentPanes(orch: OrchSnapshot): void {
+  const retired = new Set(orch.runs.flatMap((run) => run.agents.filter((a) => a.retired).map((a) => a.id)))
+  for (const pane of store.state.panes) {
+    if (pane.tabs.some((t) => t.orchAgentId && retired.has(t.orchAgentId))) void discardPane(pane.id)
   }
 }
 

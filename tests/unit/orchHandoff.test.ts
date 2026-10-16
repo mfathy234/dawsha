@@ -9,7 +9,7 @@ function setup() {
   const lead = svc.registerAgent({ runId: run.id, role: 'lead', runner: 'claude', model: 'opus' })
   const impl = svc.registerAgent({ runId: run.id, role: 'implementer', runner: 'codex', model: 'gpt-codex' })
   const rev = svc.registerAgent({ runId: run.id, role: 'code-reviewer', runner: 'claude', model: 'sonnet' })
-  svc.call(lead, 'create_task', { title: 'CSV writer', spec: 'Write the CSV writer.', role: 'implementer', acceptance: ['UTF-8 BOM'] })
+  svc.call(lead, 'create_task', { title: 'CSV writer', spec: 'Write the CSV writer.', role: 'implementer', review: true, acceptance: ['UTF-8 BOM'] })
   svc.call(impl, 'get_my_task', {})
   svc.call(impl, 'update_task', { progress: 'Writer done, tests next.' })
   svc.call(impl, 'put_note', { key: 'encoding', text: 'Always UTF-8 with BOM' })

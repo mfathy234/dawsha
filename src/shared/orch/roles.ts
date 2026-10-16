@@ -6,7 +6,8 @@ const REVIEWER = ['get_my_task', 'submit_review', 'block_task'] as const
 
 /** The orch tools each role sees in tools/list and may call. */
 export const ROLE_TOOLS: Record<OrchRole, readonly string[]> = {
-  lead: [...COMMON, 'create_task', 'list_tasks'],
+  // The lead can also take a task itself (create_task with self) and work it like an implementer.
+  lead: [...COMMON, 'set_estimate', 'create_task', 'list_tasks', 'cancel_run', ...WORKER],
   'spec-writer': [...COMMON, ...WORKER],
   implementer: [...COMMON, ...WORKER],
   ui: [...COMMON, ...WORKER],

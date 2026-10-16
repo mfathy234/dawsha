@@ -235,3 +235,5 @@
   .orch-dash { grid-template-columns: minmax(0, 1fr); }
   .orch-side { grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); }
 }
+
+.orch-run-estimate { margin: var(--orch-space-2) 0 0; font-size: 13px; line-height: 1.5; }

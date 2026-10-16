@@ -42,8 +42,12 @@ test('the lead asks while planning, the human replies in Human review, and the r
       const snapshot = await page.evaluate(() => window.gridApi.orchSnapshot())
       return snapshot.runs[0]?.tasks.map((t) => `${t.role}:${t.title}`)
     }, { timeout: 30_000 }).toEqual(expect.arrayContaining(['implementer:Do it: A new key, defaulting to main']))
-    // The lead's pane plus at least the implementer's (its review may already have started too).
-    await expect.poll(() => page.locator('.pane').count(), { timeout: 20_000 }).toBeGreaterThanOrEqual(2)
+    // The implementer does it and, with nothing left to do, its pane closes; the lead's stays.
+    await expect.poll(async () => {
+      const snapshot = await page.evaluate(() => window.gridApi.orchSnapshot())
+      return snapshot.runs[0]?.tasks.find((t) => t.role === 'implementer')?.status
+    }, { timeout: 30_000 }).toBe('approved')
+    await expect(page.locator('.pane')).toHaveCount(1, { timeout: 15_000 })
   } finally {
     await closeApp(app)
   }

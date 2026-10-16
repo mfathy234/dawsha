@@ -3,6 +3,7 @@ import { ORCH_ROLES } from './types'
 type PropSchema =
   | { type: 'string'; description: string; enum?: readonly string[] }
   | { type: 'number'; description: string }
+  | { type: 'boolean'; description: string }
   | { type: 'array'; description: string; items: { type: 'string' } }
 
 export interface ToolSchema {
@@ -13,6 +14,7 @@ export interface ToolSchema {
 
 const str = (description: string, values?: readonly string[]): PropSchema =>
   values ? { type: 'string', description, enum: values } : { type: 'string', description }
+const bool = (description: string): PropSchema => ({ type: 'boolean', description })
 const list = (description: string): PropSchema => ({ type: 'array', description, items: { type: 'string' } })
 const tool = (name: string, description: string, properties: Record<string, PropSchema> = {}, required: string[] = []): ToolSchema => ({
   name,
@@ -24,13 +26,22 @@ const tool = (name: string, description: string, properties: Record<string, Prop
 export const TOOL_SCHEMAS: readonly ToolSchema[] = [
   tool('whoami', 'Your agent id, role, current task, and the run: its title, the full story the human wrote and the project path. Call this first.'),
   tool('list_agents', 'Everyone working on this run, with role, model and current task.'),
-  tool('create_task', 'Lead only. Add a task to this run. Dawsha opens an agent for it when its dependencies are approved.', {
+  tool('create_task', 'Lead only. Add a task to this run. With self: true you do it yourself; otherwise another agent is started for it once its dependencies are approved.', {
     title: str('Short imperative title.'),
     spec: str('Everything the agent needs: what to change, where, and constraints.'),
-    role: str('Which role does it.', ORCH_ROLES),
+    role: str('Which role does it (ignored with self: true). Reviews are not tasks: set review instead.', ORCH_ROLES),
+    self: bool('Do this task yourself in your own working folder, without starting another agent. Use it for small and medium changes.'),
+    review: bool('Have a code reviewer check the work before it counts as done. Only for large or risky changes.'),
     depends_on: list('Task keys (e.g. T-2) that must be approved first.'),
     acceptance: list('Testable acceptance criteria.')
   }, ['title', 'spec', 'role']),
+  tool('set_estimate', 'Lead only. Call first, before creating tasks: how big the work is and why. small and medium: you do it yourself; large: a team.', {
+    size: str('small, medium or large.', ['small', 'medium', 'large']),
+    reason: str('One sentence: what changes, roughly how many files and areas.')
+  }, ['size', 'reason']),
+  tool('cancel_run', 'Lead only. Cancel this whole run, for example when the human says so. All agents stop.', {
+    reason: str('Why the run is cancelled.')
+  }, ['reason']),
   tool('list_tasks', 'Lead only. All tasks in this run with status and assignee.', {
     status: str('Only tasks with this status.')
   }),

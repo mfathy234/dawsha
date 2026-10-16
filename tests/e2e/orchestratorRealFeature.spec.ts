@@ -88,9 +88,9 @@ test('real feature run: the lead reads the full story and uses a small team', as
     expect(finalState, `the run did not reach merge; last state: ${last}`).not.toBeNull()
     const run = finalState!.runs[0]
     expect(run.title.endsWith('…')).toBe(true)
-    // A small, clear change: the lead, an implementer and its reviewer; no spec writer, UI, UX or tester.
-    expect(run.agents.length).toBeLessThanOrEqual(3)
-    expect(run.tasks.map((t) => t.role).sort()).toEqual(['code-reviewer', 'implementer'])
+    // A small, clear change: the lead sizes it and does it itself. One agent, no reviewer.
+    expect(run.agents).toHaveLength(1)
+    expect(run.tasks.map((t) => t.role)).toEqual(['lead'])
     const short = run.id.replace(/^run_/, '').slice(0, 8)
     const source = git(repo, 'show', `orch/${short}/run:src/price.js`)
     expect(source).toMatch(/toFixed\(2\)|Intl\.NumberFormat/)

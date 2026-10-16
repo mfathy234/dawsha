@@ -262,7 +262,7 @@ export class OrchPaneBridge {
       }
       if (service.unreadCount(agent.id) > 0 && now - watched.lastNudgeAt >= NUDGE_EVERY_MS) {
         watched.lastNudgeAt = now
-        this.type(tabId, 'Dawsha: you have new messages. Call fetch_inbox, then continue your task.')
+        this.type(tabId, 'You have new messages. Call fetch_inbox, then continue your task.')
         continue
       }
       this.checkSilence(tabId, watched, agent, quietFor)
@@ -276,7 +276,7 @@ export class OrchPaneBridge {
     if (!watched.quietNudged) {
       watched.quietNudged = true
       watched.lastOutputAt = this.now() - limit / 2
-      this.type(tabId, 'Dawsha: are you still working? If you are done, call complete_task; if you are stuck, call ask_human.')
+      this.type(tabId, 'Are you still working? If you are done, call complete_task; if you are stuck, call ask_human.')
       return
     }
     this.stall(watched, `No output for ${Math.round(quietFor / 60_000)} minutes`)

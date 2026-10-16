@@ -1,6 +1,6 @@
 import { REVIEWER_FOR } from '../../shared/orch/roles'
 import { isFinal, pauseTask } from '../../shared/orch/taskMachine'
-import type { OrchAgent, OrchRole, OrchTask, TaskStatus } from '../../shared/orch/types'
+import type { EstimateSize, OrchAgent, OrchRole, OrchTask, TaskStatus } from '../../shared/orch/types'
 import {
   IN_REVIEW,
   MAX_OPEN_DECISIONS_PER_AGENT,
@@ -24,6 +24,8 @@ export function createToolHandlers(ctx: OrchContext): Record<string, ToolHandler
     whoami: (me) => whoami(ctx, me),
     list_agents: (me) => listAgents(ctx, me),
     create_task: (me, args) => createTask(ctx, me, args),
+    cancel_run: (me, args) => cancelRun(ctx, me, args),
+    set_estimate: (me, args) => setEstimate(ctx, me, args),
     list_tasks: (me, args) => ctx.store.listTasks({ runId: me.runId, status: (str(args.status) || undefined) as TaskStatus | undefined }),
     get_my_task: (me) => getMyTask(ctx, me),
     update_task: (me, args) => updateTask(ctx, me, args),
@@ -62,17 +64,45 @@ function createTask(ctx: OrchContext, me: OrchAgent, args: Args): OrchTask {
   if (ctx.store.nextTaskNumber(me.runId) > MAX_TASKS_PER_RUN) {
     throw new OrchToolError(`This run already has ${MAX_TASKS_PER_RUN} tasks. Ask the human before adding more.`)
   }
+  const self = args.self === true
+  const role = (self ? 'lead' : str(args.role)) as OrchRole
+  if (role === 'code-reviewer' || role === 'ux-reviewer') {
+    throw new OrchToolError('Reviews are not separate tasks. Set review: true on the task whose work should be reviewed.')
+  }
   const dependsOn = strList(args.depends_on)
   for (const key of dependsOn) ctx.task(key, me.runId)
   const task = ctx.newTask(me.runId, {
     title: str(args.title),
     spec: str(args.spec),
-    role: str(args.role) as OrchRole,
+    role,
     dependsOn,
-    acceptance: strList(args.acceptance)
+    acceptance: strList(args.acceptance),
+    review: args.review === true
   })
-  ctx.log(me.runId, 'task', `${task.key} created for ${task.role}: ${task.title}`, task.id)
-  return task
+  if (!self) {
+    ctx.log(me.runId, 'task', `${task.key} created for ${task.role}: ${task.title}`, task.id)
+    return task
+  }
+  // The lead does it itself, in its own folder on the run branch: no other agent starts for it.
+  const mine = ctx.save({ ...ctx.move(task, 'in_progress'), assignee: me.id })
+  ctx.store.putAgent({ ...me, taskId: mine.id })
+  ctx.log(me.runId, 'task', `${task.key} taken by the lead: ${task.title}`, task.id)
+  return mine
+}
+
+function setEstimate(ctx: OrchContext, me: OrchAgent, args: Args): unknown {
+  const run = ctx.store.getRun(me.runId)
+  if (!run) throw new OrchToolError('This run no longer exists.')
+  const estimate = { size: str(args.size) as EstimateSize, reason: str(args.reason) }
+  ctx.store.putRun({ ...run, estimate })
+  const team = estimate.size === 'large' ? 'a team' : 'the lead alone'
+  ctx.log(me.runId, 'plan', `Estimate: ${estimate.size}, done by ${team}. ${estimate.reason}`, null)
+  return { ok: true, next: estimate.size === 'large' ? 'Create tasks for the team.' : 'Create one task with self: true and do it yourself.' }
+}
+
+function cancelRun(ctx: OrchContext, me: OrchAgent, args: Args): unknown {
+  ctx.finishRun(me.runId, 'cancelled', `The lead cancelled the run: ${str(args.reason)}`)
+  return { status: 'cancelled' }
 }
 
 function getMyTask(ctx: OrchContext, me: OrchAgent): unknown {
@@ -110,7 +140,8 @@ function completeTask(ctx: OrchContext, me: OrchAgent, args: Args): unknown {
     branch: str(args.branch) || task.branch,
     feedback: null
   }
-  const reviewer = REVIEWER_FOR[task.role]
+  // Reviews only happen when the lead asked for one on this task.
+  const reviewer = task.review ? REVIEWER_FOR[task.role] ?? 'code-reviewer' : undefined
   if (reviewer) return sendToReview(ctx, me, done, reviewer)
   if (task.role === 'spec-writer') return sendSpecToHuman(ctx, me, done)
   ctx.move(done, 'approved')

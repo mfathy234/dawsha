@@ -85,7 +85,7 @@ describe('orchestrator dispatcher', () => {
     expect(written[0]).toMatch(/claude-mcp\.json$/)
   })
 
-  it('starts a feature with the lead alone, and a small change gets one implementer and its reviewer', async () => {
+  it('a larger change: the lead hands a task to an implementer and asks for its review', async () => {
     const { svc, dispatcher, panes, merges, closed } = setup()
     const run = svc.startRun({ projectPath: 'C:/work/app', title: 'Hide server field', story: 'Hide one field.', plan: 'default' })
     expect(svc.tasks(run.id)).toEqual([])
@@ -94,9 +94,9 @@ describe('orchestrator dispatcher', () => {
     expect(svc.run(run.id)?.stage).toBe('plan')
     expect(panes.map((p) => p.title)).toEqual(['Lead · opus'])
     expect(panes[0].folder).toBe(`C:/wt/${run.id}`)
-    expect(panes[0].prompt).toMatch(/smallest team/i)
+    expect(panes[0].prompt).toMatch(/set_estimate/)
     const lead = agentOf(svc, panes[0])
-    svc.call(lead, 'create_task', { title: 'Hide the field', spec: 's', role: 'implementer' })
+    svc.call(lead, 'create_task', { title: 'Hide the field', spec: 's', role: 'implementer', review: true })
 
     await dispatcher.tick()
     expect(svc.run(run.id)?.stage).toBe('build')
@@ -124,6 +124,52 @@ describe('orchestrator dispatcher', () => {
     expect(svc.agents(run.id).every((a) => a.retiredAt)).toBe(true)
     // The finished agents' panes close with the run.
     expect([...closed].sort()).toEqual(panes.map((p) => p.agentId).sort())
+  })
+
+  it('a small change: the lead does it itself, one agent and no review', async () => {
+    const { svc, dispatcher, panes, merges } = setup()
+    const run = svc.startRun({ projectPath: 'C:/work/app', title: 'Hide server field', story: 'Hide one field.', plan: 'default' })
+    await dispatcher.tick()
+    const lead = agentOf(svc, panes[0])
+    expect(svc.call(lead, 'create_task', { title: 'Hide the field', spec: 's', role: 'implementer', self: true })).toMatchObject({ key: 'T-1', role: 'lead', status: 'in_progress', assignee: lead.id })
+    await dispatcher.tick()
+    expect(svc.run(run.id)?.stage).toBe('build')
+    expect(panes).toHaveLength(1)
+    expect(svc.call(lead, 'get_my_task', {})).toMatchObject({ key: 'T-1' })
+    expect(svc.call(lead, 'complete_task', { summary: 'hidden' })).toEqual({ status: 'approved' })
+    await dispatcher.tick()
+    // The lead worked on the run branch itself: nothing to merge, no reviewer, straight to the human.
+    expect(merges).toEqual([])
+    expect(svc.run(run.id)?.stage).toBe('merge')
+    expect(svc.agents(run.id)).toHaveLength(1)
+  })
+
+  it('reviews nothing unless the lead asks, never lets the lead add review tasks, and closes finished agents', async () => {
+    const { svc, dispatcher, panes, closed } = setup()
+    const run = svc.startRun({ projectPath: 'C:/work/app', title: 'Two parts', story: 's', plan: 'default' })
+    await dispatcher.tick()
+    const lead = agentOf(svc, panes[0])
+    expect(() => svc.call(lead, 'create_task', { title: 'Review it all', spec: 's', role: 'code-reviewer' })).toThrow(/review/i)
+    svc.call(lead, 'create_task', { title: 'Backend', spec: 's', role: 'implementer' })
+    await dispatcher.tick()
+    const impl = agentOf(svc, panes[1])
+    svc.call(impl, 'get_my_task', {})
+    expect(svc.call(impl, 'complete_task', { summary: 'done' })).toEqual({ status: 'approved' })
+    await dispatcher.tick()
+    expect(svc.tasks(run.id).map((t) => t.role)).toEqual(['implementer'])
+    // Its work is merged and it has nothing left: its pane closes, the lead's stays.
+    expect(closed).toEqual([impl.id])
+    expect(svc.agent(impl.id)?.retiredAt).not.toBeNull()
+    expect(svc.agent(lead.id)?.retiredAt).toBeNull()
+  })
+
+  it('lets the lead cancel the run when the human says so', async () => {
+    const { svc, dispatcher, panes } = setup()
+    const run = svc.startRun({ projectPath: 'C:/work/app', title: 'Wrong project', story: 's', plan: 'default' })
+    await dispatcher.tick()
+    const lead = agentOf(svc, panes[0])
+    svc.call(lead, 'cancel_run', { reason: 'The human said this run is on the wrong project.' })
+    expect(svc.run(run.id)?.stage).toBe('cancelled')
   })
 
   it('writes a spec only when the lead asks for one, holds other work until it is approved, then tells the lead', async () => {

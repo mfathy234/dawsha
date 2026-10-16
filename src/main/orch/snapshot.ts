@@ -37,6 +37,7 @@ export function runDetail(service: OrchService, run: OrchRun, open: readonly Orc
   const events = service.events(run.id)
   return {
     imported: run.imported,
+    estimate: run.estimate ?? null,
     decisions: service.decisions(run.id),
     id: run.id,
     kind: run.kind,

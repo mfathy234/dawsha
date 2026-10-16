@@ -367,7 +367,8 @@ function keepClosedTabs(pane: PaneState, tabs: TermState[]): void {
   const view = derivePanes(state).find((item) => item.pane.id === pane.id)
   const matches = matchAll(state)
   const additions: KeptSession[] = tabs.flatMap((tab) => {
-    if (tab.agent === 'shell' || !state.settings.projects.some((project) => project.id === pane.projectId)) return []
+    // Orchestrator agents are not sessions to come back to: they stay out of the sidebar's closed sessions.
+    if (tab.agent === 'shell' || tab.orchAgentId || !state.settings.projects.some((project) => project.id === pane.projectId)) return []
     const sessionId = tab.sessionId || (tab.agent === 'claude' ? matches.claude.get(tab.id)?.sessionId
       : tab.agent === 'codex' ? matches.codex.get(tab.id)?.sessionId
       : matches.gemini.get(tab.id)?.sessionId)

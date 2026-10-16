@@ -41,13 +41,14 @@ const runCheck = object({
   id, kind: oneOf(['bug', 'feature']), projectPath: str, title: str, story: str, plan: str,
   stage: oneOf(['spec', 'plan', 'build', 'review', 'merge', 'done', 'cancelled']), createdAt: timestamp, finishedAt: nullable(timestamp),
   projectId: optional(nullable(id)), specApproval: optional(bool), fixerProfileId: optional(nullable(id)),
+  estimate: optional(nullable(object({ size: oneOf(['small', 'medium', 'large']), reason: str }))),
   imported: optional(object({ at: timestamp, from: str }))
 })
 const taskCheck = object({
   id, key: id, runId: id, title: str, spec: str, role, status, dependsOn: list(id), acceptance: list(str),
   reviewOf: nullable(id), reviewRound: integer, assignee: nullable(id), summary: nullable(str), files: list(str),
   branch: nullable(str), feedback: nullable(str), pausedFrom: nullable(status), createdAt: timestamp, updatedAt: timestamp,
-  attempts: optional(integer), mergedAt: optional(nullable(timestamp))
+  attempts: optional(integer), mergedAt: optional(nullable(timestamp)), review: optional(bool)
 })
 const agentCheck = object({
   id, runId: id, role, runner: str, model: str, taskId: nullable(id), createdAt: timestamp,

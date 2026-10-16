@@ -82,6 +82,7 @@ export class Dispatcher {
     this.forgetAnswered(run)
     await this.continueElsewhere(run)
     await this.mergeApproved(run)
+    this.retireFinishedAgents(run)
     if (this.finishIfAnswered(run)) return
     const tasks = this.deps.service.tasks(run.id)
     const plan = this.planOf(run)
@@ -96,7 +97,8 @@ export class Dispatcher {
       const fresh = this.deps.service.run(run.id)
       return fresh ? this.advance(fresh) : undefined
     }
-    if (run.stage === 'plan' && !specPending && tasks.some((t) => !RUN_BRANCH_ROLES.includes(t.role))) this.deps.service.setStage(run.id, 'build')
+    // Building starts with the first piece of work: another agent's task, or one the lead took itself.
+    if (run.stage === 'plan' && !specPending && tasks.some((t) => t.role !== 'spec-writer')) this.deps.service.setStage(run.id, 'build')
     if (this.allDone(run, tasks)) {
       this.deps.service.setStage(run.id, 'merge')
       this.deps.service.raiseDecision(run.id, 'run-complete', {
@@ -184,8 +186,25 @@ export class Dispatcher {
   private async folderFor(run: OrchRun, role: OrchRole, task: OrchTask | null): Promise<OrchWorktree> {
     const { worktrees } = this.deps
     if (!task || RUN_BRANCH_ROLES.includes(role)) return worktrees.runWorktree(run.projectPath, run.id)
-    // Reviewers look at the work in the worktree of the task they review.
+    // Reviewers look at the work where it was done: the task's worktree, or the run branch for the lead's own work.
+    const reviewed = task.reviewOf ? this.deps.service.tasks(run.id).find((t) => t.key === task.reviewOf) : undefined
+    if (reviewed && RUN_BRANCH_ROLES.includes(reviewed.role)) return worktrees.runWorktree(run.projectPath, run.id)
     return worktrees.createTaskWorktree(run.projectPath, run.id, task.reviewOf ?? task.key)
+  }
+
+  /**
+   * An agent other than the lead whose tasks are all finished (and merged) has nothing left to do: retire it and
+   * close its pane now, so idle agents do not keep running (and costing) until the end of the run.
+   */
+  private retireFinishedAgents(run: OrchRun): void {
+    const { service } = this.deps
+    const tasks = service.tasks(run.id)
+    for (const agent of service.agents(run.id).filter((a) => !a.retiredAt && a.role !== 'lead')) {
+      const own = tasks.filter((t) => t.assignee === agent.id)
+      if (own.length === 0 || !own.every((t) => isFinal(t.status) && (!this.needsMerge(t) || t.mergedAt))) continue
+      service.releaseAgent(agent.id, 'Its task is done')
+      this.deps.closePane(agent.id)
+    }
   }
 
   /** Registers an agent for the task (or the lead with none), prepares its launch and asks for a pane. */
