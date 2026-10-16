@@ -2,6 +2,7 @@
 .work-view .usage-head { flex-wrap: wrap; }
 .work-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
 .work-search { position: relative; flex: 1 1 240px; max-width: 480px; }
+.work-filters > .select-menu { flex: 0 0 240px; width: 240px; }
 .work-search .text-input { width: 100%; padding-right: 38px; }
 .work-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
 .work-search-clear { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); padding: 4px 8px; }
