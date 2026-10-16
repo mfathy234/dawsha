@@ -158,3 +158,20 @@ test('fix a bug from the Orchestrator view and finish it in Human review', async
     await closeApp(app)
   }
 })
+
+test('toasts keep the newest three and dismiss info before errors', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    await app.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      for (const [message, ok] of [['old info', true], ['persistent error', false], ['new info', true], ['newest info', true]] as const) {
+        window.webContents.send('cli:notice', message, ok)
+      }
+    })
+    await expect(page.locator('.toast')).toHaveText(['persistent error', 'new info', 'newest info'])
+    await expect(page.locator('.toast.info')).toHaveCount(0, { timeout: 5000 })
+    await expect(page.locator('.toast.error')).toHaveText('persistent error')
+    await page.locator('.toast.error').click()
+    await expect(page.locator('.toast')).toHaveCount(0)
+  } finally { await closeApp(app) }
+})

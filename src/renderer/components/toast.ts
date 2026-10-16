@@ -1,6 +1,8 @@
 import { h } from '../dom'
 
-const DURATION_MS = 7000
+const ERROR_DURATION_MS = 7000
+const INFO_DURATION_MS = 4000
+const MAX_TOASTS = 3
 
 let region: HTMLElement | null = null
 
@@ -15,6 +17,8 @@ export function toast(message: string, kind: 'error' | 'info' = 'error'): void {
   const item = h('div', { class: `toast ${kind}` }, message)
   const dismiss = (): void => item.remove()
   item.addEventListener('click', dismiss)
-  ensureRegion().appendChild(item)
-  setTimeout(dismiss, DURATION_MS)
+  const stack = ensureRegion()
+  stack.appendChild(item)
+  while (stack.childElementCount > MAX_TOASTS) stack.firstElementChild?.remove()
+  setTimeout(dismiss, kind === 'info' ? INFO_DURATION_MS : ERROR_DURATION_MS)
 }
