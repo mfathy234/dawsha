@@ -143,7 +143,14 @@ export class OrchRunView {
       { class: 'orch-stages', 'aria-label': 'Stages' },
       ...stages.map((stage, i) => {
         const state = finished || i < at ? 'done' : i === at && run.stage !== 'cancelled' ? 'now' : 'todo'
-        return h('li', { class: `orch-stage ${state}`, 'aria-current': state === 'now' ? 'step' : undefined }, h('i', {}, state === 'done' ? '✓' : String(i + 1)), stage.label)
+        const status = state === 'now' ? 'current' : state === 'done' ? 'done' : 'upcoming'
+        return h(
+          'li',
+          { class: `orch-stage ${state}`, 'aria-current': state === 'now' ? 'step' : undefined },
+          h('i', { 'aria-hidden': 'true' }),
+          stage.label,
+          h('span', { class: 'sr-only' }, ` (${status})`)
+        )
       }),
       run.stage === 'cancelled' ? h('li', { class: 'orch-stage cancelled' }, 'Cancelled') : null
     )

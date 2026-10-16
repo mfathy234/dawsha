@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
+import type { OrchRunDetail } from '../../src/shared/orch/api'
 import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
 
 const FAKE_ORCH = resolve(__dirname, '../support/fakeOrchAgent.cjs')
@@ -11,6 +12,60 @@ const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', ['-c', 'core.autocrlf=false', '-c', 'user.name=Test User', '-c', 'user.email=test@example.invalid', ...args], { cwd, encoding: 'utf8' }).trim()
 
 const shot = (page: Page, name: string): Promise<Buffer> => page.screenshot({ path: join(SCREENS, `orch-${name}.png`) })
+
+for (const theme of ['dawsha-night', 'dawsha-daylight']) {
+  test(`run stages show accessible progress and wrap without controls in ${theme}`, async () => {
+    const sandbox = createSandbox()
+    writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({
+      version: 2, lastSeenVersion: APP_VERSION, onboardingDismissed: true,
+      theme: { id: theme }, experimental: { orchestrator: true }
+    }))
+    const { app, page } = await launchApp(sandbox)
+    // Supply run states at the IPC boundary; render the real dashboard and theme CSS.
+    const publish = async (kind: OrchRunDetail['kind'], stage: OrchRunDetail['stage']): Promise<void> => {
+      const run: OrchRunDetail = {
+        id: 'stage-track', kind, stage, title: 'Progress track', projectId: null,
+        createdAt: 1, taskCount: 0, tasksDone: 0, openDecisions: 0,
+        story: '', plan: 'Budget', projectPath: '', finishedAt: null, branch: '',
+        tasks: [], agents: [], events: [],
+        usage: { agents: [], byRole: [], total: { inputTokens: 0, outputTokens: 0,
+          cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 0, costUsd: 0, complete: true } }
+      }
+      await app.evaluate(({ ipcMain, webContents }, value) => {
+        ipcMain.removeHandler('orch:snapshot')
+        ipcMain.handle('orch:snapshot', () => ({
+          status: { enabled: true, running: true, error: null }, runs: [value], decisions: []
+        }))
+        for (const contents of webContents.getAllWebContents()) contents.send('orch:changed')
+      }, run)
+    }
+    try {
+      await publish('bug', 'build')
+      await page.locator('#orchestrator-button').click()
+      await page.getByRole('button', { name: 'Open', exact: true }).click()
+      const track = page.getByRole('list', { name: 'Stages', exact: true })
+      const items = track.locator('li:not(.cancelled)')
+      for (const kind of ['bug', 'feature'] as const) {
+        const labels = kind === 'bug' ? ['Build', 'Merge', 'Done'] : ['Spec', 'Plan', 'Build', 'Merge', 'Done']
+        const stages = kind === 'bug' ? ['build', 'review', 'merge', 'done', 'cancelled'] as const
+          : ['spec', 'plan', 'build', 'review', 'merge', 'done', 'cancelled'] as const
+        for (const stage of stages) {
+          await publish(kind, stage)
+          const at = labels.indexOf(stage === 'review' ? 'Build' : stage[0].toUpperCase() + stage.slice(1))
+          const states = labels.map((_, i) => stage === 'done' ? 'done' : i < at ? 'done' : i === at ? 'current' : 'upcoming')
+          await expect(items).toHaveText(labels.map((label, i) => `${label} (${states[i]})`))
+          await expect(track.locator('[aria-current="step"]')).toHaveCount(stage === 'done' || stage === 'cancelled' ? 0 : 1)
+          await expect(track.locator('button, a, [tabindex]')).toHaveCount(0)
+        }
+        await publish(kind, 'merge')
+        await expect(track.locator('[aria-current="step"]')).toContainText('Merge')
+        await page.setViewportSize({ width: 1440, height: 900 })
+        mkdirSync(SCREENS, { recursive: true })
+        await shot(page, `stage-track-${kind}-${theme}`)
+      }
+    } finally { await closeApp(app) }
+  })
+}
 
 test('Settings → Orchestrator edits plans and profiles, and the view works in a light theme', async () => {
   test.setTimeout(60_000)
