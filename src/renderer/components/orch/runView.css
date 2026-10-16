@@ -123,13 +123,13 @@
 
 .orch-dash {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(440px, 1fr);
+  grid-template-columns: minmax(0, 1.8fr) minmax(360px, 1fr);
   gap: var(--orch-space-5);
   align-items: start;
 }
 
 .orch-tasks { overflow-x: auto; }
-.orch-tasks .orch-board { grid-template-columns: repeat(5, minmax(110px, 1fr)); padding: var(--orch-panel-padding); }
+.orch-tasks .orch-board { grid-template-columns: repeat(5, minmax(150px, 1fr)); padding: var(--orch-panel-padding); }
 .orch-side { display: grid; gap: var(--orch-space-5); min-width: 0; align-content: start; }
 .orch-panel-hint { color: var(--muted); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; }
 
@@ -231,6 +231,7 @@
   font-size: 12px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1700px) {
   .orch-dash { grid-template-columns: minmax(0, 1fr); }
+  .orch-side { grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); }
 }

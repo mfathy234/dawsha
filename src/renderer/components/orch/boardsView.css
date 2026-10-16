@@ -119,6 +119,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .orch-col.needs .orch-col-head { color: var(--busy); }
@@ -177,11 +178,10 @@
 .orch-card-role { color: var(--muted); }
 
 .orch-card-meta .orch-model {
-  flex: 0 0 100%;
-  white-space: normal;
-  overflow: visible;
-  overflow-wrap: anywhere;
-  text-overflow: clip;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .orch-chip {
