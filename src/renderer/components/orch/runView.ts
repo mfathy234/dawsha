@@ -73,7 +73,10 @@ export class OrchRunView {
 
   private render(run: OrchRunDetail, state: AppState): void {
     clear(this.el)
-    this.el.append(this.switcher(run, state), this.header(run), this.story(run), this.dashboard(run, state))
+    this.el.append(this.switcher(run, state), this.header(run))
+    const story = this.story(run)
+    if (story) this.el.append(story)
+    this.el.append(this.dashboard(run, state))
     if (run.kind === 'feature') {
       const open = state.orch?.decisions.some((d) => d.runId === run.id && d.kind === 'spec-approval')
       const link = h('button', { class: open ? 'btn primary' : 'btn', type: 'button', onClick: () => showOrch('spec', run.id) }, open ? 'Review spec' : 'Spec')
@@ -156,8 +159,13 @@ export class OrchRunView {
     )
   }
 
-  private story(run: OrchRunDetail): HTMLElement {
-    const details = h('details', { class: 'orch-panel orch-story' }, h('summary', { class: 'orch-panel-title' }, 'Story'), h('p', { class: 'orch-story-text' }, run.story || 'No story.'))
+  private story(run: OrchRunDetail): HTMLElement | null {
+    if (!run.story.trim()) return null
+    const details = h('details', { class: 'orch-panel orch-story' },
+      h('summary', { class: 'orch-panel-title' },
+        h('span', { class: 'orch-story-chevron', 'aria-hidden': 'true' }, '›'),
+        'Story', h('span', { class: 'orch-story-preview' }, run.story)),
+      h('p', { class: 'orch-story-text' }, run.story))
     details.open = this.storyOpen
     details.addEventListener('toggle', () => (this.storyOpen = details.open))
     return details

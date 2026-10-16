@@ -183,6 +183,20 @@ test('fix a bug from the Orchestrator view and finish it in Human review', async
     await expect(page.locator('.orch-view')).toBeVisible()
     await expect(page.locator('.orch-view')).toContainText('Export crashes on an empty range')
     await expect(page.locator('#orchestrator-button .orch-badge')).toHaveText('1', { timeout: 60_000 })
+    const story = page.locator('.orch-story')
+    await expect(story.locator('summary')).toContainText('The export button crashes when the range is empty.')
+    await expect(story).not.toHaveAttribute('open', '')
+    await story.locator('summary').click()
+    await expect(story.locator('.orch-story-text')).toBeVisible()
+    await story.locator('summary').click()
+    await expect(page.locator('.orch-ev time').first()).toHaveCSS('white-space', 'nowrap')
+    expect(await page.locator('.orch-card .orch-model').first().evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await page.setViewportSize({ width: 1050, height: 900 })
+    const board = await page.locator('.orch-tasks').boundingBox()
+    const side = await page.locator('.orch-side').boundingBox()
+    expect(side!.y).toBeGreaterThanOrEqual(board!.y + board!.height)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect(page.locator('.orch-card').first()).toBeInViewport()
     await shot(page, 'run-dashboard')
 
     await page.locator('#orch-tab-runs').click()
@@ -204,23 +218,6 @@ test('fix a bug from the Orchestrator view and finish it in Human review', async
   } finally {
     await closeApp(app)
   }
-})
-
-test('toasts keep the newest three and dismiss info before errors', async () => {
-  const { app, page } = await launchApp(createSandbox())
-  try {
-    await app.evaluate(({ BrowserWindow }) => {
-      const window = BrowserWindow.getAllWindows()[0]
-      for (const [message, ok] of [['old info', true], ['persistent error', false], ['new info', true], ['newest info', true]] as const) {
-        window.webContents.send('cli:notice', message, ok)
-      }
-    })
-    await expect(page.locator('.toast')).toHaveText(['persistent error', 'new info', 'newest info'])
-    await expect(page.locator('.toast.info')).toHaveCount(0, { timeout: 5000 })
-    await expect(page.locator('.toast.error')).toHaveText('persistent error')
-    await page.locator('.toast.error').click()
-    await expect(page.locator('.toast')).toHaveCount(0)
-  } finally { await closeApp(app) }
 })
 
 test('orchestrator gives text room and respects motion preferences in both themes', async () => {
@@ -253,5 +250,70 @@ test('orchestrator gives text room and respects motion preferences in both theme
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await expect(page.locator('.orch-history')).toHaveCSS('animation-name', 'none')
     }
+  } finally { await closeApp(app) }
+})
+
+test('toasts keep the newest three and dismiss info before errors', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') })
+    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'))
+    await app.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      for (const [message, ok] of [['old info', true], ['persistent error', false], ['new info', true], ['newest info', true]] as const) {
+        window.webContents.send('cli:notice', message, ok)
+      }
+    })
+    await expect(page.locator('.toast')).toHaveText(['persistent error', 'new info', 'newest info'])
+    await page.clock.fastForward(3999)
+    await expect(page.locator('.toast.info')).toHaveCount(2)
+    await page.clock.fastForward(1)
+    await expect(page.locator('.toast.info')).toHaveCount(0)
+    await expect(page.locator('.toast.error')).toHaveText('persistent error')
+    await page.clock.fastForward(3000)
+    await expect(page.locator('.toast')).toHaveCount(0)
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('cli:notice', 'Dismiss me', true))
+    await page.locator('.toast').click()
+    await expect(page.locator('.toast')).toHaveCount(0)
+  } finally { await closeApp(app) }
+})
+
+test('empty stories are hidden and long stories have a collapsed preview', async () => {
+  const sandbox = createSandbox()
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({
+    version: 2, lastSeenVersion: APP_VERSION, onboardingDismissed: true, experimental: { orchestrator: true }
+  }))
+  const { app, page } = await launchApp(sandbox)
+  const publish = async (story: string): Promise<void> => {
+    const run: OrchRunDetail = {
+      id: 'story-preview', kind: 'bug', stage: 'done', title: 'Story preview', projectId: null,
+      createdAt: 1, taskCount: 0, tasksDone: 0, openDecisions: 0,
+      story, plan: 'Budget', projectPath: '', finishedAt: 2, branch: '', tasks: [], agents: [], events: [],
+      usage: { agents: [], byRole: [], total: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0,
+        cacheWriteTokens: 0, totalTokens: 0, costUsd: 0, complete: true } }
+    }
+    await app.evaluate(({ ipcMain, webContents }, value) => {
+      ipcMain.removeHandler('orch:snapshot')
+      ipcMain.handle('orch:snapshot', () => ({ status: { enabled: true, running: true, error: null }, runs: [value], decisions: [] }))
+      for (const contents of webContents.getAllWebContents()) contents.send('orch:changed')
+    }, run)
+  }
+  try {
+    await publish('   ')
+    await page.locator('#orchestrator-button').click()
+    await page.locator('.runs-finished summary').click()
+    await page.getByRole('button', { name: 'Open', exact: true }).click()
+    await expect(page.locator('.orch-run-title')).toHaveText('Story preview')
+    await expect(page.locator('.orch-story')).toHaveCount(0)
+    const text = 'A long story with <untrusted markup> and details. '.repeat(30)
+    await publish(text)
+    const preview = page.locator('.orch-story-preview')
+    await expect(preview).toHaveText(text.trim())
+    await expect(preview).toHaveCSS('text-overflow', 'ellipsis')
+    await expect(preview).toHaveCSS('white-space', 'nowrap')
+    await page.locator('.orch-story summary').click()
+    await expect(preview).toBeHidden()
+    await expect(page.locator('.orch-story-text')).toHaveText(text.trim())
+    await expect(page.locator('.orch-story-text')).toBeVisible()
   } finally { await closeApp(app) }
 })
