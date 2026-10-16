@@ -11,6 +11,31 @@ vi.mock('../../src/main/orch/worktrees', async (original) => ({
 }))
 
 describe('runtime spec snapshots', () => {
+  it('retries the same approval after invalid files are repaired', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'orch-spec-retry-'))
+    const log = vi.fn()
+    const rt = new OrchRuntime({
+      dbPath: join(root, 'orchestrator.db'), configRoot: join(root, 'orchestrator', 'agents'),
+      version: '1', log, settings: defaultOrchSettings, projectFolder: () => root,
+      writePty: vi.fn(), openPane: vi.fn(), closePane: vi.fn(), changed: vi.fn()
+    })
+    await rt.start()
+    try {
+      const svc = rt.service!
+      const run = svc.createRun({ projectPath: root, title: 'CSV', story: 'Export', plan: 'default' })
+      const files = join(root, '.dawsha', 'runs', run.id)
+      await mkdir(files, { recursive: true })
+      await writeFile(join(files, 'spec.md'), Buffer.alloc(512 * 1024 + 1))
+      const decision = svc.raiseDecision(run.id, 'spec-approval', { question: 'Approve?', options: [], context: '', taskId: null })
+      await expect(rt.spec(run.id)).rejects.toThrow(/saved/)
+      expect(log.mock.calls.flat().join(' ')).toContain('size limit')
+      await writeFile(join(files, 'spec.md'), '# Repaired')
+      const view = await rt.spec(run.id)
+      expect(view?.current.spec).toBe('# Repaired')
+      expect(view?.versions).toEqual([expect.objectContaining({ version: 1, decisionId: decision.id })])
+      expect(svc.openDecisions()[0].id).toBe(decision.id)
+    } finally { await rt.stop() }
+  })
   it('captures each approval once, retains old content and pairs answers across restart', async () => {
     const root = await mkdtemp(join(tmpdir(), 'orch-spec-runtime-'))
     const deps = {

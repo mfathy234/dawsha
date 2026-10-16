@@ -198,7 +198,13 @@ export class OrchRuntime {
   async spec(runId: string): Promise<OrchSpecView | null> {
     await this.specQueue
     if (!this.service?.run(runId)) return null
-    if (this.specErrors.has(runId)) throw new Error('The spec could not be saved. Check its files and try again with a revised spec.')
+    if (this.specErrors.has(runId)) {
+      // Retry only on a reader's request, never on change notifications alone.
+      for (const d of this.service.openDecisions().filter((d) => d.runId === runId && d.kind === 'spec-approval')) this.specSeen.delete(d.id)
+      this.captureSpecs(this.service)
+      await this.specQueue
+      if (this.specErrors.has(runId)) throw new Error('The spec could not be saved. Check its files and retry.')
+    }
     try {
       const decisions = this.service.decisions(runId)
       const versions = (await listSpecVersions(this.specsRoot, runId)).map((v) => ({ ...v, answer: decisions.find((d) => d.id === v.decisionId)?.answer ?? null }))
