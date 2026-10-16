@@ -27,6 +27,8 @@
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
 - **Find work across sessions.** Search prompts and replies in the Resume picker. Leave **Search all projects** unchecked to search one project, or check it to search every project.
 - **Keep closed sessions in Projects.** Closing a pane keeps its resumable sessions under that project in the left sidebar. Resume one there or use its Remove button to clear it from Dawsha's list; the agent transcript stays on disk. Open sessions also have a Close button in the sidebar.
+- **Orchestrator.** Describe a feature or a bug and a lead agent sizes it, does small work itself and starts only the agents bigger work needs, each in its own pane and git worktree, on Claude Code and Codex. Approve specs, answer questions in Human review, follow cost per agent, then mark a run done or push it and open a PR.
+- **Work dashboard.** See the tickets and sessions you worked on today, this week or this month, per project, typed Feature, Bug, Other or Conversation, with exact active time, your own ticket names and links, and a Copy summary for standups.
 - **Remote Control (Beta).** Enable Remote Access in Settings to pair your own browser with this running Dawsha installation. The app creates a temporary Cloudflare Quick Tunnel; remote input and session control are separate opt-in permissions, and paired browsers can be revoked at any time.
 - **Resize the Projects panel.** Drag its edge or focus the divider and use the arrow keys; Dawsha remembers the width between launches.
 - **Task history.** The Projects > Tasks tab groups related sessions, a task goal, notes and commit references in a dated history that remains after sessions close.
@@ -303,7 +305,20 @@ Lines that contain `error`, `failed`, `exception` (red), `warning` (amber) or `p
 
 ### Settings
 
-Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Highlights**, **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now, and Download / Install when available), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Dawsha keeps there). The Theme menu holds the themes and the background image.
+Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Highlights**, **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now, and Download / Install when available), **Orchestrator** (plans, agent profiles, effort and prices), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Dawsha keeps there). The Theme menu holds the themes and the background image.
+
+### Orchestrator
+
+**Orchestrator** in the top bar runs work with more than one agent. In **New run**, pick the project, choose **Feature** or **Bug**, and paste the story or bug report.
+
+- **Feature:** a lead agent reads the story and calls a size first. Small and medium work it does itself; large work gets implementers, a spec writer when the request is unclear (you approve the spec and mockups before anything is built) and reviewers that use the agent's built-in code review. You can pick the lead's model for one run, or choose **Lead works alone**.
+- **Bug:** one agent fixes it. Pick **Claude** or **Codex**; the model comes from your plan.
+
+Each agent opens in its own pane and git worktree on the run's branch, so your checkout stays untouched, and nothing merges into your main branch. The run dashboard shows the stages, tasks, agents with their model, state and cost, and the total. **Restart** replaces a stuck agent on the same task; **Continue with…** moves a task to another model. Questions from agents wait in **Human review**. When a run is ready, choose **Mark as done**, or **Push and open a PR**, optionally with instructions for the lead. **Boards** shows tasks from all runs, and **History** keeps finished runs for search and export. Plans, profiles and prices are in Settings > Orchestrator.
+
+### Work
+
+**Work** in the top bar shows what you worked on **Today**, **This week** or **This month**, with ‹ and › to step back. Each session and orchestrator run is a **Feature**, **Bug**, **Other** change or **Conversation**, worked out from its branch and your own commits (by your git `user.email`). Time spent is active time from the full transcripts, leaving out breaks longer than 5 minutes. **Tickets** groups the sessions of one branch; give a ticket a name and a link, kept on this computer. Search, a project filter and **Copy summary** (standup text for what is shown) sit above the list.
 
 ### Usage
 
