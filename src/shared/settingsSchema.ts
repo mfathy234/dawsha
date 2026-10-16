@@ -1,3 +1,4 @@
+import { defaultOrchSettings, sanitizeOrchSettings } from './orch/profiles'
 import { isAgent } from './agents'
 import { isSessionsLayout } from './board'
 import { sanitizeBaseline } from './gitStatus'
@@ -83,7 +84,8 @@ export const defaultSettings = (): Settings => ({
   remoteAccess: defaultRemoteAccess(),
   highlights: defaultHighlights(),
   recordings: defaultRecordings(),
-  experimental: { orchestrator: false }
+  experimental: { orchestrator: false },
+  orchestrator: defaultOrchSettings()
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -358,6 +360,7 @@ export function migrateSettings(raw: unknown): Settings {
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
     highlights: sanitizeHighlights(raw.highlights),
     recordings: sanitizeRecordings(raw.recordings),
-    experimental: { orchestrator: isRecord(raw.experimental) && raw.experimental.orchestrator === true }
+    experimental: { orchestrator: isRecord(raw.experimental) && raw.experimental.orchestrator === true },
+    orchestrator: sanitizeOrchSettings(raw.orchestrator)
   }
 }

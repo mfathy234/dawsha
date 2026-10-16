@@ -19,7 +19,8 @@ export const INCLUDED_KEYS = [
   'autoUpdateCheck',
   'sidebarCollapsed',
   'sidebarWidth',
-  'othersCollapsed'
+  'othersCollapsed',
+  'orchestrator'
 ] as const satisfies readonly (keyof Settings)[]
 
 export const EXCLUDED_KEYS = [

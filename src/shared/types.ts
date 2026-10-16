@@ -1,3 +1,4 @@
+import type { OrchSettings } from './orch/profiles'
 import type { SessionBaseline } from './gitStatus'
 import type { SessionsLayout } from './board'
 import type { HighlightSettings } from './highlights'
@@ -140,6 +141,7 @@ export interface Settings {
   highlights: HighlightSettings
   recordings: RecordingSettings
   experimental: ExperimentalSettings
+  orchestrator: OrchSettings
 }
 
 /** Features that ship off and only in local builds until they are ready. */
