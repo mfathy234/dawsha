@@ -19,6 +19,7 @@ import { migrateLegacyUserData } from './userDataMigration'
 import { CliRunner } from './cliRunner'
 import { startCliServer } from './cliServer'
 import { OrchRuntime } from './orch/runtime'
+import { createOrchestratorSwitch } from './orch/switch'
 import { setupUpdates } from './updates'
 import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
@@ -178,6 +179,18 @@ app.whenReady().then(async () => {
     recorder,
     projectName: (projectId) => store.get().projects.find((project) => project.id === projectId)?.name ?? ''
   })
+  const orchestrator = new OrchRuntime({
+    dbPath: join(userData, 'orchestrator.db'),
+    configRoot: join(userData, 'orchestrator', 'agents'),
+    version: app.getVersion(),
+    log: quitLog,
+    settings: () => store.get().orchestrator,
+    projectFolder: (id) => store.get().projects.find((project) => project.id === id)?.folder ?? null,
+    writePty: (tabId, data) => ptys.write(tabId, data),
+    openPane: (request) => send(IPC.orchOpenPane, request),
+    closePane: (agentId) => send(IPC.orchClosePane, agentId)
+  })
+  ptys.observe({ onOutput: (id, data) => orchestrator.onOutput(id, data), onEnd: (id, reason) => orchestrator.onEnd(id, reason) })
   const watcher = new SessionsWatcher((sessions) => send(IPC.sessionsUpdate, sessions))
   const codexWatcher = new CodexWatcher((sessions) => send(IPC.codexUpdate, sessions))
   const geminiWatcher = new GeminiWatcher((sessions) => send(IPC.geminiUpdate, sessions))
@@ -186,6 +199,7 @@ app.whenReady().then(async () => {
   const statusWatcher = new StatusWatcher(bridgeDirs(app.getPath('userData')).statusDir, (infos) => {
     send(IPC.statusUpdate, infos)
     usage.recordStatus(infos)
+    orchestrator.onStatus(infos)
   })
   const opsWatcher = new OpsWatcher(opsDirs(), (snapshots) => send(IPC.opsUpdate, snapshots))
   const remoteAccess = isRemoteControlBuild
@@ -199,16 +213,14 @@ app.whenReady().then(async () => {
       })
     : undefined
   registerImageProtocol(store)
-  registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings)
+  const orchestratorSwitch = createOrchestratorSwitch(orchestrator, quitLog)
+  registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings, orchestratorSwitch)
   recordings.startSchedule()
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
   app.on('will-quit', () => cliServer.close())
-  const orchestrator = new OrchRuntime(join(userData, 'orchestrator.db'), app.getVersion(), quitLog)
-  if (store.get().experimental.orchestrator) {
-    orchestrator.start().catch((error: unknown) => quitLog(`orchestrator did not start: ${(error as Error).message}`))
-  }
+  orchestratorSwitch.apply(store.get())
   app.on('will-quit', (event) => {
     if (!orchestrator.running) return
     // Close the server and database cleanly, then quit again (stop() leaves running false).

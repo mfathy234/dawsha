@@ -1,22 +1,13 @@
+import type { OrchPaneRequest } from '../../shared/orch/api'
 import { agentRunnerName, buildLaunch } from '../../shared/orch/launch'
-import { DEFAULT_PLAN_ID, fixerProfileOf, profileFor, type OrchPlan, type OrchProfile, type OrchRunner, type OrchSettings } from '../../shared/orch/profiles'
+import { DEFAULT_PLAN_ID, fixerProfileOf, profileFor, type OrchPlan, type OrchProfile, type OrchSettings } from '../../shared/orch/profiles'
 import { firstMessage } from '../../shared/orch/rolePrompts'
 import type { OrchAgent, OrchDecision, OrchRole, OrchRun, OrchTask } from '../../shared/orch/types'
 import { ACTIVE } from './context'
 import type { OrchService } from './service'
 import { runBranch, type MergeOutcome, type OrchWorktree } from './worktrees'
 
-/** Everything the renderer needs to open an agent's pane. The token is added later, in the main process. */
-export interface OrchPaneRequest {
-  agentId: string
-  runId: string
-  projectId: string | null
-  folder: string
-  runner: OrchRunner
-  title: string
-  prompt: string
-  sessionId: string | null
-}
+export type { OrchPaneRequest } from '../../shared/orch/api'
 
 export interface DispatcherDeps {
   service: OrchService

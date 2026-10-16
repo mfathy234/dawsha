@@ -1,3 +1,4 @@
+import { registerOrchestratorIpc, type OrchestratorIpc } from './orch/switch'
 import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -85,7 +86,8 @@ export function registerIpc(
   usage: UsageService,
   initialWarning: string | null,
   remoteAccess?: ReturnType<typeof createRemoteAccessController>,
-  recordings?: RecordingService
+  recordings?: RecordingService,
+  orchestrator?: OrchestratorIpc
 ): void {
   const locations = (): BridgeLocations => ({
     settingsPath: claudeSettingsPath(),
@@ -105,7 +107,11 @@ export function registerIpc(
     warning = null
     return result
   })
-  ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => settings.update(patch))
+  ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => {
+    const updated = settings.update(patch)
+    orchestrator?.apply(updated)
+    return updated
+  })
   ipcMain.handle(IPC.settingsExport, () => exportSettings(getWindow(), settings.get()))
   ipcMain.handle(IPC.settingsImportRead, () => readSettingsImport(getWindow()))
   if (remoteAccess) {
@@ -227,7 +233,12 @@ export function registerIpc(
       if (typeof id === 'string' && typeof title === 'string') recordings.setTitle(id, title)
     })
   }
-  ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => ptys.spawn(request))
+  ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => {
+    const extras = orchestrator?.prepareSpawn(request) ?? null
+    if (extras && 'error' in extras) return { ok: false, error: extras.error }
+    return ptys.spawn(request, extras ?? {})
+  })
+  if (orchestrator) registerOrchestratorIpc(orchestrator)
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))
   ipcMain.on(IPC.ptyResize, (_event, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))
   ipcMain.handle(IPC.ptyKill, (_event, id: string) => ptys.kill(id))

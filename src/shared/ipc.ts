@@ -106,5 +106,12 @@ export const IPC = {
   recordingsTitle: 'recordings:title',
   recordingsPause: 'recordings:pause',
   flushRequest: 'app:flush-request',
-  flushDone: 'app:flush-done'
+  flushDone: 'app:flush-done',
+  orchOpenPane: 'orch:open-pane',
+  orchClosePane: 'orch:close-pane',
+  orchStatus: 'orch:status',
+  orchStartRun: 'orch:start-run',
+  orchRuns: 'orch:runs',
+  orchDecisions: 'orch:decisions',
+  orchAnswer: 'orch:answer'
 } as const

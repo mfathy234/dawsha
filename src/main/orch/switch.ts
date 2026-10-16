@@ -1,0 +1,70 @@
+import { ipcMain } from 'electron'
+import type { OrchDecisionView, OrchResult, OrchRunView, OrchStartInput, OrchStatus } from '../../shared/orch/api'
+import { IPC } from '../../shared/ipc'
+import type { Settings, SpawnRequest } from '../../shared/types'
+import type { LaunchExtras } from './paneBridge'
+import type { OrchRuntime } from './runtime'
+
+/** What the IPC layer needs from the orchestrator. */
+export interface OrchestratorIpc {
+  /** Starts or stops the runtime to match Settings → Experimental. */
+  apply(settings: Settings): void
+  prepareSpawn(request: SpawnRequest): LaunchExtras | { error: string } | null
+  status(): OrchStatus
+  startRun(input: OrchStartInput): OrchResult<string>
+  runs(): OrchRunView[]
+  decisions(): OrchDecisionView[]
+  answer(decisionId: string, answer: string): OrchResult
+}
+
+export function createOrchestratorSwitch(runtime: OrchRuntime, log: (message: string) => void): OrchestratorIpc {
+  let enabled = false
+  let error: string | null = null
+  return {
+    apply(settings) {
+      enabled = settings.experimental.orchestrator
+      if (enabled && !runtime.running) {
+        error = null
+        runtime.start().catch((reason: unknown) => {
+          error = (reason as Error).message
+          log(`orchestrator did not start: ${error}`)
+        })
+      } else if (!enabled && runtime.running) {
+        void runtime.stop()
+      }
+    },
+    prepareSpawn: (request) => runtime.prepareSpawn(request),
+    status: () => ({ enabled, running: runtime.running, error }),
+    startRun: (input) => runtime.startRun(input),
+    runs: () => runtime.runs(),
+    decisions: () => runtime.decisions(),
+    answer: (decisionId, answer) => runtime.answer(decisionId, answer)
+  }
+}
+
+const isText = (value: unknown, max = 20_000): value is string => typeof value === 'string' && value.length <= max
+
+function parseStartInput(value: unknown): OrchStartInput | null {
+  if (typeof value !== 'object' || value === null) return null
+  const raw = value as Record<string, unknown>
+  if ((raw.kind !== 'bug' && raw.kind !== 'feature') || !isText(raw.projectId, 200) || !isText(raw.title, 300)) return null
+  if (!isText(raw.story) || !isText(raw.planId, 100)) return null
+  const fixer = raw.fixerProfileId
+  if (fixer !== null && !isText(fixer, 100)) return null
+  return { kind: raw.kind, projectId: raw.projectId, title: raw.title, story: raw.story, planId: raw.planId, fixerProfileId: fixer }
+}
+
+export function registerOrchestratorIpc(orchestrator: OrchestratorIpc): void {
+  ipcMain.handle(IPC.orchStatus, () => orchestrator.status())
+  ipcMain.handle(IPC.orchStartRun, (_event, input: unknown) => {
+    const parsed = parseStartInput(input)
+    return parsed ? orchestrator.startRun(parsed) : { ok: false, error: 'The run details could not be read.' }
+  })
+  ipcMain.handle(IPC.orchRuns, () => orchestrator.runs())
+  ipcMain.handle(IPC.orchDecisions, () => orchestrator.decisions())
+  ipcMain.handle(IPC.orchAnswer, (_event, decisionId: unknown, answer: unknown) =>
+    isText(decisionId, 100) && isText(answer, 4000)
+      ? orchestrator.answer(decisionId, answer)
+      : { ok: false, error: 'The answer could not be read.' }
+  )
+}
