@@ -59,39 +59,51 @@
 .orch-stages {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 8px 0;
   margin: 10px 0 0;
   padding: 0;
   list-style: none;
+  cursor: default;
 }
 
 .orch-stage {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 10px 2px 3px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
   color: var(--muted);
   font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
 }
 
 .orch-stage i {
-  display: inline-grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border);
   border-radius: 50%;
-  background: var(--raised);
-  font-size: 10px;
-  font-style: normal;
+  background: var(--border);
 }
 
+.orch-stage::after {
+  content: '';
+  flex: none;
+  width: 24px;
+  height: 2px;
+  margin-right: 6px;
+  background: var(--border);
+}
+
+.orch-stage:last-child::after,
+.orch-stage:has(+ .cancelled)::after { content: none; }
+
 .orch-stage.done { color: var(--accent); }
-.orch-stage.done i { background: var(--accent); color: var(--on-accent); }
-.orch-stage.now { color: var(--text); border-color: var(--accent); }
-.orch-stage.now i { border: 1px solid var(--accent); }
-.orch-stage.cancelled { color: var(--danger); border-color: var(--danger); padding-left: 10px; }
+.orch-stage.done i { background: var(--accent); border-color: var(--accent); }
+.orch-stage.done::after { background: var(--accent); }
+.orch-stage.now { color: var(--text); font-weight: 600; }
+.orch-stage.now i { background: none; border-color: var(--accent); }
+.orch-stage.cancelled { color: var(--danger); margin-left: 12px; }
 
 .orch-kpis { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .orch-kpi { display: flex; flex-direction: column; min-width: 64px; }

@@ -56,9 +56,56 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
           await expect(items).toHaveText(labels.map((label, i) => `${label} (${states[i]})`))
           await expect(track.locator('[aria-current="step"]')).toHaveCount(stage === 'done' || stage === 'cancelled' ? 0 : 1)
           await expect(track.locator('button, a, [tabindex]')).toHaveCount(0)
+          const first = items.first()
+          await expect(first).toHaveCSS('border-top-width', '0px')
+          await expect(first).toHaveCSS('cursor', 'default')
+          await expect(first.locator('i')).toHaveAttribute('aria-hidden', 'true')
+          await expect(first.locator('i')).toHaveCSS('width', '10px')
+          await expect(first.locator('i')).toHaveCSS('height', '10px')
+          const colors = await track.evaluate((el) => {
+            const probe = document.createElement('span')
+            el.append(probe)
+            const color = (token: string): string => {
+              probe.style.color = `var(--${token})`
+              return getComputedStyle(probe).color
+            }
+            const result = { accent: color('accent'), border: color('border'), text: color('text'), muted: color('muted'), danger: color('danger') }
+            probe.remove()
+            return result
+          })
+          for (let i = 0; i < labels.length; i++) {
+            const item = items.nth(i)
+            const state = states[i]
+            await expect(item).toHaveCSS('color', state === 'done' ? colors.accent : state === 'current' ? colors.text : colors.muted)
+            await expect(item.locator('i')).toHaveCSS('border-top-color', state === 'upcoming' ? colors.border : colors.accent)
+            if (state === 'current') await expect(item).toHaveCSS('font-weight', '600')
+            if (i < labels.length - 1) {
+              const connector = await item.evaluate((el) => {
+                const css = getComputedStyle(el, '::after')
+                return { height: css.height, color: css.backgroundColor }
+              })
+              expect(connector).toEqual({ height: '2px', color: state === 'done' ? colors.accent : colors.border })
+            }
+          }
+          if (stage === 'cancelled') {
+            await expect(track.getByText('Cancelled', { exact: true })).toHaveCSS('color', colors.danger)
+            await expect(track.getByText('Cancelled', { exact: true })).toHaveCSS('border-top-width', '0px')
+          }
         }
         await publish(kind, 'merge')
         await expect(track.locator('[aria-current="step"]')).toContainText('Merge')
+        for (const width of [1440, 520]) {
+          await page.setViewportSize({ width, height: 900 })
+          const bounds = await items.evaluateAll((els) => els.map((el) => {
+            const r = el.getBoundingClientRect()
+            return { top: r.top, left: r.left, right: r.right }
+          }))
+          if (width === 1440) expect(new Set(bounds.map((r) => r.top)).size).toBe(1)
+          expect(await track.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
+          for (let i = 1; i < bounds.length; i++) {
+            expect(bounds[i].top > bounds[i - 1].top || bounds[i].left >= bounds[i - 1].right).toBe(true)
+          }
+        }
         await page.setViewportSize({ width: 1440, height: 900 })
         mkdirSync(SCREENS, { recursive: true })
         await shot(page, `stage-track-${kind}-${theme}`)
