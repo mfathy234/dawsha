@@ -139,6 +139,12 @@ export interface Settings {
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
   recordings: RecordingSettings
+  experimental: ExperimentalSettings
+}
+
+/** Features that ship off and only in local builds until they are ready. */
+export interface ExperimentalSettings {
+  orchestrator: boolean
 }
 
 export type FullAccess = Record<AgentKind, boolean>

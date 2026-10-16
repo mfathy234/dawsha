@@ -18,6 +18,7 @@ import { platformExecutableDirs, resolveExecutable } from './executables'
 import { migrateLegacyUserData } from './userDataMigration'
 import { CliRunner } from './cliRunner'
 import { startCliServer } from './cliServer'
+import { OrchRuntime } from './orch/runtime'
 import { setupUpdates } from './updates'
 import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
@@ -204,6 +205,11 @@ app.whenReady().then(async () => {
   cli = new CliRunner(() => mainWindow)
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
   app.on('will-quit', () => cliServer.close())
+  const orchestrator = new OrchRuntime(join(userData, 'orchestrator.db'), app.getVersion())
+  if (store.get().experimental.orchestrator) {
+    orchestrator.start().catch((error: unknown) => quitLog(`orchestrator did not start: ${(error as Error).message}`))
+  }
+  app.on('will-quit', () => void orchestrator.stop())
   void cli.executeFromArgv(process.argv, process.cwd())
   mainWindow.webContents.once('did-finish-load', () => {
     watcher.start()

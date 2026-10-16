@@ -30,6 +30,8 @@ export const EXCLUDED_KEYS = [
   'tasks',
   'lastSeenVersion',
   'onboardingDismissed',
+  // Experimental features are switched on per PC, on purpose.
+  'experimental',
   // Never carried between PCs: a shared file must not be able to switch agents to skipping permission prompts.
   'fullAccess'
 ] as const satisfies readonly (keyof Settings)[]

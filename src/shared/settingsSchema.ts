@@ -82,7 +82,8 @@ export const defaultSettings = (): Settings => ({
   fullAccess: defaultFullAccess(),
   remoteAccess: defaultRemoteAccess(),
   highlights: defaultHighlights(),
-  recordings: defaultRecordings()
+  recordings: defaultRecordings(),
+  experimental: { orchestrator: false }
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -356,6 +357,7 @@ export function migrateSettings(raw: unknown): Settings {
     fullAccess: sanitizeFullAccess(raw.fullAccess),
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
     highlights: sanitizeHighlights(raw.highlights),
-    recordings: sanitizeRecordings(raw.recordings)
+    recordings: sanitizeRecordings(raw.recordings),
+    experimental: { orchestrator: isRecord(raw.experimental) && raw.experimental.orchestrator === true }
   }
 }
