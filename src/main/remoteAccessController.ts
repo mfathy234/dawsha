@@ -95,7 +95,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     auth = createRemoteAuth(memoryStore)
     storageError = `Paired-device data could not be read. Remote Access is disabled until it is repaired: ${(error as Error).message}`
   }
-  const installer = options.tunnel ? null : createCloudflaredInstaller({ userDataDir: options.userDataDir })
+  const installer = options.tunnel ? null : createCloudflaredInstaller({ userDataDir: options.userDataDir, log: (event, detail) => log(`installer-${event}`, detail) })
   const tunnelFactory = options.tunnel ?? createCloudflareQuickTunnel(undefined, () => installer!.ensureExecutable())
   const createServer = options.createServer ?? startRemoteServer
   auth.setPermissions(options.settings.get().remoteAccess)
