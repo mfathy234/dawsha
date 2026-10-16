@@ -1,4 +1,4 @@
-import { ORCH_ROLES, TASK_STATUSES, type OrchAgent, type OrchDecision, type OrchEvent, type OrchMessage, type OrchNote, type OrchRun, type OrchTask } from './types'
+﻿import { ORCH_ROLES, TASK_STATUSES, type OrchAgent, type OrchDecision, type OrchEvent, type OrchMessage, type OrchNote, type OrchRun, type OrchTask } from './types'
 
 export const ARCHIVE_MAX_BYTES = 20 * 1024 * 1024
 export type ArchiveAgent = Omit<OrchAgent, 'token' | 'launch'>
@@ -23,6 +23,7 @@ type Shape = Record<string, Check>
 const str: Check = (v) => typeof v === 'string' && v.length <= 100_000
 const id: Check = (v) => typeof v === 'string' && v.length > 0 && v.length <= 200
 const num: Check = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= Number.MAX_SAFE_INTEGER
+const timestamp: Check = (v) => num(v) && (v as number) <= 8_640_000_000_000_000
 const integer: Check = (v) => num(v) && Number.isInteger(v)
 const bool: Check = (v) => typeof v === 'boolean'
 const nullable = (check: Check): Check => (v) => v === null || check(v)
@@ -38,32 +39,32 @@ const status = oneOf(TASK_STATUSES)
 const role = oneOf(ORCH_ROLES)
 const runCheck = object({
   id, kind: oneOf(['bug', 'feature']), projectPath: str, title: str, story: str, plan: str,
-  stage: oneOf(['spec', 'plan', 'build', 'review', 'merge', 'done', 'cancelled']), createdAt: num, finishedAt: nullable(num),
+  stage: oneOf(['spec', 'plan', 'build', 'review', 'merge', 'done', 'cancelled']), createdAt: timestamp, finishedAt: nullable(timestamp),
   projectId: optional(nullable(id)), specApproval: optional(bool), fixerProfileId: optional(nullable(id)),
-  imported: optional(object({ at: num, from: str }))
+  imported: optional(object({ at: timestamp, from: str }))
 })
 const taskCheck = object({
   id, key: id, runId: id, title: str, spec: str, role, status, dependsOn: list(id), acceptance: list(str),
   reviewOf: nullable(id), reviewRound: integer, assignee: nullable(id), summary: nullable(str), files: list(str),
-  branch: nullable(str), feedback: nullable(str), pausedFrom: nullable(status), createdAt: num, updatedAt: num,
-  attempts: optional(integer), mergedAt: optional(nullable(num))
+  branch: nullable(str), feedback: nullable(str), pausedFrom: nullable(status), createdAt: timestamp, updatedAt: timestamp,
+  attempts: optional(integer), mergedAt: optional(nullable(timestamp))
 })
 const agentCheck = object({
-  id, runId: id, role, runner: str, model: str, taskId: nullable(id), createdAt: num,
+  id, runId: id, role, runner: str, model: str, taskId: nullable(id), createdAt: timestamp,
   usage: nullable(object({ inputTokens: integer, outputTokens: integer, cacheReadTokens: integer, cacheWriteTokens: integer, reportedCostUsd: nullable(num) })),
-  retiredAt: optional(nullable(num)), lastCallAt: optional(nullable(num))
+  retiredAt: optional(nullable(timestamp)), lastCallAt: optional(nullable(timestamp))
 })
 const decisionCheck = object({
   id, runId: id, kind: oneOf(['question', 'spec-approval', 'escalation', 'stall', 'merge-conflict', 'run-complete']),
   taskId: nullable(id), agentId: nullable(id), question: str, options: list(str), recommended: nullable(integer),
-  context: str, urgency: oneOf(['normal', 'high']), answer: nullable(str), createdAt: num, answeredAt: nullable(num)
+  context: str, urgency: oneOf(['normal', 'high']), answer: nullable(str), createdAt: timestamp, answeredAt: nullable(timestamp)
 })
 const archiveCheck = object({
-  format: (v) => v === 'dawsharun', version: (v) => v === 1, exportedAt: num, app: object({ version: str }), run: runCheck,
+  format: (v) => v === 'dawsharun', version: (v) => v === 1, exportedAt: timestamp, app: object({ version: str }), run: runCheck,
   tasks: list(taskCheck), agents: list(agentCheck), decisions: list(decisionCheck),
-  notes: list(object({ runId: id, key: id, text: str, author: str, updatedAt: num })),
-  events: list(object({ runId: id, at: num, kind: str, text: str, taskId: nullable(id) })),
-  messages: list(object({ id, runId: id, from: id, to: id, taskId: nullable(id), body: str, createdAt: num, readAt: nullable(num) }))
+  notes: list(object({ runId: id, key: id, text: str, author: str, updatedAt: timestamp })),
+  events: list(object({ runId: id, at: timestamp, kind: str, text: str, taskId: nullable(id) })),
+  messages: list(object({ id, runId: id, from: id, to: id, taskId: nullable(id), body: str, createdAt: timestamp, readAt: nullable(timestamp) }))
 })
 
 /** Project the agent explicitly: newly added launch/credential fields cannot silently leak into files. */
@@ -111,7 +112,7 @@ const cell = (text: string): string => text.replace(/\|/g, '\\|').replace(/\r?\n
 export function archiveToMarkdown(a: RunArchive): string {
   const lines = [
     `# ${a.run.title}`, '', '## Story', a.run.story, '', '## Outcome',
-    `${a.run.stage} � Plan: ${a.run.plan} � Project: ${a.run.projectPath}`, '', '## Tasks'
+    `${a.run.stage} Â· Plan: ${a.run.plan} Â· Project: ${a.run.projectPath}`, '', '## Tasks'
   ]
   for (const task of a.tasks) lines.push(`### ${task.key}: ${task.title} (${task.status})`, task.summary ?? 'No summary.', '')
   lines.push('## Decisions')
@@ -122,6 +123,6 @@ export function archiveToMarkdown(a: RunArchive): string {
     lines.push(`| ${agent.role} | ${cell(agent.runner)} | ${cell(agent.model)} | ${u?.inputTokens ?? 0} | ${u?.outputTokens ?? 0} | ${u?.cacheReadTokens ?? 0} | ${u?.cacheWriteTokens ?? 0} | ${u?.reportedCostUsd ?? 'unpriced'} |`)
   }
   lines.push('', '## Timeline')
-  for (const event of a.events) lines.push(`- ${new Date(event.at).toISOString()} � ${event.text}`)
+  for (const event of a.events) lines.push(`- ${new Date(event.at).toISOString()} Â· ${event.text}`)
   return lines.join('\n') + '\n'
 }

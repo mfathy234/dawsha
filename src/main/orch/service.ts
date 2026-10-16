@@ -1,3 +1,4 @@
+import { createStoredRun } from './runCreation'
 import type { RunArchive } from '../../shared/orch/runArchive'
 import { exportStoredRun, importStoredRun } from './archiveStore'
 import { randomBytes } from 'node:crypto'
@@ -93,50 +94,13 @@ export class OrchService {
     if (this.store.getRun(runId)?.imported) throw new Error('Imported runs are read-only.')
   }
 
-  /** What the UI calls: a feature run also gets its spec task, made from the story. */
+  /** A feature started from the UI also gets its initial spec task. */
   startRun(input: CreateRunInput): OrchRun {
-    return this.tx(() => {
-      const run = this.createRun(input)
-      if (run.kind === 'feature') {
-        const task = this.ctx.newTask(run.id, {
-          title: `Write the spec for "${run.title}"`,
-          spec: `Story:\n${run.story}`,
-          role: 'spec-writer',
-          dependsOn: [],
-          acceptance: []
-        })
-        this.ctx.log(run.id, 'task', `${task.key} created for spec-writer: ${task.title}`, task.id)
-      }
-      return run
-    })
+    return this.tx(() => createStoredRun(this.ctx, input, true))
   }
 
   createRun(input: CreateRunInput): OrchRun {
-    return this.tx(() => {
-      const kind: RunKind = input.kind ?? 'feature'
-      const run: OrchRun = {
-        id: randomId('run'),
-        kind,
-        projectPath: input.projectPath,
-        title: input.title,
-        story: input.story,
-        plan: input.plan,
-        // A bug skips the spec and planning stages: one fixer works straight from the report.
-        stage: kind === 'bug' ? 'build' : 'spec',
-        createdAt: this.ctx.now(),
-        finishedAt: null,
-        projectId: input.projectId ?? null,
-        specApproval: input.specApproval !== false,
-        fixerProfileId: input.fixerProfileId ?? null
-      }
-      this.store.putRun(run)
-      this.ctx.log(run.id, 'run', `${kind === 'bug' ? 'Bug fix' : 'Run'} started: ${run.title}`, null)
-      if (kind === 'bug') {
-        const task = this.ctx.newTask(run.id, { title: run.title, spec: run.story, role: 'fixer', dependsOn: [], acceptance: [] })
-        this.ctx.log(run.id, 'task', `${task.key} created for fixer: ${task.title}`, task.id)
-      }
-      return run
-    })
+    return this.tx(() => createStoredRun(this.ctx, input, false))
   }
 
   /** Returns the agent with its plain token (shown once, for the pane's MCP config); only a hash is stored. */
@@ -227,6 +191,7 @@ export class OrchService {
     this.tx(() => {
       const agent = this.store.getAgent(agentId)
       if (!agent) throw new Error(`Agent ${agentId} not found.`)
+      this.writable(agent.runId)
       this.store.putAgent({ ...agent, launch })
     })
   }
@@ -287,6 +252,7 @@ export class OrchService {
     return this.tx(() => {
       const agent = this.store.getAgent(agentId)
       if (!agent) throw new Error(`Agent ${agentId} not found.`)
+      this.writable(agent.runId)
       const task = this.ctx.activeTaskOf(agent)
       if (!task) throw new Error(`Agent ${agentId} has no task.`)
       const open = this.store.openDecisions().find((d) => d.taskId === task.id && d.kind === 'stall')
@@ -310,6 +276,7 @@ export class OrchService {
   /** A question from Dawsha itself (merge conflict, run finished), not from an agent. */
   raiseDecision(runId: string, kind: OrchDecision['kind'], input: Pick<OrchDecision, 'question' | 'options' | 'context' | 'taskId'>): OrchDecision {
     return this.tx(() => {
+      this.writable(runId)
       const decision: OrchDecision = {
         id: randomId('dec'),
         runId,
@@ -380,6 +347,7 @@ export class OrchService {
     this.tx(() => {
       const agent = this.store.getAgent(agentId)
       if (!agent) throw new Error(`Agent ${agentId} not found.`)
+      this.writable(agent.runId)
       this.store.putAgent({ ...agent, usage })
     })
   }

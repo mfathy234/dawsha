@@ -43,6 +43,7 @@ describe('run archives', () => {
     expect(parseArchive(JSON.stringify({ ...archive, agents: [{ ...archive.agents[0], token: 'secret' }] })).ok).toBe(false)
     expect(parseArchive(JSON.stringify({ ...archive, tasks: [{ ...archive.tasks[0], runId: 'other' }] })).ok).toBe(false)
     expect(parseArchive(JSON.stringify({ ...archive, tasks: [archive.tasks[0], archive.tasks[0]] })).ok).toBe(false)
+    expect(parseArchive(JSON.stringify({ ...archive, events: [{ ...archive.events[0], at: Number.MAX_SAFE_INTEGER }] })).ok).toBe(false)
     expect(parseArchive(JSON.stringify({ ...archive, agents: [{ ...archive.agents[0], usage: { inputTokens: '10' } }] })).ok).toBe(false)
   })
 

@@ -83,6 +83,10 @@ describe('service run archives', () => {
     expect(() => svc.answerDecision(svc.decisions(imported.id)[0].id, 'Yes')).toThrow(/read.only/i)
     expect(() => svc.handoffTask(imported.id, 'T-1', { runner: 'codex', model: 'x' })).toThrow(/read.only/i)
     expect(() => svc.registerAgent({ runId: imported.id, role: 'fixer', runner: 'claude', model: 'x' })).toThrow(/read.only/i)
+    const agentId = svc.agents(imported.id)[0].id
+    expect(() => svc.setLaunch(agentId, { agent: 'claude', args: [], env: {}, files: [] })).toThrow(/read.only/i)
+    expect(() => svc.reportUsage(agentId, { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reportedCostUsd: 0 })).toThrow(/read.only/i)
+    expect(() => svc.raiseDecision(imported.id, 'question', { question: 'New?', options: [], context: '', taskId: null })).toThrow(/read.only/i)
     expect(svc.exportRun(imported.id)).toEqual(before)
     expect(svc.decisions(run.id)[0].id).toBe(decision.id)
     expect(() => svc.importRun({ ...before, version: 5 } as never)).toThrow(/version/i)
