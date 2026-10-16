@@ -2,7 +2,7 @@ import type { OrchDecisionView, OrchRunDetail } from '../../../shared/orch/api'
 import type { OrchProfile } from '../../../shared/orch/profiles'
 import { OTHER_OPTION, composeAnswer, decisionKindLabel, filterDecisions, pickSelection, runFilterChips } from '../../../shared/orch/review'
 import { clear, h } from '../../dom'
-import { answerDecision, handoffTask } from '../../orchActions'
+import { answerDecision, handoffTask, showOrch } from '../../orchActions'
 import type { AppState } from '../../state'
 import { ROLE_LABEL, modelBadge, pill, timeAgo } from './orchUi'
 import './reviewView.css'
@@ -154,6 +154,12 @@ export class OrchReviewView {
       return
     }
     const draft = this.draftOf(decision.id)
+    if (decision.kind === 'spec-approval') {
+      this.card.append(h('article', { class: 'orch-panel review-card' }, h('h2', { class: 'review-question' }, decision.question),
+        h('p', { class: 'orch-muted' }, decision.runTitle),
+        h('button', { class: 'btn primary', type: 'button', onClick: () => showOrch('spec', decision.runId) }, 'Review spec & mockups')))
+      return
+    }
     const options = decision.options
     const choices = options.length > 0 ? [...options, OTHER_OPTION] : []
     if (choices.length > 0 && (draft.option === null || !choices.includes(draft.option))) draft.option = choices[0]

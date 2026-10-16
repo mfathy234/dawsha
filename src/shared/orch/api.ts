@@ -4,6 +4,25 @@ import type { RunUsage } from './usage'
 
 // What the renderer and the main process exchange about the orchestrator.
 
+export interface OrchSpecVersion {
+  version: number
+  createdAt: number
+  decisionId: string | null
+  answer: string | null
+}
+
+export interface OrchSpecContent {
+  version: number
+  spec: string
+  mockups: { name: string; html: string }[]
+}
+
+export interface OrchSpecView {
+  runId: string
+  versions: OrchSpecVersion[]
+  current: OrchSpecContent
+}
+
 /** Main asks the renderer to open a pane for an agent. The token never travels this way. */
 export interface OrchPaneRequest {
   agentId: string

@@ -50,7 +50,7 @@ export class OrchRunView {
     }
     if (!run) return this.renderMissing()
     const panes = state.panes.map((p) => [p.id, p.tabs.map((t) => t.orchAgentId ?? '')])
-    const signature = JSON.stringify([run, state.orch?.runs.map((r) => [r.id, r.title, r.stage, r.tasksDone, r.taskCount]), state.settings.orchestrator.profiles.map((p) => p.id), panes, this.taskKey, this.handoff, Math.floor(Date.now() / 60_000)])
+    const signature = JSON.stringify([run, state.orch?.decisions, state.orch?.runs.map((r) => [r.id, r.title, r.stage, r.tasksDone, r.taskCount]), state.settings.orchestrator.profiles.map((p) => p.id), panes, this.taskKey, this.handoff, Math.floor(Date.now() / 60_000)])
     if (signature === this.signature) return
     this.signature = signature
     this.render(run, state)
@@ -74,6 +74,11 @@ export class OrchRunView {
   private render(run: OrchRunDetail, state: AppState): void {
     clear(this.el)
     this.el.append(this.switcher(run, state), this.header(run), this.story(run), this.dashboard(run, state))
+    if (run.kind === 'feature') {
+      const open = state.orch?.decisions.some((d) => d.runId === run.id && d.kind === 'spec-approval')
+      const link = h('button', { class: open ? 'btn primary' : 'btn', type: 'button', onClick: () => showOrch('spec', run.id) }, open ? 'Review spec' : 'Spec')
+      this.el.insertBefore(link, this.el.children[2])
+    }
   }
 
   private switcher(run: OrchRunDetail, state: AppState): HTMLElement {

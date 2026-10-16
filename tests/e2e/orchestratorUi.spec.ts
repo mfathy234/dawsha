@@ -88,6 +88,8 @@ test('fix a bug from the Orchestrator view and finish it in Human review', async
     await shot(page, 'all-runs')
 
     await page.locator('#orch-tab-boards').click()
+    // The completed fixer is in Done; the default Open filter hides it.
+    await page.locator('.orch-filter').filter({ hasText: /^Status/ }).locator('select').selectOption('all')
     await expect(page.locator('.orch-view')).toContainText('T-1')
     await shot(page, 'boards')
 
