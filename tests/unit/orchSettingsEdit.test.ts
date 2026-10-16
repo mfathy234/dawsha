@@ -64,10 +64,10 @@ describe('profile edits', () => {
   })
 
   it('resets effort and local when the runner changes', () => {
-    const s = updateProfile(base(), 'p-implementer', { local: true })
-    expect(s.profiles.find((p) => p.id === 'p-implementer')?.local).toBe(true)
-    const moved = updateProfile(s, 'p-implementer', { runner: 'gemini' })
-    expect(moved.profiles.find((p) => p.id === 'p-implementer')).toMatchObject({ runner: 'gemini', local: false, effort: null })
+    const s = updateProfile(base(), 'p-implementer-codex', { local: true })
+    expect(s.profiles.find((p) => p.id === 'p-implementer-codex')?.local).toBe(true)
+    const moved = updateProfile(s, 'p-implementer-codex', { runner: 'gemini' })
+    expect(moved.profiles.find((p) => p.id === 'p-implementer-codex')).toMatchObject({ runner: 'gemini', local: false, effort: null })
   })
 
   it('finds plans that use a profile', () => {

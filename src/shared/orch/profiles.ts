@@ -55,15 +55,18 @@ const profile = (id: string, name: string, role: OrchRole, runner: OrchRunner, m
 const DEFAULT_PROFILES: readonly OrchProfile[] = [
   profile('p-lead', 'Lead', 'lead', 'claude', 'opus', 'high'),
   profile('p-spec-writer', 'Spec writer', 'spec-writer', 'claude', 'sonnet', 'medium'),
-  profile('p-implementer', 'Implementer', 'implementer', 'codex', '', 'medium'),
+  profile('p-implementer', 'Implementer', 'implementer', 'claude', 'sonnet', 'medium'),
   profile('p-ui', 'UI builder', 'ui', 'claude', 'sonnet', 'medium'),
   profile('p-code-reviewer', 'Code reviewer', 'code-reviewer', 'claude', 'sonnet', 'high'),
-  profile('p-ux-reviewer', 'UX reviewer', 'ux-reviewer', 'gemini', '', null),
+  profile('p-ux-reviewer', 'UX reviewer', 'ux-reviewer', 'claude', 'sonnet', 'medium'),
   profile('p-tester', 'Tester', 'tester', 'claude', 'haiku', 'low'),
   profile('p-lead-budget', 'Lead (budget)', 'lead', 'claude', 'sonnet', 'medium'),
-  profile('p-implementer-budget', 'Implementer (budget)', 'implementer', 'codex', '', 'low'),
+  profile('p-implementer-budget', 'Implementer (budget)', 'implementer', 'claude', 'sonnet', 'low'),
   profile('p-code-reviewer-budget', 'Code reviewer (budget)', 'code-reviewer', 'claude', 'haiku', 'medium'),
-  profile('p-tester-budget', 'Tester (budget)', 'tester', 'gemini', '', null)
+  profile('p-tester-budget', 'Tester (budget)', 'tester', 'claude', 'haiku', 'low'),
+  // Other CLIs, ready to pick for a role in Settings; no built-in plan uses them.
+  profile('p-implementer-codex', 'Implementer (Codex)', 'implementer', 'codex', '', 'medium'),
+  profile('p-ux-reviewer-gemini', 'UX reviewer (Gemini)', 'ux-reviewer', 'gemini', '', null)
 ]
 
 const DEFAULT_PLANS: readonly OrchPlan[] = [
@@ -191,6 +194,22 @@ function sanitizePrices(value: unknown): Record<string, ModelPrice> {
   return prices
 }
 
+/**
+ * Built-in profiles as earlier versions shipped them, before the default team became Claude only. A stored copy
+ * the user never changed is upgraded to today's default; an edited one is kept as it is.
+ */
+const EARLIER_DEFAULTS: Record<string, Pick<OrchProfile, 'runner' | 'model' | 'effort'>> = {
+  'p-implementer': { runner: 'codex', model: '', effort: 'medium' },
+  'p-ux-reviewer': { runner: 'gemini', model: '', effort: null },
+  'p-implementer-budget': { runner: 'codex', model: '', effort: 'low' },
+  'p-tester-budget': { runner: 'gemini', model: '', effort: null }
+}
+
+const isEarlierDefault = (p: OrchProfile): boolean => {
+  const old = EARLIER_DEFAULTS[p.id]
+  return Boolean(old) && p.runner === old.runner && p.model === old.model && p.effort === old.effort && !p.local && p.prompt === ''
+}
+
 function uniqueById<T extends { id: string }>(items: readonly (T | null)[]): T[] {
   const seen = new Set<string>()
   return items.filter((item): item is T => item !== null && !seen.has(item.id) && Boolean(seen.add(item.id)))
@@ -202,7 +221,10 @@ export function sanitizeOrchSettings(value: unknown): OrchSettings {
   const userProfiles = uniqueById(Array.isArray(value.profiles) ? value.profiles.map(sanitizeProfile) : [])
   // Built-in profiles keep their place (edited or not); the user's own follow.
   const ordered = [
-    ...defaults.profiles.map((d) => userProfiles.find((p) => p.id === d.id) ?? d),
+    ...defaults.profiles.map((d) => {
+      const stored = userProfiles.find((p) => p.id === d.id)
+      return stored && !isEarlierDefault(stored) ? stored : d
+    }),
     ...userProfiles.filter((p) => !defaults.profiles.some((d) => d.id === p.id))
   ]
   const profileIds = new Set(ordered.map((p) => p.id))

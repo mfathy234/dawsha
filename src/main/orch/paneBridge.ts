@@ -15,9 +15,9 @@ const QUIET_BEFORE_NUDGE_MS = 3_000
 const SUBMIT_DELAY_MS = 400
 const SUBMIT_CHECK_MS = 5_000
 const SUBMIT_TRIES = 3
-/** A Down press on the trust menu that changed nothing is repeated after this long, at most TRUST_DOWNS times. */
+/** A key on the trust menu that changed nothing is repeated after this long, at most TRUST_TRIES times per key. */
 const TRUST_RETRY_MS = 1_500
-const TRUST_DOWNS = 3
+const TRUST_TRIES = 3
 /** After the trust prompt, an agent that has not called the orch server by then gets its first message typed. */
 const FIRST_MESSAGE_AFTER_MS = 5_000
 /**
@@ -27,6 +27,9 @@ const FIRST_MESSAGE_AFTER_MS = 5_000
 const FIRST_MESSAGE_FALLBACK_MS = 20_000
 /** Shown by Claude Code while it is working on a prompt. */
 const BUSY = /esc to interrupt/i
+/** A selection menu is on screen (trust, permission, resume...): typed text and Enter would pick an option. */
+// Claude: "Enter to confirm · Esc to cancel". Codex: "enter continue · esc quit", "enter to confirm".
+const MENU = /enter to confirm|esc to cancel|enter continue|esc quit/i
 
 export interface LaunchExtras {
   args: string[]
@@ -55,7 +58,9 @@ interface Watched {
   folder: string
   trustAnswered: boolean
   trustDowns: number
-  trustDownAt: number
+  trustEnters: number
+  /** When Dawsha last pressed a key on the trust menu. */
+  trustKeyAt: number
   /** When the trust menu was first seen; 0 until then. */
   trustSeenAt: number
   startedAt: number
@@ -111,7 +116,8 @@ export class OrchPaneBridge {
       folder: request.cwd,
       trustAnswered: false,
       trustDowns: 0,
-      trustDownAt: 0,
+      trustEnters: 0,
+      trustKeyAt: 0,
       trustSeenAt: 0,
       startedAt: this.now(),
       firstMessageDone: false,
@@ -169,38 +175,46 @@ export class OrchPaneBridge {
     this.stall(watched, hit.resetsAt ? `${hit.message} (resets ${hit.resetsAt})` : hit.message)
   }
 
-  /** Claude asks whether it may work in the new worktree; with the user's consent, say yes once. */
   /**
-   * One step at a time, decided from the rendered screen: Down while the cursor is on "No, exit", Enter only
-   * once the screen shows it on "Yes". A lost keystroke can therefore never make Claude exit.
+   * Claude and Codex ask whether they may work in the new worktree; with the user's consent, say yes.
+   * One key at a time, decided from the rendered screen: Down while the cursor is on "No, exit", Enter only once
+   * it is on the trusting option, so a lost key can never make the CLI exit. The menu is drawn a moment before
+   * the CLI reads keys, so Dawsha waits after first seeing it and after every key, looks again on its own timer,
+   * and repeats a key that changed nothing. The prompt counts as answered only once it is gone.
    */
   private answerTrust(tabId: string, watched: Watched, text: string): void {
     if (watched.trustAnswered || !this.deps.autoTrust()) return
     const step = trustPromptStep(watched.runner, text, watched.folder)
-    if (step === 'enter') {
-      watched.trustAnswered = true
-      this.deps.write(tabId, TRUST_ENTER)
-      // Claude drops its starting prompt when the trust prompt comes first.
-      this.setTimer(() => this.deliverFirstMessage(tabId, watched), FIRST_MESSAGE_AFTER_MS)
+    if (!step) {
+      if (watched.trustEnters > 0) watched.trustAnswered = true
       return
     }
-    if (step !== 'down' || watched.trustDowns >= TRUST_DOWNS) return
-    // The menu is drawn a moment before Claude reads keys, so a Down sent at once is lost: wait first,
-    // and look again after every press without depending on new output.
     if (!watched.trustSeenAt) {
       watched.trustSeenAt = this.now()
       this.setTimer(() => this.recheckTrust(tabId, watched), TRUST_RETRY_MS)
       return
     }
-    if (this.now() - watched.trustSeenAt < TRUST_RETRY_MS || this.now() - watched.trustDownAt < TRUST_RETRY_MS) return
-    watched.trustDowns += 1
-    watched.trustDownAt = this.now()
-    this.deps.write(tabId, TRUST_DOWN)
+    if (this.now() - watched.trustSeenAt < TRUST_RETRY_MS || this.now() - watched.trustKeyAt < TRUST_RETRY_MS) return
+    if (step === 'down' ? watched.trustDowns >= TRUST_TRIES : watched.trustEnters >= TRUST_TRIES) return
+    watched.trustKeyAt = this.now()
+    if (step === 'down') {
+      watched.trustDowns += 1
+      this.deps.write(tabId, TRUST_DOWN)
+    } else {
+      watched.trustEnters += 1
+      this.deps.write(tabId, TRUST_ENTER)
+      // The CLI can drop its starting prompt when the trust prompt comes first.
+      if (watched.trustEnters === 1) this.setTimer(() => this.deliverFirstMessage(tabId, watched), FIRST_MESSAGE_AFTER_MS)
+    }
     this.setTimer(() => this.recheckTrust(tabId, watched), TRUST_RETRY_MS)
   }
 
   private deliverFirstMessage(tabId: string, watched: Watched): void {
     if (this.watched.get(tabId) !== watched || watched.firstMessageDone) return
+    // Never type into a menu; the idle fallback tries again once it is gone.
+    // Never type into a menu or over a prompt the CLI is already working on.
+    const screen = this.screenText(watched)
+    if (MENU.test(screen) || BUSY.test(screen)) return
     watched.firstMessageDone = true
     const agent = this.deps.service()?.agent(watched.agentId)
     const message = agent?.launch?.firstMessage
@@ -241,6 +255,7 @@ export class OrchPaneBridge {
       if (!agent || agent.retiredAt) continue
       const quietFor = now - watched.lastOutputAt
       if (quietFor < QUIET_BEFORE_NUDGE_MS) continue
+      if (MENU.test(this.screenText(watched))) continue
       if (this.firstMessageDue(watched, agent, now)) {
         this.deliverFirstMessage(tabId, watched)
         continue

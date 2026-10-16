@@ -18,7 +18,24 @@ describe('orchestrator profiles and plans', () => {
     }
     const plan = settings.plans[0]
     expect(profileFor(settings, plan, 'lead')).toMatchObject({ runner: 'claude', model: 'opus', effort: 'high' })
-    expect(profileFor(settings, plan, 'implementer')?.runner).toBe('codex')
+    expect(profileFor(settings, plan, 'implementer')).toMatchObject({ runner: 'claude', model: 'sonnet' })
+    // Every built-in plan runs on Claude only; Codex and Gemini profiles are there to pick.
+    for (const p of settings.plans) for (const role of ORCH_ROLES) expect(profileFor(settings, p, role)?.runner, `${p.name} ${role}`).toBe('claude')
+    expect(settings.profiles.map((p) => p.runner)).toEqual(expect.arrayContaining(['codex', 'gemini']))
+  })
+
+  it('upgrades stored built-in profiles that still have the earlier Codex and Gemini defaults, and keeps edited ones', () => {
+    const stored = defaultOrchSettings()
+    stored.profiles = stored.profiles.map((p) =>
+      p.id === 'p-implementer' ? { ...p, runner: 'codex', model: '', effort: 'medium' }
+        : p.id === 'p-ux-reviewer' ? { ...p, runner: 'gemini', model: '', effort: null }
+          : p.id === 'p-tester-budget' ? { ...p, runner: 'gemini', model: 'gemini-pro', effort: null } : p)
+    const upgraded = sanitizeOrchSettings(JSON.parse(JSON.stringify(stored)))
+    const byId = (id: string) => upgraded.profiles.find((p) => p.id === id)
+    expect(byId('p-implementer')).toMatchObject({ runner: 'claude', model: 'sonnet' })
+    expect(byId('p-ux-reviewer')).toMatchObject({ runner: 'claude', model: 'sonnet' })
+    // The user picked a model for this one: theirs stays.
+    expect(byId('p-tester-budget')).toMatchObject({ runner: 'gemini', model: 'gemini-pro' })
   })
 
   it('uses the plan lead ("main") model for bug fixes unless a fixer is set', () => {

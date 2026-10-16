@@ -65,7 +65,7 @@ describe('orchestrator dispatcher', () => {
 
   it('starts one fixer for a bug run, on the profile the user picked, in its own worktree', async () => {
     const { svc, dispatcher, panes, written } = setup()
-    const run = svc.startRun({ kind: 'bug', projectPath: 'C:/work/app', projectId: 'p1', title: 'Export crash', story: 'It throws.', plan: 'default', fixerProfileId: 'p-implementer' })
+    const run = svc.startRun({ kind: 'bug', projectPath: 'C:/work/app', projectId: 'p1', title: 'Export crash', story: 'It throws.', plan: 'default', fixerProfileId: 'p-implementer-codex' })
     await dispatcher.tick()
     await dispatcher.tick()
     expect(panes).toHaveLength(1)
@@ -100,7 +100,7 @@ describe('orchestrator dispatcher', () => {
 
     await dispatcher.tick()
     expect(svc.run(run.id)?.stage).toBe('build')
-    expect(panes.slice(1).map((p) => p.title)).toEqual(['Implementer · codex · T-1'])
+    expect(panes.slice(1).map((p) => p.title)).toEqual(['Implementer · sonnet · T-1'])
     const impl = agentOf(svc, panes[1])
     svc.call(impl, 'get_my_task', {})
     svc.call(impl, 'complete_task', { summary: 'done' })
@@ -146,7 +146,7 @@ describe('orchestrator dispatcher', () => {
     expect(panes.filter((p) => p.title.startsWith('Lead'))).toHaveLength(1)
     expect(svc.unreadCount(lead.id)).toBe(1)
     expect(svc.call(lead, 'fetch_inbox', {})).toEqual([expect.objectContaining({ from: 'dawsha', body: expect.stringContaining('approved') })])
-    expect(panes.slice(2).map((p) => p.title)).toEqual(['Implementer · codex · T-2'])
+    expect(panes.slice(2).map((p) => p.title)).toEqual(['Implementer · sonnet · T-2'])
     expect(merges).toEqual([])
   })
 
@@ -159,7 +159,7 @@ describe('orchestrator dispatcher', () => {
     const lead = agentOf(svc, panes[0])
     for (const title of ['A', 'B', 'C', 'D']) svc.call(lead, 'create_task', { title, spec: 's', role: 'implementer' })
     await dispatcher.tick()
-    expect(panes.slice(1).map((p) => p.title)).toEqual(['Implementer · codex · T-1', 'Implementer · codex · T-2'])
+    expect(panes.slice(1).map((p) => p.title)).toEqual(['Implementer · sonnet · T-1', 'Implementer · sonnet · T-2'])
     expect(svc.tasks(run.id).filter((t) => t.status === 'todo')).toHaveLength(2)
   })
 
@@ -169,8 +169,8 @@ describe('orchestrator dispatcher', () => {
     await dispatcher.tick()
     const first = agentOf(svc, panes[0])
     svc.call(first, 'get_my_task', {})
-    const decision = svc.reportStall(first.id, 'Claude usage limit reached', ['Continue with Implementer', 'Wait'])
-    svc.answerDecision(decision.id, 'Continue with Implementer')
+    const decision = svc.reportStall(first.id, 'Claude usage limit reached', ['Continue with Implementer (Codex)', 'Wait'])
+    svc.answerDecision(decision.id, 'Continue with Implementer (Codex)')
     await dispatcher.tick()
     await dispatcher.tick()
     expect(closed).toEqual([first.id])

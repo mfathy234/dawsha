@@ -101,9 +101,15 @@ describe('orchestrator pane bridge', () => {
     // The cursor has not moved yet: nothing more until the screen shows it on "Yes".
     await show('tab-1', 'C:/wt/fix')
     expect(writes).toEqual(['\x1b[B'])
+    // On "Yes" now, but a key was just pressed: Enter waits its turn too, then goes on Dawsha's own timer.
     await show('tab-1', 'C:/wt/fix', true)
+    expect(writes).toEqual(['\x1b[B'])
+    advance(1_500)
     expect(writes).toEqual(['\x1b[B', '\r'])
-    await show('tab-1', 'C:/wt/fix', true)
+    // The menu went away: answered, nothing more is pressed.
+    bridge.onOutput('tab-1', '\x1b[2J\x1b[H> \r\n')
+    await bridge.settle('tab-1')
+    advance(10_000)
     expect(writes).toEqual(['\x1b[B', '\r'])
   })
 
@@ -114,7 +120,11 @@ describe('orchestrator pane bridge', () => {
     bridge.prepare(request({ cwd: 'C:/wt/fix' }))
     bridge.onOutput('tab-1', yesScreen)
     await bridge.settle('tab-1')
+    advance(1_500)
     expect(writes).toEqual(['\r'])
+    // Claude clears the menu and shows its prompt.
+    bridge.onOutput('tab-1', '\x1b[2J\x1b[H> \r\n')
+    await bridge.settle('tab-1')
     advance(5_000)
     expect(writes).toEqual(['\r', 'You are the fixer. Call whoami.'])
 
@@ -122,6 +132,9 @@ describe('orchestrator pane bridge', () => {
     second.svc.setLaunch(second.agent.id, { ...second.svc.agent(second.agent.id)!.launch!, firstMessage: 'Hello' })
     second.bridge.prepare(second.request({ cwd: 'C:/wt/fix' }))
     second.bridge.onOutput('tab-1', yesScreen)
+    await second.bridge.settle('tab-1')
+    second.advance(1_500)
+    second.bridge.onOutput('tab-1', '\x1b[2J\x1b[H> \r\n')
     await second.bridge.settle('tab-1')
     second.svc.call(second.agent, 'whoami', {})
     second.advance(5_000)
@@ -146,6 +159,52 @@ describe('orchestrator pane bridge', () => {
     advance(30_000)
     bridge.poll()
     expect(writes.filter((w) => w.startsWith('You are'))).toHaveLength(1)
+  })
+
+  it('never types into a menu it does not recognise, so Enter cannot pick "No, exit"', async () => {
+    const { svc, agent, bridge, writes, request, advance } = setup()
+    svc.setLaunch(agent.id, { ...svc.agent(agent.id)!.launch!, firstMessage: 'Hello' })
+    bridge.prepare(request({ cwd: 'C:/somewhere/else' }))
+    bridge.onOutput('tab-1', '\x1b[2J\x1b[H Accessing workspace:\r\n C:/not/the/worktree\r\n Quick safety check\r\n ❯ No, exit\r\n   Yes, I trust this folder\r\n Enter to confirm · Esc to cancel\r\n')
+    await bridge.settle('tab-1')
+    advance(60_000)
+    bridge.poll()
+    expect(writes).toEqual([])
+    svc.call(agent, 'get_my_task', {})
+    svc.call(agent, 'ask_human', { question: 'Disable or message?' })
+    svc.answerDecision(svc.openDecisions()[0].id, 'Message')
+    advance(60_000)
+    bridge.poll()
+    expect(writes).toEqual([])
+  })
+
+  it("answers Codex's folder prompt for its worktree, and never types into Codex's menu", async () => {
+    const { svc, run, agent, bridge, writes, request: base, advance } = setup()
+    // A bug run has one fixer: replace the Claude one with a Codex one.
+    svc.releaseAgent(agent.id, 'replaced')
+    const codex = svc.registerAgent({ runId: run.id, role: 'fixer', runner: 'codex', model: '' })
+    svc.setLaunch(codex.id, { agent: 'codex', args: [], env: {}, files: [], firstMessage: 'Hello' })
+    const request = (over: Partial<SpawnRequest>): SpawnRequest => base({ agent: 'codex', orchAgentId: codex.id, ...over })
+    const menu = (folder: string): string => `\x1b[2J\x1b[H  Folder access\r\n  ${folder}\r\n\r\n  Trust this folder? Codex can read, edit, and run files here.\r\n\r\n› 1. Trust and continue\r\n  2. Quit\r\n\r\n  enter continue · esc quit\r\n`
+    bridge.prepare(request({ id: 'tab-9', cwd: 'C:/wt/other' }))
+    bridge.onOutput('tab-9', menu('C:/not/this/one'))
+    await bridge.settle('tab-9')
+    advance(60_000)
+    bridge.poll()
+    expect(writes).toEqual([])
+    bridge.prepare(request({ cwd: 'C:/wt/fix' }))
+    bridge.onOutput('tab-1', menu('C:/wt/fix'))
+    await bridge.settle('tab-1')
+    expect(writes).toEqual([])
+    advance(1_500)
+    expect(writes).toEqual(['\r'])
+    // Codex was not reading keys yet and the menu is still there: Enter again, at most three times.
+    advance(1_500)
+    expect(writes).toEqual(['\r', '\r'])
+    bridge.onOutput('tab-1', '\x1b[2J\x1b[H› Ask Codex to do anything\r\n')
+    await bridge.settle('tab-1')
+    advance(10_000)
+    expect(writes.filter((w) => w === '\r')).toHaveLength(2)
   })
 
   it('does not type the first message while the CLI is still working on it, or after the agent connected', async () => {
