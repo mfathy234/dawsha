@@ -34,7 +34,8 @@ describe('task export and handoff', () => {
     const { svc, run, impl } = setup()
     const { agent } = svc.handoffTask(run.id, 'T-1', { runner: 'claude', model: 'sonnet', note: 'Codex ran out of quota.' })
     expect(agent).toMatchObject({ role: 'implementer', runner: 'claude', model: 'sonnet' })
-    expect(svc.call(impl, 'get_my_task', {})).toMatchObject({ task: null })
+    expect(() => svc.call(impl, 'get_my_task', {})).toThrow(/replaced/)
+    expect(svc.agentForToken(impl.token)).toBeUndefined()
     expect(svc.call(agent, 'get_my_task', {})).toMatchObject({ key: 'T-1', status: 'in_progress' })
     const inbox = svc.call(agent, 'fetch_inbox', {}) as { body: string }[]
     expect(inbox[0].body).toContain('Writer done, tests next.')

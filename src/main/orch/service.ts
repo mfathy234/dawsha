@@ -2,7 +2,9 @@ import { randomBytes } from 'node:crypto'
 import { REVIEWER_FOR, canUseTool } from '../../shared/orch/roles'
 import { isFinal, moveTask, pauseTask, resumeTask } from '../../shared/orch/taskMachine'
 import { TOOL_SCHEMAS, validateArgs, type ToolSchema } from '../../shared/orch/toolSchemas'
+import { summarizeRunUsage, type PriceLookup, type RunUsage } from '../../shared/orch/usage'
 import type {
+  AgentUsage,
   DecisionKind,
   OrchAgent,
   OrchDecision,
@@ -11,6 +13,7 @@ import type {
   OrchRun,
   OrchTask,
   OrchTaskState,
+  RunKind,
   TaskStatus
 } from '../../shared/orch/types'
 import type { OrchStore } from './store'
@@ -21,6 +24,8 @@ export const MAX_REVIEW_ROUNDS = 2
 export class OrchToolError extends Error {}
 
 export interface CreateRunInput {
+  /** Defaults to 'feature'. */
+  kind?: RunKind
   projectPath: string
   title: string
   story: string
@@ -97,20 +102,40 @@ export class OrchService {
   // ---- Host API (used by Dawsha itself, never by agents) ----
 
   createRun(input: CreateRunInput): OrchRun {
-    const run: OrchRun = { id: randomId('run'), ...input, stage: 'spec', createdAt: this.now(), finishedAt: null }
+    const kind: RunKind = input.kind ?? 'feature'
+    const run: OrchRun = {
+      id: randomId('run'),
+      kind,
+      projectPath: input.projectPath,
+      title: input.title,
+      story: input.story,
+      plan: input.plan,
+      // A bug skips the spec and planning stages: one fixer works straight from the report.
+      stage: kind === 'bug' ? 'build' : 'spec',
+      createdAt: this.now(),
+      finishedAt: null
+    }
     this.store.putRun(run)
-    this.log(run.id, 'run', `Run started: ${run.title}`, null)
+    this.log(run.id, 'run', `${kind === 'bug' ? 'Bug fix' : 'Run'} started: ${run.title}`, null)
+    if (kind === 'bug') {
+      const task = this.newTask(run.id, { title: run.title, spec: run.story, role: 'fixer', dependsOn: [], acceptance: [] })
+      this.log(run.id, 'task', `${task.key} created for fixer: ${task.title}`, task.id)
+    }
     return run
   }
 
   registerAgent(input: RegisterAgentInput): OrchAgent {
-    if (!this.store.getRun(input.runId)) throw new Error(`Run ${input.runId} not found.`)
+    const run = this.store.getRun(input.runId)
+    if (!run) throw new Error(`Run ${input.runId} not found.`)
+    if (run.kind === 'bug') this.checkBugAgent(input)
     const agent: OrchAgent = {
       id: randomId(input.role),
       ...input,
       token: randomBytes(24).toString('base64url'),
       taskId: null,
-      createdAt: this.now()
+      createdAt: this.now(),
+      usage: null,
+      retiredAt: null
     }
     this.store.putAgent(agent)
     this.log(input.runId, 'agent', `${input.role} joined (${input.runner} · ${input.model})`, null)
@@ -118,7 +143,23 @@ export class OrchService {
   }
 
   agentForToken(token: string): OrchAgent | undefined {
-    return token ? this.store.agentByToken(token) : undefined
+    const agent = token ? this.store.agentByToken(token) : undefined
+    return agent && !agent.retiredAt ? agent : undefined
+  }
+
+  tasks(runId: string): OrchTask[] {
+    return this.store.listTasks({ runId })
+  }
+
+  /** Called by the runner with the CLI session's latest cumulative token counts. */
+  reportUsage(agentId: string, usage: AgentUsage): void {
+    const agent = this.store.getAgent(agentId)
+    if (!agent) throw new Error(`Agent ${agentId} not found.`)
+    this.store.putAgent({ ...agent, usage })
+  }
+
+  runUsage(runId: string, prices: PriceLookup): RunUsage {
+    return summarizeRunUsage(this.store.listAgents(runId), prices)
   }
 
   toolsFor(agent: OrchAgent): ToolSchema[] {
@@ -127,7 +168,7 @@ export class OrchService {
 
   call(agent: OrchAgent, tool: string, args: unknown): unknown {
     const me = this.store.getAgent(agent.id)
-    if (!me) throw new OrchToolError('Unknown agent.')
+    if (!me || me.retiredAt) throw new OrchToolError('This agent was replaced and can no longer work on the run.')
     if (!canUseTool(me.role, tool)) throw new OrchToolError(`The ${me.role} role is not allowed to use ${tool}.`)
     const problem = validateArgs(tool, args ?? {})
     if (problem) throw new OrchToolError(problem)
@@ -188,12 +229,12 @@ export class OrchService {
     if (isFinal(task.status)) throw new Error(`${key} is ${task.status} and cannot be handed over.`)
     const state = this.exportTaskState(runId, key)
     const previous = task.assignee ? this.store.getAgent(task.assignee) : undefined
+    if (previous) this.store.putAgent({ ...previous, taskId: null, retiredAt: this.now() })
     const agent = this.registerAgent({ runId, role: task.role, runner: input.runner, model: input.model })
     const paused = task.status === 'blocked' || task.status === 'waiting_on_human'
     const working = task.status === 'in_progress' || task.status === 'stalled' || task.status === 'assigned'
     this.save({ ...task, assignee: agent.id, status: working ? 'assigned' : task.status, updatedAt: this.now() })
     this.store.putAgent({ ...agent, taskId: task.id })
-    if (previous) this.store.putAgent({ ...previous, taskId: null })
     if (paused) {
       for (const decision of this.store.openDecisions().filter((d) => d.taskId === task.id)) {
         this.store.putDecision({ ...decision, agentId: agent.id })
@@ -428,6 +469,12 @@ export class OrchService {
   }
 
   // ---- Helpers ----
+
+  private checkBugAgent(input: RegisterAgentInput): void {
+    if (input.role !== 'fixer') throw new Error('Bug runs use one fixer agent and no subagents.')
+    const working = this.store.listAgents(input.runId).some((agent) => agent.role === 'fixer' && !agent.retiredAt)
+    if (working) throw new Error('This bug run already has a fixer. Hand the task over to continue with another model.')
+  }
 
   private activeTaskOf(agent: OrchAgent): OrchTask | undefined {
     return this.store.listTasks({ runId: agent.runId }).find((task) => task.assignee === agent.id && ACTIVE.includes(task.status))

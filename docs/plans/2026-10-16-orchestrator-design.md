@@ -22,8 +22,10 @@ run, and a Human review inbox collects every decision that needs the user.
 | Human decisions | `ask_human` tool feeding a Human review tab with Dawsha's needs-you alerts |
 | Concurrency | Several runs at once (any projects); one All runs overview with quick replies |
 | Plans | Created and edited in Settings → Orchestrator; New run only picks one |
-| Cost | Actual spend shown per agent and run; no estimates and no budget cap |
+| Cost | Spend per agent and run (reported or estimated from token counts); no up-front estimates and no budget cap |
 | History | Past runs searchable; export/import as `.dawsharun` files |
+| Run types | Feature: the whole team (spec, lead, workers, reviews). Bug: one fixer agent on the model the user picks (default: the plan's main/lead model), no subagents, no spec stage; can still ask the human and be handed to another model; merge into main still needs the user |
+| Usage and cost | Every run reports tokens (input, output, cache read/write) and estimated cost in total, per role and per agent (role, runner, model). Cost source per agent: reported by the CLI (Claude Code), estimated from the user's price table, free (local), or unpriced (no price set; total marked incomplete) |
 | Continue with another model | Any unfinished task can be exported as a state + brief and handed to another profile (runner, model, effort) the user picks; same worktree and branch; review round and history kept. Quota exhaustion detected in a pane marks the task stalled and raises a "Continue with another model" card |
 | Task boards | One kanban per project with the tasks of all its runs (plus manual tasks); an All projects view; filters and saved views |
 

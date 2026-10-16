@@ -11,6 +11,7 @@ export const ROLE_TOOLS: Record<OrchRole, readonly string[]> = {
   implementer: [...COMMON, ...WORKER],
   ui: [...COMMON, ...WORKER],
   tester: [...COMMON, ...WORKER],
+  fixer: [...COMMON, ...WORKER],
   'code-reviewer': [...COMMON, ...REVIEWER],
   'ux-reviewer': [...COMMON, ...REVIEWER]
 }

@@ -1,4 +1,4 @@
-export const ORCH_ROLES = ['lead', 'spec-writer', 'implementer', 'ui', 'code-reviewer', 'ux-reviewer', 'tester'] as const
+export const ORCH_ROLES = ['lead', 'spec-writer', 'implementer', 'ui', 'code-reviewer', 'ux-reviewer', 'tester', 'fixer'] as const
 export type OrchRole = (typeof ORCH_ROLES)[number]
 
 export const TASK_STATUSES = [
@@ -45,10 +45,14 @@ export interface OrchTask {
   updatedAt: number
 }
 
+/** A feature gets the whole team; a bug is fixed by one agent with no subagents. */
+export type RunKind = 'feature' | 'bug'
+
 export type RunStage = 'spec' | 'plan' | 'build' | 'review' | 'merge' | 'done' | 'cancelled'
 
 export interface OrchRun {
   id: string
+  kind: RunKind
   projectPath: string
   title: string
   story: string
@@ -67,6 +71,19 @@ export interface OrchAgent {
   token: string
   taskId: string | null
   createdAt: number
+  /** Latest cumulative usage reported by Dawsha's runner for this agent's CLI session. */
+  usage: AgentUsage | null
+  /** Set when the agent is replaced or its run ends; its token stops working. */
+  retiredAt?: number | null
+}
+
+export interface AgentUsage {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  /** Cost the CLI itself reported (Claude Code does); null when only tokens are known. */
+  reportedCostUsd: number | null
 }
 
 export interface OrchMessage {
