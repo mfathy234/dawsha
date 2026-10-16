@@ -6,6 +6,7 @@ import { claudeProjectSlug, sessionIdFromFile, sessionTitle } from '../shared/pr
 import { RESUME_LIMIT, matchesQuery } from '../shared/resumeIndex'
 import { claudeDetail, codexDetail, contentMatch, geminiDetail, modelLabel, type SessionDetail } from '../shared/sessionDetail'
 import { normalizePath } from '../shared/sessionMatch'
+import { sessionEvidence } from '../shared/sessionDetail'
 import type { AgentKind, Project, ResumeQuery, ResumeSession } from '../shared/types'
 import { codexHome, geminiHome } from './agentLaunch'
 import { listGeminiChatFiles, projectSlugs } from './geminiWatcher'
@@ -87,7 +88,7 @@ async function codexCwd(path: string): Promise<string | null> {
   return cwd
 }
 
-async function codexCandidates(projects: Project[], home: string): Promise<Candidate[]> {
+async function codexCandidates(projects: Project[], home: string, since?: number): Promise<Candidate[]> {
   const byFolder = new Map(projects.map((p) => [normalizePath(p.folder), p.id]))
   const files = await Promise.all(
     (await listRolloutFiles(join(home, 'sessions'))).map(async (path) => {
@@ -99,7 +100,8 @@ async function codexCandidates(projects: Project[], home: string): Promise<Candi
       }
     })
   )
-  const newest = files.filter((f): f is NonNullable<typeof f> => f !== null).sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, MAX_CODEX_FILES)
+  const sorted = files.filter((f): f is NonNullable<typeof f> => f !== null && (since === undefined || f.modifiedAt >= since)).sort((a, b) => b.modifiedAt - a.modifiedAt)
+  const newest = since === undefined ? sorted.slice(0, MAX_CODEX_FILES) : sorted
   const out: Candidate[] = []
   for (const file of newest) {
     const cwd = await codexCwd(file.path)
@@ -109,7 +111,7 @@ async function codexCandidates(projects: Project[], home: string): Promise<Candi
   return out
 }
 
-async function geminiCandidates(projects: Project[], home: string): Promise<Candidate[]> {
+async function geminiCandidates(projects: Project[], home: string, since?: number): Promise<Candidate[]> {
   const files = await listGeminiChatFiles(home)
   const out: Candidate[] = []
   for (const project of projects) {
@@ -118,17 +120,21 @@ async function geminiCandidates(projects: Project[], home: string): Promise<Cand
       if (slugs.has(file.slug)) out.push({ agent: 'gemini', path: file.path, projectId: project.id, modifiedAt: file.modifiedAt, size: file.size })
     }
   }
-  return out.sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, MAX_GEMINI_FILES)
+  const sorted = out.filter(f => since === undefined || f.modifiedAt >= since).sort((a, b) => b.modifiedAt - a.modifiedAt)
+  return since === undefined ? sorted.slice(0, MAX_GEMINI_FILES) : sorted
 }
 
-function build(candidate: Candidate, id: string, title: string, detail: SessionDetail): ResumeSession {
+function build(candidate: Candidate, id: string, title: string, detail: SessionDetail, text: string): ResumeSession {
+  const evidence = sessionEvidence(candidate.agent, text)
   return {
     agent: candidate.agent,
     id,
     title,
     projectId: candidate.projectId,
     modifiedAt: candidate.modifiedAt,
-    startedAt: detail.startedAt ?? candidate.modifiedAt,
+    startedAt: evidence.startedAt ?? detail.startedAt ?? candidate.modifiedAt,
+    lastActivityAt: evidence.endedAt ?? candidate.modifiedAt,
+    workBranch: evidence.branch,
     messageCount: detail.messages,
     model: modelLabel(candidate.agent, detail.model),
     firstPrompt: detail.firstPrompt,
@@ -141,7 +147,7 @@ async function enrichClaude(candidate: Candidate): Promise<ResumeSession | null>
   const half = Math.min(text.length, 96 * 1024)
   const title = sessionTitle(text.slice(0, half), text.slice(-48 * 1024))
   if (!title || !candidate.id) return null
-  return build(candidate, candidate.id, title, claudeDetail(text, scale))
+  return build(candidate, candidate.id, title, claudeDetail(text, scale), text)
 }
 
 async function enrichCodex(candidate: Candidate, names: Map<string, string>): Promise<ResumeSession | null> {
@@ -150,7 +156,7 @@ async function enrichCodex(candidate: Candidate, names: Map<string, string>): Pr
   if (!meta) return null
   const detail = codexDetail(text, scale)
   const title = names.get(meta.sessionId) ?? detail.firstPrompt?.slice(0, 80) ?? 'Codex session'
-  return build(candidate, meta.sessionId, title, { ...detail, startedAt: meta.startedAt })
+  return build(candidate, meta.sessionId, title, { ...detail, startedAt: meta.startedAt }, text)
 }
 
 async function enrichGemini(candidate: Candidate): Promise<ResumeSession | null> {
@@ -159,7 +165,7 @@ async function enrichGemini(candidate: Candidate): Promise<ResumeSession | null>
   if (!chat || !chat.hasConversation) return null
   const detail = geminiDetail(text, scale)
   const title = chat.name ?? 'Gemini session'
-  return build(candidate, chat.sessionId, title, { ...detail, startedAt: chat.startedAt || detail.startedAt })
+  return build(candidate, chat.sessionId, title, { ...detail, startedAt: chat.startedAt || detail.startedAt }, text)
 }
 
 async function enrich(candidate: Candidate, names: Map<string, string>): Promise<ResumeSession | null> {
@@ -178,16 +184,17 @@ async function enrich(candidate: Candidate, names: Map<string, string>): Promise
   return session
 }
 
-async function gather(projects: Project[], query: ResumeQuery, homes: SessionHomes) {
+async function gather(projects: Project[], query: ResumeQuery, homes: SessionHomes, since?: number) {
   const scope = projects.filter((p) => !query.projectId || p.id === query.projectId)
   const wanted = (agent: AgentKind): boolean => !query.agent || query.agent === agent
   const [claude, codex, gemini, names] = await Promise.all([
     wanted('claude') ? claudeCandidates(scope, homes.claudeProjects) : [],
-    wanted('codex') ? codexCandidates(scope, homes.codex) : [],
-    wanted('gemini') ? geminiCandidates(scope, homes.gemini) : [],
+    wanted('codex') ? codexCandidates(scope, homes.codex, since) : [],
+    wanted('gemini') ? geminiCandidates(scope, homes.gemini, since) : [],
     readFile(join(homes.codex, 'session_index.jsonl'), 'utf8').then(parseSessionIndex, () => new Map<string, string>())
   ])
-  const candidates = [...claude, ...codex, ...gemini].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, MAX_SCANNED)
+  const sorted = [...claude, ...codex, ...gemini].filter(f => since === undefined || f.modifiedAt >= since).sort((a, b) => b.modifiedAt - a.modifiedAt)
+  const candidates = since === undefined ? sorted.slice(0, MAX_SCANNED) : sorted
   return { scope, names, candidates }
 }
 
@@ -200,10 +207,11 @@ export interface SessionSource {
 export async function listSessionSources(
   projects: Project[],
   query: Pick<ResumeQuery, 'projectId' | 'agent' | 'limit'> = {},
-  homes: SessionHomes = defaultHomes()
+  homes: SessionHomes = defaultHomes(),
+  since?: number
 ): Promise<SessionSource[]> {
-  const { candidates, names } = await gather(projects, query, homes)
-  const limit = query.limit ?? MAX_SCANNED
+  const { candidates, names } = await gather(projects, query, homes, since)
+  const limit = query.limit ?? (since === undefined ? MAX_SCANNED : Infinity)
   const out: SessionSource[] = []
   const seen = new Set<string>()
   for (const candidate of candidates) {

@@ -10,6 +10,47 @@ export interface SessionDetail {
   messages: number
 }
 
+export interface SessionEvidence {
+  branch: string | null
+  startedAt?: number
+  endedAt?: number
+}
+
+/** Metadata from the same bounded sample used by the session index. Gemini stores no git branch. */
+export function sessionEvidence(agent: AgentKind, text: string): SessionEvidence {
+  const evidence: SessionEvidence = { branch: null }
+  let entries = records(text)
+  if (agent === 'gemini') {
+    try {
+      const whole: unknown = JSON.parse(text)
+      if (isRecord(whole)) entries = [whole]
+    } catch { /* JSONL is handled by records. */ }
+  }
+  const takeTime = (value: unknown): void => {
+    const at = asTime(value)
+    if (at === undefined) return
+    evidence.startedAt = Math.min(evidence.startedAt ?? at, at)
+    evidence.endedAt = Math.max(evidence.endedAt ?? at, at)
+  }
+  for (const record of entries) {
+    takeTime(record.timestamp)
+    const payload = isRecord(record.payload) ? record.payload : {}
+    if (agent === 'claude' && typeof record.gitBranch === 'string') evidence.branch = record.gitBranch || null
+    if (agent === 'codex' && record.type === 'session_meta') {
+      takeTime(payload.timestamp)
+      const git = isRecord(payload.git) ? payload.git : {}
+      if (typeof git.branch === 'string') evidence.branch = git.branch || null
+    }
+    if (agent === 'gemini') {
+      const meta = isRecord(record.$set) ? record.$set : record
+      takeTime(meta.startTime)
+      takeTime(meta.lastUpdated)
+      if (Array.isArray(record.messages)) for (const m of record.messages) if (isRecord(m)) takeTime(m.timestamp)
+    }
+  }
+  return evidence
+}
+
 type Json = Record<string, unknown>
 
 const isRecord = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value)

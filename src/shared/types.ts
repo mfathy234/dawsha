@@ -254,6 +254,9 @@ export interface ResumeEntry {
 }
 
 export interface ResumeSession {
+  /** Transcript metadata reused by the work dashboard. */
+  workBranch?: string | null
+  lastActivityAt?: number
   agent: AgentKind
   id: string
   title: string
