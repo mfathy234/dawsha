@@ -138,4 +138,3 @@ export function plansSection(settings: OrchSettings, refresh: () => void): HTMLE
     )
   )
 }
-

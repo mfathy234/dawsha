@@ -24,7 +24,7 @@
 .orch-nr-story { height: auto; min-height: 140px; padding: var(--orch-space-2) var(--orch-space-3); resize: vertical; line-height: 1.5; font-family: inherit; }
 
 .orch-nr-inline { display: flex; align-items: center; gap: var(--orch-space-3); flex-wrap: wrap; }
-.orch-nr-inline .text-input { flex: 1 1 260px; min-width: 0; width: auto; }
+.orch-nr-inline > .select-menu { flex: 1 1 260px; min-width: 0; width: auto; }
 
 .orch-nr-cards {
   display: grid;

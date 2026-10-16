@@ -77,4 +77,3 @@ export function button(id: string, label: string, onClick: () => void, options: 
 export const modelCell = (p: OrchProfile): HTMLElement => modelBadge(p.local ? 'codex-local' : p.runner, p.model || 'default')
 
 export const effortLabel = (p: OrchProfile): string => (p.effort ? p.effort : supportsEffort(p.runner) ? 'default' : 'n/a')
-
