@@ -1,3 +1,4 @@
+import { selectMenu } from '../selectMenu'
 import type { OrchDecisionView, OrchRunDetail } from '../../../shared/orch/api'
 import type { OrchProfile } from '../../../shared/orch/profiles'
 import { OTHER_OPTION, composeAnswer, decisionKindLabel, filterDecisions, pickSelection, runFilterChips } from '../../../shared/orch/review'
@@ -252,7 +253,7 @@ export class OrchReviewView {
       { class: 'review-handoff', 'aria-label': 'Continue with another model' },
       h('h3', { class: 'review-handoff-title' }, 'Continue with another model'),
       h('p', { class: 'orch-muted review-handoff-hint' }, 'The task moves to a fresh agent with everything done so far.'),
-      select,
+      selectMenu(select),
       note,
       h('div', { class: 'review-actions' }, button)
     )

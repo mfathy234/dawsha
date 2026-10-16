@@ -1,3 +1,4 @@
+import { selectMenu, syncSelectMenu } from '../selectMenu'
 import {
   boardCards,
   DEFAULT_BOARD_FILTER,
@@ -82,9 +83,9 @@ class FilterSelect {
   private signature = ''
 
   constructor(label: string, onChange: (value: string) => void) {
-    this.select = h('select', { class: 'orch-select' })
+    this.select = h('select', { class: 'orch-select', 'aria-label': label })
     this.select.addEventListener('change', () => onChange(this.select.value))
-    this.el = h('label', { class: 'orch-filter' }, h('span', { class: 'orch-filter-label' }, label), this.select)
+    this.el = h('div', { class: 'orch-filter' }, h('span', { class: 'orch-filter-label' }, label), selectMenu(this.select))
   }
 
   /** Returns false when the current value is no longer offered. */
@@ -97,6 +98,7 @@ class FilterSelect {
     }
     const present = options.some((o) => o.value === value)
     this.select.value = present ? value : (options[0]?.value ?? '')
+    syncSelectMenu(this.select)
     return present
   }
 }

@@ -1,6 +1,6 @@
+import { selectMenu } from '../selectMenu'
 import type { RunKind } from '../../../shared/orch/types'
 import { fixerProfileOf, type OrchPlan, type OrchProfile, type OrchSettings } from '../../../shared/orch/profiles'
-import { ORCH_ROLES } from '../../../shared/orch/types'
 import { openSettings } from '../../actions'
 import { h } from '../../dom'
 import { startRun } from '../../orchActions'
@@ -28,12 +28,6 @@ const KIND_OPTIONS: { kind: RunKind; name: string; hint: string }[] = [
 
 const profileLabel = (p: OrchProfile): string =>
   `${p.name} · ${p.local ? 'codex (local)' : p.runner}${p.model ? ` ${p.model}` : ''}${p.effort ? ` · effort ${p.effort}` : ''}`
-
-const planRoleCount = (settings: OrchSettings, plan: OrchPlan): { roles: number; local: number } => {
-  const ids = ORCH_ROLES.map((role) => plan.roles[role]).filter((id): id is string => Boolean(id))
-  const profiles = ids.map((id) => settings.profiles.find((p) => p.id === id)).filter((p): p is OrchProfile => p !== undefined)
-  return { roles: profiles.length, local: new Set(profiles.filter((p) => p.local).map((p) => p.id)).size }
-}
 
 function field(label: string, id: string, control: HTMLElement, hint?: string): HTMLElement {
   return h('div', { class: 'orch-nr-field' }, h('label', { class: 'orch-nr-label', for: id }, label), control, hint ? h('p', { class: 'orch-nr-hint' }, hint) : null)
@@ -126,7 +120,7 @@ export class OrchNewRunView {
     if (projects.length === 0) select.append(h('option', { value: '' }, 'No projects yet'))
     for (const p of projects) select.append(h('option', { value: p.id, selected: p.id === current }, p.name))
     select.addEventListener('change', () => this.change({ projectId: select.value }))
-    return field('Project', 'orch-nr-project', select, 'The run works in its own branch and worktrees, so your checkout stays untouched.')
+    return field('Project', 'orch-nr-project', selectMenu(select), 'The run works in its own branch and worktrees, so your checkout stays untouched.')
   }
 
   private kindField(): HTMLElement {
@@ -164,7 +158,7 @@ export class OrchNewRunView {
     }
     select.addEventListener('change', () => this.change({ fixerId: select.value || null }))
     const badge = main ? modelBadge(main.local ? 'codex-local' : main.runner, main.model || 'default') : null
-    return field('Fixed by', 'orch-nr-fixer', h('div', { class: 'orch-nr-inline' }, select, this.draft.fixerId === null ? badge : null), "Defaults to your plan's main model.")
+    return field('Fixed by', 'orch-nr-fixer', h('div', { class: 'orch-nr-inline' }, selectMenu(select), this.draft.fixerId === null ? badge : null), "Defaults to your plan's main model.")
   }
 
   private storyField(): HTMLElement {
@@ -194,7 +188,7 @@ export class OrchNewRunView {
     const group = h('div', { class: 'orch-nr-cards', role: 'radiogroup', 'aria-label': 'Plan', id: 'orch-nr-plans' })
     for (const p of settings.plans) {
       const selected = p.id === plan.id
-      const counts = planRoleCount(settings, p)
+      const lead = settings.profiles.find((profile) => profile.id === p.roles.lead)
       group.append(
         h(
           'button',
@@ -209,7 +203,7 @@ export class OrchNewRunView {
             onClick: () => this.change({ planId: p.id })
           },
           h('b', {}, p.name, p.id === settings.defaultPlanId ? h('span', { class: 'orch-nr-default' }, 'default') : null),
-          h('small', { class: 'orch-nr-est' }, `${counts.roles} roles${counts.local > 0 ? ` · ${counts.local} local` : ''}`)
+          h('small', { class: 'orch-nr-est' }, `Lead: ${lead?.model || 'default'} · team picked by the lead`)
         )
       )
     }
