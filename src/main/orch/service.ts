@@ -1,3 +1,5 @@
+import type { RunArchive } from '../../shared/orch/runArchive'
+import { exportStoredRun, importStoredRun } from './archiveStore'
 import { randomBytes } from 'node:crypto'
 import { canUseTool } from '../../shared/orch/roles'
 import { TOOL_SCHEMAS, validateArgs, type ToolSchema } from '../../shared/orch/toolSchemas'
@@ -79,6 +81,18 @@ export class OrchService {
     return result
   }
 
+  exportRun(runId: string, version = '1.0.0'): RunArchive {
+    return this.store.transaction(() => exportStoredRun(this.store, runId, version, this.ctx.now()))
+  }
+
+  importRun(archive: RunArchive, from = 'dawsharun'): OrchRun {
+    return this.tx(() => importStoredRun(this.store, archive, this.ctx.now(), from))
+  }
+
+  private writable(runId: string): void {
+    if (this.store.getRun(runId)?.imported) throw new Error('Imported runs are read-only.')
+  }
+
   /** What the UI calls: a feature run also gets its spec task, made from the story. */
   startRun(input: CreateRunInput): OrchRun {
     return this.tx(() => {
@@ -128,6 +142,7 @@ export class OrchService {
   /** Returns the agent with its plain token (shown once, for the pane's MCP config); only a hash is stored. */
   registerAgent(input: RegisterAgentInput): OrchAgent {
     return this.tx(() => {
+      this.writable(input.runId)
       const run = this.store.getRun(input.runId)
       if (!run) throw new Error(`Run ${input.runId} not found.`)
       if (run.kind === 'bug') this.checkBugAgent(input)
@@ -198,6 +213,7 @@ export class OrchService {
 
   setStage(runId: string, stage: RunStage): void {
     this.tx(() => {
+      this.writable(runId)
       const run = this.store.getRun(runId)
       if (!run || run.stage === stage) return
       const finished = stage === 'done' || stage === 'cancelled'
@@ -229,6 +245,7 @@ export class OrchService {
   /** Gives a waiting task to a specific agent; its get_my_task then returns it. */
   assignTask(runId: string, key: string, agentId: string): OrchTask {
     return this.tx(() => {
+      this.writable(runId)
       const task = this.ctx.task(key, runId)
       const agent = this.store.getAgent(agentId)
       if (!agent || agent.retiredAt) throw new Error(`Agent ${agentId} is not active.`)
@@ -323,6 +340,7 @@ export class OrchService {
 
   markMerged(runId: string, key: string): void {
     this.tx(() => {
+      this.writable(runId)
       const task = this.ctx.task(key, runId)
       this.ctx.save({ ...task, mergedAt: this.ctx.now() })
       this.ctx.log(runId, 'merge', `${key} merged into the run branch`, task.id)
@@ -334,7 +352,7 @@ export class OrchService {
   }
 
   openDecisions(): OrchDecision[] {
-    return this.store.openDecisions()
+    return this.store.openDecisions().filter((d) => !this.store.getRun(d.runId)?.imported)
   }
 
   events(runId: string): OrchEvent[] {
@@ -345,6 +363,7 @@ export class OrchService {
     return this.tx(() => {
       const decision = this.store.getDecision(id)
       if (!decision) throw new Error(`Decision ${id} not found.`)
+      this.writable(decision.runId)
       if (decision.answer !== null) throw new Error(`Decision ${id} was already answered.`)
       const answered: OrchDecision = { ...decision, answer, answeredAt: this.ctx.now() }
       this.store.putDecision(answered)
@@ -393,6 +412,7 @@ export class OrchService {
    */
   handoffTask(runId: string, key: string, input: HandoffInput): { agent: OrchAgent; state: OrchTaskState } {
     return this.tx(() => {
+      this.writable(runId)
       const task = this.ctx.task(key, runId)
       if (!ACTIVE.includes(task.status)) {
         throw new Error(`${key} is ${statusText(task.status)}; only unfinished work that is not waiting for review can be handed over.`)

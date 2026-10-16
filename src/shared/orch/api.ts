@@ -76,6 +76,8 @@ export interface OrchAgentRow {
 
 /** One run with everything the Orchestrator screens show for it. */
 export interface OrchRunDetail extends OrchRunView {
+  imported?: { at: number; from: string }
+  decisions?: import('./types').OrchDecision[]
   story: string
   plan: string
   projectPath: string
