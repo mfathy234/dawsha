@@ -13,6 +13,7 @@ export interface SnapshotTab {
   from?: AgentKind
   baseline?: SessionBaseline
   task?: unknown
+  orchAgentId?: string
 }
 
 export interface SnapshotPane {
@@ -57,7 +58,8 @@ export function snapshotWorkspace(
           sessionId: tab.agent === 'shell' || detached ? undefined : sessionFor(tab),
           agentsOpen: tab.agentsOpen === true ? true : undefined,
           from: tab.from,
-          baseline: options.portable === true ? undefined : tab.baseline
+          baseline: options.portable === true ? undefined : tab.baseline,
+          orchAgentId: options.portable === true ? undefined : tab.orchAgentId
         }))
       }
       if (options.portable !== true) {

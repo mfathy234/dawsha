@@ -53,6 +53,8 @@ export interface SavedTab {
   agentsOpen?: boolean
   from?: AgentKind
   baseline?: SessionBaseline
+  /** The orchestrator agent this pane runs; it reconnects with a fresh token when restored. */
+  orchAgentId?: string
 }
 
 export interface SavedPane {

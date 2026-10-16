@@ -43,6 +43,8 @@ export interface TermState {
   from?: AgentKind
   baseline?: SessionBaseline
   task?: { agents: AgentKind[]; before: ToolReport[] }
+  /** Orchestrator agent run in this tab. */
+  orchAgentId?: string
 }
 
 export interface PaneState {
@@ -65,7 +67,7 @@ export interface ReplayRef {
   returnView: View
 }
 
-export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
+export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote' | 'experimental'
 
 export type ProjectsTab = 'projects' | 'tasks' | 'snippets' | 'instructions'
 

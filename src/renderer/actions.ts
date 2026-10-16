@@ -167,6 +167,7 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     prompt: term.prompt,
     title: term.titleHint,
     fullAccess: term.agent !== 'shell' && state.settings.fullAccess[term.agent],
+    orchAgentId: term.orchAgentId,
     cols: view?.cols ?? 120,
     rows: view?.rows ?? 30
   })
@@ -986,7 +987,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline, orchAgentId: tab.orchAgentId })
   }
   return {
     id: newId(),

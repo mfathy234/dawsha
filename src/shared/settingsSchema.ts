@@ -137,6 +137,8 @@ function sanitizeTab(value: unknown): SavedTab | null {
   if (isAgent(value.from) && agent !== 'shell') tab.from = value.from
   const baseline = sanitizeBaseline(value.baseline)
   if (baseline) tab.baseline = baseline
+  const orchAgentId = asString(value.orchAgentId)
+  if (orchAgentId && agent !== 'shell') tab.orchAgentId = orchAgentId
   return tab
 }
 

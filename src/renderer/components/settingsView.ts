@@ -49,6 +49,7 @@ import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
+import { setOrchestratorEnabled } from '../orchActions'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
@@ -56,6 +57,7 @@ const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
   { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
   { id: 'highlights', label: 'Highlights', lede: 'Tint terminal lines that contain the words you care about.' },
+  { id: 'experimental', label: 'Experimental', lede: 'Features that are still being built. Use them in local builds only.' },
   { id: 'changelog', label: 'Changelog', lede: 'Every released version, newest first.' },
   { id: 'about', label: 'About', lede: 'Version, links and where your data lives.' }
 ]
@@ -142,6 +144,7 @@ export class SettingsViewComponent {
       state.settings.autoUpdateCheck,
       state.settings.highlights,
       state.settings.recordings,
+      state.settings.experimental,
       this.remoteAccess,
       this.remoteError,
       this.remoteBusy,
@@ -233,6 +236,14 @@ export class SettingsViewComponent {
         return this.highlights(state)
       case 'remote':
         return this.remoteAccessBody()
+      case 'experimental':
+        return [
+          row(
+            'Orchestrator',
+            checkbox('settings-orchestrator', 'Turn on', state.settings.experimental.orchestrator, false, setOrchestratorEnabled),
+            h('p', { class: 'note set-note' }, 'A lead agent plans work and gives tasks to other agents in their own panes and worktrees, on the models you choose. Start runs from the command palette: "Orchestrator: fix a bug" or "build a feature".')
+          )
+        ]
       case 'changelog':
         return this.changelog(state)
       default:
