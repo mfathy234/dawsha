@@ -1,3 +1,4 @@
+import { selectMenu, syncSelectMenu } from '../selectMenu'
 import type { OrchRunDetail } from '../../../shared/orch/api'
 import { historyResult, historyRuns, type HistoryFilter } from '../../../shared/orch/history'
 import { formatUsd } from '../../../shared/usage'
@@ -26,7 +27,7 @@ export class OrchHistoryView {
   private busy = false
 
   constructor() {
-    const label = (text: string, input: HTMLElement): HTMLElement => h('div', { class: 'orch-filter' }, h('label', { class: 'orch-filter-label', for: input.id }, text), input)
+    const label = (text: string, input: HTMLElement): HTMLElement => h('div', { class: 'orch-filter' }, h('label', { class: 'orch-filter-label', for: input.id }, text), input instanceof HTMLSelectElement ? selectMenu(input) : input)
     this.el.append(h('div', { class: 'orch-history-toolbar' }, h('div', {}, h('h2', {}, 'Run history'), h('p', { class: 'orch-muted' }, 'Finished, cancelled and imported runs, all projects')),
       h('div', { class: 'orch-actions' }, this.import, this.export)),
       h('div', { class: 'orch-filterbar orch-panel' }, label('Search history', this.search), label('Project', this.project), label('Result', this.result)), this.host)
@@ -50,6 +51,7 @@ export class OrchHistoryView {
       this.project.append(h('option', { value: '' }, 'All projects'), ...projects.map((path) => h('option', { value: path }, this.projectName(path))))
       if (!projects.includes(this.filter.project)) this.filter = { ...this.filter, project: '' }
       this.project.value = this.filter.project
+      syncSelectMenu(this.project)
     }
     const runs = historyRuns(all, this.filter)
     if (!runs.some((r) => r.id === this.activeId)) this.activeId = runs[0]?.id ?? null

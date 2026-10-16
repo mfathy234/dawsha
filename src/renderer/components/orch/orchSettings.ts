@@ -1,3 +1,4 @@
+import { selectMenu } from '../selectMenu'
 import { supportsEffort } from '../../../shared/orch/launch'
 import {
   EFFORTS,
@@ -96,11 +97,11 @@ function numberInput(id: string, value: number | null, min: number, max: number 
   return input
 }
 
-function selectInput(id: string, options: { value: string; label: string; disabled?: boolean }[], value: string, onChange: (value: string) => void, disabled = false): HTMLSelectElement {
+function selectInput(id: string, options: { value: string; label: string; disabled?: boolean }[], value: string, onChange: (value: string) => void, disabled = false): HTMLElement {
   const select = h('select', { class: 'text-input', id, disabled })
   for (const option of options) select.append(h('option', { value: option.value, selected: option.value === value, disabled: option.disabled === true }, option.label))
   select.addEventListener('change', () => onChange(select.value))
-  return select
+  return selectMenu(select)
 }
 
 function checkbox(id: string, label: string, checked: boolean, disabled: boolean, onChange: (value: boolean) => void): HTMLElement {
@@ -281,7 +282,7 @@ function profileList(settings: OrchSettings, profile: OrchProfile, refresh: () =
   return list
 }
 
-function effortSelect(profile: OrchProfile): HTMLSelectElement {
+function effortSelect(profile: OrchProfile): HTMLElement {
   const supported = supportsEffort(profile.runner)
   const options = supported
     ? [{ value: '', label: 'CLI default' }, ...EFFORTS.map((e) => ({ value: e, label: e }))]

@@ -1,3 +1,4 @@
+import { selectMenu } from '../selectMenu'
 import type { OrchAgentRow, OrchRunDetail } from '../../../shared/orch/api'
 import { boardCards, DEFAULT_BOARD_FILTER, isFinishedRun, timelineEvents, usageRows } from '../../../shared/orch/board'
 import type { OrchProfile } from '../../../shared/orch/profiles'
@@ -255,7 +256,7 @@ export class OrchRunView {
           'div',
           { class: 'orch-handoff-form' },
           h('label', { for: select.id }, `Continue ${handoff.taskKey} with`),
-          select,
+          selectMenu(select),
           h('label', { for: note.id }, 'Note'),
           note,
           h('div', { class: 'orch-actions' }, go, cancel)

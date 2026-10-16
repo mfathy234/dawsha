@@ -1,3 +1,4 @@
+import { selectMenu } from '../selectMenu'
 import type { OrchDecisionView, OrchSpecContent, OrchSpecView as SpecViewData } from '../../../shared/orch/api'
 import { renderMarkdown } from '../../../shared/markdown'
 import { formatSpecComments, type SpecComment } from '../../../shared/orch/specReview'
@@ -87,7 +88,7 @@ export class OrchSpecView {
     doc.innerHTML = renderMarkdown(content.spec)
     this.el.append(
       h('div', { class: 'spec-columns' },
-        h('section', { class: 'orch-panel spec-document' }, h('div', { class: 'spec-toolbar' }, h('h3', {}, 'spec.md'), h('label', {}, 'Version ', picker)),
+        h('section', { class: 'orch-panel spec-document' }, h('div', { class: 'spec-toolbar' }, h('h3', {}, 'spec.md'), h('span', {}, 'Version ', selectMenu(picker))),
           h('p', { class: 'spec-question' }, this.decision?.question ?? 'Saved spec and mockups'), doc,
           version?.answer ? h('p', { class: 'spec-answer' }, `Answer on v${version.version}: ${version.answer}`) : null),
         this.preview(content)),
@@ -165,7 +166,7 @@ export class OrchSpecView {
     note.value = draft.note
     note.addEventListener('input', () => { draft.note = note.value })
     return h('section', { class: 'orch-panel spec-comments' }, h('h3', {}, 'Your comments'),
-      h('label', {}, 'Target ', target), h('label', {}, 'Comment ', text),
+      h('div', {}, 'Target ', selectMenu(target)), h('label', {}, 'Comment ', text),
       button('Add comment', () => {
         if (!text.value.trim()) { text.focus(); return }
         draft.comments = [...draft.comments, { target: target.value, text: text.value.trim() }]

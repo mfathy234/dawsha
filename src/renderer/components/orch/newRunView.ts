@@ -1,3 +1,4 @@
+import { selectMenu } from '../selectMenu'
 import type { RunKind } from '../../../shared/orch/types'
 import { fixerProfileOf, type OrchPlan, type OrchProfile, type OrchSettings } from '../../../shared/orch/profiles'
 import { ORCH_ROLES } from '../../../shared/orch/types'
@@ -126,7 +127,7 @@ export class OrchNewRunView {
     if (projects.length === 0) select.append(h('option', { value: '' }, 'No projects yet'))
     for (const p of projects) select.append(h('option', { value: p.id, selected: p.id === current }, p.name))
     select.addEventListener('change', () => this.change({ projectId: select.value }))
-    return field('Project', 'orch-nr-project', select, 'The run works in its own branch and worktrees, so your checkout stays untouched.')
+    return field('Project', 'orch-nr-project', selectMenu(select), 'The run works in its own branch and worktrees, so your checkout stays untouched.')
   }
 
   private kindField(): HTMLElement {
@@ -164,7 +165,7 @@ export class OrchNewRunView {
     }
     select.addEventListener('change', () => this.change({ fixerId: select.value || null }))
     const badge = main ? modelBadge(main.local ? 'codex-local' : main.runner, main.model || 'default') : null
-    return field('Fixed by', 'orch-nr-fixer', h('div', { class: 'orch-nr-inline' }, select, this.draft.fixerId === null ? badge : null), "Defaults to your plan's main model.")
+    return field('Fixed by', 'orch-nr-fixer', h('div', { class: 'orch-nr-inline' }, selectMenu(select), this.draft.fixerId === null ? badge : null), "Defaults to your plan's main model.")
   }
 
   private storyField(): HTMLElement {

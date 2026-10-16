@@ -75,6 +75,7 @@
 }
 
 .orch-select { min-width: 110px; max-width: 200px; }
+.orch-filter > .select-menu { min-width: 110px; max-width: 200px; }
 
 .orch-toggle {
   display: inline-flex;
