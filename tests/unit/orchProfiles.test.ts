@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_PLAN_ID,
   DEFAULT_PRICES,
+  bugFixerFor,
   defaultOrchSettings,
   fixerProfileOf,
   priceLookupFor,
@@ -84,5 +85,26 @@ describe('orchestrator profiles and plans', () => {
     expect(lookup('codex-local', 'qwen3-coder')).toBe('free')
     expect(lookup('codex', 'gpt-5')).toEqual({ inputPerM: 1, outputPerM: 2 })
     expect(lookup('gemini', 'gemini-pro')).toBeNull()
+  })
+
+  describe('bug fixer by agent', () => {
+    it("uses the plan's main model when it already runs on the chosen agent", () => {
+      const settings = defaultOrchSettings()
+      const plan = settings.plans[0]
+      expect(bugFixerFor(settings, plan, 'claude')?.id).toBe(fixerProfileOf(settings, plan)?.id)
+    })
+
+    it("uses that agent's implementer otherwise", () => {
+      const settings = defaultOrchSettings()
+      expect(bugFixerFor(settings, settings.plans[0], 'codex')?.id).toBe('p-implementer-codex')
+    })
+
+    it('falls back to any profile on that agent, and to nothing when there is none', () => {
+      const settings = defaultOrchSettings()
+      const leadOnly = { ...settings, profiles: settings.profiles.map((p) => (p.runner === 'codex' ? { ...p, role: 'lead' as const } : p)) }
+      expect(bugFixerFor(leadOnly, settings.plans[0], 'codex')?.id).toBe('p-implementer-codex')
+      const noCodex = { ...settings, profiles: settings.profiles.filter((p) => p.runner !== 'codex') }
+      expect(bugFixerFor(noCodex, settings.plans[0], 'codex')).toBeUndefined()
+    })
   })
 })

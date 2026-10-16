@@ -131,7 +131,7 @@ test.describe('real orchestrator paths', () => {
     }
   })
 
-  test('bug: one fixer on Sonnet fixes a reported bug alone', async () => {
+  test('bug: one Claude fixer fixes a reported bug alone', async () => {
     const sandbox = createSandbox()
     seedRepo(sandbox.projectFolder)
     writeFileSync(join(sandbox.projectFolder, 'api', 'prices.js'), 'function total(items) {\n  return items.reduce((sum, i) => sum + i.price, 1)\n}\n\nmodule.exports = { total }\n')
@@ -143,7 +143,7 @@ test.describe('real orchestrator paths', () => {
       await page.locator('#orchestrator-button').click()
       await page.locator('#orch-tab-new').click()
       await page.locator('#orch-nr-kind').getByText('Bug', { exact: true }).click()
-      await page.locator('#orch-nr-fixer').selectOption('p-implementer')
+      await page.locator('#orch-nr-fixer-claude').click()
       await page.locator('#orch-nr-story').fill('npm test fails: total([{price:2},{price:3}]) returns 6 instead of 5 in api/prices.js. Fix it with a regression test.')
       await page.locator('#orch-nr-start').click()
       const run = await driveToFinish(page, 'bug', 15)

@@ -1,12 +1,11 @@
 import { selectMenu } from '../selectMenu'
 import type { RunKind } from '../../../shared/orch/types'
 import { defaultRunProject } from '../../../shared/orch/board'
-import { fixerProfileOf, type OrchPlan, type OrchProfile, type OrchSettings } from '../../../shared/orch/profiles'
+import { bugFixerFor, fixerProfileOf, type OrchPlan, type OrchProfile, type OrchRunner, type OrchSettings } from '../../../shared/orch/profiles'
 import { openSettings } from '../../actions'
 import { h } from '../../dom'
 import { startRun } from '../../orchActions'
 import type { AppState } from '../../state'
-import { modelBadge } from './orchUi'
 import './newRunView.css'
 
 interface Draft {
@@ -26,7 +25,12 @@ const TITLE_MAX = 120
 
 const KIND_OPTIONS: { kind: RunKind; name: string; hint: string }[] = [
   { kind: 'feature', name: 'Feature', hint: 'The lead reads it and starts only the agents the work needs.' },
-  { kind: 'bug', name: 'Bug', hint: 'One agent fixes it on the model you pick. No subagents, no spec.' }
+  { kind: 'bug', name: 'Bug', hint: 'One agent, Claude or Codex, fixes it. No subagents, no spec.' }
+]
+
+const FIXER_OPTIONS: { runner: OrchRunner; name: string }[] = [
+  { runner: 'claude', name: 'Claude' },
+  { runner: 'codex', name: 'Codex' }
 ]
 
 const profileLabel = (p: OrchProfile): string =>
@@ -156,16 +160,31 @@ export class OrchNewRunView {
     return h('div', { class: 'orch-nr-field' }, h('span', { class: 'orch-nr-label', id: 'orch-nr-kind-label' }, 'Type'), group)
   }
 
+  /** A bug has one agent, so the only choice is which CLI; the profile follows from the plan. */
   private fixerField(settings: OrchSettings, plan: OrchPlan | undefined): HTMLElement {
-    const main = plan ? fixerProfileOf(settings, plan) : undefined
-    const select = h('select', { class: 'text-input', id: 'orch-nr-fixer', disabled: this.draft.submitting })
-    select.append(h('option', { value: '', selected: this.draft.fixerId === null }, main ? `Main model (${profileLabel(main)})` : 'Main model'))
-    for (const p of settings.profiles) {
-      select.append(h('option', { value: p.id, selected: p.id === this.draft.fixerId }, profileLabel(p)))
+    const chosen = settings.profiles.find((p) => p.id === this.draft.fixerId) ?? (plan ? fixerProfileOf(settings, plan) : undefined)
+    const group = h('div', { class: 'orch-nr-cards', role: 'radiogroup', 'aria-labelledby': 'orch-nr-fixer-label', id: 'orch-nr-fixer' })
+    for (const option of FIXER_OPTIONS) {
+      const profile = plan ? bugFixerFor(settings, plan, option.runner) : undefined
+      const selected = chosen?.runner === option.runner
+      group.append(h(
+        'button',
+        {
+          class: `orch-nr-card${selected ? ' selected' : ''}`,
+          type: 'button',
+          role: 'radio',
+          id: `orch-nr-fixer-${option.runner}`,
+          'aria-checked': String(selected),
+          tabindex: selected ? 0 : -1,
+          disabled: this.draft.submitting || !profile,
+          onClick: () => profile && this.change({ fixerId: profile.id })
+        },
+        h('b', {}, option.name),
+        h('small', { class: 'orch-nr-est' }, profile ? `${profile.model || 'default model'}${profile.effort ? ` · effort ${profile.effort}` : ''}` : 'Add a profile for it in Settings')
+      ))
     }
-    select.addEventListener('change', () => this.change({ fixerId: select.value || null }))
-    const badge = main ? modelBadge(main.local ? 'codex-local' : main.runner, main.model || 'default') : null
-    return field('Fixed by', 'orch-nr-fixer', h('div', { class: 'orch-nr-inline' }, selectMenu(select), this.draft.fixerId === null ? badge : null), "Defaults to your plan's main model.")
+    group.addEventListener('keydown', radioKeys)
+    return h('div', { class: 'orch-nr-field' }, h('span', { class: 'orch-nr-label', id: 'orch-nr-fixer-label' }, 'Fixed by'), group)
   }
 
   private storyField(): HTMLElement {

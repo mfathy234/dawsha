@@ -130,6 +130,14 @@ export function fixerProfileOf(settings: OrchSettings, plan: OrchPlan): OrchProf
   return (id && settings.profiles.find((p) => p.id === id)) || (lead ? settings.profiles.find((p) => p.id === lead) : undefined)
 }
 
+/** The profile a bug run uses when the human only picks the agent: the plan's main model if it runs there, else that agent's implementer. */
+export function bugFixerFor(settings: OrchSettings, plan: OrchPlan, runner: OrchRunner): OrchProfile | undefined {
+  const main = fixerProfileOf(settings, plan)
+  if (main?.runner === runner) return main
+  const mine = settings.profiles.filter((p) => p.runner === runner && !p.local)
+  return mine.find((p) => p.role === 'implementer') ?? mine.find((p) => p.role === 'fixer') ?? mine[0]
+}
+
 /** Agents run locally are registered with runner `<runner>-local`, which is always free. */
 export function priceLookupFor(settings: OrchSettings): PriceLookup {
   return (runner, model) => (runner.endsWith('-local') ? 'free' : settings.prices[`${runner}:${model}`] ?? null)
