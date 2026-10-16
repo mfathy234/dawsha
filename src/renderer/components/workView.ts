@@ -7,7 +7,6 @@ import { refreshOrch, showOrch } from '../orchActions'
 import { h } from '../dom'
 import type { AppState } from '../state'
 import { buildStackedBars } from './usageChart'
-import { present } from './dialogs'
 import { store } from '../state'
 import type { TicketNotes } from '../../shared/ticketNotes'
 import { TicketsPanel } from './workTickets'
@@ -265,26 +264,13 @@ export class WorkViewComponent {
   private async open(item: WorkItem): Promise<void> {
     try {
       if (item.agent === 'orchestrator') {
-        if (!store.state.settings.experimental.orchestrator) this.previewRun(item)
-        else { await refreshOrch(); showOrch('runs', item.id) }
-      }
-      else if (item.session) await resumeInNewPane(item.session)
+        await refreshOrch()
+        showOrch('runs', item.id)
+      } else if (item.session) await resumeInNewPane(item.session)
     } catch {
       this.error = 'Could not open this item. Its project may no longer be available.'
       this.render()
     }
   }
 
-  private previewRun(item: WorkItem): void {
-    const close = h('button', { class: 'btn ghost', type: 'button' }, 'Close')
-    const dialog = h('div', { class: 'dialog work-run-preview', role: 'dialog', 'aria-modal': 'true', 'aria-label': item.title },
-      h('h2', {}, item.title), h('p', { class: 'muted' }, `${item.project} · ${WORK_LABELS[item.type]} · ${item.run?.stage ?? ''}`),
-      h('p', {}, item.branch, ' · ', duration(this.itemTime(item))),
-      h('p', {}, 'Saved run · read-only. The orchestrator remains off.'),
-      item.run?.story ? h('p', { class: 'work-run-story' }, item.run.story) : null,
-      item.run?.plan ? h('details', {}, h('summary', {}, 'Plan'), h('pre', {}, item.run.plan)) : null,
-      h('div', { class: 'dialog-actions' }, close))
-    const shown = present(dialog, null, close)
-    close.addEventListener('click', () => shown.finish(null))
-  }
 }

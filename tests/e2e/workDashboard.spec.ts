@@ -45,9 +45,9 @@ function seed(s: Sandbox): void {
   ))
 }
 
-function seedRuns(s: Sandbox, enabled = true): void {
+function seedRuns(s: Sandbox): void {
   const settings = JSON.parse(readFileSync(join(s.userData, 'settings.json'), 'utf8'))
-  settings.experimental = { orchestrator: enabled }
+  settings.experimental = { orchestrator: true }
   writeFileSync(join(s.userData, 'settings.json'), JSON.stringify(settings))
   const store = new OrchStore(join(s.userData, 'orchestrator.db'))
   for (const kind of ['feature', 'bug'] as const) store.putRun({ id: `run_${kind === 'feature' ? 'abcdefgh' : 'ijklmnop'}`, title: `${kind} orchestrator item`, kind,
@@ -130,24 +130,6 @@ test('counts each orchestrator run once, excludes child sessions of all agents, 
     await page.locator('.work-item').filter({ hasText: 'feature orchestrator item' }).click()
     await expect(page.locator('.orch-run')).toBeVisible()
     await expect(page.locator('.orch-run')).toContainText('feature orchestrator item')
-  } finally { await closeApp(app) }
-})
-
-test('opens persisted runs read-only while the orchestrator remains disabled', async () => {
-  const sandbox = createSandbox()
-  seed(sandbox)
-  seedRuns(sandbox, false)
-  const { app, page } = await launchApp(sandbox)
-  try {
-    await page.locator('#work-button').click()
-    await page.locator('.work-item').filter({ hasText: 'feature orchestrator item' }).click()
-    const dialog = page.getByRole('dialog', { name: 'feature orchestrator item' })
-    await expect(dialog).toBeVisible()
-    await expect(dialog).toContainText('Test work history')
-    await expect(dialog).toContainText('done')
-    await page.keyboard.press('Escape')
-    await expect(dialog).toHaveCount(0)
-    expect(JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).experimental.orchestrator).toBe(false)
   } finally { await closeApp(app) }
 })
 

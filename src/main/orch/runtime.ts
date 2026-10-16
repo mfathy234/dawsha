@@ -39,7 +39,7 @@ export interface OrchRuntimeDeps {
   changed: () => void
 }
 
-/** Owns the orchestrator for the life of the app (experimental feature): store, server, dispatcher, panes. */
+/** Owns the orchestrator for the life of the app: store, server, dispatcher, panes. */
 export class OrchRuntime {
   private store: OrchStore | null = null
   private server: OrchMcpServer | null = null
@@ -95,7 +95,7 @@ export class OrchRuntime {
   /** Extras for an orchestrated spawn; null for ordinary panes. */
   prepareSpawn(request: SpawnRequest): LaunchExtras | { error: string; retired?: boolean } | null {
     if (!request.orchAgentId) return null
-    if (!this.service) return { error: 'The orchestrator is off. Turn it on in Settings → Experimental, then reopen this pane.' }
+    if (!this.service) return { error: 'The orchestrator is not running. Restart Dawsha, then reopen this pane.' }
     const extras = this.bridge.prepare(request)
     const agent = this.service.agent(request.orchAgentId)
     if (extras && !('error' in extras) && agent?.launch) {
@@ -130,7 +130,7 @@ export class OrchRuntime {
 
   startRun(input: OrchStartInput): OrchResult<string> {
     const service = this.service
-    if (!service) return { ok: false, error: 'The orchestrator is off. Turn it on in Settings → Experimental.' }
+    if (!service) return { ok: false, error: 'The orchestrator is not running. Restart Dawsha and try again.' }
     const folder = this.deps.projectFolder(input.projectId)
     if (!folder) return { ok: false, error: 'That project no longer exists.' }
     if (!input.story.trim()) return { ok: false, error: input.kind === 'bug' ? 'Describe the bug first.' : 'Write the user story first.' }

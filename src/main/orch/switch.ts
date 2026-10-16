@@ -9,7 +9,7 @@ import { validSpecRunId } from './specs'
 
 /** What the IPC layer needs from the orchestrator. */
 export interface OrchestratorIpc {
-  /** Starts or stops the runtime to match Settings → Experimental. */
+  /** Starts the runtime; it is always on since 1.5. */
   apply(settings: Settings): void
   prepareSpawn(request: SpawnRequest): LaunchExtras | { error: string; retired?: boolean } | null
   status(): OrchStatus

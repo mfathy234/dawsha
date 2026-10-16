@@ -86,7 +86,7 @@ export const defaultSettings = (): Settings => ({
   remoteAccess: defaultRemoteAccess(),
   highlights: defaultHighlights(),
   recordings: defaultRecordings(),
-  experimental: { orchestrator: false },
+  experimental: { orchestrator: true },
   orchestrator: defaultOrchSettings()
 })
 
@@ -365,7 +365,8 @@ export function migrateSettings(raw: unknown): Settings {
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
     highlights: sanitizeHighlights(raw.highlights),
     recordings: sanitizeRecordings(raw.recordings),
-    experimental: { orchestrator: isRecord(raw.experimental) && raw.experimental.orchestrator === true },
+    // The orchestrator left Experimental in 1.5; older files that turned it off get it too.
+    experimental: { orchestrator: true },
     orchestrator: sanitizeOrchSettings(raw.orchestrator)
   }
 }

@@ -140,12 +140,6 @@ export async function startRun(input: OrchStartInput): Promise<boolean> {
   return true
 }
 
-export function setOrchestratorEnabled(enabled: boolean): void {
-  const experimental = { ...store.state.settings.experimental, orchestrator: enabled }
-  store.set((s) => ({ ...s, settings: { ...s.settings, experimental } }))
-  void saveSettings({ experimental }).then(() => setTimeout(() => void refreshOrch(), 500))
-}
-
 export function setOrchestratorAutoTrust(autoTrust: boolean): void {
   const orchestrator = { ...store.state.settings.orchestrator, autoTrust }
   store.set((s) => ({ ...s, settings: { ...s.settings, orchestrator } }))

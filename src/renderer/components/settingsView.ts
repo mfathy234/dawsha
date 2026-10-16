@@ -49,7 +49,6 @@ import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
-import { setOrchestratorEnabled } from '../orchActions'
 import { orchestratorSettingsRows } from './orch/orchSettings'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
@@ -58,14 +57,13 @@ const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
   { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
   { id: 'highlights', label: 'Highlights', lede: 'Tint terminal lines that contain the words you care about.' },
-  { id: 'experimental', label: 'Experimental', lede: 'Features that are still being built. Use them in local builds only.' },
   { id: 'orchestrator', label: 'Orchestrator', lede: 'Plans, agent profiles, effort and prices for the orchestrator.' },
   { id: 'changelog', label: 'Changelog', lede: 'Every released version, newest first.' },
   { id: 'about', label: 'About', lede: 'Version, links and where your data lives.' }
 ]
 if (isRemoteControlBuild) SECTIONS.push({ id: 'remote', label: 'Remote Access', lede: 'Reach this Dawsha installation from your own devices.' })
 
-const visibleSections = (state: AppState): typeof SECTIONS => SECTIONS.filter((s) => s.id !== 'orchestrator' || state.settings.experimental.orchestrator)
+const visibleSections = (_state: AppState): typeof SECTIONS => SECTIONS
 
 const REPO_URL = 'https://github.com/mfathy234/dawsha'
 const LINKS = [
@@ -149,7 +147,6 @@ export class SettingsViewComponent {
       state.settings.autoUpdateCheck,
       state.settings.highlights,
       state.settings.recordings,
-      state.settings.experimental,
       state.settings.orchestrator,
       this.remoteAccess,
       this.remoteError,
@@ -245,14 +242,6 @@ export class SettingsViewComponent {
         return this.highlights(state)
       case 'remote':
         return this.remoteAccessBody()
-      case 'experimental':
-        return [
-          row(
-            'Orchestrator',
-            checkbox('settings-orchestrator', 'Turn on', state.settings.experimental.orchestrator, false, setOrchestratorEnabled),
-            h('p', { class: 'note set-note' }, 'A lead agent plans work and gives tasks to other agents in their own panes and worktrees, on the models you choose. Start runs from the command palette: "Orchestrator: fix a bug" or "build a feature".')
-          )
-        ]
       case 'orchestrator':
         return orchestratorSettingsRows(state, () => this.refresh())
       case 'changelog':

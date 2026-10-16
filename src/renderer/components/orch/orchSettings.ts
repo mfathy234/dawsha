@@ -85,7 +85,7 @@ export function orchestratorSettingsRows(state: AppState, refresh: () => void): 
     h('section', { class: 'orch-panel orch-set-section' },
       h('h3', { class: 'orch-panel-title' }, 'Trust orchestrator worktrees'),
       h('div', { class: 'orch-set-body' },
-        checkbox('settings-orchestrator-trust', 'Answer for me', settings.autoTrust, !state.settings.experimental.orchestrator, setOrchestratorAutoTrust),
+        checkbox('settings-orchestrator-trust', 'Answer for me', settings.autoTrust, false, setOrchestratorAutoTrust),
         h('p', { class: 'orch-set-hint' }, 'Answer the trust prompt once for each worktree Dawsha creates.'))))
   advanced.addEventListener('toggle', () => { if (advanced.isConnected) advancedOpen = advanced.open })
   return [h('div', { class: 'orch-set' }, plansSection(settings, refresh), advanced)]

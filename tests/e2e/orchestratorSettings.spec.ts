@@ -84,3 +84,21 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
     } finally { await closeApp(app) }
   })
 }
+
+test('the orchestrator is a normal feature: on for settings that turned it off, with no Experimental section', async () => {
+  const sandbox = createSandbox()
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({
+    version: 2, lastSeenVersion: APP_VERSION, onboardingDismissed: true, experimental: { orchestrator: false },
+    projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }]
+  }))
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await expect(page.locator('#orchestrator-button')).toBeVisible()
+    await page.locator('#orchestrator-button').click()
+    await expect(page.locator('#orch-tab-new')).toBeVisible()
+    await page.locator('#settings-button').click()
+    const nav = page.locator('.settings-nav')
+    await expect(nav).toContainText('Orchestrator')
+    await expect(nav).not.toContainText('Experimental')
+  } finally { await closeApp(app) }
+})

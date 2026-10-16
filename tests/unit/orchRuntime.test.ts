@@ -43,7 +43,7 @@ describe('OrchRuntime', () => {
   it('explains why a run cannot start', async () => {
     const rt = runtime()
     const input = { kind: 'bug' as const, projectId: 'known', title: '', story: 'Crash on export', planId: 'default', fixerProfileId: null }
-    expect(rt.startRun(input)).toEqual({ ok: false, error: expect.stringContaining('orchestrator is off') })
+    expect(rt.startRun(input)).toEqual({ ok: false, error: expect.stringContaining('orchestrator is not running') })
     await rt.start()
     expect(rt.startRun({ ...input, projectId: 'gone' })).toEqual({ ok: false, error: 'That project no longer exists.' })
     expect(rt.startRun({ ...input, story: '  ' })).toEqual({ ok: false, error: 'Describe the bug first.' })
@@ -54,6 +54,6 @@ describe('OrchRuntime', () => {
     const rt = runtime()
     const request = { id: 't', agent: 'claude' as const, cwd: 'C:/', resume: false, cols: 80, rows: 24 }
     expect(rt.prepareSpawn(request)).toBeNull()
-    expect(rt.prepareSpawn({ ...request, orchAgentId: 'a1' })).toEqual({ error: expect.stringContaining('Settings → Experimental') })
+    expect(rt.prepareSpawn({ ...request, orchAgentId: 'a1' })).toEqual({ error: expect.stringContaining('Restart Dawsha') })
   })
 })

@@ -148,7 +148,7 @@ export interface Settings {
   orchestrator: OrchSettings
 }
 
-/** Features that ship off and only in local builds until they are ready. */
+/** Features that used to be opt-in. The orchestrator is always on since 1.5; the key stays so older settings files load. */
 export interface ExperimentalSettings {
   orchestrator: boolean
 }

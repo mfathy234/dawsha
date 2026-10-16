@@ -25,7 +25,6 @@
 .work-bug { background: var(--danger); }
 .work-other { background: var(--muted); }
 .work-conversation { background: var(--gemini-bg); }
-.work-run-preview { max-height: 85vh; overflow-y: auto; }
 .work-tickets { list-style: none; padding: 0; margin: 0; }
 .work-ticket-row { display: flex; flex-direction: column; gap: 7px; padding: 12px 8px; border-bottom: 1px solid var(--border); }
 .work-ticket-head { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
@@ -41,7 +40,6 @@
 .work-ticket-sessions summary { color: var(--muted); font-size: 12px; cursor: pointer; width: fit-content; }
 .work-ticket-sessions summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .work-ticket-sessions .work-items { margin-top: 4px; }
-.work-run-story, .work-run-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 900px) {
   .work-view { padding: 20px; }
   .work-view .usage-legend { flex-wrap: wrap; }

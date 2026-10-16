@@ -71,7 +71,7 @@ export interface ReplayRef {
   returnView: View
 }
 
-export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote' | 'experimental' | 'orchestrator'
+export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote' | 'orchestrator'
 
 export type ProjectsTab = 'projects' | 'tasks' | 'snippets' | 'instructions'
 

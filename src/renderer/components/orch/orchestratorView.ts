@@ -1,6 +1,5 @@
 import { OrchHistoryView } from './historyView'
 import { clear, h } from '../../dom'
-import { openSettings } from '../../actions'
 import { showOrch } from '../../orchActions'
 import type { AppState, OrchTab } from '../../state'
 import { OrchBoardsView } from './boardsView'
@@ -40,7 +39,6 @@ export class OrchestratorViewComponent {
 
   update(state: AppState): void {
     this.renderTabs(state)
-    if (!state.settings.experimental.orchestrator) return this.showOff()
     this.renderNotice(state)
     const runOpen = state.orchRunId !== null && state.orch?.runs.some((r) => r.id === state.orchRunId)
     const pages = { runs: this.runs, boards: this.boards, review: this.review, history: this.history, new: this.newRun, spec: this.runs }
@@ -73,18 +71,6 @@ export class OrchestratorViewComponent {
     const problem = status?.error ? `The orchestrator could not start: ${status.error}` : status && !status.running ? 'The orchestrator is starting…' : null
     this.notice.hidden = !problem
     this.notice.textContent = problem ?? ''
-  }
-
-  private showOff(): void {
-    this.notice.hidden = true
-    const off = h(
-      'section',
-      { class: 'orch-empty' },
-      h('h2', {}, 'The orchestrator is off'),
-      h('p', {}, 'It is an experimental feature for local builds. Turn it on to plan work with a lead agent and run other agents in their own panes.'),
-      h('button', { class: 'btn primary', type: 'button', onClick: () => openSettings('experimental') }, 'Open Settings → Experimental')
-    )
-    this.show(off)
   }
 
   private show(el: HTMLElement): void {
