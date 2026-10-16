@@ -311,6 +311,8 @@ export interface SpawnRequest {
   fullAccess?: boolean
   desktopVisible?: boolean
   remoteManaged?: boolean
+  /** Set for orchestrator agent panes; the main process adds the agent's launch args and token. */
+  orchAgentId?: string
 }
 
 export interface RemoteSessionStarted {

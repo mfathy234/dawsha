@@ -186,6 +186,15 @@ export class OrchService {
     return this.store.listAgents(runId)
   }
 
+  activeTask(agentId: string): OrchTask | undefined {
+    const agent = this.store.getAgent(agentId)
+    return agent ? this.ctx.activeTaskOf(agent) : undefined
+  }
+
+  unreadCount(agentId: string): number {
+    return this.store.unreadFor(agentId).length
+  }
+
   setStage(runId: string, stage: RunStage): void {
     this.tx(() => {
       const run = this.store.getRun(runId)
