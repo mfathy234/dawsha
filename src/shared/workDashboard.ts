@@ -17,6 +17,7 @@ export interface WorkItem {
   startedAt: number
   endedAt: number
   session?: ResumeSession
+  run?: { stage: string; story: string; plan: string }
 }
 export interface WorkReport {
   period: WorkPeriod

@@ -23,6 +23,11 @@ it('types runs by kind and uses latest task/event activity for unfinished runs',
     tasks: [{ updatedAt: 3000 }], events: [{ at: 4000 }] }], projects)
   expect(items[0]).toMatchObject({ type: 'bug', agent: 'orchestrator', startedAt: 1000, endedAt: 4000 })
 })
+it('includes matched child transcript activity in an unfinished run instead of losing today\'s work', () => {
+  const items = runWorkItems([{ id: 'run_x', title: 'Repair', kind: 'bug', projectId: 'p', projectPath: 'C:/project', branch: 'orch/x/run', createdAt: 1000, finishedAt: null,
+    tasks: [], events: [], workSessionIds: ['child'] }], projects, [session({ id: 'child', lastActivityAt: 5000 })])
+  expect(items[0].endedAt).toBe(5000)
+})
 it('reads commits from the recorded branch and time window, all authors, safely', async () => {
   const repo = mkdtempSync(join(tmpdir(), 'dawsha-work-git-'))
   const git = (...args: string[]) => execFileSync('git', args, { cwd: repo, windowsHide: true, env: { ...process.env,
@@ -62,4 +67,13 @@ it('reads persisted run history even when orchestration is disabled, suppressing
   expect(runs[0]).toMatchObject({ id: run.id, workSessionIds: ['child'], branch: 'orch/abcdefgh/run' })
   expect(await sessionWorkItems([session({ id: 'child', workBranch: null })], projects, runs.map(r => r.branch), async () => [], runs.flatMap(r => r.workSessionIds ?? []))).toEqual([])
   expect(await readWorkRuns(path + '.missing')).toEqual([])
+})
+it('coalesces and caches run history before querying SQLite', async () => {
+  const path = join(mkdtempSync(join(tmpdir(), 'dawsha-work-cache-')), 'orchestrator.db')
+  const store = new OrchStore(path)
+  store.close()
+  const first = readWorkRuns(path)
+  expect(readWorkRuns(path)).toBe(first)
+  await first
+  expect(readWorkRuns(path)).toBe(first)
 })

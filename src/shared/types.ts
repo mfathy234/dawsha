@@ -257,6 +257,7 @@ export interface ResumeSession {
   /** Transcript metadata reused by the work dashboard. */
   workBranch?: string | null
   lastActivityAt?: number
+  orchestrated?: true
   agent: AgentKind
   id: string
   title: string

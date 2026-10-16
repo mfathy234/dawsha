@@ -8,6 +8,7 @@ describe('work classification', () => {
     ['main', ['fix: crash'], 'bug'], ['main', ['fix(ui): crash'], 'bug'],
     ['main', ['feat: chart'], 'feature'], ['main', ['feat(ui): chart'], 'feature'],
     ['feature/a', ['fix: crash'], 'bug'], ['fix/a', ['feat: chart'], 'bug'],
+    ['main', ['feat: chart', 'fix(ui): crash'], 'bug'],
     ['main', ['docs: guide'], 'other'], ['main', [], 'conversation'],
     ['prefix/fix/a', ['prefix fix: nope'], 'other'], ['featureless', [], 'conversation']
   ])('%s and %j become %s', (branch, commits, expected) => {
@@ -36,6 +37,19 @@ describe('local calendar periods', () => {
   it('handles month and year transitions', () => {
     expect(workWindow('month', new Date(2026, 11, 31).getTime())).toEqual({ start: new Date(2026, 11, 1).getTime(), end: new Date(2027, 0, 1).getTime() })
     expect(workWindow('week', new Date(2027, 0, 1).getTime()).start).toBe(new Date(2026, 11, 28).getTime())
+  })
+  it('handles leap February and preserves local midnight across DST', () => {
+    expect(workWindow('month', new Date(2028, 1, 29, 12).getTime())).toEqual({ start: new Date(2028, 1, 1).getTime(), end: new Date(2028, 2, 1).getTime() })
+    const previous = process.env.TZ
+    process.env.TZ = 'America/New_York'
+    try {
+      const window = workWindow('today', new Date(2026, 2, 8, 12).getTime())
+      expect(window.end - window.start).toBe(23 * 3_600_000)
+      expect(new Date(window.end).getHours()).toBe(0)
+    } finally {
+      if (previous === undefined) delete process.env.TZ
+      else process.env.TZ = previous
+    }
   })
 })
 

@@ -79,6 +79,17 @@ function geminiSession(w: World, slug: string, folder: string, id: string, minut
 }
 
 describe('listAllSessions', () => {
+  it('includes Gemini legacy JSON chats in dashboard history', async () => {
+    const w = world()
+    const dir = join(w.homes.gemini, 'tmp', 'legacy')
+    mkdirSync(join(dir, 'chats'), { recursive: true })
+    writeFileSync(join(dir, '.project_root'), w.folders.site)
+    writeFileSync(join(dir, 'chats', 'session-2026-10-16-legacy.json'), JSON.stringify({ sessionId: uuid(99), startTime: '2026-10-16T10:00:00Z', lastUpdated: '2026-10-16T11:00:00Z',
+      messages: [{ id: 'm', type: 'user', content: 'Discuss rollout' }] }, null, 2))
+    const found = await listSessionSources(w.projects, {}, w.homes, 0)
+    expect(found).toHaveLength(1)
+    expect(found[0].session).toMatchObject({ agent: 'gemini', title: 'Discuss rollout', lastActivityAt: Date.parse('2026-10-16T11:00:00Z') })
+  })
   it('provides uncapped dashboard sources since a date with cached branch and activity metadata', async () => {
     const w = world()
     for (let n = 1; n <= 405; n++) claudeSession(w, 'web', n, `Item ${n}`, 1)

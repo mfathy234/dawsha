@@ -1,7 +1,7 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseRolloutMeta, parseSessionIndex } from '../shared/codexSession'
-import { parseGeminiChat } from '../shared/geminiSession'
+import { parseGeminiChat, parseLegacyGeminiChat } from '../shared/geminiSession'
 import { claudeProjectSlug, sessionIdFromFile, sessionTitle } from '../shared/projectSessions'
 import { RESUME_LIMIT, matchesQuery } from '../shared/resumeIndex'
 import { claudeDetail, codexDetail, contentMatch, geminiDetail, modelLabel, type SessionDetail } from '../shared/sessionDetail'
@@ -135,6 +135,7 @@ function build(candidate: Candidate, id: string, title: string, detail: SessionD
     startedAt: evidence.startedAt ?? detail.startedAt ?? candidate.modifiedAt,
     lastActivityAt: evidence.endedAt ?? candidate.modifiedAt,
     workBranch: evidence.branch,
+    ...(evidence.orchestrated ? { orchestrated: true as const } : {}),
     messageCount: detail.messages,
     model: modelLabel(candidate.agent, detail.model),
     firstPrompt: detail.firstPrompt,
@@ -161,7 +162,7 @@ async function enrichCodex(candidate: Candidate, names: Map<string, string>): Pr
 
 async function enrichGemini(candidate: Candidate): Promise<ResumeSession | null> {
   const { text, scale } = await sample(candidate.path, candidate.size)
-  const chat = parseGeminiChat(text)
+  const chat = candidate.path.endsWith('.json') ? parseLegacyGeminiChat(text) : parseGeminiChat(text)
   if (!chat || !chat.hasConversation) return null
   const detail = geminiDetail(text, scale)
   const title = chat.name ?? 'Gemini session'

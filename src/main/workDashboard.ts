@@ -1,13 +1,12 @@
 import { execFile } from 'node:child_process'
 import { access } from 'node:fs/promises'
-import { DatabaseSync } from 'node:sqlite'
+import { Worker } from 'node:worker_threads'
 import { branchNameProblem } from '../shared/gitBranches'
 import { aggregateWork, classifyWork, ticketFromBranch, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../shared/workDashboard'
 import type { Project, ResumeSession } from '../shared/types'
 import { normalizePath } from '../shared/sessionMatch'
 import { listSessionSources } from './sessionIndex'
 import { runBranch } from './orch/worktrees'
-import type { OrchAgent, OrchEvent, OrchRun, OrchTask } from '../shared/orch/types'
 
 const TTL = 10_000
 const commitCache = new Map<string, { at: number; job: Promise<string[]> }>()
@@ -41,28 +40,56 @@ export interface WorkRun {
   tasks: readonly { updatedAt: number }[]
   events: readonly { at: number }[]
   workSessionIds?: readonly string[]
+  stage?: string
+  story?: string
+  plan?: string
 }
 
-/** History stays visible with the experimental runtime off. Open the existing store read-only on demand. */
-export async function readWorkRuns(path: string): Promise<WorkRun[]> {
-  try { await access(path) } catch { return [] }
-  const db = new DatabaseSync(path, { readOnly: true })
+/** Self-contained worker: synchronous SQLite/JSON work never runs on Electron's event loop. */
+function collectRunHistory(): void {
+  const { parentPort, workerData } = require('node:worker_threads') as typeof import('node:worker_threads')
+  const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite')
+  const db = new DatabaseSync(workerData as string, { readOnly: true })
   try {
-    const records = <T>(table: string): T[] => (db.prepare(`SELECT data FROM ${table}`).all() as { data: string }[]).map(row => JSON.parse(row.data) as T)
-    const tasks = records<OrchTask>('tasks')
-    const events = records<OrchEvent>('events')
-    const agents = records<OrchAgent>('agents')
-    return records<OrchRun>('runs').map(run => ({
-      ...run, projectId: run.projectId ?? null, branch: runBranch(run.id),
-      tasks: tasks.filter(t => t.runId === run.id).map(t => ({ updatedAt: t.updatedAt })),
-      events: events.filter(e => e.runId === run.id).map(e => ({ at: e.at })),
-      workSessionIds: agents.filter(a => a.runId === run.id).flatMap(a => {
-        const args = a.launch?.args ?? []
-        const i = args.indexOf('--session-id')
-        return i >= 0 && args[i + 1] ? [args[i + 1]] : []
-      })
-    }))
+    const activity = (table: string, field: string): Map<string, number> => new Map(
+      (db.prepare(`SELECT run_id, MAX(json_extract(data, '$.${field}')) AS at FROM ${table} GROUP BY run_id`).all() as { run_id: string; at: number }[]).map(r => [r.run_id, r.at]))
+    const tasks = activity('tasks', 'updatedAt'), events = activity('events', 'at')
+    const ids = new Map<string, string[]>()
+    for (const row of db.prepare("SELECT run_id, json_extract(data, '$.launch.args') AS args FROM agents").all() as { run_id: string; args: string | null }[]) {
+      const args: string[] = row.args ? JSON.parse(row.args) as string[] : []
+      const i = args.indexOf('--session-id')
+      if (i >= 0 && args[i + 1]) ids.set(row.run_id, [...ids.get(row.run_id) ?? [], args[i + 1]])
+    }
+    const runs = (db.prepare('SELECT data FROM runs').all() as { data: string }[]).map(row => {
+      const run = JSON.parse(row.data) as import('../shared/orch/types').OrchRun
+      return { id: run.id, title: run.title, kind: run.kind, projectId: run.projectId ?? null, projectPath: run.projectPath,
+        createdAt: run.createdAt, finishedAt: run.finishedAt, stage: run.stage, story: run.story, plan: run.plan,
+        tasks: [{ updatedAt: tasks.get(run.id) ?? run.createdAt }], events: [{ at: events.get(run.id) ?? run.createdAt }], workSessionIds: ids.get(run.id) ?? [] }
+    })
+    parentPort!.postMessage(runs)
   } finally { db.close() }
+}
+
+const runCache = new Map<string, { at: number; job: Promise<WorkRun[]> }>()
+/** History stays visible with the runtime off; coalesce/cache before opening SQLite. */
+export function readWorkRuns(path: string): Promise<WorkRun[]> {
+  const cached = runCache.get(path)
+  if (cached && Date.now() - cached.at < TTL) return cached.job
+  const job = access(path).then(() => new Promise<WorkRun[]>((resolve, reject) => {
+    const worker = new Worker(`(${collectRunHistory.toString()})()`, { eval: true, workerData: path })
+    const timer = setTimeout(() => { void worker.terminate(); reject(new Error('Work history took too long to read.')) }, 15_000)
+    worker.once('message', (runs: Omit<WorkRun, 'branch'>[]) => { clearTimeout(timer); resolve(runs.map(r => ({ ...r, branch: runBranch(r.id) }))) })
+    worker.once('error', () => { clearTimeout(timer); reject(new Error('Could not read orchestrator work history.')) })
+    worker.once('exit', code => { clearTimeout(timer); if (code !== 0) reject(new Error('Could not read orchestrator work history.')) })
+  }), () => [])
+  if (runCache.size >= 50) runCache.delete(runCache.keys().next().value!)
+  runCache.set(path, { at: Date.now(), job })
+  job.catch(() => { if (runCache.get(path)?.job === job) runCache.delete(path) })
+  return job
+}
+
+function belongsToRun(session: ResumeSession, run: Pick<WorkRun, 'branch' | 'workSessionIds'>): boolean {
+  return Boolean(run.workSessionIds?.includes(session.id) || (session.workBranch && session.workBranch.startsWith(`${run.branch.replace(/\/run$/, '')}/`)))
 }
 
 export async function sessionWorkItems(sessions: readonly ResumeSession[], projects: readonly Project[], runBranches: readonly string[], commits: CommitReader = workCommits, childIds: readonly string[] = []): Promise<WorkItem[]> {
@@ -71,7 +98,7 @@ export async function sessionWorkItems(sessions: readonly ResumeSession[], proje
   const seen = new Set<string>()
   const candidates = sessions.filter(s => {
     const key = `${s.agent}:${s.id}`
-    if (seen.has(key) || children.has(s.id) || !byId.has(s.projectId)) return false
+    if (seen.has(key) || children.has(s.id) || s.orchestrated || !byId.has(s.projectId)) return false
     seen.add(key)
     return !s.workBranch || !runBranches.some(b => s.workBranch!.startsWith(`${b.replace(/\/run$/, '')}/`))
   })
@@ -92,12 +119,13 @@ export async function sessionWorkItems(sessions: readonly ResumeSession[], proje
   return items
 }
 
-export function runWorkItems(runs: readonly WorkRun[], projects: readonly Project[]): WorkItem[] {
+export function runWorkItems(runs: readonly WorkRun[], projects: readonly Project[], sessions: readonly ResumeSession[] = []): WorkItem[] {
   return runs.map(run => {
     const project = projects.find(p => p.id === run.projectId || normalizePath(p.folder) === normalizePath(run.projectPath))
     return { id: run.id, title: run.title, projectId: project?.id ?? run.projectId ?? run.projectPath, project: project?.name ?? run.projectPath,
       type: run.kind, agent: 'orchestrator', branch: run.branch, ticket: ticketFromBranch(run.branch), startedAt: run.createdAt,
-      endedAt: run.finishedAt ?? Math.max(run.createdAt, ...run.tasks.map(t => t.updatedAt), ...run.events.map(e => e.at)) }
+      endedAt: run.finishedAt ?? Math.max(run.createdAt, ...run.tasks.map(t => t.updatedAt), ...run.events.map(e => e.at), ...sessions.filter(s => belongsToRun(s, run)).map(s => s.lastActivityAt ?? s.modifiedAt)),
+      run: { stage: run.stage ?? '', story: run.story ?? '', plan: run.plan ?? '' } }
   })
 }
 
@@ -117,7 +145,7 @@ export class WorkService {
     if (!this.cached || this.cached.key !== key || now - this.cached.at >= TTL) {
       const job = this.sources(projects, since).then(async sessions => [
         ...await sessionWorkItems(sessions, projects, runs.map(r => r.branch), workCommits, runs.flatMap(r => r.workSessionIds ?? [])),
-        ...runWorkItems(runs, projects)
+        ...runWorkItems(runs, projects, sessions)
       ])
       this.cached = { key, at: now, job }
       job.catch(() => { if (this.cached?.job === job) this.cached = null })

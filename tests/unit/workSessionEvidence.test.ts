@@ -21,3 +21,9 @@ it('reads Gemini JSON and JSONL without inventing a branch when absent', () => {
   expect(sessionEvidence('gemini', lines({ startTime: '2026-10-16T10:00:00Z' }, { id: 'x', timestamp: '2026-10-16T11:00:00Z' }))).toMatchObject({ branch: null, endedAt: Date.parse('2026-10-16T11:00:00Z') })
   expect(sessionEvidence('claude', 'garbage\n{}')).toEqual({ branch: null })
 })
+it('recognizes orchestrator tool calls even when a Codex session recorded its original branch', () => {
+  expect(sessionEvidence('codex', lines(
+    { type: 'session_meta', payload: { git: { branch: 'main' } } },
+    { type: 'response_item', payload: { type: 'function_call', name: 'mcp__dawsha-orch__fetch_inbox', arguments: '{}' } }
+  ))).toMatchObject({ orchestrated: true })
+})

@@ -12,6 +12,7 @@ export interface SessionDetail {
 
 export interface SessionEvidence {
   branch: string | null
+  orchestrated?: true
   startedAt?: number
   endedAt?: number
 }
@@ -35,6 +36,10 @@ export function sessionEvidence(agent: AgentKind, text: string): SessionEvidence
   for (const record of entries) {
     takeTime(record.timestamp)
     const payload = isRecord(record.payload) ? record.payload : {}
+    const message = isRecord(record.message) ? record.message : {}
+    const calls = Array.isArray(message.content) ? message.content : []
+    if ((typeof payload.name === 'string' && payload.name.startsWith('mcp__dawsha-orch__')) ||
+      calls.some(call => isRecord(call) && typeof call.name === 'string' && call.name.startsWith('mcp__dawsha-orch__'))) evidence.orchestrated = true
     if (agent === 'claude' && typeof record.gitBranch === 'string') evidence.branch = record.gitBranch || null
     if (agent === 'codex' && record.type === 'session_meta') {
       takeTime(payload.timestamp)
