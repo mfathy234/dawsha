@@ -56,8 +56,17 @@ import { WorkService, readWorkRuns } from './workDashboard'
 import { MAX_STEPS_BACK, type WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
-import type { RemoteAccessSettings } from '../shared/types'
+import type { RemoteAccessSettings, RemoteAccessState } from '../shared/types'
 import type { createRemoteAccessController } from './remoteAccessController'
+
+async function remoteResult(action: () => Promise<RemoteAccessState>): Promise<{ ok: true; state: RemoteAccessState } | { ok: false; error: string }> {
+  try {
+    return { ok: true, state: await action() }
+  } catch (error) {
+    const message = error instanceof Error ? error.message.trim() : ''
+    return { ok: false, error: message || 'Remote Access could not be changed. Try again in a moment.' }
+  }
+}
 import type { RecordingService } from './recordings'
 
 function checkFolder(path: string): FolderCheck {
@@ -118,13 +127,13 @@ export function registerIpc(
   ipcMain.handle(IPC.settingsImportRead, () => readSettingsImport(getWindow()))
   if (remoteAccess) {
     ipcMain.handle(IPC.remoteAccessGet, () => remoteAccess.getState())
-    ipcMain.handle(IPC.remoteAccessEnable, () => remoteAccess.enable())
-    ipcMain.handle(IPC.remoteAccessDisable, () => remoteAccess.disable())
-    ipcMain.handle(IPC.remoteAccessPairing, () => remoteAccess.refreshPairing())
-    ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: Partial<RemoteAccessSettings>) => remoteAccess.setPermissions(patch))
-    ipcMain.handle(IPC.remoteAccessEmail, (_event, email: string) => remoteAccess.setAllowedEmail(email))
+    ipcMain.handle(IPC.remoteAccessEnable, () => remoteResult(() => remoteAccess.enable()))
+    ipcMain.handle(IPC.remoteAccessDisable, () => remoteResult(() => remoteAccess.disable()))
+    ipcMain.handle(IPC.remoteAccessPairing, () => remoteResult(() => remoteAccess.refreshPairing()))
+    ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: Partial<RemoteAccessSettings>) => remoteResult(() => remoteAccess.setPermissions(patch)))
+    ipcMain.handle(IPC.remoteAccessEmail, (_event, email: string) => remoteResult(() => remoteAccess.setAllowedEmail(email)))
     ipcMain.handle(IPC.remoteApprovalAnswered, (_event, terminalId: string, allowed: boolean, tail?: string) => remoteAccess.recordDesktopApproval(terminalId, allowed, tail))
-    ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteAccess.revoke(id))
+    ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteResult(() => remoteAccess.revoke(id)))
   }
   ipcMain.handle(IPC.paneonImportPreview, () => previewPaneonImport(paneonUserDataDir(), app.getPath('userData')))
   ipcMain.handle(IPC.paneonImportQueue, () => queuePaneonImport(paneonUserDataDir(), app.getPath('userData')))

@@ -5,7 +5,7 @@ import { isRemoteControlBuild } from '../shared/remoteBuild'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { UpdateState } from '../shared/updates'
 import type { OrchPaneRequest } from '../shared/orch/api'
-import type { CodexSession, GeminiSession, SessionFile, StatusInfo, RemoteSessionStarted } from '../shared/types'
+import type { RemoteAccessState, CodexSession, GeminiSession, SessionFile, StatusInfo, RemoteSessionStarted } from '../shared/types'
 
 function subscribe<T extends unknown[]>(channel: string, listener: (...args: T) => void): () => void {
   const handler = (_event: Electron.IpcRendererEvent, ...args: unknown[]): void => listener(...(args as T))
@@ -13,16 +13,27 @@ function subscribe<T extends unknown[]>(channel: string, listener: (...args: T) 
   return () => ipcRenderer.removeListener(channel, handler)
 }
 
+async function invokeRemote(channel: string, ...args: unknown[]): Promise<RemoteAccessState> {
+  let result: { ok: true; state: RemoteAccessState } | { ok: false; error: string }
+  try {
+    result = await ipcRenderer.invoke(channel, ...args)
+  } catch {
+    throw new Error('Remote Access could not be reached. Try again in a moment.')
+  }
+  if (!result.ok) throw new Error(result.error)
+  return result.state
+}
+
 const api: GridApi = {
   ...(isRemoteControlBuild ? {
     remoteAccess: {
       getState: () => ipcRenderer.invoke(IPC.remoteAccessGet),
-      enable: () => ipcRenderer.invoke(IPC.remoteAccessEnable),
-      disable: () => ipcRenderer.invoke(IPC.remoteAccessDisable),
-      refreshPairing: () => ipcRenderer.invoke(IPC.remoteAccessPairing),
-      setPermissions: (patch) => ipcRenderer.invoke(IPC.remoteAccessPermissions, patch),
-      setAllowedEmail: (email) => ipcRenderer.invoke(IPC.remoteAccessEmail, email),
-      revokeDevice: (id) => ipcRenderer.invoke(IPC.remoteAccessRevoke, id),
+      enable: () => invokeRemote(IPC.remoteAccessEnable),
+      disable: () => invokeRemote(IPC.remoteAccessDisable),
+      refreshPairing: () => invokeRemote(IPC.remoteAccessPairing),
+      setPermissions: (patch) => invokeRemote(IPC.remoteAccessPermissions, patch),
+      setAllowedEmail: (email) => invokeRemote(IPC.remoteAccessEmail, email),
+      revokeDevice: (id) => invokeRemote(IPC.remoteAccessRevoke, id),
       recordApproval: (terminalId, allowed, tail) => ipcRenderer.invoke(IPC.remoteApprovalAnswered, terminalId, allowed, tail)
     }
   } : {}),

@@ -119,6 +119,7 @@ export class SettingsViewComponent {
   private remoteAccess: RemoteAccessState | null = null
   private remoteError: string | null = null
   private remoteBusy = false
+  private remotePollTimer: ReturnType<typeof setTimeout> | null = null
   private pairingExpiryTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
@@ -301,13 +302,17 @@ export class SettingsViewComponent {
       : null
     const status = state?.status ?? 'off'
     const enabled = state?.enabled === true
+    if (this.remotePollTimer) clearTimeout(this.remotePollTimer)
+    this.remotePollTimer = status === 'connecting'
+      ? setTimeout(() => { this.remotePollTimer = null; void this.loadRemoteAccess() }, 2000)
+      : null
     const mainAction = h('button', {
       class: enabled ? 'btn ghost small' : 'btn primary small',
       type: 'button',
       id: 'remote-access-toggle',
       disabled: this.remoteBusy,
       onClick: () => void this.runRemoteAction(() => enabled ? remote.disable() : remote.enable())
-    }, this.remoteBusy ? (enabled ? 'Working…' : 'Preparing tunnel…') : enabled ? 'Stop Remote Access' : 'Start Remote Access')
+    }, this.remoteBusy ? (enabled ? 'Working…' : 'Preparing tunnel…') : enabled ? 'Stop Remote Access' : (status === 'setup-required' || this.remoteError) ? 'Try again' : 'Start Remote Access')
     const securityNote = h('p', { class: 'hint remote-hero-note' }, state?.permissions.allowedEmail
       ? 'Cloudflare will send a PIN to this email before Dawsha asks for its pairing code. Cloudflare processes traffic through the public-facing URL.'
       : 'With no PIN email, the short-lived Dawsha pairing code is the only login gate. Keep the public-facing URL private; Cloudflare processes proxied traffic.')
