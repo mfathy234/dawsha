@@ -2,12 +2,16 @@
 
 .orch-run { min-width: 0; }
 
-.orch-runswitch {
+.orch-crumbs {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--orch-space-2);
+  min-width: 0;
+  font-size: 13px;
 }
+.orch-crumbs-sep { color: var(--muted); }
+.orch-crumbs-here { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.orch-crumbs-switch { margin-left: auto; flex: 0 0 auto; width: 260px; max-width: 40%; }
 
 .orch-back,
 .orch-rs,
@@ -17,11 +21,14 @@
 }
 
 .orch-back {
-  padding: var(--orch-space-1) var(--orch-space-3);
+  flex: 0 0 auto;
+  padding: var(--orch-space-1) var(--orch-space-2);
   border: 0;
+  border-radius: var(--radius);
   background: none;
   color: var(--accent);
 }
+.orch-back:hover { background: var(--raised); }
 
 .orch-rs {
   display: inline-flex;

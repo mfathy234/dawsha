@@ -68,7 +68,7 @@ export class OrchRunView {
   }
 
   private backLink(): HTMLElement {
-    return h('button', { class: 'orch-back', type: 'button', onClick: () => showOrch('runs') }, '← All runs')
+    return h('button', { class: 'orch-back', type: 'button', onClick: () => showOrch('runs') }, '‹ All runs')
   }
 
   private render(run: OrchRunDetail, state: AppState): void {
@@ -85,20 +85,24 @@ export class OrchRunView {
     }
   }
 
+  /** "‹ All runs / this run", plus a dropdown to the other active runs when there are any. */
   private switcher(run: OrchRunDetail, state: AppState): HTMLElement {
-    const active = (state.orch?.runs ?? []).filter((r) => !isFinishedRun(r) || r.id === run.id)
+    const others = (state.orch?.runs ?? []).filter((r) => !isFinishedRun(r) && r.id !== run.id)
+    let jump: HTMLElement | null = null
+    if (others.length > 0) {
+      const select = h('select', { class: 'text-input', id: 'orch-run-switch', 'aria-label': 'Switch to another run' },
+        h('option', { value: '' }, `Switch run (${others.length})`),
+        ...others.map((r) => h('option', { value: r.id }, r.openDecisions > 0 ? `${r.title} · ${r.openDecisions} need you` : r.title)))
+      select.addEventListener('change', () => { if (select.value) showOrch('runs', select.value) })
+      jump = h('div', { class: 'orch-crumbs-switch' }, selectMenu(select))
+    }
     return h(
       'nav',
-      { class: 'orch-runswitch', 'aria-label': 'Runs' },
+      { class: 'orch-crumbs', 'aria-label': 'Breadcrumb' },
       this.backLink(),
-      ...active.map((r) =>
-        h(
-          'button',
-          { class: 'orch-rs', type: 'button', 'aria-current': r.id === run.id ? 'page' : undefined, onClick: () => showOrch('runs', r.id) },
-          r.title,
-          r.openDecisions > 0 ? h('span', { class: 'orch-badge' }, String(r.openDecisions)) : null
-        )
-      )
+      h('span', { class: 'orch-crumbs-sep', 'aria-hidden': 'true' }, '/'),
+      h('span', { class: 'orch-crumbs-here', 'aria-current': 'page', title: run.title }, run.title),
+      jump
     )
   }
 
@@ -214,7 +218,8 @@ export class OrchRunView {
       'tr',
       { class: agent.retired ? 'retired' : '' },
       h('td', {}, h('div', { class: 'orch-role' }, ROLE_LABEL[agent.role]), h('div', { class: 'orch-sub' }, modelBadge(agent.runner, agent.model), agent.taskKey ? h('span', { class: 'orch-mono' }, ` ${agent.taskKey}`) : null)),
-      h('td', {}, agent.retired ? pill('replaced', 'idle') : pill(AGENT_STATE_LABEL[agent.state], TONE[agent.state] ?? 'idle')),
+      // A retired agent of a finished run is done; in a live run it was replaced (handed over or restarted).
+      h('td', {}, agent.retired ? pill(isFinishedRun(run) ? 'done' : 'replaced', isFinishedRun(run) ? 'done' : 'idle') : pill(AGENT_STATE_LABEL[agent.state], TONE[agent.state] ?? 'idle')),
       h('td', { class: 'num' }, cost ? `${row.input} in / ${row.output} out` : '–'),
       h('td', { class: 'num' }, row ? row.cost : '–'),
       h('td', {}, actions)

@@ -13,7 +13,7 @@ interface Draft { comments: SpecComment[]; text: string; target: string; note: s
 const button = (label: string, click: () => void, primary = false): HTMLButtonElement =>
   h('button', { class: primary ? 'btn primary' : 'btn', type: 'button', onClick: click }, label)
 /** Same back link as the run dashboard's "← All runs", so the way back looks the same on every run screen. */
-const backLink = (click: () => void): HTMLButtonElement => h('button', { class: 'orch-back', type: 'button', onClick: click }, '← Back to run')
+const backLink = (click: () => void): HTMLButtonElement => h('button', { class: 'orch-back', type: 'button', onClick: click }, '‹ Back to run')
 
 /** Saved specs and static, isolated mockups. Draft feedback survives navigation between runs. */
 export class OrchSpecView {

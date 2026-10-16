@@ -44,6 +44,16 @@ export interface OrchSettings {
 }
 
 export const DEFAULT_PLAN_ID = 'default'
+
+/**
+ * Anthropic list prices in USD per million tokens (October 2026) for the models Claude Code's aliases run, so runs
+ * show a cost out of the box. Cache reads are 0.1x and 5-minute cache writes 1.25x input. Editable in Settings.
+ */
+export const DEFAULT_PRICES: Record<string, ModelPrice> = {
+  'claude:opus': { inputPerM: 4, outputPerM: 20, cacheReadPerM: 0.2, cacheWritePerM: 5 },
+  'claude:sonnet': { inputPerM: 2, outputPerM: 10, cacheReadPerM: 0.2, cacheWritePerM: 2.5 },
+  'claude:haiku': { inputPerM: 0.1, outputPerM: 0.5, cacheReadPerM: 0.01, cacheWritePerM: 0.125 }
+}
 export const MAX_WORKERS_LIMIT = 5
 const MIN_TASK_MINUTES = 5
 const MAX_TASK_MINUTES = 240
@@ -101,7 +111,7 @@ export function defaultOrchSettings(): OrchSettings {
     profiles: DEFAULT_PROFILES.map((p) => ({ ...p })),
     plans: DEFAULT_PLANS.map((p) => ({ ...p, roles: { ...p.roles } })),
     defaultPlanId: DEFAULT_PLAN_ID,
-    prices: {},
+    prices: { ...DEFAULT_PRICES },
     autoTrust: true
   }
 }
@@ -236,5 +246,6 @@ export function sanitizeOrchSettings(value: unknown): OrchSettings {
   const defaultPlanId = typeof value.defaultPlanId === 'string' && plans.some((p) => p.id === value.defaultPlanId)
     ? value.defaultPlanId
     : DEFAULT_PLAN_ID
-  return { profiles: ordered, plans, defaultPlanId, prices: sanitizePrices(value.prices), autoTrust: value.autoTrust !== false }
+  // The user's own prices win; list prices fill in models they have not priced.
+  return { profiles: ordered, plans, defaultPlanId, prices: { ...DEFAULT_PRICES, ...sanitizePrices(value.prices) }, autoTrust: value.autoTrust !== false }
 }

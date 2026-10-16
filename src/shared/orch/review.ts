@@ -93,9 +93,15 @@ export function liveTimeline(runs: readonly Pick<OrchRunDetail, 'id' | 'title' |
     .slice(0, limit)
 }
 
-/** A short label for a run in tight places: its first word, at most 14 characters. */
+/** Words that say how to work, not what the run is about ("on a branch based on develop in ..."). */
+const FILLER = new Set(['on', 'a', 'an', 'the', 'in', 'into', 'to', 'for', 'of', 'and', 'or', 'at', 'by', 'with', 'from', 'i', 'we', 'need', 'needs', 'want',
+  'please', 'branch', 'based', 'new', 'worktree', 'develop', 'main', 'master', 'is', 'be', 'it'])
+
+/** A short label for a run in tight places: its first meaningful words, at most 14 characters. */
 export function runTag(title: string): string {
-  const first = title.trim().split(/\s+/).slice(0, 2).join(' ')
+  const words = title.trim().split(/\s+/).filter(Boolean)
+  const meaningful = words.filter((w) => !FILLER.has(w.toLowerCase().replace(/[^a-z]/g, '')))
+  const first = (meaningful.length > 0 ? meaningful : words).slice(0, 2).join(' ')
   const tag = first.length > TAG_MAX ? first.split(' ')[0] : first
   if (!tag) return 'run'
   return tag.length > TAG_MAX ? `${tag.slice(0, TAG_MAX - 1)}…` : tag

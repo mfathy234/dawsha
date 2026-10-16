@@ -66,7 +66,8 @@ export function renderTaskBoard(cards: readonly BoardCard[], options: TaskBoardO
   const columns = groupByColumn(cards).map((column) =>
     h(
       'section',
-      { class: `orch-col${column.id === 'needs' ? ' needs' : ''}`, 'aria-label': `${column.label}, ${column.cards.length} tasks` },
+      // Amber only when something actually waits for the human.
+      { class: `orch-col${column.id === 'needs' && column.cards.length > 0 ? ' needs' : ''}`, 'aria-label': `${column.label}, ${column.cards.length} tasks` },
       h('header', { class: 'orch-col-head' }, column.label, h('span', { class: 'orch-col-count' }, String(column.cards.length))),
       h('div', { class: 'orch-col-cards' }, ...column.cards.map((card) => taskCard(card, options)))
     )

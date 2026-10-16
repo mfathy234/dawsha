@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_PLAN_ID,
+  DEFAULT_PRICES,
   defaultOrchSettings,
   fixerProfileOf,
   priceLookupFor,
@@ -68,7 +69,8 @@ describe('orchestrator profiles and plans', () => {
     expect(plan?.roles.lead).toBeNull()
     expect(profileFor(clean, plan!, 'ux-reviewer')).toMatchObject({ local: true, effort: 'max' })
     expect(clean.defaultPlanId).toBe('mine')
-    expect(clean.prices).toEqual({ 'codex:gpt-5': { inputPerM: 1.25, outputPerM: 10 } })
+    // The user's prices are kept, and Claude's list prices fill in the rest.
+    expect(clean.prices).toEqual({ ...DEFAULT_PRICES, 'codex:gpt-5': { inputPerM: 1.25, outputPerM: 10 } })
   })
 
   it('puts built-in plans back if they were removed and falls back to the Default plan', () => {

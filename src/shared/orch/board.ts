@@ -2,6 +2,7 @@ import { formatTokens, formatUsd } from '../usage'
 import type { OrchRunDetail } from './api'
 import type { OrchEvent, OrchRole, TaskStatus } from './types'
 import type { CostSource, RunUsage } from './usage'
+import { runTag as sharedRunTag } from './review'
 
 // Pure logic behind the Orchestrator boards and the run dashboard: cards, filters, usage rows.
 
@@ -80,9 +81,10 @@ type ProjectRef = { id: string; name: string }
 
 const RUN_TAG_LENGTH = 12
 
+/** The run's tag on a card: the same words as everywhere else (see review.runTag), cut to fit a card. */
 export const runTag = (title: string): string => {
-  const first = title.trim().split(/\s+/)[0] ?? ''
-  return first.length > RUN_TAG_LENGTH ? `${first.slice(0, RUN_TAG_LENGTH - 1)}…` : first
+  const tag = sharedRunTag(title)
+  return tag.length > RUN_TAG_LENGTH ? `${tag.slice(0, RUN_TAG_LENGTH - 1)}…` : tag
 }
 
 /** The model name shown on a badge: the model, or the runner when the CLI default is used. */

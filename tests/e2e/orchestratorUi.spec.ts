@@ -301,7 +301,8 @@ test('empty stories are hidden and long stories have a collapsed preview', async
   try {
     await publish('   ')
     await page.locator('#orchestrator-button').click()
-    await page.locator('.runs-finished summary').click()
+    // With no active run, Finished runs is already open.
+    await expect(page.locator('.runs-finished')).toHaveAttribute('open', '')
     await page.getByRole('button', { name: 'Open', exact: true }).click()
     await expect(page.locator('.orch-run-title')).toHaveText('Story preview')
     await expect(page.locator('.orch-story')).toHaveCount(0)

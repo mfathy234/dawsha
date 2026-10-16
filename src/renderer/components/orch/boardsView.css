@@ -215,3 +215,4 @@
 .orch-board-run:hover { border-color: var(--muted); }
 .orch-board-run:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .orch-board-run-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.orch-board-run .orch-muted { white-space: nowrap; }

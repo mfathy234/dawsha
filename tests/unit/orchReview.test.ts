@@ -115,3 +115,11 @@ describe('runs', () => {
     expect(runTag('  ')).toBe('run')
   })
 })
+
+describe('runTag skips how-to words', () => {
+  it('tags a run by what it is about, not "on a branch based on develop"', () => {
+    expect(runTag('on a branch based on develop in the admin.client and adminportal.apis i need to')).toBe('admin.client')
+    expect(runTag('in a new branch in a new worktree in admin.client…')).toBe('admin.client…')
+    expect(runTag('Add dark mode toggle to settings')).toBe('Add dark')
+  })
+})

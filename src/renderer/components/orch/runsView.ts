@@ -23,6 +23,8 @@ export class OrchRunsView {
   private signature = ''
   private readonly drafts = new Map<string, string>()
   private finishedOpen = false
+  /** Until the user opens or closes it, Finished runs is open exactly when nothing is active. */
+  private finishedTouched = false
 
   update(state: AppState): void {
     const snapshot = state.orch
@@ -58,7 +60,7 @@ export class OrchRunsView {
     }
     // Live means active runs only; finished and cancelled runs keep their timeline in their own dashboard.
     if (active.length > 0) this.el.append(this.timeline(active))
-    if (finished.length > 0) this.el.append(this.finished(finished))
+    if (finished.length > 0) this.el.append(this.finished(finished, active.length === 0))
     if (focusId) {
       const input = this.el.querySelector<HTMLInputElement>(`input[data-decision="${CSS.escape(focusId)}"]`)
       input?.focus()
@@ -203,7 +205,7 @@ export class OrchRunsView {
     )
   }
 
-  private finished(runs: OrchRunDetail[]): HTMLElement {
+  private finished(runs: OrchRunDetail[], nothingActive: boolean): HTMLElement {
     const details = h(
       'details',
       { class: 'orch-panel runs-finished' },
@@ -222,8 +224,10 @@ export class OrchRunsView {
         )
       )
     )
-    details.open = this.finishedOpen
+    details.open = this.finishedTouched ? this.finishedOpen : nothingActive
     details.addEventListener('toggle', () => {
+      if (details.open === (this.finishedTouched ? this.finishedOpen : nothingActive)) return
+      this.finishedTouched = true
       this.finishedOpen = details.open
     })
     return details

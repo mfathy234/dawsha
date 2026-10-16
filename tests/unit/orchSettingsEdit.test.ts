@@ -111,7 +111,7 @@ describe('prices', () => {
   it('stores a price once input and output are set, and clears it when all are empty', () => {
     const priced = setPrice(base(), 'claude:opus', { inputPerM: 15, outputPerM: 75, cacheReadPerM: null, cacheWritePerM: 18 })
     expect(priced.prices['claude:opus']).toEqual({ inputPerM: 15, outputPerM: 75, cacheWritePerM: 18 })
-    expect(setPrice(priced, 'claude:opus', noPrice).prices).toEqual({})
+    expect(setPrice(priced, 'claude:opus', noPrice).prices).not.toHaveProperty('claude:opus')
   })
 
   it('leaves settings alone while a price is incomplete or invalid', () => {
