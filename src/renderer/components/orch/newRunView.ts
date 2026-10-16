@@ -1,7 +1,6 @@
 import { selectMenu } from '../selectMenu'
 import type { RunKind } from '../../../shared/orch/types'
 import { fixerProfileOf, type OrchPlan, type OrchProfile, type OrchSettings } from '../../../shared/orch/profiles'
-import { ORCH_ROLES } from '../../../shared/orch/types'
 import { openSettings } from '../../actions'
 import { h } from '../../dom'
 import { startRun } from '../../orchActions'
@@ -29,12 +28,6 @@ const KIND_OPTIONS: { kind: RunKind; name: string; hint: string }[] = [
 
 const profileLabel = (p: OrchProfile): string =>
   `${p.name} · ${p.local ? 'codex (local)' : p.runner}${p.model ? ` ${p.model}` : ''}${p.effort ? ` · effort ${p.effort}` : ''}`
-
-const planRoleCount = (settings: OrchSettings, plan: OrchPlan): { roles: number; local: number } => {
-  const ids = ORCH_ROLES.map((role) => plan.roles[role]).filter((id): id is string => Boolean(id))
-  const profiles = ids.map((id) => settings.profiles.find((p) => p.id === id)).filter((p): p is OrchProfile => p !== undefined)
-  return { roles: profiles.length, local: new Set(profiles.filter((p) => p.local).map((p) => p.id)).size }
-}
 
 function field(label: string, id: string, control: HTMLElement, hint?: string): HTMLElement {
   return h('div', { class: 'orch-nr-field' }, h('label', { class: 'orch-nr-label', for: id }, label), control, hint ? h('p', { class: 'orch-nr-hint' }, hint) : null)
@@ -195,7 +188,7 @@ export class OrchNewRunView {
     const group = h('div', { class: 'orch-nr-cards', role: 'radiogroup', 'aria-label': 'Plan', id: 'orch-nr-plans' })
     for (const p of settings.plans) {
       const selected = p.id === plan.id
-      const counts = planRoleCount(settings, p)
+      const lead = settings.profiles.find((profile) => profile.id === p.roles.lead)
       group.append(
         h(
           'button',
@@ -210,7 +203,7 @@ export class OrchNewRunView {
             onClick: () => this.change({ planId: p.id })
           },
           h('b', {}, p.name, p.id === settings.defaultPlanId ? h('span', { class: 'orch-nr-default' }, 'default') : null),
-          h('small', { class: 'orch-nr-est' }, `${counts.roles} roles${counts.local > 0 ? ` · ${counts.local} local` : ''}`)
+          h('small', { class: 'orch-nr-est' }, `Lead: ${lead?.model || 'default'} · team picked by the lead`)
         )
       )
     }
