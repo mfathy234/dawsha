@@ -171,6 +171,27 @@ export class OrchService {
     return agent ? this.ctx.activeTaskOf(agent) : undefined
   }
 
+  /**
+   * More work after the run looked finished: a task for the lead, given to the live lead (and told so) or left for
+   * a new one, and the run goes back to building.
+   */
+  followUpForLead(runId: string, title: string, spec: string): void {
+    this.tx(() => {
+      this.writable(runId)
+      const task = this.ctx.newTask(runId, { title, spec, role: 'lead', dependsOn: [], acceptance: [] })
+      const lead = this.store.listAgents(runId).find((a) => a.role === 'lead' && !a.retiredAt)
+      if (lead) {
+        const mine = this.ctx.save({ ...this.ctx.move(task, 'in_progress'), assignee: lead.id })
+        this.store.putAgent({ ...lead, taskId: mine.id })
+        this.ctx.message(runId, 'human', lead.id, mine.id, `New task ${mine.key} from the human: ${title}. Call get_my_task and do it.`)
+      }
+      this.ctx.log(runId, 'task', `${task.key} for the lead: ${title}`, task.id)
+      const run = this.store.getRun(runId)
+      if (run) this.store.putRun({ ...run, stage: 'build' })
+      this.ctx.log(runId, 'run', 'Stage: build', null)
+    })
+  }
+
   /** A message from Dawsha itself to every live agent with `role` in the run; returns how many got it. */
   notifyRole(runId: string, role: OrchRole, body: string): number {
     return this.tx(() => {

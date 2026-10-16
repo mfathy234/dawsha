@@ -4,6 +4,7 @@ import { DEFAULT_PLAN_ID, fixerProfileOf, profileFor, type OrchPlan, type OrchPr
 import { firstMessage } from '../../shared/orch/rolePrompts'
 import { isFinal } from '../../shared/orch/taskMachine'
 import type { OrchAgent, OrchDecision, OrchRole, OrchRun, OrchTask } from '../../shared/orch/types'
+import { normalizeAnswer } from './answers'
 import { ACTIVE } from './context'
 import type { OrchService } from './service'
 import { runBranch, type MergeOutcome, type OrchWorktree } from './worktrees'
@@ -29,6 +30,12 @@ export interface DispatcherDeps {
 }
 
 const FINISHED_STAGES = new Set(['done', 'cancelled'])
+const MARK_DONE = 'Mark as done'
+const PUSH_AND_PR = 'Push and open a PR'
+const PUSH_AND_PR_SPEC =
+  'Commit anything left in your working folder, push the run branch to origin, and open a pull request into the base branch the story names ' +
+  "(otherwise the repository's default branch) with a clear title and summary. Use the repository's own tool (az repos pr create for Azure DevOps, " +
+  'gh pr create for GitHub). Do not merge it. Put the pull request link in your complete_task summary.'
 /** Roles whose work lands on their own task branch and is merged into the run branch. */
 const MERGED_ROLES: readonly OrchRole[] = ['implementer', 'ui', 'tester', 'fixer']
 /** Roles that work on the run branch itself. */
@@ -102,8 +109,8 @@ export class Dispatcher {
     if (this.allDone(run, tasks)) {
       this.deps.service.setStage(run.id, 'merge')
       this.deps.service.raiseDecision(run.id, 'run-complete', {
-        question: `"${run.title}" is finished on branch ${runBranch(run.id)}. Review it and merge it into your main branch when ready.`,
-        options: ['Mark as done'],
+        question: `"${run.title}" is finished on branch ${runBranch(run.id)}. Review it, then mark it as done, or tell the lead what else to do (for example push and open a PR).`,
+        options: [MARK_DONE, PUSH_AND_PR],
         context: tasks.map((t) => `${t.key} ${t.status}: ${t.title}`).join('\n'),
         taskId: null
       })
@@ -117,15 +124,26 @@ export class Dispatcher {
     return tasks.every((t) => (t.status === 'approved' || t.status === 'cancelled') && (!this.needsMerge(t) || t.mergedAt))
   }
 
-  /** In the merge stage, answering the run-complete question ends the run. */
+  /**
+   * In the merge stage the human answers the run-complete question. "Mark as done" ends the run; anything else
+   * (push and open a PR, or their own instructions) becomes a task for the lead, after which they are asked again.
+   */
   private finishIfAnswered(run: OrchRun): boolean {
     if (run.stage !== 'merge') return false
-    const answered = this.deps.service.decisions(run.id).some((d) => d.kind === 'run-complete' && d.answer !== null)
-    if (answered) {
+    const asked = this.deps.service.decisions(run.id).filter((d) => d.kind === 'run-complete').sort((a, b) => a.createdAt - b.createdAt).at(-1)
+    if (!asked || asked.answer === null) return true
+    if (normalizeAnswer(asked.answer) === normalizeAnswer(MARK_DONE)) {
       // The agents have nothing left to do: close their panes with the run, as cancelling does.
       for (const agent of this.deps.service.agents(run.id).filter((a) => !a.retiredAt)) this.deps.closePane(agent.id)
       this.deps.service.finishRun(run.id)
+      return true
     }
+    const pushPr = normalizeAnswer(asked.answer).startsWith(normalizeAnswer(PUSH_AND_PR))
+    const extra = pushPr ? asked.answer.slice(PUSH_AND_PR.length).replace(/^[.\s]+/, '') : asked.answer
+    this.deps.service.followUpForLead(run.id, pushPr ? 'Push the branch and open a pull request' : 'Follow-up from the human', [
+      pushPr ? PUSH_AND_PR_SPEC : '',
+      extra ? `The human said: ${extra}` : ''
+    ].filter(Boolean).join('\n\n'))
     return true
   }
 
