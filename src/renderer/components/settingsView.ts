@@ -50,6 +50,7 @@ import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
 import { setOrchestratorAutoTrust, setOrchestratorEnabled } from '../orchActions'
+import { orchestratorSettingsRows } from './orch/orchSettings'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
@@ -58,10 +59,13 @@ const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
   { id: 'highlights', label: 'Highlights', lede: 'Tint terminal lines that contain the words you care about.' },
   { id: 'experimental', label: 'Experimental', lede: 'Features that are still being built. Use them in local builds only.' },
+  { id: 'orchestrator', label: 'Orchestrator', lede: 'Plans, agent profiles, effort and prices for the orchestrator.' },
   { id: 'changelog', label: 'Changelog', lede: 'Every released version, newest first.' },
   { id: 'about', label: 'About', lede: 'Version, links and where your data lives.' }
 ]
 if (isRemoteControlBuild) SECTIONS.push({ id: 'remote', label: 'Remote Access', lede: 'Reach this Dawsha installation from your own devices.' })
+
+const visibleSections = (state: AppState): typeof SECTIONS => SECTIONS.filter((s) => s.id !== 'orchestrator' || state.settings.experimental.orchestrator)
 
 const REPO_URL = 'https://github.com/mfathy234/dawsha'
 const LINKS = [
@@ -103,7 +107,7 @@ export class SettingsViewComponent {
   private readonly title = h('h2', { class: 'settings-section-title' })
   private readonly lede = h('p', { class: 'lede' })
   private signature = ''
-  private navSection: SettingsSection | null = null
+  private navSection: string | null = null
   private shortcutDraft: string | null = null
   private shortcutError: string | null = null
   private addDraft: RuleDraft = emptyDraft()
@@ -145,7 +149,7 @@ export class SettingsViewComponent {
       state.settings.highlights,
       state.settings.recordings,
       state.settings.experimental,
-      state.settings.orchestrator.autoTrust,
+      state.settings.orchestrator,
       this.remoteAccess,
       this.remoteError,
       this.remoteBusy,
@@ -182,10 +186,12 @@ export class SettingsViewComponent {
 
   private render(state: AppState): void {
     const focusedId = (document.activeElement as HTMLElement | null)?.id
-    const section = SECTIONS.find((s) => s.id === state.settingsSection) ?? SECTIONS[0]
-    if (this.navSection !== section.id) {
-      this.navSection = section.id
-      this.nav.replaceChildren(...SECTIONS.map((s) => this.tab(s, s.id === section.id)))
+    const sections = visibleSections(state)
+    const section = sections.find((s) => s.id === state.settingsSection) ?? sections[0]
+    const navKey = `${section.id}|${sections.length}`
+    if (this.navSection !== navKey) {
+      this.navSection = navKey
+      this.nav.replaceChildren(...sections.map((s) => this.tab(s, s.id === section.id)))
     }
     this.title.replaceChildren(section.label)
     if (section.id === 'remote') {
@@ -214,13 +220,14 @@ export class SettingsViewComponent {
   }
 
   private onNavKey(event: KeyboardEvent): void {
-    const index = SECTIONS.findIndex((s) => s.id === store.state.settingsSection)
+    const sections = visibleSections(store.state)
+    const index = sections.findIndex((s) => s.id === store.state.settingsSection)
     const step = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 0
-    const target = event.key === 'Home' ? 0 : event.key === 'End' ? SECTIONS.length - 1 : (index + step + SECTIONS.length) % SECTIONS.length
+    const target = event.key === 'Home' ? 0 : event.key === 'End' ? sections.length - 1 : (index + step + sections.length) % sections.length
     if (step === 0 && event.key !== 'Home' && event.key !== 'End') return
     event.preventDefault()
-    showSettingsSection(SECTIONS[target].id)
-    requestAnimationFrame(() => document.getElementById(`settings-tab-${SECTIONS[target].id}`)?.focus())
+    showSettingsSection(sections[target].id)
+    requestAnimationFrame(() => document.getElementById(`settings-tab-${sections[target].id}`)?.focus())
   }
 
   private body(section: SettingsSection, state: AppState): HTMLElement[] {
@@ -250,6 +257,8 @@ export class SettingsViewComponent {
             h('p', { class: 'note set-note' }, 'Claude Code asks whether it may work in each new worktree. Dawsha answers Yes only for the worktree it just created from your project, once per agent. Turn this off to answer yourself.')
           )
         ]
+      case 'orchestrator':
+        return orchestratorSettingsRows(state, () => this.refresh())
       case 'changelog':
         return this.changelog(state)
       default:

@@ -1,4 +1,4 @@
-import type { OrchDecisionView, OrchPaneRequest, OrchStartInput } from '../shared/orch/api'
+import type { OrchDecisionView, OrchPaneRequest, OrchSnapshot, OrchStartInput } from '../shared/orch/api'
 import type { OrchProfile } from '../shared/orch/profiles'
 import { DEFAULT_FONT_SIZE, clampFontSize } from '../shared/types'
 import { discardPane, launch, makeTerm, persistWorkspace, saveSettings } from './actions'
@@ -48,9 +48,32 @@ export async function refreshOrch(): Promise<void> {
     return
   }
   try {
-    store.patch({ orch: await api.orchSnapshot() })
+    const orch = await api.orchSnapshot()
+    notifyNewDecisions(orch)
+    store.patch({ orch })
   } catch {
     // The next change notification tries again.
+  }
+}
+
+/** Notification ids for orchestrator decisions; clicking one opens Human review. */
+export const ORCH_NOTIFY_PREFIX = 'orch:'
+let seenDecisions: Set<string> | null = null
+
+/** A Windows notification for each question that arrived since the last snapshot (not for old ones at start). */
+function notifyNewDecisions(orch: OrchSnapshot): void {
+  const ids = new Set(orch.decisions.map((d) => d.id))
+  const fresh = seenDecisions ? orch.decisions.filter((d) => !seenDecisions?.has(d.id)) : []
+  seenDecisions = ids
+  const { notifications, sound } = store.state.settings.sessionInfo
+  if (!notifications) return
+  for (const decision of fresh) {
+    api.notify({
+      paneId: `${ORCH_NOTIFY_PREFIX}${decision.id}`,
+      title: `Orchestrator · ${decision.runTitle || 'Needs you'}`,
+      body: decision.question.slice(0, 180),
+      sound
+    })
   }
 }
 

@@ -1,0 +1,110 @@
+.orch-nr { max-width: 760px; width: 100%; margin: 0 auto; }
+
+.orch-nr-form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.orch-nr-title { margin: 0; font-size: 16px; }
+
+.orch-nr-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.orch-nr-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.orch-nr-hint { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+.orch-nr-story { height: auto; min-height: 140px; padding: 8px 10px; resize: vertical; line-height: 1.5; font-family: inherit; }
+
+.orch-nr-inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.orch-nr-inline .text-input { flex: 1 1 260px; min-width: 0; width: auto; }
+
+.orch-nr-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.orch-nr-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.orch-nr-card:hover:not(:disabled) { background: var(--raised); }
+.orch-nr-card.selected { border-color: var(--accent); background: var(--raised); }
+.orch-nr-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.orch-nr-card:disabled { opacity: 0.6; cursor: default; }
+.orch-nr-card small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.orch-nr-card .orch-nr-est { font-family: var(--font-mono); font-size: 11px; }
+
+.orch-nr-default {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.orch-nr-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.orch-nr-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+.orch-nr-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+
+.orch-nr-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 13px;
+}
+
+.orch-nr-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.orch-nr-message { flex: 1 1 240px; min-width: 0; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.orch-nr-error { margin: 0; color: var(--danger); font-size: 13px; }
+
+@media (max-width: 520px) {
+  .orch-nr-form { padding: 12px; }
+  .orch-nr-footer .btn { width: 100%; }
+}

@@ -1,0 +1,751 @@
+<title>Dawsha Orchestrator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: the real Dawsha window (sidebar + view) inside a scrollable frame, one screen per tab. Single dark look, as the app ships. */
+:root {
+  color-scheme: dark;
+  --bg: #0c0e12; --sidebar: #0e1116; --surface: #11141a; --raised: #161b23; --border: #232833;
+  --text: #d6dae3; --muted: #8a93a6; --accent: #34d399; --on-accent: #06281c;
+  --busy: #f5b54a; --working: #60a5fa; --danger: #f87171; --violet: #a78bfa;
+  --claude: #e8956b; --codex: #9ad0ff; --gemini: #8ab4f8; --local: #c4b5fd;
+  --radius: 8px;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-ui); font-size: 13px; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; }
+.intro { max-width: 1240px; margin: 0 auto 14px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; }
+.intro h1 { font-size: 20px; margin: 0 0 4px; font-weight: 600; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); max-width: 62ch; line-height: 1.5; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { background: var(--surface); color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font: inherit; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+.tabs button:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.frame-wrap { max-width: 1240px; margin: 0 auto; overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+.window { min-width: 1100px; height: 720px; display: grid; grid-template-rows: 34px 1fr; background: var(--bg); }
+.titlebar { display: flex; align-items: center; gap: 10px; padding: 0 12px; background: var(--sidebar); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.titlebar b { color: var(--text); font-weight: 600; }
+.titlebar .dots { display: flex; gap: 6px; margin-left: auto; }
+.titlebar .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+.app { display: grid; grid-template-columns: 52px 1fr; min-height: 0; }
+.rail { background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 10px; }
+.rail span { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); font-size: 11px; font-weight: 600; }
+.rail span.on { background: var(--raised); color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+.rail .badge { position: relative; }
+.rail .badge::after { content: "4"; position: absolute; top: 2px; right: 1px; background: var(--busy); color: #2a1a00; font-size: 9px; border-radius: 8px; padding: 0 4px; line-height: 13px; }
+.view { min-width: 0; min-height: 0; overflow: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.screen[hidden] { display: none !important; }
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--muted); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.panel h3 { margin: 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.btn { background: var(--raised); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 11px; font: inherit; cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+.btn.warn { border-color: color-mix(in srgb, var(--busy) 55%, var(--border)); color: var(--busy); }
+.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 8px; font-size: 11px; border: 1px solid var(--border); background: var(--raised); white-space: nowrap; }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.s-working { color: var(--working); } .s-idle { color: var(--muted); } .s-waiting { color: var(--busy); } .s-stalled { color: var(--danger); } .s-done { color: var(--accent); }
+.model { font-family: var(--font-mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--raised); border: 1px solid var(--border); white-space: nowrap; }
+.v-claude { color: var(--claude); } .v-codex { color: var(--codex); } .v-gemini { color: var(--gemini); } .v-local { color: var(--local); }
+
+/* Run header + stages */
+.runhead { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; }
+.runhead h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+.stages { display: flex; gap: 0; margin-top: 10px; }
+.stage { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.stage + .stage::before { content: ""; width: 26px; height: 1px; background: var(--border); margin: 0 8px; }
+.stage i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border); display: grid; place-items: center; font-style: normal; font-size: 10px; }
+.stage.done { color: var(--text); } .stage.done i { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.stage.now { color: var(--working); font-weight: 600; } .stage.now i { border-color: var(--working); }
+.kpis { display: flex; gap: 18px; text-align: right; }
+.kpis div b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+.kpis div span { font-size: 11px; color: var(--muted); }
+
+/* Board */
+.dash { display: grid; grid-template-columns: 1fr 330px; gap: 12px; min-height: 0; }
+.board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 10px; }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.col > header { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; display: flex; justify-content: space-between; padding: 0 2px; }
+.col.needs > header { color: var(--busy); }
+.card { background: var(--raised); border: 1px solid var(--border); border-radius: 7px; padding: 8px 9px; display: flex; flex-direction: column; gap: 6px; }
+.card.needs { border-color: color-mix(in srgb, var(--busy) 60%, var(--border)); }
+.card .id { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); display: flex; justify-content: space-between; }
+.card .t { font-size: 12.5px; line-height: 1.35; }
+.card .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 11px; color: var(--muted); }
+.agents table, .tbl { width: 100%; border-collapse: collapse; }
+.agents td, .tbl td, .tbl th { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; text-align: left; }
+.tbl th { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.agents tr:last-child td { border-bottom: 0; }
+.agents .role { font-weight: 600; font-size: 12.5px; }
+.agents .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.timeline { padding: 6px 12px 10px; display: flex; flex-direction: column; }
+.ev { display: grid; grid-template-columns: 44px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 12px; line-height: 1.4; }
+.ev:last-child { border-bottom: 0; }
+.ev time { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* Spec review */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; min-height: 0; }
+.doc { padding: 14px 18px; line-height: 1.55; font-size: 13px; }
+.doc h4 { margin: 14px 0 6px; font-size: 13px; }
+.doc h4:first-child { margin-top: 0; }
+.doc ol, .doc ul { margin: 0; padding-left: 20px; display: grid; gap: 3px; }
+.doc .c { background: color-mix(in srgb, var(--busy) 12%, transparent); border-left: 2px solid var(--busy); padding: 6px 8px; border-radius: 0 6px 6px 0; margin-top: 6px; font-size: 12px; }
+.versions { display: flex; gap: 6px; }
+.preview { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.shots { display: flex; gap: 6px; flex-wrap: wrap; }
+.shots .pill { cursor: pointer; }
+.shots .pill.sel { color: var(--accent); border-color: var(--accent); }
+.mock { background: #f7f7f5; color: #1e2329; border-radius: 6px; padding: 14px; font-family: var(--font-ui); display: grid; gap: 10px; }
+.mock .mh { display: flex; justify-content: space-between; align-items: center; }
+.mock .mh b { font-size: 14px; }
+.mock .mb { background: #1e2329; color: #fff; border-radius: 5px; padding: 5px 10px; font-size: 12px; }
+.mock .seg { display: flex; gap: 4px; }
+.mock .seg span { border: 1px solid #c9cdd3; border-radius: 4px; padding: 3px 8px; font-size: 11.5px; }
+.mock .seg span.on { background: #1e2329; color: #fff; border-color: #1e2329; }
+.mock .bars { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; align-items: end; height: 90px; border-bottom: 1px solid #c9cdd3; }
+.mock .bars i { background: #2f7d63; border-radius: 2px 2px 0 0; }
+.mock .dlg { border: 1px solid #c9cdd3; border-radius: 6px; padding: 10px; display: grid; gap: 8px; background: #fff; }
+.mock .dlg label { display: flex; gap: 6px; font-size: 12px; align-items: center; }
+.mock .note { font-size: 11px; color: #5b6470; }
+.decision-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--border); }
+
+/* Human review */
+.inbox { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; min-height: 0; }
+.ilist { display: flex; flex-direction: column; }
+.iitem { padding: 10px 12px; border-bottom: 1px solid var(--border); display: grid; gap: 4px; cursor: pointer; }
+.iitem.sel { background: var(--raised); box-shadow: inset 3px 0 0 var(--busy); }
+.iitem .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--busy); }
+.iitem .k.r { color: var(--danger); } .iitem .k.g { color: var(--accent); }
+.iitem .q { font-size: 12.5px; line-height: 1.35; }
+.decision { padding: 16px 18px; display: grid; gap: 14px; align-content: start; }
+.decision h2 { margin: 0; font-size: 16px; line-height: 1.35; font-weight: 600; }
+.ctx { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6; overflow-x: auto; white-space: pre; }
+.opts { display: grid; gap: 8px; }
+.opt { display: grid; grid-template-columns: 18px 1fr; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--raised); cursor: pointer; }
+.opt.rec { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.opt input { margin: 2px 0 0; accent-color: var(--accent); }
+.opt b { font-size: 12.5px; }
+.opt small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.4; font-size: 11.5px; }
+.tag { font-size: 10px; color: var(--accent); border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+textarea { width: 100%; min-height: 60px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font: inherit; resize: vertical; }
+
+/* Plans & profiles */
+.plans { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 12px; }
+.planpick { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.planpick .pill { cursor: pointer; }
+.planpick .pill.sel { color: var(--accent); border-color: var(--accent); }
+.form { padding: 12px 14px; display: grid; gap: 10px; }
+.field { display: grid; gap: 4px; }
+.field > span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; font: inherit; color: var(--text); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.check { border-radius: 7px; padding: 10px 12px; display: grid; gap: 6px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.check.warn { border-color: color-mix(in srgb, var(--busy) 50%, var(--border)); background: color-mix(in srgb, var(--busy) 7%, transparent); }
+.check ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; display: grid; gap: 2px; }
+
+/* New run */
+.newrun { max-width: 760px; width: 100%; margin: 6px auto; padding: 18px 20px; display: grid; gap: 14px; }
+.newrun h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.story { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; line-height: 1.55; }
+.plancards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pc { border: 1px solid var(--border); border-radius: 7px; padding: 10px; background: var(--raised); display: grid; gap: 6px; cursor: pointer; }
+.pc.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.pc b { font-size: 13px; }
+.pc small { color: var(--muted); line-height: 1.4; }
+.pc .est { font-family: var(--font-mono); font-size: 11.5px; }
+.limits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+
+/* Panes grid */
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 1fr 1fr; gap: 8px; height: 100%; min-height: 560px; }
+.pane { background: #0a0c10; border: 1px solid var(--border); border-radius: 7px; display: grid; grid-template-rows: auto auto 1fr; min-width: 0; overflow: hidden; }
+.pane.needs { border-color: var(--busy); box-shadow: 0 0 0 1px var(--busy) inset; }
+.ph { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 12px; }
+.ph b { font-weight: 600; }
+.ph .pill { margin-left: auto; }
+.strip { display: flex; gap: 10px; padding: 4px 8px; font-size: 10.5px; color: var(--muted); border-bottom: 1px solid var(--border); font-family: var(--font-mono); flex-wrap: wrap; }
+.term { padding: 8px 10px; font-family: var(--font-mono); font-size: 11px; line-height: 1.55; color: #b9c0cc; white-space: pre-wrap; overflow: hidden; }
+.term .g { color: var(--accent); } .term .y { color: var(--busy); } .term .b { color: var(--working); } .term .m { color: var(--muted); }
+/* All runs, history, settings */
+.runs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.rcard { padding: 12px 14px; display: grid; gap: 9px; align-content: start; }
+.rtop { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.rtop b { font-size: 14px; }
+.stages.mini { margin: 0; }
+.stages.mini .stage { font-size: 10.5px; gap: 4px; }
+.stages.mini .stage + .stage::before { width: 8px; margin: 0 4px; }
+.stages.mini .stage i { width: 15px; height: 15px; font-size: 9px; }
+.progress { height: 4px; background: var(--raised); border-radius: 4px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); }
+.rlast { background: var(--raised); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 12px; line-height: 1.45; }
+.quick { flex: 1; min-width: 0; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; font: inherit; }
+.seg2 { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+.tagrun { font-family: var(--font-mono); font-size: 10.5px; color: var(--violet); border: 1px solid color-mix(in srgb, var(--violet) 45%, var(--border)); border-radius: 4px; padding: 0 5px; }
+.runswitch { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.runswitch a { color: var(--muted); text-decoration: none; margin-right: 6px; }
+.rs { border: 1px solid var(--border); background: var(--surface); border-radius: 6px; padding: 4px 10px; color: var(--muted); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.rs.sel { color: var(--text); border-color: var(--accent); }
+.rs i { font-style: normal; background: var(--busy); color: #2a1a00; font-size: 10px; border-radius: 8px; padding: 0 5px; }
+.ifilter, .hfilter { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--border); align-items: center; }
+.ifilter .pill, .hfilter .pill { cursor: pointer; }
+.ifilter .pill.sel, .hfilter .pill.sel { color: var(--accent); border-color: var(--accent); }
+.iitem .run { font-size: 11px; color: var(--violet); }
+.hist tr.sel td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.hist .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.hist input { accent-color: var(--accent); }
+.hist-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.settabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.settabs span { padding: 7px 12px; color: var(--muted); border-bottom: 2px solid transparent; }
+.settabs span.on { color: var(--text); border-bottom-color: var(--accent); }
+.eff { font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; background: var(--bg); white-space: nowrap; }
+.gates { display: grid; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--border); font-size: 12.5px; }
+.gates label { display: flex; gap: 8px; align-items: center; }
+.gates input { accent-color: var(--accent); }
+.projtabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.pt { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--muted); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.pt.sel { color: var(--text); border-color: var(--accent); }
+.pt i { font-style: normal; font-size: 10.5px; color: var(--muted); }
+.fl { border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; background: var(--raised); color: var(--muted); font-size: 12px; white-space: nowrap; }
+.fl b { color: var(--text); font-weight: 600; }
+.rt { color: var(--violet); }
+.pchip { display: none; font-size: 10.5px; padding: 0 6px; border-radius: 4px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); white-space: nowrap; }
+.pchip.b { border-color: color-mix(in srgb, var(--busy) 45%, var(--border)); color: var(--busy); background: color-mix(in srgb, var(--busy) 8%, transparent); }
+.proj-all .pchip { display: inline-block; }
+.screen[data-screen="tasks"]:not(.proj-all):not(.proj-billing) .card.bp { display: none; }
+.proj-billing .card:not(.bp) { display: none; }
+.rt.manual { color: var(--muted); }
+.kind { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kopt { text-align: left; border: 1px solid var(--border); background: var(--raised); color: var(--text); border-radius: 7px; padding: 10px; display: grid; gap: 4px; font: inherit; cursor: pointer; }
+.kopt small { color: var(--muted); line-height: 1.4; }
+.kopt.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.usage table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.usage th, .usage td { padding: 5px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.usage th { color: var(--muted); font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
+.usage td .model { margin-left: 4px; font-size: 10px; }
+.usage tr.tot td { font-weight: 600; border-bottom: 0; }
+.src { font-size: 9px; border: 1px solid var(--border); border-radius: 3px; padding: 0 3px; color: var(--claude); }
+.src.e { color: var(--codex); } .src.f { color: var(--local); }
+.rail span.on.set { background: var(--raised); color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+.legend { max-width: 1240px; margin: 12px auto 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+@media (prefers-reduced-motion: no-preference) { .pill.s-working::before { animation: pulse 1.6s ease-in-out infinite; } }
+@keyframes pulse { 50% { opacity: .35; } }
+</style>
+
+<div class="intro">
+  <div>
+    <h1>Dawsha Orchestrator: mockups</h1>
+    <p>Three runs going at once across two projects; screens 3 to 5 zoom into one of them ("Export usage as CSV"). Click the tabs to see each screen. Everything here is sample data.</p>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Screens">
+    <button role="tab" data-s="runs" id="t-runs">1 · All runs</button>
+    <button role="tab" data-s="tasks" id="t-tasks">1b · Project boards</button>
+    <button role="tab" data-s="new" id="t-new">2 · New run</button>
+    <button role="tab" data-s="spec" id="t-spec">3 · Spec review</button>
+    <button role="tab" data-s="board" id="t-board">4 · Run dashboard</button>
+    <button role="tab" data-s="panes" id="t-panes">5 · Agent panes</button>
+    <button role="tab" data-s="human" id="t-human">6 · Human review</button>
+    <button role="tab" data-s="history" id="t-history">7 · History</button>
+    <button role="tab" data-s="plans" id="t-plans">8 · Settings · Plans</button>
+  </div>
+</div>
+
+<div class="frame-wrap">
+<div class="window">
+  <div class="titlebar"><b>Dawsha</b> <span>·</span> <span>dawsha</span> <span>·</span> <span id="crumb">Orchestrator</span><div class="dots"><i></i><i></i><i></i></div></div>
+  <div class="app">
+    <nav class="rail" aria-hidden="true"><span>Prj</span><span>Grid</span><span class="on badge" id="rail-orch">Orch</span><span>Use</span><span>Skl</span><span id="rail-set" style="margin-top:auto;margin-bottom:10px">Set</span></nav>
+    <main class="view">
+
+<!-- 0 ALL RUNS -->
+<section class="screen" data-screen="runs" hidden>
+  <div class="row" style="justify-content: space-between">
+    <div class="row"><b style="font-size:15px">Active runs</b><span class="pill s-working">3 running</span><span class="pill s-waiting">4 need you</span><span class="muted">8 agent panes open</span></div>
+    <div class="row"><a href="#history" class="jump btn" data-s="history" style="text-decoration:none">History</a><a href="#new" class="jump btn primary" data-s="new" style="text-decoration:none">New run</a></div>
+  </div>
+  <div class="runs">
+    <div class="panel rcard">
+      <div class="rtop"><div><b>Export usage as CSV</b><div class="muted">dawsha · Default plan · 38 min</div></div><span class="pill s-waiting">2 need you</span></div>
+      <div class="stages mini"><span class="stage done"><i>✓</i>Spec</span><span class="stage done"><i>✓</i>Plan</span><span class="stage now"><i>3</i>Build</span><span class="stage"><i>4</i>Review</span><span class="stage"><i>5</i>Merge</span></div>
+      <div class="progress"><i style="width:57%"></i></div>
+      <div class="muted" style="font-size:12px">4 of 7 tasks · working: UI, Code reviewer · stalled: UX reviewer</div>
+      <div class="rlast"><b>Implementer</b> asks: Price non-Claude models from your settings, or leave cost empty?</div>
+      <div class="row"><input class="quick" id="q1" value="Use settings prices, mark them estimated" aria-label="Quick reply"><button class="btn primary">Reply</button><a href="#board" class="jump btn" data-s="board" style="text-decoration:none">Open</a></div>
+    </div>
+    <div class="panel rcard">
+      <div class="rtop"><div><b>Invoice PDF footer</b><div class="muted">billing-api · Budget plan · 9 min</div></div><span class="pill s-waiting">1 needs you</span></div>
+      <div class="stages mini"><span class="stage now"><i>1</i>Spec</span><span class="stage"><i>2</i>Plan</span><span class="stage"><i>3</i>Build</span><span class="stage"><i>4</i>Review</span><span class="stage"><i>5</i>Merge</span></div>
+      <div class="progress"><i style="width:10%"></i></div>
+      <div class="muted" style="font-size:12px">Spec v1 and 3 mockups ready · spec writer idle</div>
+      <div class="rlast"><b>Spec writer</b>: spec ready for your review. Open question: show VAT number on every page or only the last?</div>
+      <div class="row"><a href="#spec" class="jump btn primary" data-s="spec" style="text-decoration:none">Review spec</a><a href="#board" class="jump btn" data-s="board" style="text-decoration:none">Open</a></div>
+    </div>
+    <div class="panel rcard">
+      <div class="rtop"><div><b>Dark mode for settings</b><div class="muted">dawsha · My UI plan · 1 h 12 min</div></div><span class="pill s-stalled">1 escalated</span></div>
+      <div class="stages mini"><span class="stage done"><i>✓</i>Spec</span><span class="stage done"><i>✓</i>Plan</span><span class="stage done"><i>✓</i>Build</span><span class="stage now"><i>4</i>Review</span><span class="stage"><i>5</i>Merge</span></div>
+      <div class="progress"><i style="width:83%"></i></div>
+      <div class="muted" style="font-size:12px">5 of 6 tasks · T-2 rejected twice by the reviewer</div>
+      <div class="rlast"><b>Reviewer</b>: "Toggle state is not saved after restart." Reassign, let it try again, or take over?</div>
+      <div class="row"><span class="seg2"><button class="btn">Try again</button><button class="btn">Reassign</button><button class="btn">Take over</button></span><a href="#board" class="jump btn" data-s="board" style="text-decoration:none">Open</a></div>
+    </div>
+  </div>
+  <div class="panel"><h3>Live across all runs</h3>
+    <div class="timeline">
+      <div class="ev"><time>14:12</time><span><span class="tagrun">CSV</span> <b>UI</b> edited <span class="mono">UsageExport.ts</span> and <span class="mono">styles.css</span>.</span></div>
+      <div class="ev"><time>14:11</time><span><span class="tagrun">PDF</span> <b>Spec writer</b> finished spec v1 with 3 mockups.</span></div>
+      <div class="ev"><time>14:09</time><span><span class="tagrun">CSV</span> <b>UX reviewer</b> went idle without submitting. Nudged once.</span></div>
+      <div class="ev"><time>13:58</time><span><span class="tagrun">Dark</span> <b>Reviewer</b> rejected T-2 for the second time. Escalated to you.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 0b PROJECT BOARDS -->
+<section class="screen proj-all" data-screen="tasks" hidden>
+  <div class="row" style="justify-content: space-between">
+    <div class="projtabs"><span class="pt sel" data-p="all">All projects <i>23</i></span><span class="pt" data-p="dawsha">dawsha <i>15</i></span><span class="pt" data-p="billing-api">billing-api <i>8</i></span></div>
+    <div class="row"><button class="btn">Add task</button><a href="#new" class="jump btn primary" data-s="new" style="text-decoration:none">New run</a></div>
+  </div>
+  <div class="panel">
+    <div class="hfilter">
+      <div class="input" style="min-width:240px">Search titles, specs, decisions… <span class="muted">⌕</span></div>
+      <span class="fl">Run: <b>All</b> ▾</span><span class="fl">Status: <b>Open</b> ▾</span><span class="fl">Role: <b>All</b> ▾</span><span class="fl">Model: <b>All</b> ▾</span>
+      <span class="pill sel">Needs you only</span><span class="pill">Include finished runs</span>
+      <span class="muted" style="margin-left:auto;font-size:12px">Saved view: <b style="color:var(--text)">My open work</b> ▾</span>
+    </div>
+    <div class="board">
+      <div class="col"><header>To do <span>3</span></header>
+        <div class="card"><div class="id"><span>T-7</span><span class="rt">CSV</span></div><div class="t">Check every acceptance criterion</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-gemini">tester · gemini-flash</span></div></div>
+        <div class="card"><div class="id"><span>D-6</span><span class="rt">Dark</span></div><div class="t">Screenshot pass for all settings pages</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-local">ux · ollama/qwen3-coder</span></div></div>
+        <div class="card"><div class="id"><span>#12</span><span class="rt manual">manual</span></div><div class="t">Rename "Layouts" menu to "Saved layouts"</div><div class="meta"><span class="pchip">dawsha</span><span>no run yet · <span style="color:var(--accent)">Start run</span></span></div></div>
+      <div class="card bp"><div class="id"><span>P-3</span><span class="rt">PDF</span></div><div class="t">Footer layout for multi-page invoices</div><div class="meta"><span class="pchip b">billing-api</span><span class="model v-claude">ui · sonnet-5.5</span></div></div>
+      </div>
+      <div class="col"><header>In progress <span>2</span></header>
+        <div class="card"><div class="id"><span>T-5</span><span class="rt">CSV</span></div><div class="t">Export dialog UI from export-dialog.html</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-claude">ui · sonnet-5.5</span></div></div>
+        <div class="card"><div class="id"><span>D-5</span><span class="rt">Dark</span></div><div class="t">Theme tokens for settings forms</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-codex">gpt-5.5-codex</span></div></div>
+      </div>
+      <div class="col"><header>Review <span>1</span></header>
+        <div class="card"><div class="id"><span>T-3</span><span class="rt">CSV</span></div><div class="t">CSV writer with BOM and chunked output</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-claude">review · sonnet-5.5</span><span>round 2</span></div></div>
+      </div>
+      <div class="col needs"><header>Needs you <span>3</span></header>
+        <div class="card needs"><div class="id"><span>T-4</span><span class="rt">CSV</span></div><div class="t">Price non-Claude models from your settings?</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-codex">implementer</span></div></div>
+        <div class="card needs"><div class="id"><span>T-6</span><span class="rt">CSV</span></div><div class="t">UX review stalled</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-local">ux · local</span></div></div>
+        <div class="card needs"><div class="id"><span>D-2</span><span class="rt">Dark</span></div><div class="t">Toggle state not saved (rejected twice)</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-claude">ui · sonnet-5.5</span></div></div>
+      <div class="card needs bp"><div class="id"><span>P-1</span><span class="rt">PDF</span></div><div class="t">Approve spec v1 and 3 mockups</div><div class="meta"><span class="pchip b">billing-api</span><span class="model v-gemini">spec · gemini-flash</span></div></div>
+      </div>
+      <div class="col"><header>Done <span>6</span></header>
+        <div class="card"><div class="id"><span>T-2</span><span class="rt">CSV</span></div><div class="t">Usage query by date range</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-codex">gpt-5.5-codex</span></div></div>
+        <div class="card"><div class="id"><span>D-1</span><span class="rt">Dark</span></div><div class="t">Settings layout uses theme tokens</div><div class="meta"><span class="pchip">dawsha</span><span class="model v-claude">sonnet-5.5</span></div></div>
+        <div class="card" style="opacity:.75"><div class="id"><span>+4</span><span></span></div><div class="t muted">more from 2 runs</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="muted" style="font-size:12px">Each project has its own board with the tasks from all its runs; the tag on a card shows the run. "All projects" shows every board together. Finished runs move to Projects → Tasks with their goal, notes and commits.</div>
+</section>
+
+<!-- 1 NEW RUN -->
+<section class="screen" data-screen="new">
+  <div class="panel newrun">
+    <div><h2>New run</h2><div class="muted">Project: dawsha · branch main · the run works on <span class="mono">orch/export-usage-csv</span></div></div>
+    <div class="field"><span>Type</span>
+      <div class="kind" role="radiogroup" aria-label="Run type">
+        <button class="kopt sel" data-kind="feature" role="radio" aria-checked="true"><b>Feature</b><small>Spec, lead, workers and reviews. Your plan's team.</small></button>
+        <button class="kopt" data-kind="bug" role="radio" aria-checked="false"><b>Bug</b><small>One agent fixes it on the model you pick. No subagents, no spec.</small></button>
+      </div>
+    </div>
+    <div class="field bug-only" hidden><span>Fixed by</span>
+      <div class="input"><span><span class="model v-claude">Claude Code · opus-5.5 · effort high</span> <span class="muted">your plan's main model (default)</span></span><span class="muted">Change ▾</span></div>
+    </div>
+    <div class="field"><span class="story-label">User story</span>
+      <div class="story">As a heavy Claude Code user, I want to export my usage table as a CSV file, so that I can track spend in a spreadsheet and share it with my team lead.<br><span class="muted">From Projects → Tasks · "Usage export" · or paste any story</span></div>
+    </div>
+    <div class="field feature-only"><span>Plan</span>
+      <div class="plancards">
+        <div class="pc sel"><b>Default</b><small>Opus leads, Sonnet and Codex build, a different vendor reviews.</small><span class="est">7 roles · 3 vendors</span></div>
+        <div class="pc"><b>Budget</b><small>Sonnet leads, free Gemini Flash and local Qwen review.</small><span class="est">7 roles · 2 local</span></div>
+        <div class="pc"><b>My UI plan</b><small>Your plan: Gemini Pro for UI, local UX reviewer.</small><span class="est">6 roles · 1 local</span></div>
+      </div>
+      <span class="muted" style="font-size:12px">Plans are created and edited in Settings → Orchestrator. <a href="#plans" class="jump" data-s="plans" style="color:var(--accent)">Open plans</a></span>
+    </div>
+    <div class="field feature-only"><span>Limits for this run</span>
+      <div class="limits" style="grid-template-columns: repeat(3, minmax(0, 1fr))">
+        <div class="input">Workers at once <b>3</b></div>
+        <div class="input">Per task <b>30 min</b></div>
+        <div class="input">Review rounds <b>2</b></div>
+      </div>
+    </div>
+    <div class="row" style="justify-content: space-between">
+      <span class="muted">Runs side by side with your 2 other active runs. Nothing is built until you approve the spec.</span>
+      <div class="row"><button class="btn">Cancel</button><button class="btn primary" id="start-btn">Start spec</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 SPEC REVIEW -->
+<section class="screen" data-screen="spec" hidden>
+  <div class="row" style="justify-content: space-between">
+    <div class="row"><b style="font-size:15px">Spec review · Export usage as CSV</b><span class="pill s-waiting">Waiting for you</span></div>
+    <div class="row"><span class="muted">Written by</span><span class="model v-claude">Spec writer · claude-sonnet-5.5</span><div class="versions"><span class="pill s-idle">v1</span><span class="pill s-done">v2 · current</span></div></div>
+  </div>
+  <div class="split">
+    <div class="panel"><h3>spec.md <span class="mono" style="text-transform:none;letter-spacing:0">.dawsha/runs/r-0412/spec.md</span></h3>
+      <div class="doc">
+        <h4>Goal</h4>
+        <p style="margin:0">Let people save the Usage table as a CSV file for a chosen date range.</p>
+        <h4>Acceptance criteria</h4>
+        <ol>
+          <li>An <b>Export CSV</b> button sits in the Usage view header.</li>
+          <li>The dialog offers Last 7 days, Last 30 days, This month and Custom range.</li>
+          <li>Columns: date, project, agent, model, input tokens, output tokens, cost (USD).</li>
+          <li>The file is named <span class="mono">dawsha-usage-YYYY-MM-DD.csv</span> and opens cleanly in Excel (UTF-8 with BOM).</li>
+          <li>When the range has no usage, the dialog says so and the Export button is disabled.</li>
+        </ol>
+        <div class="c"><b>Your comment on v1:</b> "add a 'group by project' option, the lead wants totals" → added as criterion 6 in v2.</div>
+        <ol start="6"><li>A "Totals per project" checkbox adds a summary block at the end.</li></ol>
+        <h4>Edge cases</h4>
+        <ul><li>Agents with no cost data (Codex, Gemini, local) export cost as empty, not 0.</li><li>Very large ranges are written in chunks without freezing the UI.</li></ul>
+        <h4>Out of scope</h4>
+        <ul><li>Scheduled or emailed exports.</li></ul>
+        <h4>Open questions</h4>
+        <ul><li>Should costs use your price settings for non-Claude models? <span class="muted">→ sent to Human review</span></li></ul>
+      </div>
+    </div>
+    <div class="panel"><h3>Mockups <span style="text-transform:none;letter-spacing:0">Desktop · <span class="muted">Phone</span></span></h3>
+      <div class="preview">
+        <div class="shots"><span class="pill sel">usage-header.html</span><span class="pill">export-dialog.html</span><span class="pill">empty-range.html</span><span class="pill">exporting.html</span></div>
+        <div class="mock" aria-label="Mockup of the Usage view with the export dialog">
+          <div class="mh"><b>Usage</b><span class="mb">Export CSV</span></div>
+          <div class="seg"><span class="on">Tokens</span><span>Cost</span><span>Limits</span></div>
+          <div class="bars"><i style="height:40%"></i><i style="height:55%"></i><i style="height:30%"></i><i style="height:70%"></i><i style="height:62%"></i><i style="height:45%"></i><i style="height:20%"></i><i style="height:35%"></i><i style="height:80%"></i><i style="height:66%"></i><i style="height:58%"></i><i style="height:90%"></i><i style="height:50%"></i><i style="height:72%"></i></div>
+          <div class="dlg">
+            <b style="font-size:13px">Export usage</b>
+            <div class="seg"><span>Last 7 days</span><span class="on">Last 30 days</span><span>This month</span><span>Custom</span></div>
+            <label><input type="checkbox" checked disabled> Totals per project</label>
+            <div class="note">412 rows · 3 projects · dawsha-usage-2026-10-16.csv</div>
+            <div style="display:flex;justify-content:flex-end;gap:6px"><span class="seg"><span>Cancel</span></span><span class="mb">Export</span></div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:11.5px">Mockups are static HTML using the project's own colours. Click any element to leave a comment on it.</div>
+      </div>
+    </div>
+  </div>
+  <div class="panel decision-bar">
+    <span class="muted">Approving hands the spec to the lead (Opus), who splits it into tasks.</span>
+    <div class="row"><button class="btn">Comment</button><button class="btn warn">Request changes</button><button class="btn primary">Approve spec &amp; mockups</button></div>
+  </div>
+</section>
+
+<!-- 3 RUN DASHBOARD -->
+<section class="screen" data-screen="board" hidden>
+  <div class="runswitch">
+    <a href="#runs" class="jump" data-s="runs">← All runs</a>
+    <span class="rs sel">Export usage as CSV <i>2</i></span>
+    <span class="rs">Invoice PDF footer <i>1</i></span>
+    <span class="rs">Dark mode for settings</span>
+  </div>
+  <div class="panel runhead">
+    <div>
+      <h2>Export usage as CSV</h2>
+      <div class="muted">Run r-0412 · Default plan · branch <span class="mono">orch/export-usage-csv</span></div>
+      <div class="stages">
+        <span class="stage done"><i>✓</i>Spec</span><span class="stage done"><i>✓</i>Plan</span><span class="stage now"><i>3</i>Build</span><span class="stage"><i>4</i>Review</span><span class="stage"><i>5</i>Merge</span>
+      </div>
+    </div>
+    <div class="kpis">
+      <div><b>4 / 7</b><span>tasks done</span></div>
+      <div><b>38m</b><span>elapsed</span></div>
+      <div><b>$1.42</b><span>spent so far</span></div>
+      <div><b style="color:var(--busy)">2</b><span>need you</span></div>
+    </div>
+  </div>
+  <div class="dash">
+    <div class="panel"><h3>Tasks <span style="text-transform:none;letter-spacing:0" class="muted">click a card for details</span></h3>
+      <div class="board">
+        <div class="col"><header>To do <span>1</span></header>
+          <div class="card"><div class="id"><span>T-7</span><span>after T-5</span></div><div class="t">Check every acceptance criterion</div><div class="meta"><span class="model v-gemini">tester · gemini-flash</span></div></div>
+        </div>
+        <div class="col"><header>In progress <span>1</span></header>
+          <div class="card"><div class="id"><span>T-5</span><span>12 min</span></div><div class="t">Export dialog UI from export-dialog.html</div><div class="meta"><span class="model v-claude">ui · sonnet-5.5</span><span>worktree</span></div></div>
+        </div>
+        <div class="col"><header>Review <span>1</span></header>
+          <div class="card"><div class="id"><span>T-3</span><span>round 2</span></div><div class="t">CSV writer with BOM and chunked output</div><div class="meta"><span class="model v-codex">built · gpt-5.5-codex</span><span class="model v-claude">review · sonnet-5.5</span></div></div>
+        </div>
+        <div class="col needs"><header>Needs you <span>2</span></header>
+          <div class="card needs"><div class="id"><span>T-4</span><span>question</span></div><div class="t">Price non-Claude models from your settings?</div><div class="meta"><span class="model v-codex">implementer · gpt-5.5-codex</span></div></div>
+          <div class="card needs"><div class="id"><span>T-6</span><span>stalled 9 min</span></div><div class="t">UX review of the header button</div><div class="meta"><span class="model v-local">ux · ollama/qwen3-coder</span></div></div>
+        </div>
+        <div class="col"><header>Done <span>3</span></header>
+          <div class="card"><div class="id"><span>T-0</span><span>✓</span></div><div class="t">Spec and mockups v2</div><div class="meta"><span class="model v-claude">spec · sonnet-5.5</span></div></div>
+          <div class="card"><div class="id"><span>T-1</span><span>✓</span></div><div class="t">Plan: 7 tasks, 2 in parallel</div><div class="meta"><span class="model v-claude">lead · opus-5.5</span></div></div>
+          <div class="card"><div class="id"><span>T-2</span><span>✓</span></div><div class="t">Usage query by date range</div><div class="meta"><span class="model v-codex">gpt-5.5-codex</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;gap:12px;align-content:start;min-width:0">
+      <div class="panel agents"><h3>Agents <span style="text-transform:none;letter-spacing:0" class="muted">click to open pane</span></h3>
+        <table>
+          <tr><td><div class="role">Lead</div><div class="sub"><span class="model v-claude">opus-5.5</span></div></td><td><span class="pill s-idle">idle</span></td><td class="num">$0.61</td></tr>
+          <tr><td><div class="role">Implementer</div><div class="sub"><span class="model v-codex">gpt-5.5-codex</span> · T-4</div></td><td><span class="pill s-waiting">needs you</span></td><td class="num">$0.29</td></tr>
+          <tr><td><div class="role">UI</div><div class="sub"><span class="model v-claude">sonnet-5.5</span> · T-5 · <span style="color:var(--accent)">Continue with…</span></div></td><td><span class="pill s-working">working</span></td><td class="num">$0.22</td></tr>
+          <tr><td><div class="role">Code reviewer</div><div class="sub"><span class="model v-claude">sonnet-5.5</span> · T-3</div></td><td><span class="pill s-working">working</span></td><td class="num">$0.18</td></tr>
+          <tr><td><div class="role">UX reviewer</div><div class="sub"><span class="model v-local">ollama/qwen3-coder</span> · T-6</div></td><td><span class="pill s-stalled">stalled</span></td><td class="num">$0.00</td></tr>
+        </table>
+      </div>
+      <div class="panel usage"><h3>Usage · this run <span style="text-transform:none;letter-spacing:0" class="muted">tokens · est. cost</span></h3>
+        <table>
+          <tr><th>Agent</th><th class="num">In</th><th class="num">Out</th><th class="num">Cache</th><th class="num">Cost</th></tr>
+          <tr><td>Spec writer <span class="model v-claude">sonnet-5.5</span></td><td class="num">41k</td><td class="num">9k</td><td class="num">180k</td><td class="num">$0.19 <span class="src" title="Reported by Claude Code">R</span></td></tr>
+          <tr><td>Lead <span class="model v-claude">opus-5.5</span></td><td class="num">62k</td><td class="num">14k</td><td class="num">410k</td><td class="num">$0.61 <span class="src" title="Reported by Claude Code">R</span></td></tr>
+          <tr><td>Implementer <span class="model v-codex">gpt-5.5-codex</span></td><td class="num">118k</td><td class="num">22k</td><td class="num">96k</td><td class="num">$0.29 <span class="src e" title="Estimated from your price table">E</span></td></tr>
+          <tr><td>UI <span class="model v-claude">sonnet-5.5</span></td><td class="num">55k</td><td class="num">12k</td><td class="num">240k</td><td class="num">$0.22 <span class="src" title="Reported by Claude Code">R</span></td></tr>
+          <tr><td>Code reviewer <span class="model v-claude">sonnet-5.5</span></td><td class="num">38k</td><td class="num">5k</td><td class="num">120k</td><td class="num">$0.11 <span class="src" title="Reported by Claude Code">R</span></td></tr>
+          <tr><td>UX reviewer <span class="model v-local">qwen3-coder</span></td><td class="num">24k</td><td class="num">3k</td><td class="num">0</td><td class="num">$0.00 <span class="src f" title="Local model">L</span></td></tr>
+          <tr class="tot"><td>Total · 6 agents</td><td class="num">338k</td><td class="num">65k</td><td class="num">1.05M</td><td class="num">$1.42</td></tr>
+        </table>
+        <div class="muted" style="font-size:11px;padding:6px 10px">R reported by the CLI · E estimated from your prices · L local, free. Export with the run.</div>
+      </div>
+      <div class="panel"><h3>Timeline</h3>
+        <div class="timeline">
+          <div class="ev"><time>14:02</time><span><b>Reviewer</b> rejected T-3: "BOM missing when the file is split into chunks".</span></div>
+          <div class="ev"><time>14:05</time><span><b>Implementer</b> asked you about pricing non-Claude models.</span></div>
+          <div class="ev"><time>14:09</time><span><b>UX reviewer</b> went idle without submitting. Nudged once.</span></div>
+          <div class="ev"><time>14:11</time><span><b>Note</b> by lead: "Use the existing Usage store, no new IPC".</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 PANES -->
+<section class="screen" data-screen="panes" hidden>
+  <div class="grid">
+    <div class="pane"><div class="ph"><b>Lead</b><span class="model v-claude">opus-5.5</span><span class="pill s-idle">idle</span></div><div class="strip"><span>Claude Code</span><span>ctx 31%</span><span>$0.61</span></div>
+      <div class="term"><span class="m">● orch.create_task(T-5, role: ui, depends_on: [T-2])</span>
+<span class="m">● orch.create_task(T-7, role: tester, depends_on: [T-5])</span>
+Plan ready: 7 tasks. T-3 and T-5 run in parallel
+in separate worktrees. Waiting on reviews.</div></div>
+    <div class="pane needs"><div class="ph"><b>Implementer</b><span class="model v-codex">gpt-5.5-codex</span><span class="pill s-waiting">needs you</span></div><div class="strip"><span>Codex CLI</span><span>wt: orch-T-4</span><span>$0.29</span></div>
+      <div class="term">› orch.get_my_task → T-4 "Cost column for all agents"
+<span class="y">● orch.ask_human("Price non-Claude models from
+  your settings, or leave cost empty?")</span>
+<span class="m">waiting for an answer in Human review…</span></div></div>
+    <div class="pane"><div class="ph"><b>UI</b><span class="model v-claude">sonnet-5.5</span><span class="pill s-working">working</span></div><div class="strip"><span>Claude Code</span><span>wt: orch-T-5</span><span>$0.22</span></div>
+      <div class="term">Building the export dialog to match
+mockups/export-dialog.html
+<span class="b">● Edit src/renderer/components/UsageExport.ts</span>
+<span class="b">● Edit src/renderer/styles.css (+48)</span></div></div>
+    <div class="pane"><div class="ph"><b>Code reviewer</b><span class="model v-claude">sonnet-5.5</span><span class="pill s-working">working</span></div><div class="strip"><span>Claude Code</span><span>read-only</span><span>$0.18</span></div>
+      <div class="term">Reviewing T-3, round 2 (branch orch-T-3)
+<span class="g">✓ BOM now written once before the first chunk</span>
+<span class="g">✓ test: csvWriter.spec.ts 9/9</span>
+<span class="m">submitting review…</span></div></div>
+    <div class="pane needs"><div class="ph"><b>UX reviewer</b><span class="model v-local">ollama/qwen3-coder</span><span class="pill s-stalled">stalled</span></div><div class="strip"><span>OpenCode</span><span>local · $0</span><span>9 min idle</span></div>
+      <div class="term">The header button looks consistent with the
+other view actions. Contrast is fine.
+<span class="y">⚠ finished without calling orch.submit_review</span>
+<span class="m">Dawsha nudged once · now in Human review</span></div></div>
+    <div class="pane"><div class="ph"><b>Tester</b><span class="model v-gemini">gemini-flash</span><span class="pill s-idle">queued</span></div><div class="strip"><span>Gemini CLI</span><span>starts after T-5</span><span>$0.00</span></div>
+      <div class="term"><span class="m">Pane opens when T-5 is approved.
+Will check criteria 1–6 and report pass/fail
+for each one.</span></div></div>
+  </div>
+</section>
+
+<!-- 5 HUMAN REVIEW -->
+<section class="screen" data-screen="human" hidden>
+  <div class="inbox">
+    <div class="panel ilist">
+      <h3>Needs you · all runs <span class="pill s-waiting" style="text-transform:none;letter-spacing:0">4</span></h3>
+      <div class="ifilter"><span class="pill sel">All runs</span><span class="pill">Export usage as CSV</span><span class="pill">Invoice PDF footer</span></div>
+      <div class="iitem sel"><span class="k">Question · T-4 · Implementer</span><span class="q">Price non-Claude models from your settings, or leave cost empty?</span><span class="run">Export usage as CSV · dawsha · 4 min ago</span></div>
+      <div class="iitem"><span class="k g">Spec approval</span><span class="q">Spec v1 and 3 mockups are ready</span><span class="run">Invoice PDF footer · billing-api · 6 min ago</span></div>
+      <div class="iitem" data-q="quota"><span class="k r">Out of quota · T-5 · UI</span><span class="q">Claude hit its usage limit mid-task. Continue with another model?</span><span class="run">Export usage as CSV · dawsha · 1 min ago</span></div>
+      <div class="iitem"><span class="k r">Stalled · T-6 · UX reviewer</span><span class="q">Finished without submitting a review (local model)</span><span class="run">Export usage as CSV · dawsha · 9 min ago</span></div>
+      <div class="iitem"><span class="k r">Review rejected twice · T-2</span><span class="q">Toggle state not saved after restart</span><span class="run">Dark mode for settings · dawsha · 21 min ago</span></div>
+    </div>
+    <div class="panel decision" id="quota-card" hidden>
+      <div class="row"><span class="pill s-working">Export usage as CSV</span><span class="model v-claude">UI · sonnet-5.5</span><span class="muted">task T-5 · stalled: usage limit reached</span></div>
+      <h2>Claude hit its usage limit while building the export dialog. Who should continue T-5?</h2>
+      <div class="ctx">Progress so far (from the task state)
+- Built UsageExport.ts dialog shell and range buttons
+- styles.css: +48 lines, matches export-dialog.html
+- Review round 0 · branch orch/T-5 · 2 files changed
+Pane output: "You've reached your usage limit. Resets at 17:00."</div>
+      <div class="opts">
+        <label class="opt rec"><input type="radio" name="d2" checked><span><b>Codex · gpt-5.5-codex · effort medium</b><span class="tag">suggested</span><small>Different vendor, so its quota is separate. Continues on the same branch with the brief.</small></span></label>
+        <label class="opt"><input type="radio" name="d2"><span><b>Gemini CLI · gemini-pro · effort high</b><small>Your "My UI plan" UI profile.</small></span></label>
+        <label class="opt"><input type="radio" name="d2"><span><b>OpenCode · ollama/qwen3-coder</b><small>Local and free, but marked unreliable at tool calls.</small></span></label>
+        <label class="opt"><input type="radio" name="d2"><span><b>Wait for Claude to reset at 17:00</b><small>The task stays paused; other tasks keep going.</small></span></label>
+      </div>
+      <textarea id="handoff-note" aria-label="Note for the next agent">Keep the dialog layout from the mockup; only the "Totals per project" checkbox is left.</textarea>
+      <div class="row" style="justify-content: space-between">
+        <button class="btn">Export task state…</button>
+        <div class="row"><button class="btn">Open pane</button><button class="btn primary">Continue with Codex</button></div>
+      </div>
+    </div>
+    <div class="panel decision" id="question-card">
+      <div class="row"><span class="pill s-working">Export usage as CSV</span><span class="model v-codex">Implementer · gpt-5.5-codex</span><span class="muted">task T-4 · paused, other agents and runs keep working</span></div>
+      <h2>Codex, Gemini and local models report tokens but no cost. Should the CSV price them from your settings, or leave cost empty?</h2>
+      <div class="ctx">// src/main/usage/cost.ts  (current)
+export function costFor(row: UsageRow): number | null {
+  if (row.agent === 'claude') return claudePrice(row)
+  return null   // Codex / Gemini / local: no price data
+}</div>
+      <div class="opts">
+        <label class="opt rec"><input type="radio" name="d1" checked><span><b>Price them from Settings → Usage prices</b><span class="tag">agent's pick</span><small>Matches what the dashboard already shows. Rows priced this way get "estimated" in a notes column.</small></span></label>
+        <label class="opt"><input type="radio" name="d1"><span><b>Leave cost empty for non-Claude agents</b><small>What the spec says today (edge case 1). Simplest, but totals per project undercount.</small></span></label>
+        <label class="opt"><input type="radio" name="d1"><span><b>Add both columns: cost and estimated cost</b><small>Most complete, one more column in every export.</small></span></label>
+      </div>
+      <textarea id="answer-note" aria-label="Add a note to your answer">Go with settings prices, and add the "estimated" note.</textarea>
+      <div class="row" style="justify-content: space-between">
+        <span class="muted" style="font-size:12px">Your answer is saved as a shared note so no agent asks again.</span>
+        <div class="row"><button class="btn">Open pane</button><button class="btn primary">Send answer &amp; resume T-4</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 HISTORY -->
+<section class="screen" data-screen="history" hidden>
+  <div class="row" style="justify-content: space-between">
+    <div class="row"><b style="font-size:15px">Run history</b><span class="muted">finished, cancelled and imported runs, all projects</span></div>
+    <div class="row"><button class="btn">Import runs…</button><button class="btn">Export selected (2)</button></div>
+  </div>
+  <div class="panel">
+    <div class="hfilter"><div class="input" style="min-width:260px">Search stories, tasks, decisions… <span class="muted">⌕</span></div><span class="pill sel">All projects</span><span class="pill">dawsha</span><span class="pill">billing-api</span><span class="pill">Completed</span><span class="pill">Cancelled</span><span class="pill">Imported</span></div>
+    <table class="tbl hist">
+      <tr><th style="width:28px"></th><th>Story</th><th>Project</th><th>Plan</th><th>Result</th><th class="num">Tasks</th><th class="num">Decisions</th><th class="num">Cost</th><th>Finished</th><th></th></tr>
+      <tr class="sel"><td><input type="checkbox" checked aria-label="Select run"></td><td><b>Usage chart tooltips</b><div class="sub">merged · orch/usage-tooltips</div></td><td>dawsha</td><td>Default</td><td><span class="pill s-done">merged</span></td><td class="num">6</td><td class="num">3</td><td class="num">$1.96</td><td>Oct 15, 17:40</td><td><button class="btn">Open</button></td></tr>
+      <tr><td><input type="checkbox" checked aria-label="Select run"></td><td><b>Retry failed webhook deliveries</b><div class="sub">merged · orch/webhook-retry</div></td><td>billing-api</td><td>Budget</td><td><span class="pill s-done">merged</span></td><td class="num">9</td><td class="num">5</td><td class="num">$0.71</td><td>Oct 14, 12:05</td><td><button class="btn">Open</button></td></tr>
+      <tr><td><input type="checkbox" aria-label="Select run"></td><td><b>Onboarding checklist</b><div class="sub">stopped at spec review</div></td><td>dawsha</td><td>My UI plan</td><td><span class="pill s-idle">cancelled</span></td><td class="num">1</td><td class="num">2</td><td class="num">$0.18</td><td>Oct 12, 09:31</td><td><button class="btn">Open</button></td></tr>
+      <tr><td><input type="checkbox" aria-label="Select run"></td><td><b>CSV import for customers</b><div class="sub">imported from laptop-2 · read-only</div></td><td>billing-api</td><td>Default</td><td><span class="pill s-done">merged</span></td><td class="num">7</td><td class="num">4</td><td class="num">$2.30</td><td>Oct 10, 16:22</td><td><button class="btn">Open</button></td></tr>
+    </table>
+  </div>
+  <div class="hist-detail">
+    <div class="panel">
+      <h3>Usage chart tooltips · what's kept</h3>
+      <div class="doc" style="font-size:12.5px">
+        <ul>
+          <li>Story, every spec version and the HTML mockups</li>
+          <li>All 6 tasks with their reviews, rounds and final summaries</li>
+          <li>Your 3 decisions with the options you were given</li>
+          <li>Agent messages, notes and the full timeline</li>
+          <li>Which plan, runners and models did each task; tokens and cost</li>
+          <li>Links to the commits on the run branch</li>
+        </ul>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Export · import</h3>
+      <div class="doc" style="font-size:12.5px">
+        <p style="margin:0 0 8px">Export writes one <span class="mono">.dawsharun</span> file per run (a zip with <span class="mono">run.json</span>, the spec, mockups and timeline). Choose to include or leave out agent transcripts.</p>
+        <p style="margin:0">Import adds runs from another laptop or a teammate to this history as read-only, so you can reuse a spec or start a new run from it.</p>
+        <div class="row" style="margin-top:10px"><button class="btn">Start new run from this spec</button><button class="btn">Export as Markdown report</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 SETTINGS · PLANS & PROFILES -->
+<section class="screen" data-screen="plans" hidden>
+  <div class="settabs"><span>General</span><span>Terminal</span><span>Agents</span><span class="on">Orchestrator</span><span>Remote</span><span>Experimental</span></div>
+  <div class="plans">
+    <div class="panel">
+      <h3>Plans <span style="text-transform:none;letter-spacing:0" class="row"><button class="btn">Import</button><button class="btn">Duplicate</button><button class="btn primary">New plan</button></span></h3>
+      <div class="planpick"><span class="pill sel">Default · built in</span><span class="pill">Budget · built in</span><span class="pill">My UI plan</span><span class="pill">Max quality</span></div>
+      <table class="tbl">
+        <tr><th>Role</th><th>Profile</th><th>Runner · model</th><th>Effort</th><th>Access</th><th></th></tr>
+        <tr><td>Spec writer</td><td>Spec writer</td><td><span class="model v-claude">Claude Code · sonnet-5.5</span></td><td><span class="eff">medium ▾</span></td><td>run folder</td><td><span class="muted">Change ▾</span></td></tr>
+        <tr><td>Lead</td><td>Lead</td><td><span class="model v-claude">Claude Code · opus-5.5</span></td><td><span class="eff">high ▾</span></td><td>run branch</td><td><span class="muted">Change ▾</span></td></tr>
+        <tr><td>Implementer</td><td>Implementer</td><td><span class="model v-codex">Codex · gpt-5.5-codex</span></td><td><span class="eff">medium ▾</span></td><td>worktree</td><td><span class="muted">Change ▾</span></td></tr>
+        <tr><td>UI</td><td>UI builder</td><td><span class="model v-claude">Claude Code · sonnet-5.5</span></td><td><span class="eff">medium ▾</span></td><td>worktree</td><td><span class="muted">Change ▾</span></td></tr>
+        <tr><td>Code reviewer</td><td>Reviewer (other vendor)</td><td><span class="model v-claude">Claude Code · sonnet-5.5</span> <span class="muted">when Codex built it</span></td><td><span class="eff">high ▾</span></td><td>read-only</td><td><span class="muted">Change ▾</span></td></tr>
+        <tr><td>UX reviewer</td><td>UX reviewer (local)</td><td><span class="model v-local">OpenCode · ollama/qwen3-coder</span></td><td><span class="muted">not supported</span></td><td>read-only</td><td><span class="muted">Change ▾</span></td></tr>
+        <tr><td>Tester</td><td>Tester</td><td><span class="model v-gemini">Gemini CLI · gemini-flash</span></td><td><span class="eff">low ▾</span></td><td>worktree</td><td><span class="muted">Change ▾</span></td></tr>
+      </table>
+      <div class="gates">
+        <span class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">Stops for you in this plan</span>
+        <label><input type="checkbox" checked> Approve spec and mockups before building</label>
+        <label><input type="checkbox" checked disabled> Approve the final merge into main <span class="muted">(always on)</span></label>
+      </div>
+      <div class="row" style="padding:10px 12px;justify-content:space-between"><span class="muted">Add or remove roles, set the defaults for new runs, and choose which plan is preselected.</span><button class="btn">+ Add role</button></div>
+    </div>
+    <div class="panel">
+      <h3>Profile · UX reviewer (local)</h3>
+      <div class="form">
+        <label class="field"><span>Role</span><div class="input">UX reviewer <span class="muted">▾</span></div></label>
+        <label class="field"><span>Runner</span><div class="input">OpenCode <span class="muted">▾</span></div></label>
+        <label class="field"><span>Model</span><div class="input"><span class="mono">ollama/qwen3-coder</span><span class="muted">▾ local · free</span></div></label>
+        <label class="field"><span>Effort</span><div class="input"><span class="muted">Not supported by this model</span><span class="muted">—</span></div></label>
+        <label class="field"><span>Role prompt</span><div class="input"><span class="mono">roles/ux-reviewer.md</span><span class="muted">Edit</span></div></label>
+        <label class="field"><span>Access</span><div class="input">Read-only <span class="muted">▾</span></div></label>
+        <div class="check warn">
+          <b style="color:var(--busy)">⚠ Unreliable at tool calls</b>
+          <ul><li>Connected to the orch server ✓</li><li>Called whoami ✓</li><li>Skipped get_my_task 2 of 3 times ✗</li></ul>
+          <span class="muted" style="font-size:12px">Fine for review-only roles: if it doesn't submit, Dawsha uses its last reply as the review.</span>
+        </div>
+        <div class="row" style="justify-content:flex-end"><button class="btn">Run check again</button><button class="btn primary">Save profile</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+    </main>
+  </div>
+</div>
+</div>
+<p class="legend">Model colours: <span class="v-claude">Claude</span> · <span class="v-codex">Codex / OpenAI</span> · <span class="v-gemini">Gemini</span> · <span class="v-local">local / free</span>. The amber outline is Dawsha's existing "needs you" signal.</p>
+
+<script>
+(function () {
+  var names = { runs: 'All runs', tasks: 'Project boards · All projects', new: 'New run', spec: 'Spec review', board: 'Export usage as CSV', panes: 'Grid', human: 'Human review', history: 'History', plans: 'Plans & profiles' };
+  var tabs = document.querySelectorAll('.tabs button');
+  function show(key) {
+    if (!names[key]) key = 'runs';
+    document.querySelectorAll('.screen').forEach(function (s) { s.hidden = s.dataset.screen !== key; });
+    tabs.forEach(function (t) { t.setAttribute('aria-selected', String(t.dataset.s === key)); });
+    var settings = key === 'plans';
+    document.getElementById('crumb').textContent = (settings ? 'Settings · Orchestrator · ' : 'Orchestrator · ') + names[key];
+    document.getElementById('rail-orch').classList.toggle('on', !settings);
+    document.getElementById('rail-set').classList.toggle('on', settings);
+    document.getElementById('rail-set').classList.toggle('set', settings);
+  }
+  function go(key) { show(key); try { history.replaceState(null, '', '#' + key); } catch (e) {} }
+  tabs.forEach(function (t) { t.addEventListener('click', function () { go(t.dataset.s); }); });
+  document.querySelectorAll('.jump').forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); go(a.dataset.s); }); });
+  document.querySelectorAll('.shots .pill, .planpick .pill, .pc, .iitem, .ifilter .pill, .rs, .pt').forEach(function (el) {
+    el.addEventListener('click', function () {
+      el.parentElement.querySelectorAll('.sel').forEach(function (x) { x.classList.remove('sel'); });
+      el.classList.add('sel');
+    });
+  });
+  document.querySelectorAll('.pt').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var sec = el.closest('.screen');
+      sec.classList.toggle('proj-all', el.dataset.p === 'all');
+      sec.classList.toggle('proj-billing', el.dataset.p === 'billing-api');
+      document.getElementById('crumb').textContent = 'Orchestrator · Project boards · ' + el.textContent.replace(/\s*\d+$/, '');
+    });
+  });
+  document.querySelectorAll('.kopt').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var bug = el.dataset.kind === 'bug';
+      document.querySelectorAll('.kopt').forEach(function (k) { k.classList.toggle('sel', k === el); k.setAttribute('aria-checked', String(k === el)); });
+      document.querySelectorAll('.bug-only').forEach(function (x) { x.hidden = !bug; });
+      document.querySelectorAll('.feature-only').forEach(function (x) { x.hidden = bug; });
+      document.querySelector('.story-label').textContent = bug ? 'Bug report' : 'User story';
+      document.querySelector('.story').firstChild.textContent = bug ? 'Clicking Export CSV with an empty date range throws "Cannot read properties of undefined" and nothing is saved.' : 'As a heavy Claude Code user, I want to export my usage table as a CSV file, so that I can track spend in a spreadsheet and share it with my team lead.';
+      document.getElementById('start-btn').textContent = bug ? 'Start fix' : 'Start spec';
+    });
+  });
+  document.querySelectorAll('.ilist .iitem').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var quota = el.dataset.q === 'quota';
+      document.getElementById('quota-card').hidden = !quota;
+      document.getElementById('question-card').hidden = quota;
+    });
+  });
+  show((location.hash || '').slice(1) || 'runs');
+})();
+</script>
