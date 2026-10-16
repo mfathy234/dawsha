@@ -24,6 +24,7 @@ import { UpdatePopoverComponent } from './updatePopover'
 import { WhatsNewComponent } from './whatsNew'
 import { TopBarComponent } from './topbar'
 import { UsageViewComponent } from './usageView'
+import { WorkViewComponent } from './workView'
 import { OrchestratorViewComponent } from './orch/orchestratorView'
 import { isSidebarCollapsed } from './sidebar'
 
@@ -46,6 +47,7 @@ export class AppShell {
   private readonly agents = new AgentsViewComponent()
   private readonly skills = new SkillsViewComponent()
   private readonly usage = new UsageViewComponent()
+  private readonly work = new WorkViewComponent()
   private readonly orchestrator = new OrchestratorViewComponent()
   private readonly settings = new SettingsViewComponent()
   private readonly replay = new ReplayViewComponent()
@@ -63,7 +65,7 @@ export class AppShell {
   private resizeWidth = DEFAULT_SIDEBAR_WIDTH
 
   constructor() {
-    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.agents.el, this.skills.el, this.usage.el, this.orchestrator.el, this.settings.el, this.replay.el)
+    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.agents.el, this.skills.el, this.usage.el, this.work.el, this.orchestrator.el, this.settings.el, this.replay.el)
     this.sidebarResize.addEventListener('pointerdown', this.onResizeStart)
     this.sidebarResize.addEventListener('pointermove', this.onResizeMove)
     this.sidebarResize.addEventListener('pointerup', this.onResizeEnd)
@@ -141,6 +143,8 @@ export class AppShell {
     if (state.view === 'skills' && this.lastView !== 'skills') this.skills.show()
     this.usage.el.hidden = state.view !== 'usage'
     this.usage.update(state)
+    this.work.el.hidden = state.view !== 'work'
+    this.work.update(state)
     this.orchestrator.el.hidden = state.view !== 'orchestrator'
     if (state.view === 'orchestrator') this.orchestrator.update(state)
     this.settings.el.hidden = state.view !== 'settings'

@@ -87,6 +87,7 @@ export class TopBarComponent {
   private agentUpdates = false
   private activeMore: MoreView | null = null
   private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
+  private readonly work = h('button', { class: 'btn ghost', type: 'button', id: 'work-button', onClick: () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work') }, 'Work')
   private readonly orchBadge = h('span', { class: 'orch-badge', hidden: true })
   private readonly orchestrator = h('button', { class: 'btn ghost', type: 'button', id: 'orchestrator-button', hidden: true }, 'Orchestrator', this.orchBadge)
   private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings', title: 'Settings' },
@@ -136,6 +137,7 @@ export class TopBarComponent {
         this.sessions,
         this.projects,
         this.usage,
+        this.work,
         this.orchestrator,
         this.more
       ),
@@ -164,6 +166,7 @@ export class TopBarComponent {
     this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
+    this.work.setAttribute('aria-pressed', String(state.view === 'work'))
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
     this.agentUpdates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
     this.updateMore(state)

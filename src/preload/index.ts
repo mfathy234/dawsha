@@ -112,6 +112,7 @@ const api: GridApi = {
   restartToUpdate: () => ipcRenderer.invoke(IPC.updateRestart),
   openUpdateLink: (url) => ipcRenderer.invoke(IPC.updateOpenLink, url),
   usageReport: (range) => ipcRenderer.invoke(IPC.usageGet, range),
+  workReport: (period) => ipcRenderer.invoke(IPC.workGet, period),
   usageSnapshot: () => ipcRenderer.invoke(IPC.usageSnapshot),
   exportTranscript: (request) => ipcRenderer.invoke(IPC.transcriptExport, request),
   sessionTimeline: (request) => ipcRenderer.invoke(IPC.timelineSession, request),
