@@ -1,7 +1,7 @@
 import { agentRunnerName, buildLaunch } from '../../shared/orch/launch'
 import { DEFAULT_PLAN_ID, fixerProfileOf, profileFor, type OrchPlan, type OrchProfile, type OrchRunner, type OrchSettings } from '../../shared/orch/profiles'
 import { firstMessage } from '../../shared/orch/rolePrompts'
-import type { OrchRole, OrchRun, OrchTask } from '../../shared/orch/types'
+import type { OrchAgent, OrchDecision, OrchRole, OrchRun, OrchTask } from '../../shared/orch/types'
 import { ACTIVE } from './context'
 import type { OrchService } from './service'
 import { runBranch, type MergeOutcome, type OrchWorktree } from './worktrees'
@@ -30,6 +30,8 @@ export interface DispatcherDeps {
   configDir: (agentId: string) => string
   writeFiles: (files: { path: string; content: string }[]) => Promise<void>
   openPane: (request: OrchPaneRequest) => void
+  /** Closes the pane of an agent that was replaced. */
+  closePane: (agentId: string) => void
   newSessionId: () => string
   log: (message: string) => void
 }
@@ -39,6 +41,9 @@ const FINISHED_STAGES = new Set(['done', 'cancelled'])
 const MERGED_ROLES: readonly OrchRole[] = ['implementer', 'ui', 'tester', 'fixer']
 /** Roles that work on the run branch itself. */
 const RUN_BRANCH_ROLES: readonly OrchRole[] = ['spec-writer', 'lead']
+/** Answers to a stall card that hand the task to another profile look like "Continue with <profile name>". */
+const CONTINUE_WITH = /^continue with\s+(.+)$/i
+
 const ROLE_LABEL: Record<OrchRole, string> = {
   lead: 'Lead', 'spec-writer': 'Spec writer', implementer: 'Implementer', ui: 'UI', 'code-reviewer': 'Code reviewer',
   'ux-reviewer': 'UX reviewer', tester: 'Tester', fixer: 'Fixer'
@@ -83,6 +88,7 @@ export class Dispatcher {
 
   private async advance(run: OrchRun): Promise<void> {
     this.forgetAnswered(run)
+    await this.continueElsewhere(run)
     await this.mergeApproved(run)
     if (this.finishIfAnswered(run)) return
     const tasks = this.deps.service.tasks(run.id)
@@ -183,33 +189,70 @@ export class Dispatcher {
   /** Registers an agent for the task (or the lead with none), prepares its launch and asks for a pane. */
   private async startAgent(run: OrchRun, profile: OrchProfile, task: OrchTask | null): Promise<boolean> {
     const { service } = this.deps
-    const mcpUrl = this.deps.mcpUrl()
-    if (!mcpUrl) return false
+    if (!this.deps.mcpUrl()) return false
     const role = task?.role ?? 'lead'
     try {
       const worktree = await this.folderFor(run, role, task)
       const agent = service.registerAgent({ runId: run.id, role, runner: agentRunnerName(profile), model: profile.model || 'default' })
-      const sessionId = profile.runner === 'codex' ? null : this.deps.newSessionId()
-      const launch = buildLaunch({ profile, mcpUrl, configDir: this.deps.configDir(agent.id), sessionId: sessionId ?? undefined })
-      await this.deps.writeFiles(launch.files)
-      service.setLaunch(agent.id, launch)
       if (task) service.assignTask(run.id, task.key, agent.id)
-      this.deps.openPane({
-        agentId: agent.id,
-        runId: run.id,
-        projectId: run.projectId ?? null,
-        folder: worktree.path,
-        runner: profile.runner,
-        title: `${ROLE_LABEL[role]} · ${profile.model || profile.runner}${task ? ` · ${task.key}` : ''}`,
-        prompt: firstMessage({ role, runId: run.id, runTitle: run.title, branch: worktree.branch, extra: profile.prompt }),
-        sessionId
-      })
+      await this.openAgentPane(run, profile, agent, task, worktree)
       return true
     } catch (error) {
       this.deps.log(`orchestrator could not start ${role} for ${run.title}: ${(error as Error).message}`)
       if (task) this.flagOnce(run, task, `Dawsha could not start an agent: ${(error as Error).message}`)
       return false
     }
+  }
+
+  private async openAgentPane(run: OrchRun, profile: OrchProfile, agent: OrchAgent, task: OrchTask | null, worktree: OrchWorktree): Promise<void> {
+    const mcpUrl = this.deps.mcpUrl()
+    if (!mcpUrl) throw new Error('The orchestrator server is not running.')
+    const sessionId = profile.runner === 'codex' ? null : this.deps.newSessionId()
+    const launch = buildLaunch({ profile, mcpUrl, configDir: this.deps.configDir(agent.id), sessionId: sessionId ?? undefined })
+    await this.deps.writeFiles(launch.files)
+    this.deps.service.setLaunch(agent.id, launch)
+    this.deps.openPane({
+      agentId: agent.id,
+      runId: run.id,
+      projectId: run.projectId ?? null,
+      folder: worktree.path,
+      runner: profile.runner,
+      title: `${ROLE_LABEL[agent.role]} · ${profile.model || profile.runner}${task ? ` · ${task.key}` : ''}`,
+      prompt: firstMessage({ role: agent.role, runId: run.id, runTitle: run.title, branch: worktree.branch, extra: profile.prompt }),
+      sessionId
+    })
+  }
+
+  /** "Continue with <profile>" on a stall card: hand the task over and open the new agent's pane. */
+  private async continueElsewhere(run: OrchRun): Promise<void> {
+    const settings = this.deps.settings()
+    for (const decision of this.deps.service.decisions(run.id)) {
+      const target = this.handoffTarget(decision)
+      if (!target) continue
+      const task = this.deps.service.tasks(run.id).find((t) => t.id === decision.taskId)
+      // Already handed over when the task's agent is no longer the one that stalled.
+      if (!task || !ACTIVE.includes(task.status) || task.assignee !== decision.agentId) continue
+      const profile = settings.profiles.find((p) => p.name === target && p.role === task.role) ?? settings.profiles.find((p) => p.name === target)
+      if (!profile) continue
+      const previous = task.assignee
+      try {
+        const worktree = await this.folderFor(run, task.role, task)
+        const { agent } = this.deps.service.handoffTask(run.id, task.key, {
+          runner: agentRunnerName(profile),
+          model: profile.model || 'default',
+          note: `The previous agent stopped: ${decision.question}`
+        })
+        if (previous) this.deps.closePane(previous)
+        await this.openAgentPane(run, profile, agent, task, worktree)
+      } catch (error) {
+        this.deps.log(`orchestrator could not hand ${task.key} to ${target}: ${(error as Error).message}`)
+      }
+    }
+  }
+
+  private handoffTarget(decision: OrchDecision): string | null {
+    if (decision.kind !== 'stall' || !decision.answer || !decision.taskId) return null
+    return CONTINUE_WITH.exec(decision.answer.trim())?.[1].trim() ?? null
   }
 
   /** Once the human answers "Retry" or "I resolved it", the task may be tried again. */

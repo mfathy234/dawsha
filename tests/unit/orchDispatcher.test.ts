@@ -10,6 +10,7 @@ function setup(settings: OrchSettings = defaultOrchSettings()) {
   let session = 0
   const svc = new OrchService(new OrchStore(':memory:'), () => (t += 1))
   const panes: OrchPaneRequest[] = []
+  const closed: string[] = []
   const merges: string[] = []
   const written: string[] = []
   let mergeResult: MergeOutcome = { ok: true, conflict: false, message: 'merged' }
@@ -30,10 +31,11 @@ function setup(settings: OrchSettings = defaultOrchSettings()) {
       written.push(...files.map((f) => f.path))
     },
     openPane: (request) => panes.push(request),
+    closePane: (agentId) => closed.push(agentId),
     newSessionId: () => `session-${(session += 1)}`,
     log: () => undefined
   })
-  return { svc, dispatcher, panes, merges, written, setMerge: (m: MergeOutcome) => (mergeResult = m) }
+  return { svc, dispatcher, panes, closed, merges, written, setMerge: (m: MergeOutcome) => (mergeResult = m) }
 }
 
 const agentOf = (svc: OrchService, pane: OrchPaneRequest) => {
@@ -132,6 +134,26 @@ describe('orchestrator dispatcher', () => {
     await dispatcher.tick()
     expect(panes.slice(2).map((p) => p.title)).toEqual(['Implementer · codex · T-2', 'Implementer · codex · T-3'])
     expect(svc.tasks(run.id).filter((t) => t.status === 'todo')).toHaveLength(2)
+  })
+
+  it('continues a stalled task on the profile the human picked, in the same worktree', async () => {
+    const { svc, dispatcher, panes, closed } = setup()
+    const run = svc.startRun({ kind: 'bug', projectPath: 'C:/work/app', title: 'Crash', story: 's', plan: 'default' })
+    await dispatcher.tick()
+    const first = agentOf(svc, panes[0])
+    svc.call(first, 'get_my_task', {})
+    const decision = svc.reportStall(first.id, 'Claude usage limit reached', ['Continue with Implementer', 'Wait'])
+    svc.answerDecision(decision.id, 'Continue with Implementer')
+    await dispatcher.tick()
+    await dispatcher.tick()
+    expect(closed).toEqual([first.id])
+    expect(panes).toHaveLength(2)
+    expect(panes[1]).toMatchObject({ runner: 'codex', folder: panes[0].folder })
+    const second = agentOf(svc, panes[1])
+    expect(second.role).toBe('fixer')
+    expect(svc.task('T-1', run.id).assignee).toBe(second.id)
+    const inbox = svc.call(second, 'fetch_inbox', {}) as { body: string }[]
+    expect(inbox[0].body).toContain('# Continue task T-1')
   })
 
   it('asks the human once about a merge conflict and retries after the answer', async () => {
