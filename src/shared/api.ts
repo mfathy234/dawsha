@@ -1,4 +1,5 @@
 import type { OrchExportFormat, OrchArchiveFileResult } from './orch/api'
+import type { WorkPeriod, WorkReport } from './workDashboard'
 import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
@@ -156,6 +157,7 @@ export interface GridApi {
   openUpdateLink(url: string): Promise<void>
   usageReport(range: UsageRange): Promise<UsageReport>
   usageSnapshot(): Promise<UsageSnapshot>
+  workReport(period: WorkPeriod): Promise<WorkReport>
   exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
   sessionTimeline(request: TimelineRequest): Promise<TimelineResult>
   exportTimeline(request: TimelineExportRequest): Promise<TimelineExportResult>

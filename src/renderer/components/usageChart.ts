@@ -12,8 +12,6 @@ function amountOf(bucket: UsageBucket, agent: AgentKind, mode: ChartMode): numbe
   return mode === 'tokens' ? value.tokens : (value.costUsd ?? 0)
 }
 
-const totalOf = (bucket: UsageBucket, mode: ChartMode): number => AGENTS.reduce((sum, agent) => sum + amountOf(bucket, agent, mode), 0)
-
 const format = (value: number, mode: ChartMode): string => (mode === 'tokens' ? formatTokens(value) : formatUsd(value))
 
 function bucketLabel(report: UsageReport, key: string, index: number): string {
@@ -32,26 +30,41 @@ function bucketTitle(report: UsageReport, bucket: UsageBucket, mode: ChartMode):
 }
 
 export function buildBars(report: UsageReport, mode: ChartMode): HTMLElement {
-  const max = Math.max(0, ...report.buckets.map((bucket) => totalOf(bucket, mode)))
-  const columns = report.buckets.map((bucket, index) => {
+  return buildStackedBars(report.buckets.map((bucket, index) => ({
+    key: bucket.key, label: bucketLabel(report, bucket.key, index), title: bucketTitle(report, bucket, mode),
+    segments: AGENTS.map(agent => ({ className: `seg-${agent}`, value: amountOf(bucket, agent, mode) }))
+  })), value => format(value, mode))
+}
+
+export interface StackedBar {
+  key: string
+  label: string
+  title: string
+  segments: { className: string; value: number }[]
+}
+
+/** Shared stacked columns for usage amounts and work counts. */
+export function buildStackedBars(bars: StackedBar[], formatValue: (value: number) => string): HTMLElement {
+  const totals = bars.map(bar => bar.segments.reduce((sum, s) => sum + s.value, 0))
+  const max = Math.max(0, ...totals)
+  const columns = bars.map((bar, index) => {
     const stack = h('div', { class: 'usage-stack' })
-    for (const agent of AGENTS) {
-      const value = amountOf(bucket, agent, mode)
+    for (const { value, className } of bar.segments) {
       if (value <= 0 || max <= 0) continue
-      stack.append(h('div', { class: `usage-seg seg-${agent}`, style: `height:${((value / max) * 100).toFixed(2)}%` }))
+      stack.append(h('div', { class: `usage-seg ${className}`, style: `height:${((value / max) * 100).toFixed(2)}%` }))
     }
     return h(
       'div',
-      { class: 'usage-col', title: bucketTitle(report, bucket, mode), 'data-bucket': bucket.key, 'data-total': String(totalOf(bucket, mode)) },
+      { class: 'usage-col', title: bar.title, 'data-bucket': bar.key, 'data-total': String(totals[index]) },
       stack,
-      h('span', { class: 'usage-x' }, bucketLabel(report, bucket.key, index))
+      h('span', { class: 'usage-x' }, bar.label)
     )
   })
   const axis = h(
     'div',
     { class: 'usage-axis' },
-    h('span', {}, max > 0 ? format(max, mode) : ''),
-    h('span', {}, max > 0 ? format(max / 2, mode) : ''),
+    h('span', {}, max > 0 ? formatValue(max) : ''),
+    h('span', {}, max > 0 ? formatValue(max / 2) : ''),
     h('span', {}, max > 0 ? '0' : '')
   )
   return h('div', { class: 'usage-bars' }, axis, h('div', { class: 'usage-cols' }, ...columns))

@@ -3465,7 +3465,8 @@ input[type='checkbox'] {
   font-size: 12px;
 }
 
-.usage-view {
+.usage-view,
+.work-view {
   flex: 1;
   min-width: 0;
   padding: 24px 40px 32px;

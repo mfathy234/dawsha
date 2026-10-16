@@ -52,6 +52,8 @@ import { collectProcessActivity } from './processActivity'
 import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
+import { WorkService, readWorkRuns } from './workDashboard'
+import type { WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
 import type { RemoteAccessSettings } from '../shared/types'
@@ -247,6 +249,12 @@ export function registerIpc(
     return usage.report(known ? range : '7d', settings.get().projects)
   })
   ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
+  const work = new WorkService()
+  ipcMain.handle(IPC.workGet, async (_event, period: unknown) => {
+    const valid: WorkPeriod = period === 'week' || period === 'month' ? period : 'today'
+    const runs = await readWorkRuns(join(app.getPath('userData'), 'orchestrator.db'))
+    return work.report(valid, settings.get().projects, runs)
+  })
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
   ipcMain.handle(IPC.timelineSession, (_event, request: TimelineRequest) => sessionTimeline(request))
   ipcMain.handle(IPC.timelineExport, (_event, request: TimelineExportRequest) => exportTimeline(getWindow(), request))

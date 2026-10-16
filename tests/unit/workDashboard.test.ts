@@ -41,13 +41,18 @@ describe('local calendar periods', () => {
   it('handles leap February and preserves local midnight across DST', () => {
     expect(workWindow('month', new Date(2028, 1, 29, 12).getTime())).toEqual({ start: new Date(2028, 1, 1).getTime(), end: new Date(2028, 2, 1).getTime() })
     const previous = process.env.TZ
+    const originalZone = Intl.DateTimeFormat().resolvedOptions().timeZone
     process.env.TZ = 'America/New_York'
     try {
       const window = workWindow('today', new Date(2026, 2, 8, 12).getTime())
       expect(window.end - window.start).toBe(23 * 3_600_000)
       expect(new Date(window.end).getHours()).toBe(0)
     } finally {
-      if (previous === undefined) delete process.env.TZ
+      if (previous === undefined) {
+        // On Windows, deleting TZ alone leaves Node's timezone cache on the assigned zone.
+        process.env.TZ = originalZone
+        delete process.env.TZ
+      }
       else process.env.TZ = previous
     }
   })

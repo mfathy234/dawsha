@@ -89,6 +89,7 @@ export const IPC = {
   updateRestart: 'update:restart',
   updateOpenLink: 'update:open-link',
   usageGet: 'usage:get',
+  workGet: 'work:get',
   usageSnapshot: 'usage:snapshot',
   transcriptExport: 'transcript:export',
   timelineSession: 'timeline:session',
