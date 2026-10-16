@@ -1,3 +1,4 @@
+import type { OrchExportFormat, OrchArchiveFileResult } from '../../shared/orch/api'
 import { ipcMain } from 'electron'
 import type { OrchDecisionView, OrchHandoffInput, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus, OrchSpecView, OrchSpecContent } from '../../shared/orch/api'
 import { IPC } from '../../shared/ipc'
@@ -18,6 +19,9 @@ export interface OrchestratorIpc {
   answer(decisionId: string, answer: string): OrchResult
   snapshot(): OrchSnapshot
   handoff(input: OrchHandoffInput): Promise<OrchResult>
+  exportRun(runId: string, format: OrchExportFormat): Promise<OrchResult<string | null>>
+  exportRuns(runIds: string[]): Promise<OrchResult<OrchArchiveFileResult[]>>
+  importRuns(): Promise<OrchResult<OrchArchiveFileResult[]>>
   cancelRun(runId: string): OrchResult
   spec(runId: string): Promise<OrchSpecView | null>
   specVersion(runId: string, version: number): Promise<OrchSpecContent | null>
@@ -49,7 +53,10 @@ export function createOrchestratorSwitch(runtime: OrchRuntime, log: (message: st
     handoff: (input) => runtime.handoff(input),
     cancelRun: (runId) => runtime.cancelRun(runId),
     spec: (runId) => runtime.spec(runId),
-    specVersion: (runId, version) => runtime.specVersion(runId, version)
+    specVersion: (runId, version) => runtime.specVersion(runId, version),
+    exportRun: (runId, format) => runtime.exportRun(runId, format),
+    exportRuns: (runIds) => runtime.exportRuns(runIds),
+    importRuns: () => runtime.importRuns()
   }
 }
 
@@ -70,6 +77,15 @@ export function registerOrchestratorIpc(orchestrator: OrchestratorIpc): void {
   ipcMain.handle(IPC.orchSpecVersion, (_event, runId: unknown, version: unknown) =>
     validSpecRunId(runId) && typeof version === 'number' && Number.isSafeInteger(version) && version > 0
       ? orchestrator.specVersion(runId, version) : null)
+  const validId = (v: unknown): v is string => isText(v, 200) && v.length > 0
+  ipcMain.handle(IPC.orchExportRun, (_event, runId: unknown, format: unknown) =>
+    validId(runId) && (format === 'dawsharun' || format === 'markdown')
+      ? orchestrator.exportRun(runId, format) : { ok: false, error: 'The export request could not be read.' })
+  ipcMain.handle(IPC.orchExportRuns, (_event, ids: unknown) =>
+    Array.isArray(ids) && ids.length > 0 && ids.length <= 100 && ids.every(validId)
+      ? orchestrator.exportRuns([...new Set(ids)]) : { ok: false, error: 'Select between 1 and 100 runs.' })
+  ipcMain.handle(IPC.orchImportRuns, (_event, ...args: unknown[]) =>
+    args.length === 0 ? orchestrator.importRuns() : { ok: false, error: 'The import request could not be read.' })
   ipcMain.handle(IPC.orchStatus, () => orchestrator.status())
   ipcMain.handle(IPC.orchStartRun, (_event, input: unknown) => {
     const parsed = parseStartInput(input)

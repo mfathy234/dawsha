@@ -64,7 +64,7 @@ export class Dispatcher {
       do {
         this.again = false
         for (const run of this.deps.service.runs()) {
-          if (!FINISHED_STAGES.has(run.stage)) await this.advance(run)
+          if (!run.imported && !FINISHED_STAGES.has(run.stage)) await this.advance(run)
         }
       } while (this.again)
     } finally {
@@ -238,6 +238,7 @@ export class Dispatcher {
   async handoff(runId: string, taskKey: string, profile: OrchProfile, note: string): Promise<void> {
     const run = this.deps.service.run(runId)
     if (!run) throw new Error('That run no longer exists.')
+    if (run.imported || FINISHED_STAGES.has(run.stage)) throw new Error('This run is read-only.')
     const task = this.deps.service.task(taskKey, runId)
     const previous = task.assignee
     const worktree = await this.folderFor(run, task.role, task)

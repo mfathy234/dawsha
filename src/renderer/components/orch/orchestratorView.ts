@@ -1,3 +1,4 @@
+import { OrchHistoryView } from './historyView'
 import { clear, h } from '../../dom'
 import { openSettings } from '../../actions'
 import { showOrch } from '../../orchActions'
@@ -13,6 +14,7 @@ const TABS: { id: OrchTab; label: string }[] = [
   { id: 'runs', label: 'All runs' },
   { id: 'boards', label: 'Boards' },
   { id: 'review', label: 'Human review' },
+  { id: 'history', label: 'History' },
   { id: 'new', label: 'New run' }
 ]
 
@@ -27,6 +29,7 @@ export class OrchestratorViewComponent {
   private readonly boards = new OrchBoardsView()
   private readonly review = new OrchReviewView()
   private readonly newRun = new OrchNewRunView()
+  private readonly history = new OrchHistoryView()
   private readonly run = new OrchRunView()
   private readonly spec = new OrchSpecView()
   private shown: HTMLElement | null = null
@@ -40,7 +43,8 @@ export class OrchestratorViewComponent {
     if (!state.settings.experimental.orchestrator) return this.showOff()
     this.renderNotice(state)
     const runOpen = state.orchRunId !== null && state.orch?.runs.some((r) => r.id === state.orchRunId)
-    const target = state.orchTab === 'spec' && runOpen ? this.spec : runOpen ? this.run : { runs: this.runs, boards: this.boards, review: this.review, new: this.newRun, spec: this.runs }[state.orchTab]
+    const pages = { runs: this.runs, boards: this.boards, review: this.review, history: this.history, new: this.newRun, spec: this.runs }
+    const target = state.orchTab === 'spec' && runOpen ? this.spec : runOpen ? this.run : pages[state.orchTab]
     this.show(target.el)
     target.update(state)
   }

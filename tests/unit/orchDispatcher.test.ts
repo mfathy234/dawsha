@@ -13,12 +13,13 @@ function setup(settings: OrchSettings = defaultOrchSettings()) {
   const closed: string[] = []
   const merges: string[] = []
   const written: string[] = []
+  const folders: string[] = []
   let mergeResult: MergeOutcome = { ok: true, conflict: false, message: 'merged' }
   const dispatcher = new Dispatcher({
     service: svc,
     settings: () => settings,
     worktrees: {
-      createTaskWorktree: async (_repo, runId, key) => ({ path: `C:/wt/${runId}-${key.toLowerCase()}`, branch: `orch/x/${key.toLowerCase()}` }),
+      createTaskWorktree: async (_repo, runId, key) => { folders.push(key); return { path: `C:/wt/${runId}-${key.toLowerCase()}`, branch: `orch/x/${key.toLowerCase()}` } },
       runWorktree: async (_repo, runId) => ({ path: `C:/wt/${runId}`, branch: 'orch/x/run' }),
       mergeTaskIntoRun: async (_repo, _runId, key) => {
         merges.push(key)
@@ -35,7 +36,7 @@ function setup(settings: OrchSettings = defaultOrchSettings()) {
     newSessionId: () => `session-${(session += 1)}`,
     log: () => undefined
   })
-  return { svc, dispatcher, panes, closed, merges, written, setMerge: (m: MergeOutcome) => (mergeResult = m) }
+  return { svc, dispatcher, panes, closed, merges, written, folders, setMerge: (m: MergeOutcome) => (mergeResult = m) }
 }
 
 const agentOf = (svc: OrchService, pane: OrchPaneRequest) => {
@@ -45,6 +46,23 @@ const agentOf = (svc: OrchService, pane: OrchPaneRequest) => {
 }
 
 describe('orchestrator dispatcher', () => {
+  it('ignores imported runs even with an active stage and refuses handoff before filesystem work', async () => {
+    const { svc, dispatcher, panes, merges, written, folders } = setup()
+    const source = svc.startRun({ kind: 'bug', projectPath: 'C:/repo', title: 'Archive', story: 's', plan: 'default' })
+    const imported = svc.importRun(svc.exportRun(source.id))
+    svc.finishRun(source.id)
+    // Simulate legacy persisted history with an active stage: the explicit imported guard is required.
+    const originalRuns = svc.runs.bind(svc)
+    svc.runs = () => originalRuns().map((r) => r.id === imported.id ? { ...r, stage: 'build' } : r)
+    await dispatcher.tick()
+    expect(panes).toEqual([])
+    expect(merges).toEqual([])
+    expect(written).toEqual([])
+    expect(folders).toEqual([])
+    await expect(dispatcher.handoff(imported.id, 'T-1', defaultOrchSettings().profiles[0], '')).rejects.toThrow(/read.only/i)
+    expect(folders).toEqual([])
+  })
+
   it('starts one fixer for a bug run, on the profile the user picked, in its own worktree', async () => {
     const { svc, dispatcher, panes, written } = setup()
     const run = svc.startRun({ kind: 'bug', projectPath: 'C:/work/app', projectId: 'p1', title: 'Export crash', story: 'It throws.', plan: 'default', fixerProfileId: 'p-implementer' })

@@ -1,3 +1,4 @@
+import type { OrchExportFormat, OrchArchiveFileResult } from './orch/api'
 import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
@@ -176,6 +177,9 @@ export interface GridApi {
   orchCancelRun(runId: string): Promise<OrchResult>
   orchSpec(runId: string): Promise<OrchSpecView | null>
   orchSpecVersion(runId: string, version: number): Promise<OrchSpecContent | null>
+  orchExportRun(runId: string, format: OrchExportFormat): Promise<OrchResult<string | null>>
+  orchExportRuns(runIds: string[]): Promise<OrchResult<OrchArchiveFileResult[]>>
+  orchImportRuns(): Promise<OrchResult<OrchArchiveFileResult[]>>
   listRecordings(): Promise<RecordingSummary[]>
   readRecording(id: string): Promise<string>
   recordingStats(): Promise<RecordingStats>

@@ -36,6 +36,8 @@ export function runDetail(service: OrchService, run: OrchRun, open: readonly Orc
   const tasks = service.tasks(run.id)
   const events = service.events(run.id)
   return {
+    imported: run.imported,
+    decisions: service.decisions(run.id),
     id: run.id,
     kind: run.kind,
     title: run.title,

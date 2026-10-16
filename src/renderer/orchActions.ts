@@ -1,3 +1,4 @@
+import type { OrchArchiveFileResult, OrchExportFormat, OrchResult } from '../shared/orch/api'
 import type { OrchDecisionView, OrchPaneRequest, OrchSnapshot, OrchStartInput } from '../shared/orch/api'
 import type { OrchProfile } from '../shared/orch/profiles'
 import { DEFAULT_FONT_SIZE, clampFontSize } from '../shared/types'
@@ -238,4 +239,32 @@ export async function answerDecisions(): Promise<void> {
   for (const decision of decisions) {
     if (!(await answerOne(decision))) return
   }
+}
+
+/** File errors are always surfaced; path selection stays in main. */
+async function historyFiles(action: () => Promise<OrchResult<OrchArchiveFileResult[]>>, verb: string): Promise<void> {
+  try {
+    const result = await action()
+    if (!result.ok) { toast(result.error); return }
+    for (const file of result.value) if (!file.result.ok) toast(`${file.path}: ${file.result.error}`)
+    const count = result.value.filter((file) => file.result.ok).length
+    if (count) toast(`${verb} ${count} ${count === 1 ? 'run' : 'runs'}.`, 'info')
+    await refreshOrch()
+  } catch { toast('Could not process the selected runs.') }
+}
+
+export async function exportHistoryRun(id: string, format: OrchExportFormat): Promise<void> {
+  try {
+    const result = await api.orchExportRun(id, format)
+    if (!result.ok) toast(result.error)
+    else if (result.value) toast('Run exported.', 'info')
+  } catch { toast('Could not export the run.') }
+}
+
+export async function exportHistoryRuns(ids: string[]): Promise<void> {
+  await historyFiles(() => api.orchExportRuns(ids), 'Exported')
+}
+
+export async function importHistoryRuns(): Promise<void> {
+  await historyFiles(() => api.orchImportRuns(), 'Imported')
 }

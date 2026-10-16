@@ -1,0 +1,20 @@
+.orch-history-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.orch-history-toolbar h2 { margin: 0; font-size: 16px; }
+.orch-history-toolbar p { margin: 5px 0 0; }
+.orch-history .orch-filterbar { margin-top: 16px; padding: 12px; }
+.orch-history-content { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; align-items: start; margin-top: 14px; }
+.orch-history .orch-table { min-width: 960px; }
+.orch-history .orch-table td { vertical-align: top; }
+.orch-history tr.selected { background: var(--raised); }
+.orch-history-title { background: none; border: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; padding: 0; text-align: left; }
+.orch-history-title:hover { color: var(--accent); }
+.orch-history-sub { margin-top: 5px; max-width: 280px; overflow-wrap: anywhere; }
+.orch-history-details { padding: 16px; overflow-wrap: anywhere; line-height: 1.6; }
+.orch-history-details h3 { font-size: 13px; margin: 0 0 10px; }
+.orch-history-details ul { padding-left: 18px; margin: 0 0 18px; }
+.orch-history-details p { color: var(--muted); margin: 0 0 10px; }
+.orch-history .orch-empty { grid-column: 1 / -1; }
+.orch-history input[type='checkbox'] { accent-color: var(--accent); }
+.orch-history :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 1550px) { .orch-history-content { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) { .orch-history .orch-actions { flex-wrap: wrap; } .orch-history .orch-filter { min-width: 0; flex: 1 1 100%; } .orch-history .orch-search { width: 100%; } }

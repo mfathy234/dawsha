@@ -57,6 +57,8 @@ export type RunKind = 'feature' | 'bug'
 export type RunStage = 'spec' | 'plan' | 'build' | 'review' | 'merge' | 'done' | 'cancelled'
 
 export interface OrchRun {
+  /** Archived runs never dispatch work or accept changes. */
+  imported?: { at: number; from: string }
   id: string
   kind: RunKind
   projectPath: string

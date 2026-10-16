@@ -119,5 +119,8 @@ export const IPC = {
   orchHandoff: 'orch:handoff',
   orchCancelRun: 'orch:cancel-run',
   orchSpec: 'orch:spec',
-  orchSpecVersion: 'orch:spec-version'
+  orchSpecVersion: 'orch:spec-version',
+  orchExportRun: 'orch:export-run',
+  orchExportRuns: 'orch:export-runs',
+  orchImportRuns: 'orch:import-runs'
 } as const
