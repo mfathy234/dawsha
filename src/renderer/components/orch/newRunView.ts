@@ -13,6 +13,8 @@ interface Draft {
   kind: RunKind
   projectId: string | null
   planId: string | null
+  leadId: string | null
+  solo: boolean
   fixerId: string | null
   title: string
   story: string
@@ -51,7 +53,7 @@ function radioKeys(event: KeyboardEvent): void {
 
 export class OrchNewRunView {
   readonly el = h('section', { class: 'orch-section orch-nr' })
-  private draft: Draft = { kind: 'feature', projectId: null, planId: null, fixerId: null, title: '', story: '', submitting: false, error: null }
+  private draft: Draft = { kind: 'feature', projectId: null, planId: null, fixerId: null, leadId: null, solo: false, title: '', story: '', submitting: false, error: null }
   private signature = ''
   private state: AppState | null = null
 
@@ -66,6 +68,8 @@ export class OrchNewRunView {
       this.draft.projectId,
       this.draft.planId,
       this.draft.fixerId,
+      this.draft.leadId,
+      this.draft.solo,
       this.draft.submitting,
       this.draft.error
     ])
@@ -107,6 +111,8 @@ export class OrchNewRunView {
         this.storyField(),
         this.titleField(),
         !bug && plan ? this.planField(settings, plan) : null,
+        !bug && plan ? this.leadField(settings, plan) : null,
+        !bug ? this.teamField() : null,
         !bug && plan ? this.limits(plan) : null,
         this.footer(state, plan)
       )
@@ -223,6 +229,25 @@ export class OrchNewRunView {
     )
   }
 
+  private leadField(settings: OrchSettings, plan: OrchPlan): HTMLElement {
+    const main = settings.profiles.find((p) => p.id === plan.roles.lead)
+    const select = h('select', { class: 'text-input', id: 'orch-nr-lead', disabled: this.draft.submitting },
+      h('option', { value: '' }, main ? `Plan lead (${profileLabel(main)})` : 'Plan lead'),
+      ...settings.profiles.filter((p) => p.role === 'lead' || p.runner === 'claude' || p.runner === 'codex')
+        .map((p) => h('option', { value: p.id }, profileLabel(p))))
+    select.value = this.draft.leadId ?? ''
+    select.addEventListener('change', () => this.change({ leadId: select.value || null }))
+    return field('Lead model', select.id, selectMenu(select), 'Applies to this run only.')
+  }
+
+  private teamField(): HTMLElement {
+    const select = h('select', { class: 'text-input', id: 'orch-nr-team', disabled: this.draft.submitting },
+      h('option', { value: 'auto' }, 'Let the lead decide'), h('option', { value: 'solo' }, 'Lead works alone'))
+    select.value = this.draft.solo ? 'solo' : 'auto'
+    select.addEventListener('change', () => this.change({ solo: select.value === 'solo' }))
+    return field('Team', select.id, selectMenu(select))
+  }
+
   private limits(plan: OrchPlan): HTMLElement {
     const tile = (label: string, value: string): HTMLElement => h('div', { class: 'orch-nr-tile' }, h('span', { class: 'orch-muted' }, label), h('b', {}, value))
     return h(
@@ -271,6 +296,8 @@ export class OrchNewRunView {
         title: this.draft.title.trim(),
         story,
         planId: plan.id,
+        leadProfileId: this.draft.kind === 'feature' ? this.draft.leadId : null,
+        solo: this.draft.kind === 'feature' && this.draft.solo,
         fixerProfileId: this.draft.kind === 'bug' ? this.draft.fixerId : null
       })
     } finally {

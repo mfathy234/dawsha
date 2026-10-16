@@ -107,6 +107,13 @@ export async function handoffTask(runId: string, taskKey: string, profileId: str
   return result.ok
 }
 
+export async function restartAgent(runId: string, agentId: string, label: string): Promise<void> {
+  if (!await confirmDialog({ title: `Restart ${label}?`, body: 'A fresh agent continues in the same worktree. Its current pane closes.', confirmLabel: 'Restart', danger: false })) return
+  const result = await api.orchRestart(runId, agentId)
+  if (!result.ok) toast(result.error)
+  void refreshOrch()
+}
+
 export async function cancelRun(runId: string, title: string): Promise<void> {
   const confirmed = await confirmDialog({
     title: `Cancel "${title}"?`,
