@@ -24,6 +24,7 @@ run, and a Human review inbox collects every decision that needs the user.
 | Plans | Created and edited in Settings → Orchestrator; New run only picks one |
 | Cost | Actual spend shown per agent and run; no estimates and no budget cap |
 | History | Past runs searchable; export/import as `.dawsharun` files |
+| Continue with another model | Any unfinished task can be exported as a state + brief and handed to another profile (runner, model, effort) the user picks; same worktree and branch; review round and history kept. Quota exhaustion detected in a pane marks the task stalled and raises a "Continue with another model" card |
 | Task boards | One kanban per project with the tasks of all its runs (plus manual tasks); an All projects view; filters and saved views |
 
 Mockups: https://claude.ai/artifact/ADwGF2HY7VkJXfMKyAqVJU
@@ -166,12 +167,28 @@ in History.
 Settings → Orchestrator: create, duplicate, import and edit plans; change the profile per role; add or
 remove roles; choose the preselected plan; manage profiles and run their check.
 
+## Continue with another model
+
+- `exportTaskState(run, task)` returns the run, the task (spec, criteria, status, review round, feedback,
+  summary, files, branch), who had it (role, runner, model), its progress events, messages about it, the
+  shared notes, and a Markdown brief written for the next agent. The UI offers it as "Export task state"
+  (JSON + Markdown) on every task.
+- `handoffTask(run, task, { runner, model, note })` registers a new agent with the same role on the chosen
+  profile, moves the task to it (working tasks restart as `assigned`; tasks in review or waiting on the
+  human keep their status and pass open decisions to the new agent), detaches the old agent, and sends the
+  brief plus the human's note to the new agent. The pane opens on the same worktree and branch.
+- Phase 2 runner adapters watch pane output for usage-limit messages (Claude, Codex, Gemini each have their
+  own wording); a hit marks the task `stalled` with reason `quota` and raises a Human review card
+  "Continue with another model" listing the user's profiles. "Continue with…" is also on every task card
+  and agent row.
+
 ## 5. Errors, limits, testing, build
 
 | Failure | Handling |
 |---|---|
 | Idle without reporting | `stalled`: one nudge, then a card (retry, reassign, take over the pane) |
 | Pane or CLI exits | Task back to To do with a log, one retry, then a card |
+| Agent out of quota | Task `stalled` (quota), card "Continue with another model"; handoff keeps branch and history |
 | Nudge not submitted | Verified submit retries 3 times, then a card; never types while the agent is busy |
 | Review rejected twice | Escalated to the user |
 | Overlapping files | Lead adds a dependency; leases only warn; merge conflicts go to the lead, then the user |

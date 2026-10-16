@@ -339,6 +339,13 @@ describe('human decisions', () => {
 answers (escalation answers: `Try again` → back to `in_progress`, round reset; anything else → note + resume).
 **Step 4:** PASS. **Step 5:** commit `feat(orch): human decisions`.
 
+### Task 5b: Task export and handoff to another model
+
+**Files:** Modify `src/shared/orch/types.ts` (`OrchTaskState`), `src/main/orch/store.ts` (`listMessages`),
+`src/main/orch/service.ts` (`exportTaskState`, `handoffTask`, brief builder); Test: `tests/unit/orchHandoff.test.ts`
+(export contents and brief; handoff of a working task; handoff mid-review keeps round and feedback;
+finished tasks refuse). Commit `feat(orch): export task state and hand off to another model`.
+
 ### Task 6: MCP server
 
 **Files:**

@@ -109,6 +109,10 @@ export class OrchStore {
     return parseAll<OrchMessage>(this.sql('SELECT data FROM messages WHERE to_agent = ? AND read_at IS NULL ORDER BY created_at, id').all(agentId))
   }
 
+  listMessages(runId: string): OrchMessage[] {
+    return parseAll<OrchMessage>(this.sql('SELECT data FROM messages WHERE run_id = ? ORDER BY created_at, id').all(runId))
+  }
+
   putNote(note: OrchNote): void {
     this.sql('INSERT OR REPLACE INTO notes (run_id, key, data) VALUES (?, ?, ?)').run(note.runId, note.key, JSON.stringify(note))
   }

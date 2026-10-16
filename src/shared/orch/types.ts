@@ -107,6 +107,19 @@ export interface OrchDecision {
   answeredAt: number | null
 }
 
+/** Everything another agent needs to continue a task: exported on demand or when handing it over. */
+export interface OrchTaskState {
+  exportedAt: number
+  run: Pick<OrchRun, 'id' | 'title' | 'story' | 'projectPath' | 'plan'>
+  task: OrchTask
+  agent: Pick<OrchAgent, 'id' | 'role' | 'runner' | 'model'> | null
+  progress: string[]
+  messages: { from: string; body: string; at: number }[]
+  notes: { key: string; text: string; author: string }[]
+  /** Markdown brief written for the agent that takes over. */
+  brief: string
+}
+
 export interface OrchEvent {
   runId: string
   at: number

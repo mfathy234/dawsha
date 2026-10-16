@@ -10,6 +10,7 @@ import type {
   OrchRole,
   OrchRun,
   OrchTask,
+  OrchTaskState,
   TaskStatus
 } from '../../shared/orch/types'
 import type { OrchStore } from './store'
@@ -24,6 +25,13 @@ export interface CreateRunInput {
   title: string
   story: string
   plan: string
+}
+
+export interface HandoffInput {
+  runner: string
+  model: string
+  /** Why the task changes hands, e.g. "Codex ran out of quota". Passed to the new agent. */
+  note?: string
 }
 
 export interface RegisterAgentInput {
@@ -41,6 +49,26 @@ const APPROVE = 'approve'
 const TRY_AGAIN = 'try again'
 const APPROVE_ANYWAY = 'approve anyway'
 const CANCEL_TASK = 'cancel task'
+
+function buildBrief(state: OrchTaskState): string {
+  const { task, run, agent } = state
+  const section = (title: string, body: string): string => (body.trim() ? `## ${title}\n${body.trim()}` : '')
+  return [
+    `# Continue task ${task.key}: ${task.title}`,
+    `You are taking over this task${agent ? ` from the ${agent.role} agent (${agent.runner} · ${agent.model})` : ''}. ` +
+      `Run "${run.title}" in ${run.projectPath}.`,
+    section('Task spec', task.spec),
+    section('Acceptance criteria', task.acceptance.map((c, i) => `${i + 1}. ${c}`).join('\n')),
+    section('Status', `${task.status.replace(/_/g, ' ')}, review round ${task.reviewRound}`),
+    section('Latest review or human feedback', task.feedback ?? ''),
+    section('Progress so far', state.progress.map((line) => `- ${line}`).join('\n')),
+    section('Last summary', task.summary ?? ''),
+    section('Files and branch', [task.files.join(', '), task.branch ? `Branch: ${task.branch}` : ''].filter(Boolean).join('\n')),
+    section('Shared notes', state.notes.map((n) => `- ${n.key}: ${n.text}`).join('\n')),
+    section('Messages about this task', state.messages.map((m) => `- ${m.from}: ${m.body}`).join('\n')),
+    'Pick up where it stopped: check the working tree and branch first, then call get_my_task and continue. Do not redo finished work.'
+  ].filter(Boolean).join('\n\n')
+}
 
 const randomId = (prefix: string): string => `${prefix}_${randomBytes(5).toString('hex')}`
 const str = (value: unknown): string => (typeof value === 'string' ? value : '')
@@ -131,6 +159,51 @@ export class OrchService {
     const task = decision.taskId ? this.store.getTask(decision.taskId) : undefined
     if (task) this.applyAnswer(answered, task, answer.trim())
     return answered
+  }
+
+  exportTaskState(runId: string, key: string): OrchTaskState {
+    const run = this.store.getRun(runId)
+    if (!run) throw new Error(`Run ${runId} not found.`)
+    const task = this.task(key, runId)
+    const agent = task.assignee ? this.store.getAgent(task.assignee) : undefined
+    const state: OrchTaskState = {
+      exportedAt: this.now(),
+      run: { id: run.id, title: run.title, story: run.story, projectPath: run.projectPath, plan: run.plan },
+      task,
+      agent: agent ? { id: agent.id, role: agent.role, runner: agent.runner, model: agent.model } : null,
+      progress: this.store.listEvents(runId).filter((event) => event.taskId === task.id).map((event) => event.text),
+      messages: this.store.listMessages(runId).filter((m) => m.taskId === task.id).map((m) => ({ from: m.from, body: m.body, at: m.createdAt })),
+      notes: this.store.listNotes(runId).map(({ key: noteKey, text, author }) => ({ key: noteKey, text, author })),
+      brief: ''
+    }
+    return { ...state, brief: buildBrief(state) }
+  }
+
+  /**
+   * Gives an unfinished task to a new agent on another runner or model (quota ran out, or the human
+   * chose to). The task keeps its branch, review round and history; the new agent gets a brief.
+   */
+  handoffTask(runId: string, key: string, input: HandoffInput): { agent: OrchAgent; state: OrchTaskState } {
+    const task = this.task(key, runId)
+    if (isFinal(task.status)) throw new Error(`${key} is ${task.status} and cannot be handed over.`)
+    const state = this.exportTaskState(runId, key)
+    const previous = task.assignee ? this.store.getAgent(task.assignee) : undefined
+    const agent = this.registerAgent({ runId, role: task.role, runner: input.runner, model: input.model })
+    const paused = task.status === 'blocked' || task.status === 'waiting_on_human'
+    const working = task.status === 'in_progress' || task.status === 'stalled' || task.status === 'assigned'
+    this.save({ ...task, assignee: agent.id, status: working ? 'assigned' : task.status, updatedAt: this.now() })
+    this.store.putAgent({ ...agent, taskId: task.id })
+    if (previous) this.store.putAgent({ ...previous, taskId: null })
+    if (paused) {
+      for (const decision of this.store.openDecisions().filter((d) => d.taskId === task.id)) {
+        this.store.putDecision({ ...decision, agentId: agent.id })
+      }
+    }
+    const note = input.note ? `\n\n## Note from the human\n${input.note}` : ''
+    this.message(runId, 'dawsha', agent.id, task.id, state.brief + note)
+    const from = previous ? `${previous.runner} · ${previous.model}` : 'nobody'
+    this.log(runId, 'handoff', `${key} handed over from ${from} to ${input.runner} · ${input.model}`, task.id)
+    return { agent: this.store.getAgent(agent.id) ?? agent, state }
   }
 
   // ---- Tools ----
