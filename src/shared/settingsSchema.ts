@@ -1,3 +1,4 @@
+import { sanitizeTicketNotes } from './ticketNotes'
 import { defaultOrchSettings, sanitizeOrchSettings } from './orch/profiles'
 import { isAgent } from './agents'
 import { isSessionsLayout } from './board'
@@ -76,6 +77,7 @@ export const defaultSettings = (): Settings => ({
   layouts: [],
   snippets: [],
   keptSessions: [],
+  ticketNotes: {},
   tasks: [],
   lastSeenVersion: null,
   autoUpdateCheck: true,
@@ -354,6 +356,7 @@ export function migrateSettings(raw: unknown): Settings {
     layouts: sanitizeLayouts(raw.layouts),
     snippets: sanitizeSnippets(raw.snippets, new Set(projects.map((p) => p.id))),
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
+    ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
     autoUpdateCheck: raw.autoUpdateCheck !== false,

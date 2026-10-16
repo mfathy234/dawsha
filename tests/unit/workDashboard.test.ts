@@ -99,3 +99,38 @@ describe('active time', () => {
     expect(activeSpans([5 * min])).toEqual([[5 * min, 6 * min]])
   })
 })
+
+describe('tickets', () => {
+  it('counts the sessions on one branch of one project as one ticket, typed by its strongest evidence', async () => {
+    const { workTickets } = await import('../../src/shared/workDashboard')
+    const tickets = workTickets([
+      item('s1', { branch: 'fix/18550', ticket: '#18550', type: 'conversation', title: 'Look at login', startedAt: stamp(16, 8), endedAt: stamp(16, 9) }),
+      item('s2', { branch: 'fix/18550', ticket: '#18550', type: 'bug', title: 'Fix login', endedAt: stamp(16, 11) }),
+      item('s3', { branch: 'feature/26412-stock', ticket: '#26412', type: 'feature' }),
+      // Same branch name in another project is another ticket.
+      item('s4', { branch: 'feature/26412-stock', ticket: '#26412', projectId: 'b', project: 'Beta' }),
+      // A chat on a base branch is not a ticket; commits on it are their own ticket.
+      item('s5', { branch: 'main', type: 'conversation' }),
+      item('s6', { branch: 'main', type: 'bug', title: 'Hotfix on main' }),
+      item('s7', { branch: null, type: 'conversation' }),
+      // A run is its own ticket.
+      item('run_1', { agent: 'orchestrator', branch: 'orch/abc/run', type: 'feature', title: 'Run' })
+    ], 0, stamp(17, 0))
+    expect(tickets.map((t) => [t.project, t.ticket, t.type, t.items.map((i) => i.id)])).toEqual([
+      ['Alpha', '#18550', 'bug', ['s2', 's1']],
+      ['Alpha', '#26412', 'feature', ['s3']],
+      ['Beta', '#26412', 'feature', ['s4']],
+      ['Alpha', null, 'bug', ['s6']],
+      ['Alpha', null, 'feature', ['run_1']]
+    ].sort(() => 0))
+    const fix = tickets.find((t) => t.ticket === '#18550')!
+    expect(fix.title).toBe('Look at login')
+    expect(fix.activeMs).toBe(2 * 3_600_000)
+  })
+
+  it('types a ticket whose sessions only talked from its branch name', async () => {
+    const { workTickets } = await import('../../src/shared/workDashboard')
+    expect(workTickets([item('s1', { branch: 'feature/x', type: 'conversation' })], 0, stamp(17, 0))[0].type).toBe('feature')
+    expect(workTickets([item('s1', { branch: 'spike/x', type: 'conversation' })], 0, stamp(17, 0))[0].type).toBe('other')
+  })
+})

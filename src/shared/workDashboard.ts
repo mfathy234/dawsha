@@ -81,3 +81,52 @@ export function aggregateWork(input: readonly WorkItem[], period: WorkPeriod, no
   }
   return { period, total: items.length, counts, items, buckets, projects: [...projects.values()].sort((a, b) => b.total - a.total || a.project.localeCompare(b.project)) }
 }
+
+/** One ticket: the work on one branch of one project (or one orchestrator run), however many sessions it took. */
+export interface WorkTicket {
+  key: string
+  title: string
+  ticket: string | null
+  branch: string | null
+  projectId: string
+  project: string
+  type: WorkType
+  /** Most recent first. */
+  items: WorkItem[]
+  activeMs: number
+  lastAt: number
+}
+
+/** Branches that hold everyone's work: a chat on one is not a ticket. */
+const BASE_BRANCH = /^(main|master|develop|dev|stage|staging|prod|production|release)$/i
+const TYPE_WEIGHT: Record<WorkType, number> = { bug: 3, feature: 2, other: 1, conversation: 0 }
+
+function ticketKeyOf(item: WorkItem): string | null {
+  if (item.agent === 'orchestrator') return `run:${item.id}`
+  if (item.branch && !BASE_BRANCH.test(item.branch)) return `branch:${item.projectId}:${item.branch}`
+  // On a base branch or none, only work that changed something is a ticket of its own.
+  return item.type === 'conversation' ? null : `item:${item.id}`
+}
+
+/** Groups items into tickets, with active time inside [start, end); most recently active first. */
+export function workTickets(items: readonly WorkItem[], start: number, end: number): WorkTicket[] {
+  const groups = new Map<string, WorkItem[]>()
+  for (const item of items) {
+    const key = ticketKeyOf(item)
+    if (key) groups.set(key, [...groups.get(key) ?? [], item])
+  }
+  const tickets = [...groups].map(([key, group]): WorkTicket => {
+    const recent = [...group].sort((a, b) => b.endedAt - a.endedAt)
+    const first = [...group].sort((a, b) => a.startedAt - b.startedAt)[0]
+    const strongest = group.reduce((best, i) => TYPE_WEIGHT[i.type] > TYPE_WEIGHT[best] ? i.type : best, 'conversation' as WorkType)
+    // Only talk on a ticket's branch: its name says what it is.
+    const fromBranch = classifyWork(first.branch, [])
+    const type = strongest !== 'conversation' ? strongest : fromBranch === 'conversation' ? 'other' : fromBranch
+    return {
+      key, title: first.title, ticket: group.find(i => i.ticket)?.ticket ?? null, branch: first.branch,
+      projectId: first.projectId, project: first.project, type, items: recent,
+      activeMs: group.reduce((sum, i) => sum + activeMs(i, start, end), 0), lastAt: recent[0].endedAt
+    }
+  })
+  return tickets.sort((a, b) => b.lastAt - a.lastAt)
+}

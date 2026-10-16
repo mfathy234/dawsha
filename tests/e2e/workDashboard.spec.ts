@@ -161,3 +161,35 @@ test('work dashboard explains an empty period and can return to sessions', async
     await expect(page.locator('.work-view')).toBeHidden()
   } finally { await closeApp(app) }
 })
+
+test('the Tickets tab counts a branch once and keeps the name and link the user gives it', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.getByRole('button', { name: 'Work', exact: true }).click()
+    await page.getByRole('tab', { name: 'Tickets', exact: true }).click()
+    const row = page.locator('.work-ticket-row', { hasText: '#18550' })
+    await expect(row).toBeVisible()
+    await expect(row.locator('.work-ticket-head .work-chip')).toHaveText('Bug')
+    await expect(row).toContainText('1 session')
+    // A web link only: anything else is refused with a message.
+    await row.getByRole('button', { name: 'Edit' }).click()
+    await row.getByLabel('Ticket name').fill('Login crash on expired token')
+    await row.getByLabel('Ticket link').fill('javascript:alert(1)')
+    await row.getByRole('button', { name: 'Save' }).click()
+    await expect(row.getByRole('alert')).toContainText('web address')
+    // What was typed survives the error.
+    await expect(row.getByLabel('Ticket name')).toHaveValue('Login crash on expired token')
+    await row.getByLabel('Ticket link').fill('dev.azure.com/MicrotecEgypt/_workitems/edit/18550')
+    await row.getByRole('button', { name: 'Save' }).click()
+    await expect(row.locator('.work-ticket-name')).toHaveText('Login crash on expired token')
+    await expect(row.getByRole('link', { name: 'Open link ↗' })).toHaveAttribute('href', 'https://dev.azure.com/MicrotecEgypt/_workitems/edit/18550')
+    await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).ticketNotes, { timeout: 10_000 })
+      .toEqual(expect.objectContaining({ [String(await row.getAttribute('data-ticket'))]: { name: 'Login crash on expired token', link: 'https://dev.azure.com/MicrotecEgypt/_workitems/edit/18550' } }))
+    mkdirSync('test-results/screens', { recursive: true })
+    await page.screenshot({ path: 'test-results/screens/work-tickets.png' })
+  } finally {
+    await closeApp(app)
+  }
+})

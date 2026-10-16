@@ -8,8 +8,12 @@ import type { AppState } from '../state'
 import { buildStackedBars } from './usageChart'
 import { present } from './dialogs'
 import { store } from '../state'
+import type { TicketNotes } from '../../shared/ticketNotes'
+import { TicketsPanel } from './workTickets'
 import './workView.css'
 
+type WorkMode = 'sessions' | 'tickets'
+const MODES: { value: WorkMode; label: string }[] = [{ value: 'sessions', label: 'Sessions' }, { value: 'tickets', label: 'Tickets' }]
 const PERIODS: { value: WorkPeriod; label: string }[] = [{ value: 'today', label: 'Today' }, { value: 'week', label: 'This week' }, { value: 'month', label: 'This month' }]
 const duration = (ms: number): string => {
   const minutes = Math.floor(Math.max(0, ms) / 60_000)
@@ -26,6 +30,9 @@ export class WorkViewComponent {
   private error: string | null = null
   private token = 0
   private timer: number | undefined
+  private mode: WorkMode = 'sessions'
+  private notes: TicketNotes = {}
+  private readonly tickets = new TicketsPanel()
 
   /** An item's active time inside the shown period, the same measure the per-project totals use. */
   private itemTime(item: WorkItem): number {
@@ -36,6 +43,11 @@ export class WorkViewComponent {
 
   update(state: AppState): void {
     const visible = state.view === 'work'
+    // A saved ticket name or link shows at once.
+    if (state.settings.ticketNotes !== this.notes) {
+      this.notes = state.settings.ticketNotes
+      if (visible && this.visible) this.render()
+    }
     if (visible === this.visible) return
     this.visible = visible
     window.clearInterval(this.timer)
@@ -77,12 +89,25 @@ export class WorkViewComponent {
       h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Work period' }, ...PERIODS.map(p => h('button', {
         class: `rp-tab${this.period === p.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.period === p.value),
         onClick: () => this.changePeriod(p.value)
-      }, p.label))), h('span', { class: 'spacer' }),
+      }, p.label))),
+      h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Count by' }, ...MODES.map(m => h('button', {
+        class: `rp-tab${this.mode === m.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.mode === m.value), id: `work-mode-${m.value}`,
+        onClick: () => { this.mode = m.value; this.projectId = null; this.render() }
+      }, m.label))), h('span', { class: 'spacer' }),
       h('button', { class: 'btn ghost', type: 'button', disabled: this.loading, onClick: () => void this.load() }, 'Refresh')))
     if (this.error) this.el.append(h('p', { class: 'field-error', role: 'alert' }, this.error))
     const report = this.report
     if (!report) {
       if (this.loading) this.el.append(h('p', { class: 'usage-empty', role: 'status' }, 'Reading your work history…'))
+      return
+    }
+    if (this.mode === 'tickets') {
+      const now = Date.now()
+      const { start, end } = workWindow(this.period, now)
+      this.el.append(...this.tickets.render(report, {
+        notes: this.notes, projectId: this.projectId, window: { start, end: Math.min(end, now) }, duration,
+        renderItem: (item) => this.item(item), setProject: (id) => { this.projectId = id; this.render() }, rerender: () => this.render()
+      }))
       return
     }
     const tile = (id: string, label: string, count: number) => h('div', { class: 'usage-tile', id: `work-${id}` },

@@ -134,6 +134,8 @@ export interface Settings {
   layouts: SavedLayout[]
   snippets: Snippet[]
   keptSessions: KeptSession[]
+  /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
+  ticketNotes: import('./ticketNotes').TicketNotes
   tasks: ProjectTask[]
   lastSeenVersion: string | null
   autoUpdateCheck: boolean
