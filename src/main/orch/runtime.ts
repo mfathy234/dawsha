@@ -5,6 +5,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { OrchDecisionView, OrchHandoffInput, OrchPaneRequest, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus, OrchSpecView, OrchSpecContent } from '../../shared/orch/api'
 import { DEFAULT_PLAN_ID, priceLookupFor, type OrchSettings } from '../../shared/orch/profiles'
+import { runTitleFrom } from '../../shared/orch/runTitle'
 import type { OrchAgent } from '../../shared/orch/types'
 import type { RunUsage } from '../../shared/orch/usage'
 import type { SpawnRequest, StatusInfo } from '../../shared/types'
@@ -138,7 +139,7 @@ export class OrchRuntime {
       kind: input.kind,
       projectPath: folder,
       projectId: input.projectId,
-      title: input.title.trim() || input.story.trim().split(/\r?\n/)[0].slice(0, 80),
+      title: input.title.trim() || runTitleFrom(input.story),
       story: input.story.trim(),
       plan: plan?.id ?? DEFAULT_PLAN_ID,
       specApproval: plan?.specApproval ?? true,

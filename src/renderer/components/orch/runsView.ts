@@ -56,7 +56,8 @@ export class OrchRunsView {
     } else {
       this.el.append(h('p', { class: 'orch-muted runs-none' }, 'No run is active. Start one, or open a finished run below.'))
     }
-    this.el.append(this.timeline(active.length > 0 ? active : runs))
+    // Live means active runs only; finished and cancelled runs keep their timeline in their own dashboard.
+    if (active.length > 0) this.el.append(this.timeline(active))
     if (finished.length > 0) this.el.append(this.finished(finished))
     if (focusId) {
       const input = this.el.querySelector<HTMLInputElement>(`input[data-decision="${CSS.escape(focusId)}"]`)

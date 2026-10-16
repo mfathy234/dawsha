@@ -5,7 +5,8 @@ import type { OrchRole } from './types'
 const DUTIES: Record<OrchRole, string> = {
   lead:
     'You are the lead, and you choose the smallest team that can do the work well. Every task starts another agent, so do not add roles the work does not need. ' +
-    'First read the story (get_my_task may say no task; call list_tasks and get_notes) and look at the code it touches. ' +
+    'whoami returns the full story the human wrote (the run title is only a short label) and the project path; you have no task of your own, so get_my_task may say so. ' +
+    'Read the story, call list_tasks and get_notes, and look at the code it touches before creating tasks. ' +
     'A small or clear change (one area, no new screens, a few files) gets one implementer task, or one per repository or layer if it spans several, and nothing else; ' +
     'its code review is added automatically. ' +
     'Create a spec-writer task first, and nothing else until Dawsha tells you it is approved, only when the story is ambiguous, large, or adds or redesigns screens. ' +

@@ -22,7 +22,7 @@ const tool = (name: string, description: string, properties: Record<string, Prop
 
 // Descriptions are written for the agents: they are how a model learns when to call each tool.
 export const TOOL_SCHEMAS: readonly ToolSchema[] = [
-  tool('whoami', 'Your agent id, role, run and current task. Call this first.'),
+  tool('whoami', 'Your agent id, role, current task, and the run: its title, the full story the human wrote and the project path. Call this first.'),
   tool('list_agents', 'Everyone working on this run, with role, model and current task.'),
   tool('create_task', 'Lead only. Add a task to this run. Dawsha opens an agent for it when its dependencies are approved.', {
     title: str('Short imperative title.'),

@@ -90,11 +90,13 @@ export const modelName = (runner: string, model: string): string => (model && mo
 
 export const isFinishedRun = (run: Pick<OrchRunDetail, 'stage'>): boolean => run.stage === 'done' || run.stage === 'cancelled'
 
-export function projectTabs(runs: readonly OrchRunDetail[], projects: readonly ProjectRef[]): ProjectTab[] {
+/** Project chips for the board; each count is the number of cards the board shows for it with `filter`. */
+export function projectTabs(runs: readonly OrchRunDetail[], projects: readonly ProjectRef[], filter: BoardFilter): ProjectTab[] {
+  const count = (projectId: string): number => boardCards(runs, projects, { ...filter, projectId, runId: '' }).length
   const tabs = projects
     .filter((p) => runs.some((r) => r.projectId === p.id))
-    .map((p) => ({ id: p.id, label: p.name, count: runs.filter((r) => r.projectId === p.id).reduce((n, r) => n + r.tasks.length, 0) }))
-  return [{ id: '', label: 'All projects', count: runs.reduce((n, r) => n + r.tasks.length, 0) }, ...tabs]
+    .map((p) => ({ id: p.id, label: p.name, count: count(p.id) }))
+  return [{ id: '', label: 'All projects', count: count('') }, ...tabs]
 }
 
 function cardsOf(run: OrchRunDetail, projects: readonly ProjectRef[]): BoardCard[] {

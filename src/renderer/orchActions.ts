@@ -7,6 +7,7 @@ import { api } from './api'
 import { choiceDialog, confirmDialog, promptDialog } from './components/dialogs'
 import { toast } from './components/toast'
 import { newId, projectById, store, type OrchTab, type PaneState, type TermState } from './state'
+import { runTitleFrom } from '../shared/orch/runTitle'
 
 // Orchestrator in the renderer: panes the main process asks for, and the phase 2 start and answer commands.
 
@@ -184,7 +185,7 @@ export async function startBugRun(): Promise<void> {
   const result = await api.orchStartRun({
     kind: 'bug',
     projectId,
-    title: story.slice(0, 80),
+    title: runTitleFrom(story),
     story,
     planId: store.state.settings.orchestrator.defaultPlanId,
     fixerProfileId
@@ -210,7 +211,7 @@ export async function startFeatureRun(): Promise<void> {
     choices: orchestrator.plans.map((p) => ({ label: p.name, value: p.id, kind: p.id === orchestrator.defaultPlanId ? 'primary' : 'ghost' }))
   })
   if (!planId) return
-  const result = await api.orchStartRun({ kind: 'feature', projectId, title: story.slice(0, 80), story, planId, fixerProfileId: null })
+  const result = await api.orchStartRun({ kind: 'feature', projectId, title: runTitleFrom(story), story, planId, fixerProfileId: null })
   toast(result.ok ? 'Feature run started. The spec writer opens in a new pane.' : result.error, result.ok ? 'info' : undefined)
 }
 

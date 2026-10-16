@@ -34,8 +34,14 @@ const runs = [
 ]
 
 describe('projectTabs', () => {
-  it('lists all projects first, then each project that has runs with its task count', () => {
-    expect(projectTabs(runs, projects)).toEqual([
+  it('lists all projects first, then each project that has runs, counting the cards the board shows', () => {
+    // Default filter: open tasks of unfinished runs, so the finished run r2 counts 0.
+    expect(projectTabs(runs, projects, DEFAULT_BOARD_FILTER)).toEqual([
+      { id: '', label: 'All projects', count: 3 },
+      { id: 'p1', label: 'dawsha', count: 2 },
+      { id: 'p2', label: 'billing-api', count: 0 }
+    ])
+    expect(projectTabs(runs, projects, { ...DEFAULT_BOARD_FILTER, status: 'all', includeFinished: true })).toEqual([
       { id: '', label: 'All projects', count: 5 },
       { id: 'p1', label: 'dawsha', count: 3 },
       { id: 'p2', label: 'billing-api', count: 1 }

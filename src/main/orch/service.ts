@@ -310,6 +310,11 @@ export class OrchService {
       for (const agent of this.store.listAgents(runId).filter((a) => !a.retiredAt)) {
         this.store.putAgent({ ...agent, taskId: null, retiredAt: this.ctx.now() })
       }
+      // Questions of a finished run can no longer be acted on.
+      const answer = stage === 'cancelled' ? 'Run cancelled' : 'Run finished'
+      for (const decision of this.store.listDecisions(runId).filter((d) => d.answer === null)) {
+        this.store.putDecision({ ...decision, answer, answeredAt: this.ctx.now() })
+      }
       this.setStage(runId, stage)
     })
   }
@@ -328,7 +333,10 @@ export class OrchService {
   }
 
   openDecisions(): OrchDecision[] {
-    return this.store.openDecisions().filter((d) => !this.store.getRun(d.runId)?.imported)
+    return this.store.openDecisions().filter((d) => {
+      const run = this.store.getRun(d.runId)
+      return run && !run.imported && run.stage !== 'done' && run.stage !== 'cancelled'
+    })
   }
 
   events(runId: string): OrchEvent[] {

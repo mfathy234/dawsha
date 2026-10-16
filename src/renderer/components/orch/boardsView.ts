@@ -137,7 +137,7 @@ export class OrchBoardsView {
     this.state = state
     const runs = state.orch?.runs ?? []
     const projects = state.settings.projects
-    const tabs = projectTabs(runs, projects)
+    const tabs = projectTabs(runs, projects, this.filter)
     if (!tabs.some((t) => t.id === this.filter.projectId)) this.filter = { ...this.filter, projectId: '' }
     const cards = boardCards(runs, projects, this.filter)
     const signature = JSON.stringify([tabs, cards.map((c) => [c.id, c.status, c.title, c.agent, c.reviewRound, c.attempts, c.runTag, c.projectName]), this.filter, runs.map((r) => [r.id, r.title, r.projectId, r.stage])])

@@ -41,7 +41,11 @@ export function createToolHandlers(ctx: OrchContext): Record<string, ToolHandler
 function whoami(ctx: OrchContext, me: OrchAgent): unknown {
   const run = ctx.store.getRun(me.runId)
   const task = ctx.activeTaskOf(me)
-  return { agent_id: me.id, role: me.role, model: me.model, run_id: me.runId, run_title: run?.title ?? '', task: task?.key ?? null }
+  return {
+    agent_id: me.id, role: me.role, model: me.model, run_id: me.runId, run_title: run?.title ?? '',
+    // The title is shortened from the story; the story is the full request.
+    story: run?.story ?? '', project_path: run?.projectPath ?? '', task: task?.key ?? null
+  }
 }
 
 function listAgents(ctx: OrchContext, me: OrchAgent): unknown {

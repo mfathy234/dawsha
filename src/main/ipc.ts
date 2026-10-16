@@ -236,7 +236,7 @@ export function registerIpc(
   ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => {
     const extras = orchestrator?.prepareSpawn(request) ?? null
     if (extras && 'error' in extras) return { ok: false, error: extras.error }
-    return ptys.spawn(request, extras ?? {})
+    return ptys.spawn(extras ? { ...request, resume: extras.resume } : request, extras ?? {})
   })
   if (orchestrator) registerOrchestratorIpc(orchestrator)
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))

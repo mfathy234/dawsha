@@ -31,6 +31,8 @@ const BUSY = /esc to interrupt/i
 export interface LaunchExtras {
   args: string[]
   env: Record<string, string>
+  /** Whether the CLI resumes its session; false when the agent never connected, so there is none yet. */
+  resume: boolean
 }
 
 export interface PaneBridgeDeps {
@@ -119,7 +121,9 @@ export class OrchPaneBridge {
       quietNudged: false,
       limitReported: false
     })
-    return { args: launchArgsFor(agent.launch.args, request.resume), env: { ...agent.launch.env, [ORCH_TOKEN_ENV]: token } }
+    // An agent that never called the server has no saved conversation: resuming it makes the CLI exit.
+    const resume = request.resume && Boolean(agent.lastCallAt)
+    return { args: launchArgsFor(agent.launch.args, resume), env: { ...agent.launch.env, [ORCH_TOKEN_ENV]: token }, resume }
   }
 
   tabOf(agentId: string): string | undefined {
