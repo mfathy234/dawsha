@@ -18,6 +18,8 @@ export function createStoredRun(ctx: OrchContext, input: CreateRunInput, leadFir
     finishedAt: null,
     projectId: input.projectId ?? null,
     specApproval: input.specApproval !== false,
+    leadProfileId: input.leadProfileId ?? null,
+    solo: input.solo === true,
     fixerProfileId: input.fixerProfileId ?? null
   }
   ctx.store.putRun(run)

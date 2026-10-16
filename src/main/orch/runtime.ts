@@ -143,6 +143,8 @@ export class OrchRuntime {
       story: input.story.trim(),
       plan: plan?.id ?? DEFAULT_PLAN_ID,
       specApproval: plan?.specApproval ?? true,
+      leadProfileId: input.leadProfileId,
+      solo: input.solo,
       fixerProfileId: input.fixerProfileId
     })
     return { ok: true, value: run.id }
@@ -159,6 +161,16 @@ export class OrchRuntime {
 
   decisions(): OrchDecisionView[] {
     return this.snapshot({ enabled: true, running: this.running, error: null }).decisions
+  }
+
+  async restart(runId: string, agentId: string): Promise<OrchResult> {
+    if (!this.dispatcher) return { ok: false, error: 'The orchestrator is off.' }
+    try {
+      await this.dispatcher.restart(runId, agentId)
+      return { ok: true, value: undefined }
+    } catch (error) {
+      return { ok: false, error: (error as Error).message }
+    }
   }
 
   /** The human picked another profile for a task ("Continue with…"). */

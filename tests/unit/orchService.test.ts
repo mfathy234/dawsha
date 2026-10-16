@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { OrchService } from '../../src/main/orch/service'
+import { parseArchive } from '../../src/shared/orch/runArchive'
 import { OrchStore } from '../../src/main/orch/store'
 
 function setup() {
@@ -13,6 +14,31 @@ function setup() {
 }
 
 describe('OrchService tasks', () => {
+  it('persists optional run overrides, round-trips archives and enforces solo tasks', () => {
+    const svc = new OrchService(new OrchStore(':memory:'))
+    const run = svc.startRun({ projectPath: 'C:/p', title: 'Solo', story: 's', plan: 'default', leadProfileId: 'p-lead-budget', solo: true })
+    expect(svc.run(run.id)).toMatchObject({ leadProfileId: 'p-lead-budget', solo: true })
+    const lead = svc.registerAgent({ runId: run.id, role: 'lead', runner: 'claude', model: 'sonnet' })
+    expect(() => svc.call(lead, 'create_task', { title: 'Delegate', spec: 's', role: 'implementer' })).toThrow(/solo.*self: true/i)
+    expect(svc.tasks(run.id)).toHaveLength(0)
+    expect(svc.call(lead, 'create_task', { title: 'My work', spec: 's', role: 'implementer', self: true })).toMatchObject({ role: 'lead', assignee: lead.id })
+    expect(svc.call(lead, 'set_estimate', { size: 'large', reason: 'Many files' })).toMatchObject({ next: expect.stringContaining('self: true') })
+    const archive = svc.exportRun(run.id)
+    expect(parseArchive(JSON.stringify(archive)).ok).toBe(true)
+    expect(svc.importRun(archive)).toMatchObject({ leadProfileId: 'p-lead-budget', solo: true })
+    expect(parseArchive(JSON.stringify({ ...archive, run: { ...archive.run, solo: 'yes' } })).ok).toBe(false)
+    const { leadProfileId, solo, ...legacy } = archive.run
+    expect(parseArchive(JSON.stringify({ ...archive, run: legacy })).ok).toBe(true)
+  })
+
+  it('does not spawn a reviewer for a solo lead task', () => {
+    const svc = new OrchService(new OrchStore(':memory:'))
+    const run = svc.startRun({ projectPath: 'C:/p', title: 'Solo', story: 's', plan: 'default', solo: true })
+    const lead = svc.registerAgent({ runId: run.id, role: 'lead', runner: 'claude', model: 'opus' })
+    expect(() => svc.call(lead, 'create_task', { title: 'Own work', spec: 's', role: 'implementer', self: true, review: true })).toThrow(/solo.*review/i)
+    expect(svc.tasks(run.id)).toHaveLength(0)
+  })
+
   it('lets the lead create tasks and a worker claim them in dependency order', () => {
     const { svc, lead, impl } = setup()
     const a = svc.call(lead, 'create_task', { title: 'Query', spec: 's', role: 'implementer', review: true }) as { key: string }

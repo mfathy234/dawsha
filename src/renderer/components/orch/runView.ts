@@ -4,7 +4,7 @@ import { boardCards, DEFAULT_BOARD_FILTER, isFinishedRun, timelineEvents, totalC
 import type { OrchProfile } from '../../../shared/orch/profiles'
 import { focusPane } from '../../actions'
 import { clear, h } from '../../dom'
-import { cancelRun, handoffTask, showOrch } from '../../orchActions'
+import { cancelRun, handoffTask, restartAgent, showOrch } from '../../orchActions'
 import type { AppState } from '../../state'
 import { renderTaskBoard } from './boardsView'
 import { AGENT_STATE_LABEL, currentStageIndex, elapsed, modelBadge, pill, ROLE_LABEL, stagesOf } from './orchUi'
@@ -127,10 +127,11 @@ export class OrchRunView {
           run.branch ? ' · branch ' : null,
           run.branch ? h('span', { class: 'orch-mono' }, run.branch) : null
         ),
+        run.kind === 'feature' ? h('p', { class: 'orch-muted' }, `Lead: ${this.leadModel(run)}${run.solo ? ' \u00b7 alone' : ''}`) : null,
         this.stages(run),
         // The lead's size estimate decides the team: small and medium are done by the lead alone.
         run.estimate
-          ? h('p', { class: 'orch-run-estimate' }, h('strong', {}, `Estimate: ${run.estimate.size}`), ` · ${run.estimate.size === 'large' ? 'team' : 'lead works alone'} · `, h('span', { class: 'orch-muted' }, run.estimate.reason))
+          ? h('p', { class: 'orch-run-estimate' }, h('strong', {}, `Estimate: ${run.estimate.size}`), ` · ${!run.solo && run.estimate.size === 'large' ? 'team' : 'lead works alone'} · `, h('span', { class: 'orch-muted' }, run.estimate.reason))
           : run.kind === 'feature' && run.stage === 'plan' ? h('p', { class: 'orch-muted orch-run-estimate' }, 'The lead is sizing the work…') : null,
         run.imported ? h('p', { class: 'orch-muted' }, `Imported from ${run.imported.from} · read-only`) : finished ? h('p', { class: 'orch-muted' }, 'Finished · read-only') : null
       ),
@@ -144,6 +145,15 @@ export class OrchRunView {
       ),
       finished ? null : h('button', { class: 'btn danger orch-cancel', type: 'button', onClick: () => void cancelRun(run.id, run.title) }, 'Cancel run')
     )
+  }
+
+  private leadModel(run: OrchRunDetail): string {
+    const live = run.agents.find((a) => a.role === 'lead' && !a.retired) ?? run.agents.find((a) => a.role === 'lead')
+    if (live) return live.model
+    const settings = this.state?.settings.orchestrator
+    const plan = settings?.plans.find((p) => p.id === run.plan)
+    const profile = settings?.profiles.find((p) => p.id === (run.leadProfileId ?? plan?.roles.lead))
+    return profile?.model || profile?.runner || 'default'
   }
 
   private stages(run: OrchRunDetail): HTMLElement {
@@ -213,7 +223,8 @@ export class OrchRunView {
     const pane = state.panes.find((p) => p.tabs.some((t) => t.orchAgentId === agent.id))
     const canHandoff = !run.imported && !isFinishedRun(run) && !agent.retired && agent.taskKey !== null && HANDOFF_STATES.has(agent.state)
     const open = h('button', { class: 'btn orch-small', type: 'button', disabled: pane ? undefined : true, title: pane ? 'Focus this agent’s pane' : 'This agent has no open pane', onClick: () => pane && focusPane(pane.id) }, 'Open pane')
-    const actions = h('div', { class: 'orch-actions' }, open, canHandoff ? h('button', { class: 'btn orch-small', type: 'button', onClick: () => this.openHandoff(agent, state) }, 'Continue with…') : null)
+    const restart = !agent.retired || run.imported || isFinishedRun(run) ? h('button', { class: 'btn orch-small', type: 'button', disabled: Boolean(run.imported) || isFinishedRun(run), onClick: () => void restartAgent(run.id, agent.id, `${ROLE_LABEL[agent.role]} \u00b7 ${agent.model}${agent.taskKey ? ` on ${agent.taskKey}` : ''}`) }, 'Restart') : null
+    const actions = h('div', { class: 'orch-actions' }, open, restart, canHandoff ? h('button', { class: 'btn orch-small', type: 'button', onClick: () => this.openHandoff(agent, state) }, 'Continue with…') : null)
     const main = h(
       'tr',
       { class: agent.retired ? 'retired' : '' },

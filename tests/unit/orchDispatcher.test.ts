@@ -14,13 +14,14 @@ function setup(settings: OrchSettings = defaultOrchSettings()) {
   const merges: string[] = []
   const written: string[] = []
   const folders: string[] = []
+  let onRunFolder = () => {}
   let mergeResult: MergeOutcome = { ok: true, conflict: false, message: 'merged' }
   const dispatcher = new Dispatcher({
     service: svc,
     settings: () => settings,
     worktrees: {
       createTaskWorktree: async (_repo, runId, key) => { folders.push(key); return { path: `C:/wt/${runId}-${key.toLowerCase()}`, branch: `orch/x/${key.toLowerCase()}` } },
-      runWorktree: async (_repo, runId) => ({ path: `C:/wt/${runId}`, branch: 'orch/x/run' }),
+      runWorktree: async (_repo, runId) => { onRunFolder(); return { path: `C:/wt/${runId}`, branch: 'orch/x/run' } },
       mergeTaskIntoRun: async (_repo, _runId, key) => {
         merges.push(key)
         return mergeResult
@@ -36,7 +37,7 @@ function setup(settings: OrchSettings = defaultOrchSettings()) {
     newSessionId: () => `session-${(session += 1)}`,
     log: () => undefined
   })
-  return { svc, dispatcher, panes, closed, merges, written, folders, setMerge: (m: MergeOutcome) => (mergeResult = m) }
+  return { svc, dispatcher, panes, closed, merges, written, folders, setRunFolder: (fn: () => void) => { onRunFolder = fn }, setMerge: (m: MergeOutcome) => (mergeResult = m) }
 }
 
 const agentOf = (svc: OrchService, pane: OrchPaneRequest) => {
@@ -46,6 +47,120 @@ const agentOf = (svc: OrchService, pane: OrchPaneRequest) => {
 }
 
 describe('orchestrator dispatcher', () => {
+  it('uses the run lead override and tells a solo lead to work alone', async () => {
+    const { svc, dispatcher, panes } = setup()
+    const run = svc.startRun({ projectPath: 'C:/repo', title: 'Solo', story: 's', plan: 'default', leadProfileId: 'p-implementer-codex', solo: true })
+    await dispatcher.tick()
+    expect(panes[0]).toMatchObject({ runner: 'codex', folder: `C:/wt/${run.id}` })
+    expect(agentOf(svc, panes[0]).role).toBe('lead')
+    expect(panes[0].prompt).toMatch(/work alone.*self: true/i)
+  })
+
+  it.each([false, true])('restarts a lead with an unfinished task: %s', async (withTask) => {
+    const { svc, dispatcher, panes, closed } = setup()
+    const run = svc.startRun({ projectPath: 'C:/repo', title: 'Restart', story: 's', plan: 'default', leadProfileId: 'p-lead-budget' })
+    await dispatcher.tick()
+    const first = agentOf(svc, panes[0])
+    if (withTask) svc.call(first, 'create_task', { title: 'Own work', spec: 's', role: 'implementer', self: true })
+    await dispatcher.restart(run.id, first.id)
+    await dispatcher.tick()
+    expect(panes).toHaveLength(2)
+    expect(closed).toEqual([first.id])
+    expect(svc.agent(first.id)?.retiredAt).toBeTruthy()
+    expect(panes[1]).toMatchObject({ runner: panes[0].runner, folder: panes[0].folder, title: withTask ? 'Lead · sonnet · T-1' : 'Lead · sonnet' })
+    expect(panes[1].prompt).toMatch(/continuing after a restart/i)
+    expect(agentOf(svc, panes[1]).model).toBe('sonnet')
+    if (withTask) expect(svc.task('T-1', run.id).assignee).toBe(panes[1].agentId)
+    await expect(dispatcher.restart(run.id, first.id)).rejects.toThrow(/active/i)
+  })
+
+  it('restarts a task agent on its handoff profile in the same worktree', async () => {
+    const { svc, dispatcher, panes, closed } = setup()
+    const run = svc.startRun({ kind: 'bug', projectPath: 'C:/repo', title: 'Restart', story: 's', plan: 'default' })
+    await dispatcher.tick()
+    await dispatcher.handoff(run.id, 'T-1', defaultOrchSettings().profiles.find((p) => p.id === 'p-implementer-codex')!, 'Switch')
+    const first = agentOf(svc, panes[1])
+    await dispatcher.restart(run.id, first.id)
+    expect(panes).toHaveLength(3)
+    expect(closed).toContain(first.id)
+    expect(panes[2]).toMatchObject({ runner: 'codex', folder: panes[1].folder })
+    expect(panes[2].prompt).toMatch(/continuing after a restart/i)
+    expect(svc.task('T-1', run.id).assignee).toBe(panes[2].agentId)
+    svc.finishRun(run.id)
+    await expect(dispatcher.restart(run.id, panes[2].agentId)).rejects.toThrow(/read.only/i)
+    const imported = svc.importRun(svc.exportRun(run.id))
+    await expect(dispatcher.restart(imported.id, panes[2].agentId)).rejects.toThrow(/read.only/i)
+  })
+
+  it('coalesces competing restarts of a task agent and rejects agents from another run', async () => {
+    const { svc, dispatcher, panes } = setup()
+    const run = svc.startRun({ kind: 'bug', projectPath: 'C:/repo', title: 'Restart', story: 's', plan: 'default' })
+    const other = svc.startRun({ projectPath: 'C:/other', title: 'Other', story: 's', plan: 'default' })
+    await dispatcher.tick()
+    const first = panes.find((p) => p.runId === run.id)!
+    await expect(dispatcher.restart(other.id, first.agentId)).rejects.toThrow(/active/i)
+    const results = await Promise.allSettled([dispatcher.restart(run.id, first.agentId), dispatcher.restart(run.id, first.agentId)])
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1)
+    expect(svc.agents(run.id).filter((a) => !a.retiredAt)).toHaveLength(1)
+    expect(panes.filter((p) => p.runId === run.id)).toHaveLength(2)
+  })
+
+  it('keeps a planning lead question and unread inbox through restart', async () => {
+    const { svc, dispatcher, panes } = setup()
+    const run = svc.startRun({ projectPath: 'C:/repo', title: 'Question', story: 's', plan: 'default' })
+    await dispatcher.tick()
+    const first = agentOf(svc, panes[0])
+    svc.call(first, 'ask_human', { question: 'Which API?' })
+    svc.notifyRole(run.id, 'lead', 'Keep the current API')
+    const question = svc.openDecisions()[0]
+    await dispatcher.restart(run.id, first.id)
+    const next = agentOf(svc, panes[1])
+    expect(svc.openDecisions()[0].agentId).toBe(next.id)
+    svc.answerDecision(question.id, 'Use v2')
+    expect(svc.call(next, 'fetch_inbox', {})).toEqual(expect.arrayContaining([
+      expect.objectContaining({ body: 'Keep the current API' }), expect.objectContaining({ body: expect.stringContaining('Use v2') })
+    ]))
+  })
+
+  it.each([true, false])('restarts an author waiting for review without losing review feedback (lead: %s)', async (self) => {
+    const { svc, dispatcher, panes } = setup()
+    const run = svc.startRun({ projectPath: 'C:/repo', title: 'Review', story: 's', plan: 'default' })
+    await dispatcher.tick()
+    const lead = agentOf(svc, panes[0])
+    svc.call(lead, 'create_task', { title: 'Work', spec: 's', role: 'implementer', self, review: true })
+    await dispatcher.tick()
+    const first = self ? lead : agentOf(svc, panes[1])
+    svc.call(first, 'get_my_task', {})
+    svc.call(first, 'complete_task', { summary: 'Ready' })
+    await dispatcher.tick()
+    const reviewer = svc.agents(run.id).find((a) => a.role === 'code-reviewer')!
+    svc.call(reviewer, 'get_my_task', {})
+    await dispatcher.restart(run.id, first.id)
+    const next = svc.agents(run.id).find((a) => a.role === first.role && !a.retiredAt)!
+    expect(svc.task('T-1', run.id)).toMatchObject({ assignee: next.id, status: 'done_pending_review' })
+    expect(panes.at(-1)?.folder).toBe(panes.find((p) => p.agentId === first.id)?.folder)
+    svc.call(reviewer, 'submit_review', { verdict: 'reject', comments: 'Fix validation' })
+    expect(svc.call(next, 'get_my_task', {})).toMatchObject({ key: 'T-1', status: 'in_progress' })
+    expect(svc.call(next, 'fetch_inbox', {})).toEqual(expect.arrayContaining([expect.objectContaining({ body: expect.stringContaining('Fix validation') })]))
+  })
+
+  it('preserves self work acquired while a lead restart prepares its worktree', async () => {
+    const { svc, dispatcher, panes, setRunFolder } = setup()
+    const run = svc.startRun({ projectPath: 'C:/repo', title: 'Race', story: 's', plan: 'default', solo: true, leadProfileId: 'p-lead-budget' })
+    await dispatcher.tick()
+    const first = agentOf(svc, panes[0])
+    setRunFolder(() => {
+      setRunFolder(() => {})
+      svc.call(first, 'create_task', { title: 'Just acquired', spec: 's', role: 'implementer', self: true })
+    })
+    await dispatcher.restart(run.id, first.id)
+    await dispatcher.tick()
+    expect(panes).toHaveLength(2)
+    expect(svc.task('T-1', run.id)).toMatchObject({ assignee: panes[1].agentId, status: 'assigned' })
+    expect(svc.task('T-1', run.id).attempts ?? 0).toBe(0)
+    expect(agentOf(svc, panes[1]).model).toBe('sonnet')
+  })
+
   it('ignores imported runs even with an active stage and refuses handoff before filesystem work', async () => {
     const { svc, dispatcher, panes, merges, written, folders } = setup()
     const source = svc.startRun({ kind: 'bug', projectPath: 'C:/repo', title: 'Archive', story: 's', plan: 'default' })

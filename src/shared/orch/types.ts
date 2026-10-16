@@ -74,7 +74,11 @@ export interface OrchRun {
   projectId?: string | null
   /** Stop for the human to approve the spec (from the plan). Defaults to true. */
   specApproval?: boolean
-  /** Bug runs: the profile the user picked for the fixer. */
+  /** Per-run lead selection; absent on older runs. */
+  leadProfileId?: string | null
+  /** The lead does all work without delegating. */
+  solo?: boolean
+  /** Bug runs: the profile picked for the fixer. */
   fixerProfileId?: string | null
   /** The lead's size estimate, made before it picks a team. */
   estimate?: RunEstimate | null
@@ -88,6 +92,7 @@ export interface RunEstimate {
 }
 
 export interface OrchAgent {
+  profileId?: string
   id: string
   runId: string
   role: OrchRole

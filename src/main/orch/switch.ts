@@ -18,6 +18,7 @@ export interface OrchestratorIpc {
   decisions(): OrchDecisionView[]
   answer(decisionId: string, answer: string): OrchResult
   snapshot(): OrchSnapshot
+  restart(runId: string, agentId: string): Promise<OrchResult>
   handoff(input: OrchHandoffInput): Promise<OrchResult>
   exportRun(runId: string, format: OrchExportFormat): Promise<OrchResult<string | null>>
   exportRuns(runIds: string[]): Promise<OrchResult<OrchArchiveFileResult[]>>
@@ -50,6 +51,7 @@ export function createOrchestratorSwitch(runtime: OrchRuntime, log: (message: st
     decisions: () => runtime.decisions(),
     answer: (decisionId, answer) => runtime.answer(decisionId, answer),
     snapshot: () => runtime.snapshot({ enabled, running: runtime.running, error }),
+    restart: (runId, agentId) => runtime.restart(runId, agentId),
     handoff: (input) => runtime.handoff(input),
     cancelRun: (runId) => runtime.cancelRun(runId),
     spec: (runId) => runtime.spec(runId),
@@ -69,7 +71,9 @@ function parseStartInput(value: unknown): OrchStartInput | null {
   if (!isText(raw.story) || !isText(raw.planId, 100)) return null
   const fixer = raw.fixerProfileId
   if (fixer !== null && !isText(fixer, 100)) return null
-  return { kind: raw.kind, projectId: raw.projectId, title: raw.title, story: raw.story, planId: raw.planId, fixerProfileId: fixer }
+  if (raw.leadProfileId !== undefined && raw.leadProfileId !== null && !isText(raw.leadProfileId, 100)) return null
+  if (raw.solo !== undefined && typeof raw.solo !== 'boolean') return null
+  return { leadProfileId: raw.leadProfileId as string | null | undefined, solo: raw.solo as boolean | undefined, kind: raw.kind, projectId: raw.projectId, title: raw.title, story: raw.story, planId: raw.planId, fixerProfileId: fixer }
 }
 
 export function registerOrchestratorIpc(orchestrator: OrchestratorIpc): void {
@@ -94,6 +98,8 @@ export function registerOrchestratorIpc(orchestrator: OrchestratorIpc): void {
   ipcMain.handle(IPC.orchRuns, () => orchestrator.runs())
   ipcMain.handle(IPC.orchDecisions, () => orchestrator.decisions())
   ipcMain.handle(IPC.orchSnapshot, () => orchestrator.snapshot())
+  ipcMain.handle(IPC.orchRestart, (_event, runId: unknown, agentId: unknown) =>
+    validId(runId) && validId(agentId) ? orchestrator.restart(runId, agentId) : { ok: false, error: 'The restart request could not be read.' })
   ipcMain.handle(IPC.orchHandoff, (_event, input: unknown) => {
     const raw = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>
     if (!isText(raw.runId, 100) || !isText(raw.taskKey, 20) || !isText(raw.profileId, 100) || !isText(raw.note, 4000)) {

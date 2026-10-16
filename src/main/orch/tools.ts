@@ -65,6 +65,12 @@ function createTask(ctx: OrchContext, me: OrchAgent, args: Args): OrchTask {
     throw new OrchToolError(`This run already has ${MAX_TASKS_PER_RUN} tasks. Ask the human before adding more.`)
   }
   const self = args.self === true
+  if (ctx.store.getRun(me.runId)?.solo && !self) {
+    throw new OrchToolError("This is a solo run. Create only self: true tasks and do the work yourself.")
+  }
+  if (ctx.store.getRun(me.runId)?.solo && args.review === true) {
+    throw new OrchToolError('This is a solo run. Reviews require another agent; do the work without review.')
+  }
   const role = (self ? 'lead' : str(args.role)) as OrchRole
   // Building waits for the spec: the lead's own build task too, not only other agents' (held by the dispatcher).
   const specPending = ctx.store.listTasks({ runId: me.runId }).some((t) => t.role === 'spec-writer' && !isFinal(t.status))
@@ -100,9 +106,10 @@ function setEstimate(ctx: OrchContext, me: OrchAgent, args: Args): unknown {
   if (!run) throw new OrchToolError('This run no longer exists.')
   const estimate = { size: str(args.size) as EstimateSize, reason: str(args.reason) }
   ctx.store.putRun({ ...run, estimate })
-  const team = estimate.size === 'large' ? 'a team' : 'the lead alone'
+  const useTeam = !run.solo && estimate.size === 'large'
+  const team = useTeam ? 'a team' : 'the lead alone'
   ctx.log(me.runId, 'plan', `Estimate: ${estimate.size}, done by ${team}. ${estimate.reason}`, null)
-  return { ok: true, next: estimate.size === 'large' ? 'Create tasks for the team.' : 'Create one task with self: true and do it yourself.' }
+  return { ok: true, next: useTeam ? 'Create tasks for the team.' : 'Create one task with self: true and do it yourself.' }
 }
 
 function cancelRun(ctx: OrchContext, me: OrchAgent, args: Args): unknown {

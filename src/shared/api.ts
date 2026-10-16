@@ -176,6 +176,7 @@ export interface GridApi {
   orchAnswer(decisionId: string, answer: string): Promise<OrchResult>
   orchSnapshot(): Promise<OrchSnapshot>
   onOrchChanged(listener: () => void): () => void
+  orchRestart(runId: string, agentId: string): Promise<OrchResult>
   orchHandoff(input: OrchHandoffInput): Promise<OrchResult>
   orchCancelRun(runId: string): Promise<OrchResult>
   orchSpec(runId: string): Promise<OrchSpecView | null>

@@ -117,6 +117,7 @@ export const IPC = {
   orchAnswer: 'orch:answer',
   orchSnapshot: 'orch:snapshot',
   orchChanged: 'orch:changed',
+  orchRestart: 'orch:restart',
   orchHandoff: 'orch:handoff',
   orchCancelRun: 'orch:cancel-run',
   orchSpec: 'orch:spec',

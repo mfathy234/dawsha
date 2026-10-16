@@ -318,3 +318,77 @@ test('empty stories are hidden and long stories have a collapsed preview', async
     await expect(page.locator('.orch-story-text')).toBeVisible()
   } finally { await closeApp(app) }
 })
+
+for (const solo of [true, false]) {
+  test(`run overrides and confirmed agent restarts with fake agents (solo: ${solo})`, async () => {
+    const sandbox = createSandbox()
+    git(sandbox.projectFolder, 'init', '-q', '-b', 'main')
+    writeFileSync(join(sandbox.projectFolder, 'README.md'), 'restart fixture\n')
+    git(sandbox.projectFolder, 'add', '.')
+    git(sandbox.projectFolder, 'commit', '-q', '-m', 'first')
+    writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({
+      version: 2, lastSeenVersion: APP_VERSION, onboardingDismissed: true,
+      experimental: { orchestrator: true },
+      projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }]
+    }))
+    const { app, page } = await launchApp(sandbox, {
+      DAWSHA_CLAUDE_COMMAND: process.execPath, DAWSHA_CLAUDE_ARGS: JSON.stringify([FAKE_ORCH])
+    })
+    try {
+      await page.locator('#orchestrator-button').click()
+      await page.locator('#orch-tab-new').click()
+      await page.setViewportSize({ width: 1440, height: 1400 })
+      await expect(page.locator('#orch-nr-lead')).toHaveValue('')
+      await expect(page.locator('#orch-nr-team')).toHaveValue('auto')
+      await page.locator('#orch-nr-lead-trigger').click()
+      await page.getByRole('option', { name: /^Lead \(budget\)/ }).click()
+      if (solo) {
+        await page.locator('#orch-nr-team-trigger').click()
+        await page.getByRole('option', { name: 'Lead works alone', exact: true }).click()
+      }
+      await page.locator('#orch-nr-story').fill(solo ? 'RESTART: solo' : 'RESTART: team')
+      await page.locator('#orch-nr-title').fill(solo ? 'Solo restart' : 'Team restart')
+      const shots = 'C:/Users/tuy_2/Desktop/orch-user-data-shots'
+      mkdirSync(shots, { recursive: true })
+      if (solo) await page.screenshot({ path: join(shots, 'overrides-new-run.png') })
+      await page.locator('#orch-nr-start').click()
+      await expect(page.locator('.orch-runhead')).toContainText(solo ? 'Lead: sonnet · alone' : 'Lead: sonnet')
+      const snapshot = () => page.evaluate(() => window.gridApi.orchSnapshot())
+      await expect.poll(async () => (await snapshot()).runs[0]?.agents.filter((a) => !a.retired).length).toBe(solo ? 1 : 2)
+      if (solo) await expect(page.locator('.orch-run-estimate')).toContainText('lead works alone')
+      const original = (await snapshot()).runs[0]
+      const target = original.agents.find((a) => a.role === (solo ? 'lead' : 'implementer'))!
+      const row = page.locator('.orch-table tr').filter({ has: page.getByRole('button', { name: 'Restart', exact: true }) }).filter({ hasText: solo ? 'Lead' : 'Implementer' }).first()
+      await expect(row.getByRole('button', { name: 'Restart', exact: true })).toBeEnabled()
+      if (solo) await page.screenshot({ path: join(shots, 'overrides-dashboard.png') })
+      await row.getByRole('button', { name: 'Restart', exact: true }).click()
+      const dialog = page.getByRole('alertdialog')
+      await expect(dialog).toContainText(solo ? 'Restart Lead · sonnet?' : 'Restart Implementer · sonnet on T-1?')
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+      expect((await snapshot()).runs[0].agents).toHaveLength(original.agents.length)
+      await row.getByRole('button', { name: 'Restart', exact: true }).click()
+      await dialog.getByRole('button', { name: 'Restart', exact: true }).click()
+      await expect.poll(async () => (await snapshot()).runs[0].agents.length).toBe(original.agents.length + 1)
+      const restarted = (await snapshot()).runs[0]
+      expect(restarted.agents.find((a) => a.id === target.id)?.retired).toBe(true)
+      const replacement = restarted.agents.find((a) => a.role === target.role && !a.retired)!
+      expect(replacement.model).toBe('sonnet')
+      if (!solo) expect(restarted.tasks[0].assignee).toBe(replacement.id)
+      await expect(page.locator('.pane')).toHaveCount(solo ? 1 : 2)
+      // Verify the backend read-only boundary and UI controls after finishing.
+      await page.getByRole('button', { name: 'Cancel run', exact: true }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: /^Cancel "/ }).click()
+      await expect(page.locator('.orch-runhead')).toContainText('read-only')
+      await expect(page.getByRole('button', { name: 'Restart', exact: true }).first()).toBeDisabled()
+      const archived = { ...(await snapshot()).runs[0], stage: 'build' as const, imported: { at: 1, from: 'fixture' } }
+      await app.evaluate(({ ipcMain, webContents }, run) => {
+        ipcMain.removeHandler('orch:snapshot')
+        ipcMain.handle('orch:snapshot', () => ({ status: { enabled: true, running: true, error: null }, runs: [run], decisions: [] }))
+        for (const contents of webContents.getAllWebContents()) contents.send('orch:changed')
+      }, archived)
+      await expect(page.locator('.orch-runhead')).toContainText('Imported from fixture')
+      await expect(page.getByRole('button', { name: 'Restart', exact: true }).first()).toBeDisabled()
+
+    } finally { await closeApp(app) }
+  })
+}

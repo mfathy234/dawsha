@@ -41,6 +41,7 @@ const runCheck = object({
   id, kind: oneOf(['bug', 'feature']), projectPath: str, title: str, story: str, plan: str,
   stage: oneOf(['spec', 'plan', 'build', 'review', 'merge', 'done', 'cancelled']), createdAt: timestamp, finishedAt: nullable(timestamp),
   projectId: optional(nullable(id)), specApproval: optional(bool), fixerProfileId: optional(nullable(id)),
+  leadProfileId: optional(nullable(id)), solo: optional(bool),
   estimate: optional(nullable(object({ size: oneOf(['small', 'medium', 'large']), reason: str }))),
   imported: optional(object({ at: timestamp, from: str }))
 })
@@ -51,7 +52,7 @@ const taskCheck = object({
   attempts: optional(integer), mergedAt: optional(nullable(timestamp)), review: optional(bool)
 })
 const agentCheck = object({
-  id, runId: id, role, runner: str, model: str, taskId: nullable(id), createdAt: timestamp,
+  profileId: optional(id), id, runId: id, role, runner: str, model: str, taskId: nullable(id), createdAt: timestamp,
   usage: nullable(object({ inputTokens: integer, outputTokens: integer, cacheReadTokens: integer, cacheWriteTokens: integer, reportedCostUsd: nullable(num) })),
   retiredAt: optional(nullable(timestamp)), lastCallAt: optional(nullable(timestamp))
 })
@@ -71,6 +72,7 @@ const archiveCheck = object({
 /** Project the agent explicitly: newly added launch/credential fields cannot silently leak into files. */
 export function buildArchive(records: ArchiveRecords, appVersion: string, exportedAt = Date.now()): RunArchive {
   const agents = records.agents.map((a): ArchiveAgent => ({
+    ...(a.profileId ? { profileId: a.profileId } : {}),
     id: a.id, runId: a.runId, role: a.role, runner: a.runner, model: a.model, taskId: a.taskId,
     createdAt: a.createdAt, usage: a.usage, ...(a.retiredAt !== undefined ? { retiredAt: a.retiredAt } : {}),
     ...(a.lastCallAt !== undefined ? { lastCallAt: a.lastCallAt } : {})

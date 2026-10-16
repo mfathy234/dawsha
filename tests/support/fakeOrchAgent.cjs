@@ -26,6 +26,15 @@ async function main() {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'fake-orch-agent', version: '1' } })
   const me = await tool('whoami', {})
   say(`fake agent ${me.role} in run "${me.run_title}"`)
+  if (/^RESTART:/.test(me.story)) {
+    if (me.role === 'lead') await tool('set_estimate', { size: 'large', reason: 'Restart fixture' })
+    if (me.role === 'lead' && me.story.endsWith('team')) {
+      const tasks = await tool('list_tasks', {})
+      if (tasks.length === 0) await tool('create_task', { title: 'Restartable task', spec: 's', role: 'implementer' })
+    }
+    if (me.role !== 'lead') await tool('get_my_task', {})
+    return setInterval(() => undefined, 60_000)
+  }
   if (me.role === 'lead' && /^ASK:/.test(me.story)) {
     // Like a real lead with an open question: ask while planning, wait for the answer, then plan one task.
     await tool('ask_human', { question: me.story.slice(4).trim() })
