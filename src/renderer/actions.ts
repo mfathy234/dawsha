@@ -167,6 +167,7 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     prompt: term.prompt,
     title: term.titleHint,
     fullAccess: term.agent !== 'shell' && state.settings.fullAccess[term.agent],
+    orchAgentId: term.orchAgentId,
     cols: view?.cols ?? 120,
     rows: view?.rows ?? 30
   })
@@ -174,6 +175,11 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     store.set((s) =>
       mapTerm(s, termId, (t) => ({ ...t, status: 'running', pid: result.pid, startedAt, resumed: resume, prompt: undefined }))
     )
+    return
+  }
+  // A restored pane of an orchestrator agent that has finished has nothing left to do: remove it quietly.
+  if (result.retired && term.orchAgentId) {
+    void discardPane(paneId)
     return
   }
   view?.writeLine(`\x1b[31m${result.error}\x1b[0m`)
@@ -361,7 +367,8 @@ function keepClosedTabs(pane: PaneState, tabs: TermState[]): void {
   const view = derivePanes(state).find((item) => item.pane.id === pane.id)
   const matches = matchAll(state)
   const additions: KeptSession[] = tabs.flatMap((tab) => {
-    if (tab.agent === 'shell' || !state.settings.projects.some((project) => project.id === pane.projectId)) return []
+    // Orchestrator agents are not sessions to come back to: they stay out of the sidebar's closed sessions.
+    if (tab.agent === 'shell' || tab.orchAgentId || !state.settings.projects.some((project) => project.id === pane.projectId)) return []
     const sessionId = tab.sessionId || (tab.agent === 'claude' ? matches.claude.get(tab.id)?.sessionId
       : tab.agent === 'codex' ? matches.codex.get(tab.id)?.sessionId
       : matches.gemini.get(tab.id)?.sessionId)
@@ -986,7 +993,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline, orchAgentId: tab.orchAgentId })
   }
   return {
     id: newId(),

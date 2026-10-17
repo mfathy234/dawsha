@@ -1,3 +1,5 @@
+import { sanitizeTicketNotes } from './ticketNotes'
+import { defaultOrchSettings, sanitizeOrchSettings } from './orch/profiles'
 import { isAgent } from './agents'
 import { isSessionsLayout } from './board'
 import { sanitizeBaseline } from './gitStatus'
@@ -75,6 +77,7 @@ export const defaultSettings = (): Settings => ({
   layouts: [],
   snippets: [],
   keptSessions: [],
+  ticketNotes: {},
   tasks: [],
   lastSeenVersion: null,
   autoUpdateCheck: true,
@@ -82,7 +85,9 @@ export const defaultSettings = (): Settings => ({
   fullAccess: defaultFullAccess(),
   remoteAccess: defaultRemoteAccess(),
   highlights: defaultHighlights(),
-  recordings: defaultRecordings()
+  recordings: defaultRecordings(),
+  experimental: { orchestrator: true },
+  orchestrator: defaultOrchSettings()
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -134,6 +139,8 @@ function sanitizeTab(value: unknown): SavedTab | null {
   if (isAgent(value.from) && agent !== 'shell') tab.from = value.from
   const baseline = sanitizeBaseline(value.baseline)
   if (baseline) tab.baseline = baseline
+  const orchAgentId = asString(value.orchAgentId)
+  if (orchAgentId && agent !== 'shell') tab.orchAgentId = orchAgentId
   return tab
 }
 
@@ -349,6 +356,7 @@ export function migrateSettings(raw: unknown): Settings {
     layouts: sanitizeLayouts(raw.layouts),
     snippets: sanitizeSnippets(raw.snippets, new Set(projects.map((p) => p.id))),
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
+    ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
     autoUpdateCheck: raw.autoUpdateCheck !== false,
@@ -356,6 +364,9 @@ export function migrateSettings(raw: unknown): Settings {
     fullAccess: sanitizeFullAccess(raw.fullAccess),
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
     highlights: sanitizeHighlights(raw.highlights),
-    recordings: sanitizeRecordings(raw.recordings)
+    recordings: sanitizeRecordings(raw.recordings),
+    // The orchestrator left Experimental in 1.5; older files that turned it off get it too.
+    experimental: { orchestrator: true },
+    orchestrator: sanitizeOrchSettings(raw.orchestrator)
   }
 }

@@ -91,6 +91,8 @@ export async function launchApp(
       DAWSHA_NOTIFY_LOG: sandbox.notifyLog,
       DAWSHA_QUIT_LOG: sandbox.quitLog,
       DAWSHA_PIPE: sandbox.pipe,
+      // Off-screen window: test runs do not pop up on the desktop. Set DAWSHA_OFFSCREEN=0 to watch a run.
+      DAWSHA_OFFSCREEN: process.env.DAWSHA_OFFSCREEN ?? '1',
       GCM_INTERACTIVE: 'never',
       GIT_AUTHOR_NAME: 'Test User',
       GIT_AUTHOR_EMAIL: 'test@example.invalid',

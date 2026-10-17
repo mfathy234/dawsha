@@ -9,13 +9,13 @@ const REMOVE_ATTEMPTS = 6
 const REMOVE_RETRY_MS = 300
 const LOCKED = /permission denied|being used by another process|directory not empty|resource busy/i
 
-interface GitRun {
+export interface GitRun {
   ok: boolean
   stdout: string
   stderr: string
 }
 
-function git(args: string[], cwd: string): Promise<GitRun> {
+export function git(args: string[], cwd: string): Promise<GitRun> {
   return new Promise((resolve) => {
     execFile('git', args, { cwd, timeout: GIT_TIMEOUT_MS, windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (error, stdout, stderr) => {
       resolve({ ok: !error, stdout: stdout.trim(), stderr: (stderr || (error?.message ?? '')).trim() })
@@ -68,7 +68,7 @@ export async function worktreeStatus(repo: string, path: string, branch: string)
 
 const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
-async function removeWorktreeFolder(repo: string, path: string, force: boolean | undefined): Promise<string | null> {
+export async function removeWorktreeFolder(repo: string, path: string, force: boolean | undefined): Promise<string | null> {
   for (let attempt = 1; ; attempt += 1) {
     const removed = await git(['worktree', 'remove', ...(force ? ['--force'] : []), path], repo)
     if (removed.ok || !existsSync(path)) return null

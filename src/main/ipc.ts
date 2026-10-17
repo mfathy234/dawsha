@@ -1,3 +1,4 @@
+import { registerOrchestratorIpc, type OrchestratorIpc } from './orch/switch'
 import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -51,10 +52,21 @@ import { collectProcessActivity } from './processActivity'
 import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
+import { WorkService, readWorkRuns } from './workDashboard'
+import { MAX_STEPS_BACK, type WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
-import type { RemoteAccessSettings } from '../shared/types'
+import type { RemoteAccessSettings, RemoteAccessState } from '../shared/types'
 import type { createRemoteAccessController } from './remoteAccessController'
+
+async function remoteResult(action: () => Promise<RemoteAccessState>): Promise<{ ok: true; state: RemoteAccessState } | { ok: false; error: string }> {
+  try {
+    return { ok: true, state: await action() }
+  } catch (error) {
+    const message = error instanceof Error ? error.message.trim() : ''
+    return { ok: false, error: message || 'Remote Access could not be changed. Try again in a moment.' }
+  }
+}
 import type { RecordingService } from './recordings'
 
 function checkFolder(path: string): FolderCheck {
@@ -85,7 +97,8 @@ export function registerIpc(
   usage: UsageService,
   initialWarning: string | null,
   remoteAccess?: ReturnType<typeof createRemoteAccessController>,
-  recordings?: RecordingService
+  recordings?: RecordingService,
+  orchestrator?: OrchestratorIpc
 ): void {
   const locations = (): BridgeLocations => ({
     settingsPath: claudeSettingsPath(),
@@ -105,18 +118,22 @@ export function registerIpc(
     warning = null
     return result
   })
-  ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => settings.update(patch))
+  ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => {
+    const updated = settings.update(patch)
+    orchestrator?.apply(updated)
+    return updated
+  })
   ipcMain.handle(IPC.settingsExport, () => exportSettings(getWindow(), settings.get()))
   ipcMain.handle(IPC.settingsImportRead, () => readSettingsImport(getWindow()))
   if (remoteAccess) {
     ipcMain.handle(IPC.remoteAccessGet, () => remoteAccess.getState())
-    ipcMain.handle(IPC.remoteAccessEnable, () => remoteAccess.enable())
-    ipcMain.handle(IPC.remoteAccessDisable, () => remoteAccess.disable())
-    ipcMain.handle(IPC.remoteAccessPairing, () => remoteAccess.refreshPairing())
-    ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: Partial<RemoteAccessSettings>) => remoteAccess.setPermissions(patch))
-    ipcMain.handle(IPC.remoteAccessEmail, (_event, email: string) => remoteAccess.setAllowedEmail(email))
+    ipcMain.handle(IPC.remoteAccessEnable, () => remoteResult(() => remoteAccess.enable()))
+    ipcMain.handle(IPC.remoteAccessDisable, () => remoteResult(() => remoteAccess.disable()))
+    ipcMain.handle(IPC.remoteAccessPairing, () => remoteResult(() => remoteAccess.refreshPairing()))
+    ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: Partial<RemoteAccessSettings>) => remoteResult(() => remoteAccess.setPermissions(patch)))
+    ipcMain.handle(IPC.remoteAccessEmail, (_event, email: string) => remoteResult(() => remoteAccess.setAllowedEmail(email)))
     ipcMain.handle(IPC.remoteApprovalAnswered, (_event, terminalId: string, allowed: boolean, tail?: string) => remoteAccess.recordDesktopApproval(terminalId, allowed, tail))
-    ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteAccess.revoke(id))
+    ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteResult(() => remoteAccess.revoke(id)))
   }
   ipcMain.handle(IPC.paneonImportPreview, () => previewPaneonImport(paneonUserDataDir(), app.getPath('userData')))
   ipcMain.handle(IPC.paneonImportQueue, () => queuePaneonImport(paneonUserDataDir(), app.getPath('userData')))
@@ -227,7 +244,12 @@ export function registerIpc(
       if (typeof id === 'string' && typeof title === 'string') recordings.setTitle(id, title)
     })
   }
-  ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => ptys.spawn(request))
+  ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => {
+    const extras = orchestrator?.prepareSpawn(request) ?? null
+    if (extras && 'error' in extras) return { ok: false, error: extras.error, retired: 'retired' in extras && extras.retired === true }
+    return ptys.spawn(extras ? { ...request, resume: extras.resume } : request, extras ?? {})
+  })
+  if (orchestrator) registerOrchestratorIpc(orchestrator)
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))
   ipcMain.on(IPC.ptyResize, (_event, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))
   ipcMain.handle(IPC.ptyKill, (_event, id: string) => ptys.kill(id))
@@ -236,6 +258,14 @@ export function registerIpc(
     return usage.report(known ? range : '7d', settings.get().projects)
   })
   ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
+  const work = new WorkService()
+  ipcMain.handle(IPC.workGet, async (_event, period: unknown, offset: unknown) => {
+    const valid: WorkPeriod = period === 'week' || period === 'month' ? period : 'today'
+    // Steps back from now; anything else is now.
+    const steps = typeof offset === 'number' && Number.isInteger(offset) && offset <= 0 && offset >= -MAX_STEPS_BACK ? offset : 0
+    const runs = await readWorkRuns(join(app.getPath('userData'), 'orchestrator.db'))
+    return work.report(valid, settings.get().projects, runs, steps)
+  })
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
   ipcMain.handle(IPC.timelineSession, (_event, request: TimelineRequest) => sessionTimeline(request))
   ipcMain.handle(IPC.timelineExport, (_event, request: TimelineExportRequest) => exportTimeline(getWindow(), request))

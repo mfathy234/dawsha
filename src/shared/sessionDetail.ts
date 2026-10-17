@@ -10,6 +10,74 @@ export interface SessionDetail {
   messages: number
 }
 
+export interface SessionEvidence {
+  branch: string | null
+  orchestrated?: true
+  startedAt?: number
+  endedAt?: number
+  /** When the session was actually active: activity less than ACTIVE_GAP_MS apart, merged into spans. */
+  spans?: [number, number][]
+}
+
+/** Activity further apart than this is a break, not work. */
+export const ACTIVE_GAP_MS = 5 * 60_000
+/** A lone message still counts as a minute of work. */
+const MIN_SPAN_MS = 60_000
+
+/** Merges activity times into the spans the session was active in. */
+export function activeSpans(times: readonly number[], gap = ACTIVE_GAP_MS): [number, number][] {
+  const sorted = [...times].filter(Number.isFinite).sort((a, b) => a - b)
+  const spans: [number, number][] = []
+  for (const at of sorted) {
+    const last = spans.at(-1)
+    if (last && at - last[1] <= gap) last[1] = at
+    else spans.push([at, at])
+  }
+  return spans.map(([start, end]) => [start, Math.max(end, start + MIN_SPAN_MS)])
+}
+
+/** Metadata from the same bounded sample used by the session index. Gemini stores no git branch. */
+export function sessionEvidence(agent: AgentKind, text: string): SessionEvidence {
+  const evidence: SessionEvidence = { branch: null }
+  let entries = records(text)
+  if (agent === 'gemini') {
+    try {
+      const whole: unknown = JSON.parse(text)
+      if (isRecord(whole)) entries = [whole]
+    } catch { /* JSONL is handled by records. */ }
+  }
+  const times: number[] = []
+  const takeTime = (value: unknown): void => {
+    const at = asTime(value)
+    if (at === undefined) return
+    times.push(at)
+    evidence.startedAt = Math.min(evidence.startedAt ?? at, at)
+    evidence.endedAt = Math.max(evidence.endedAt ?? at, at)
+  }
+  for (const record of entries) {
+    takeTime(record.timestamp)
+    const payload = isRecord(record.payload) ? record.payload : {}
+    const message = isRecord(record.message) ? record.message : {}
+    const calls = Array.isArray(message.content) ? message.content : []
+    if ((typeof payload.name === 'string' && payload.name.startsWith('mcp__dawsha-orch__')) ||
+      calls.some(call => isRecord(call) && typeof call.name === 'string' && call.name.startsWith('mcp__dawsha-orch__'))) evidence.orchestrated = true
+    if (agent === 'claude' && typeof record.gitBranch === 'string') evidence.branch = record.gitBranch || null
+    if (agent === 'codex' && record.type === 'session_meta') {
+      takeTime(payload.timestamp)
+      const git = isRecord(payload.git) ? payload.git : {}
+      if (typeof git.branch === 'string') evidence.branch = git.branch || null
+    }
+    if (agent === 'gemini') {
+      const meta = isRecord(record.$set) ? record.$set : record
+      takeTime(meta.startTime)
+      takeTime(meta.lastUpdated)
+      if (Array.isArray(record.messages)) for (const m of record.messages) if (isRecord(m)) takeTime(m.timestamp)
+    }
+  }
+  if (times.length > 0) evidence.spans = activeSpans(times)
+  return evidence
+}
+
 type Json = Record<string, unknown>
 
 const isRecord = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value)

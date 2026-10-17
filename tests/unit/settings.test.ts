@@ -8,6 +8,11 @@ import { SettingsStore } from '../../src/main/settingsStore'
 const tempFile = (): string => join(mkdtempSync(join(tmpdir(), 'cg-settings-')), 'settings.json')
 
 describe('migrateSettings', () => {
+  it('turns the orchestrator on for everyone, including settings that turned it off before 1.5', () => {
+    expect(defaultSettings().experimental).toEqual({ orchestrator: true })
+    expect(migrateSettings({ experimental: { orchestrator: false } }).experimental).toEqual({ orchestrator: true })
+    expect(migrateSettings({}).experimental).toEqual({ orchestrator: true })
+  })
   it('keeps closed sessions and task history only for known projects', () => {
     const projects = [{ id: 'api', name: 'API', folder: 'C:\\work\\api', defaultAgent: 'codex' }]
     const keptSessions = [{ projectId: 'api', agent: 'codex', sessionId: 'session-1', title: 'Fix export', closedAt: 100 }, { projectId: 'missing', agent: 'claude', sessionId: 'x', title: 'Orphan', closedAt: 100 }]

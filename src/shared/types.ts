@@ -1,3 +1,4 @@
+import type { OrchSettings } from './orch/profiles'
 import type { SessionBaseline } from './gitStatus'
 import type { SessionsLayout } from './board'
 import type { HighlightSettings } from './highlights'
@@ -52,6 +53,8 @@ export interface SavedTab {
   agentsOpen?: boolean
   from?: AgentKind
   baseline?: SessionBaseline
+  /** The orchestrator agent this pane runs; it reconnects with a fresh token when restored. */
+  orchAgentId?: string
 }
 
 export interface SavedPane {
@@ -131,6 +134,8 @@ export interface Settings {
   layouts: SavedLayout[]
   snippets: Snippet[]
   keptSessions: KeptSession[]
+  /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
+  ticketNotes: import('./ticketNotes').TicketNotes
   tasks: ProjectTask[]
   lastSeenVersion: string | null
   autoUpdateCheck: boolean
@@ -139,6 +144,13 @@ export interface Settings {
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
   recordings: RecordingSettings
+  experimental: ExperimentalSettings
+  orchestrator: OrchSettings
+}
+
+/** Features that used to be opt-in. The orchestrator is always on since 1.5; the key stays so older settings files load. */
+export interface ExperimentalSettings {
+  orchestrator: boolean
 }
 
 export type FullAccess = Record<AgentKind, boolean>
@@ -162,7 +174,7 @@ export interface RemoteAccessDevice {
 }
 
 export interface RemoteAccessState {
-  status: 'off' | 'setup-required' | 'available'
+  status: 'off' | 'setup-required' | 'connecting' | 'available'
   enabled: boolean
   url: string | null
   message: string
@@ -244,6 +256,12 @@ export interface ResumeEntry {
 }
 
 export interface ResumeSession {
+  /** Transcript metadata reused by the work dashboard. */
+  workBranch?: string | null
+  lastActivityAt?: number
+  /** When the session was active (from its sampled activity); work time is counted from these. */
+  activeSpans?: [number, number][]
+  orchestrated?: true
   agent: AgentKind
   id: string
   title: string
@@ -303,6 +321,8 @@ export interface SpawnRequest {
   fullAccess?: boolean
   desktopVisible?: boolean
   remoteManaged?: boolean
+  /** Set for orchestrator agent panes; the main process adds the agent's launch args and token. */
+  orchAgentId?: string
 }
 
 export interface RemoteSessionStarted {
@@ -313,7 +333,8 @@ export interface RemoteSessionStarted {
   sessionId?: string
 }
 
-export type SpawnResult = { ok: true; pid: number } | { ok: false; error: string }
+/** `retired`: the pane belongs to an orchestrator agent that has finished, so the pane can simply go away. */
+export type SpawnResult = { ok: true; pid: number } | { ok: false; error: string; retired?: boolean }
 
 export interface RepoProbe {
   isRepo: boolean

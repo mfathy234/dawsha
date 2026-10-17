@@ -1,6 +1,7 @@
 import { installUsageSnapshot } from './usageSnapshot'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
+import './orchestrator.css'
 import {
   flushWorkspace,
   attachRemoteSession,
@@ -30,6 +31,8 @@ import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
 import { installBuiltinCommands } from './commands/builtin'
 import { installCompareCommands } from './commands/compare'
+import { installOrchestratorCommands } from './commands/orchestrator'
+import { closeOrchPane, openOrchPane, refreshOrch } from './orchActions'
 import { installHandoffCommands } from './commands/handoff'
 import { installLayoutCommands } from './commands/layouts'
 import { installReplayCommands } from './commands/replay'
@@ -107,11 +110,16 @@ async function boot(): Promise<void> {
   installReplayCommands()
   installSnippetCommands()
   installSettingsTransferCommands()
+  installOrchestratorCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)
   initWhatsNew()
   api.onFlushRequest(flushWorkspace)
   api.onCliRun(runCliCommand)
+  api.onOrchOpenPane(openOrchPane)
+  api.onOrchClosePane(closeOrchPane)
+  api.onOrchChanged(() => void refreshOrch())
+  void refreshOrch()
   api.onCliNotice((text, ok) => toast(text, ok ? 'info' : 'error'))
   if (loaded.warning) toast(loaded.warning, 'info')
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()

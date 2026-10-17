@@ -87,6 +87,9 @@ export class TopBarComponent {
   private agentUpdates = false
   private activeMore: MoreView | null = null
   private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
+  private readonly work = h('button', { class: 'btn ghost', type: 'button', id: 'work-button', onClick: () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work') }, 'Work')
+  private readonly orchBadge = h('span', { class: 'orch-badge', hidden: true })
+  private readonly orchestrator = h('button', { class: 'btn ghost', type: 'button', id: 'orchestrator-button', hidden: true }, 'Orchestrator', this.orchBadge)
   private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings', title: 'Settings' },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
     h('span', { class: 'utility-label' }, 'Settings')
@@ -113,6 +116,10 @@ export class TopBarComponent {
     this.projects.addEventListener('click', () => {
       showView(this.projects.getAttribute('aria-pressed') === 'true' ? 'grid' : 'projects')
     })
+    this.orchestrator.addEventListener('click', () => {
+      if (this.orchestrator.getAttribute('aria-pressed') === 'true') showView('grid')
+      else showView('orchestrator')
+    })
     this.usage.addEventListener('click', () => {
       showView(this.usage.getAttribute('aria-pressed') === 'true' ? 'grid' : 'usage')
     })
@@ -130,6 +137,8 @@ export class TopBarComponent {
         this.sessions,
         this.projects,
         this.usage,
+        this.work,
+        this.orchestrator,
         this.more
       ),
       this.summary,
@@ -151,11 +160,13 @@ export class TopBarComponent {
 
   update(state: AppState, views: PaneView[]): void {
     this.updateLimits(state, views)
+    this.updateOrchestrator(state)
     this.sessions.setAttribute('aria-pressed', String(state.view === 'grid'))
     this.gridMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'grid'))
     this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
+    this.work.setAttribute('aria-pressed', String(state.view === 'work'))
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
     this.agentUpdates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
     this.updateMore(state)
@@ -405,6 +416,16 @@ export class TopBarComponent {
     this.limits.hidden = items.length === 0
     this.limits.replaceChildren(...items.map((item) => limitItem(item.window, item.text, item.title)))
   }
+
+  private updateOrchestrator(state: AppState): void {
+    const enabled = state.settings.experimental.orchestrator
+    this.orchestrator.hidden = !enabled
+    this.orchestrator.setAttribute('aria-pressed', String(state.view === 'orchestrator'))
+    const waiting = state.orch?.decisions.length ?? 0
+    this.orchBadge.hidden = waiting === 0
+    this.orchBadge.textContent = String(waiting)
+    this.orchestrator.title = waiting ? `Orchestrator: ${waiting} waiting for you` : 'Orchestrator'
+  }
 }
 
 function resetText(window: RateLimitWindow): string {
@@ -423,4 +444,5 @@ function limitItem(window: RateLimitWindow, text: string, title: string): HTMLEl
     ' ',
     h('span', { class: 'limit-value' }, text)
   )
+
 }

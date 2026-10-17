@@ -19,7 +19,8 @@ export const INCLUDED_KEYS = [
   'autoUpdateCheck',
   'sidebarCollapsed',
   'sidebarWidth',
-  'othersCollapsed'
+  'othersCollapsed',
+  'orchestrator'
 ] as const satisfies readonly (keyof Settings)[]
 
 export const EXCLUDED_KEYS = [
@@ -27,9 +28,13 @@ export const EXCLUDED_KEYS = [
   'remoteAccess',
   'workspace',
   'keptSessions',
+  // Keyed by this PC's project ids and branches, like closed sessions.
+  'ticketNotes',
   'tasks',
   'lastSeenVersion',
   'onboardingDismissed',
+  // Experimental features are switched on per PC, on purpose.
+  'experimental',
   // Never carried between PCs: a shared file must not be able to switch agents to skipping permission prompts.
   'fullAccess'
 ] as const satisfies readonly (keyof Settings)[]

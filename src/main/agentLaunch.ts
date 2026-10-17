@@ -119,7 +119,8 @@ export function shellArgs(file: string, command?: string, platform = process.pla
   return process.env.DAWSHA_SHELL ? [] : ['-NoLogo']
 }
 
-export function launchSpec(request: SpawnRequest, platform = process.platform): LaunchSpec | string {
+/** extraArgs (orchestrator model, effort, MCP config) go after the agent's own args and before the prompt. */
+export function launchSpec(request: SpawnRequest, platform = process.platform, extraArgs: readonly string[] = []): LaunchSpec | string {
   if (request.agent === 'shell') {
     const command = shellCommand(platform)
     const file = resolveExecutable(command, [], platform)
@@ -134,7 +135,7 @@ export function launchSpec(request: SpawnRequest, platform = process.platform): 
     const extra = splitArgs(process.env.DAWSHA_CODEX_ARGS)
     const initial = promptFor(base, request)
     if (typeof initial === 'string') return initial
-    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
+    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...extraArgs, ...initial] }
   }
   if (request.agent === 'gemini') {
     const base = resolveGemini(pathDirs, platform)
@@ -143,7 +144,7 @@ export function launchSpec(request: SpawnRequest, platform = process.platform): 
     const extra = splitArgs(process.env.DAWSHA_GEMINI_ARGS)
     const initial = promptFor(base, request)
     if (typeof initial === 'string') return initial
-    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
+    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...extraArgs, ...initial] }
   }
   const command = claudeCommand(platform)
   const file = resolveExecutable(command, [...claudeFallbackDirs(), ...platformExecutableDirs(platform)], platform)
@@ -153,6 +154,7 @@ export function launchSpec(request: SpawnRequest, platform = process.platform): 
   const args = [
     ...splitArgs(process.env.DAWSHA_CLAUDE_ARGS),
     ...agentArgs(request, Boolean(process.env.DAWSHA_CLAUDE_COMMAND)),
+    ...extraArgs,
     ...initial
   ]
   return { file, args }

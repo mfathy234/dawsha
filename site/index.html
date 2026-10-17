@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.0</a>
+      <a href="#new">New in 1.5</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -59,7 +59,7 @@
     <div class="wrap hero-grid">
       <div class="hero-copy">
         <img class="logo hero-logo" src="favicon.svg?v=0.2.0-2" width="40" height="40" alt="Dawsha logo: a terminal inside a speech bubble">
-        <a class="new-pill" href="#new"><strong>New in 1.0</strong><span>Board, timeline, replay and phone approvals</span></a>
+        <a class="new-pill" href="#new"><strong>New in 1.5</strong><span>Orchestrator and Work dashboard</span></a>
         <p class="eyebrow">For Claude Code, Codex CLI and Gemini CLI</p>
         <h1>Every AI coding agent, one readable window.</h1>
         <p class="lead">Run Claude Code, Codex and Gemini side by side in large, readable terminals, one session per task.</p>
@@ -107,7 +107,69 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.0</h2>
+      <h2 id="new-h">New in 1.5</h2>
+      <p class="section-lead">Hand a feature or a bug to a team of agents, see where your day went, and keep Remote Control connected.</p>
+      <div class="feat-row" id="orchestrator">
+        <div class="feat-copy">
+          <h3>Orchestrator</h3>
+          <p>Describe a feature or a bug and a lead agent takes it from there. It sizes the work first, small, medium or large, and does small work itself. For bigger work it starts only the agents the job needs.</p>
+          <ul><li>Implementers, a spec writer whose spec you approve, and reviewers that use the built-in code review.</li><li>Every agent gets its own visible pane and its own git worktree, so your checkout stays untouched.</li><li>Mix Claude Code and Codex in one run.</li><li>A bug run uses a single agent, and you pick Claude or Codex for it.</li><li>Choose the lead model for each run, or tell the lead to work alone.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/orch-new-run.png" width="1600" height="1000" alt="The New run form of the Orchestrator with a project, the Feature and Bug types, a user story, a title and a plan">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="orch-run">
+        <div class="feat-copy">
+          <h3>A dashboard for every run</h3>
+          <p>See the stages, the tasks and every agent of a run in one place, with the cost of each agent and the total.</p>
+          <ul><li>Questions from the agents wait for you in Human review.</li><li>Restart an agent that got stuck.</li><li>When the work is ready, choose Mark as done, or Push and open a PR with extra instructions for the pull request.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/orch-run.png" width="1600" height="1000" alt="A run dashboard for a CSV export feature showing its stages, a task board, the agents with their state, tokens and cost, and one question waiting for the user">
+        </figure>
+      </div>
+      <div class="feat-row" id="orch-boards">
+        <div class="feat-copy">
+          <h3>Boards and History</h3>
+          <p>The Boards tab shows the tasks of all your runs in columns from To do to Done, and highlights the ones that need you.</p>
+          <ul><li>Filter by project, run, role or model.</li><li>Finished runs move to History, where you can search them and export a run.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/orch-boards.png" width="1600" height="1000" alt="The Orchestrator boards with tasks from three runs in the columns To do, In progress, Review, Needs you and Done, each card showing its project, role and model">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="work">
+        <div class="feat-copy">
+          <h3>Work dashboard</h3>
+          <p>Open Work in the top bar to see what you got done, for today, this week or this month, one project at a time or all of them.</p>
+          <ul><li>Step back through earlier days, weeks and months with the arrows.</li><li>Each item is a Feature, a Bug, Other change or a Conversation, worked out from its branch and your own commits.</li><li>Time is the exact active time, not the hours a window stayed open.</li><li>Search, filter by project, and use Copy summary for your standup.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/work.png" width="1600" height="1000" alt="The Work dashboard for this week with counts of features, bugs, other changes and conversations, a chart of items per day and a table of time spent per project">
+        </figure>
+      </div>
+      <div class="feat-row" id="tickets">
+        <div class="feat-copy">
+          <h3>Tickets</h3>
+          <p>The Tickets tab groups the sessions on one branch into a single ticket, however many sessions it took.</p>
+          <ul><li>Give a ticket your own name and a link, and open the link with a click.</li><li>Your names and links are saved on your computer.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/work-tickets.png" width="1600" height="1000" alt="The Tickets tab of the Work dashboard listing tickets with their type, project, branch, sessions and time, two of them with a name and an Open link">
+        </figure>
+      </div>
+      <div class="feat-copy feat-note" id="remote-steady">
+        <h3>Remote Control connects more reliably</h3>
+        <p>Remote Control now gets through in more situations, so the link on your phone works when you need it.</p>
+        <ul><li>It connects while a new Cloudflare address is still spreading, instead of failing.</li><li>It retries by itself.</li><li>It works behind proxies.</li><li>It installs the cloudflared helper on more PCs.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="new-1-0" aria-labelledby="new-10-h">
+    <div class="wrap">
+      <h2 id="new-10-h">New in 1.0</h2>
       <p class="section-lead">See what every session needs, look back at what it did, and answer from your phone.</p>
       <div class="feat-row" id="board">
         <div class="feat-copy">

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
-import { Resolver } from 'node:dns/promises'
 import { setTimeout as delay } from 'node:timers/promises'
+import { proxyFromEnv, withProxyEnv } from './proxyConfig'
 
 export interface TunnelProcess {
   stdout: { on(event: 'data', listener: (chunk: Buffer | string) => void): unknown }
@@ -10,7 +10,7 @@ export interface TunnelProcess {
   kill(signal?: NodeJS.Signals): boolean
 }
 
-export type TunnelSpawn = (command: string, args: string[], options: { shell: false; windowsHide: true; stdio: ['ignore', 'pipe', 'pipe'] }) => TunnelProcess
+export type TunnelSpawn = (command: string, args: string[], options: { shell: false; windowsHide: true; stdio: ['ignore', 'pipe', 'pipe']; env?: NodeJS.ProcessEnv }) => TunnelProcess
 
 export interface QuickTunnelHandle {
   url: string
@@ -19,18 +19,7 @@ export interface QuickTunnelHandle {
 }
 
 const START_TIMEOUT_MS = 20_000
-const DNS_READY_TIMEOUT_MS = 20_000
-const DNS_RETRY_MS = 500
 const MAX_LOG_BYTES = 64 * 1024
-
-async function resolveQuickTunnelHost(hostname: string): Promise<string[]> {
-  const resolver = new Resolver({ timeout: 1_000, tries: 1 })
-  try {
-    return await resolver.resolve4(hostname)
-  } finally {
-    resolver.cancel()
-  }
-}
 
 function validEmail(email: string): boolean {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -45,9 +34,7 @@ function parseTunnelUrl(log: string): string | null {
 export function createCloudflareQuickTunnel(
   run: TunnelSpawn = (command, args, options) => spawn(command, args, options) as unknown as TunnelProcess,
   resolveExecutable: () => Promise<string> = async () => 'cloudflared',
-  resolveHost: (hostname: string) => Promise<unknown> = resolveQuickTunnelHost,
-  dnsReadyTimeoutMs = DNS_READY_TIMEOUT_MS,
-  dnsRetryMs = DNS_RETRY_MS
+  env: NodeJS.ProcessEnv = process.env
 ) {
   async function start(port: number, email?: string): Promise<QuickTunnelHandle> {
     if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('The local remote-control port is invalid.')
@@ -57,8 +44,11 @@ export function createCloudflareQuickTunnel(
       const executable = await resolveExecutable()
       const args = ['tunnel', '--url', `http://127.0.0.1:${port}`]
       if (email) args.push('--allowed-mail', email)
+      const proxy = proxyFromEnv(env)
+      if (proxy) args.push('--protocol', 'http2')
       child = run(executable, args, {
-        shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe']
+        shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
+        ...(proxy ? { env: withProxyEnv(env, proxy) } : {})
       })
     } catch (error) {
       throw new Error(`Cloudflare Tunnel could not start. ${(error as Error).message}`)
@@ -115,26 +105,6 @@ export function createCloudflareQuickTunnel(
       if (exitState.error) throw new Error(`Cloudflare Quick Tunnel failed to start: ${exitState.error.message}`)
       if (exited) throw new Error('cloudflared exited before returning a Quick Tunnel URL. Check its version and the --allowed-mail option.')
       throw new Error('Timed out waiting for the Cloudflare Quick Tunnel URL.')
-    }
-    const hostname = new URL(url).hostname
-    const dnsDeadline = Date.now() + dnsReadyTimeoutMs
-    let lastDnsError: unknown
-    while (Date.now() < dnsDeadline) {
-      if (exited || spawnError) break
-      try {
-        await resolveHost(hostname)
-        lastDnsError = null
-        break
-      } catch (error) {
-        lastDnsError = error
-        await delay(Math.min(dnsRetryMs, Math.max(1, dnsDeadline - Date.now())))
-      }
-    }
-    if (lastDnsError || exited || spawnError) {
-      const tunnelError = exited || spawnError ? exitState.error : null
-      await terminateChild()
-      if (tunnelError) throw new Error(`Cloudflare Quick Tunnel stopped before its hostname became reachable: ${tunnelError.message}`)
-      throw new Error('Cloudflare created a tunnel URL, but its DNS name is not reachable yet. Wait a moment and try again.')
     }
     return {
       url,

@@ -7,7 +7,7 @@ import type { RemoteServerOptions } from '../../src/main/remoteServer'
 import { defaultSettings } from '../../src/shared/settingsSchema'
 import type { Settings } from '../../src/shared/types'
 
-function fixture() {
+function fixture(waitForHostname: (host: string, o: { timeoutMs: number }) => Promise<boolean> = async () => true) {
   let settings: Settings = { ...defaultSettings(), remoteAccess: { ...defaultSettings().remoteAccess, allowedEmail: 'owner@example.com' } }
   const store = { get: () => settings, update: (patch: Partial<Settings>) => (settings = { ...settings, ...patch }) }
   const tunnelHandle = { url: 'https://brisk-fox.trycloudflare.com', stop: vi.fn(async () => undefined), onExit: vi.fn(() => () => undefined) }
@@ -26,9 +26,11 @@ function fixture() {
     getWindow: () => null,
     tunnel,
     createServer,
-    assetDirectory
+    assetDirectory,
+    waitForHostname,
+    readyGraceMs: 5
   })
-  return { controller, settings: () => settings, store, tunnelHandle, tunnel, server, createServer, assetDirectory, userDataDir, remoteIds, kill, spawn }
+  return { controller, waitForHostname, settings: () => settings, store, tunnelHandle, tunnel, server, createServer, assetDirectory, userDataDir, remoteIds, kill, spawn }
 }
 
 describe('Remote Access controller', () => {
@@ -174,5 +176,34 @@ describe('Remote Access controller', () => {
     await expect(context.controller.setPermissions({ approvalsAwayMinutes: '3' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
     await expect(context.controller.setPermissions({ allowedEmail: 'x@y.com' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
     expect(context.settings().remoteAccess.approvals).toBe(false)
+  })
+
+  it('returns a connecting state instead of failing while the hostname is still propagating, then becomes available', async () => {
+    let release!: (value: boolean) => void
+    const context = fixture(() => new Promise<boolean>((resolve) => { release = resolve }))
+    const state = await context.controller.enable()
+    expect(state).toMatchObject({ status: 'connecting', enabled: true, url: null, pairing: null })
+    release(true)
+    await vi.waitFor(async () => expect(await context.controller.getState()).toMatchObject({ status: 'available', url: 'https://brisk-fox.trycloudflare.com/dawsha/' }))
+    expect((await context.controller.getState()).pairing).not.toBeNull()
+  })
+
+  it('restarts cloudflared once for a fresh hostname when the first never resolves', async () => {
+    const waits: number[] = []
+    let calls = 0
+    const context = fixture(async (_host, o) => { waits.push(o.timeoutMs); return ++calls > 1 })
+    await context.controller.enable()
+    await vi.waitFor(async () => expect((await context.controller.getState()).status).toBe('available'))
+    expect(context.tunnel.start).toHaveBeenCalledTimes(2)
+    expect(context.tunnelHandle.stop).toHaveBeenCalledOnce()
+    expect(waits).toEqual([45_000, 90_000])
+  })
+
+  it('reports a friendly setup error and stops everything if no hostname ever becomes reachable', async () => {
+    const context = fixture(async () => false)
+    await expect(context.controller.enable()).rejects.toThrow(/still not reachable/i)
+    expect((await context.controller.getState()).status).toBe('setup-required')
+    expect((await context.controller.getState()).message).toMatch(/still not reachable.*again to retry/i)
+    expect(context.server.stop).toHaveBeenCalled()
   })
 })

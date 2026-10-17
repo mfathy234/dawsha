@@ -17,7 +17,7 @@ describe('Cloudflare Quick Tunnel adapter', () => {
     const child = fakeProcess()
     child.kill = vi.fn(() => { child.emit('exit', 0); return true })
     const run = vi.fn(() => child)
-    const tunnel = createCloudflareQuickTunnel(run, undefined, async () => ({ address: '127.0.0.1', family: 4 }))
+    const tunnel = createCloudflareQuickTunnel(run, undefined, {})
     const pending = tunnel.start(4567, 'owner@example.com')
     await vi.waitFor(() => expect(run).toHaveBeenCalledOnce())
     ;(child.stderr as unknown as EventEmitter).emit('data', 'Your quick Tunnel has been created! Visit it at https://silver-owl.trycloudflare.com\n')
@@ -32,7 +32,7 @@ describe('Cloudflare Quick Tunnel adapter', () => {
     const child = fakeProcess()
     child.kill = vi.fn(() => { child.emit('exit', 0); return true })
     const run = vi.fn(() => child)
-    const tunnel = createCloudflareQuickTunnel(run, undefined, async () => ({ address: '127.0.0.1', family: 4 }))
+    const tunnel = createCloudflareQuickTunnel(run, undefined, {})
     const pending = tunnel.start(4567)
     await vi.waitFor(() => expect(run).toHaveBeenCalledOnce())
     ;(child.stderr as unknown as EventEmitter).emit('data', 'Visit it at https://silver-owl.trycloudflare.com\n')
@@ -42,7 +42,7 @@ describe('Cloudflare Quick Tunnel adapter', () => {
 
   it('rejects invalid ports and email addresses without spawning', async () => {
     const run = vi.fn(() => fakeProcess())
-    const tunnel = createCloudflareQuickTunnel(run)
+    const tunnel = createCloudflareQuickTunnel(run, undefined, {})
     await expect(tunnel.start(0, 'owner@example.com')).rejects.toThrow(/port/i)
     await expect(tunnel.start(1234, 'not-an-email')).rejects.toThrow(/email/i)
     expect(run).not.toHaveBeenCalled()
@@ -50,7 +50,7 @@ describe('Cloudflare Quick Tunnel adapter', () => {
 
   it('stops a child which exits before returning a valid URL', async () => {
     const child = fakeProcess()
-    const tunnel = createCloudflareQuickTunnel(() => child)
+    const tunnel = createCloudflareQuickTunnel(() => child, undefined, {})
     const pending = tunnel.start(1234, 'owner@example.com')
     await vi.waitFor(() => expect(child.listenerCount('exit')).toBeGreaterThan(0))
     child.emit('exit', 1)
@@ -58,31 +58,29 @@ describe('Cloudflare Quick Tunnel adapter', () => {
     expect(child.kill).not.toHaveBeenCalled()
   })
 
-  it('waits for DNS readiness before returning a tunnel URL', async () => {
+  it('forces HTTP/2 and passes the proxy to cloudflared when a proxy is configured', async () => {
     const child = fakeProcess()
     const run = vi.fn(() => child)
-    let attempts = 0
-    const tunnel = createCloudflareQuickTunnel(run, undefined, async () => {
-      attempts += 1
-      if (attempts === 1) throw new Error('ENOTFOUND')
-      return { address: '127.0.0.1', family: 4 }
-    }, 1_000, 1)
+    const tunnel = createCloudflareQuickTunnel(run, undefined, { http_proxy: 'http://proxy.corp:3128', NO_PROXY: 'localhost' })
     const pending = tunnel.start(4567)
     await vi.waitFor(() => expect(run).toHaveBeenCalledOnce())
-    ;(child.stderr as unknown as EventEmitter).emit('data', 'Visit it at https://ready-now.trycloudflare.com\n')
-    await expect(pending).resolves.toMatchObject({ url: 'https://ready-now.trycloudflare.com' })
-    expect(attempts).toBe(2)
+    ;(child.stderr as unknown as EventEmitter).emit('data', 'Visit it at https://proxied.trycloudflare.com\n')
+    await pending
+    expect(run).toHaveBeenCalledWith('cloudflared', ['tunnel', '--url', 'http://127.0.0.1:4567', '--protocol', 'http2'], expect.objectContaining({
+      env: expect.objectContaining({ HTTPS_PROXY: 'http://proxy.corp:3128', https_proxy: 'http://proxy.corp:3128', NO_PROXY: 'localhost' })
+    }))
   })
 
-  it('stops the tunnel if Cloudflare returns a hostname which never resolves', async () => {
+  it('keeps the default protocol and environment without a proxy', async () => {
     const child = fakeProcess()
-    child.kill = vi.fn(() => { child.emit('exit', 0); return true })
     const run = vi.fn(() => child)
-    const tunnel = createCloudflareQuickTunnel(run, undefined, async () => { throw new Error('ENOTFOUND') }, 5, 1)
+    const tunnel = createCloudflareQuickTunnel(run, undefined, {})
     const pending = tunnel.start(4567)
     await vi.waitFor(() => expect(run).toHaveBeenCalledOnce())
-    ;(child.stderr as unknown as EventEmitter).emit('data', 'Visit it at https://not-ready.trycloudflare.com\n')
-    await expect(pending).rejects.toThrow(/DNS name is not reachable/i)
-    expect(child.kill).toHaveBeenCalledOnce()
+    ;(child.stderr as unknown as EventEmitter).emit('data', 'Visit it at https://direct.trycloudflare.com\n')
+    await pending
+    const call = run.mock.calls[0] as unknown as [string, string[], Record<string, unknown>]
+    expect(call[1]).not.toContain('--protocol')
+    expect(call[2]).not.toHaveProperty('env')
   })
 })

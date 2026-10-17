@@ -1,0 +1,327 @@
+import { selectMenu } from '../selectMenu'
+import type { OrchAgentRow, OrchRunDetail } from '../../../shared/orch/api'
+import { boardCards, DEFAULT_BOARD_FILTER, isFinishedRun, timelineEvents, totalCostLabel, usageRows } from '../../../shared/orch/board'
+import type { OrchProfile } from '../../../shared/orch/profiles'
+import { focusPane } from '../../actions'
+import { clear, h } from '../../dom'
+import { cancelRun, handoffTask, restartAgent, showOrch } from '../../orchActions'
+import type { AppState } from '../../state'
+import { renderTaskBoard } from './boardsView'
+import { AGENT_STATE_LABEL, currentStageIndex, elapsed, modelBadge, pill, ROLE_LABEL, stagesOf } from './orchUi'
+import './runView.css'
+
+const TIMELINE_LIMIT = 100
+const HANDOFF_STATES = new Set(['working', 'waiting', 'stalled', 'idle'])
+const TONE: Record<string, string> = { working: 'working', waiting: 'waiting', stalled: 'stalled', idle: 'idle', done: 'done' }
+
+interface Handoff {
+  agentId: string
+  taskKey: string
+  profileId: string
+}
+
+const keyOfTask = (taskId: string, runId: string): string => (taskId.startsWith(`${runId}:`) ? taskId.slice(runId.length + 1) : taskId)
+
+const timeOf = (at: number): string => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+function profileLabel(p: OrchProfile): string {
+  return `${p.name} · ${p.runner}${p.model ? ` ${p.model}` : ''}`
+}
+
+/** One run's dashboard: header, task board, agents, usage and timeline. */
+export class OrchRunView {
+  readonly el = h('section', { class: 'orch-section orch-run' })
+  private taskKey: string | null = null
+  private storyOpen = false
+  private handoff: Handoff | null = null
+  private note = ''
+  private runId: string | null = null
+  private signature = ''
+  private state: AppState | null = null
+
+  update(state: AppState): void {
+    this.state = state
+    const run = state.orch?.runs.find((r) => r.id === state.orchRunId) ?? null
+    if (run?.id !== this.runId) {
+      this.runId = run?.id ?? null
+      this.taskKey = null
+      this.handoff = null
+      this.note = ''
+    }
+    if (!run) return this.renderMissing()
+    const panes = state.panes.map((p) => [p.id, p.tabs.map((t) => t.orchAgentId ?? '')])
+    const signature = JSON.stringify([run, state.orch?.decisions, state.orch?.runs.map((r) => [r.id, r.title, r.stage, r.tasksDone, r.taskCount]), state.settings.orchestrator.profiles.map((p) => p.id), panes, this.taskKey, this.handoff, Math.floor(Date.now() / 60_000)])
+    if (signature === this.signature) return
+    this.signature = signature
+    this.render(run, state)
+  }
+
+  private rerender(): void {
+    this.signature = ''
+    if (this.state) this.update(this.state)
+  }
+
+  private renderMissing(): void {
+    this.signature = ''
+    clear(this.el)
+    this.el.append(h('div', { class: 'orch-board-empty' }, 'This run is no longer available.'), this.backLink())
+  }
+
+  private backLink(): HTMLElement {
+    return h('button', { class: 'orch-back', type: 'button', onClick: () => showOrch('runs') }, '‹ All runs')
+  }
+
+  private render(run: OrchRunDetail, state: AppState): void {
+    clear(this.el)
+    this.el.append(this.switcher(run, state), this.header(run))
+    const story = this.story(run)
+    if (story) this.el.append(story)
+    this.el.append(this.dashboard(run, state))
+    // Only runs where the lead asked for a spec have one to review.
+    if (run.kind === 'feature' && run.tasks.some((t) => t.role === 'spec-writer')) {
+      const open = state.orch?.decisions.some((d) => d.runId === run.id && d.kind === 'spec-approval')
+      const link = h('button', { class: open ? 'btn primary' : 'btn', type: 'button', onClick: () => showOrch('spec', run.id) }, open ? 'Review spec' : 'Spec')
+      this.el.insertBefore(link, this.el.children[2])
+    }
+  }
+
+  /** "‹ All runs / this run", plus a dropdown to the other active runs when there are any. */
+  private switcher(run: OrchRunDetail, state: AppState): HTMLElement {
+    const others = (state.orch?.runs ?? []).filter((r) => !isFinishedRun(r) && r.id !== run.id)
+    let jump: HTMLElement | null = null
+    if (others.length > 0) {
+      const select = h('select', { class: 'text-input', id: 'orch-run-switch', 'aria-label': 'Switch to another run' },
+        h('option', { value: '' }, `Switch run (${others.length})`),
+        ...others.map((r) => h('option', { value: r.id }, r.openDecisions > 0 ? `${r.title} · ${r.openDecisions} need you` : r.title)))
+      select.addEventListener('change', () => { if (select.value) showOrch('runs', select.value) })
+      jump = h('div', { class: 'orch-crumbs-switch' }, selectMenu(select))
+    }
+    return h(
+      'nav',
+      { class: 'orch-crumbs', 'aria-label': 'Breadcrumb' },
+      this.backLink(),
+      h('span', { class: 'orch-crumbs-sep', 'aria-hidden': 'true' }, '/'),
+      h('span', { class: 'orch-crumbs-here', 'aria-current': 'page', title: run.title }, run.title),
+      jump
+    )
+  }
+
+  private header(run: OrchRunDetail): HTMLElement {
+    const finished = Boolean(run.imported) || isFinishedRun(run)
+    const total = run.usage.total
+    const done = run.tasks.length > 0 ? run.tasks.filter((t) => t.status === 'approved' || t.status === 'cancelled').length : run.tasksDone
+    const count = run.tasks.length > 0 ? run.tasks.length : run.taskCount
+    const cost = totalCostLabel(total.costUsd, total.complete)
+    const kpi = (value: string, label: string, tone = ''): HTMLElement => h('div', { class: 'orch-kpi' }, h('b', { class: tone }, value), h('span', {}, label))
+    return h(
+      'div',
+      { class: 'orch-panel orch-runhead' },
+      h(
+        'div',
+        { class: 'orch-runhead-main' },
+        h('h2', { class: 'orch-run-title' }, run.title),
+        h(
+          'div',
+          { class: 'orch-muted orch-run-sub' },
+          `${run.kind === 'bug' ? 'Bug fix' : 'Feature'} · ${run.plan || 'No plan'}`,
+          run.branch ? ' · branch ' : null,
+          run.branch ? h('span', { class: 'orch-mono' }, run.branch) : null
+        ),
+        run.kind === 'feature' ? h('p', { class: 'orch-muted' }, `Lead: ${this.leadModel(run)}${run.solo ? ' \u00b7 alone' : ''}`) : null,
+        this.stages(run),
+        // The lead's size estimate decides the team: small and medium are done by the lead alone.
+        run.estimate
+          ? h('p', { class: 'orch-run-estimate' }, h('strong', {}, `Estimate: ${run.estimate.size}`), ` · ${!run.solo && run.estimate.size === 'large' ? 'team' : 'lead works alone'} · `, h('span', { class: 'orch-muted' }, run.estimate.reason))
+          : run.kind === 'feature' && run.stage === 'plan' ? h('p', { class: 'orch-muted orch-run-estimate' }, 'The lead is sizing the work…') : null,
+        run.imported ? h('p', { class: 'orch-muted' }, `Imported from ${run.imported.from} · read-only`) : finished ? h('p', { class: 'orch-muted' }, 'Finished · read-only') : null
+      ),
+      h(
+        'div',
+        { class: 'orch-kpis' },
+        kpi(`${done} / ${count}`, 'tasks done'),
+        kpi(elapsed(run.createdAt, run.finishedAt ?? Date.now()), finished ? 'total time' : 'elapsed'),
+        kpi(cost, 'spent'),
+        kpi(String(run.openDecisions), 'need you', run.openDecisions > 0 ? 'orch-warn' : '')
+      ),
+      finished ? null : h('button', { class: 'btn danger orch-cancel', type: 'button', onClick: () => void cancelRun(run.id, run.title) }, 'Cancel run')
+    )
+  }
+
+  private leadModel(run: OrchRunDetail): string {
+    const live = run.agents.find((a) => a.role === 'lead' && !a.retired) ?? run.agents.find((a) => a.role === 'lead')
+    if (live) return live.model
+    const settings = this.state?.settings.orchestrator
+    const plan = settings?.plans.find((p) => p.id === run.plan)
+    const profile = settings?.profiles.find((p) => p.id === (run.leadProfileId ?? plan?.roles.lead))
+    return profile?.model || profile?.runner || 'default'
+  }
+
+  private stages(run: OrchRunDetail): HTMLElement {
+    const stages = stagesOf(run)
+    const at = currentStageIndex(run)
+    const finished = run.stage === 'done'
+    return h(
+      'ol',
+      { class: 'orch-stages', 'aria-label': 'Stages' },
+      ...stages.map((stage, i) => {
+        const state = finished || i < at ? 'done' : i === at && run.stage !== 'cancelled' ? 'now' : 'todo'
+        const status = state === 'now' ? 'current' : state === 'done' ? 'done' : 'upcoming'
+        return h(
+          'li',
+          { class: `orch-stage ${state}`, 'aria-current': state === 'now' ? 'step' : undefined },
+          h('i', { 'aria-hidden': 'true' }),
+          stage.label,
+          h('span', { class: 'sr-only' }, ` (${status})`)
+        )
+      }),
+      run.stage === 'cancelled' ? h('li', { class: 'orch-stage cancelled' }, 'Cancelled') : null
+    )
+  }
+
+  private story(run: OrchRunDetail): HTMLElement | null {
+    if (!run.story.trim()) return null
+    const details = h('details', { class: 'orch-panel orch-story' },
+      h('summary', { class: 'orch-panel-title' },
+        h('span', { class: 'orch-story-chevron', 'aria-hidden': 'true' }, '›'),
+        'Story', h('span', { class: 'orch-story-preview' }, run.story)),
+      h('p', { class: 'orch-story-text' }, run.story))
+    details.open = this.storyOpen
+    details.addEventListener('toggle', () => (this.storyOpen = details.open))
+    return details
+  }
+
+  private dashboard(run: OrchRunDetail, state: AppState): HTMLElement {
+    return h('div', { class: 'orch-dash' }, this.tasks(run, state), h('div', { class: 'orch-side' }, this.agents(run, state), this.usage(run), this.timeline(run)))
+  }
+
+  private tasks(run: OrchRunDetail, state: AppState): HTMLElement {
+    const cards = boardCards([run], state.settings.projects, { ...DEFAULT_BOARD_FILTER, status: 'all', includeFinished: true, runId: run.id })
+    const board = renderTaskBoard(cards, {
+      showProject: false,
+      showRun: false,
+      selectedKey: this.taskKey,
+      emptyText: 'No tasks yet. The lead creates them once the plan is approved.',
+      onOpen: (card) => {
+        this.taskKey = this.taskKey === card.key ? null : card.key
+        this.rerender()
+      }
+    })
+    const hint = this.taskKey ? `Timeline shows ${this.taskKey}. Click it again to clear.` : 'Click a card to filter the timeline'
+    return h('div', { class: 'orch-panel orch-tasks' }, h('h3', { class: 'orch-panel-title' }, 'Tasks', h('span', { class: 'orch-panel-hint' }, hint)), board)
+  }
+
+  private agents(run: OrchRunDetail, state: AppState): HTMLElement {
+    const rows = run.agents.map((agent) => this.agentRows(run, agent, state))
+    const table = h('table', { class: 'orch-table' }, h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Agent'), h('th', { scope: 'col' }, 'State'), h('th', { scope: 'col', class: 'num' }, 'Tokens'), h('th', { scope: 'col', class: 'num' }, 'Cost'), h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Actions')))), h('tbody', {}, ...rows.flat()))
+    return h('div', { class: 'orch-panel' }, h('h3', { class: 'orch-panel-title' }, 'Agents'), run.agents.length === 0 ? h('div', { class: 'orch-board-empty' }, 'No agents yet.') : h('div', { class: 'orch-scroll' }, table))
+  }
+
+  private agentRows(run: OrchRunDetail, agent: OrchAgentRow, state: AppState): HTMLElement[] {
+    const cost = run.usage.agents.find((a) => a.agentId === agent.id)
+    const { rows } = usageRows({ ...run.usage, agents: cost ? [cost] : [] })
+    const row = rows[0]
+    const pane = state.panes.find((p) => p.tabs.some((t) => t.orchAgentId === agent.id))
+    const canHandoff = !run.imported && !isFinishedRun(run) && !agent.retired && agent.taskKey !== null && HANDOFF_STATES.has(agent.state)
+    const open = h('button', { class: 'btn orch-small', type: 'button', disabled: pane ? undefined : true, title: pane ? 'Focus this agent’s pane' : 'This agent has no open pane', onClick: () => pane && focusPane(pane.id) }, 'Open pane')
+    const restart = !agent.retired || run.imported || isFinishedRun(run) ? h('button', { class: 'btn orch-small', type: 'button', disabled: Boolean(run.imported) || isFinishedRun(run), onClick: () => void restartAgent(run.id, agent.id, `${ROLE_LABEL[agent.role]} \u00b7 ${agent.model}${agent.taskKey ? ` on ${agent.taskKey}` : ''}`) }, 'Restart') : null
+    const actions = h('div', { class: 'orch-actions' }, open, restart, canHandoff ? h('button', { class: 'btn orch-small', type: 'button', onClick: () => this.openHandoff(agent, state) }, 'Continue with…') : null)
+    const main = h(
+      'tr',
+      { class: agent.retired ? 'retired' : '' },
+      h('td', {}, h('div', { class: 'orch-role' }, ROLE_LABEL[agent.role]), h('div', { class: 'orch-sub' }, modelBadge(agent.runner, agent.model), agent.taskKey ? h('span', { class: 'orch-mono' }, ` ${agent.taskKey}`) : null)),
+      // A retired agent of a finished run is done; in a live run it was replaced (handed over or restarted).
+      h('td', {}, agent.retired ? pill(isFinishedRun(run) ? 'done' : 'replaced', isFinishedRun(run) ? 'done' : 'idle') : pill(AGENT_STATE_LABEL[agent.state], TONE[agent.state] ?? 'idle')),
+      h('td', { class: 'num' }, cost ? `${row.input} in / ${row.output} out` : '–'),
+      h('td', { class: 'num' }, row ? row.cost : '–'),
+      h('td', {}, actions)
+    )
+    return !run.imported && !isFinishedRun(run) && this.handoff?.agentId === agent.id ? [main, this.handoffRow(run, agent, state)] : [main]
+  }
+
+  private openHandoff(agent: OrchAgentRow, state: AppState): void {
+    if (!agent.taskKey) return
+    const profiles = state.settings.orchestrator.profiles
+    const first = profiles.find((p) => p.role === agent.role && p.model !== agent.model) ?? profiles[0]
+    this.handoff = this.handoff?.agentId === agent.id ? null : { agentId: agent.id, taskKey: agent.taskKey, profileId: first?.id ?? '' }
+    this.note = ''
+    this.rerender()
+  }
+
+  private handoffRow(run: OrchRunDetail, agent: OrchAgentRow, state: AppState): HTMLElement {
+    const profiles = state.settings.orchestrator.profiles
+    const handoff = this.handoff as Handoff
+    const select = h('select', { class: 'orch-select', id: `orch-handoff-model-${agent.id}` }, ...profiles.map((p) => h('option', { value: p.id }, profileLabel(p))))
+    select.value = handoff.profileId
+    select.addEventListener('change', () => (handoff.profileId = select.value))
+    const note = h('textarea', { class: 'orch-note', id: `orch-handoff-note-${agent.id}`, rows: 2, placeholder: 'What should the new model know? (optional)' })
+    note.value = this.note
+    note.addEventListener('input', () => (this.note = note.value))
+    const go = h('button', { class: 'btn primary orch-small', type: 'button', disabled: profiles.length === 0 ? true : undefined }, 'Continue')
+    go.addEventListener('click', () => {
+      if (!handoff.profileId) return
+      go.disabled = true
+      void handoffTask(run.id, handoff.taskKey, handoff.profileId, this.note.trim()).then((ok) => {
+        if (ok) this.handoff = null
+        this.rerender()
+      })
+    })
+    const cancel = h('button', { class: 'btn orch-small', type: 'button', onClick: () => { this.handoff = null; this.rerender() } }, 'Cancel')
+    return h(
+      'tr',
+      { class: 'orch-handoff' },
+      h(
+        'td',
+        { colspan: 5 },
+        h(
+          'div',
+          { class: 'orch-handoff-form' },
+          h('label', { for: select.id }, `Continue ${handoff.taskKey} with`),
+          selectMenu(select),
+          h('label', { for: note.id }, 'Note'),
+          note,
+          h('div', { class: 'orch-actions' }, go, cancel)
+        )
+      )
+    )
+  }
+
+  private usage(run: OrchRunDetail): HTMLElement {
+    const { rows, total } = usageRows(run.usage)
+    const marker = (r: { marker: string; markerTitle: string }): HTMLElement => h('span', { class: `orch-src src-${r.marker === 'R' ? 'r' : r.marker === 'E' ? 'e' : r.marker === 'L' ? 'l' : 'n'}`, title: r.markerTitle, 'aria-label': r.markerTitle }, r.marker)
+    const body = rows.map((r) =>
+      h('tr', {}, h('td', {}, ROLE_LABEL[r.role], ' ', modelBadge(r.runner, r.model)), h('td', { class: 'num' }, r.input), h('td', { class: 'num' }, r.output), h('td', { class: 'num' }, r.cache), h('td', { class: 'num' }, r.cost, ' ', marker(r)))
+    )
+    const foot = h('tr', { class: 'tot' }, h('td', {}, `Total · ${total.agents} ${total.agents === 1 ? 'agent' : 'agents'}`), h('td', { class: 'num' }, total.input), h('td', { class: 'num' }, total.output), h('td', { class: 'num' }, total.cache), h('td', { class: 'num' }, total.incomplete && total.cost === '$0.00' ? 'No prices set' : total.incomplete ? `${total.cost} + unpriced` : total.cost))
+    const table = h('table', { class: 'orch-table' }, h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Agent'), h('th', { scope: 'col', class: 'num' }, 'In'), h('th', { scope: 'col', class: 'num' }, 'Out'), h('th', { scope: 'col', class: 'num' }, 'Cache'), h('th', { scope: 'col', class: 'num' }, 'Cost'))), h('tbody', {}, ...body, foot))
+    return h(
+      'div',
+      { class: 'orch-panel' },
+      h('h3', { class: 'orch-panel-title' }, 'Usage · this run', h('span', { class: 'orch-panel-hint' }, 'tokens · cost')),
+      rows.length === 0 ? h('div', { class: 'orch-board-empty' }, 'No usage yet.') : h('div', { class: 'orch-scroll' }, table),
+      h('div', { class: 'orch-legend orch-muted' }, 'R reported by the CLI · E estimated from your prices · L local, free · – no price or no usage yet. Cache is read plus write.')
+    )
+  }
+
+  private timeline(run: OrchRunDetail): HTMLElement {
+    const events = timelineEvents(run.events, run.id, this.taskKey).slice(0, TIMELINE_LIMIT)
+    const filter = this.taskKey
+      ? h('button', { class: 'btn orch-small', type: 'button', onClick: () => { this.taskKey = null; this.rerender() } }, `Showing ${this.taskKey} · Clear`)
+      : null
+    const list = events.map((e) => {
+      const key = e.taskId ? keyOfTask(e.taskId, run.id) : null
+      return h(
+        'li',
+        { class: 'orch-ev' },
+        h('time', { datetime: new Date(e.at).toISOString() }, timeOf(e.at)),
+        h('span', {}, key ? h('button', { class: 'orch-keylink orch-mono', type: 'button', title: `Show only ${key}`, onClick: () => { this.taskKey = key; this.rerender() } }, key) : null, key ? ' ' : null, e.text)
+      )
+    })
+    return h(
+      'div',
+      { class: 'orch-panel' },
+      h('h3', { class: 'orch-panel-title' }, 'Timeline', filter),
+      list.length === 0 ? h('div', { class: 'orch-board-empty' }, this.taskKey ? `Nothing happened on ${this.taskKey} yet.` : 'Nothing has happened yet.') : h('ol', { class: 'orch-timeline' }, ...list)
+    )
+  }
+}
+

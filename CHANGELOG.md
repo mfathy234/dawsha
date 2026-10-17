@@ -3,6 +3,33 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-10-17
+
+### Added
+
+- Orchestrator. Open it from the top bar, describe a feature or a bug, and pick the project. A lead agent sizes the work first (small, medium or large). It does small and medium work itself, and for large work starts only the agents it needs: implementers, a spec writer whose spec and mockups you approve before anything is built, and reviewers that use the agent's built-in code review. Every agent runs in its own visible pane and git worktree, so your checkout stays untouched, and a run can mix Claude Code and Codex.
+- Bug runs use a single agent. Pick Claude or Codex; the model comes from your plan.
+- Per-run choices in New run: the lead's model, and "Lead works alone" to keep the run to one agent.
+- A dashboard for every run: its stages, the lead's estimate, tasks, every agent with its model, state and cost, and the total cost. Restart an agent that is stuck (it continues the same task in the same worktree, after a confirmation), or continue a task on another model.
+- Human review collects every question the agents ask you. When a run is ready, choose Mark as done, or Push and open a PR, and add instructions for the lead, for example a missing database migration.
+- Boards show the tasks of all runs in columns from To do to Done, filtered by project, run, role or model. Finished runs move to History, where you can search and export them.
+- Settings > Orchestrator holds plans (Default and Budget), agent profiles with model and effort, and prices. Anthropic list prices are filled in, so costs show without setup.
+- Work dashboard. Open Work in the top bar to see what you did today, this week or this month, per project or in total, and step back with ‹ and ›. Each session or orchestrator run is a Feature, a Bug, an Other change or a Conversation, worked out from its branch and your own commits. Time is the exact active time from the full transcripts; breaks over 5 minutes do not count.
+- A Tickets tab groups the sessions of one branch into a ticket. Give a ticket your own name and a link that opens with a click. Names and links stay on this computer.
+- Search and a project filter in the Work view, with a project chip on each item when all projects are shown.
+- Copy summary copies standup text for the period, tab and filters you are looking at.
+
+### Changed
+
+- The orchestrator is a normal feature, on for everyone. Settings no longer has an Experimental section.
+
+### Fixed
+
+- Remote Control no longer fails while a new Cloudflare address is still spreading. It shows Connecting… and gives you the link once the address works, checking public DNS so a router that cached an early "not found" does not block it. If the address never comes up, it gets a fresh one once before showing a clear error with Try again.
+- Remote Control errors are readable messages instead of "Error invoking remote method".
+- Installing cloudflared works on more PCs. Downloads retry, go through the Windows proxy or HTTPS_PROXY, and fall back to GitHub's release pages when its API rate limit is reached. 32-bit and ARM Windows get a build that runs, an existing cloudflared install is used, a broken copy is downloaded again, and a file held by antivirus is retried. If it still fails, the error gives the manual download link and the winget command.
+- Behind a proxy, the tunnel connects over HTTP/2, which proxies let through.
+
 ## [1.0.0] - 2026-10-15
 
 ### Added
