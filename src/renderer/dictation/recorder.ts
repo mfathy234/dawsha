@@ -1,4 +1,4 @@
-import { DICTATION_MAX_SAMPLES, DICTATION_SAMPLE_RATE, joinChunks, resample } from '../../shared/dictation'
+import { DICTATION_MAX_SAMPLES, DICTATION_SAMPLE_RATE, joinChunks, levelFromRms, peakOf, resample, rmsOf, SILENCE_PEAK } from '../../shared/dictation'
 
 export type MicProblem = 'denied' | 'missing' | 'other'
 
@@ -27,8 +27,18 @@ export class Recorder {
   private readonly chunks: Float32Array[] = []
   private samples = 0
   private ended = false
+  /** Loudest sample so far; 0 for a muted or switched-off microphone. */
+  peak = 0
+  /** Loudness of the latest chunk, 0 to 1, for a level meter. */
+  level = 0
+  /** When the microphone last delivered more than silence (or when recording started). */
+  lastSoundAt = Date.now()
+  /** Whether the chosen microphone was missing and the system default is used instead. */
+  fellBack = false
 
   private constructor(
+    /** The microphone's name as the system reports it. */
+    readonly label: string,
     private readonly stream: MediaStream,
     private readonly context: AudioContext,
     private readonly node: ScriptProcessorNode,
@@ -39,6 +49,10 @@ export class Recorder {
       if (this.ended) return
       const input = event.inputBuffer.getChannelData(0)
       const chunk = context.sampleRate === DICTATION_SAMPLE_RATE ? input.slice() : resample(input, context.sampleRate)
+      const peak = peakOf(chunk)
+      this.peak = Math.max(this.peak, peak)
+      this.level = levelFromRms(rmsOf(chunk))
+      if (peak > SILENCE_PEAK) this.lastSoundAt = Date.now()
       this.chunks.push(chunk)
       this.samples += chunk.length
       if (this.samples >= DICTATION_MAX_SAMPLES) onLimit()
@@ -47,19 +61,33 @@ export class Recorder {
     node.connect(context.destination)
   }
 
-  static async start(onLimit: () => void): Promise<Recorder> {
+  /** Opens `deviceId` ('' for the system default); a chosen microphone that is gone falls back to the default. */
+  static async start(onLimit: () => void, deviceId = ''): Promise<Recorder> {
+    const constraints = (id: string): MediaStreamConstraints => ({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, ...(id ? { deviceId: { exact: id } } : {}) }
+    })
     let stream: MediaStream
+    let fellBack = false
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } })
+      stream = await navigator.mediaDevices.getUserMedia(constraints(deviceId))
     } catch (error) {
-      throw classify(error)
+      const name = (error as { name?: string })?.name
+      if (!deviceId || (name !== 'NotFoundError' && name !== 'OverconstrainedError')) throw classify(error)
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints(''))
+        fellBack = true
+      } catch (fallbackError) {
+        throw classify(fallbackError)
+      }
     }
     let context: AudioContext | null = null
     try {
       context = new AudioContext({ sampleRate: DICTATION_SAMPLE_RATE })
       const source = context.createMediaStreamSource(stream)
       const node = context.createScriptProcessor(4096, 1, 1)
-      return new Recorder(stream, context, node, source, onLimit)
+      const recorder = new Recorder(stream.getAudioTracks()[0]?.label || 'the microphone', stream, context, node, source, onLimit)
+      recorder.fellBack = fellBack
+      return recorder
     } catch (error) {
       stream.getTracks().forEach((track) => track.stop())
       void context?.close().catch(() => undefined)

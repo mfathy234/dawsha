@@ -8023,6 +8023,52 @@ button.tl-event:hover { background: var(--raised); }
   display: none;
 }
 
+.pane-dictation,
+.dictation-pill {
+  gap: 10px;
+}
+
+.dictation-pill {
+  display: flex;
+  align-items: center;
+}
+
+.dictation-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dictation-meter {
+  flex: none;
+  width: 56px;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+.dictation-meter[hidden] {
+  display: none;
+}
+
+.dictation-meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 90ms linear;
+}
+
+.dictation-meter.quiet {
+  outline: 1px solid var(--busy);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dictation-meter-fill { transition: none; }
+}
+
 .dictation-pill {
   position: fixed;
   left: 50%;

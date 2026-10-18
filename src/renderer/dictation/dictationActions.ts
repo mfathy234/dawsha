@@ -1,4 +1,4 @@
-import { insertAtCaret, isTextField } from '../../shared/dictation'
+import { insertAtCaret, isTextField, peakOf, QUIET_HINT_MS, SILENCE_PEAK } from '../../shared/dictation'
 import { toast } from '../components/toast'
 import { paneById, store } from '../state'
 import { getTerminal } from '../terminals'
@@ -6,6 +6,7 @@ import { WorkerEngine } from './engine'
 import { dictationStatus, resetDictationStatus, setDictationStatus } from './dictationState'
 import type { DictationEngine } from './protocol'
 import { MicError, Recorder } from './recorder'
+import { confirmDictationIntro } from './dictationIntro'
 
 const MIN_SAMPLES = 4800
 const POINTER_FOCUS_MS = 1500
@@ -31,6 +32,8 @@ let target: Target | null = null
 let run = 0
 let starting = false
 let pointerFocus: { element: Element | null; at: number } = { element: null, at: 0 }
+let meterTimer = 0
+const METER_MS = 100
 
 // Clicking the pane's mic button moves focus to the pane before the click lands, so remember what had focus when the pointer went down.
 document.addEventListener('pointerdown', (event) => {
@@ -120,18 +123,33 @@ function describeFailure(error: unknown): string {
   return `Dictation failed: ${message}`
 }
 
+function watchLevel(): void {
+  window.clearInterval(meterTimer)
+  meterTimer = window.setInterval(() => {
+    if (!recorder || dictationStatus().phase !== 'recording') return stopWatchingLevel()
+    setDictationStatus({ level: recorder.level, quiet: Date.now() - recorder.lastSoundAt > QUIET_HINT_MS })
+  }, METER_MS)
+}
+
+function stopWatchingLevel(): void {
+  window.clearInterval(meterTimer)
+  meterTimer = 0
+}
+
 export async function startDictation(): Promise<void> {
   const chosen = chooseTarget()
   if (!chosen) {
     toast('Open a session, or click a text box, then start dictation.', 'info')
     return
   }
+  const real = !currentFake() && !hook().samples
+  if (real && !store.state.settings.dictation.introShown && !(await confirmDictationIntro())) return
   const id = ++run
   target = chosen
   const paneId = store.state.focusedId
   starting = true
   try {
-    if (!currentFake() && !hook().samples) recorder = await Recorder.start(() => void finishDictation())
+    if (real) recorder = await Recorder.start(() => void finishDictation(), store.state.settings.dictation.microphone)
   } catch (error) {
     if (id === run) toast(describeFailure(error))
     return
@@ -143,8 +161,11 @@ export async function startDictation(): Promise<void> {
     recorder = null
     return
   }
-  setDictationStatus({ phase: 'recording', paneId, intoField: chosen.kind === 'field', progress: null })
-  if (recorder) ensureEngine().prepare?.(store.state.settings.dictation.model)
+  setDictationStatus({ phase: 'recording', paneId, intoField: chosen.kind === 'field', progress: null, micLabel: recorder?.label ?? null })
+  if (!recorder) return
+  if (recorder.fellBack) toast(`Your chosen microphone isn't connected, so ${recorder.label} is used. Pick another in Settings > Voice dictation.`, 'info')
+  watchLevel()
+  ensureEngine().prepare?.(store.state.settings.dictation.model)
 }
 
 export async function finishDictation(): Promise<void> {
@@ -152,11 +173,19 @@ export async function finishDictation(): Promise<void> {
   const id = run
   const chosen = target
   const fake = currentFake()
+  const label = recorder?.label ?? 'The microphone'
+  stopWatchingLevel()
   const audio = fake ? new Float32Array(MIN_SAMPLES) : (hook().samples?.slice() ?? recorder?.stop() ?? new Float32Array(0))
   recorder = null
   if (audio.length < MIN_SAMPLES) {
     resetDictationStatus()
     toast('Nothing was recorded. Speak for a little longer, then finish.', 'info')
+    return
+  }
+  // A muted or switched-off microphone sends exact silence; Whisper would only guess at it.
+  if (!fake && peakOf(audio) <= SILENCE_PEAK) {
+    resetDictationStatus()
+    toast(`${label} sent only silence. Check that the headset is on and its mic isn't muted, or pick another microphone in Settings > Voice dictation.`)
     return
   }
   const settings = store.state.settings.dictation
@@ -180,6 +209,7 @@ export async function finishDictation(): Promise<void> {
 export function cancelDictation(): boolean {
   if (dictationStatus().phase === 'idle' && !starting) return false
   run += 1
+  stopWatchingLevel()
   recorder?.cancel()
   recorder = null
   target = null

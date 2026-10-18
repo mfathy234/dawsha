@@ -33,7 +33,7 @@ for (const name of clips) {
     const sandbox = createSandbox()
     mkdirSync(PROFILE, { recursive: true })
     const settings = JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8'))
-    writeFileSync(join(PROFILE, 'settings.json'), JSON.stringify({ ...settings, dictation: { language: 'auto', model: MODEL } }), 'utf8')
+    writeFileSync(join(PROFILE, 'settings.json'), JSON.stringify({ ...settings, dictation: { language: 'auto', model: MODEL, introShown: true } }), 'utf8')
     const file = join(CLIPS!, name)
     const { app, page } = await launchApp(sandbox, { DAWSHA_USER_DATA: PROFILE }, [
       '--use-fake-device-for-media-stream',

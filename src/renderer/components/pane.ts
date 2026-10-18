@@ -57,7 +57,8 @@ import { toggleTimeline } from '../timelineActions'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
 import { toggleDictation } from '../dictation/dictationActions'
-import { onDictationStatus, statusText, type DictationStatus } from '../dictation/dictationState'
+import { dictationIndicator } from '../dictation/dictationIndicator'
+import { onDictationStatus, type DictationStatus } from '../dictation/dictationState'
 
 const RESUMED_CHIP_MS = 60_000
 
@@ -91,7 +92,8 @@ export class PaneComponent {
   private infoSignature = ''
   private readonly hint = h('div', { class: 'pane-hint', role: 'status', hidden: true })
   private hintSignature = ''
-  private readonly dictationStrip = h('div', { class: 'pane-dictation', role: 'status', hidden: true })
+  private readonly dictation = dictationIndicator()
+  private readonly dictationStrip = h('div', { class: 'pane-dictation', role: 'status', hidden: true }, this.dictation.meter, this.dictation.text)
   private readonly mic = iconButton('Dictate (Ctrl+Shift+Space)', ICONS.mic, () => void toggleDictation(), 'pane-mic')
   private readonly stopDictationStatus: () => void
   private readonly drawer = new AgentsDrawer()
@@ -649,7 +651,7 @@ export class PaneComponent {
   private showDictation(status: DictationStatus): void {
     const mine = status.phase !== 'idle' && status.paneId === this.paneId
     this.dictationStrip.hidden = !mine
-    this.dictationStrip.textContent = mine ? statusText(status) : ''
+    this.dictation.update(mine ? status : { ...status, phase: 'idle' })
     this.mic.classList.toggle('recording', mine && status.phase === 'recording')
     this.mic.classList.toggle('busy', mine && status.phase !== 'recording')
     this.mic.setAttribute('aria-pressed', String(mine && status.phase === 'recording'))

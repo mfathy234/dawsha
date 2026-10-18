@@ -4,12 +4,21 @@ export type DictationModel = 'base' | 'small' | 'turbo'
 export interface DictationSettings {
   language: DictationLanguage
   model: DictationModel
+  /** Device id of the microphone to use; '' means the system default. */
+  microphone: string
+  /** Whether the first-use card (local processing, model size) has been shown. */
+  introShown: boolean
 }
 
 export const DICTATION_SHORTCUT = 'Ctrl+Shift+Space'
 export const DICTATION_SAMPLE_RATE = 16_000
 export const DICTATION_MAX_SECONDS = 120
 export const DICTATION_MAX_SAMPLES = DICTATION_SAMPLE_RATE * DICTATION_MAX_SECONDS
+/** Below this peak (about -60 dBFS) a recording is silence: a muted or switched-off microphone sends exact zeros. */
+export const SILENCE_PEAK = 0.001
+/** How long the microphone may stay silent while listening before the indicator says so. */
+export const QUIET_HINT_MS = 2000
+const MAX_DEVICE_ID = 512
 
 export const DICTATION_LANGUAGES: { id: DictationLanguage; label: string }[] = [
   { id: 'auto', label: 'Auto-detect' },
@@ -65,7 +74,7 @@ export const DICTATION_MODELS: DictationModelInfo[] = [
 
 export const modelInfo = (model: DictationModel): DictationModelInfo => DICTATION_MODELS.find((m) => m.id === model) ?? DICTATION_MODELS[0]
 
-export const defaultDictation = (): DictationSettings => ({ language: 'auto', model: 'turbo' })
+export const defaultDictation = (): DictationSettings => ({ language: 'auto', model: 'turbo', microphone: '', introShown: false })
 
 export const isDictationLanguage = (value: unknown): value is DictationLanguage => value === 'auto' || value === 'ar' || value === 'en'
 export const isDictationModel = (value: unknown): value is DictationModel => DICTATION_MODELS.some((m) => m.id === value)
@@ -76,7 +85,9 @@ export function sanitizeDictation(value: unknown): DictationSettings {
   const raw = value as Record<string, unknown>
   return {
     language: isDictationLanguage(raw.language) ? raw.language : defaults.language,
-    model: isDictationModel(raw.model) ? raw.model : defaults.model
+    model: isDictationModel(raw.model) ? raw.model : defaults.model,
+    microphone: typeof raw.microphone === 'string' && raw.microphone.length <= MAX_DEVICE_ID ? raw.microphone : defaults.microphone,
+    introShown: raw.introShown === true
   }
 }
 
@@ -84,6 +95,28 @@ export const modelRepo = (model: DictationModel): string => modelInfo(model).rep
 
 /** Whisper takes a language name; leaving it out lets the model detect the language itself. */
 export const whisperLanguage = (language: DictationLanguage): string | null => (language === 'ar' ? 'arabic' : language === 'en' ? 'english' : null)
+
+/** The largest absolute sample value. */
+export function peakOf(samples: Float32Array): number {
+  let peak = 0
+  for (const value of samples) peak = Math.max(peak, Math.abs(value))
+  return peak
+}
+
+/** Root mean square of the samples. */
+export function rmsOf(samples: Float32Array): number {
+  if (samples.length === 0) return 0
+  let sum = 0
+  for (const value of samples) sum += value * value
+  return Math.sqrt(sum / samples.length)
+}
+
+/** Loudness for a level meter, 0 to 1, on a decibel scale from -60 dBFS (silent) to -10 dBFS (loud speech). */
+export function levelFromRms(rms: number): number {
+  if (rms <= 0) return 0
+  const db = 20 * Math.log10(rms)
+  return Math.min(1, Math.max(0, (db + 60) / 50))
+}
 
 /** Averages interleaved or separate channels down to one. */
 export function downmix(channels: Float32Array[]): Float32Array {

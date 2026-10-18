@@ -8,8 +8,12 @@ import {
   insertAtCaret,
   isTextField,
   joinChunks,
+  levelFromRms,
+  peakOf,
   resample,
+  rmsOf,
   sanitizeDictation,
+  SILENCE_PEAK,
   whisperLanguage
 } from '../../src/shared/dictation'
 import { defaultSettings, migrateSettings } from '../../src/shared/settingsSchema'
@@ -17,20 +21,29 @@ import { bind, matchesBinding } from '../../src/shared/shortcuts'
 import { isMediaPermissionAllowed } from '../../src/shared/mediaPermission'
 
 describe('dictation settings', () => {
-  it('defaults to automatic language and the base model', () => {
-    expect(defaultDictation()).toEqual({ language: 'auto', model: 'turbo' })
-    expect(defaultSettings().dictation).toEqual({ language: 'auto', model: 'turbo' })
+  const DEFAULTS = { language: 'auto', model: 'turbo', microphone: '', introShown: false }
+
+  it('defaults to automatic language, the large turbo model, the system microphone and the intro not yet shown', () => {
+    expect(defaultDictation()).toEqual(DEFAULTS)
+    expect(defaultSettings().dictation).toEqual(DEFAULTS)
   })
 
   it('keeps valid choices and repairs everything else', () => {
-    expect(sanitizeDictation({ language: 'ar', model: 'small' })).toEqual({ language: 'ar', model: 'small' })
+    expect(sanitizeDictation({ language: 'ar', model: 'small', microphone: 'abc123', introShown: true })).toEqual({
+      language: 'ar',
+      model: 'small',
+      microphone: 'abc123',
+      introShown: true
+    })
+    expect(sanitizeDictation({ microphone: 42, introShown: 'yes' })).toEqual(DEFAULTS)
+    expect(sanitizeDictation({ microphone: 'x'.repeat(513) }).microphone).toBe('')
     expect(sanitizeDictation({ language: 'fr', model: 'huge' })).toEqual(defaultDictation())
     expect(sanitizeDictation(null)).toEqual(defaultDictation())
     expect(sanitizeDictation(['ar'])).toEqual(defaultDictation())
   })
 
   it('is read back through the settings migration', () => {
-    expect(migrateSettings({ dictation: { language: 'en', model: 'small' } }).dictation).toEqual({ language: 'en', model: 'small' })
+    expect(migrateSettings({ dictation: { language: 'en', model: 'small' } }).dictation).toEqual({ ...DEFAULTS, language: 'en', model: 'small' })
     expect(migrateSettings({ dictation: 'bad' }).dictation).toEqual(defaultDictation())
   })
 
@@ -120,5 +133,26 @@ describe('microphone permission', () => {
     expect(isMediaPermissionAllowed('media', app, { mediaTypes: ['video', 'audio'] }, app)).toBe(false)
     expect(isMediaPermissionAllowed('media', 'https://evil.example/', { mediaTypes: ['audio'] }, app)).toBe(false)
     expect(isMediaPermissionAllowed('geolocation', app, {}, app)).toBe(false)
+  })
+})
+
+describe('microphone level', () => {
+  it('measures peak and loudness', () => {
+    const samples = new Float32Array([0, 0.5, -0.8, 0.1])
+    expect(peakOf(samples)).toBeCloseTo(0.8)
+    expect(rmsOf(samples)).toBeCloseTo(Math.sqrt((0.25 + 0.64 + 0.01) / 4))
+    expect(rmsOf(new Float32Array(0))).toBe(0)
+  })
+
+  it('treats a muted microphone as silence', () => {
+    expect(peakOf(new Float32Array(16000)) <= SILENCE_PEAK).toBe(true)
+    expect(peakOf(new Float32Array([0.01])) <= SILENCE_PEAK).toBe(false)
+  })
+
+  it('maps loudness to a 0..1 meter on a decibel scale', () => {
+    expect(levelFromRms(0)).toBe(0)
+    expect(levelFromRms(0.0001)).toBe(0)
+    expect(levelFromRms(0.01)).toBeCloseTo(0.4)
+    expect(levelFromRms(0.5)).toBe(1)
   })
 })

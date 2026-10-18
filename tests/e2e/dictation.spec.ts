@@ -115,7 +115,80 @@ test('the language and model settings are shown, saved and sanitized', async () 
     await expect(page.locator('#dictation-model-note')).toContainText('works offline')
     await page.locator('#dictation-language').selectOption('ar')
     await page.locator('#dictation-model').selectOption('small')
-    await expect.poll(() => readSettings(sandbox.userData).dictation).toEqual({ language: 'ar', model: 'small' })
+    await expect.poll(() => readSettings(sandbox.userData).dictation).toMatchObject({ language: 'ar', model: 'small', microphone: '' })
+    await expect(page.locator('#dictation-microphone')).toHaveValue('')
+  } finally {
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
+  }
+})
+
+const useSamples = (page: Page, samples: number[] | null, length = 0): Promise<void> =>
+  page.evaluate(
+    ([values, size]) => {
+      const hook = (window as unknown as { __dictationTest: { samples: Float32Array | null } }).__dictationTest
+      hook.samples = values ? new Float32Array(values) : new Float32Array(size as number)
+    },
+    [samples, length] as const
+  )
+
+test('a microphone that sends only silence is reported and never transcribed', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launch(sandbox)
+  try {
+    const id = await startEcho(page)
+    await useSamples(page, null, 16000 * 2)
+    const mic = page.locator('.pane-mic')
+    await mic.click()
+    await expect(mic).toHaveClass(/recording/)
+    await mic.click()
+    await expect(page.locator('.toast').last()).toContainText('sent only silence')
+    await expect(page.locator('.toast').last()).toContainText('Settings > Voice dictation')
+    expect(await lastInput(page, id)).not.toContain('GOT')
+    await expect(mic).not.toHaveClass(/recording/)
+  } finally {
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
+  }
+})
+
+test('the first mic press explains local dictation, then listening shows a live level meter', async () => {
+  const sandbox = createSandbox()
+  // Chromium's fake microphone plays a steady beep, so the meter has something to show without a real device.
+  const { app, page } = await launchApp(
+    sandbox,
+    { DAWSHA_CLAUDE_COMMAND: process.execPath, DAWSHA_CLAUDE_ARGS: JSON.stringify([ECHO]) },
+    ['--use-fake-device-for-media-stream']
+  )
+  try {
+    const id = await startEcho(page)
+    const mic = page.locator('.pane-mic')
+    await mic.click()
+    const intro = page.getByRole('dialog', { name: 'Voice dictation' })
+    await expect(intro).toBeVisible()
+    await expect(intro).toContainText('never leaves it')
+    await expect(intro).toContainText('MB')
+    await intro.getByRole('button', { name: 'Not now' }).click()
+    await expect(intro).toBeHidden()
+    await expect(mic).not.toHaveClass(/recording/)
+    expect(readSettings(sandbox.userData).dictation?.introShown ?? false).toBe(false)
+
+    await mic.click()
+    await intro.locator('#dictation-intro-language').selectOption('ar')
+    await intro.getByRole('button', { name: 'Start dictating' }).click()
+    await expect(mic).toHaveClass(/recording/)
+    const meter = page.locator('.pane-dictation .dictation-meter')
+    await expect(meter).toBeVisible()
+    await expect.poll(async () => Number(await meter.getAttribute('aria-valuenow')), { timeout: 10_000 }).toBeGreaterThan(0)
+    await expect.poll(() => readSettings(sandbox.userData).dictation).toMatchObject({ introShown: true, language: 'ar' })
+    await page.screenshot({ path: resolve(__dirname, '../../test-results/screens/dictation-listening.png') })
+    await page.keyboard.press('Escape')
+    await expect(mic).not.toHaveClass(/recording/)
+    expect(await lastInput(page, id)).not.toContain('GOT')
+
+    // Pressed again, it records straight away.
+    await mic.click()
+    await expect(mic).toHaveClass(/recording/)
+    await expect(intro).toBeHidden()
+    await page.keyboard.press('Escape')
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
