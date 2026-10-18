@@ -1523,6 +1523,49 @@ input[type='checkbox'] {
   padding-top: 16px;
 }
 
+.term-arabic-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.term-arabic-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  white-space: pre;
+  unicode-bidi: isolate;
+  background: var(--arabic-bg);
+  color: var(--arabic-fg);
+  font-variant-ligatures: normal;
+}
+
+.term-arabic-cursor {
+  background: var(--arabic-cursor);
+  color: var(--arabic-bg);
+  outline: 1px solid var(--arabic-cursor);
+  outline-offset: -1px;
+}
+
+.term-host:focus-within .term-arabic-cursor {
+  animation: term-arabic-blink 1.2s steps(1) infinite;
+}
+
+.term-host:not(:focus-within) .term-arabic-cursor {
+  background: transparent;
+  color: inherit;
+}
+
+@keyframes term-arabic-blink {
+  50% {
+    background: transparent;
+    color: inherit;
+  }
+}
+
 .term-host .xterm,
 .term-host .xterm-viewport,
 .term-host .xterm-scrollable-element {
