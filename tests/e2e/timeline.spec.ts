@@ -151,7 +151,8 @@ test('Ctrl+Shift+T and the palette toggle the timeline, and Escape closes it', a
     await page.keyboard.press('Escape')
     await expect(page.locator('.replay-picker')).toBeHidden()
     // The pane header has its own Replay button too.
-    await page.locator('.pane').first().getByRole('button', { name: 'Replay session' }).click()
+    await page.locator('.pane').first().getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Replay session' }).click()
     await expect(page.locator('.replay-picker')).toBeVisible()
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Close timeline' }).click()

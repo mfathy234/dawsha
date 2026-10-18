@@ -912,9 +912,6 @@ button {
 }
 
 @container pane-header (max-width: 640px) {
-  .pane-header .pane-prev,
-  .pane-header .pane-next,
-  .pane-header .pane-vscode,
   .pane-header .chip-compare,
   .pane-header .chip-from {
     display: none;
@@ -945,6 +942,12 @@ button {
 
 .pane-header > .icon-btn {
   flex: 0 0 28px;
+}
+
+/* Previous and next pane only matter in full mode, where the grid is hidden. */
+.pane:not(.maximized) .pane-header > .pane-prev,
+.pane:not(.maximized) .pane-header > .pane-next {
+  display: none;
 }
 
 .pane-fresh {
@@ -6247,12 +6250,6 @@ body.dragging-ui {
   .pane-header .pane-project {
     display: none;
   }
-
-  /* Timeline and Replay stay in the pane menu; on narrow panes the title needs the room. */
-  .pane-header .pane-timeline,
-  .pane-header .pane-replay {
-    display: none;
-  }
 }
 
 @container pane-header (max-width: 400px) {
@@ -6261,10 +6258,6 @@ body.dragging-ui {
     padding: 0;
     justify-content: center;
     font-size: 0;
-  }
-
-  .pane-header .pane-move {
-    display: none;
   }
 }
 

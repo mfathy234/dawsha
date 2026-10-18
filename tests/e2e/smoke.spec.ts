@@ -205,7 +205,8 @@ test('reorders panes from the move menu and the keyboard, and opens pane menus n
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
 
-    await panes.nth(2).getByRole('button', { name: 'Move pane' }).click()
+    await panes.nth(2).getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Move pane…' }).click()
     await expect(menu.getByRole('menuitem')).toHaveCount(3)
     await menu.getByRole('menuitem').first().click()
     await expect

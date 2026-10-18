@@ -41,6 +41,7 @@ import {
   jumpPrompt
 } from '../terminalActions'
 import { exportTranscript } from '../transcriptActions'
+import { replayPane } from '../replayActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setSessionsLayout } from '../sessionsLayout'
@@ -246,6 +247,7 @@ export function installBuiltinCommands(): void {
       ...focusedAction('timeline.search-all', 'Search all session timelines…', (id) => openTimelineWith(id, { scope: 'all' }), 'find prompts edits commands tests old closed past sessions history'),
       ...withKeys('Ctrl+Alt+F')
     },
+    focusedAction('pane.replay', 'Replay the session', replayPane, 'play back terminal recording history'),
     focusedAction('pane.transcript', 'Export transcript…', exportTranscript, 'save markdown html conversation chat history'),
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),
     focusedAction('pane.close', 'Close the pane', closePane, 'stop session'),

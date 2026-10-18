@@ -128,10 +128,6 @@ export class PaneComponent {
       h('span', { class: 'spacer' }),
       this.tabAdd,
       this.mic,
-      iconButton('Session timeline', ICONS.history, () => toggleTimeline(paneId), 'pane-timeline'),
-      iconButton('Replay session', ICONS.replay, () => void replayPane(paneId), 'pane-replay'),
-      iconButton('Open in VS Code', ICONS.code, () => void openPaneFolder(paneId, 'vscode'), 'pane-vscode'),
-      iconButton('Move pane', ICONS.layout, () => this.toggleMove(), 'pane-move'),
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
       iconButton('Previous pane', ICONS.prev, () => focusRelative(-1), 'pane-prev'),
       iconButton('Next pane', ICONS.next, () => focusRelative(1), 'pane-next'),
@@ -377,7 +373,7 @@ export class PaneComponent {
       this.closeActions()
     })
     this.el.append(this.actionsMenu)
-    placeNearAnchor(this.actionsMenu, this.el.querySelector('.pane-move'))
+    placeNearAnchor(this.actionsMenu, this.el.querySelector('.pane-actions'))
     items.find((b) => !(b as HTMLButtonElement).disabled)?.focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outsideActions, true), 0)
     document.addEventListener('keydown', this.escapeActions, true)
@@ -454,11 +450,12 @@ export class PaneComponent {
       studioItem,
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),
       item('Open terminal here', () => addTab(this.paneId, 'shell'), ICONS.terminal),
+      item('Move pane…', () => this.toggleMove(), ICONS.layout),
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
-      item('Replay session', () => replayPane(this.paneId), ICONS.replay),
+      item('Replay session', () => replayPane(this.paneId), ICONS.replay, 'pane.replay'),
       pauseItem,
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
