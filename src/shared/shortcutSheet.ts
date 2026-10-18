@@ -36,7 +36,9 @@ export function fixedEntries(paletteKeys: string, mod: string): Array<SheetEntry
     { group: 'Terminal', title: 'Reset the pane text size', keys: `${mod}+0` },
     { group: 'Terminal', title: 'Interrupt the agent (Esc stays in the terminal, also in full mode)', keys: 'Esc' },
     { group: 'Panes', title: 'Leave full mode when focus is outside the terminal', keys: 'Esc' },
-    { group: 'Panes', title: 'Next terminal tab in a pane', keys: 'Tab' }
+    { group: 'Panes', title: 'Next terminal tab in a pane', keys: 'Ctrl+PageDown' },
+    { group: 'Panes', title: 'Previous terminal tab in a pane', keys: 'Ctrl+PageUp' },
+    { group: 'Terminal', title: 'Tab and Shift+Tab go to the agent (Claude Code mode switch, shell completion)', keys: 'Tab' }
   ]
 }
 

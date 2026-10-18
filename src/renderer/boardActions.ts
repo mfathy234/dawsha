@@ -42,6 +42,8 @@ export function sendReply(paneId: string, text: string): boolean {
     return false
   }
   terminal.insertText(reply)
+  // Mark the prompt as typing Enter would, so Copy last reply and Ctrl+Up point at this reply.
+  terminal.prompts.noteInput('\r')
   api.write(view.primaryTabId, '\r')
   return true
 }

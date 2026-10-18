@@ -46,6 +46,11 @@ function peekShouldClose(event: KeyboardEvent): boolean {
   return !inTerminal(event)
 }
 
+function inTerminalOrField(event: KeyboardEvent): boolean {
+  const target = event.target as HTMLElement | null
+  return target?.closest('.xterm, input, textarea, select, [contenteditable="true"]') != null
+}
+
 function consume(event: KeyboardEvent): void {
   event.preventDefault()
   event.stopPropagation()
@@ -95,11 +100,15 @@ function onKeyDown(event: KeyboardEvent): void {
     }
     return
   }
-  if (event.key === 'Tab' && state.focusedId) {
+  // Ctrl+PageDown/PageUp switch a pane's terminal tabs from anywhere. Tab does it only outside the terminal and text
+  // boxes: there Tab and Shift+Tab belong to the agent (Claude's mode switch, shell completion) or the field.
+  const pageKey = (event.key === 'PageDown' || event.key === 'PageUp') && event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey
+  const plainTab = event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.metaKey && !inTerminalOrField(event)
+  if ((pageKey || plainTab) && state.focusedId) {
     const focused = state.panes.find((pane) => pane.id === state.focusedId)
     if (focused && focused.tabs.length > 1) {
       consume(event)
-      cycleActiveTab(event.shiftKey ? -1 : 1)
+      cycleActiveTab(pageKey ? (event.key === 'PageUp' ? -1 : 1) : event.shiftKey ? -1 : 1)
       return
     }
   }
