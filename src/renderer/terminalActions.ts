@@ -16,7 +16,6 @@ export function jumpPrompt(direction: 1 | -1): void {
   focusedTerminal()?.prompts.jump(direction)
 }
 
-export const focusedHasSelection = (): boolean => focusedTerminal()?.hasSelection() ?? false
 
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? '' : 's'}`
 

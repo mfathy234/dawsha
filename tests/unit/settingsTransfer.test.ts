@@ -16,10 +16,9 @@ import {
   type TransferData,
   type TransferMode
 } from '../../src/shared/settingsTransfer'
-import type { Project, SavedLayout, Settings, Snippet } from '../../src/shared/types'
+import type { Project, SavedLayout, Settings } from '../../src/shared/types'
 
 const project = (id: string, folder: string, name = id): Project => ({ id, name, folder, defaultAgent: 'claude' })
-const snippet = (id: string, name: string, projectId: string | null = null): Snippet => ({ id, name, text: `text ${name}`, projectId, shortcut: null })
 const layout = (id: string, name: string, projectId: string): SavedLayout => ({
   id,
   name,
@@ -32,7 +31,6 @@ function rich(): Settings {
   return {
     ...defaultSettings(),
     projects: [project('a', 'C:\\work\\alpha', 'Alpha'), project('b', 'C:\\work\\beta', 'Beta')],
-    snippets: [snippet('s1', 'Review', 'a'), snippet('s2', 'Global')],
     layouts: [layout('l1', 'Morning', 'a')],
     sessionsLayout: 'board',
     paletteShortcut: 'Alt+Space',
@@ -78,10 +76,9 @@ describe('what is exported', () => {
     expect(text).not.toContain('bg.png')
   })
 
-  it('keeps projects, snippets, layouts and preferences', () => {
+  it('keeps projects, layouts and preferences', () => {
     const data = buildTransferData(rich())
     expect(data.projects).toHaveLength(2)
-    expect(data.snippets).toHaveLength(2)
     expect(data.layouts).toHaveLength(1)
     expect(data.sessionsLayout).toBe('board')
     expect(data.paletteShortcut).toBe('Alt+Space')
@@ -98,13 +95,23 @@ describe('what is exported', () => {
 })
 
 describe('parseTransfer', () => {
+  it('still reads an older export that carries snippets and drops them', () => {
+    const envelope = { ...buildEnvelope(rich(), '1.0.0', new Date()) }
+    const old = { ...envelope, data: { ...envelope.data, snippets: [{ id: 's1', name: 'Old', text: 'text', projectId: null, shortcut: 1 }] } }
+    const result = parseTransfer(JSON.stringify(old))
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.transfer.data.projects).toHaveLength(2)
+      expect('snippets' in result.transfer.data).toBe(false)
+    }
+  })
+
   it('round-trips an exported envelope', () => {
     const envelope = buildEnvelope(rich(), '1.0.0', new Date())
     const result = parseTransfer(JSON.stringify(envelope))
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.transfer.data.projects).toHaveLength(2)
-      expect(result.transfer.data.snippets).toHaveLength(2)
       expect(result.transfer.appVersion).toBe('1.0.0')
     }
   })
@@ -165,7 +172,6 @@ describe('planImport merge', () => {
   const incoming = (): Partial<TransferData> =>
     parsed({
       projects: [project('a', 'c:\\work\\alpha\\', 'Alpha import'), project('z', 'D:\\new\\zed', 'Zed')],
-      snippets: [snippet('s9', 'Review', 'a'), snippet('s8', 'Zed only', 'z'), snippet('s7', 'Global')],
       layouts: [layout('l9', 'morning', 'a'), layout('l8', 'Zed day', 'z')],
       sessionsLayout: 'board',
       theme: { id: 'nord' }
@@ -182,18 +188,16 @@ describe('planImport merge', () => {
     expect(previewLines(plan.summary).join('\n')).toContain('1 folder not found')
   })
 
-  it('adds snippets and layouts by name, remapping project ids', () => {
+  it('adds layouts by name, remapping project ids', () => {
     const current = {
       ...defaultSettings(),
       projects: [project('keep', 'C:\\work\\alpha')],
-      snippets: [snippet('x', 'Review', 'keep')],
       layouts: [layout('lx', 'Morning', 'keep')]
     }
     const plan = run(current, incoming(), 'merge')
-    expect(plan.patch.snippets?.map((s) => s.name)).toEqual(['Review', 'Zed only', 'Global'])
     expect(plan.patch.layouts?.map((l) => l.name)).toEqual(['Morning', 'Zed day'])
     expect(plan.patch.layouts?.[1].panes[0].projectId).toBe(plan.patch.projects?.find((p) => p.name === 'Zed')?.id)
-    expect(plan.summary).toMatchObject({ snippetsNew: 2, layoutsNew: 1 })
+    expect(plan.summary).toMatchObject({ layoutsNew: 1 })
   })
 
   it('gives imported items a fresh id when theirs is already taken', () => {
@@ -222,19 +226,15 @@ describe('planImport replace', () => {
     const current = rich()
     const data = parsed({
       projects: [project('q', 'c:/work/alpha', 'Alpha new'), project('n', 'D:\\n', 'Nova')],
-      snippets: [snippet('s', 'Only one', 'q')],
       layouts: []
     })
     const plan = run(current, data, 'replace')
     expect(plan.patch.projects?.map((p) => [p.id, p.name])).toEqual([['a', 'Alpha new'], ['n', 'Nova']])
-    expect(plan.patch.snippets).toEqual([expect.objectContaining({ name: 'Only one', projectId: 'a' })])
     expect(plan.patch.layouts).toEqual([])
     expect(plan.summary.removedProjects).toEqual(['Beta'])
-    expect(plan.summary.replacedSnippets).toBe(2)
     expect(plan.summary.replacedLayouts).toBe(1)
     const warning = replaceWarning(plan.summary, 2)
     expect(warning).toContain('Beta')
-    expect(warning).toContain('2 snippets')
     expect(warning).toContain('2 open sessions')
   })
 

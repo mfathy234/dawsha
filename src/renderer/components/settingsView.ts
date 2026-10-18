@@ -541,7 +541,7 @@ export class SettingsViewComponent {
         h('div', { class: 'set-inline' },
           h('button', { class: 'btn ghost small', type: 'button', id: 'export-settings', onClick: () => void exportSettingsFromUi() }, 'Export settings…'),
           h('button', { class: 'btn ghost small', type: 'button', id: 'import-settings', onClick: () => void importSettingsFromUi() }, 'Import settings…')),
-        h('p', { class: 'hint' }, 'Save your projects, snippets, layouts, highlight rules and preferences to one file to move Dawsha to another PC. Remote Access, open sessions and usage history are never included.')
+        h('p', { class: 'hint' }, 'Save your projects, layouts, highlight rules and preferences to one file to move Dawsha to another PC. Remote Access, open sessions and usage history are never included.')
       ),
       ...(this.paneonImport?.available ? [row(
         'Paneon settings',
@@ -553,7 +553,7 @@ export class SettingsViewComponent {
         h('p', { class: 'hint', id: 'paneon-import-summary' },
           this.paneonImport.pending
             ? 'Import queued; close and reopen Dawsha to apply it.'
-            : this.paneonImport.error ?? `${this.paneonImport.projects} project${this.paneonImport.projects === 1 ? '' : 's'}, ${this.paneonImport.layouts} layout${this.paneonImport.layouts === 1 ? '' : 's'} and ${this.paneonImport.snippets} snippet${this.paneonImport.snippets === 1 ? '' : 's'} found. Your current Dawsha settings will be backed up.`
+            : this.paneonImport.error ?? `${this.paneonImport.projects} project${this.paneonImport.projects === 1 ? '' : 's'}, ${this.paneonImport.layouts} layout${this.paneonImport.layouts === 1 ? '' : 's'} found. Your current Dawsha settings will be backed up.`
         )
       )] : [])
     ]

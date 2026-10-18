@@ -37,7 +37,6 @@ import { closeOrchPane, openOrchPane, refreshOrch } from './orchActions'
 import { installHandoffCommands } from './commands/handoff'
 import { installLayoutCommands } from './commands/layouts'
 import { installReplayCommands } from './commands/replay'
-import { installSnippetCommands } from './commands/snippets'
 import { installSettingsTransferCommands } from './commands/settingsTransfer'
 import { installKeyboard } from './keyboard'
 import { store } from './state'
@@ -110,7 +109,6 @@ async function boot(): Promise<void> {
   installCompareCommands()
   installHandoffCommands()
   installReplayCommands()
-  installSnippetCommands()
   installSettingsTransferCommands()
   installOrchestratorCommands()
   installKeyboard()

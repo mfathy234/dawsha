@@ -42,7 +42,7 @@ export function compareDialog(options: CompareDialogOptions): Promise<boolean> {
   const agentA = agentSelect(`cmp-a-${id}`, 'claude')
   const agentB = agentSelect(`cmp-b-${id}`, 'codex')
   const prompt = h('textarea', {
-    class: 'text-input snippet-text',
+    class: 'text-input dialog-text',
     id: `cmp-prompt-${id}`,
     rows: '4',
     maxlength: String(COMPARE_PROMPT_MAX),

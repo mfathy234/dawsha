@@ -3,6 +3,5 @@ export interface PaneonImportPreview {
   pending: boolean
   projects: number
   layouts: number
-  snippets: number
   error: string | null
 }

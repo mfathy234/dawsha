@@ -22,7 +22,7 @@ function readSettingsFile(path: string): Settings {
 export function previewPaneonImport(paneonDir: string, dawshaDir: string): PaneonImportPreview {
   const pending = existsSync(join(dawshaDir, PENDING_FILE))
   const source = join(paneonDir, 'settings.json')
-  if (!existsSync(source)) return { available: false, pending, projects: 0, layouts: 0, snippets: 0, error: null }
+  if (!existsSync(source)) return { available: false, pending, projects: 0, layouts: 0, error: null }
   try {
     const settings = readSettingsFile(source)
     return {
@@ -30,11 +30,10 @@ export function previewPaneonImport(paneonDir: string, dawshaDir: string): Paneo
       pending,
       projects: settings.projects.length,
       layouts: settings.layouts.length,
-      snippets: settings.snippets.length,
       error: null
     }
   } catch {
-    return { available: true, pending, projects: 0, layouts: 0, snippets: 0, error: 'Paneon settings could not be read.' }
+    return { available: true, pending, projects: 0, layouts: 0, error: 'Paneon settings could not be read.' }
   }
 }
 

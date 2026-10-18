@@ -9,7 +9,6 @@ import { ICONS } from '../icons'
 import type { AppState, ProjectsTab } from '../state'
 import { agentMark } from './agentMark'
 import { InstructionsPanelComponent } from './instructionsPanel'
-import { SnippetsPanelComponent } from './snippetsPanel'
 import { stateIcon } from './stateIcon'
 import { TasksPanelComponent } from './tasksPanel'
 
@@ -36,7 +35,6 @@ export class ProjectsViewComponent {
   private signature = ''
   private current: AppState | null = null
 
-  private readonly snippets = new SnippetsPanelComponent()
   private readonly tasks = new TasksPanelComponent()
   private readonly instructions = new InstructionsPanelComponent()
   private readonly tabs = new Map<ProjectsTab, HTMLElement>()
@@ -58,13 +56,11 @@ export class ProjectsViewComponent {
       ),
       this.rows
     )
-    this.snippets.el.setAttribute('role', 'tabpanel')
-    this.snippets.el.id = 'panel-snippets'
     this.instructions.el.setAttribute('role', 'tabpanel')
     this.instructions.el.id = 'panel-instructions'
     this.tasks.el.setAttribute('role', 'tabpanel')
     this.tasks.el.id = 'panel-tasks'
-    this.el.append(h('h1', {}, 'Projects'), this.tabBar(), this.projectsPanel, this.tasks.el, this.snippets.el, this.instructions.el)
+    this.el.append(h('h1', {}, 'Projects'), this.tabBar(), this.projectsPanel, this.tasks.el, this.instructions.el)
   }
 
   private tabBar(): HTMLElement {
@@ -86,7 +82,6 @@ export class ProjectsViewComponent {
     }
     return h('div', { class: 'rp-tabs proj-tabs', role: 'tablist', 'aria-label': 'Projects view' }, tab('projects', 'Projects'),
       tab('tasks', 'Tasks'),
-      tab('snippets', 'Snippets'),
       tab('instructions', 'Instructions')
     )
   }
@@ -100,14 +95,12 @@ export class ProjectsViewComponent {
     }
     this.projectsPanel.hidden = state.projectsTab !== 'projects'
     this.tasks.el.hidden = state.projectsTab !== 'tasks'
-    this.snippets.el.hidden = state.projectsTab !== 'snippets'
     this.instructions.el.hidden = state.projectsTab !== 'instructions'
   }
 
   update(state: AppState): void {
     this.current = state
     this.updateTabs(state)
-    this.snippets.update(state)
     this.tasks.update(state)
     this.instructions.update(state)
     if (state.view !== 'projects') this.closeMenu()

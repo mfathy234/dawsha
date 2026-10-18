@@ -26,7 +26,7 @@ export function peekInGrid(paneId: string): void {
   focusPane(paneId)
 }
 
-/** Sends a reply to the pane's agent terminal: typed in like a snippet, then Enter. */
+/** Sends a reply to the pane's agent terminal: typed in, then Enter. */
 export function sendReply(paneId: string, text: string): boolean {
   const reply = text.trim()
   const view = derivePanes(store.state).find((v) => v.pane.id === paneId)

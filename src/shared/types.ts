@@ -89,14 +89,6 @@ export interface SavedLayout {
   splits?: GridSplits
 }
 
-export interface Snippet {
-  id: string
-  name: string
-  text: string
-  projectId: string | null
-  shortcut: number | null
-}
-
 export interface KeptSession {
   projectId: string
   agent: AgentKind
@@ -132,7 +124,6 @@ export interface Settings {
   onboardingDismissed: boolean
   workspace: Workspace
   layouts: SavedLayout[]
-  snippets: Snippet[]
   keptSessions: KeptSession[]
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
   ticketNotes: import('./ticketNotes').TicketNotes
