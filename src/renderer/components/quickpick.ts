@@ -18,6 +18,7 @@ import { agentMark } from './agentMark'
 import { chargeBar } from './chargeBar'
 import { modeTabs } from './pickerTabs'
 import type { AppState } from '../state'
+import { getTerminal } from '../terminals'
 
 const MAC = navigator.platform.toLowerCase().includes('mac')
 
@@ -38,6 +39,7 @@ export class QuickPickComponent {
   private preset: AgentPreset = 'default'
   private overrides: AgentOverrides = {}
   private state: AppState | null = null
+  private focusedAtOpen: string | null = null
   private views: PaneView[] = []
 
   constructor(private readonly anchor: () => HTMLElement) {}
@@ -55,6 +57,7 @@ export class QuickPickComponent {
   }
 
   private open(): void {
+    this.focusedAtOpen = this.state?.focusedId ?? null
     this.input = h('input', {
       class: 'text-input rp-search',
       type: 'text',
@@ -130,7 +133,12 @@ export class QuickPickComponent {
     this.list = null
     this.agents = null
     this.start = null
-    if (!stillOpen) this.anchor().focus()
+    if (stillOpen) return
+    // A session started from here is the focused pane now: type into it, not the button that opened the pick.
+    const pane = this.state?.focusedId !== this.focusedAtOpen ? this.state?.panes.find((p) => p.id === this.state?.focusedId) : undefined
+    const terminal = pane ? getTerminal(pane.activeTabId) : undefined
+    if (terminal) terminal.focus()
+    else this.anchor().focus()
   }
 
   private startSelected(): void {

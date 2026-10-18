@@ -105,6 +105,8 @@ test('opens panes from the quick pick with the keyboard and reopens them on the 
     await first.page.keyboard.press('Enter')
     await expect(first.page.locator('.pane')).toHaveCount(1)
     await expect(first.page.locator('.quickpick')).toHaveCount(0)
+    // Typing goes straight into the new session, not to the button that opened the pick.
+    await expect(first.page.locator('.pane .term-host.active .xterm-helper-textarea')).toBeFocused()
     await first.page.keyboard.press('Control+n')
     await expect(first.page.locator('.quickpick')).toHaveCount(1)
     await first.page.keyboard.press('Enter')
