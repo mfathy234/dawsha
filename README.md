@@ -21,6 +21,8 @@
 
 - **A grid of real terminals.** 1 to 6+ panes laid out automatically, each a full terminal (xterm.js on `node-pty`) with tabs for more agent sessions or a shell. Maximize any pane, zoom text per project.
 - **Three agents, one workflow.** Pick a project and its default agent starts in that folder without a prompt. Switch agent per session with the split **New session** button (Claude / Codex / Gemini) or Tab in the quick-pick.
+- **Arabic in every session.** Replies and prompts in Arabic show joined letters in right-to-left order in Claude Code, Codex, Gemini and shell sessions and in Replay, with numbers and English words kept in place. Copy, transcripts and find use normal reading order, and the terminal text itself is never changed. A bundled Arabic font and right-to-left text boxes make Arabic look the same on every computer.
+- **Voice dictation.** Press the mic in a pane header or **Ctrl+Shift+Space**, speak Arabic or English, and press it again; the text is typed into the session or the text box you were in, without sending it. Speech becomes text on your computer with Whisper large-v3-turbo (a one-time download of about 570 MB, then offline), with a live microphone level and a microphone picker in Settings.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Activity per pane.** Native child-process activity works for Claude, Codex and Gemini without a mod. An optional Claude ops feed adds plan progress and sub-agent details. Context and any available 5-hour/weekly limits stay with their own pane.
 - **Arrange panes your way.** Drag the borders between panes to resize them, drag a pane by its header or a tab along its strip to reorder, or use the **Move pane** button and the keyboard. Pin a pane so it stays beside whichever pane you maximize. Switch panes with **Ctrl+Tab**, jump to one with **Ctrl+1** to **Ctrl+9**, or to the next one waiting on you with **Ctrl+Shift+J**.
@@ -33,6 +35,7 @@
 - **Resize the Projects panel.** Drag its edge or focus the divider and use the arrow keys; Dawsha remembers the width between launches.
 - **Task history.** The Projects > Tasks tab groups related sessions, a task goal, notes and commit references in a dated history that remains after sessions close.
 - **Gemini tool activity.** Gemini panes show the latest tool from the agent's saved chat, with recent tool calls in the activity drawer when available.
+- **Keyboard shortcuts sheet.** **Ctrl+/** lists every shortcut, grouped and searchable.
 - **A command palette.** **Ctrl+K** searches your open sessions, actions, projects and layouts in one list and runs what you pick from the keyboard.
 - **Saved layouts.** Save the current panes under a name and bring the same setup back later, resuming each agent's session, from the **Layouts** menu, the palette or `dawsha open <layout>`.
 - **Ask two agents.** Send one prompt to two agents at once, each optionally in its own git worktree, watch them side by side and keep one, keep both or diff them.
@@ -63,6 +66,10 @@
 - **Settings in one place.** A Settings view (Ctrl+,) for the palette shortcut, notifications and live session info, full access per agent, updates, the full changelog and where your data lives.
 - **Themes.** Seven themes (Dawsha, Dawsha Cards, Graphite Cards, Dawsha Daylight, Nord, Catppuccin Mocha, GitHub Light) with contrast checks, plus an optional background image. The Cards and Daylight themes draw each pane as a card with its terminal inset.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
+
+| Arabic in a Claude Code pane | Voice dictation |
+|---|---|
+| ![A Claude Code pane with an Arabic prompt and reply, joined and right to left, with a file name and a number in place](docs/screenshots/arabic.png) | ![A pane while dictating, with the mic button red and a live microphone level meter](docs/screenshots/dictation.png) |
 
 | Sessions board | Peek at a card |
 |---|---|
