@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { QUIT_BUDGET_MS, activeTermId, bufferText, closeApp, closeBounded, createSandbox, fontSize, launchApp } from './helpers'
+import { QUIT_BUDGET_MS, activeTermId, bufferText, closeApp, closeBounded, createSandbox, fontSize, lastInput, launchApp } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -37,6 +37,13 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await expect(page.locator('.sidebar.rail')).toHaveCount(1)
     await expect(page.locator('.pane-strip')).toBeVisible()
     await page.screenshot({ path: join(SCREENS, '3-maximized.png') })
+    // Esc inside a terminal goes to the agent and never leaves full mode, whatever the status says.
+    const fullId = await activeTermId(page)
+    await page.locator('.term-host.active .xterm-helper-textarea').focus()
+    await page.keyboard.press('Escape')
+    await expect.poll(() => lastInput(page, fullId)).toBe('')
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
     await page.keyboard.press('Escape')
     await expect(page.locator('.pane.maximized')).toHaveCount(0)
     await expect(page.locator('.sidebar.rail')).toHaveCount(0)

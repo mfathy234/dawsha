@@ -3,7 +3,6 @@ import { DEFAULT_PALETTE_SHORTCUT } from '../shared/settingsSchema'
 import { bind, formatShortcut, matchesBinding, parseShortcut, type KeyBinding, type KeyEventLike } from '../shared/shortcuts'
 import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, zoomPane } from './actions'
 import { commandForEvent } from './commands/registry'
-import { derivePanes } from './derive'
 import { store, type AppState } from './state'
 import { closeTimeline } from './timelineActions'
 import { closePeek } from './boardActions'
@@ -36,20 +35,15 @@ function zoomDelta(event: KeyboardEvent): number | 'reset' | null {
   return null
 }
 
+// Esc inside a terminal always belongs to the agent: session status lags, so guessing "busy" made interrupts take two presses.
+const inTerminal = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.xterm') != null
+
 function escapeShouldRestore(event: KeyboardEvent): boolean {
-  const { maximizedId, focusedId } = store.state
-  if (!maximizedId) return false
-  const inTerminal = (event.target as HTMLElement | null)?.closest('.xterm') !== null
-  if (!inTerminal) return true
-  const focused = derivePanes(store.state).find((v) => v.pane.id === focusedId)
-  return focused?.status !== 'busy'
+  return store.state.maximizedId !== null && !inTerminal(event)
 }
 
 function peekShouldClose(event: KeyboardEvent): boolean {
-  const inTerminal = (event.target as HTMLElement | null)?.closest('.xterm') != null
-  if (!inTerminal) return true
-  const peeked = derivePanes(store.state).find((v) => v.pane.id === store.state.boardPeekId)
-  return peeked?.status !== 'busy'
+  return !inTerminal(event)
 }
 
 function consume(event: KeyboardEvent): void {
