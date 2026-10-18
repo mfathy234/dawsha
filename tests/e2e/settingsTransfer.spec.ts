@@ -79,7 +79,7 @@ test('exports settings without remote access data and imports them into a fresh 
     const confirm = page.getByRole('alertdialog', { name: 'Replace your projects and layouts?' })
     await expect(confirm).toContainText('Smoke')
     await expect(confirm).toContainText('Missing')
-    await expect(confirm.getByRole('button', { name: 'Replace 2 projects, 1 layouts' })).toBeVisible()
+    await expect(confirm.getByRole('button', { name: 'Replace and remove 2 projects, 1 layout' })).toBeVisible()
     await confirm.getByRole('button', { name: 'Cancel' }).click()
     expect(readSettings(target.userData).projects).toHaveLength(4)
 

@@ -19,9 +19,16 @@ test('Ctrl+/ and the palette open a searchable, read-only keyboard shortcuts she
     await expect(sheet.getByRole('listitem').filter({ hasText: 'Open the command palette' }).locator('kbd')).toHaveText('Ctrl+K')
     await expect(sheet.getByRole('listitem').filter({ hasText: 'New session' }).first().locator('kbd')).toHaveText('Ctrl+N')
     await expect(sheet.getByRole('listitem').filter({ hasText: 'Keyboard shortcuts' }).locator('kbd')).toHaveText('Ctrl+/')
+    // The nine Focus pane keys are one row, and the search box has the app's text box look.
+    await expect(sheet.locator('.shortcuts-list li').filter({ hasText: /^Focus pane/ })).toHaveCount(1)
+    await expect(sheet.locator('.shortcuts-list li').filter({ hasText: 'Focus pane 1–9' }).locator('kbd')).toHaveText('Ctrl+1…9')
+    await expect(page.getByRole('searchbox', { name: 'Search shortcuts' })).toHaveClass(/text-input/)
     await page.screenshot({ path: join(SCREENS, 'shortcuts-sheet.png') })
 
     // Filtering as you type, by title, by keys and by group; nothing in it is editable beyond the search box.
+    await page.keyboard.type('focus pane 3')
+    await expect(sheet.locator('.shortcuts-list li')).toHaveText([/Focus pane 1–9/])
+    await page.getByRole('searchbox', { name: 'Search shortcuts' }).fill('')
     await page.keyboard.type('timeline')
     await expect(sheet.locator('.shortcuts-list li')).toHaveCount(2)
     await expect(sheet.locator('.shortcuts-list li').filter({ hasText: 'Show session timeline' }).locator('kbd')).toHaveText('Ctrl+Shift+T')

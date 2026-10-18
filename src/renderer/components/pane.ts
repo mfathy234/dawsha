@@ -102,12 +102,15 @@ export class PaneComponent {
   private detailsSignature = ''
   private readonly timeline: TimelinePanel
   private actionsMenu: HTMLElement | null = null
+  /** The header button whose menu is open: a second click on it closes the menu, the other one switches. */
+  private actionsAnchor: HTMLElement | null = null
   private readonly restart = h('button', { class: 'btn small pane-restart', type: 'button' }, 'Restart')
   private readonly maxButton = h('span', { class: 'slot pane-maximize-slot' })
   private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'pane-body' })
   private tabSignature = ''
   private menu: HTMLElement | null = null
+  private menuAnchor: HTMLElement | null = null
   private current: PaneView | null = null
   private lastActiveTab = ''
 
@@ -368,8 +371,10 @@ export class PaneComponent {
     this.details.replaceChildren(...children)
   }
 
-  private toggleMove(): void {
-    if (this.actionsMenu) return this.closeActions()
+  /** Opened from Pane actions › Move pane…, so it takes that button's place: clicking it again closes the menu. */
+  private openMove(): void {
+    if (this.actionsMenu) this.closeActions()
+    this.actionsAnchor = this.el.querySelector<HTMLElement>('.pane-actions')
     const views = derivePanes(store.state)
     const items = views.map((view, i) => {
       const here = view.pane.id === this.paneId
@@ -403,7 +408,11 @@ export class PaneComponent {
   }
 
   private toggleActions(): void {
-    if (this.actionsMenu) return this.closeActions()
+    const anchor = this.el.querySelector<HTMLElement>('.pane-actions')
+    const reopen = this.actionsAnchor !== anchor
+    if (this.actionsMenu) this.closeActions()
+    if (!reopen) return
+    this.actionsAnchor = anchor
     const run = (action: () => unknown): void => {
       this.closeActions()
       void action()
@@ -450,7 +459,7 @@ export class PaneComponent {
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
     const maximized = store.state.maximizedId === this.paneId
     const maximizeItem = item(
-      maximized ? 'Restore pane to grid' : 'Expand pane',
+      maximized ? 'Restore pane to grid' : 'Maximize pane',
       () => maximized ? restoreGrid() : toggleMaximize(this.paneId),
       maximized ? ICONS.restore : ICONS.maximize,
       'pane.maximize'
@@ -473,7 +482,7 @@ export class PaneComponent {
       studioItem,
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),
       item('Open terminal here', () => addTab(this.paneId, 'shell'), ICONS.terminal),
-      item('Move pane…', () => this.toggleMove(), ICONS.layout),
+      item('Move pane…', () => this.openMove(), ICONS.layout),
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
@@ -502,7 +511,7 @@ export class PaneComponent {
 
   private readonly outsideActions = (event: Event): void => {
     const target = event.target as HTMLElement
-    if (this.actionsMenu && !this.actionsMenu.contains(target) && !target.closest('.pane-actions')) this.closeActions()
+    if (this.actionsMenu && !this.actionsMenu.contains(target) && !this.actionsAnchor?.contains(target)) this.closeActions()
   }
 
   private readonly escapeActions = (event: KeyboardEvent): void => {
@@ -516,6 +525,7 @@ export class PaneComponent {
     document.removeEventListener('keydown', this.escapeActions, true)
     this.actionsMenu?.remove()
     this.actionsMenu = null
+    this.actionsAnchor = null
   }
 
   private paneTargetAt(x: number, y: number): HTMLElement | null {
@@ -629,7 +639,10 @@ export class PaneComponent {
   }
 
   private toggleMenu(anchor: HTMLElement): void {
-    if (this.menu) return this.closeMenu()
+    const reopen = this.menuAnchor !== anchor
+    if (this.menu) this.closeMenu()
+    if (!reopen) return
+    this.menuAnchor = anchor
     const choose = (agent: TabAgent): void => {
       this.closeMenu()
       void addTab(this.paneId, agent)
@@ -652,13 +665,15 @@ export class PaneComponent {
   }
 
   private readonly outside = (event: Event): void => {
-    if (this.menu && !this.menu.contains(event.target as Node)) this.closeMenu()
+    const target = event.target as Node
+    if (this.menu && !this.menu.contains(target) && !this.menuAnchor?.contains(target)) this.closeMenu()
   }
 
   private closeMenu(): void {
     document.removeEventListener('pointerdown', this.outside, true)
     this.menu?.remove()
     this.menu = null
+    this.menuAnchor = null
   }
 
   private showDictation(status: DictationStatus): void {

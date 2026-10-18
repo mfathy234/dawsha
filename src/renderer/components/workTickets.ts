@@ -40,7 +40,7 @@ export class TicketsPanel {
   private tiles(tickets: WorkTicket[]): HTMLElement {
     const tile = (id: string, label: string, count: number): HTMLElement => h('div', { class: 'usage-tile', id: `work-tickets-${id}` },
       h('span', { class: 'usage-tile-label' }, label), h('span', { class: 'usage-tile-value' }, String(count)))
-    return h('div', { class: 'usage-tiles work-tiles', role: 'group', 'aria-label': 'Tickets summary' },
+    return h('div', { class: 'usage-tiles work-tiles work-ticket-tiles', role: 'group', 'aria-label': 'Tickets summary' },
       ...TICKET_TYPES.map((type) => tile(type, WORK_LABELS[type], tickets.filter((t) => t.type === type).length)), tile('total', 'Tickets', tickets.length))
   }
 

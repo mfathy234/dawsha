@@ -202,7 +202,8 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['autoUpdateCheck', 'Update checks'],
   ['sidebarCollapsed', 'Sidebar'],
   ['sidebarWidth', 'Sidebar'],
-  ['othersCollapsed', 'Sidebar']
+  ['othersCollapsed', 'Sidebar'],
+  ['orchestrator', 'Orchestrator settings']
 ]
 
 export function preferenceLabels(data: Partial<TransferData>): string[] {
@@ -348,11 +349,17 @@ export function replaceWarning(summary: ImportSummary, openSessions: number): st
   return `This replaces your current projects and layouts with the ones in the file. Not in the file and removed: ${parts.join(', ')}.${closing} Folders on disk are not touched. This cannot be undone.`
 }
 
+/** The Replace button names what it removes, as the warning above it does. */
+export function replaceConfirmLabel(summary: ImportSummary): string {
+  return `Replace and remove ${plural(summary.removedProjects.length, 'project')}, ${plural(summary.replacedLayouts, 'layout')}`
+}
+
 export function importToastText(summary: ImportSummary): string {
   const parts: string[] = []
   if (summary.projectsTotal > 0) parts.push(plural(summary.projectsNew + (summary.mode === 'replace' ? summary.projectsExisting : 0), 'project'))
   if (summary.layoutsNew > 0) parts.push(plural(summary.layoutsNew, 'layout'))
-  const base = parts.length > 0 ? `Imported ${parts.join(', ')} and preferences.` : 'Imported preferences.'
+  const preferences = summary.preferences.length > 0
+  const base = parts.length > 0 ? `Imported ${parts.join(', ')}${preferences ? ' and preferences' : ''}.` : preferences ? 'Imported preferences.' : 'Nothing new to import.'
   return summary.projectsMissing > 0 ? `${base} ${plural(summary.projectsMissing, 'project folder')} not found on this PC.` : base
 }
 

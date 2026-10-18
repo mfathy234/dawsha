@@ -27,7 +27,7 @@ function renderGroups(groups: SheetGroup[]): HTMLElement[] {
 export function openShortcutsSheet(): Promise<void> {
   const titleId = `dlg-title-${nextDialogId()}`
   const groups = buildSheet(listAllCommands(store.state), fixedEntries(paletteShortcutLabel(store.state), mod()))
-  const search = h('input', { class: 'shortcuts-search', type: 'search', placeholder: 'Search shortcuts', 'aria-label': 'Search shortcuts', autocomplete: 'off' })
+  const search = h('input', { class: 'text-input shortcuts-search', type: 'search', placeholder: 'Search shortcuts', 'aria-label': 'Search shortcuts', autocomplete: 'off' })
   const list = h('div', { class: 'shortcuts-body' }, ...renderGroups(groups))
   const close = h('button', { class: 'btn ghost', type: 'button' }, 'Close')
   const dialog = h(

@@ -444,7 +444,8 @@ function removePane(state: AppState, paneId: string): AppState {
     ...state,
     panes: closing ? panes.map((p) => (p.compare?.id === closing ? { ...p, compare: undefined } : p)) : panes,
     focusedId: state.focusedId === paneId ? (neighbour?.id ?? null) : state.focusedId,
-    maximizedId: state.maximizedId === paneId ? null : state.maximizedId
+    // Closing the shown session in the focus view moves to its neighbour instead of leaving the view.
+    maximizedId: state.maximizedId === paneId ? (neighbour?.id ?? null) : state.maximizedId
   }
 }
 

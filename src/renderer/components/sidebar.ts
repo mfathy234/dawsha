@@ -4,7 +4,7 @@ import { projectTodayLabel, projectTodayShort, projectTodayTooltip } from '../..
 import type { AgentKind, Project } from '../../shared/types'
 import { closePane, focusPane, openResumePicker, removeKeptSession, showView, startSession, toggleProjectExpanded, toggleSidebar } from '../actions'
 import type { PaneView } from '../derive'
-import { clear, h, icon, iconButton } from '../dom'
+import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { stateIcon } from './stateIcon'
@@ -23,7 +23,7 @@ const viewState = (view: PaneView) => sessionState({ status: view.status, attent
 export class SidebarComponent {
   readonly el = h('aside', { class: 'sidebar', 'aria-label': 'Projects' })
   private readonly filter = h('input', {
-    id: 'project-filter',
+    id: 'sidebar-project-filter',
     class: 'text-input',
     type: 'text',
     placeholder: 'Filter projects',
@@ -110,7 +110,7 @@ export class SidebarComponent {
       h(
         'div',
         { class: 'filter' },
-        h('label', { for: 'project-filter', class: 'sr-only' }, 'Filter projects'),
+        h('label', { for: 'sidebar-project-filter', class: 'sr-only' }, 'Filter projects'),
         icon(ICONS.search),
         this.filter
       ),
@@ -228,6 +228,7 @@ export class SidebarComponent {
   }
 
   private menu: HTMLElement | null = null
+  private menuAnchor: HTMLElement | null = null
 
   private agentMenuButton(project: AppState['settings']['projects'][number]): HTMLElement {
     const button = iconButton(`Choose agent for ${project.name}`, ICONS.more, () => this.toggleMenu(button, project), 'small proj-agent-menu')
@@ -235,18 +236,24 @@ export class SidebarComponent {
     return button
   }
 
+  // The menu's own button is left to toggleMenu, so a second click closes the menu instead of reopening it.
   private readonly outside = (event: Event): void => {
-    if (this.menu && !this.menu.contains(event.target as Node)) this.closeMenu()
+    const target = event.target as Node
+    if (this.menu && !this.menu.contains(target) && !this.menuAnchor?.contains(target)) this.closeMenu()
   }
 
   private closeMenu(): void {
     document.removeEventListener('pointerdown', this.outside, true)
     this.menu?.remove()
     this.menu = null
+    this.menuAnchor = null
   }
 
   private toggleMenu(anchor: HTMLElement, project: Project): void {
-    if (this.menu) return this.closeMenu()
+    const reopen = this.menuAnchor !== anchor
+    if (this.menu) this.closeMenu()
+    if (!reopen) return
+    this.menuAnchor = anchor
     const projectId = project.id
     const choose = (agent: AgentKind): void => {
       this.closeMenu()
@@ -267,11 +274,10 @@ export class SidebarComponent {
     )
     const item = (agent: AgentKind): HTMLElement =>
       h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => choose(agent) }, agentMark(agent), `${AGENT_NAMES[agent]} session`)
-    const rect = anchor.getBoundingClientRect()
     const first = item('claude')
     this.menu = h(
       'div',
-      { class: 'popover menu floating', role: 'menu', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 2)}px` },
+      { class: 'popover menu floating', role: 'menu' },
       first,
       item('codex'),
       item('gemini'),
@@ -284,6 +290,8 @@ export class SidebarComponent {
       anchor.focus()
     })
     document.body.appendChild(this.menu)
+    // Kept inside the window, so the last project's menu opens upwards.
+    placeNearAnchor(this.menu, anchor, 2)
     first.focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
   }

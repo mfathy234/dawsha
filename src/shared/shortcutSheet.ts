@@ -1,6 +1,8 @@
 export interface SheetEntry {
   title: string
   keys: string
+  /** Extra words the search matches, such as each number of a collapsed 1–9 row. */
+  terms?: string
 }
 
 export interface SheetGroup {
@@ -38,6 +40,36 @@ export function fixedEntries(paletteKeys: string, mod: string): Array<SheetEntry
   ]
 }
 
+const NUMBERED = /^(.*) ([1-9])$/
+
+/** "Focus pane 1" … "Focus pane 9" on Ctrl+1 … Ctrl+9 become one row, "Focus pane 1–9" on "Ctrl+1…9". */
+function collapseNumbered(entries: SheetEntry[]): SheetEntry[] {
+  const out: SheetEntry[] = []
+  for (let i = 0; i < entries.length; i++) {
+    const head = NUMBERED.exec(entries[i].title)
+    const keyBase = head && entries[i].keys.endsWith(head[2]) ? entries[i].keys.slice(0, -1) : null
+    const run = [entries[i]]
+    while (head && keyBase !== null && i + run.length < entries.length) {
+      const next = entries[i + run.length]
+      const digit = String(Number(head[2]) + run.length)
+      if (next.title !== `${head[1]} ${digit}` || next.keys !== keyBase + digit) break
+      run.push(next)
+    }
+    if (!head || run.length < 3) {
+      out.push(entries[i])
+      continue
+    }
+    const last = run[run.length - 1]
+    out.push({
+      title: `${head[1]} ${head[2]}–${last.title.slice(-1)}`,
+      keys: `${entries[i].keys}…${last.keys.slice(-1)}`,
+      terms: run.map((entry) => `${entry.title} ${entry.keys}`).join(' ')
+    })
+    i += run.length - 1
+  }
+  return out
+}
+
 export function buildSheet(commands: SheetCommand[], fixed: ReturnType<typeof fixedEntries>): SheetGroup[] {
   const seen = new Set<string>()
   const groups = new Map<string, SheetEntry[]>(SHEET_GROUPS.map((label) => [label, []]))
@@ -51,7 +83,7 @@ export function buildSheet(commands: SheetCommand[], fixed: ReturnType<typeof fi
     if (command.shortcut) add(sheetGroupFor(command.id), { title: command.title, keys: command.shortcut })
   }
   for (const { group, ...entry } of fixed) add(group, entry)
-  return SHEET_GROUPS.map((label) => ({ label, entries: groups.get(label) ?? [] })).filter((group) => group.entries.length > 0)
+  return SHEET_GROUPS.map((label) => ({ label, entries: collapseNumbered(groups.get(label) ?? []) })).filter((group) => group.entries.length > 0)
 }
 
 export function filterSheet(groups: SheetGroup[], query: string): SheetGroup[] {
@@ -61,7 +93,7 @@ export function filterSheet(groups: SheetGroup[], query: string): SheetGroup[] {
     .map((group) => ({
       ...group,
       entries: group.entries.filter((entry) => {
-        const haystack = `${group.label} ${entry.title} ${entry.keys}`.toLowerCase()
+        const haystack = `${group.label} ${entry.title} ${entry.keys} ${entry.terms ?? ''}`.toLowerCase()
         return words.every((word) => haystack.includes(word))
       })
     }))

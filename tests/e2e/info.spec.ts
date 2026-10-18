@@ -270,7 +270,18 @@ test('pane actions menu and resume menu', async () => {
 
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    // The ⋯ button toggles its menu, and the menu stays inside the window.
+    const agentMenu = page.getByRole('button', { name: 'Choose agent for Smoke' })
+    await agentMenu.click()
+    await expect(page.getByRole('menu')).toBeVisible()
+    await agentMenu.click()
+    await expect(page.getByRole('menu')).toHaveCount(0)
+    await agentMenu.click()
+    const menuBox = (await page.getByRole('menu').boundingBox())!
+    const viewport = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }))
+    expect(menuBox.x).toBeGreaterThanOrEqual(0)
+    expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(viewport.height)
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(viewport.width)
     await page.getByRole('menuitem', { name: 'Resume in Smoke…' }).click()
     await expect(page.locator('.resume-picker')).toBeVisible()
     await expect(page.locator('#rp-project')).toHaveValue('smoke')

@@ -330,6 +330,11 @@ test('pairs a browser, respects permissions, and adapts to a phone screen', asyn
     }))
     expect(mobileLayout.width, JSON.stringify(mobileLayout)).toBeLessThanOrEqual(mobileLayout.viewport)
     await page.screenshot({ path: 'test-results/screens/remote-control-mobile.png' })
+
+    // Disconnect goes back to pairing with an empty code box; the used code works only once.
+    await page.locator('#remote-logout').click()
+    await expect(page.locator('#pair-view')).toBeVisible()
+    await expect(page.locator('#pairing-code')).toHaveValue('')
   } finally {
     await browser?.close()
     await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
@@ -472,6 +477,7 @@ test('Remote Access settings show a QR code that opens the page with the pairing
     await expect(page.locator('.remote-qr-card')).toContainText('Scan with your phone')
     await expect(page.locator('.remote-manual')).toContainText('Or connect by hand')
     await expect(page.locator('.remote-pairing-code')).toHaveAttribute('aria-label', 'Pairing code 4 8 2 9 1 3')
+    await expect(page.getByRole('textbox', { name: 'Cloudflare PIN email' })).toBeVisible()
     await page.screenshot({ path: 'test-results/screens/remote-access-qr.png' })
   } finally {
     await closeApp(app)

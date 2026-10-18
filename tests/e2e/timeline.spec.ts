@@ -140,6 +140,8 @@ test('Ctrl+Shift+T and the palette toggle the timeline, and Escape closes it', a
     await expect(panel.getByRole('searchbox', { name: 'Search the timeline' })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(panel).toBeHidden()
+    // Focus goes back to the terminal at once, so the next shortcut is not lost in the hidden search box.
+    await expect(page.locator('.term-host.active .xterm-helper-textarea')).toBeFocused({ timeout: 100 })
     await page.keyboard.press('Control+Shift+P')
     await page.keyboard.type('Show session timeline')
     await page.keyboard.press('Enter')

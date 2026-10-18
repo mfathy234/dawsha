@@ -284,7 +284,7 @@ export class TopBarComponent {
       },
       icon(ICONS.history),
       'Resume a session…',
-      h('span', { class: 'kbd' }, 'Ctrl+Shift+R')
+      h('span', { class: 'kbd' }, formatShortcut(bind('Ctrl+Shift+R')))
     )
     const compare = h(
       'button',
@@ -300,7 +300,7 @@ export class TopBarComponent {
       },
       icon(ICONS.compare),
       'Ask two agents…',
-      h('span', { class: 'kbd' }, 'Ctrl+Shift+A')
+      h('span', { class: 'kbd' }, formatShortcut(bind('Ctrl+Shift+A')))
     )
     items.push(resume, compare)
     const rect = this.newSession.getBoundingClientRect()

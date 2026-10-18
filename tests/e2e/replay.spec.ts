@@ -5,10 +5,12 @@ import { bufferText, closeApp, closeSettings, createSandbox, launchApp, openSett
 
 const SLOW = 30_000
 
+interface ReplayState { position: number; total: number; playing: boolean; applied: number; skipIdle: boolean }
+
 interface ReplayHook {
   bufferText(): string
   selection(): string
-  state(): { position: number; total: number; playing: boolean; applied: number } | null
+  state(): ReplayState | null
 }
 
 const replayBuffer = (page: Page): Promise<string> =>
@@ -17,7 +19,7 @@ const replayBuffer = (page: Page): Promise<string> =>
 const replaySelection = (page: Page): Promise<string> =>
   page.evaluate(() => (window as unknown as { __replay: ReplayHook }).__replay.selection())
 
-const replayState = (page: Page): Promise<{ position: number; total: number; playing: boolean; applied: number } | null> =>
+const replayState = (page: Page): Promise<ReplayState | null> =>
   page.evaluate(() => (window as unknown as { __replay: ReplayHook }).__replay.state())
 
 function castFiles(sandbox: Sandbox): string[] {
@@ -121,6 +123,21 @@ test('an exited session is replayed from its pane menu: seek, search and jump, p
     await page.keyboard.press('Escape')
     await expect(page.locator('.replay-view')).toBeHidden()
     await expect(page.locator('.pane')).toHaveCount(1)
+
+    // Escape from the Skip idle checkbox still closes, and a reopened replay follows the box.
+    await page.getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Replay session' }).click()
+    await expect.poll(async () => (await replayState(page))?.skipIdle, { timeout: SLOW }).toBe(true)
+    await page.locator('#replay-skip-idle').uncheck()
+    await expect.poll(async () => (await replayState(page))?.skipIdle).toBe(false)
+    await expect(page.locator('#replay-skip-idle')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.replay-view')).toBeHidden()
+    await page.getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Replay session' }).click()
+    await expect.poll(async () => (await replayState(page))?.total ?? 0, { timeout: SLOW }).toBeGreaterThan(1)
+    await expect(page.locator('#replay-skip-idle')).not.toBeChecked()
+    expect((await replayState(page))?.skipIdle).toBe(false)
   } finally {
     await closeApp(app)
   }
@@ -170,6 +187,17 @@ test('recording is off by default; turning it on records new sessions and turnin
     await expect
       .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.enabled, { timeout: SLOW })
       .toBe(true)
+    const days = page.locator('#recordings-days')
+    await days.fill('30')
+    await days.press('Tab')
+    await expect
+      .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.keepDays, { timeout: SLOW })
+      .toBe(30)
+    await days.fill('')
+    await days.press('Tab')
+    await expect(days).toHaveValue('30')
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    expect(JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.keepDays).toBe(30)
     await closeSettings(page)
 
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()

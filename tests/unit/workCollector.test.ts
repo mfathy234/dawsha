@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { WorkService, sessionWorkItems, runWorkItems, workCommits, readWorkRuns } from '../../src/main/workDashboard'
 import { OrchStore } from '../../src/main/orch/store'
 import type { ResumeSession } from '../../src/shared/types'
@@ -12,6 +12,17 @@ const session = (overrides: Partial<ResumeSession> = {}): ResumeSession => ({
   modifiedAt: 9000, lastActivityAt: 2000, messageCount: 2, workBranch: 'feature/26412-stock', ...overrides
 })
 const projects = [{ id: 'p', name: 'Project', folder: 'C:/project', defaultAgent: 'claude' as const }]
+
+// 'today' reports start at local midnight, so tests that build spans back from now pin the
+// clock to a time of day that leaves room for them (only Date, so fs and timers stay real).
+const pinClock = (hour: number, minute = 0): number => {
+  const at = new Date()
+  at.setHours(hour, minute, 0, 0)
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(at)
+  return at.getTime()
+}
+afterEach(() => { vi.useRealTimers() })
 it('classifies indexed sessions and drops orchestrator children and duplicates', async () => {
   const items = await sessionWorkItems([session(), session(), session({ id: 'child', workBranch: 'orch/abcdefgh/t-1' })], projects,
     ['orch/abcdefgh/run'], async () => ['fix: crash'])
@@ -81,7 +92,7 @@ it('coalesces and caches run history before querying SQLite', async () => {
 })
 
 it('reads exact spans only for the requested period, stays lazy, and notices transcript changes on refresh', async () => {
-  const now = Date.now()
+  const now = pinClock(12)
   const path = join(mkdtempSync(join(tmpdir(), 'dawsha-work-exact-')), 'session.jsonl')
   const start = now - 20 * 60_000
   const records = (minutes: number[]) => minutes.map(m => JSON.stringify({ timestamp: new Date(start + m * 60_000).toISOString() })).join('\n')
@@ -99,7 +110,7 @@ it('reads exact spans only for the requested period, stays lazy, and notices tra
 })
 
 it('includes exact child spans in a selected run without reading unrelated transcripts', async () => {
-  const now = Date.now(), start = now - 20 * 60_000
+  const now = pinClock(12), start = now - 20 * 60_000
   const path = join(mkdtempSync(join(tmpdir(), 'dawsha-work-child-')), 'session.jsonl')
   writeFileSync(path, [0, 4, 8, 12].map(m => JSON.stringify({ timestamp: new Date(start + m * 60_000).toISOString() })).join('\n'))
   const service = new WorkService(async () => [
@@ -123,7 +134,7 @@ it('joins nearby child activity and run events while preserving long child inter
 })
 
 it('keeps readable work visible when another indexed transcript is deleted or inaccessible', async () => {
-  const now = Date.now(), start = now - 10 * 60_000
+  const now = pinClock(12), start = now - 10 * 60_000
   const path = join(mkdtempSync(join(tmpdir(), 'dawsha-work-missing-')), 'session.jsonl')
   writeFileSync(path, JSON.stringify({ timestamp: new Date(start).toISOString() }))
   const service = new WorkService(async () => [

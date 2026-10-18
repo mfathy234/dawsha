@@ -1,4 +1,6 @@
 .work-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+/* Three ticket types plus the total. */
+.work-ticket-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .work-view .usage-head { flex-wrap: wrap; }
 .work-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
 .work-search { position: relative; flex: 1 1 240px; max-width: 480px; }
@@ -44,6 +46,7 @@
   .work-view { padding: 20px; }
   .work-view .usage-legend { flex-wrap: wrap; }
   .work-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .work-ticket-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .work-step { display: inline-flex; align-items: center; gap: 4px; }
 .work-step-btn { min-width: 32px; padding: 0 8px; font-size: 16px; line-height: 1; }

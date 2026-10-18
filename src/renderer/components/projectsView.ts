@@ -23,7 +23,7 @@ export class ProjectsViewComponent {
   private readonly filterInput = h('input', {
     class: 'text-input pv-filter',
     type: 'search',
-    id: 'project-filter',
+    id: 'projects-view-filter',
     placeholder: 'Filter projects',
     'aria-label': 'Filter projects',
     autocomplete: 'off'
@@ -220,7 +220,7 @@ export class ProjectsViewComponent {
       if (done) return
       const value = input.value.trim()
       if (save && !value) {
-        this.showRowError(project.id, 'Name cannot be empty.')
+        this.showRowError(project.id, 'Name cannot be empty.', 'name')
         return
       }
       done = true
@@ -243,15 +243,18 @@ export class ProjectsViewComponent {
     return input
   }
 
-  private showRowError(projectId: string, message: string | null): void {
-    if (message) this.errors.set(projectId, message)
-    else this.errors.delete(projectId)
+  /** Folder errors are kept across renders; a name error belongs to the open rename box only. */
+  private showRowError(projectId: string, message: string | null, field: 'folder' | 'name' = 'folder'): void {
+    if (field === 'folder') {
+      if (message) this.errors.set(projectId, message)
+      else this.errors.delete(projectId)
+    }
     const row = this.rows.querySelector(`[data-project-id="${projectId}"]`)
     const error = row?.querySelector<HTMLElement>('.field-error')
     if (!row || !error) return
     error.textContent = message ?? ''
     error.hidden = message === null
-    row.querySelector('.pv-folder')?.classList.toggle('invalid', message !== null)
+    row.querySelector(field === 'folder' ? '.pv-folder' : '.pv-rename')?.classList.toggle('invalid', message !== null)
   }
 
   private toggleMenu(project: Project, anchor: HTMLElement): void {

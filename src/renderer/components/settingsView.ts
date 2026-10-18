@@ -380,7 +380,7 @@ export class SettingsViewComponent {
         securityNote,
         this.remoteError ? h('p', { class: 'note error set-note', role: 'alert' }, this.remoteError) : null)
     ]
-    const allowedEmail = h('input', { class: 'text-input', type: 'email', value: state?.permissions.allowedEmail ?? '', placeholder: 'you@example.com', autocomplete: 'email', disabled: this.remoteBusy || enabled }) as HTMLInputElement
+    const allowedEmail = h('input', { class: 'text-input', type: 'email', value: state?.permissions.allowedEmail ?? '', placeholder: 'you@example.com', autocomplete: 'email', 'aria-label': 'Cloudflare PIN email', disabled: this.remoteBusy || enabled }) as HTMLInputElement
     rows.push(row('Cloudflare PIN email (optional)', h('div', { class: 'remote-email-setting' }, allowedEmail,
       h('button', { class: 'btn ghost small', type: 'button', disabled: this.remoteBusy || enabled, onClick: () => void this.runRemoteAction(() => remote.setAllowedEmail(allowedEmail.value)) }, 'Save email')),
     h('p', { class: 'hint' }, 'Dawsha checks for a compatible Cloudflare Tunnel and installs a verified copy in app data if needed. First setup needs internet access; no administrator access is required.')))

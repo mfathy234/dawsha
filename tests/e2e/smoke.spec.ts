@@ -105,6 +105,8 @@ test('opens panes from the quick pick with the keyboard and reopens them on the 
     await first.page.keyboard.press('Enter')
     await expect(first.page.locator('.pane')).toHaveCount(1)
     await expect(first.page.locator('.quickpick')).toHaveCount(0)
+    // Typing goes straight into the new session, not to the button that opened the pick.
+    await expect(first.page.locator('.pane .term-host.active .xterm-helper-textarea')).toBeFocused()
     await first.page.keyboard.press('Control+n')
     await expect(first.page.locator('.quickpick')).toHaveCount(1)
     await first.page.keyboard.press('Enter')
@@ -136,6 +138,23 @@ test('projects view validates folders and confirms removal by name', async () =>
     await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible()
     await expect(page.locator('[data-project-id="gone"] .field-error')).toHaveText('This folder does not exist.')
     await page.screenshot({ path: join(SCREENS, '8-projects.png') })
+    // The sidebar stays mounted next to the Projects view, so both filters must keep their own ids.
+    const duplicateIds = await page.evaluate(() => {
+      const ids = [...document.querySelectorAll('[id]')].map(el => el.id)
+      return [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))]
+    })
+    expect(duplicateIds).toEqual([])
+
+    // An empty name is the name box's error: the folder is not marked, and Escape clears it.
+    const smoke = page.locator('[data-project-id="smoke"]')
+    await page.getByRole('button', { name: 'More for Smoke' }).click()
+    await page.getByRole('menuitem', { name: 'Rename' }).click()
+    await smoke.getByRole('textbox', { name: 'Name of Smoke' }).fill('')
+    await page.keyboard.press('Enter')
+    await expect(smoke.locator('.field-error')).toHaveText('Name cannot be empty.')
+    await expect(smoke.locator('.pv-folder')).not.toHaveClass(/invalid/)
+    await page.keyboard.press('Escape')
+    await expect(smoke.locator('.field-error')).toBeHidden()
 
     await page.getByRole('button', { name: 'More for Missing' }).click()
     await page.getByRole('menuitem', { name: 'Remove Missing…' }).click()
