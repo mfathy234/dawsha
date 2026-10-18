@@ -1,3 +1,4 @@
+import type { DictationModel } from '../../shared/dictation'
 import type { DictationEngine, LoadProgress, TranscribeOptions, WorkerResponse } from './protocol'
 
 /** Talks to the Whisper worker. The worker is created on first use and kept so the model stays loaded. */
@@ -13,6 +14,10 @@ export class WorkerEngine implements DictationEngine {
       this.pending.set(id, { resolve, reject, progress: onProgress })
       worker.postMessage({ type: 'transcribe', id, audio, options }, [audio.buffer])
     })
+  }
+
+  prepare(model: DictationModel): void {
+    this.ensureWorker().postMessage({ type: 'prepare', model })
   }
 
   private ensureWorker(): Worker {

@@ -18,8 +18,8 @@ import { isMediaPermissionAllowed } from '../../src/shared/mediaPermission'
 
 describe('dictation settings', () => {
   it('defaults to automatic language and the base model', () => {
-    expect(defaultDictation()).toEqual({ language: 'auto', model: 'base' })
-    expect(defaultSettings().dictation).toEqual({ language: 'auto', model: 'base' })
+    expect(defaultDictation()).toEqual({ language: 'auto', model: 'turbo' })
+    expect(defaultSettings().dictation).toEqual({ language: 'auto', model: 'turbo' })
   })
 
   it('keeps valid choices and repairs everything else', () => {

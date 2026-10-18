@@ -144,6 +144,7 @@ export async function startDictation(): Promise<void> {
     return
   }
   setDictationStatus({ phase: 'recording', paneId, intoField: chosen.kind === 'field', progress: null })
+  if (recorder) ensureEngine().prepare?.(store.state.settings.dictation.model)
 }
 
 export async function finishDictation(): Promise<void> {

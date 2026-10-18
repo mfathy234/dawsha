@@ -67,12 +67,13 @@ export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
 
 export async function launchApp(
   sandbox: Sandbox,
-  extraEnv: Record<string, string> = {}
+  extraEnv: Record<string, string> = {},
+  chromiumArgs: string[] = []
 ): Promise<{ app: ElectronApplication; page: Page }> {
   const env = { ...process.env } as Record<string, string>
   delete env.ELECTRON_RUN_AS_NODE
   const app = await electron.launch({
-    args: [resolve(__dirname, '../../out/main/index.js')],
+    args: [resolve(__dirname, '../../out/main/index.js'), ...chromiumArgs],
     env: {
       ...env,
       DAWSHA_USER_DATA: sandbox.userData,

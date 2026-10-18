@@ -39,7 +39,7 @@ export function dictationRows(state: AppState): HTMLElement[] {
     row(
       'Speech model',
       choice('dictation-model', 'Dictation model', DICTATION_MODELS.map((m) => ({ id: m.id, label: m.label })), settings.model, (model) => setDictation({ model })),
-      h('p', { class: 'hint', id: 'dictation-model-note' }, `Runs on this PC with Whisper, so your voice never leaves it. The model downloads once on first use (${DICTATION_MODELS.find((m) => m.id === settings.model)?.size ?? ''}) and is kept in Dawsha's data folder, so dictation then works offline. Small is more accurate but slower and several times bigger.`)
+      h('p', { class: 'hint', id: 'dictation-model-note' }, `Runs on this PC with Whisper, so your voice never leaves it. The model downloads once on first use (${DICTATION_MODELS.find((m) => m.id === settings.model)?.size ?? ''}) and is kept in Dawsha's data folder, so dictation then works offline. Large turbo understands Arabic dialects and mixed Arabic and English best; choose Base on a slower PC without a graphics card.`)
     )
   ]
 }

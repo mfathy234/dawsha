@@ -1,5 +1,5 @@
 import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers'
-import { cleanTranscript, modelRepo, whisperLanguage, type DictationModel } from '../../shared/dictation'
+import { cleanTranscript, modelInfo, modelRepo, whisperLanguage, type DictationModel } from '../../shared/dictation'
 import { detectLanguage } from './languageDetect'
 import type { LoadProgress, WorkerRequest, WorkerResponse } from './protocol'
 import ortModule from '../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs?url'
@@ -29,16 +29,22 @@ let loading: Promise<Loaded> | null = null
 let loadingModel: DictationModel | null = null
 let queue: Promise<void> = Promise.resolve()
 let webGpuBroken = false
+// Download progress goes to the transcription that is waiting for the model, also when a prepare started the download.
+let progressListener: ((progress: LoadProgress) => void) | null = null
 
 const reply = (message: WorkerResponse): void => (self as unknown as Worker).postMessage(message)
 
-async function webGpuAvailable(): Promise<boolean> {
-  const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown | null> } }).gpu
-  if (!gpu) return false
+type GpuSupport = 'none' | 'gpu' | 'gpuF16'
+
+async function webGpuSupport(): Promise<GpuSupport> {
+  const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<{ features: Set<string> } | null> } }).gpu
+  if (!gpu) return 'none'
   try {
-    return (await gpu.requestAdapter()) !== null
+    const adapter = await gpu.requestAdapter()
+    if (!adapter) return 'none'
+    return adapter.features.has('shader-f16') ? 'gpuF16' : 'gpu'
   } catch {
-    return false
+    return 'none'
   }
 }
 
@@ -57,8 +63,10 @@ function progressTracker(report: (progress: LoadProgress) => void): (event: { st
   }
 }
 
-async function build(model: DictationModel, device: Device, report: (progress: LoadProgress) => void): Promise<Loaded> {
-  const dtype = device === 'webgpu' ? { encoder_model: 'fp32', decoder_model_merged: 'q4' } : 'q8'
+async function build(model: DictationModel, support: GpuSupport, report: (progress: LoadProgress) => void): Promise<Loaded> {
+  const info = modelInfo(model)
+  const device: Device = support === 'none' ? 'wasm' : 'webgpu'
+  const dtype = support === 'none' ? info.cpu : info[support]
   const transcriber = (await pipeline('automatic-speech-recognition', modelRepo(model), {
     device,
     dtype: dtype as never,
@@ -67,7 +75,9 @@ async function build(model: DictationModel, device: Device, report: (progress: L
   return { model, device, transcriber }
 }
 
-async function load(model: DictationModel, report: (progress: LoadProgress) => void): Promise<Loaded> {
+const report = (progress: LoadProgress): void => progressListener?.(progress)
+
+async function load(model: DictationModel): Promise<Loaded> {
   if (loaded?.model === model) return loaded
   if (loading && loadingModel === model) return loading
   loadingModel = model
@@ -75,14 +85,15 @@ async function load(model: DictationModel, report: (progress: LoadProgress) => v
     const previous = loaded
     loaded = null
     await previous?.transcriber.dispose().catch(() => undefined)
-    if (!webGpuBroken && (await webGpuAvailable())) {
+    const support = webGpuBroken ? 'none' : await webGpuSupport()
+    if (support !== 'none') {
       try {
-        return await build(model, 'webgpu', report)
+        return await build(model, support, report)
       } catch {
         // WebGPU can be present but unusable (driver, blocklist, unsupported operator); fall through to WASM.
       }
     }
-    return build(model, 'wasm', report)
+    return build(model, 'none', report)
   })()
   try {
     loaded = await loading
@@ -93,9 +104,12 @@ async function load(model: DictationModel, report: (progress: LoadProgress) => v
   }
 }
 
-async function run(request: WorkerRequest): Promise<void> {
+type TranscribeRequest = Extract<WorkerRequest, { type: 'transcribe' }>
+
+async function run(request: TranscribeRequest): Promise<void> {
   const { id, audio, options } = request
-  const engine = await load(options.model, (progress) => reply({ type: 'progress', id, progress }))
+  progressListener = (progress) => reply({ type: 'progress', id, progress })
+  const engine = await load(options.model).finally(() => (progressListener = null))
   try {
     const chosen = options.language === 'auto' ? await detectLanguage(engine.transcriber, audio) : options.language
     const result = await engine.transcriber(audio, {
@@ -117,7 +131,7 @@ async function run(request: WorkerRequest): Promise<void> {
   }
 }
 
-async function transcribe(request: WorkerRequest): Promise<void> {
+async function transcribe(request: TranscribeRequest): Promise<void> {
   try {
     await run(request)
   } catch (error) {
@@ -126,5 +140,8 @@ async function transcribe(request: WorkerRequest): Promise<void> {
 }
 
 self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
-  if (event.data.type === 'transcribe') queue = queue.then(() => transcribe(event.data))
+  const request = event.data
+  if (request.type === 'transcribe') queue = queue.then(() => transcribe(request))
+  // Not queued: loading starts at once and a transcribe that follows waits on the same load.
+  else void load(request.model).catch(() => undefined)
 })

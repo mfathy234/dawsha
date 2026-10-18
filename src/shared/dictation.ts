@@ -1,5 +1,5 @@
 export type DictationLanguage = 'auto' | 'ar' | 'en'
-export type DictationModel = 'base' | 'small'
+export type DictationModel = 'base' | 'small' | 'turbo'
 
 export interface DictationSettings {
   language: DictationLanguage
@@ -17,15 +17,58 @@ export const DICTATION_LANGUAGES: { id: DictationLanguage; label: string }[] = [
   { id: 'en', label: 'English' }
 ]
 
-export const DICTATION_MODELS: { id: DictationModel; repo: string; label: string; size: string }[] = [
-  { id: 'base', repo: 'onnx-community/whisper-base', label: 'Base (faster)', size: 'about 80 to 200 MB' },
-  { id: 'small', repo: 'onnx-community/whisper-small', label: 'Small (more accurate)', size: 'about 250 to 520 MB' }
+/** ONNX precision per model file, as transformers.js takes it. */
+export type ModelDtype = string | Record<string, string>
+
+export interface DictationModelInfo {
+  id: DictationModel
+  repo: string
+  label: string
+  size: string
+  /** On a GPU with 16-bit float shaders. */
+  gpuF16: ModelDtype
+  /** On any other GPU. */
+  gpu: ModelDtype
+  /** On the CPU (WASM). */
+  cpu: ModelDtype
+}
+
+export const DICTATION_MODELS: DictationModelInfo[] = [
+  {
+    id: 'base',
+    repo: 'onnx-community/whisper-base',
+    label: 'Base (faster)',
+    size: 'about 80 to 200 MB',
+    gpuF16: { encoder_model: 'fp32', decoder_model_merged: 'q4' },
+    gpu: { encoder_model: 'fp32', decoder_model_merged: 'q4' },
+    cpu: 'q8'
+  },
+  {
+    id: 'small',
+    repo: 'onnx-community/whisper-small',
+    label: 'Small (more accurate)',
+    size: 'about 250 to 590 MB',
+    gpuF16: { encoder_model: 'fp32', decoder_model_merged: 'q4' },
+    gpu: { encoder_model: 'fp32', decoder_model_merged: 'q4' },
+    cpu: 'q8'
+  },
+  {
+    id: 'turbo',
+    repo: 'onnx-community/whisper-large-v3-turbo',
+    label: 'Large turbo (most accurate)',
+    size: 'about 570 to 760 MB',
+    gpuF16: { encoder_model: 'q4f16', decoder_model_merged: 'q4f16' },
+    gpu: { encoder_model: 'q4', decoder_model_merged: 'q4' },
+    cpu: { encoder_model: 'q4', decoder_model_merged: 'q4' }
+  }
 ]
 
-export const defaultDictation = (): DictationSettings => ({ language: 'auto', model: 'base' })
+export const modelInfo = (model: DictationModel): DictationModelInfo => DICTATION_MODELS.find((m) => m.id === model) ?? DICTATION_MODELS[0]
+
+export const defaultDictation = (): DictationSettings => ({ language: 'auto', model: 'turbo' })
 
 export const isDictationLanguage = (value: unknown): value is DictationLanguage => value === 'auto' || value === 'ar' || value === 'en'
-export const isDictationModel = (value: unknown): value is DictationModel => value === 'base' || value === 'small'
+export const isDictationModel = (value: unknown): value is DictationModel => DICTATION_MODELS.some((m) => m.id === value)
 
 export function sanitizeDictation(value: unknown): DictationSettings {
   const defaults = defaultDictation()
@@ -37,7 +80,7 @@ export function sanitizeDictation(value: unknown): DictationSettings {
   }
 }
 
-export const modelRepo = (model: DictationModel): string => (DICTATION_MODELS.find((m) => m.id === model) ?? DICTATION_MODELS[0]).repo
+export const modelRepo = (model: DictationModel): string => modelInfo(model).repo
 
 /** Whisper takes a language name; leaving it out lets the model detect the language itself. */
 export const whisperLanguage = (language: DictationLanguage): string | null => (language === 'ar' ? 'arabic' : language === 'en' ? 'english' : null)

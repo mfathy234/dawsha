@@ -11,7 +11,9 @@ export interface LoadProgress {
   total: number
 }
 
-export type WorkerRequest = { type: 'transcribe'; id: number; audio: Float32Array; options: TranscribeOptions }
+export type WorkerRequest =
+  | { type: 'transcribe'; id: number; audio: Float32Array; options: TranscribeOptions }
+  | { type: 'prepare'; model: DictationModel }
 
 export type WorkerResponse =
   | { type: 'progress'; id: number; progress: LoadProgress }
@@ -20,4 +22,6 @@ export type WorkerResponse =
 
 export interface DictationEngine {
   transcribe(audio: Float32Array, options: TranscribeOptions, onProgress: (progress: LoadProgress) => void): Promise<string>
+  /** Starts loading the model while the user is still speaking. Load errors surface on the next transcribe. */
+  prepare?(model: DictationModel): void
 }
