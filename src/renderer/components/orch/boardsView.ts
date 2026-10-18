@@ -48,7 +48,7 @@ function taskCard(card: BoardCard, options: TaskBoardOptions): HTMLElement {
   return h(
     'button',
     {
-      class: `orch-card${card.column === 'needs' ? ' needs' : ''}${selected ? ' selected' : ''}`,
+      class: `orch-card${card.lead ? ' lead' : ''}${card.column === 'needs' ? ' needs' : ''}${selected ? ' selected' : ''}`,
       type: 'button',
       'aria-pressed': options.selectedKey === undefined ? undefined : String(selected),
       title: `${card.key} · ${STATUS_LABEL[card.status]} · ${card.runTitle}`,
@@ -56,6 +56,7 @@ function taskCard(card: BoardCard, options: TaskBoardOptions): HTMLElement {
     },
     h('span', { class: 'orch-card-id' }, h('span', { class: 'orch-mono' }, card.key), options.showRun ? h('span', { class: 'orch-run-tag' }, card.runTag) : null),
     h('span', { class: 'orch-card-title' }, card.title),
+    card.waiting ? h('span', { class: 'orch-card-waiting' }, card.waiting) : null,
     cardMeta(card, options)
   )
 }

@@ -64,6 +64,17 @@ export class OrchContext {
     this.log(runId, 'run', `Stage: ${stage}`, null)
   }
 
+  /** New work after the run looked finished: withdraw the open run-complete question and build again. */
+  private reopenIfMerging(runId: string): void {
+    const run = this.store.getRun(runId)
+    if (!run || run.stage !== 'merge') return
+    for (const decision of this.store.listDecisions(runId).filter((d) => d.kind === 'run-complete' && d.answer === null)) {
+      this.store.putDecision({ ...decision, answer: 'Withdrawn: new work was added', answeredAt: this.now() })
+    }
+    this.store.putRun({ ...run, stage: 'build' })
+    this.log(runId, 'run', 'Stage: build (new work was added)', null)
+  }
+
   log(runId: string, kind: string, text: string, taskId: string | null): void {
     this.store.addEvent({ runId, at: this.now(), kind, text, taskId })
   }
@@ -81,6 +92,7 @@ export class OrchContext {
   newTask(runId: string, input: NewTaskInput): OrchTask {
     const key = `T-${this.store.nextTaskNumber(runId)}`
     const now = this.now()
+    this.reopenIfMerging(runId)
     return this.save({
       id: `${runId}:${key}`,
       key,

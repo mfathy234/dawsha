@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OrchAgentRow, OrchRunDetail } from '../../src/shared/orch/api'
-import { boardCards, boardRuns, DEFAULT_BOARD_FILTER, defaultRunProject, groupByColumn, projectTabs, timelineEvents, totalCostLabel, usageRows } from '../../src/shared/orch/board'
+import { waitingReason, boardCards, boardRuns, DEFAULT_BOARD_FILTER, defaultRunProject, groupByColumn, projectTabs, timelineEvents, totalCostLabel, usageRows } from '../../src/shared/orch/board'
 import type { OrchTask } from '../../src/shared/orch/types'
 import type { RunUsage } from '../../src/shared/orch/usage'
 
@@ -162,5 +162,26 @@ describe('timelineEvents', () => {
   it('lists newest first and filters by task key', () => {
     expect(timelineEvents(events, 'r1', null).map((e) => e.text)).toEqual(['third', 'second', 'first'])
     expect(timelineEvents(events, 'r1', 'T-2').map((e) => e.text)).toEqual(['second'])
+  })
+})
+
+describe('lead activity and waiting reasons', () => {
+  it('shows a live lead without a task as an in-progress card, and not once it works on a task or retired', () => {
+    const lead = (over: Partial<OrchAgentRow>) => agent({ id: 'l1', role: 'lead', taskKey: null, state: 'coordinating', ...over })
+    const find = (r: OrchRunDetail) => boardCards([r], projects, DEFAULT_BOARD_FILTER).find((c) => c.lead)
+    expect(find(run({ agents: [lead({})] }))).toMatchObject({ title: 'Lead · coordinating', column: 'progress' })
+    expect(find(run({ agents: [lead({ state: 'working', taskKey: 'T-1' })] }))).toBeUndefined()
+    expect(find(run({ agents: [lead({ retired: true })] }))).toBeUndefined()
+    expect(find(run({ stage: 'done', agents: [lead({})] }))).toBeUndefined()
+  })
+
+  it('says why a todo task waits', () => {
+    const tasks = [task({ key: 'T-1', status: 'in_progress' }), task({ key: 'T-2', status: 'todo', dependsOn: ['T-1'] }), task({ key: 'T-3', status: 'todo' })]
+    const r = run({ tasks })
+    expect(waitingReason(tasks[1], r)).toBe('Waiting for T-1')
+    expect(waitingReason(tasks[2], r)).toBe('Waiting for a free agent slot')
+    expect(waitingReason(tasks[0], r)).toBeNull()
+    const merge = run({ tasks, stage: 'merge', decisions: [{ id: 'd', runId: 'r1', kind: 'run-complete', taskId: null, agentId: null, question: '', options: [], recommended: null, context: '', urgency: 'normal', answer: null, createdAt: 0, answeredAt: null }] })
+    expect(waitingReason(tasks[2], merge)).toBe('Waiting for your answer in Human review')
   })
 })

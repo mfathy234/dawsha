@@ -92,7 +92,11 @@ export class Dispatcher {
     await this.continueElsewhere(run)
     await this.mergeApproved(run)
     this.retireFinishedAgents(run)
-    if (await this.finishIfAnswered(run)) return
+    if (await this.finishIfAnswered(run)) {
+      // Tasks left ready in the merge stage (e.g. created before the stage moved back) must still start.
+      if (run.stage === 'merge' && this.deps.service.run(run.id)?.stage === 'merge') await this.startReadyTasks(run, this.planOf(run), this.deps.service.tasks(run.id))
+      return
+    }
     const tasks = this.deps.service.tasks(run.id)
     const plan = this.planOf(run)
     const specPending = tasks.some((t) => t.role === 'spec-writer' && !isFinal(t.status))

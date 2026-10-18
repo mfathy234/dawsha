@@ -9,7 +9,7 @@ const MAX_EVENTS = 200
 
 function agentState(agent: OrchAgent, task: OrchTask | undefined): OrchAgentState {
   if (agent.retiredAt) return 'done'
-  if (!task) return 'idle'
+  if (!task) return agent.role === 'lead' ? 'coordinating' : 'idle'
   if (task.status === 'stalled') return 'stalled'
   if (task.status === 'waiting_on_human' || task.status === 'blocked') return 'waiting'
   return 'working'
