@@ -446,16 +446,20 @@ test('Remote Access settings show a QR code that opens the page with the pairing
   try {
     const url = 'https://quiet-river-1234.trycloudflare.com/dawsha/'
     await app.evaluate(({ ipcMain }, tunnel) => {
-      ipcMain.removeHandler('remote-access:get')
-      ipcMain.handle('remote-access:get', () => ({
+      const state = () => ({
         status: 'available',
         enabled: true,
         url: tunnel,
         message: 'Remote Access is on.',
+        notice: null,
         devices: [],
         pairing: { code: '482913', expiresAt: Date.now() + 5 * 60_000 },
         permissions: { allowedEmail: '', terminalInput: true, sessionControl: true }
-      }))
+      })
+      ipcMain.removeHandler('remote-access:get')
+      ipcMain.handle('remote-access:get', () => state())
+      ipcMain.removeHandler('remote-access:verify')
+      ipcMain.handle('remote-access:verify', () => ({ ok: true, state: state() }))
     }, url)
     // Settings reads the Remote Access state once at startup.
     await page.reload()
@@ -469,6 +473,44 @@ test('Remote Access settings show a QR code that opens the page with the pairing
     await expect(page.locator('.remote-manual')).toContainText('Or connect by hand')
     await expect(page.locator('.remote-pairing-code')).toHaveAttribute('aria-label', 'Pairing code 4 8 2 9 1 3')
     await page.screenshot({ path: 'test-results/screens/remote-access-qr.png' })
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Remote Access never shows the stale link after the tunnel dies: it reconnects and asks to re-scan', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    const oldUrl = 'https://old-river-1234.trycloudflare.com/dawsha/'
+    const newUrl = 'https://new-river-5678.trycloudflare.com/dawsha/'
+    await app.evaluate(({ ipcMain }, urls) => {
+      let phase: 'old' | 'reconnecting' | 'new' = 'old'
+      const base = { enabled: true, devices: [], permissions: { allowedEmail: '', terminalInput: true, sessionControl: true } }
+      const state = () => phase === 'old'
+        ? { ...base, status: 'available', url: urls.old, message: 'Remote Access is on.', notice: null, pairing: { code: '111111', expiresAt: Date.now() + 5 * 60_000 } }
+        : phase === 'reconnecting'
+          ? { ...base, status: 'reconnecting', url: null, message: 'The connection dropped. Reconnecting…', notice: null, pairing: null }
+          : { ...base, status: 'available', url: urls.next, message: 'Remote Access is on.', notice: 'The address changed. Scan the new code on your phone.', pairing: { code: '222222', expiresAt: Date.now() + 5 * 60_000 } }
+      ipcMain.removeHandler('remote-access:get')
+      ipcMain.handle('remote-access:get', () => state())
+      ipcMain.removeHandler('remote-access:verify')
+      ipcMain.handle('remote-access:verify', async () => {
+        // The tunnel is dead: main detects it, starts reconnecting, and only later has a new address.
+        phase = 'reconnecting'
+        setTimeout(() => { phase = 'new' }, 1500)
+        return { ok: true, state: state() }
+      })
+    }, { old: oldUrl, next: newUrl })
+    await page.reload()
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-remote').click()
+    await expect(page.locator('.remote-status')).toContainText('Reconnecting…')
+    await expect(page.locator('.remote-qr')).toHaveCount(0)
+    await expect(page.locator('.remote-url')).toHaveCount(0)
+    await expect(page.locator('.remote-qr')).toHaveAttribute('data-qr', /new-river-5678.*#pair=222222/, { timeout: 15_000 })
+    await expect(page.locator('.remote-url')).toHaveText(newUrl)
+    await expect(page.locator('#remote-address-changed')).toHaveText('The address changed. Scan the new code on your phone.')
+    await expect(page.getByText('old-river-1234')).toHaveCount(0)
   } finally {
     await closeApp(app)
   }

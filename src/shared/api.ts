@@ -71,6 +71,7 @@ export interface GridApi {
     getState(): Promise<RemoteAccessState>
     enable(): Promise<RemoteAccessState>
     disable(): Promise<RemoteAccessState>
+    verify(): Promise<RemoteAccessState>
     refreshPairing(): Promise<RemoteAccessState>
     setPermissions(patch: Partial<RemoteAccessSettings>): Promise<RemoteAccessState>
     setAllowedEmail(email: string): Promise<RemoteAccessState>

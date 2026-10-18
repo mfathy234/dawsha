@@ -6,6 +6,7 @@ export const IPC = {
   remoteAccessGet: 'remote-access:get',
   remoteAccessEnable: 'remote-access:enable',
   remoteAccessDisable: 'remote-access:disable',
+  remoteAccessVerify: 'remote-access:verify',
   remoteAccessPairing: 'remote-access:pairing',
   remoteAccessPermissions: 'remote-access:permissions',
   remoteAccessEmail: 'remote-access:email',

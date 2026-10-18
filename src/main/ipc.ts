@@ -129,6 +129,7 @@ export function registerIpc(
     ipcMain.handle(IPC.remoteAccessGet, () => remoteAccess.getState())
     ipcMain.handle(IPC.remoteAccessEnable, () => remoteResult(() => remoteAccess.enable()))
     ipcMain.handle(IPC.remoteAccessDisable, () => remoteResult(() => remoteAccess.disable()))
+    ipcMain.handle(IPC.remoteAccessVerify, () => remoteResult(() => remoteAccess.verify()))
     ipcMain.handle(IPC.remoteAccessPairing, () => remoteResult(() => remoteAccess.refreshPairing()))
     ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: Partial<RemoteAccessSettings>) => remoteResult(() => remoteAccess.setPermissions(patch)))
     ipcMain.handle(IPC.remoteAccessEmail, (_event, email: string) => remoteResult(() => remoteAccess.setAllowedEmail(email)))

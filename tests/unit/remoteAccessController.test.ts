@@ -207,3 +207,89 @@ describe('Remote Access controller', () => {
     expect(context.server.stop).toHaveBeenCalled()
   })
 })
+
+describe('Remote Access tunnel health', () => {
+  type Wait = (host: string, o: { timeoutMs: number }) => Promise<boolean>
+  async function enabled(probeResults: boolean[], waitForHostname?: Wait) {
+    const context = fixture(waitForHostname)
+    const queue = [...probeResults]
+    const probe = vi.fn(async () => (queue.length ? queue.shift()! : true))
+    const second = { url: 'https://calm-owl.trycloudflare.com', stop: vi.fn(async () => undefined), onExit: vi.fn(() => () => undefined) }
+    context.tunnel.start.mockResolvedValueOnce(context.tunnelHandle).mockResolvedValueOnce(second)
+    const controller = createRemoteAccessController({
+      userDataDir: context.userDataDir,
+      settings: context.store,
+      ptys: { remoteSnapshot: () => [], remoteScreen: async () => null, remoteTail: async () => null, subscribeRemoteOutput: () => null, write: () => undefined, kill: () => undefined, spawn: () => ({ ok: true as const, pid: 1 }) },
+      getWindow: () => null,
+      tunnel: context.tunnel,
+      createServer: context.createServer,
+      assetDirectory: context.assetDirectory,
+      waitForHostname: context.waitForHostname,
+      readyGraceMs: 5,
+      probe
+    })
+    await controller.enable()
+    return { ...context, controller, probe }
+  }
+
+  it('keeps the link when verify finds a healthy tunnel', async () => {
+    const context = await enabled([true])
+    const state = await context.controller.verify()
+    expect(state).toMatchObject({ status: 'available', url: 'https://brisk-fox.trycloudflare.com/dawsha/', notice: null })
+    expect(context.tunnel.start).toHaveBeenCalledTimes(1)
+    await context.controller.disable()
+  })
+
+  it('retries once on a single failure without reconnecting', async () => {
+    const context = await enabled([false, true])
+    expect((await context.controller.verify()).status).toBe('available')
+    expect(context.tunnel.start).toHaveBeenCalledTimes(1)
+    await context.controller.disable()
+  })
+
+  it('reconnects after two failures, hides the stale link, then shows the new link with a re-scan notice', async () => {
+    let release!: (value: boolean) => void
+    let calls = 0
+    const context = await enabled([false, false], () => (++calls === 1 ? Promise.resolve(true) : new Promise<boolean>((resolve) => { release = resolve })))
+    const state = await context.controller.verify()
+    expect(state).toMatchObject({ status: 'reconnecting', url: null, pairing: null, message: 'The connection dropped. Reconnecting…' })
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+    release(true)
+    await vi.waitFor(async () => expect((await context.controller.getState()).status).toBe('available'))
+    const after = await context.controller.getState()
+    expect(after.url).toBe('https://calm-owl.trycloudflare.com/dawsha/')
+    expect(after.notice).toBe('The address changed. Scan the new code on your phone.')
+    expect(after.pairing?.code).toMatch(/^\d{6}$/)
+    expect(context.tunnelHandle.stop).toHaveBeenCalled()
+    await context.controller.disable()
+  })
+
+  it('reconnects after a single failed check following resume', async () => {
+    const context = await enabled([false])
+    context.controller.onSystemResume()
+    await vi.waitFor(() => expect(context.tunnel.start).toHaveBeenCalledTimes(2))
+    await vi.waitFor(async () => expect((await context.controller.getState()).url).toBe('https://calm-owl.trycloudflare.com/dawsha/'))
+    await context.controller.disable()
+  })
+
+  it('ends in the setup error with Try again when the reconnect never becomes reachable, and stops checking', async () => {
+    let calls = 0
+    const context = await enabled([false, false], async () => ++calls === 1)
+    await context.controller.verify()
+    await vi.waitFor(async () => expect((await context.controller.getState()).status).toBe('setup-required'))
+    const state = await context.controller.getState()
+    expect(state).toMatchObject({ enabled: false, url: null })
+    expect(state.message).toMatch(/not reachable/)
+    const before = context.probe.mock.calls.length
+    await context.controller.verify()
+    expect(context.probe.mock.calls.length).toBe(before)
+  })
+
+  it('logs health failures and the reconnect', async () => {
+    const context = await enabled([false, false])
+    await context.controller.verify()
+    await vi.waitFor(() => expect(readFileSync(join(context.userDataDir, 'remote-access.log'), 'utf8')).toContain('tunnel-reconnect'))
+    expect(readFileSync(join(context.userDataDir, 'remote-access.log'), 'utf8')).toContain('tunnel-health-failed')
+    await context.controller.disable()
+  })
+})
