@@ -96,7 +96,7 @@ describe('listAllSessions', () => {
     const sources = await listSessionSources(w.projects, {}, w.homes, Date.now() - 3_600_000)
     expect(sources).toHaveLength(405)
     expect(sources[0].session).toMatchObject({ workBranch: null, lastActivityAt: Date.parse('2026-10-08T09:00:00.000Z') })
-  })
+  }, 30_000) // writes and reads 405 transcripts, which passes 5 s when the full suite shares the disk
   it('merges the three agents across projects, newest first, with details', async () => {
     const w = world()
     claudeSession(w, 'web', 1, 'Add dark mode toggle', 12)
