@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.5</a>
+      <a href="#new">New in 1.6</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -59,7 +59,7 @@
     <div class="wrap hero-grid">
       <div class="hero-copy">
         <img class="logo hero-logo" src="favicon.svg?v=0.2.0-2" width="40" height="40" alt="Dawsha logo: a terminal inside a speech bubble">
-        <a class="new-pill" href="#new"><strong>New in 1.5</strong><span>Orchestrator and Work dashboard</span></a>
+        <a class="new-pill" href="#new"><strong>New in 1.6</strong><span>Native Arabic support and voice dictation</span></a>
         <p class="eyebrow">For Claude Code, Codex CLI and Gemini CLI</p>
         <h1>Every AI coding agent, one readable window.</h1>
         <p class="lead">Run Claude Code, Codex and Gemini side by side in large, readable terminals, one session per task.</p>
@@ -107,7 +107,70 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.5</h2>
+      <h2 id="new-h">New in 1.6</h2>
+      <p class="section-lead">Dawsha now speaks Arabic. Read replies with joined letters, dictate in Arabic or English, and work in a calmer window.</p>
+      <div class="launch-video" id="launch-1-6" hidden></div>
+      <div class="feat-row" id="arabic">
+        <div class="feat-copy">
+          <h3>Arabic in every session</h3>
+          <p>Replies and prompts in Arabic show joined letters in right-to-left order, in Claude Code, Codex, Gemini and shell sessions, and in Replay.</p>
+          <ul><li>Numbers and English words stay in place, and harakat stay intact.</li><li>Claude Code lays Arabic out itself. Dawsha keeps its layout and joins the letters.</li><li>Copy, Copy last reply, Copy prompt, transcripts and find work in reading order, so an Arabic word you type into find matches Claude's reply.</li><li>The terminal text itself is never changed.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/arabic-reply.png" width="1600" height="1000" alt="A Claude Code pane with an Arabic prompt and an Arabic reply about a theme change, with joined letters, the file name src/context/theme.tsx and the number 41 in place">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="dictation">
+        <div class="feat-copy">
+          <h3>Voice dictation in Arabic and English</h3>
+          <p>Press the mic in a pane header or Ctrl+Shift+Space, speak, and press it again. The text is typed into the session, or into the text box you were in, without sending it.</p>
+          <ul><li>Speech becomes text on your computer with Whisper large-v3-turbo. Nothing leaves it.</li><li>It handles Egyptian and Gulf Arabic, and Arabic mixed with English.</li><li>The model downloads once, about 570 MB, then works offline.</li><li>A live level meter shows the microphone is heard. If it sends only silence, Dawsha names the microphone. Pick one in Settings > Voice dictation.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/dictation.png" width="1600" height="1000" alt="A pane while dictating: the mic button is red and a bar under the header reads Listening with a live microphone level meter">
+        </figure>
+      </div>
+      <div class="feat-row" id="native-arabic">
+        <div class="feat-copy">
+          <h3>Native Arabic</h3>
+          <p>Arabic looks the same on every computer, and Dawsha's own text follows it.</p>
+          <ul><li>A bundled Arabic font, IBM Plex Sans Arabic, sized to match the code font.</li><li>Text boxes switch to right-to-left as you type Arabic.</li><li>Arabic session titles read correctly in the sidebar, the board and the panes.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/arabic-native.png" width="1600" height="1000" alt="Dawsha with two projects named in Arabic: the titles in the sidebar and the pane headers read right to left, and the filter box above them is right-to-left">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="calm">
+        <div class="feat-copy">
+          <h3>A calmer workspace</h3>
+          <p>Less in the way, and every shortcut one search away.</p>
+          <ul><li>The pane header keeps New terminal, Dictate, Pane actions, Maximize and Close. Timeline, Replay, Open in VS Code and Move pane are in the pane menu and the palette.</li><li>Full mode keeps every session name on one line, cut off with an ellipsis, in full on hover. Each close button sits right next to its name.</li><li>Press Ctrl+/ for a keyboard shortcuts sheet, grouped and searchable.</li><li>Closing an agent session shows Reopen for a few seconds.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/full-mode.png" width="1600" height="1000" alt="Full mode with six sessions that have long names: a strip across the top shows each name on one line with an ellipsis and a close button next to it, and the other sessions are listed on the right">
+        </figure>
+      </div>
+      <div class="feat-row" id="shortcuts">
+        <div class="feat-copy">
+          <h3>Every shortcut, searchable</h3>
+          <p>Ctrl+/ opens the sheet, and so does searching the palette for Keyboard shortcuts.</p>
+          <ul><li>Grouped by Sessions, Panes, Terminal, Views, Dictation and General.</li><li>Type in the search box to find a key or an action.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/shortcuts.png" width="1600" height="1000" alt="The Keyboard shortcuts sheet over a session, with a search box and shortcuts grouped under Sessions, Panes and Terminal">
+        </figure>
+      </div>
+      <div class="feat-copy feat-note" id="remote-checks">
+        <h3>Remote Control checks its connection</h3>
+        <p>While it is on, Dawsha checks the public link every minute, after the computer wakes or unlocks, and before it shows you the link or code.</p>
+        <ul><li>If the connection has dropped, it reconnects and shows the new link with a note to scan it again, instead of a link that no longer works.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="new-1-5" aria-labelledby="new-15-h">
+    <div class="wrap">
+      <h2 id="new-15-h">New in 1.5</h2>
       <p class="section-lead">Hand a feature or a bug to a team of agents, see where your day went, and keep Remote Control connected.</p>
       <div class="feat-row" id="orchestrator">
         <div class="feat-copy">
@@ -233,7 +296,7 @@
         </figure>
         <figure class="shot">
           <img loading="lazy" src="assets/palette.png" width="1600" height="1000" alt="The command palette filtered by a short query, listing sessions, actions and projects">
-          <figcaption><strong>Command palette.</strong> Ctrl+K reaches sessions, projects, snippets and layouts from the keyboard.</figcaption>
+          <figcaption><strong>Command palette.</strong> Ctrl+K reaches sessions, projects and layouts from the keyboard.</figcaption>
         </figure>
         <figure class="shot">
           <img loading="lazy" src="assets/compare.png" width="1600" height="1000" alt="Two agents answering the same prompt side by side, each in its own worktree, with Keep A, Keep B and Diff buttons">
@@ -290,8 +353,8 @@
         <figcaption><strong>Activity at a glance.</strong> Native processes and optional Claude sub-agent progress sit beside each session.</figcaption>
       </figure>
       <div class="fgroups">
-        <div class="fgroup"><h3>Run</h3><ul><li><strong>Three agents in one grid</strong><span>Up to 6 real terminals. Resize, drag, pin or maximize any session, Ctrl+Tab between them.</span></li><li><strong>The dawsha command</strong><span>Start, resume and open layouts from the terminal you already use.</span></li><li><strong>Commit and push</strong><span>Review the changed files, commit the ones you pick or commit and push. Pull, switch branch and stash in a click.</span></li><li><strong>Layouts, snippets, instructions</strong><span>Restore a setup by name, insert snippets, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.</span></li><li><strong>Import existing settings</strong><span>Bring in projects and preferences from an earlier setup, with a backup of your current Dawsha settings.</span></li><li><strong>Back up and move</strong><span>Export your settings to one JSON file without remote-access secrets, then import it on another computer with Merge or Replace.</span></li><li><strong>Themes</strong><span>Seven themes, including card-style light and dark themes, with contrast checks and an optional background image.</span></li><li><strong>Installed skills</strong><span>Browse, open, copy and export skills for every agent, including project skills.</span></li></ul></div>
-        <div class="fgroup"><h3>Switch<img class="ill ill-hop brand-logo" src="favicon.svg?v=0.2.0-2" width="38" height="38" alt="Dawsha logo"></h3><ul><li><strong>Remote Control <span class="beta-badge">Beta</span></strong><span>Pair a browser with your running Dawsha app. Input and session controls stay off until you enable them.</span></li><li><strong>Resizable Projects panel</strong><span>Drag the sidebar edge to set a width that suits your projects; Dawsha remembers it.</span></li><li><strong>Find and resume sessions</strong><span>Ctrl+Shift+R searches prompts and replies. Choose the current project or include all projects.</span></li><li><strong>Keep closed sessions</strong><span>Closed tabs stay under their project until you remove them there. Resume one whenever you need it.</span></li><li><strong>Project tasks</strong><span>Keep a task timeline with notes, commit references and linked sessions.</span></li><li><strong>Command palette</strong><span>Ctrl+K finds sessions, projects, snippets and layouts.</span></li><li><strong>Find and copy</strong><span>Search any terminal, open files in their matching apps, and copy the last reply or the prompt you are typing.</span></li><li><strong>Ask two agents</strong><span>One prompt, two worktrees, two answers to compare.</span></li><li><strong>Continue in another agent</strong><span>Hand a session over with an editable summary, or export it as Markdown.</span></li></ul></div>
+        <div class="fgroup"><h3>Run</h3><ul><li><strong>Three agents in one grid</strong><span>Up to 6 real terminals. Resize, drag, pin or maximize any session, Ctrl+Tab between them.</span></li><li><strong>The dawsha command</strong><span>Start, resume and open layouts from the terminal you already use.</span></li><li><strong>Commit and push</strong><span>Review the changed files, commit the ones you pick or commit and push. Pull, switch branch and stash in a click.</span></li><li><strong>Layouts and instructions</strong><span>Restore a setup by name, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.</span></li><li><strong>Voice dictation</strong><span>Speak Arabic or English and the text is typed into the session. It runs on your computer, offline.</span></li><li><strong>Arabic support</strong><span>Joined, right-to-left Arabic in every session, with copy and find in reading order.</span></li><li><strong>Import existing settings</strong><span>Bring in projects and preferences from an earlier setup, with a backup of your current Dawsha settings.</span></li><li><strong>Back up and move</strong><span>Export your settings to one JSON file without remote-access secrets, then import it on another computer with Merge or Replace.</span></li><li><strong>Themes</strong><span>Seven themes, including card-style light and dark themes, with contrast checks and an optional background image.</span></li><li><strong>Installed skills</strong><span>Browse, open, copy and export skills for every agent, including project skills.</span></li></ul></div>
+        <div class="fgroup"><h3>Switch<img class="ill ill-hop brand-logo" src="favicon.svg?v=0.2.0-2" width="38" height="38" alt="Dawsha logo"></h3><ul><li><strong>Remote Control <span class="beta-badge">Beta</span></strong><span>Pair a browser with your running Dawsha app. Input and session controls stay off until you enable them.</span></li><li><strong>Resizable Projects panel</strong><span>Drag the sidebar edge to set a width that suits your projects; Dawsha remembers it.</span></li><li><strong>Find and resume sessions</strong><span>Ctrl+Shift+R searches prompts and replies. Choose the current project or include all projects.</span></li><li><strong>Keep closed sessions</strong><span>Closed tabs stay under their project until you remove them there. Resume one whenever you need it.</span></li><li><strong>Project tasks</strong><span>Keep a task timeline with notes, commit references and linked sessions.</span></li><li><strong>Command palette</strong><span>Ctrl+K finds sessions, projects and layouts.</span></li><li><strong>Find and copy</strong><span>Search any terminal, open files in their matching apps, and copy the last reply or the prompt you are typing.</span></li><li><strong>Ask two agents</strong><span>One prompt, two worktrees, two answers to compare.</span></li><li><strong>Continue in another agent</strong><span>Hand a session over with an editable summary, or export it as Markdown.</span></li></ul></div>
         <div class="fgroup"><h3>Stay informed</h3><ul><li><strong>Needs-you alerts</strong><span>An amber border and a notification when a session needs your input.</span></li><li><strong>Close confirmation</strong><span>Dawsha asks before closing a session only while it is working. Idle, done and exited sessions close straight away.</span></li><li><strong>Highlights and context</strong><span>Errors stand out, and a nearly full session warns you before it runs out.</span></li><li><strong>Reset countdowns</strong><span>Claude sessions show the 5-hour and weekly reset countdowns when Claude reports them.</span></li><li><strong>Cost and usage</strong><span>Time, tokens and cost for every session, plus a full usage view.</span></li><li><strong>Gemini tool activity</strong><span>See Gemini's recent tools beside its session and in the agents drawer.</span></li><li><strong>In-app updates</strong><span>The installed build updates itself while sessions keep running.</span></li><li class="has-ill"><strong>Local by default</strong><span>No account or telemetry. Remote Control is optional and routes traffic through Cloudflare.</span><svg class="ill ill-lock" width="56" height="42" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" style="--dd:0ms" d="M9 5 Q9 3 11 3 L53 3.3 Q55 3.5 55 6 L54.6 33 Q54.5 35 52.5 35 L11 34.8 Q9 34.5 9 32.5Z"/><path class="dr" pathLength="1" style="--dd:200ms" d="M3 40 Q3 38 6 38 L58 38.4 Q61 38.5 61 40.5 Q61 43 58 43 L6 43 Q3 42.8 3 40Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M27 38.5 Q32 41 37 38.5"/><path class="fd" d="M25.5 20.5 Q25.5 19 27 19 L37 19.2 Q38.5 19.4 38.5 21 L38.3 28 Q38.2 29.6 36.7 29.6 L27 29.5 Q25.5 29.4 25.5 28Z" fill="#34d399" fill-opacity=".25" stroke="#34d399"/><circle class="fd" cx="32" cy="24" r="1.2" fill="#34d399" stroke="none"/><path class="shk" stroke="#34d399" d="M28.5 19 L28.4 15.5 Q28.5 11.5 32 11.5 Q35.5 11.5 35.6 15.5 L35.5 19"/></svg></li></ul></div>
       </div>
     </div>

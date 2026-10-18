@@ -239,16 +239,41 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
 })
 
 const newSections = ['board', 'timeline', 'search', 'replay']
+const newSections16 = ['arabic', 'dictation', 'native-arabic', 'calm', 'shortcuts']
 const newSections15 = ['orchestrator', 'orch-run', 'orch-boards', 'work', 'tickets']
+
+test('New in 1.6 leads with Arabic, keeps a hidden launch video slot and has sized lazy images', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(url)
+  await expect(page.locator('.new-pill')).toContainText('New in 1.6')
+  await expect(page.locator('.new-pill')).toContainText('Arabic')
+  await expect(page.locator('.new-pill')).toHaveAttribute('href', '#new')
+  await expect(page.locator('#new-h')).toHaveText('New in 1.6')
+  await expect(page.locator('#new #launch-1-6')).toBeHidden()
+  await expect(page.locator('#new .feat-row').first()).toHaveAttribute('id', 'arabic')
+  for (const id of newSections16) {
+    const row = page.locator(`#new #${id}`)
+    await expect(row).toHaveCount(1)
+    const image = row.locator('img')
+    await expect(image).toHaveAttribute('loading', 'lazy')
+    await expect(image).toHaveAttribute('width', '1600')
+    await expect(image).toHaveAttribute('height', '1000')
+    expect(((await image.getAttribute('alt')) ?? '').length).toBeGreaterThan(20)
+    await image.scrollIntoViewIfNeeded()
+    await expect(image).toHaveJSProperty('complete', true)
+    expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(1600)
+  }
+  await expect(page.locator('#remote-checks')).toContainText('every minute')
+  await expect(page.locator('#new-15-h')).toHaveText('New in 1.5')
+  await expect(page.locator('body')).not.toContainText(/snippet/i)
+  await expect(page.locator('#features')).toContainText('Voice dictation')
+})
 
 test('New in 1.5 shows five feature rows with sized lazy images and the remote reliability note', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
-  await expect(page.locator('.new-pill')).toContainText('New in 1.5')
-  await expect(page.locator('.new-pill')).toHaveAttribute('href', '#new')
-  await expect(page.locator('#new-h')).toHaveText('New in 1.5')
   for (const id of newSections15) {
-    const row = page.locator(`#new #${id}`)
+    const row = page.locator(`#new-1-5 #${id}`)
     await expect(row).toHaveCount(1)
     const image = row.locator('img')
     await expect(image).toHaveAttribute('loading', 'lazy')
@@ -290,7 +315,11 @@ test('The 1.0 section still shows four feature rows with sized lazy images and a
 
 test('the Arabic page translates the new sections and the English page has no horizontal scroll at 375px', async ({ page }) => {
   await page.goto(arabicUrl)
-  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.5')
+  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.6')
+  await expect(page.locator('#new-15-h')).toHaveText('الجديد في 1.5')
+  await expect(page.locator('#arabic h3')).toHaveText('العربية في كل جلسة')
+  await expect(page.locator('#dictation h3')).toHaveText('الإملاء الصوتي بالعربية والإنجليزية')
+  await expect(page.locator('#arabic img')).toHaveAttribute('alt', /مساحة Claude Code/)
   await expect(page.locator('#new-10-h')).toHaveText('الجديد في 1.0')
   await expect(page.locator('#orchestrator h3')).toHaveText('المنسّق')
   await expect(page.locator('#work h3')).toHaveText('لوحة العمل')
@@ -302,8 +331,9 @@ test('the Arabic page translates the new sections and the English page has no ho
   await expect(page.locator('#replay h3')).toHaveText('إعادة التشغيل')
   await expect(page.locator('#remote')).toContainText('وافق من هاتفك')
   await expect(page.getByText('انسخ احتياطيًا وانقل')).toBeVisible()
-  await expect(page.locator('.new-pill')).toContainText('الجديد في 1.5')
-  const english = await page.locator('#new, #new-1-0, #remote, .new-pill').evaluateAll((nodes) => nodes.map((node) => node.textContent ?? '').join(' '))
+  await expect(page.locator('.new-pill')).toContainText('الجديد في 1.6')
+  await expect(page.locator('.new-pill')).toContainText('العربية')
+  const english = await page.locator('#new, #new-1-5, #new-1-0, #remote, .new-pill').evaluateAll((nodes) => nodes.map((node) => node.textContent ?? '').join(' '))
   expect(english).not.toMatch(/Sessions board|Approve from your phone|Session timeline|Work dashboard|Orchestrator/)
   await expect(page.locator('#board img')).toHaveAttribute('alt', /لوحة الجلسات/)
   for (const address of [url, arabicUrl]) {
