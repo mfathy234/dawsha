@@ -22,6 +22,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - In full mode and in the board peek, Esc inside a terminal always goes to the agent, so one press interrupts it. Leave full mode with Ctrl+Enter, the restore button, or Esc outside the terminal.
 - Orchestrator: Mark as done closes the run's panes and removes every worktree it created, along with its merged branches. Branches with unmerged work are kept and listed, with a Retry clean-up button.
 - Orchestrator: a working lead shows as Coordinating, and tasks that are waiting say why.
+- In a pane with several terminal tabs, Tab and Shift+Tab go to the agent or the text box you are in, so Claude Code's Shift+Tab mode switch and shell completion work there. Switch tabs with Ctrl+PageDown and Ctrl+PageUp.
 
 ### Removed
 
@@ -31,6 +32,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - Orchestrator: work added after a run was reported as finished now starts. Before, the new tasks waited until the old "finished" question was answered.
 - Dialogs never grow taller than the window. They scroll inside it, so their buttons stay reachable on small screens.
+- Closing the session shown in full mode moves to its neighbour instead of leaving full mode, and the strip shows the same status words as the sidebar, including Needs you.
+- A session started from the quick pick gets the keyboard.
+- Pane, tab and sidebar menus close on a second click of their button, and stay inside the window.
+- Escape from the timeline search returns to the terminal, and Escape closes Replay from its Skip idle box.
+- Clearing a recording limit box keeps its value instead of saving the minimum, which could remove recordings.
+- Settings import names orchestrator settings, counts the sessions Replace will close correctly, and says what it removes on the button.
+- The Work view refresh and the run dashboard no longer take the caret out of a ticket editor or a handoff note.
+- A reply sent from the board peek counts as a prompt for Copy last reply and Ctrl+Up.
+- Remote Control: Disconnect clears the used pairing code, and the Cloudflare email box has an accessible name.
+- Smaller fixes: the Tickets tiles fill their row, New run says Start run, an empty project name no longer marks the folder invalid, shortcut hints show Cmd on macOS, and the run dashboard shows a finished agent as done.
 
 ## [1.5.0] - 2026-10-17
 
