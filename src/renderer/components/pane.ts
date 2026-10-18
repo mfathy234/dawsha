@@ -461,7 +461,7 @@ export class PaneComponent {
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
     const maximized = store.state.maximizedId === this.paneId
     const maximizeItem = item(
-      maximized ? 'Restore pane to grid' : 'Expand pane',
+      maximized ? 'Restore pane to grid' : 'Maximize pane',
       () => maximized ? restoreGrid() : toggleMaximize(this.paneId),
       maximized ? ICONS.restore : ICONS.maximize,
       'pane.maximize'
