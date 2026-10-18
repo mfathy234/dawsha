@@ -121,7 +121,7 @@ export class TerminalArabic {
       layer.style.cssText =
         `--arabic-bg:${background};--arabic-fg:${this.theme.foreground ?? '#ffffff'};` +
         `--arabic-cursor:${this.theme.cursor ?? this.theme.foreground ?? '#ffffff'};` +
-        `font-family:${TERMINAL_FONT};font-size:${this.term.options.fontSize}px;line-height:${cellH}px`
+        `font-family:'Dawsha Arabic',${TERMINAL_FONT};font-size:${this.term.options.fontSize}px;line-height:${cellH}px`
     }
     const buffer = this.term.buffer.active
     const cursorRow = buffer.cursorY

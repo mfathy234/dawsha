@@ -86,3 +86,22 @@ test('Claude rows, already in visual order, keep their layout and get their Arab
     await closeApp(app)
   }
 })
+
+test('Arabic typed into a text box reads right-to-left with the bundled Arabic font', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    const filter = page.getByRole('textbox', { name: 'Filter projects' })
+    await filter.fill('مشروع الفواتير')
+    const style = await filter.evaluate((el) => {
+      const computed = getComputedStyle(el)
+      return { bidi: computed.unicodeBidi, font: computed.fontFamily }
+    })
+    expect(style.bidi).toBe('plaintext')
+    expect(style.font).toContain('Dawsha Arabic')
+    expect(await page.evaluate(() => document.fonts.check("13px 'Dawsha Arabic'", 'مشروع'))).toBe(true)
+    mkdirSync(SCREENS, { recursive: true })
+    await page.locator('.sidebar').screenshot({ path: resolve(SCREENS, 'arabic-input.png') })
+  } finally {
+    await closeApp(app)
+  }
+})
