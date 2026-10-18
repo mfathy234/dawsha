@@ -1,12 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { activeTermId, bufferText, closeApp, createSandbox, launchApp, lastInput, QUIT_BUDGET_MS } from './helpers'
+import { activeTermId, bufferText, closeApp, createSandbox, launchApp, lastInput, QUIT_BUDGET_MS, rawBufferText } from './helpers'
 
 const SLOW = 30_000
 const ECHO = resolve(__dirname, '../support/echoInput.cjs')
 const ARABIC = 'مرحبا بالعالم'
-const flat = async (page: Page, id: string): Promise<string> => (await bufferText(page, id)).replace(/[\r\n]/g, '')
+// The echo stand-in runs in a Claude-tagged pane but prints in reading order, so read the buffer as written.
+const flat = async (page: Page, id: string): Promise<string> => (await rawBufferText(page, id)).replace(/[\r\n]/g, '')
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 
 const useFakeEngine = (page: Page, text: string): Promise<void> =>

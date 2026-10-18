@@ -82,6 +82,7 @@ export function applyBundleToAll(): void {
 Object.defineProperty(window, '__grid', {
   value: {
     bufferText: (id: string): string => views.get(id)?.bufferText() ?? '',
+    rawBufferText: (id: string): string => views.get(id)?.rawBufferText() ?? '',
     lastInput: (id: string): string => lastInput.get(id) ?? '',
     fontSize: (id: string): number => views.get(id)?.fontSize ?? 0,
     feed: (id: string, data: string): void => views.get(id)?.write(data),

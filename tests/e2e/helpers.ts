@@ -23,6 +23,7 @@ export const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../pac
 
 interface GridHook {
   bufferText(id: string): string
+  rawBufferText(id: string): string
   lastInput(id: string): string
   fontSize(id: string): number
   feed(id: string, data: string): void
@@ -115,6 +116,10 @@ export async function activeTermId(page: Page): Promise<string> {
 
 export const bufferText = (page: Page, id: string): Promise<string> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.bufferText(termId), id)
+
+/** The buffer as the program wrote it; bufferText puts Claude Code's visual-order Arabic back in reading order. */
+export const rawBufferText = (page: Page, id: string): Promise<string> =>
+  page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.rawBufferText(termId), id)
 
 export const lastInput = (page: Page, id: string): Promise<string> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.lastInput(termId), id)

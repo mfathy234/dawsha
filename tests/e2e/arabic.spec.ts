@@ -36,8 +36,10 @@ test('Arabic rows are drawn as shaped right-to-left text while the buffer stays 
     expect(text).toContain('plain english row')
     await selectAllText(page, id)
     expect(await host.locator('.term-arabic-row span').count()).toBeGreaterThan(0)
-    const selectedBg = await host.locator('.term-arabic-row span').first().evaluate((s) => (s as HTMLElement).style.background)
-    expect(selectedBg).not.toBe('')
+    // The overlay repaints on the next animation frame after the selection changes.
+    await expect
+      .poll(() => host.locator('.term-arabic-row span').first().evaluate((s) => (s as HTMLElement).style.background))
+      .not.toBe('')
 
     // Scrolling the row out of view removes its overlay row.
     await feedTerminal(page, id, '\r\n'.repeat(80))
