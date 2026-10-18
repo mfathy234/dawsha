@@ -170,6 +170,17 @@ test('recording is off by default; turning it on records new sessions and turnin
     await expect
       .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.enabled, { timeout: SLOW })
       .toBe(true)
+    const days = page.locator('#recordings-days')
+    await days.fill('30')
+    await days.press('Tab')
+    await expect
+      .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.keepDays, { timeout: SLOW })
+      .toBe(30)
+    await days.fill('')
+    await days.press('Tab')
+    await expect(days).toHaveValue('30')
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    expect(JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.keepDays).toBe(30)
     await closeSettings(page)
 
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
