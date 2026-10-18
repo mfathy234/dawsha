@@ -1,5 +1,6 @@
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
 import { bind, formatShortcut } from '../../shared/shortcuts'
+import { DICTATION_SHORTCUT } from '../../shared/dictation'
 import {
   addTab,
   closePane,
@@ -31,6 +32,7 @@ import {
 import { derivePanes } from '../derive'
 import { applyStashPane, fetchPane, pullPane, stashPane, switchBranchPane } from '../gitQuickActions'
 import { saveSelectionAsSnippet } from '../snippetActions'
+import { toggleDictation } from '../dictation/dictationActions'
 import { openInstructionsForPane } from '../instructionsActions'
 import {
   canJumpPrompt,
@@ -77,6 +79,14 @@ export function installBuiltinCommands(): void {
       ...withKeys('Ctrl+Shift+N'),
       searchOnly: true,
       run: () => openQuickPick('other')
+    },
+    {
+      id: 'dictation.toggle',
+      title: 'Dictate',
+      group: 'Actions',
+      keywords: 'voice speech microphone talk arabic whisper',
+      shortcut: formatShortcut(bind(DICTATION_SHORTCUT)),
+      run: () => void toggleDictation()
     },
     { id: 'session.resume', title: 'Resume a session', group: 'Actions', ...withKeys('Ctrl+Shift+R'), run: () => openResumePicker() },
     {

@@ -15,6 +15,7 @@ export const INCLUDED_KEYS = [
   'paletteShortcut',
   'sessionsLayout',
   'recordings',
+  'dictation',
   'sessionInfo',
   'autoUpdateCheck',
   'sidebarCollapsed',
@@ -93,7 +94,7 @@ export type ParseResult = { ok: true; transfer: ParsedTransfer } | { ok: false; 
 const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'snippets', 'layouts'] as const
-const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo'] as const
+const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'dictation', 'sessionInfo'] as const
 const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'othersCollapsed'] as const
 
 function checkShapes(data: Raw): string | null {
@@ -200,6 +201,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['paletteShortcut', 'Palette shortcut'],
   ['sessionsLayout', 'Sessions view'],
   ['recordings', 'Recording settings'],
+  ['dictation', 'Dictation settings'],
   ['sessionInfo', 'Notifications'],
   ['autoUpdateCheck', 'Update checks'],
   ['sidebarCollapsed', 'Sidebar'],

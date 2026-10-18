@@ -30,6 +30,7 @@ import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
 import { installBuiltinCommands } from './commands/builtin'
+import { installDictationPill } from './dictation/dictationPill'
 import { installCompareCommands } from './commands/compare'
 import { installOrchestratorCommands } from './commands/orchestrator'
 import { closeOrchPane, openOrchPane, refreshOrch } from './orchActions'
@@ -104,6 +105,7 @@ async function boot(): Promise<void> {
   void installOps()
   installProcessActivity()
   installBuiltinCommands()
+  installDictationPill()
   installLayoutCommands()
   installCompareCommands()
   installHandoffCommands()

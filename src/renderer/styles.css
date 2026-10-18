@@ -7945,3 +7945,61 @@ button.tl-event:hover { background: var(--raised); }
 .import-mode { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
 .import-mode:has(input:checked) { border-color: var(--accent); background: var(--raised); }
 .import-mode > span { display: grid; gap: 2px; }
+
+.pane-mic.recording {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  animation: dictation-pulse 1.2s ease-in-out infinite;
+}
+
+.pane-mic.busy {
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.pane-dictation {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pane-dictation[hidden],
+.dictation-pill[hidden] {
+  display: none;
+}
+
+.dictation-pill {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 2000;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 35%);
+}
+
+.dictation-pill.recording {
+  border-color: var(--danger);
+}
+
+@keyframes dictation-pulse {
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pane-mic.recording { animation: none; }
+}

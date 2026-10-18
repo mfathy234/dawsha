@@ -8,6 +8,9 @@ import { store, type AppState } from './state'
 import { closeTimeline } from './timelineActions'
 import { closePeek } from './boardActions'
 import { boardShowing } from './sessionsLayout'
+import { DICTATION_SHORTCUT } from '../shared/dictation'
+import { cancelDictation, toggleDictation } from './dictation/dictationActions'
+import { dictationStatus } from './dictation/dictationState'
 
 const overlayOpen = (): boolean => document.querySelector('.overlay, .popover') !== null
 
@@ -56,8 +59,28 @@ function consume(event: KeyboardEvent): void {
 
 const inFindBar = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.term-find, .timeline-search') != null
 
+const DICTATION_BINDING = bind(DICTATION_SHORTCUT)
+
+// Dictation works from dialogs and text boxes too, so it is handled before the overlay guard.
+function handleDictationKey(event: KeyboardEvent): boolean {
+  if (matchesBinding(event, DICTATION_BINDING)) {
+    consume(event)
+    // Holding the keys repeats keydown; only the first press toggles.
+    if (!event.repeat) void toggleDictation()
+    return true
+  }
+  if (event.key === 'Escape' && dictationStatus().phase !== 'idle') {
+    consume(event)
+    cancelDictation()
+    return true
+  }
+  return false
+}
+
 function onKeyDown(event: KeyboardEvent): void {
-  if (event.isComposing || overlayOpen() || inFindBar(event)) return
+  if (event.isComposing) return
+  if (handleDictationKey(event)) return
+  if (overlayOpen() || inFindBar(event)) return
   const state = store.state
   if (isPaletteShortcut(event, state)) {
     consume(event)

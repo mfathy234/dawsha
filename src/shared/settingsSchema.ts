@@ -10,6 +10,7 @@ import { sanitizeSplits } from './splits'
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './sidebarWidth'
 import { defaultHighlights, sanitizeHighlights } from './highlights'
 import { defaultRecordings, sanitizeRecordings } from './recordings'
+import { defaultDictation, sanitizeDictation } from './dictation'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -86,6 +87,7 @@ export const defaultSettings = (): Settings => ({
   remoteAccess: defaultRemoteAccess(),
   highlights: defaultHighlights(),
   recordings: defaultRecordings(),
+  dictation: defaultDictation(),
   experimental: { orchestrator: true },
   orchestrator: defaultOrchSettings()
 })
@@ -365,6 +367,7 @@ export function migrateSettings(raw: unknown): Settings {
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
     highlights: sanitizeHighlights(raw.highlights),
     recordings: sanitizeRecordings(raw.recordings),
+    dictation: sanitizeDictation(raw.dictation),
     // The orchestrator left Experimental in 1.5; older files that turned it off get it too.
     experimental: { orchestrator: true },
     orchestrator: sanitizeOrchSettings(raw.orchestrator)
