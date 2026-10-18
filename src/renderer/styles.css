@@ -8049,3 +8049,60 @@ button.tl-event:hover { background: var(--raised); }
     display: none;
   }
 }
+
+/* Keyboard shortcuts sheet: a searchable, read-only list grouped by area. */
+.shortcuts-dialog {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shortcuts-search {
+  width: 100%;
+}
+
+.shortcuts-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 14px;
+}
+
+.shortcuts-group h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.shortcuts-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shortcuts-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcuts-title {
+  min-width: 0;
+}
+
+.shortcuts-list kbd {
+  flex: none;
+}
+
+.shortcuts-empty {
+  color: var(--muted);
+}

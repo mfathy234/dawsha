@@ -42,6 +42,7 @@ import {
 } from '../terminalActions'
 import { exportTranscript } from '../transcriptActions'
 import { replayPane } from '../replayActions'
+import { openShortcutsSheet } from '../components/shortcutsSheet'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setSessionsLayout } from '../sessionsLayout'
@@ -284,6 +285,15 @@ export function installBuiltinCommands(): void {
       run: () => setSessionsLayout('grid')
     },
     { id: 'view.grid', title: 'Back to the grid', group: 'Actions', searchOnly: true, run: () => showView('grid') },
+    {
+      id: 'app.shortcuts',
+      title: 'Keyboard shortcuts',
+      group: 'Actions',
+      keywords: 'keys hotkeys help bindings cheat sheet',
+      shortcut: 'Ctrl+/',
+      keys: [{ key: '/', ctrl: true, shift: false, alt: false }],
+      run: () => void openShortcutsSheet()
+    },
     { id: 'app.theme', title: 'Choose a theme', group: 'Actions', keywords: 'colors background', run: () => toggleThemePicker(true) },
     { id: 'app.updates', title: 'Check for updates', group: 'Actions', run: () => runUpdateAction('check') },
     { id: 'app.whats-new', title: "Show what's new", group: 'Actions', searchOnly: true, run: () => openWhatsNew() },
