@@ -163,7 +163,13 @@ test('the Tickets tab counts a branch once and keeps the name and link the user 
     await expect(row.getByRole('alert')).toContainText('web address')
     // What was typed survives the error.
     await expect(row.getByLabel('Ticket name')).toHaveValue('Login crash on expired token')
-    await row.getByLabel('Ticket link').fill('dev.azure.com/MicrotecEgypt/_workitems/edit/18550')
+    await row.getByLabel('Ticket link').fill('dev.azure.com/MicrotecEgypt/_workitems/edit/')
+    // A refresh (as the 30-second timer does, without moving focus) keeps the caret in the editor.
+    await page.locator('.work-view .usage-head button', { hasText: 'Refresh' }).dispatchEvent('click')
+    await expect(page.locator('.work-view')).toHaveAttribute('aria-busy', 'false')
+    await expect(row.getByLabel('Ticket link')).toBeFocused()
+    await page.keyboard.type('18550')
+    await expect(row.getByLabel('Ticket link')).toHaveValue('dev.azure.com/MicrotecEgypt/_workitems/edit/18550')
     await row.getByRole('button', { name: 'Save' }).click()
     await expect(row.locator('.work-ticket-name')).toHaveText('Login crash on expired token')
     await expect(row.getByRole('link', { name: 'Open link ↗' })).toHaveAttribute('href', 'https://dev.azure.com/MicrotecEgypt/_workitems/edit/18550')
