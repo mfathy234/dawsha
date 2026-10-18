@@ -155,6 +155,10 @@ test('the Tickets tab counts a branch once and keeps the name and link the user 
     await expect(row).toBeVisible()
     await expect(row.locator('.work-ticket-head .work-chip')).toHaveText('Bug')
     await expect(row).toContainText('1 session')
+    // Four ticket tiles fill the row instead of leaving a fifth column empty.
+    const tilesBox = (await page.locator('.work-ticket-tiles').boundingBox())!
+    const totalBox = (await page.locator('#work-tickets-total').boundingBox())!
+    expect(Math.abs(tilesBox.x + tilesBox.width - (totalBox.x + totalBox.width))).toBeLessThan(2)
     // A web link only: anything else is refused with a message.
     await row.getByRole('button', { name: 'Edit' }).click()
     await row.getByLabel('Ticket name').fill('Login crash on expired token')
