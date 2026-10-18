@@ -166,10 +166,11 @@ export interface RemoteAccessDevice {
 }
 
 export interface RemoteAccessState {
-  status: 'off' | 'setup-required' | 'connecting' | 'available'
+  status: 'off' | 'setup-required' | 'connecting' | 'reconnecting' | 'available'
   enabled: boolean
   url: string | null
   message: string
+  notice: string | null
   devices: RemoteAccessDevice[]
   pairing: { code: string; expiresAt: number } | null
   permissions: RemoteAccessSettings

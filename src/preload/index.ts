@@ -30,6 +30,7 @@ const api: GridApi = {
       getState: () => ipcRenderer.invoke(IPC.remoteAccessGet),
       enable: () => invokeRemote(IPC.remoteAccessEnable),
       disable: () => invokeRemote(IPC.remoteAccessDisable),
+      verify: () => invokeRemote(IPC.remoteAccessVerify),
       refreshPairing: () => invokeRemote(IPC.remoteAccessPairing),
       setPermissions: (patch) => invokeRemote(IPC.remoteAccessPermissions, patch),
       setAllowedEmail: (email) => invokeRemote(IPC.remoteAccessEmail, email),

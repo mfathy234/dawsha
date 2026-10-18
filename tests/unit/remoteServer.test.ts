@@ -105,6 +105,18 @@ describe('private remote HTTP API', () => {
     }
   })
 
+  it('answers the tunnel health probe without auth and without leaking app state', async () => {
+    const context = await setup()
+    try {
+      const response = await request(`${context.base}/health`, { headers: { Host: 'device.trycloudflare.com' } })
+      expect(response.statusCode).toBe(200)
+      expect(await bodyJson(response)).toEqual({ ok: true, app: 'dawsha' })
+      const wrongHost = await request(`${context.base}/health`, { headers: { Host: 'attacker.example' } })
+      expect(wrongHost.statusCode).toBe(403)
+      expect(context.getProjects).not.toHaveBeenCalled()
+    } finally { await context.server.stop() }
+  })
+
   it('rejects unauthenticated and wrong-origin requests before reading app state', async () => {
     const context = await setup()
     try {

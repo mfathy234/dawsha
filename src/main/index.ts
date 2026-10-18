@@ -224,6 +224,10 @@ app.whenReady().then(async () => {
         idleSeconds: () => powerMonitor.getSystemIdleTime()
       })
     : undefined
+  if (remoteAccess) {
+    powerMonitor.on('resume', () => remoteAccess.onSystemResume())
+    powerMonitor.on('unlock-screen', () => remoteAccess.onSystemResume())
+  }
   registerImageProtocol(store)
   const orchestratorSwitch = createOrchestratorSwitch(orchestrator, quitLog)
   registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings, orchestratorSwitch)

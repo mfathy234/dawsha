@@ -6,6 +6,7 @@ import { createFileDeviceStore, createRemoteAuth, type DeviceStore, type RemoteA
 import { createCloudflareQuickTunnel, type QuickTunnelHandle } from './cloudflareQuickTunnel'
 import { createCloudflaredInstaller } from './cloudflaredInstaller'
 import { waitForTunnelHostname, type ReachabilityOptions } from './tunnelReachability'
+import { createTunnelHealthMonitor, probeTunnel, type HealthReason } from './tunnelHealth'
 import { startRemoteServer, type RemoteServerHandle, type RemoteServerOptions } from './remoteServer'
 import { startRemoteSession } from './remoteSessions'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
@@ -53,6 +54,10 @@ const SAFE_REMOTE_PATHS = new Set([
 const FIRST_REACHABLE_WINDOW_MS = 45_000
 const SECOND_REACHABLE_WINDOW_MS = 90_000
 const READY_GRACE_MS = 4_000
+const RECONNECTING_MESSAGE = 'The connection dropped. Reconnecting…'
+const ADDRESS_CHANGED_NOTICE = 'The address changed. Scan the new code on your phone.'
+const RECONNECT_LIMIT = 3
+const RECONNECT_WINDOW_MS = 10 * 60_000
 const UNREACHABLE_MESSAGE = 'Cloudflare created a tunnel, but its public address is still not reachable after about two minutes. This is usually a temporary Cloudflare or DNS problem. Start Remote Access again to retry.'
 
 const PERMISSION_KEYS = new Set(['terminalInput', 'sessionControl', 'approvals', 'approvalsNotify', 'approvalsOnlyWhenAway', 'approvalsAwayMinutes', 'approvalsAllowConfigEdits'])
@@ -82,6 +87,8 @@ export interface RemoteAccessControllerOptions {
   createServer?: (options: RemoteServerOptions) => Promise<RemoteServerHandle>
   waitForHostname?: (hostname: string, options: ReachabilityOptions) => Promise<boolean>
   readyGraceMs?: number
+  probe?: (hostname: string) => Promise<boolean>
+  healthIntervalMs?: number
 }
 
 export function createRemoteAccessController(options: RemoteAccessControllerOptions) {
@@ -105,6 +112,10 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   let tunnel: QuickTunnelHandle | null = null
   let localPort = 0
   let ready = false
+  let reconnecting = false
+  let notice: string | null = null
+  let lastHealthy = true
+  const reconnectTimes: number[] = []
   let generation = 0
   const waitForHostname = options.waitForHostname ?? waitForTunnelHostname
   const log = (event: string, detail: Record<string, unknown> = {}): void => appendRemoteDiagnostic(options.userDataDir, { time: new Date().toISOString(), event, ...detail })
@@ -152,9 +163,11 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     const enabled = server !== null && url !== null
     if (ready && pairing && pairing.expiresAt <= Date.now()) pairing = auth.createPairingCode()
     const status: RemoteAccessState['status'] = enabled
-      ? (ready ? 'available' : 'connecting')
+      ? (reconnecting ? 'reconnecting' : ready ? 'available' : 'connecting')
       : setupError ? 'setup-required' : 'off'
-    const message = status === 'connecting'
+    const message = status === 'reconnecting'
+      ? RECONNECTING_MESSAGE
+      : status === 'connecting'
       ? 'Cloudflare is publishing your tunnel address. This can take up to a minute; this page updates on its own.'
       : status === 'available'
       ? options.settings.get().remoteAccess.allowedEmail.trim()
@@ -166,6 +179,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
       enabled,
       url: ready ? url : null,
       message,
+      notice: ready ? notice : null,
       devices: auth.listDevices(),
       pairing: ready && pairing && pairing.expiresAt > Date.now() ? pairing : null,
       permissions: options.settings.get().remoteAccess
@@ -202,6 +216,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
         ready = true
         pairing = auth.createPairingCode()
         log('hostname-ready', { host })
+        health.start()
         return true
       }
       if (window === SECOND_REACHABLE_WINDOW_MS) break
@@ -223,6 +238,67 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     }
     log('hostname-unreachable', { host: hostname })
     return fail(UNREACHABLE_MESSAGE, mine)
+  }
+
+  const health = createTunnelHealthMonitor({
+    probe: () => hostname ? (options.probe ?? probeTunnel)(hostname) : Promise.resolve(true),
+    intervalMs: options.healthIntervalMs,
+    onResult: (healthy, failures) => {
+      if (!healthy) log('tunnel-health-failed', { host: hostname, consecutiveFailures: failures })
+      else if (!lastHealthy) log('tunnel-health-recovered', { host: hostname })
+      lastHealthy = healthy
+    },
+    onUnhealthy: (reason) => { void reconnect(reason).catch(() => undefined) }
+  })
+
+  // The tunnel can die while cloudflared stays alive (sleep, network change, Cloudflare drop): start a fresh Quick Tunnel.
+  async function reconnect(reason: HealthReason): Promise<void> {
+    if (!server || !ready || reconnecting || enabling || disabling || stopping) return
+    const now = Date.now()
+    while (reconnectTimes.length && now - reconnectTimes[0]! > RECONNECT_WINDOW_MS) reconnectTimes.shift()
+    reconnectTimes.push(now)
+    const email = options.settings.get().remoteAccess.allowedEmail.trim() || undefined
+    log('tunnel-reconnect', { reason, host: hostname })
+    health.stop()
+    reconnecting = true
+    ready = false
+    pairing = null
+    notice = null
+    const mine = ++generation
+    try {
+      if (reconnectTimes.length > RECONNECT_LIMIT) { await fail(UNREACHABLE_MESSAGE, mine); return }
+      const old = tunnel
+      removeTunnelExit?.()
+      removeTunnelExit = null
+      tunnel = null
+      if (old) await old.stop().catch(() => undefined)
+      const next = await tunnelFactory.start(localPort, email)
+      if (mine !== generation || !server) { await next.stop().catch(() => undefined); return }
+      tunnel = next
+      adopt(next)
+      if (await connect(email)) {
+        notice = ADDRESS_CHANGED_NOTICE
+        lastHealthy = true
+        log('tunnel-reconnected', { host: hostname })
+      }
+    } catch (error) {
+      log('tunnel-reconnect-failed', { message: (error as Error).message })
+      await fail((error as Error).message || UNREACHABLE_MESSAGE, mine)
+    } finally {
+      reconnecting = false
+    }
+  }
+
+  // Called before the link or QR is shown, and on window focus. One retry avoids reconnecting on a single blip.
+  async function verify(): Promise<RemoteAccessState> {
+    if (server && ready && !reconnecting) {
+      if (!(await health.check())) await health.check()
+    }
+    return getState()
+  }
+
+  function onSystemResume(): void {
+    if (server && ready && !reconnecting) void health.check(true)
   }
 
   async function fail(message: string, mine: number): Promise<false> {
@@ -345,6 +421,9 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     hostname = null
     pairing = null
     ready = false
+    notice = null
+    lastHealthy = true
+    health.stop()
     generation += 1
     approvals.stop()
     for (const id of remoteSessionIds) options.ptys.kill(id)
@@ -406,6 +485,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   async function refreshPairing(): Promise<RemoteAccessState> {
     if (!server) throw new Error('Enable Remote Access before creating a pairing code.')
     pairing = auth.createPairingCode()
+    notice = null
     return getState()
   }
 
@@ -438,5 +518,5 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     await approvals.recordDesktopAnswer(terminalId, allowed, typeof tail === 'string' ? tail : undefined)
   }
 
-  return { getState, recordDesktopApproval, enable, disable, refreshPairing, setPermissions, setAllowedEmail, revoke, stop }
+  return { getState, recordDesktopApproval, enable, disable, verify, onSystemResume, refreshPairing, setPermissions, setAllowedEmail, revoke, stop }
 }
