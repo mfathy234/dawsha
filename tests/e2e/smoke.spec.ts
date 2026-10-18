@@ -136,6 +136,12 @@ test('projects view validates folders and confirms removal by name', async () =>
     await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible()
     await expect(page.locator('[data-project-id="gone"] .field-error')).toHaveText('This folder does not exist.')
     await page.screenshot({ path: join(SCREENS, '8-projects.png') })
+    // The sidebar stays mounted next to the Projects view, so both filters must keep their own ids.
+    const duplicateIds = await page.evaluate(() => {
+      const ids = [...document.querySelectorAll('[id]')].map(el => el.id)
+      return [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))]
+    })
+    expect(duplicateIds).toEqual([])
 
     await page.getByRole('button', { name: 'More for Missing' }).click()
     await page.getByRole('menuitem', { name: 'Remove Missing…' }).click()

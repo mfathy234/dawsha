@@ -23,7 +23,7 @@ const viewState = (view: PaneView) => sessionState({ status: view.status, attent
 export class SidebarComponent {
   readonly el = h('aside', { class: 'sidebar', 'aria-label': 'Projects' })
   private readonly filter = h('input', {
-    id: 'project-filter',
+    id: 'sidebar-project-filter',
     class: 'text-input',
     type: 'text',
     placeholder: 'Filter projects',
@@ -110,7 +110,7 @@ export class SidebarComponent {
       h(
         'div',
         { class: 'filter' },
-        h('label', { for: 'project-filter', class: 'sr-only' }, 'Filter projects'),
+        h('label', { for: 'sidebar-project-filter', class: 'sr-only' }, 'Filter projects'),
         icon(ICONS.search),
         this.filter
       ),

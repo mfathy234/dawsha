@@ -23,7 +23,7 @@ export class ProjectsViewComponent {
   private readonly filterInput = h('input', {
     class: 'text-input pv-filter',
     type: 'search',
-    id: 'project-filter',
+    id: 'projects-view-filter',
     placeholder: 'Filter projects',
     'aria-label': 'Filter projects',
     autocomplete: 'off'
