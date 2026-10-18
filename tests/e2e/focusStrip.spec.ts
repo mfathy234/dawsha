@@ -41,6 +41,8 @@ test('focus view strip keeps long session names on one line and closes a session
       await expect(tab.locator('.agent-mark')).toHaveCount(1)
       await expect(tab.getByRole('tab')).toHaveAttribute('title', /·/)
     }
+    // Status words match the sidebar's (Working, Idle, Needs you), not the internal busy/idle.
+    await expect(strip.locator('.strip-status').first()).toHaveText(/^ · (Working|Idle|Done|Needs you|Exited)$/)
     const nameCut = await strip.locator('.strip-name').first().evaluate((el) => el.scrollWidth > el.clientWidth)
     expect(nameCut).toBe(true)
     // Names keep their own case, not ALL CAPS.
@@ -81,7 +83,7 @@ test('focus view strip keeps long session names on one line and closes a session
     await strip.getByRole('button', { name: `Close ${last}` }).click()
     await expect(page.locator('.pane')).toHaveCount(NAMES.length - 2)
     await expect(page.locator('.pane.maximized')).toHaveCount(1)
-    await expect(strip.locator('.strip-tab.selected .strip-name')).toHaveText(NAMES[NAMES.length - 2].toUpperCase())
+    await expect(strip.locator('.strip-tab.selected .strip-name')).toHaveText(NAMES[NAMES.length - 2])
   } finally {
     await closeApp(app)
   }

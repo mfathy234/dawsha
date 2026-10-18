@@ -6,6 +6,7 @@ import { derivePanes, type PaneView } from '../derive'
 import { clear, h, iconButton } from '../dom'
 import { ICONS } from '../icons'
 import { pairOf } from '../../shared/compare'
+import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
 import { layoutForCount } from '../../shared/layout'
 import { resolveSplit, withSplit } from '../../shared/splits'
 import type { CompareLink, GridSplits } from '../../shared/types'
@@ -217,7 +218,7 @@ export class GridComponent {
   private updateStrip(views: PaneView[], state: AppState, maximized: boolean): void {
     this.strip.hidden = !maximized
     if (!maximized) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status, v.agent]), state.focusedId])
+    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status, v.agent, v.attention]), state.focusedId])
     if (signature === this.stripSignature) return
     this.stripSignature = signature
     clear(this.strip)
@@ -227,7 +228,10 @@ export class GridComponent {
 
   private stripTab(view: PaneView, selected: boolean): HTMLElement {
     const name = view.title
-    const status = h('span', { class: `strip-status ${view.status}` }, ` · ${view.status}`)
+    // The same words as the sidebar, so a session that needs you says so in the focus view too.
+    const stateName = sessionState({ status: view.status, attention: view.attention })
+    const stateLabel = SESSION_STATE_LABELS[stateName]
+    const status = h('span', { class: `strip-status state-${stateName}` }, ` · ${stateLabel}`)
     const label = h(
       'button',
       {
@@ -235,7 +239,7 @@ export class GridComponent {
         type: 'button',
         role: 'tab',
         'aria-selected': selected ? 'true' : 'false',
-        title: `${name} · ${view.status}`,
+        title: `${name} · ${stateLabel}`,
         onClick: () => focusPane(view.pane.id)
       },
       h('span', { class: 'strip-index' }, `${view.index + 1}`),
