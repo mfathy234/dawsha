@@ -65,6 +65,8 @@ export class PaneComponent {
   readonly el: HTMLElement
   private readonly mark = h('span', { class: 'slot' })
   private readonly index = h('span', { class: 'pane-title' })
+  private titleText = ''
+  private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly projectName = h('span', { class: 'pane-project', hidden: true })
   private readonly pin = h('span', { class: 'pane-pin', title: 'Pinned pane', role: 'img', 'aria-label': 'Pinned pane', hidden: true })
   private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
@@ -132,7 +134,7 @@ export class PaneComponent {
       iconButton('Previous pane', ICONS.prev, () => focusRelative(-1), 'pane-prev'),
       iconButton('Next pane', ICONS.next, () => focusRelative(1), 'pane-next'),
       this.maxButton,
-      iconButton('Close pane', ICONS.close, () => void closePane(paneId), 'close-pane')
+      this.closeButton
     )
     header.addEventListener('dblclick', (event) => {
       if ((event.target as HTMLElement).closest('button')) return
@@ -170,7 +172,7 @@ export class PaneComponent {
   update(view: PaneView, focused: boolean, maximized: boolean): void {
     this.current = view
     const title = view.title
-    this.index.textContent = `${view.index + 1} · ${title}`
+    this.updateTitle(view.index + 1, title)
     this.updateMark(view.agent)
     const projectName = view.named ? (view.project?.name ?? '') : ''
     this.projectName.hidden = projectName === ''
@@ -209,12 +211,33 @@ export class PaneComponent {
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
     this.restart.hidden = !view.activeExited
     this.updateMaximizeButton(maximized)
+    this.placeCloseButton(maximized)
     this.updateTabs(view)
     this.updateTerminals(view)
     if (focused && this.lastActiveTab && this.lastActiveTab !== view.pane.activeTabId) {
       ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
     }
     this.lastActiveTab = view.pane.activeTabId
+  }
+
+  // The number prefix stays put; only the session name picks its own direction, so an Arabic title does not reorder '4 · '.
+  private updateTitle(number: number, title: string): void {
+    const signature = `${number}|${title}`
+    if (signature === this.titleText) return
+    this.titleText = signature
+    this.index.replaceChildren(`${number} · `, h('bdi', { dir: 'auto' }, title))
+    this.index.title = title
+  }
+
+  // In full mode the X sits right after the name, like the strip tabs; in the grid it stays at the far right.
+  private placeCloseButton(maximized: boolean): void {
+    const header = this.closeButton.parentElement
+    if (!header) return
+    if (maximized) {
+      if (this.index.nextElementSibling !== this.closeButton) this.index.after(this.closeButton)
+    } else if (header.lastElementChild !== this.closeButton) {
+      header.append(this.closeButton)
+    }
   }
 
   private updateState(view: PaneView, state: SessionState): void {

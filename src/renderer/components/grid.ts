@@ -11,6 +11,7 @@ import { resolveSplit, withSplit } from '../../shared/splits'
 import type { CompareLink, GridSplits } from '../../shared/types'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
+import { agentMark } from './agentMark'
 import { ComparePairComponent } from './comparePair'
 import { GridGutters } from './gutters'
 import { PaneComponent } from './pane'
@@ -216,7 +217,7 @@ export class GridComponent {
   private updateStrip(views: PaneView[], state: AppState, maximized: boolean): void {
     this.strip.hidden = !maximized
     if (!maximized) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status]), state.focusedId])
+    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status, v.agent]), state.focusedId])
     if (signature === this.stripSignature) return
     this.stripSignature = signature
     clear(this.strip)
@@ -225,7 +226,7 @@ export class GridComponent {
   }
 
   private stripTab(view: PaneView, selected: boolean): HTMLElement {
-    const name = view.title.toUpperCase()
+    const name = view.title
     const status = h('span', { class: `strip-status ${view.status}` }, ` · ${view.status}`)
     const label = h(
       'button',
@@ -238,7 +239,8 @@ export class GridComponent {
         onClick: () => focusPane(view.pane.id)
       },
       h('span', { class: 'strip-index' }, `${view.index + 1}`),
-      h('span', { class: 'strip-name' }, name),
+      agentMark(view.agent),
+      h('bdi', { class: 'strip-name', dir: 'auto' }, name),
       status
     )
     const close = iconButton(`Close ${name}`, ICONS.closeSmall, () => void closePane(view.pane.id), 'strip-close')

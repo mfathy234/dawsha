@@ -1135,8 +1135,7 @@ button {
   font: inherit;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -8006,4 +8005,47 @@ button.tl-event:hover { background: var(--raised); }
 
 @media (prefers-reduced-motion: reduce) {
   .pane-mic.recording { animation: none; }
+}
+
+/* Session titles: the name picks its own direction and stays isolated from the number and project beside it. */
+.pane-title bdi,
+.others-title bdi,
+.strip-name,
+.sess-name {
+  unicode-bidi: isolate;
+}
+
+.board-card-title,
+.board-peek-title {
+  unicode-bidi: plaintext;
+}
+
+/* Full mode: the title shrinks with an ellipsis so the close X, which sits right after it, is never pushed off. */
+.pane.maximized .pane-header .pane-title {
+  min-width: 0;
+}
+
+.pane-header > .pane-project {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strip-label > .agent-mark {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.strip-label > .agent-mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+@container pane-header (max-width: 600px) {
+  .pane-header .pane-fresh {
+    display: none;
+  }
 }
