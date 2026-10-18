@@ -75,10 +75,20 @@ test('Claude rows, already in visual order, keep their layout and get their Arab
     await expect(rows.nth(0)).toContainText('develop 42')
     expect(await stretches(1)).toEqual(['rtl:مساء الخير'])
 
-    // The buffer keeps what Claude wrote.
+    // Text read from the pane (copy, transcripts) is back in reading order; the screen buffer itself is untouched.
     const text = await bufferText(page, id)
-    expect(text).toContain(`● ${CLAUDE_REPLY}`)
-    expect(text).toContain(`❯${CLAUDE_PROMPT}`)
+    expect(text).toContain('● مَرْحَبًا بالعالم')
+    expect(text).toContain('يا صديقي')
+    expect(text).toContain('❯ مساء الخير abc')
+    expect(text).not.toContain(CLAUDE_REPLY)
+
+    // Finding an Arabic word typed in reading order matches Claude's visual-order row.
+    await host.click()
+    await page.keyboard.press('Control+Shift+F')
+    const bar = page.getByRole('search')
+    await bar.getByLabel('Find in terminal').fill('بالعالم')
+    await expect(bar.locator('.term-find-count')).toHaveText('1 of 1')
+    await page.keyboard.press('Escape')
 
     mkdirSync(SCREENS, { recursive: true })
     await host.screenshot({ path: resolve(SCREENS, 'arabic-claude-terminal.png') })

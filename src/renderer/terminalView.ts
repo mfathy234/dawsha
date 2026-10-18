@@ -3,6 +3,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
 import type { TextOrder } from '../shared/arabicRows'
+import { logicalText, visualFromLogical } from '../shared/visualOrder'
 import { insertionData } from '../shared/insertText'
 import { primaryModifierPressed } from '../shared/shortcuts'
 import { h } from './dom'
@@ -77,7 +78,10 @@ export class TerminalView {
     this.observer = new ResizeObserver(() => this.scheduleFit())
     this.el.addEventListener('wheel', (event) => this.handleWheel(event), { capture: true, passive: false })
     this.el.addEventListener('focusin', () => callbacks.onFocus())
-    this.search = new TerminalSearch(this.term, this.el)
+    this.search = new TerminalSearch(this.term, this.el, {
+      toBuffer: (query) => (callbacks.textOrder() === 'visual' ? visualFromLogical(query) : query),
+      toReading: (text) => this.readable(text)
+    })
     this.bundleTerm = bundle.theme.term
     this.applyBundle(bundle)
   }
@@ -123,13 +127,18 @@ export class TerminalView {
     this.term.write(`\r\n${message}\r\n`)
   }
 
+  /** Text as the program meant it: rows a program wrote in visual order (Claude Code's Arabic) are put back in reading order. */
+  private readable(text: string): string {
+    return this.callbacks.textOrder() === 'visual' ? logicalText(text) : text
+  }
+
   bufferText(): string {
     const buffer = this.term.buffer.active
     const lines: string[] = []
     for (let row = 0; row < buffer.length; row += 1) {
       lines.push(buffer.getLine(row)?.translateToString(true) ?? '')
     }
-    return lines.join('\n')
+    return this.readable(lines.join('\n'))
   }
 
   /**
@@ -156,7 +165,7 @@ export class TerminalView {
       if (line?.isWrapped && lines.length > 0) lines[lines.length - 1] += value
       else lines.push(value)
     }
-    return lines.join('\n')
+    return this.readable(lines.join('\n'))
   }
 
   selectAll(): void {
@@ -164,7 +173,7 @@ export class TerminalView {
   }
 
   selection(): string {
-    return this.term.getSelection()
+    return this.readable(this.term.getSelection())
   }
 
   hasSelection(): boolean {
@@ -293,7 +302,7 @@ export class TerminalView {
     if (event.type !== 'keydown') return true
     const key = event.key.toLowerCase()
     if (primaryModifierPressed(event) && !event.altKey && key === 'c' && this.term.hasSelection()) {
-      void this.callbacks.writeClipboard(this.term.getSelection())
+      void this.callbacks.writeClipboard(this.selection())
       this.term.clearSelection()
       return false
     }

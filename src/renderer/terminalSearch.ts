@@ -29,9 +29,14 @@ export class TerminalSearch {
   private readonly flags: Record<Toggle, boolean> = { caseSensitive: false, wholeWord: false, regex: false }
   private readonly buttons = new Map<Toggle, HTMLButtonElement>()
 
+  /**
+   * `order` converts between what the user types (reading order) and what the buffer holds, for programs that print
+   * right-to-left text already in visual order.
+   */
   constructor(
     private readonly term: Terminal,
-    host: HTMLElement
+    host: HTMLElement,
+    private readonly order: { toBuffer(query: string): string; toReading(text: string): string } = { toBuffer: (q) => q, toReading: (t) => t }
   ) {
     term.loadAddon(this.addon)
     this.addon.onDidChangeResults(({ resultIndex, resultCount }) => {
@@ -59,7 +64,7 @@ export class TerminalSearch {
   }
 
   open(): void {
-    const selected = this.term.getSelection()
+    const selected = this.order.toReading(this.term.getSelection())
     if (selected && !selected.includes('\n')) this.input.value = selected
     this.bar.hidden = false
     this.input.focus()
@@ -85,7 +90,7 @@ export class TerminalSearch {
   }
 
   private step(direction: 1 | -1, incremental = false): void {
-    const query = this.input.value
+    const query = this.flags.regex ? this.input.value : this.order.toBuffer(this.input.value)
     if (!query) {
       this.addon.clearDecorations()
       this.count.textContent = ''
