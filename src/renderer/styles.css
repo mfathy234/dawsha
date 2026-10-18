@@ -8106,3 +8106,15 @@ button.tl-event:hover { background: var(--raised); }
 .shortcuts-empty {
   color: var(--muted);
 }
+
+.toast.with-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast.with-action .toast-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
