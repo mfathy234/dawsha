@@ -26,6 +26,14 @@ describe('shortcut sheet', () => {
     expect(groups.flatMap((g) => g.entries).some((e) => e.title === 'Show git diff')).toBe(false)
   })
 
+  it('collapses Focus pane 1 to 9 into one row that still matches a single number', () => {
+    const panes = Array.from({ length: 9 }, (_, i) => ({ id: `pane.focus-${i + 1}`, title: `Focus pane ${i + 1}`, shortcut: `Ctrl+${i + 1}` }))
+    const groups = buildSheet([{ id: 'pane.maximize', title: 'Expand the pane', shortcut: 'Ctrl+Enter' }, ...panes], [])
+    expect(groups[0].entries.map((e) => [e.title, e.keys])).toEqual([['Expand the pane', 'Ctrl+Enter'], ['Focus pane 1–9', 'Ctrl+1…9']])
+    expect(filterSheet(groups, 'focus pane 3').flatMap((g) => g.entries.map((e) => e.title))).toEqual(['Focus pane 1–9'])
+    expect(filterSheet(groups, 'ctrl+3').flatMap((g) => g.entries.map((e) => e.title))).toEqual(['Focus pane 1–9'])
+  })
+
   it('filters by words in the title, the keys or the group name', () => {
     const groups = buildSheet(
       [
