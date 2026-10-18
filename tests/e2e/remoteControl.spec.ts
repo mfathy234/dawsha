@@ -330,6 +330,11 @@ test('pairs a browser, respects permissions, and adapts to a phone screen', asyn
     }))
     expect(mobileLayout.width, JSON.stringify(mobileLayout)).toBeLessThanOrEqual(mobileLayout.viewport)
     await page.screenshot({ path: 'test-results/screens/remote-control-mobile.png' })
+
+    // Disconnect goes back to pairing with an empty code box; the used code works only once.
+    await page.locator('#remote-logout').click()
+    await expect(page.locator('#pair-view')).toBeVisible()
+    await expect(page.locator('#pairing-code')).toHaveValue('')
   } finally {
     await browser?.close()
     await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
