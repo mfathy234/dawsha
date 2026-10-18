@@ -9,6 +9,7 @@ import { PtyManager } from './ptyManager'
 import { Recorder } from './recorder'
 import { RecordingService } from './recordings'
 import { SessionsWatcher } from './sessionsWatcher'
+import { installMediaPermissions } from './mediaPermissions'
 import { SettingsStore } from './settingsStore'
 import { StatusWatcher } from './statusWatcher'
 import { OpsWatcher } from './opsWatcher'
@@ -154,6 +155,7 @@ function registerImageProtocol(settings: SettingsStore): void {
 app.whenReady().then(async () => {
   if (!gotLock) return
   Menu.setApplicationMenu(null)
+  installMediaPermissions(() => mainWindow)
   const userData = app.getPath('userData')
   const legacyDir = legacyUserDataDir()
   const migration = legacyDir

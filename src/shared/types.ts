@@ -144,6 +144,7 @@ export interface Settings {
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
   recordings: RecordingSettings
+  dictation: import('./dictation').DictationSettings
   experimental: ExperimentalSettings
   orchestrator: OrchSettings
 }
