@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { defaultSettings } from '../../src/shared/settingsSchema'
+import { defaultOrchSettings } from '../../src/shared/orch/profiles'
 import {
   EXCLUDED_KEYS,
   INCLUDED_KEYS,
@@ -11,6 +12,7 @@ import {
   parseTransfer,
   planImport,
   previewLines,
+  replaceConfirmLabel,
   replaceWarning,
   transferFileName,
   type TransferData,
@@ -221,6 +223,22 @@ describe('planImport merge', () => {
   })
 })
 
+describe('what the preview and the toast say', () => {
+  it('lists orchestrator settings among the preferences an import changes', () => {
+    const plan = run(rich(), parsed({ orchestrator: defaultOrchSettings() }), 'merge')
+    expect(plan.patch.orchestrator).toBeDefined()
+    expect(previewLines(plan.summary)).toContain('Preferences: Orchestrator settings')
+  })
+
+  it('mentions preferences in the toast only when the file had some', () => {
+    const projectsOnly = run(rich(), parsed({ projects: [project('n', 'D:\\nova', 'Nova')] }), 'merge')
+    expect(importToastText(projectsOnly.summary)).toBe('Imported 1 project.')
+    const both = run(rich(), parsed({ projects: [project('n', 'D:\\nova', 'Nova')], sessionsLayout: 'grid' }), 'merge')
+    expect(importToastText(both.summary)).toBe('Imported 1 project and preferences.')
+    expect(importToastText(run(rich(), parsed({ sessionsLayout: 'grid' }), 'merge').summary)).toBe('Imported preferences.')
+  })
+})
+
 describe('planImport replace', () => {
   it('replaces the lists, keeps ids of folders that match and names what is removed', () => {
     const current = rich()
@@ -236,6 +254,11 @@ describe('planImport replace', () => {
     const warning = replaceWarning(plan.summary, 2)
     expect(warning).toContain('Beta')
     expect(warning).toContain('2 open sessions')
+  })
+
+  it('names what Replace removes on its button, in correct English', () => {
+    const plan = run(rich(), parsed({ projects: [project('q', 'c:/work/alpha', 'Alpha')], layouts: [] }), 'replace')
+    expect(replaceConfirmLabel(plan.summary)).toBe('Replace and remove 1 project, 1 layout')
   })
 
   it('never touches remote access or full access in the export or the patch', () => {
