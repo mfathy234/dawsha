@@ -212,7 +212,7 @@ test('the demo clip stays out of the first load and plays only once it is on scr
   await page.addInitScript(countPlays)
   await page.goto(url)
   await page.waitForLoadState('load')
-  const video = page.locator('.demo-video')
+  const video = page.locator('.demo .demo-video')
   await expect(video).toHaveAttribute('preload', 'none')
   await expect(video).toHaveAttribute('poster', 'assets/demo-poster.jpg')
   expect(await video.evaluate((el: HTMLVideoElement) => el.autoplay)).toBe(false)
@@ -221,7 +221,7 @@ test('the demo clip stays out of the first load and plays only once it is on scr
 
   await video.scrollIntoViewIfNeeded()
   await expect.poll(() => page.evaluate(() => (window as unknown as { __plays: number }).__plays)).toBeGreaterThan(0)
-  const toggle = page.locator('.demo-toggle')
+  const toggle = page.locator('.demo .demo-toggle')
   await expect(toggle).toBeVisible()
   await toggle.click()
   await expect(toggle).toHaveAttribute('aria-label', 'Play the demo')
@@ -232,24 +232,43 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.addInitScript(countPlays)
   await page.goto(url)
-  await page.locator('.demo-video').scrollIntoViewIfNeeded()
-  await page.waitForTimeout(800)
+  for (const video of await page.locator('.demo-video').all()) {
+    await video.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(800)
+  }
   expect(await page.evaluate(() => (window as unknown as { __plays: number }).__plays)).toBe(0)
-  await expect(page.locator('.demo-toggle')).toBeHidden()
+  for (const toggle of await page.locator('.demo-toggle').all()) await expect(toggle).toBeHidden()
 })
 
 const newSections = ['board', 'timeline', 'search', 'replay']
 const newSections16 = ['arabic', 'dictation', 'native-arabic', 'calm', 'shortcuts']
 const newSections15 = ['orchestrator', 'orch-run', 'orch-boards', 'work', 'tickets']
 
-test('New in 1.6 leads with Arabic, keeps a hidden launch video slot and has sized lazy images', async ({ page }) => {
+test('the 1.6 launch video stays out of the first load, plays on screen and has its own pause button', async ({ page }) => {
+  await page.addInitScript(countPlays)
+  await page.goto(url)
+  await page.waitForLoadState('load')
+  const video = page.locator('#launch-1-6 .demo-video')
+  await expect(video).toHaveAttribute('preload', 'none')
+  await expect(video).toHaveAttribute('poster', 'assets/launch-1.6-poster.jpg')
+  await expect(video.locator('source')).toHaveAttribute('src', 'assets/launch-1.6.mp4')
+  expect(((await video.getAttribute('aria-label')) ?? '').length).toBeGreaterThan(40)
+  await video.scrollIntoViewIfNeeded()
+  await expect.poll(() => video.evaluate((el: HTMLVideoElement) => !el.paused)).toBe(true)
+  const toggle = page.locator('#launch-1-6 .demo-toggle')
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-label', 'Play the demo')
+  expect(await video.evaluate((el: HTMLVideoElement) => el.paused)).toBe(true)
+})
+
+test('New in 1.6 leads with Arabic, shows the launch video and has sized lazy images', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
   await expect(page.locator('.new-pill')).toContainText('New in 1.6')
   await expect(page.locator('.new-pill')).toContainText('Arabic')
   await expect(page.locator('.new-pill')).toHaveAttribute('href', '#new')
   await expect(page.locator('#new-h')).toHaveText('New in 1.6')
-  await expect(page.locator('#new #launch-1-6')).toBeHidden()
+  await expect(page.locator('#new #launch-1-6')).toBeVisible()
   await expect(page.locator('#new .feat-row').first()).toHaveAttribute('id', 'arabic')
   for (const id of newSections16) {
     const row = page.locator(`#new #${id}`)

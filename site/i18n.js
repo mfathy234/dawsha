@@ -1,6 +1,7 @@
 (() => {
   const translations = {
     'New in 1.6': 'الجديد في 1.6',
+    'A 20 second look at Dawsha 1.6: a Claude reply in Arabic turns from disconnected letters into joined right-to-left text, Arabic is dictated into a session, and full mode keeps every session on one line': 'لمحة عن دوشة 1.6 في 20 ثانية: رد عربي من Claude يتحول من حروف متقطعة إلى نص متصل من اليمين إلى اليسار، وإملاء بالعربية في جلسة، ووضع كامل يُبقي كل جلسة في سطر واحد',
     'Native Arabic support and voice dictation': 'دوشة تدعم العربية أصلًا، مع الإملاء الصوتي',
     'Dawsha now speaks Arabic. Read replies with joined letters, dictate in Arabic or English, and work in a calmer window.': 'دوشة تدعم العربية الآن. اقرأ الردود بحروف متصلة، وأمْلِ بالعربية أو الإنجليزية، واعمل في نافذة أهدأ.',
     'Arabic in every session': 'العربية في كل جلسة',
