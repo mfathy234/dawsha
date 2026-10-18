@@ -197,6 +197,10 @@ test('fix a bug from the Orchestrator view and finish it in Human review', async
     expect(side!.y).toBeGreaterThanOrEqual(board!.y + board!.height)
     await page.setViewportSize({ width: 1440, height: 900 })
     await expect(page.locator('.orch-card').first()).toBeInViewport()
+    // The fixer finished its task, so it is done rather than replaced, and one open question 'needs you'.
+    await expect(page.locator('.orch-panel', { hasText: 'Agents' }).locator('tbody tr').first()).toContainText('done')
+    await expect(page.locator('.orch-panel', { hasText: 'Agents' }).locator('tbody tr').first()).not.toContainText('replaced')
+    await expect(page.locator('.orch-runhead')).toContainText('needs you')
     await shot(page, 'run-dashboard')
 
     await page.locator('#orch-tab-runs').click()

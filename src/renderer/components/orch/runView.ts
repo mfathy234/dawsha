@@ -152,7 +152,7 @@ export class OrchRunView {
         kpi(`${done} / ${count}`, 'tasks done'),
         kpi(elapsed(run.createdAt, run.finishedAt ?? Date.now()), finished ? 'total time' : 'elapsed'),
         kpi(cost, 'spent'),
-        kpi(String(run.openDecisions), 'need you', run.openDecisions > 0 ? 'orch-warn' : '')
+        kpi(String(run.openDecisions), run.openDecisions === 1 ? 'needs you' : 'need you', run.openDecisions > 0 ? 'orch-warn' : '')
       ),
       finished ? null : h('button', { class: 'btn danger orch-cancel', type: 'button', onClick: () => void cancelRun(run.id, run.title) }, 'Cancel run')
     )
@@ -236,13 +236,14 @@ export class OrchRunView {
     const canHandoff = !run.imported && !isFinishedRun(run) && !agent.retired && agent.taskKey !== null && HANDOFF_STATES.has(agent.state)
     const open = h('button', { class: 'btn orch-small', type: 'button', disabled: pane ? undefined : true, title: pane ? 'Focus this agent’s pane' : 'This agent has no open pane', onClick: () => pane && focusPane(pane.id) }, 'Open pane')
     const restart = !agent.retired || run.imported || isFinishedRun(run) ? h('button', { class: 'btn orch-small', type: 'button', disabled: Boolean(run.imported) || isFinishedRun(run), onClick: () => void restartAgent(run.id, agent.id, `${ROLE_LABEL[agent.role]} \u00b7 ${agent.model}${agent.taskKey ? ` on ${agent.taskKey}` : ''}`) }, 'Restart') : null
+    const retiredDone = isFinishedRun(run) || run.tasks.some((t) => t.assignee === agent.id && t.status === 'approved')
     const actions = h('div', { class: 'orch-actions' }, open, restart, canHandoff ? h('button', { class: 'btn orch-small', type: 'button', onClick: () => this.openHandoff(agent, state) }, 'Continue with…') : null)
     const main = h(
       'tr',
       { class: agent.retired ? 'retired' : '' },
       h('td', {}, h('div', { class: 'orch-role' }, ROLE_LABEL[agent.role]), h('div', { class: 'orch-sub' }, modelBadge(agent.runner, agent.model), agent.taskKey ? h('span', { class: 'orch-mono' }, ` ${agent.taskKey}`) : null)),
-      // A retired agent of a finished run is done; in a live run it was replaced (handed over or restarted).
-      h('td', {}, agent.retired ? pill(isFinishedRun(run) ? 'done' : 'replaced', isFinishedRun(run) ? 'done' : 'idle') : pill(AGENT_STATE_LABEL[agent.state], TONE[agent.state] ?? 'idle')),
+      // A retired agent is done when its run finished or its own task was approved; otherwise it was replaced (handed over or restarted).
+      h('td', {}, agent.retired ? pill(retiredDone ? 'done' : 'replaced', retiredDone ? 'done' : 'idle') : pill(AGENT_STATE_LABEL[agent.state], TONE[agent.state] ?? 'idle')),
       h('td', { class: 'num' }, cost ? `${row.input} in / ${row.output} out` : '–'),
       h('td', { class: 'num' }, row ? row.cost : '–'),
       h('td', {}, actions)
