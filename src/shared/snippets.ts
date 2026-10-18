@@ -48,19 +48,30 @@ export function shortcutConflict(snippets: Snippet[], draft: SnippetDraft): Snip
   )
 }
 
-export function validateSnippet(draft: SnippetDraft, snippets: Snippet[]): string | null {
-  if (!draft.name.trim()) return 'Enter a name.'
-  if (draft.name.trim().length > SNIPPET_NAME_MAX) return `Use at most ${SNIPPET_NAME_MAX} characters for the name.`
-  if (!draft.text.trim()) return 'Enter the text to insert.'
-  if (draft.text.length > SNIPPET_TEXT_MAX) return `Use at most ${SNIPPET_TEXT_MAX} characters of text.`
+export type SnippetField = 'name' | 'text' | 'shortcut' | 'count'
+
+export interface SnippetProblem {
+  field: SnippetField
+  message: string
+}
+
+export function snippetProblem(draft: SnippetDraft, snippets: Snippet[]): SnippetProblem | null {
+  const problem = (field: SnippetField, message: string): SnippetProblem => ({ field, message })
+  if (!draft.name.trim()) return problem('name', 'Enter a name.')
+  if (draft.name.trim().length > SNIPPET_NAME_MAX) return problem('name', `Use at most ${SNIPPET_NAME_MAX} characters for the name.`)
+  if (!draft.text.trim()) return problem('text', 'Enter the text to insert.')
+  if (draft.text.length > SNIPPET_TEXT_MAX) return problem('text', `Use at most ${SNIPPET_TEXT_MAX} characters of text.`)
   if (draft.shortcut !== null && !(Number.isInteger(draft.shortcut) && draft.shortcut >= 1 && draft.shortcut <= 9)) {
-    return 'Pick a shortcut from Alt+1 to Alt+9.'
+    return problem('shortcut', 'Pick a shortcut from Alt+1 to Alt+9.')
   }
   const clash = shortcutConflict(snippets, draft)
-  if (clash) return `Alt+${clash.shortcut} is already used by '${clash.name}'.`
-  if (draft.id === undefined && snippets.length >= MAX_SNIPPETS) return `You can keep at most ${MAX_SNIPPETS} snippets.`
+  if (clash) return problem('shortcut', `Alt+${clash.shortcut} is already used by '${clash.name}'.`)
+  if (draft.id === undefined && snippets.length >= MAX_SNIPPETS) return problem('count', `You can keep at most ${MAX_SNIPPETS} snippets.`)
   return null
 }
+
+export const validateSnippet = (draft: SnippetDraft, snippets: Snippet[]): string | null =>
+  snippetProblem(draft, snippets)?.message ?? null
 
 const CONTROL_CHARS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g
 const BRACKET_START = '\u001b[200~'

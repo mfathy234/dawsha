@@ -1,13 +1,17 @@
 import { SNIPPET_TEXT_MAX } from '../shared/settingsSchema'
-import { expandSnippet, usesSelection } from '../shared/snippets'
+import { expandSnippet, usesSelection, type SnippetDraft } from '../shared/snippets'
 import { suggestSnippetName } from '../shared/terminalText'
 import type { Snippet } from '../shared/types'
 import { saveSettings } from './actions'
+import { api } from './api'
 import { confirmDialog } from './components/dialogs'
 import { snippetDialog } from './components/snippetDialog'
 import { toast } from './components/toast'
 import { folderOfPane, newId, paneById, projectById, store } from './state'
 import { getTerminal } from './terminals'
+
+// Electron prefixes errors thrown in main with the channel and error class; the reason after it is what matters.
+const IPC_ERROR_PREFIX = /^Error invoking remote method '[^']*': (?:\w*Error(?: \[\w+\])?: )?/
 
 type SnippetPrefill = { name: string; text: string; projectId: string | null }
 
@@ -49,25 +53,45 @@ export function insertSnippet(snippet: Snippet): boolean {
   return true
 }
 
-export async function editSnippet(snippetId?: string, prefill?: SnippetPrefill): Promise<void> {
-  const existing = snippetId ? store.state.settings.snippets.find((s) => s.id === snippetId) : undefined
-  const draft = await snippetDialog({
-    snippet: existing,
-    prefill,
-    snippets: store.state.settings.snippets,
-    projects: store.state.settings.projects
-  })
-  if (!draft) return
-  const next: Snippet = {
+function snippetFromDraft(draft: SnippetDraft, existing: Snippet | undefined): Snippet {
+  return {
     id: existing?.id ?? newId(),
     name: draft.name.trim(),
     text: draft.text,
     projectId: draft.projectId,
     shortcut: draft.shortcut
   }
-  const { snippets } = store.state.settings
-  setSnippets(existing ? snippets.map((s) => (s.id === existing.id ? next : s)) : [...snippets, next])
-  toast(`${existing ? 'Updated' : 'Saved'} snippet '${next.name}'.`, 'info')
+}
+
+/** Writes the list to settings first and only then shows it, so a failed write never looks saved. */
+async function storeSnippets(snippets: Snippet[]): Promise<string | null> {
+  try {
+    await api.updateSettings({ snippets })
+  } catch (error) {
+    const reason = ((error as Error).message ?? '').replace(IPC_ERROR_PREFIX, '').trim()
+    return `Could not save the snippet. ${reason || 'Settings could not be written.'}`
+  }
+  store.set((s) => ({ ...s, settings: { ...s.settings, snippets } }))
+  return null
+}
+
+export async function editSnippet(snippetId?: string, prefill?: SnippetPrefill): Promise<void> {
+  const existing = snippetId ? store.state.settings.snippets.find((s) => s.id === snippetId) : undefined
+  let saved: Snippet | undefined
+  const draft = await snippetDialog({
+    snippet: existing,
+    prefill,
+    snippets: store.state.settings.snippets,
+    projects: store.state.settings.projects,
+    save: (value) => {
+      const next = snippetFromDraft(value, existing)
+      const { snippets } = store.state.settings
+      saved = next
+      return storeSnippets(existing ? snippets.map((s) => (s.id === existing.id ? next : s)) : [...snippets, next])
+    }
+  })
+  if (!draft || !saved) return
+  toast(`${existing ? 'Updated' : 'Saved'} snippet '${saved.name}'.`, 'info')
 }
 
 export async function deleteSnippet(snippetId: string): Promise<void> {

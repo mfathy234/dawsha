@@ -5,6 +5,7 @@ import {
   shortcutConflict,
   snippetForShortcut,
   snippetPreview,
+  snippetProblem,
   usesSelection,
   validateSnippet,
   visibleSnippets
@@ -100,6 +101,15 @@ describe('validateSnippet', () => {
     expect(validateSnippet({ ...draft, shortcut: 0 }, existing)).toBe('Pick a shortcut from Alt+1 to Alt+9.')
     expect(validateSnippet({ ...draft, shortcut: 1 }, existing)).toBe("Alt+1 is already used by 'Review the diff'.")
     expect(validateSnippet({ ...draft, id: 'a', name: 'Review the diff', shortcut: 1 }, existing)).toBeNull()
+  })
+
+  it('names the field each problem belongs to, so the dialog can focus it', () => {
+    expect(snippetProblem({ ...draft, name: '' }, existing)?.field).toBe('name')
+    expect(snippetProblem({ ...draft, text: '' }, existing)?.field).toBe('text')
+    expect(snippetProblem({ ...draft, shortcut: 1 }, existing)?.field).toBe('shortcut')
+    const full = Array.from({ length: 100 }, (_, index) => snippet(`s${index}`))
+    expect(snippetProblem(draft, full)).toEqual({ field: 'count', message: 'You can keep at most 100 snippets.' })
+    expect(snippetProblem(draft, existing)).toBeNull()
   })
 })
 

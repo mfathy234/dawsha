@@ -1373,7 +1373,14 @@ input[type='checkbox'] {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
   background: rgba(8, 10, 14, 0.72);
+}
+
+/* A dialog never grows past the window: it scrolls inside so its buttons stay reachable. */
+.overlay > .dialog {
+  max-height: 100%;
+  overflow-y: auto;
 }
 
 .dialog {
@@ -3138,6 +3145,11 @@ input[type='checkbox'] {
 .dialog .dialog-hint {
   font-size: 12px;
   color: var(--muted);
+}
+
+.dialog-actions .dialog-hint {
+  margin-right: auto;
+  align-self: center;
 }
 
 .dialog .field-error {

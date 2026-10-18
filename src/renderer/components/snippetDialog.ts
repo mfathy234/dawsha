@@ -1,4 +1,4 @@
-import { SNIPPET_VARIABLES, snippetPreview, validateSnippet, type SnippetDraft } from '../../shared/snippets'
+import { SNIPPET_VARIABLES, snippetPreview, snippetProblem, type SnippetDraft } from '../../shared/snippets'
 import { SNIPPET_TEXT_MAX } from '../../shared/settingsSchema'
 import type { Project, Snippet } from '../../shared/types'
 import { h } from '../dom'
@@ -9,6 +9,8 @@ export interface SnippetDialogOptions {
   prefill?: { name: string; text: string; projectId: string | null }
   snippets: Snippet[]
   projects: Project[]
+  /** Stores the draft. Resolves to null once it is saved, or to a message saying why it could not be saved. */
+  save: (draft: SnippetDraft) => Promise<string | null>
 }
 
 const SHORTCUTS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -71,7 +73,7 @@ export function snippetDialog(options: SnippetDialogOptions): Promise<SnippetDra
     h('div', { class: 'field' }, h('span', { class: 'dialog-label' }, 'Variables'), variables),
     h('div', { class: 'field-row' }, field('Scope', scope.id, scope), field('Shortcut', shortcut.id, shortcut)),
     error,
-    h('div', { class: 'dialog-actions' }, cancel, save)
+    h('div', { class: 'dialog-actions' }, h('span', { class: 'dialog-hint' }, 'Ctrl+Enter saves'), cancel, save)
   )
   const shown = present<SnippetDraft | null>(dialog, null, name)
   const draft = (): SnippetDraft => ({
@@ -88,13 +90,38 @@ export function snippetDialog(options: SnippetDialogOptions): Promise<SnippetDra
   updatePreview()
   text.addEventListener('input', updatePreview)
   for (const control of [name, text, scope, shortcut]) control.addEventListener('input', () => (error.hidden = true))
-  cancel.addEventListener('click', () => shown.finish(null))
-  save.addEventListener('click', () => {
+  const fields = { name, text, shortcut, count: save }
+  const showError = (message: string, target: HTMLElement): void => {
+    error.textContent = message
+    error.hidden = false
+    error.scrollIntoView({ block: 'nearest' })
+    target.focus()
+  }
+  let saving = false
+  const submit = async (): Promise<void> => {
+    if (saving) return
     const value = draft()
-    const problem = validateSnippet(value, options.snippets)
-    error.textContent = problem ?? ''
-    error.hidden = problem === null
-    if (problem === null) shown.finish(value)
+    const problem = snippetProblem(value, options.snippets)
+    if (problem) return showError(problem.message, fields[problem.field])
+    saving = true
+    save.disabled = true
+    const failure = await options.save(value).catch((reason: unknown) => (reason as Error).message || 'Could not save the snippet.')
+    saving = false
+    save.disabled = false
+    if (failure === null) shown.finish(value)
+    else showError(failure, save)
+  }
+  cancel.addEventListener('click', () => shown.finish(null))
+  save.addEventListener('click', () => void submit())
+  name.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.isComposing) return
+    event.preventDefault()
+    void submit()
+  })
+  text.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey)) return
+    event.preventDefault()
+    void submit()
   })
   return shown.result
 }
