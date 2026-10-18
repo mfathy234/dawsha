@@ -6,6 +6,7 @@ import { insertionData } from '../shared/snippets'
 import { primaryModifierPressed } from '../shared/shortcuts'
 import { h } from './dom'
 import { TerminalPrompts } from './terminalPrompts'
+import { TerminalArabic } from './terminalArabic'
 import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
 import { registerFileLinks, type FileLinkHost } from './terminalLinks'
 import { TerminalSearch } from './terminalSearch'
@@ -34,9 +35,11 @@ export class TerminalView {
   private readonly search: TerminalSearch
   readonly prompts: TerminalPrompts
   private readonly highlights: TerminalHighlights
+  private readonly arabic: TerminalArabic
   private opened = false
   private frame = 0
   private lent: HTMLElement | null = null
+  private bundleTerm: ThemeBundle['theme']['term']
 
   constructor(
     readonly id: string,
@@ -61,6 +64,7 @@ export class TerminalView {
     registerFileLinks(this.term, callbacks.fileLinks)
     this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.prompts = new TerminalPrompts(this.term)
+    this.arabic = new TerminalArabic(this.term)
     this.term.onData((data) => {
       this.prompts.noteInput(data)
       callbacks.onInput(data)
@@ -71,6 +75,7 @@ export class TerminalView {
     this.el.addEventListener('wheel', (event) => this.handleWheel(event), { capture: true, passive: false })
     this.el.addEventListener('focusin', () => callbacks.onFocus())
     this.search = new TerminalSearch(this.term, this.el)
+    this.bundleTerm = bundle.theme.term
     this.applyBundle(bundle)
   }
 
@@ -101,6 +106,8 @@ export class TerminalView {
     this.opened = true
     this.term.open(this.el)
     this.loadWebgl()
+    this.arabic.attach()
+    this.arabic.setTheme(this.bundleTerm)
     this.observer.observe(this.el)
     this.scheduleFit()
   }
@@ -219,6 +226,7 @@ export class TerminalView {
   setFontSize(size: number): void {
     if (this.term.options.fontSize === size) return
     this.term.options.fontSize = size
+    this.arabic.refresh()
     this.scheduleFit()
   }
 
@@ -227,12 +235,15 @@ export class TerminalView {
     this.term.options.minimumContrastRatio = bundle.minimumContrastRatio
     this.el.style.background = bundle.hostBackground
     this.el.dataset.termBackground = String(bundle.xterm.background)
+    this.bundleTerm = bundle.theme.term
+    this.arabic.setTheme(bundle.theme.term)
   }
 
   fitNow(): void {
     if (!this.opened || this.el.clientWidth < 40 || this.el.clientHeight < 20) return
     try {
       this.fitAddon.fit()
+      this.arabic.refresh()
     } catch (error) {
       console.warn('Terminal fit failed', error)
     }
@@ -244,6 +255,7 @@ export class TerminalView {
     this.search.dispose()
     this.prompts.dispose()
     this.highlights.dispose()
+    this.arabic.dispose()
     this.term.dispose()
     this.el.remove()
   }
