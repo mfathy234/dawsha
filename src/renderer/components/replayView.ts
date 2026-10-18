@@ -164,6 +164,7 @@ export class ReplayViewComponent {
       (state) => this.render(state),
       textOrderFor(meta.agent)
     )
+    player.setSkipIdle((this.skipIdle as HTMLInputElement).checked)
     this.loaded = { id, meta, cast, player, markers, index }
     this.setStatus('')
     this.limitNote.hidden = meta.endReason !== 'size-limit'
@@ -271,7 +272,8 @@ export class ReplayViewComponent {
     if (event.isComposing) return
     if (document.querySelector('.overlay')) return
     if (event.key === 'Escape') {
-      if (event.target instanceof HTMLInputElement && event.target.value !== '') {
+      // Only a filled text box clears first; a checkbox's value is always 'on'.
+      if (event.target instanceof HTMLInputElement && event.target.type !== 'checkbox' && event.target.value !== '') {
         event.preventDefault()
         event.stopPropagation()
         this.search.clear()
