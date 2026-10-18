@@ -8044,11 +8044,6 @@ button.tl-event:hover { background: var(--raised); }
   height: 100%;
 }
 
-@container pane-header (max-width: 600px) {
-  .pane-header .pane-fresh {
-    display: none;
-  }
-}
 
 /* Keyboard shortcuts sheet: a searchable, read-only list grouped by area. */
 .shortcuts-dialog {
