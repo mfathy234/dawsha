@@ -20,7 +20,18 @@ test('the pane menu shows icons and shortcuts, and opens the folder in VS Code o
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
 
-    await page.locator('.pane').getByRole('button', { name: 'Open in VS Code' }).click()
+    const header = page.locator('.pane-header')
+    for (const name of ['Session timeline', 'Replay session', 'Open in VS Code', 'Move pane', 'Previous pane', 'Next pane']) {
+      await expect(header.getByRole('button', { name, exact: true })).toBeHidden()
+    }
+    await expect(header.getByRole('button', { name: 'Pane actions' })).toBeVisible()
+    await expect(header.getByRole('button', { name: /^Dictate/ })).toBeVisible()
+    await expect(header.getByRole('button', { name: 'Close pane' })).toBeVisible()
+    await page.getByRole('button', { name: 'Pane actions' }).click()
+    for (const name of ['Move pane…', 'Show session timeline', 'Replay session']) {
+      await expect(page.getByRole('menuitem', { name })).toBeVisible()
+    }
+    await page.getByRole('menuitem', { name: 'Open in VS Code' }).click()
     await expect.poll(() => openLog(sandbox.openLog).map((entry) => entry.kind)).toEqual(['vscode'])
     expect(openLog(sandbox.openLog)[0].folder).toBe(sandbox.projectFolder)
 

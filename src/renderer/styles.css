@@ -912,9 +912,6 @@ button {
 }
 
 @container pane-header (max-width: 640px) {
-  .pane-header .pane-prev,
-  .pane-header .pane-next,
-  .pane-header .pane-vscode,
   .pane-header .chip-compare,
   .pane-header .chip-from {
     display: none;
@@ -945,6 +942,12 @@ button {
 
 .pane-header > .icon-btn {
   flex: 0 0 28px;
+}
+
+/* Previous and next pane only matter in full mode, where the grid is hidden. */
+.pane:not(.maximized) .pane-header > .pane-prev,
+.pane:not(.maximized) .pane-header > .pane-next {
+  display: none;
 }
 
 .pane-fresh {
@@ -1132,8 +1135,7 @@ button {
   font: inherit;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -6250,12 +6252,6 @@ body.dragging-ui {
   .pane-header .pane-project {
     display: none;
   }
-
-  /* Timeline and Replay stay in the pane menu; on narrow panes the title needs the room. */
-  .pane-header .pane-timeline,
-  .pane-header .pane-replay {
-    display: none;
-  }
 }
 
 @container pane-header (max-width: 400px) {
@@ -6264,10 +6260,6 @@ body.dragging-ui {
     padding: 0;
     justify-content: center;
     font-size: 0;
-  }
-
-  .pane-header .pane-move {
-    display: none;
   }
 }
 
@@ -8016,4 +8008,111 @@ button.tl-event:hover { background: var(--raised); }
 
 @media (prefers-reduced-motion: reduce) {
   .pane-mic.recording { animation: none; }
+}
+
+/* Session titles: the name picks its own direction and stays isolated from the number and project beside it. */
+.pane-title bdi,
+.others-title bdi,
+.strip-name,
+.sess-name {
+  unicode-bidi: isolate;
+}
+
+.board-card-title,
+.board-peek-title {
+  unicode-bidi: plaintext;
+}
+
+/* Full mode: the title shrinks with an ellipsis so the close X, which sits right after it, is never pushed off. */
+.pane.maximized .pane-header .pane-title {
+  min-width: 0;
+}
+
+.pane-header > .pane-project {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strip-label > .agent-mark {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.strip-label > .agent-mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+
+/* Keyboard shortcuts sheet: a searchable, read-only list grouped by area. */
+.shortcuts-dialog {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shortcuts-search {
+  width: 100%;
+}
+
+.shortcuts-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 14px;
+}
+
+.shortcuts-group h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.shortcuts-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shortcuts-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcuts-title {
+  min-width: 0;
+}
+
+.shortcuts-list kbd {
+  flex: none;
+}
+
+.shortcuts-empty {
+  color: var(--muted);
+}
+
+.toast.with-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast.with-action .toast-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

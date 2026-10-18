@@ -27,6 +27,11 @@ export function registerProvider(provider: Provider): void {
   providers.push(provider)
 }
 
+// Every command, also those that are not usable right now: the shortcuts sheet is a reference.
+export function listAllCommands(state: AppState): Command[] {
+  return [...statics.values(), ...providers.flatMap((provider) => provider(state))]
+}
+
 export function listCommands(state: AppState): Command[] {
   const all = [...statics.values(), ...providers.flatMap((provider) => provider(state))]
   return all.filter((command) => command.enabled?.(state) !== false)

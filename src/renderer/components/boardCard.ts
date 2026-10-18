@@ -53,7 +53,7 @@ export class BoardCard {
   readonly el: HTMLElement
   private column: BoardColumn | null = null
   private readonly mark = h('span', { class: 'board-card-mark' })
-  private readonly title = h('b', { class: 'board-card-title' })
+  private readonly title = h('b', { class: 'board-card-title', dir: 'auto' })
   private readonly time = h('span', { class: 'board-card-time' })
   private readonly meta = h('div', { class: 'board-card-meta' })
   private readonly body = h('div', { class: 'board-card-body' })

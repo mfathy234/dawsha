@@ -114,7 +114,7 @@ export class OthersPanelComponent {
         { class: 'others-card-head' },
         stateIcon(state),
         agentMark(view.agent),
-        h('span', { class: 'others-title' }, `${view.index + 1} · ${view.title}`),
+        h('span', { class: 'others-title' }, `${view.index + 1} · `, h('bdi', { dir: 'auto' }, view.title)),
         h('span', { class: `others-state state-${state}` }, word)
       ),
       h('div', { class: 'others-meta' }, h('span', { class: 'others-project' }, summary ? `${project} · ${summary}` : project)),

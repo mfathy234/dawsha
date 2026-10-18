@@ -2,7 +2,13 @@ import { h } from '../dom'
 
 const ERROR_DURATION_MS = 7000
 const INFO_DURATION_MS = 4000
+const ACTION_DURATION_MS = 8000
 const MAX_TOASTS = 3
+
+export interface ToastAction {
+  label: string
+  run: () => void
+}
 
 let region: HTMLElement | null = null
 
@@ -13,12 +19,16 @@ function ensureRegion(): HTMLElement {
   return region
 }
 
-export function toast(message: string, kind: 'error' | 'info' = 'error'): void {
-  const item = h('div', { class: `toast ${kind}` }, message)
+export function toast(message: string, kind: 'error' | 'info' = 'error', action?: ToastAction): void {
+  const item = h('div', { class: `toast ${kind}${action ? ' with-action' : ''}` }, action ? h('span', { class: 'toast-text' }, message) : message)
   const dismiss = (): void => item.remove()
   item.addEventListener('click', dismiss)
+  if (action) {
+    // The button runs first, then the click bubbles up and closes the toast.
+    item.append(h('button', { class: 'btn small toast-action', type: 'button', onClick: () => action.run() }, action.label))
+  }
   const stack = ensureRegion()
   stack.appendChild(item)
   while (stack.childElementCount > MAX_TOASTS) stack.firstElementChild?.remove()
-  setTimeout(dismiss, kind === 'info' ? INFO_DURATION_MS : ERROR_DURATION_MS)
+  setTimeout(dismiss, action ? ACTION_DURATION_MS : kind === 'info' ? INFO_DURATION_MS : ERROR_DURATION_MS)
 }

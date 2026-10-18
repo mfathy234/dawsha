@@ -41,6 +41,8 @@ import {
   jumpPrompt
 } from '../terminalActions'
 import { exportTranscript } from '../transcriptActions'
+import { replayPane } from '../replayActions'
+import { openShortcutsSheet } from '../components/shortcutsSheet'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setSessionsLayout } from '../sessionsLayout'
@@ -246,6 +248,7 @@ export function installBuiltinCommands(): void {
       ...focusedAction('timeline.search-all', 'Search all session timelines…', (id) => openTimelineWith(id, { scope: 'all' }), 'find prompts edits commands tests old closed past sessions history'),
       ...withKeys('Ctrl+Alt+F')
     },
+    focusedAction('pane.replay', 'Replay the session', replayPane, 'play back terminal recording history'),
     focusedAction('pane.transcript', 'Export transcript…', exportTranscript, 'save markdown html conversation chat history'),
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),
     focusedAction('pane.close', 'Close the pane', closePane, 'stop session'),
@@ -282,6 +285,15 @@ export function installBuiltinCommands(): void {
       run: () => setSessionsLayout('grid')
     },
     { id: 'view.grid', title: 'Back to the grid', group: 'Actions', searchOnly: true, run: () => showView('grid') },
+    {
+      id: 'app.shortcuts',
+      title: 'Keyboard shortcuts',
+      group: 'Actions',
+      keywords: 'keys hotkeys help bindings cheat sheet',
+      shortcut: 'Ctrl+/',
+      keys: [{ key: '/', ctrl: true, shift: false, alt: false }],
+      run: () => void openShortcutsSheet()
+    },
     { id: 'app.theme', title: 'Choose a theme', group: 'Actions', keywords: 'colors background', run: () => toggleThemePicker(true) },
     { id: 'app.updates', title: 'Check for updates', group: 'Actions', run: () => runUpdateAction('check') },
     { id: 'app.whats-new', title: "Show what's new", group: 'Actions', searchOnly: true, run: () => openWhatsNew() },

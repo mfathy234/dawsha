@@ -65,6 +65,8 @@ export class PaneComponent {
   readonly el: HTMLElement
   private readonly mark = h('span', { class: 'slot' })
   private readonly index = h('span', { class: 'pane-title' })
+  private titleText = ''
+  private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly projectName = h('span', { class: 'pane-project', hidden: true })
   private readonly pin = h('span', { class: 'pane-pin', title: 'Pinned pane', role: 'img', 'aria-label': 'Pinned pane', hidden: true })
   private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
@@ -128,15 +130,11 @@ export class PaneComponent {
       h('span', { class: 'spacer' }),
       this.tabAdd,
       this.mic,
-      iconButton('Session timeline', ICONS.history, () => toggleTimeline(paneId), 'pane-timeline'),
-      iconButton('Replay session', ICONS.replay, () => void replayPane(paneId), 'pane-replay'),
-      iconButton('Open in VS Code', ICONS.code, () => void openPaneFolder(paneId, 'vscode'), 'pane-vscode'),
-      iconButton('Move pane', ICONS.layout, () => this.toggleMove(), 'pane-move'),
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
       iconButton('Previous pane', ICONS.prev, () => focusRelative(-1), 'pane-prev'),
       iconButton('Next pane', ICONS.next, () => focusRelative(1), 'pane-next'),
       this.maxButton,
-      iconButton('Close pane', ICONS.close, () => void closePane(paneId), 'close-pane')
+      this.closeButton
     )
     header.addEventListener('dblclick', (event) => {
       if ((event.target as HTMLElement).closest('button')) return
@@ -174,7 +172,7 @@ export class PaneComponent {
   update(view: PaneView, focused: boolean, maximized: boolean): void {
     this.current = view
     const title = view.title
-    this.index.textContent = `${view.index + 1} · ${title}`
+    this.updateTitle(view.index + 1, title)
     this.updateMark(view.agent)
     const projectName = view.named ? (view.project?.name ?? '') : ''
     this.projectName.hidden = projectName === ''
@@ -213,12 +211,33 @@ export class PaneComponent {
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
     this.restart.hidden = !view.activeExited
     this.updateMaximizeButton(maximized)
+    this.placeCloseButton(maximized)
     this.updateTabs(view)
     this.updateTerminals(view)
     if (focused && this.lastActiveTab && this.lastActiveTab !== view.pane.activeTabId) {
       ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
     }
     this.lastActiveTab = view.pane.activeTabId
+  }
+
+  // The number prefix stays put; only the session name picks its own direction, so an Arabic title does not reorder '4 · '.
+  private updateTitle(number: number, title: string): void {
+    const signature = `${number}|${title}`
+    if (signature === this.titleText) return
+    this.titleText = signature
+    this.index.replaceChildren(`${number} · `, h('bdi', { dir: 'auto' }, title))
+    this.index.title = title
+  }
+
+  // In full mode the X sits right after the name, like the strip tabs; in the grid it stays at the far right.
+  private placeCloseButton(maximized: boolean): void {
+    const header = this.closeButton.parentElement
+    if (!header) return
+    if (maximized) {
+      if (this.index.nextElementSibling !== this.closeButton) this.index.after(this.closeButton)
+    } else if (header.lastElementChild !== this.closeButton) {
+      header.append(this.closeButton)
+    }
   }
 
   private updateState(view: PaneView, state: SessionState): void {
@@ -377,7 +396,7 @@ export class PaneComponent {
       this.closeActions()
     })
     this.el.append(this.actionsMenu)
-    placeNearAnchor(this.actionsMenu, this.el.querySelector('.pane-move'))
+    placeNearAnchor(this.actionsMenu, this.el.querySelector('.pane-actions'))
     items.find((b) => !(b as HTMLButtonElement).disabled)?.focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outsideActions, true), 0)
     document.addEventListener('keydown', this.escapeActions, true)
@@ -454,11 +473,12 @@ export class PaneComponent {
       studioItem,
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),
       item('Open terminal here', () => addTab(this.paneId, 'shell'), ICONS.terminal),
+      item('Move pane…', () => this.toggleMove(), ICONS.layout),
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
-      item('Replay session', () => replayPane(this.paneId), ICONS.replay),
+      item('Replay session', () => replayPane(this.paneId), ICONS.replay, 'pane.replay'),
       pauseItem,
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
