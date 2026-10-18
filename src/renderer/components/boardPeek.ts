@@ -10,7 +10,7 @@ import { agentMark } from './agentMark'
 export class BoardPeek {
   readonly el = h('aside', { class: 'board-peek', hidden: true })
   private readonly mark = h('span', { class: 'board-peek-mark' })
-  private readonly title = h('b', { class: 'board-peek-title' })
+  private readonly title = h('b', { class: 'board-peek-title', dir: 'auto' })
   private readonly term = h('div', { class: 'board-peek-term' })
   private readonly input = h('input', { class: 'text-input board-peek-input', type: 'text', autocomplete: 'off', spellcheck: 'false' })
   private readonly send = h('button', { class: 'btn primary', type: 'submit' }, 'Send')

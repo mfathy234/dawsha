@@ -177,7 +177,7 @@ export class SidebarComponent {
             onClick: () => focusPane(view.pane.id)
           },
           agentMark(view.agent),
-          h('span', { class: 'sess-name' }, view.title),
+          h('span', { class: 'sess-name', dir: 'auto' }, view.title),
           h('span', { class: `sess-state state-${sessionStateName}`, title: stateLabel }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, stateLabel))
         ),
         iconButton(`Close ${view.title} in ${project.name}`, ICONS.close, () => void closePane(view.pane.id), 'small sess-close')
@@ -190,7 +190,7 @@ export class SidebarComponent {
     for (const session of kept) {
       rows.push(h('div', { class: 'kept-session-row closed' },
         h('button', { class: 'sess-row', type: 'button', title: `Resume ${session.title}`, onClick: () => void startSession(project.id, session.agent, session.sessionId, true, session.title) },
-          agentMark(session.agent), h('span', { class: 'sess-name' }, session.title)),
+          agentMark(session.agent), h('span', { class: 'sess-name', dir: 'auto' }, session.title)),
         iconButton(`Remove ${session.title} from ${project.name}`, ICONS.close, () => removeKeptSession(session.agent, session.sessionId), 'small sess-close')
       ))
     }
@@ -212,7 +212,7 @@ export class SidebarComponent {
           onClick: () => focusPane(view.pane.id)
         },
         agentMark(view.agent),
-        h('span', { class: 'sess-name' }, view.title),
+        h('span', { class: 'sess-name', dir: 'auto' }, view.title),
         project ? h('span', { class: 'needs-project' }, project.name) : null,
         h('span', { class: 'sess-state state-needs' }, stateIcon('needs'))
       )

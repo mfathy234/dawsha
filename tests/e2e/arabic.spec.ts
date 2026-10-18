@@ -1,7 +1,7 @@
-import { mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { bufferText, closeApp, createSandbox, feedTerminal, launchApp, selectAllText } from './helpers'
+import { APP_VERSION, bufferText, closeApp, createSandbox, feedTerminal, launchApp, selectAllText } from './helpers'
 
 const ARABIC = 'مرحبا بالعالم'
 const SCREENS = resolve(__dirname, '../../test-results/screens')
@@ -101,6 +101,52 @@ test('Arabic typed into a text box reads right-to-left with the bundled Arabic f
     expect(await page.evaluate(() => document.fonts.check("13px 'Dawsha Arabic'", 'مشروع'))).toBe(true)
     mkdirSync(SCREENS, { recursive: true })
     await page.locator('.sidebar').screenshot({ path: resolve(SCREENS, 'arabic-input.png') })
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('an Arabic session title reads right to left without jumbling the number or the project beside it', async () => {
+  const sandbox = createSandbox()
+  const title = 'مراجعة الفواتير'
+  const folder = join(sandbox.root, 'arabic-project')
+  mkdirSync(folder, { recursive: true })
+  writeFileSync(
+    join(sandbox.userData, 'settings.json'),
+    JSON.stringify({ version: 2, lastSeenVersion: APP_VERSION, projects: [{ id: 'ar', name: title, folder }] }),
+    'utf8'
+  )
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.getByRole('button', { name: new RegExp(`^New (Claude|Codex|Gemini) session in ${title}$`) }).click()
+    await page.getByRole('button', { name: new RegExp(`^New (Claude|Codex|Gemini) session in ${title}$`) }).click()
+    await expect(page.locator('.pane')).toHaveCount(2)
+    const bidi = (selector: string): Promise<string> =>
+      page.locator(selector).first().evaluate((el) => `${getComputedStyle(el).unicodeBidi}`)
+
+    // Pane header: the number prefix is plain text, only the name gets its own direction.
+    const headerName = page.locator('.pane-title bdi').first()
+    await expect(headerName).toHaveAttribute('dir', 'auto')
+    await expect(page.locator('.pane-title').first()).toHaveText(`1 · ${title}`)
+    expect(await bidi('.pane-title bdi')).toBe('isolate')
+    expect(await page.locator('.pane-title').first().evaluate((el) => getComputedStyle(el).direction)).toBe('ltr')
+
+    await expect(page.locator('.sess-name').first()).toHaveAttribute('dir', 'auto')
+    expect(await bidi('.sess-name')).toBe('isolate')
+
+    await page.keyboard.press('Control+Enter')
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    await expect(page.locator('.strip-name').first()).toHaveAttribute('dir', 'auto')
+    expect(await bidi('.strip-name')).toBe('isolate')
+    await expect(page.locator('.others-title bdi').first()).toHaveAttribute('dir', 'auto')
+
+    await page.keyboard.press('Control+Enter')
+    await page.getByRole('button', { name: 'Board' }).click()
+    const cardTitle = page.locator('.board-card-title').first()
+    await expect(cardTitle).toHaveAttribute('dir', 'auto')
+    await expect(cardTitle).toHaveText(title)
+    expect(await bidi('.board-card-title')).toBe('plaintext')
+    await page.screenshot({ path: join(SCREENS, 'arabic-session-titles.png') })
   } finally {
     await closeApp(app)
   }
