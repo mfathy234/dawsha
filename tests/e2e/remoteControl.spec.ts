@@ -472,6 +472,7 @@ test('Remote Access settings show a QR code that opens the page with the pairing
     await expect(page.locator('.remote-qr-card')).toContainText('Scan with your phone')
     await expect(page.locator('.remote-manual')).toContainText('Or connect by hand')
     await expect(page.locator('.remote-pairing-code')).toHaveAttribute('aria-label', 'Pairing code 4 8 2 9 1 3')
+    await expect(page.getByRole('textbox', { name: 'Cloudflare PIN email' })).toBeVisible()
     await page.screenshot({ path: 'test-results/screens/remote-access-qr.png' })
   } finally {
     await closeApp(app)
