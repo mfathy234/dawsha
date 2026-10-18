@@ -73,6 +73,10 @@ export class OrchRunView {
   }
 
   private render(run: OrchRunDetail, state: AppState): void {
+    // New events and the minute tick rebuild the view; keep the caret in the handoff note.
+    const focused = document.activeElement
+    const activeId = focused instanceof HTMLTextAreaElement && this.el.contains(focused) ? focused.id : ''
+    const caret = focused instanceof HTMLTextAreaElement ? [focused.selectionStart, focused.selectionEnd] : null
     clear(this.el)
     this.el.append(this.switcher(run, state), this.header(run))
     const story = this.story(run)
@@ -83,6 +87,11 @@ export class OrchRunView {
       const open = state.orch?.decisions.some((d) => d.runId === run.id && d.kind === 'spec-approval')
       const link = h('button', { class: open ? 'btn primary' : 'btn', type: 'button', onClick: () => showOrch('spec', run.id) }, open ? 'Review spec' : 'Spec')
       this.el.insertBefore(link, this.el.children[2])
+    }
+    const restored = activeId ? document.getElementById(activeId) : null
+    if (restored instanceof HTMLTextAreaElement && caret) {
+      restored.focus()
+      restored.setSelectionRange(caret[0], caret[1])
     }
   }
 
