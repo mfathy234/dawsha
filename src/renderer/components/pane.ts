@@ -34,7 +34,6 @@ import { continueIn, continueLabel } from '../handoffActions'
 import { exportTranscript } from '../transcriptActions'
 import { replayPane, toggleRecordingPause } from '../replayActions'
 import { api } from '../api'
-import { saveSelectionAsSnippet } from '../snippetActions'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
@@ -414,11 +413,6 @@ export class PaneComponent {
       changesItem.setAttribute('disabled', '')
       changesItem.title = 'This pane folder is not a git repository'
     }
-    const snippetItem = item('Save selection as snippet', () => saveSelectionAsSnippet(this.paneId), ICONS.snippet, 'terminal.save-snippet')
-    if (!paneTerminal(this.paneId)?.hasSelection()) {
-      snippetItem.setAttribute('disabled', '')
-      snippetItem.title = 'Select some text in the terminal first'
-    }
     const pauseItem = item('Pause recording', () => toggleRecordingPause(this.paneId), ICONS.history)
     pauseItem.setAttribute('disabled', '')
     pauseItem.title = 'This terminal is not being recorded'
@@ -469,7 +463,6 @@ export class PaneComponent {
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
       item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),
-      snippetItem,
       item('Clear scrollback', () => clearScrollback(this.paneId), ICONS.eraser),
       showDetails,
       pinItem,

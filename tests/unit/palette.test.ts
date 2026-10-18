@@ -16,7 +16,6 @@ const ITEMS: PaletteItem[] = [
   item('a-compare', 'Ask two agents', 'Actions', { keywords: 'compare' }),
   item('p-claude', 'Start Claude in billing-api', 'Projects'),
   item('p-codex', 'Start Codex in billing-api', 'Projects', { searchOnly: true }),
-  item('n1', 'Insert "Review the diff"', 'Snippets'),
   item('l1', 'Open "Morning"', 'Layouts')
 ]
 
@@ -52,7 +51,7 @@ describe('fuzzyMatch', () => {
 describe('buildGroups', () => {
   it('lists the groups in the fixed order and hides search-only items when the query is empty', () => {
     const groups = buildGroups(ITEMS, '', [])
-    expect(groups.map((g) => g.label)).toEqual(['Sessions', 'Actions', 'Projects', 'Snippets', 'Layouts'])
+    expect(groups.map((g) => g.label)).toEqual(['Sessions', 'Actions', 'Projects', 'Layouts'])
     expect(flatten(groups).map((r) => r.item.id)).not.toContain('p-codex')
   })
 

@@ -26,7 +26,6 @@ import {
   type SavedPane,
   type SavedTab,
   type Settings,
-  type Snippet,
   type TabAgent,
   type Workspace
 } from './types'
@@ -76,7 +75,6 @@ export const defaultSettings = (): Settings => ({
   onboardingDismissed: false,
   workspace: { panes: [], focusedIndex: 0 },
   layouts: [],
-  snippets: [],
   keptSessions: [],
   ticketNotes: {},
   tasks: [],
@@ -241,31 +239,6 @@ function sanitizeLayouts(value: unknown): SavedLayout[] {
   return layouts.slice(0, MAX_LAYOUTS)
 }
 
-export const MAX_SNIPPETS = 100
-export const SNIPPET_NAME_MAX = 60
-export const SNIPPET_TEXT_MAX = 4000
-
-function sanitizeSnippets(value: unknown, projectIds: Set<string>): Snippet[] {
-  if (!Array.isArray(value)) return []
-  const seen = new Set<string>()
-  const snippets: Snippet[] = []
-  for (const item of value) {
-    if (!isRecord(item)) continue
-    const name = asString(item.name)?.trim().slice(0, SNIPPET_NAME_MAX)
-    const text = asString(item.text)?.slice(0, SNIPPET_TEXT_MAX)
-    if (!name || !text) continue
-    const scope = asString(item.projectId)
-    if (scope && !projectIds.has(scope)) continue
-    let id = asString(item.id) ?? makeId()
-    if (seen.has(id)) id = makeId()
-    seen.add(id)
-    const key = item.shortcut
-    const shortcut = typeof key === 'number' && Number.isInteger(key) && key >= 1 && key <= 9 ? key : null
-    snippets.push({ id, name, text, projectId: scope, shortcut })
-  }
-  return snippets.slice(0, MAX_SNIPPETS)
-}
-
 function sanitizeFullAccess(value: unknown): FullAccess {
   const defaults = defaultFullAccess()
   if (!isRecord(value)) return defaults
@@ -356,7 +329,6 @@ export function migrateSettings(raw: unknown): Settings {
     onboardingDismissed: raw.onboardingDismissed === true,
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
     layouts: sanitizeLayouts(raw.layouts),
-    snippets: sanitizeSnippets(raw.snippets, new Set(projects.map((p) => p.id))),
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
     ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),

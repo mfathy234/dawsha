@@ -46,8 +46,8 @@ describe('command registry', () => {
 
   it('finds provider commands with keys', () => {
     registry.registerProvider(() => [
-      { id: 'snippet:1', title: 'S', group: 'Snippets', keys: [bind('Alt+1')], run: () => undefined }
+      { id: 'alt-one', title: 'S', group: 'Actions', keys: [bind('Alt+1')], run: () => undefined }
     ])
-    expect(registry.commandForEvent(key('1', { altKey: true }), stateOf('grid'))?.id).toBe('snippet:1')
+    expect(registry.commandForEvent(key('1', { altKey: true }), stateOf('grid'))?.id).toBe('alt-one')
   })
 })

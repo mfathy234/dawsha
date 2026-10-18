@@ -60,25 +60,6 @@ test('prompt markers, copy last reply, copy prompt, save selection and clear scr
     await expect.poll(() => clipboardText(app), { timeout: SLOW }).toBe('omega-out')
     await expect(page.locator('.toast', { hasText: 'Copied 1 line' })).toBeVisible()
 
-    await feedTerminal(page, id, '\r\nSNIP-TEXT build the billing-api now\r\n')
-    await expect.poll(() => bufferText(page, id)).toContain('SNIP-TEXT build the billing-api now')
-    expect(await selectLine(page, id, 'SNIP-TEXT')).toBe(true)
-    await page.keyboard.press('Control+k')
-    await page.getByPlaceholder('Type a command, a session or a project').fill('save selection')
-    await page.getByRole('option', { name: /^Save selection as a snippet/ }).click()
-    const dialog = page.getByRole('dialog', { name: 'New snippet' })
-    await expect(dialog).toBeVisible()
-    await expect(dialog.getByLabel('Name')).toHaveValue('SNIP-TEXT build the billing-api now')
-    await expect(dialog.getByLabel('Text')).toHaveValue('SNIP-TEXT build the billing-api now')
-    await expect(dialog.getByLabel('Scope')).toHaveValue('smoke')
-    await dialog.getByRole('button', { name: 'Save snippet' }).click()
-    await expect(dialog).toBeHidden()
-    await expect
-      .poll(() => readSettings(sandbox.userData).snippets?.some((s: { text: string }) => s.text === 'SNIP-TEXT build the billing-api now'), {
-        timeout: SLOW
-      })
-      .toBe(true)
-
     await host.click()
     const box = [
       '\x1b[2J\x1b[H',

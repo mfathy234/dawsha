@@ -12,8 +12,7 @@ test('imports Paneon settings on the next launch after backing up Dawsha setting
   const paneon = {
     ...JSON.parse(original),
     projects: [{ id: 'paneon-project', name: 'From Paneon', folder: sandbox.projectFolder, defaultAgent: 'codex' }],
-    sidebarCollapsed: true,
-    snippets: [{ id: 'welcome', name: 'Welcome', text: 'Hello from Paneon', projectId: null, shortcut: null }]
+    sidebarCollapsed: true
   }
   const paneonText = JSON.stringify(paneon)
   writeFileSync(join(paneonDir, 'settings.json'), paneonText)
@@ -43,7 +42,6 @@ test('imports Paneon settings on the next launch after backing up Dawsha setting
     const imported = JSON.parse(readFileSync(dawshaPath, 'utf8'))
     expect(imported.projects[0].name).toBe('From Paneon')
     expect(imported.sidebarCollapsed).toBe(true)
-    expect(imported.snippets[0].name).toBe('Welcome')
     expect(readFileSync(join(paneonDir, 'settings.json'), 'utf8')).toBe(paneonText)
     expect(readdirSync(sandbox.userData).some((name) => name.startsWith('settings.json.pre-paneon-') && name.endsWith('.bak'))).toBe(true)
     expect(existsSync(join(sandbox.userData, 'paneon-import.pending.json'))).toBe(false)

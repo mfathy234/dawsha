@@ -73,7 +73,7 @@ export interface ReplayRef {
 
 export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote' | 'orchestrator'
 
-export type ProjectsTab = 'projects' | 'tasks' | 'snippets' | 'instructions'
+export type ProjectsTab = 'projects' | 'tasks' | 'instructions'
 
 export interface AgentsState {
   report: AgentsReport | null

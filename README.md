@@ -33,9 +33,8 @@
 - **Resize the Projects panel.** Drag its edge or focus the divider and use the arrow keys; Dawsha remembers the width between launches.
 - **Task history.** The Projects > Tasks tab groups related sessions, a task goal, notes and commit references in a dated history that remains after sessions close.
 - **Gemini tool activity.** Gemini panes show the latest tool from the agent's saved chat, with recent tool calls in the activity drawer when available.
-- **A command palette.** **Ctrl+K** searches your open sessions, actions, projects, snippets and layouts in one list and runs what you pick from the keyboard.
+- **A command palette.** **Ctrl+K** searches your open sessions, actions, projects and layouts in one list and runs what you pick from the keyboard.
 - **Saved layouts.** Save the current panes under a name and bring the same setup back later, resuming each agent's session, from the **Layouts** menu, the palette or `dawsha open <layout>`.
-- **Prompt snippets.** Keep short prompts with `{{selection}}`, `{{branch}}`, `{{project}}` and `{{folder}}` variables and insert one into the focused terminal with **Alt+1** to **Alt+9**, typed but not sent.
 - **Ask two agents.** Send one prompt to two agents at once, each optionally in its own git worktree, watch them side by side and keep one, keep both or diff them.
 - **Continue in another agent.** Hand a session over to Codex, Gemini or Claude with an editable summary of the goal, the files touched, what is done and left, the last error and the recent output.
 - **Cost and time at a glance.** Every pane shows how long its session has run and its tokens (and cost for Claude Code), and each project in the sidebar shows today's total.
@@ -47,7 +46,7 @@
 - **Context warnings.** The context gauge turns amber at 80% and red at 90%, and a full session offers **Compact** before it runs out.
 - **Drop files into a terminal.** Drag files from Explorer onto a pane to type their paths for the agent.
 - **Find in the terminal.** **Ctrl+Shift+F** searches a pane's output with match case, whole word and regex, and steps through the matches.
-- **Work with the output.** Ctrl+click a file reference to open it with its matching app (images in Photos, HTML in your browser); scripts and executables are revealed in Explorer. Jump between prompts with **Ctrl+Up** and **Ctrl+Down**, copy the last reply (**Ctrl+Alt+C**) or the prompt you are typing (**Ctrl+Alt+P**), save a selection as a snippet, and clear the scrollback.
+- **Work with the output.** Ctrl+click a file reference to open it with its matching app (images in Photos, HTML in your browser); scripts and executables are revealed in Explorer. Jump between prompts with **Ctrl+Up** and **Ctrl+Down**, copy the last reply (**Ctrl+Alt+C**) or the prompt you are typing (**Ctrl+Alt+P**), and clear the scrollback.
 - **Highlight rules.** Lines with errors, warnings or passing tests are tinted in every pane; change the words and colors in Settings.
 - **Open in your editor.** Every pane header has an **Open in VS Code** button, and the pane menu opens the folder's `.sln` in **Visual Studio** when there is one. The menu shows each action's icon and shortcut.
 - **Usage.** Tokens per day by agent, tokens and Claude Code cost by project and agent, and a history of your 5 hour and weekly limits, read from the agents' own folders.
@@ -60,7 +59,7 @@
 - **Replay.** Recorded terminals play back like a video, with markers for prompts and permission requests, search inside the recording, 4x and 16x speed and skipping of idle time. **Recording is opt-in**: it is off until you turn it on in Settings, recordings stay on your computer, you choose how many days and how many megabytes to keep, and you can pause recording per pane. Open Replay from the pane header, the timeline, the board or the palette.
 - **Phone approvals (beta).** The Remote Control page has an Approvals tab that lists the sessions waiting on you. Allow once, or Deny with a reason the agent reads. Notifications arrive while the page is open. Only a plain "Yes" can be allowed from the phone; edits to CI, config, `.git` and `.claude` files can only be denied by default.
 - **Back up and move.** Settings > Back up and move exports your settings to one JSON file, without remote-access secrets, and imports it on another computer with Merge or Replace.
-- **Paneon settings import.** If Paneon settings are found, Settings > General offers an import. Dawsha backs up its current settings and applies Paneon projects, layouts, snippets and preferences the next time you open Dawsha; Paneon remains untouched.
+- **Paneon settings import.** If Paneon settings are found, Settings > General offers an import. Dawsha backs up its current settings and applies Paneon projects, layouts and preferences the next time you open Dawsha; Paneon remains untouched.
 - **Settings in one place.** A Settings view (Ctrl+,) for the palette shortcut, notifications and live session info, full access per agent, updates, the full changelog and where your data lives.
 - **Themes.** Seven themes (Dawsha, Dawsha Cards, Graphite Cards, Dawsha Daylight, Nord, Catppuccin Mocha, GitHub Light) with contrast checks, plus an optional background image. The Cards and Daylight themes draw each pane as a card with its terminal inset.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
@@ -109,9 +108,9 @@
 |---|---|
 | ![Two agents answering the same prompt side by side under a Compare header, each in its own worktree, with Keep A, Keep B, Keep both and Diff A vs B](docs/screenshots/compare.png) | ![The Continue in Codex dialog with an editable summary of the session](docs/screenshots/handoff.png) |
 
-| Prompt snippets | Usage |
-|---|---|
-| ![The Snippets tab of the Projects view with the Edit snippet dialog open](docs/screenshots/snippets.png) | ![The Usage view with tokens per day by agent, limit history and tables by project and by agent](docs/screenshots/usage.png) |
+| Usage |
+|---|
+| ![The Usage view with tokens per day by agent, limit history and tables by project and by agent](docs/screenshots/usage.png) |
 
 ## Supported agents
 
@@ -168,7 +167,6 @@ Tip: run `dawsha .` in any folder to open it in Dawsha.
 |---|---|
 | Ctrl+K, Ctrl+Shift+P | Command palette: type to filter, Up and Down, **Tab** next group, Enter runs, Esc closes |
 | Ctrl+Shift+A | Ask two agents |
-| Alt+1 to Alt+9 | Insert the snippet with that number into the focused terminal, without pressing Enter |
 | Ctrl+N | New session. Quick-pick: type to filter, arrows, Enter, Esc; **Tab** cycles Claude, Codex, Gemini for the highlighted project |
 | Ctrl+Shift+N | Same quick-pick, preset to the agent after each project's default |
 | Ctrl+Shift+R | Open the picker in **Resume** mode. Inside the picker, **Ctrl+R** toggles New / Resume, **Tab** cycles the agent filter, Enter resumes in a new pane, Shift+Enter resumes in the focused pane (after a confirmation if that tab is a running agent) |
@@ -217,24 +215,11 @@ Press **Ctrl+Shift+R**, choose **Resume a session...** in the split-button menu,
 
 ### Command palette
 
-Press **Ctrl+K** (or Ctrl+Shift+P) anywhere in the window, also while a terminal has focus. Dawsha takes Ctrl+K before the terminal sees it, because agents rarely use it on Windows; set `"paletteShortcut": "Ctrl+Alt+P"` in `settings.json` to use another key (Ctrl or Alt plus one key, and Ctrl+Shift+P keeps working). The list has five groups: **Sessions** (switch to an open pane), **Actions**, **Projects** (`Start Codex in billing-api`), **Snippets** and **Layouts**. The filter is fuzzy and also matches session titles. Up and Down move through every row, **Tab** jumps to the next group, **Enter** runs the row and **Esc** closes. With an empty filter the commands you ran last come first under **Recent**. The palette, the menus and the keyboard shortcuts read one command list, so a new action shows up in all three.
+Press **Ctrl+K** (or Ctrl+Shift+P) anywhere in the window, also while a terminal has focus. Dawsha takes Ctrl+K before the terminal sees it, because agents rarely use it on Windows; set `"paletteShortcut": "Ctrl+Alt+P"` in `settings.json` to use another key (Ctrl or Alt plus one key, and Ctrl+Shift+P keeps working). The list has five groups: **Sessions** (switch to an open pane), **Actions**, **Projects** (`Start Codex in billing-api`) and **Layouts**. The filter is fuzzy and also matches session titles. Up and Down move through every row, **Tab** jumps to the next group, **Enter** runs the row and **Esc** closes. With an empty filter the commands you ran last come first under **Recent**. The palette, the menus and the keyboard shortcuts read one command list, so a new action shows up in all three.
 
 ### Saved layouts
 
 **Layouts** in the top bar lists your saved layouts. **Save current layout...** asks for a name and stores, for every pane in order, its project, its tabs (agent, label and session id), the active tab and the text size. **Open** adds the layout's panes. When panes are already open Dawsha asks first: **Replace with <name>** stops the open sessions (their files stay on disk), **Add alongside** keeps them running, **Cancel** does nothing. Tabs that have a session id resume it (`claude -r <id>`, `codex resume <id>`, `gemini --resume <id>`), the others start fresh, and a session that is already open in the grid starts fresh instead of running twice. Panes whose project was removed are skipped and reported. **Rename** and **Delete** are in the same list, and Delete names the layout in its confirmation. The two panes of an **Ask two agents** comparison are saved as plain panes without session ids, because their worktrees are temporary. From a terminal, `dawsha layouts` lists them and `dawsha open <layout>` opens one (see below).
-
-### Snippets
-
-Projects has a **Snippets** tab for short prompts. A snippet has a name, a text, a scope (all projects or one project) and an optional shortcut from **Alt+1** to **Alt+9**; a shortcut cannot be used twice in scopes that overlap. **Edit** and **Delete** are on each row, and Delete names the snippet in its confirmation. The text can use these variables:
-
-| Variable | Replaced with |
-|---|---|
-| `{{selection}}` | the text selected in the focused terminal (the snippet is not inserted if nothing is selected) |
-| `{{branch}}` | the current git branch of the pane |
-| `{{project}}` | the project name |
-| `{{folder}}` | the pane's folder |
-
-Press the shortcut or choose `Insert "<name>"` in the palette to type the text into the focused terminal **without pressing Enter**, so you can read and edit it first. Multi-line text is sent as a bracketed paste when the program in the terminal has turned that on, which Claude Code, Codex CLI and Gemini CLI do, so no line runs on its own; in a terminal that has not, the lines are joined into one and a toast says so. Control characters are removed from the text.
 
 ### Ask two agents
 
@@ -292,7 +277,6 @@ Drag files or folders from Explorer onto a pane: their paths are typed into the 
 - **Prompts**: each prompt you send is marked. **Ctrl+Up** and **Ctrl+Down** scroll to the previous or next one; when there is none in that direction the keys go to the agent as usual.
 - **Copy last reply** (**Ctrl+Alt+C**, the ⋯ menu or the palette) copies everything after your last prompt, with wrapped lines joined.
 - **Copy current prompt** (**Ctrl+Alt+P**) copies what is in the agent's input box before you send it, read from the screen; when no input box is found it copies what you typed since your last Enter. Nothing is sent or cleared.
-- **Save selection as a snippet** opens the snippet dialog with the selected text.
 - **Clear scrollback** empties the pane's history without restarting the agent.
 
 ### Highlight rules
@@ -397,7 +381,7 @@ Recording is **opt-in** and off by default. Turn it on in Settings, in the recor
 
 Everything is in the Electron user-data folder: `%APPDATA%\Dawsha` on Windows or `~/Library/Application Support/Dawsha` on macOS:
 
-- `settings.json`: projects, theme, notification toggles, sidebar state, the open-panes workspace, saved layouts, snippets and the palette key.
+- `settings.json`: projects, theme, notification toggles, sidebar state, the open-panes workspace, saved layouts and the palette key.
 - `recordings\`: terminal recordings, only when recording is turned on in Settings.
 - `usage-history.json`: the last cost of each Claude Code session that reported one and the 5 hour and weekly limit readings, for the Usage view (written only when the live session info is on).
 - `bin\` and `status\`: the status-line script and the saved status payloads (only when the live toggle was used; files older than 7 days are removed).
@@ -450,14 +434,14 @@ The end-to-end tests launch the built app with a temporary user-data folder and 
 ```
 src/shared     types, agents, settings schema, layout, session matching, status-line and ops-feed parsing,
                agent install/update logic, needs-you state machine, themes, contrast, resume index and
-               session details, command-line parsing and command handling, command palette matching, layouts, snippets,
+               session details, command-line parsing and command handling, command palette matching, layouts,
                comparison and handoff helpers, usage parsing and aggregation
 src/main       window, pty manager, agent launch, settings store, user-data migration, watchers, status-line bridge,
                agent version checks, resume lists and the cross-project session index, git, notifications,
                command-line pipe server and runner, git worktrees for comparisons, usage scan and history, IPC
 src/preload    typed bridge exposed as window.gridApi
 src/renderer   app shell, sidebar, grid, pane, quick-pick, resume picker, onboarding, projects and agents views,
-               command registry and palette, layouts menu, snippets, comparison pair, handoff and usage views,
+               command registry and palette, layouts menu, comparison pair, handoff and usage views,
                theme picker, dialogs, command host
 build          icons, the dawsha launcher (dawsha.cmd, dawsha-cli.cjs) and the installer PATH script
 tests/unit     vitest

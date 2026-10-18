@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyTyped, displayWidth, extractReply, isShellPromptLine, suggestSnippetName, unwrapLines } from '../../src/shared/terminalText'
+import { applyTyped, displayWidth, extractReply, isShellPromptLine, unwrapLines } from '../../src/shared/terminalText'
 
 const line = (text: string, isWrapped = false) => ({ text, isWrapped })
 
@@ -75,16 +75,5 @@ describe('displayWidth', () => {
   it('counts wide characters as two cells', () => {
     expect(displayWidth('abc')).toBe(3)
     expect(displayWidth('日本語')).toBe(6)
-  })
-})
-
-describe('suggestSnippetName', () => {
-  it('uses the first words', () => {
-    expect(suggestSnippetName('  npm run build -- --watch now please')).toBe('npm run build -- --watch')
-  })
-
-  it('caps the length and falls back for blank text', () => {
-    expect(suggestSnippetName('x'.repeat(200)).length).toBeLessThanOrEqual(60)
-    expect(suggestSnippetName('   ')).toBe('Terminal selection')
   })
 })

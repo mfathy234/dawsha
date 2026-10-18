@@ -265,4 +265,17 @@ describe('migrateSettings splits and pinned', () => {
     expect(result.layouts[0].panes[0].pinned).toBe(true)
     expect(result.layouts[0].splits).toEqual({ '2x1': { cols: [0.25, 0.75], rows: [1] } })
   })
+
+  it('loads an old settings file that still has a snippets key and drops the key silently', () => {
+    const old = { snippets: [{ id: 's1', name: 'Old', text: 'Review the diff', projectId: null, shortcut: 1 }], sessionsLayout: 'board' }
+    const result = migrateSettings(old)
+    expect(result.sessionsLayout).toBe('board')
+    expect('snippets' in result).toBe(false)
+  })
+
+  it('reads a settings.json from disk that has snippets without throwing', () => {
+    const file = tempFile()
+    writeFileSync(file, JSON.stringify({ snippets: 'not even a list', projects: [] }), 'utf8')
+    expect(() => new SettingsStore(file).load()).not.toThrow()
+  })
 })

@@ -31,7 +31,6 @@ import {
 } from '../actions'
 import { derivePanes } from '../derive'
 import { applyStashPane, fetchPane, pullPane, stashPane, switchBranchPane } from '../gitQuickActions'
-import { saveSelectionAsSnippet } from '../snippetActions'
 import { toggleDictation } from '../dictation/dictationActions'
 import { openInstructionsForPane } from '../instructionsActions'
 import {
@@ -39,7 +38,6 @@ import {
   clearScrollback,
   copyCurrentPrompt,
   copyLastReply,
-  focusedHasSelection,
   jumpPrompt
 } from '../terminalActions'
 import { exportTranscript } from '../transcriptActions'
@@ -220,10 +218,6 @@ export function installBuiltinCommands(): void {
       ...focusedAction('terminal.copy-prompt', 'Copy the prompt you are typing', copyCurrentPrompt, 'clipboard input draft current'),
       ...withKeys('Ctrl+Alt+P')
     },
-    {
-      ...focusedAction('terminal.save-snippet', 'Save selection as a snippet', saveSelectionAsSnippet, 'selected text create'),
-      enabled: (state) => hasPane(state) && focusedHasSelection()
-    },
     focusedAction('terminal.clear-scrollback', 'Clear the terminal scrollback', clearScrollback, 'history wipe screen output'),
     focusedAction('pane.instructions', 'Edit project instructions', openInstructionsForPane, 'claude agents gemini md rules'),
     focusedAction('pane.vscode', 'Open in VS Code', (id) => openPaneFolder(id, 'vscode'), 'editor folder'),
@@ -256,7 +250,7 @@ export function installBuiltinCommands(): void {
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),
     focusedAction('pane.close', 'Close the pane', closePane, 'stop session'),
     { id: 'view.sidebar', title: 'Toggle the sidebar', group: 'Actions', run: () => toggleSidebar() },
-    { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'snippets folders', run: () => showView('projects') },
+    { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'folders', run: () => showView('projects') },
     { id: 'view.agents', title: 'Open Agents', group: 'Actions', keywords: 'install update cli', run: () => showView('agents') },
     { id: 'view.skills', title: 'Open Skills', group: 'Actions', keywords: 'installed export copy agent', run: () => showView('skills') },
     { id: 'view.usage', title: 'Open Usage', group: 'Actions', keywords: 'tokens cost limits history', run: () => showView('usage') },

@@ -58,9 +58,9 @@ export async function importSettingsFromUi(): Promise<void> {
     if (mode === 'replace') {
       const open = store.state.panes.filter((pane) => !(plan.patch.projects ?? []).some((project) => project.id === pane.projectId)).length
       const confirmed = await confirmDialog({
-        title: 'Replace your projects, snippets and layouts?',
+        title: 'Replace your projects and layouts?',
         body: replaceWarning(plan.summary, open),
-        confirmLabel: `Replace ${plan.summary.removedProjects.length} projects, ${plan.summary.replacedSnippets} snippets, ${plan.summary.replacedLayouts} layouts`
+        confirmLabel: `Replace ${plan.summary.removedProjects.length} projects, ${plan.summary.replacedLayouts} layouts`
       })
       if (!confirmed) return
     }

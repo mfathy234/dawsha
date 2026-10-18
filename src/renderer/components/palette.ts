@@ -12,7 +12,6 @@ import { agentMark } from './agentMark'
 
 const GROUP_ICONS: Record<string, string> = {
   Actions: ICONS.bolt,
-  Snippets: ICONS.snippet,
   Layouts: ICONS.layout,
   Recent: ICONS.history
 }
