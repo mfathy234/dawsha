@@ -1,4 +1,5 @@
 import { agentLabel } from '../../shared/agents'
+import { textOrderFor } from '../../shared/arabicRows'
 import { castDuration, parseCastAsync, type ParsedCast } from '../../shared/cast'
 import { formatDuration, type RecordingSummary } from '../../shared/recordings'
 import { buildSearchIndex, derivePermissionMarkers, type SearchIndex } from '../../shared/replaySearch'
@@ -156,7 +157,13 @@ export class ReplayViewComponent {
     const index = buildSearchIndex(cast.events)
     const markers = mergeMarkers(recordedMarkers(cast.events), derivePermissionMarkers(index, cast.events))
     const finished = meta.endedAt === null ? 0 : (meta.endedAt - meta.startedAt) / 1000
-    const player = new ReplayPlayer(cast, Math.max(castDuration(cast.events), finished), currentBundle(), (state) => this.render(state))
+    const player = new ReplayPlayer(
+      cast,
+      Math.max(castDuration(cast.events), finished),
+      currentBundle(),
+      (state) => this.render(state),
+      textOrderFor(meta.agent)
+    )
     this.loaded = { id, meta, cast, player, markers, index }
     this.setStatus('')
     this.limitNote.hidden = meta.endReason !== 'size-limit'

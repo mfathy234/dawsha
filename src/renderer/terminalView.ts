@@ -2,6 +2,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
+import type { TextOrder } from '../shared/arabicRows'
 import { insertionData } from '../shared/snippets'
 import { primaryModifierPressed } from '../shared/shortcuts'
 import { h } from './dom'
@@ -25,6 +26,8 @@ export interface TerminalCallbacks {
   openLink(url: string): void
   fileLinks: FileLinkHost
   highlights: HighlightHost
+  /** How the program in this terminal writes right-to-left text. */
+  textOrder(): TextOrder
 }
 
 export class TerminalView {
@@ -64,7 +67,7 @@ export class TerminalView {
     registerFileLinks(this.term, callbacks.fileLinks)
     this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.prompts = new TerminalPrompts(this.term)
-    this.arabic = new TerminalArabic(this.term)
+    this.arabic = new TerminalArabic(this.term, () => callbacks.textOrder())
     this.term.onData((data) => {
       this.prompts.noteInput(data)
       callbacks.onInput(data)

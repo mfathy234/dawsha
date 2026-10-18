@@ -9,7 +9,10 @@ import {
   rgbColor,
   rowSignature,
   runsText,
-  type RowCell
+  textOrderFor,
+  visualSegments,
+  type RowCell,
+  type Segment
 } from '../../src/shared/arabicRows'
 
 const cells = (text: string, style = PLAIN_STYLE): RowCell[] => [...text].map((chars) => ({ chars, width: 1, style }))
@@ -122,5 +125,64 @@ describe('rowSignature', () => {
     expect(rowSignature(buildRuns(cells('مرح'), null), 'rtl')).not.toBe(a)
     expect(rowSignature(buildRuns(cells('مر', { ...PLAIN_STYLE, bold: true }), null), 'rtl')).not.toBe(a)
     expect(rowSignature(buildRuns(cells('مر'), null), 'ltr')).not.toBe(a)
+  })
+})
+
+// One cell per grapheme, as xterm stores a base letter together with its harakat.
+const graphemeCells = (text: string, style = PLAIN_STYLE): RowCell[] =>
+  [...new Intl.Segmenter('ar', { granularity: 'grapheme' }).segment(text)].map(({ segment }) => ({ chars: segment, width: 1, style }))
+
+const shape = (segments: readonly Segment[]): { rtl: boolean; text: string }[] =>
+  segments.map((segment) => ({ rtl: segment.rtl, text: runsText(segment.runs) }))
+
+describe('textOrderFor', () => {
+  it('treats Claude Code rows as visual order and everything else as logical', () => {
+    expect(textOrderFor('claude')).toBe('visual')
+    for (const agent of ['codex', 'gemini', 'shell', undefined]) expect(textOrderFor(agent)).toBe('logical')
+  })
+})
+
+describe('visualSegments', () => {
+  // Rows exactly as Claude Code 2.1 wrote them to the pty for the reply 'مَرْحَبًا بالعالم 42 develop يا صديقي'
+  // and the typed prompt 'مساء الخير abc'.
+  it('turns each Arabic stretch of a Claude reply back into reading order and keeps numbers and Latin words in place', () => {
+    expect(shape(visualSegments(graphemeCells('يقيدص اي develop 42 ملاعلاب ابًحَرْمَ'), null))).toEqual([
+      { rtl: true, text: 'يا صديقي' },
+      { rtl: false, text: ' develop 42 ' },
+      { rtl: true, text: 'مَرْحَبًا بالعالم' }
+    ])
+    expect(shape(visualSegments(graphemeCells(' abc ريخلا ءاسم'), null))).toEqual([
+      { rtl: false, text: ' abc ' },
+      { rtl: true, text: 'مساء الخير' }
+    ])
+  })
+
+  it('keeps sentence punctuation inside a stretch but splits at digits and brackets', () => {
+    expect(shape(visualSegments(graphemeCells('اركش .ابحرم'), null))).toEqual([{ rtl: true, text: 'مرحبا. شكرا' }])
+    expect(shape(visualSegments(graphemeCells('فلم 42 ددع'), null))).toEqual([
+      { rtl: true, text: 'ملف' },
+      { rtl: false, text: ' 42 ' },
+      { rtl: true, text: 'عدد' }
+    ])
+    expect(shape(visualSegments(graphemeCells('(صن)'), null))).toEqual([
+      { rtl: false, text: '(' },
+      { rtl: true, text: 'نص' },
+      { rtl: false, text: ')' }
+    ])
+  })
+
+  it('carries styles and the cursor into the reversed stretch', () => {
+    const bold = { ...PLAIN_STYLE, bold: true }
+    const row = [...graphemeCells('ريخلا', bold), ...graphemeCells(' ءاسم')]
+    const segments = visualSegments(row, 0)
+    expect(segments).toHaveLength(1)
+    const runs = segments[0].runs
+    expect(runs.map((run) => run.text)).toEqual(['مساء ', 'الخي', 'ر'])
+    expect(runs[1].style.bold).toBe(true)
+    expect(runs[2].style.cursor).toBe(true)
+  })
+
+  it('leaves a row without Arabic as one left-to-right stretch', () => {
+    expect(shape(visualSegments(cells('● done 42'), null))).toEqual([{ rtl: false, text: '● done 42' }])
   })
 })

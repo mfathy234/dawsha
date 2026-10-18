@@ -1543,6 +1543,10 @@ input[type='checkbox'] {
   font-variant-ligatures: normal;
 }
 
+.term-arabic-rtl {
+  unicode-bidi: isolate;
+}
+
 .term-arabic-cursor {
   background: var(--arabic-cursor);
   color: var(--arabic-bg);

@@ -1,4 +1,5 @@
 import type { TabAgent } from '../shared/types'
+import { textOrderFor } from '../shared/arabicRows'
 import { api } from './api'
 import { pasteText, shellKindOf } from '../shared/clipboard'
 import { noteOutput } from './ptyActivity'
@@ -55,7 +56,8 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     writeClipboard: (text) => api.writeClipboard(text),
     openLink: (url) => void api.openExternal(url),
     fileLinks: fileLinkHost(id),
-    highlights: highlightHost()
+    highlights: highlightHost(),
+    textOrder: () => textOrderFor(tabAgent(id))
   })
   views.set(id, view)
   for (const chunk of pending.take(id)) view.write(chunk)

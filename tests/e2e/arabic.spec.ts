@@ -51,3 +51,38 @@ test('Arabic rows are drawn as shaped right-to-left text while the buffer stays 
     await closeApp(app)
   }
 })
+
+// Claude Code runs the BiDi algorithm itself and writes Arabic already in visual order. These rows are exactly what it
+// wrote for the reply 'مَرْحَبًا بالعالم 42 develop يا صديقي' and the typed prompt 'مساء الخير abc'.
+const CLAUDE_REPLY = 'يقيدص اي develop 42 ملاعلاب ابًحَرْمَ'
+const CLAUDE_PROMPT = ' abc ريخلا ءاسم'
+
+test('Claude rows, already in visual order, keep their layout and get their Arabic joined', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
+    const host = page.locator('.term-host.active')
+    const id = (await host.getAttribute('data-term-id'))!
+    await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/>\s*$/m)
+
+    await feedTerminal(page, id, `\x1b[2J\x1b[H\x1b[37m● \x1b[0m${CLAUDE_REPLY}\r\n\r\n\x1b[1m❯\x1b[0m${CLAUDE_PROMPT}\r\n`)
+    const rows = host.locator('.term-arabic-row')
+    await expect(rows).toHaveCount(2)
+    for (const row of await rows.all()) await expect(row).toHaveAttribute('dir', 'ltr')
+    const stretches = (index: number): Promise<string[]> =>
+      rows.nth(index).locator('.term-arabic-rtl').evaluateAll((spans) => spans.map((s) => `${(s as HTMLElement).dir}:${s.textContent}`))
+    expect(await stretches(0)).toEqual(['rtl:يا صديقي', 'rtl:مَرْحَبًا بالعالم'])
+    await expect(rows.nth(0)).toContainText('develop 42')
+    expect(await stretches(1)).toEqual(['rtl:مساء الخير'])
+
+    // The buffer keeps what Claude wrote.
+    const text = await bufferText(page, id)
+    expect(text).toContain(`● ${CLAUDE_REPLY}`)
+    expect(text).toContain(`❯${CLAUDE_PROMPT}`)
+
+    mkdirSync(SCREENS, { recursive: true })
+    await host.screenshot({ path: resolve(SCREENS, 'arabic-claude-terminal.png') })
+  } finally {
+    await closeApp(app)
+  }
+})

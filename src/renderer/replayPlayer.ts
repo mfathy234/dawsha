@@ -1,6 +1,7 @@
 import { SearchAddon } from '@xterm/addon-search'
 import { Terminal } from '@xterm/xterm'
 import { TerminalArabic } from './terminalArabic'
+import type { TextOrder } from '../shared/arabicRows'
 import type { ParsedCast } from '../shared/cast'
 import {
   advancePosition,
@@ -56,7 +57,8 @@ export class ReplayPlayer {
     private readonly cast: ParsedCast,
     private readonly endAt: number,
     bundle: ThemeBundle,
-    private readonly onChange: (state: PlayerState) => void
+    private readonly onChange: (state: PlayerState) => void,
+    textOrder: TextOrder = 'logical'
   ) {
     this.term = new Terminal({
       cols: cast.header.width,
@@ -73,7 +75,7 @@ export class ReplayPlayer {
       minimumContrastRatio: bundle.minimumContrastRatio
     })
     this.term.loadAddon(this.search)
-    this.arabic = new TerminalArabic(this.term)
+    this.arabic = new TerminalArabic(this.term, () => textOrder)
     this.arabic.setTheme(bundle.theme.term)
     this.timeline = buildTimeline(cast.events, endAt, this.skipIdle)
   }

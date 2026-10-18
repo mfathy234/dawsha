@@ -71,33 +71,95 @@ export const sameStyle = (a: CellStyle, b: CellStyle): boolean =>
 const isBlank = (cell: RowCell): boolean =>
   (cell.chars === '' || cell.chars === ' ') && cell.width > 0 && sameStyle({ ...cell.style, selected: false }, PLAIN_STYLE)
 
-/**
- * Cells (one entry per column, wide characters followed by a width-0 cell) to runs of text sharing one style.
- * Trailing blank cells are dropped, except up to the cursor column, which is marked so the overlay can draw a caret.
- */
-export function buildRuns(cells: readonly RowCell[], cursorX: number | null): Run[] {
+/** One glyph per column (a cell's base character with its combining marks), in column order. */
+function rowGlyphs(cells: readonly RowCell[], cursorX: number | null): Run[] {
   let end = cells.length
   while (end > 0 && isBlank(cells[end - 1])) end -= 1
   const cursor = cursorX !== null && cursorX >= 0 ? cursorX : null
   if (cursor !== null) end = Math.max(end, cursor + 1)
-  const runs: Run[] = []
-  const push = (text: string, style: CellStyle): void => {
-    const last = runs[runs.length - 1]
-    if (last && sameStyle(last.style, style)) runs[runs.length - 1] = { text: last.text + text, style }
-    else runs.push({ text, style })
-  }
+  const glyphs: Run[] = []
   for (let x = 0; x < end; x += 1) {
     const cell = cells[x]
     const atCursor = x === cursor
     if (!cell) {
-      push(' ', { ...PLAIN_STYLE, cursor: atCursor })
+      glyphs.push({ text: ' ', style: { ...PLAIN_STYLE, cursor: atCursor } })
       continue
     }
     if (cell.width === 0) continue
-    const style = atCursor ? { ...cell.style, cursor: true } : cell.style
-    push(cell.chars === '' ? ' ' : cell.chars, style)
+    glyphs.push({ text: cell.chars === '' ? ' ' : cell.chars, style: atCursor ? { ...cell.style, cursor: true } : cell.style })
+  }
+  return glyphs
+}
+
+/** Joins neighbouring glyphs that share a style into one run. */
+function mergeRuns(glyphs: readonly Run[]): Run[] {
+  const runs: Run[] = []
+  for (const glyph of glyphs) {
+    const last = runs[runs.length - 1]
+    if (last && sameStyle(last.style, glyph.style)) runs[runs.length - 1] = { text: last.text + glyph.text, style: glyph.style }
+    else runs.push(glyph)
   }
   return runs
+}
+
+/**
+ * Cells (one entry per column, wide characters followed by a width-0 cell) to runs of text sharing one style.
+ * Trailing blank cells are dropped, except up to the cursor column, which is marked so the overlay can draw a caret.
+ */
+export const buildRuns = (cells: readonly RowCell[], cursorX: number | null): Run[] => mergeRuns(rowGlyphs(cells, cursorX))
+
+/**
+ * How a program writes right-to-left text. Most write it in logical (reading) order and leave BiDi to the terminal.
+ * Claude Code runs the BiDi algorithm itself and writes rows already in visual left-to-right order, unshaped.
+ */
+export type TextOrder = 'logical' | 'visual'
+
+export const textOrderFor = (agent: string | undefined): TextOrder => (agent === 'claude' ? 'visual' : 'logical')
+
+/** A stretch of a visual-order row: `rtl` stretches hold their glyphs back in logical order, to be drawn right-to-left. */
+export interface Segment {
+  rtl: boolean
+  runs: Run[]
+}
+
+// Characters that stay inside a right-to-left stretch when they sit between two Arabic glyphs. Brackets are left out:
+// the program has already mirrored them, and drawing them right-to-left would mirror them again.
+const JOINING_NEUTRAL_RE = /^[\s.,!?:;'"\-_*/\\|~@#&=+%^…]+$/
+
+type GlyphKind = 'arabic' | 'neutral' | 'other'
+
+function glyphKind(text: string): GlyphKind {
+  if (hasArabic(text) && !WEAK_ARABIC_RE.test(text[0])) return 'arabic'
+  return JOINING_NEUTRAL_RE.test(text) ? 'neutral' : 'other'
+}
+
+/**
+ * Splits a row written in visual order into left-to-right stretches and Arabic stretches. Each Arabic stretch has its
+ * glyphs reversed back to reading order, so the browser can join the letters and lay them out right-to-left again,
+ * landing where the program placed them. Digits, Latin words and brackets stay in the left-to-right stretches.
+ */
+export function visualSegments(cells: readonly RowCell[], cursorX: number | null): Segment[] {
+  const glyphs = rowGlyphs(cells, cursorX)
+  const kinds = glyphs.map((glyph) => glyphKind(glyph.text))
+  const segments: Segment[] = []
+  let x = 0
+  while (x < glyphs.length) {
+    let end = x + 1
+    if (kinds[x] === 'arabic') {
+      let last = x
+      while (end < glyphs.length && kinds[end] !== 'other') {
+        if (kinds[end] === 'arabic') last = end
+        end += 1
+      }
+      segments.push({ rtl: true, runs: mergeRuns(glyphs.slice(x, last + 1).reverse()) })
+      x = last + 1
+      continue
+    }
+    while (end < glyphs.length && kinds[end] !== 'arabic') end += 1
+    segments.push({ rtl: false, runs: mergeRuns(glyphs.slice(x, end)) })
+    x = end
+  }
+  return segments
 }
 
 /** Text of the runs in logical order. */
