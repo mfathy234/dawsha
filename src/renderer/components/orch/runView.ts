@@ -13,7 +13,7 @@ import './runView.css'
 
 const TIMELINE_LIMIT = 100
 const HANDOFF_STATES = new Set(['working', 'waiting', 'stalled', 'idle'])
-const TONE: Record<string, string> = { working: 'working', waiting: 'waiting', stalled: 'stalled', idle: 'idle', done: 'done' }
+const TONE: Record<string, string> = { working: 'working', coordinating: 'working', waiting: 'waiting', stalled: 'stalled', idle: 'idle', done: 'done' }
 
 interface Handoff {
   agentId: string
@@ -204,6 +204,7 @@ export class OrchRunView {
       selectedKey: this.taskKey,
       emptyText: 'No tasks yet. The lead creates them once the plan is approved.',
       onOpen: (card) => {
+        if (card.lead) return
         this.taskKey = this.taskKey === card.key ? null : card.key
         this.rerender()
       }

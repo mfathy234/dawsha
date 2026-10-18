@@ -83,7 +83,7 @@ export interface OrchStatus {
 }
 
 /** What an agent is doing right now, as shown in the Agents list and on task cards. */
-export type OrchAgentState = 'working' | 'waiting' | 'stalled' | 'idle' | 'done'
+export type OrchAgentState = 'working' | 'coordinating' | 'waiting' | 'stalled' | 'idle' | 'done'
 
 export interface OrchAgentRow {
   id: string

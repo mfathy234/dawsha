@@ -83,6 +83,7 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
 
 export const AGENT_STATE_LABEL: Record<OrchAgentState, string> = {
   working: 'working',
+  coordinating: 'Coordinating',
   waiting: 'needs you',
   stalled: 'stalled',
   idle: 'idle',

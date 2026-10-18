@@ -265,6 +265,28 @@ describe('orchestrator dispatcher', () => {
     expect(svc.agents(run.id)).toHaveLength(1)
   })
 
+  it('new work in the merge stage withdraws run-complete, goes back to build and starts the task', async () => {
+    const { svc, dispatcher, panes } = setup()
+    const run = svc.startRun({ projectPath: 'C:/work/app', title: 'More work', story: 's', plan: 'default' })
+    await dispatcher.tick()
+    const lead = agentOf(svc, panes[0])
+    svc.call(lead, 'create_task', { title: 'Hide the field', spec: 's', role: 'implementer', self: true })
+    await dispatcher.tick()
+    svc.call(lead, 'complete_task', { summary: 'hidden' })
+    await dispatcher.tick()
+    expect(svc.run(run.id)?.stage).toBe('merge')
+    const asked = svc.decisions(run.id).find((d) => d.kind === 'run-complete')
+    expect(asked?.answer).toBeNull()
+
+    svc.call(lead, 'create_task', { title: 'Another part', spec: 's', role: 'implementer' })
+    expect(svc.run(run.id)?.stage).toBe('build')
+    expect(svc.decisions(run.id).find((d) => d.id === asked?.id)?.answer).toMatch(/^Withdrawn: new work was added/)
+    expect(svc.openDecisions()).toHaveLength(0)
+    await dispatcher.tick()
+    expect(svc.tasks(run.id).find((t) => t.key === 'T-2')).toMatchObject({ status: 'assigned' })
+    expect(panes).toHaveLength(2)
+  })
+
   it('reviews nothing unless the lead asks, never lets the lead add review tasks, and closes finished agents', async () => {
     const { svc, dispatcher, panes, closed } = setup()
     const run = svc.startRun({ projectPath: 'C:/work/app', title: 'Two parts', story: 's', plan: 'default' })

@@ -143,6 +143,8 @@
 }
 
 .orch-card:hover { border-color: var(--muted); }
+.orch-card-waiting { font-size: 11px; color: var(--muted); }
+.orch-card.lead { border-style: dashed; }
 .orch-card.needs { border-left: 3px solid var(--busy); }
 .orch-card.selected { border-color: var(--accent); background: var(--raised); }
 
