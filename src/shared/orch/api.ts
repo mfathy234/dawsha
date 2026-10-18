@@ -101,6 +101,7 @@ export interface OrchRunDetail extends OrchRunView {
   solo?: boolean
   imported?: { at: number; from: string }
   estimate?: import('./types').RunEstimate | null
+  cleanup?: import('./types').RunCleanup
   decisions?: import('./types').OrchDecision[]
   story: string
   plan: string

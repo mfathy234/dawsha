@@ -120,6 +120,7 @@ export const IPC = {
   orchRestart: 'orch:restart',
   orchHandoff: 'orch:handoff',
   orchCancelRun: 'orch:cancel-run',
+  orchRetryCleanup: 'orch:retry-cleanup',
   orchSpec: 'orch:spec',
   orchSpecVersion: 'orch:spec-version',
   orchExportRun: 'orch:export-run',

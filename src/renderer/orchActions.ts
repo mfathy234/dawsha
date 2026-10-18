@@ -128,6 +128,12 @@ export async function cancelRun(runId: string, title: string): Promise<void> {
   void refreshOrch()
 }
 
+export async function retryCleanup(runId: string): Promise<void> {
+  const result = await api.orchRetryCleanup(runId)
+  if (!result.ok) toast(result.error)
+  void refreshOrch()
+}
+
 export async function startRun(input: OrchStartInput): Promise<boolean> {
   const result = await api.orchStartRun(input)
   if (!result.ok) {
