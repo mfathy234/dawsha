@@ -371,12 +371,10 @@ export class PaneComponent {
     this.details.replaceChildren(...children)
   }
 
-  private toggleMove(): void {
-    const anchor = this.el.querySelector<HTMLElement>('.pane-move')
-    const reopen = this.actionsAnchor !== anchor
+  /** Opened from Pane actions › Move pane…, so it takes that button's place: clicking it again closes the menu. */
+  private openMove(): void {
     if (this.actionsMenu) this.closeActions()
-    if (!reopen) return
-    this.actionsAnchor = anchor
+    this.actionsAnchor = this.el.querySelector<HTMLElement>('.pane-actions')
     const views = derivePanes(store.state)
     const items = views.map((view, i) => {
       const here = view.pane.id === this.paneId
@@ -484,7 +482,7 @@ export class PaneComponent {
       studioItem,
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),
       item('Open terminal here', () => addTab(this.paneId, 'shell'), ICONS.terminal),
-      item('Move pane…', () => this.toggleMove(), ICONS.layout),
+      item('Move pane…', () => this.openMove(), ICONS.layout),
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,

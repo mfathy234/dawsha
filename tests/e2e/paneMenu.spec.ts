@@ -57,14 +57,13 @@ test('the pane menu shows icons and shortcuts, and opens the folder in VS Code o
   }
 })
 
-test('pane header menus close on a second click of their button and switch between buttons', async () => {
+test('pane header menus close on a second click of their button, including Move pane', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
     const actions = page.locator('.pane').getByRole('button', { name: 'Pane actions' })
-    const move = page.locator('.pane').getByRole('button', { name: 'Move pane' })
     const add = page.locator('.pane').getByRole('button', { name: /^New terminal in/ })
 
     await actions.click()
@@ -72,11 +71,12 @@ test('pane header menus close on a second click of their button and switch betwe
     await actions.click()
     await expect(page.getByRole('menu')).toHaveCount(0)
 
+    // Move pane… replaces the actions menu; the Pane actions button then closes it.
     await actions.click()
-    await move.click()
+    await page.getByRole('menuitem', { name: 'Move pane…' }).click()
     await expect(page.getByRole('menu', { name: 'Move pane to position' })).toBeVisible()
     await expect(page.getByRole('menu', { name: 'Pane actions' })).toHaveCount(0)
-    await move.click()
+    await actions.click()
     await expect(page.getByRole('menu')).toHaveCount(0)
 
     await add.click()
