@@ -32,6 +32,7 @@ import { closeTimeline, openTimelineWith, takeTimelineIntent, timelineRequest, t
 import { localEvents, localVersion } from '../timelineLog'
 import { replayPane } from '../replayActions'
 import { ICONS } from '../icons'
+import { getTerminal } from '../terminals'
 import type { SearchHit } from '../../shared/timelineSearch'
 import type { ResumeSession } from '../../shared/types'
 import { AllSessionsSearch } from './timelineAllSearch'
@@ -388,7 +389,10 @@ export class TimelinePanel {
         if (this.searchingAll()) this.all.schedule(0)
         this.render(true)
       } else {
+        // The hidden box would keep focus until the next frame and swallow the next shortcut.
+        const pane = paneById(store.state, this.paneId)
         closeTimeline()
+        if (pane) getTerminal(pane.activeTabId)?.focus()
       }
     }
   }
