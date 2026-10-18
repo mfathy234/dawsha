@@ -143,6 +143,17 @@ test('projects view validates folders and confirms removal by name', async () =>
     })
     expect(duplicateIds).toEqual([])
 
+    // An empty name is the name box's error: the folder is not marked, and Escape clears it.
+    const smoke = page.locator('[data-project-id="smoke"]')
+    await page.getByRole('button', { name: 'More for Smoke' }).click()
+    await page.getByRole('menuitem', { name: 'Rename' }).click()
+    await smoke.getByRole('textbox', { name: 'Name of Smoke' }).fill('')
+    await page.keyboard.press('Enter')
+    await expect(smoke.locator('.field-error')).toHaveText('Name cannot be empty.')
+    await expect(smoke.locator('.pv-folder')).not.toHaveClass(/invalid/)
+    await page.keyboard.press('Escape')
+    await expect(smoke.locator('.field-error')).toBeHidden()
+
     await page.getByRole('button', { name: 'More for Missing' }).click()
     await page.getByRole('menuitem', { name: 'Remove Missing…' }).click()
     const dialog = page.getByRole('alertdialog')
