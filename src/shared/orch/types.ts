@@ -82,6 +82,21 @@ export interface OrchRun {
   fixerProfileId?: string | null
   /** The lead's size estimate, made before it picks a team. */
   estimate?: RunEstimate | null
+  /** What the last clean-up of the run's worktrees and branches did; absent until the run is marked done. */
+  cleanup?: RunCleanup
+}
+
+/** Result of removing a finished run's worktrees and branches. */
+export interface RunCleanup {
+  at: number
+  /** Worktree folders removed by this clean-up. */
+  removed: number
+  /** Branches deleted because their work is merged or pushed. */
+  deletedBranches: string[]
+  /** Worktrees or branches left on purpose, with the reason (unmerged work, uncommitted files). */
+  kept: string[]
+  /** Things that could not be removed, with the reason; the human can retry. */
+  failed: string[]
 }
 
 export const ESTIMATE_SIZES = ['small', 'medium', 'large'] as const

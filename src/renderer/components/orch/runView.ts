@@ -4,6 +4,7 @@ import { boardCards, DEFAULT_BOARD_FILTER, isFinishedRun, timelineEvents, totalC
 import type { OrchProfile } from '../../../shared/orch/profiles'
 import { focusPane } from '../../actions'
 import { clear, h } from '../../dom'
+import { cleanupPanel } from './cleanupPanel'
 import { cancelRun, handoffTask, restartAgent, showOrch } from '../../orchActions'
 import type { AppState } from '../../state'
 import { renderTaskBoard } from './boardsView'
@@ -133,7 +134,8 @@ export class OrchRunView {
         run.estimate
           ? h('p', { class: 'orch-run-estimate' }, h('strong', {}, `Estimate: ${run.estimate.size}`), ` · ${!run.solo && run.estimate.size === 'large' ? 'team' : 'lead works alone'} · `, h('span', { class: 'orch-muted' }, run.estimate.reason))
           : run.kind === 'feature' && run.stage === 'plan' ? h('p', { class: 'orch-muted orch-run-estimate' }, 'The lead is sizing the work…') : null,
-        run.imported ? h('p', { class: 'orch-muted' }, `Imported from ${run.imported.from} · read-only`) : finished ? h('p', { class: 'orch-muted' }, 'Finished · read-only') : null
+        run.imported ? h('p', { class: 'orch-muted' }, `Imported from ${run.imported.from} · read-only`) : finished ? h('p', { class: 'orch-muted' }, 'Finished · read-only') : null,
+        cleanupPanel(run)
       ),
       h(
         'div',

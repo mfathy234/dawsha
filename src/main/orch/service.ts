@@ -7,7 +7,7 @@ import { TOOL_SCHEMAS, validateArgs, type ToolSchema } from '../../shared/orch/t
 import { summarizeRunUsage, type PriceLookup, type RunUsage } from '../../shared/orch/usage'
 import type { OrchLaunch } from '../../shared/orch/launch'
 import { isFinal, moveTask } from '../../shared/orch/taskMachine'
-import type { AgentUsage, OrchAgent, OrchDecision, OrchEvent, OrchRole, OrchRun, OrchTask, OrchTaskState, RunKind, RunStage } from '../../shared/orch/types'
+import type { AgentUsage, OrchAgent, OrchDecision, OrchEvent, OrchRole, OrchRun, OrchTask, OrchTaskState, RunCleanup, RunKind, RunStage } from '../../shared/orch/types'
 import { applyAnswer } from './answers'
 import { ACTIVE, OrchContext, OrchToolError, RESERVED_NOTE_PREFIX, hashToken, randomId, statusText } from './context'
 import type { OrchStore } from './store'
@@ -336,6 +336,17 @@ export class OrchService {
     this.tx(() => {
       this.writable(runId)
       this.ctx.finishRun(runId, stage)
+    })
+  }
+
+  /** Stores what clearing the run's worktrees and branches did, and tells the history. */
+  recordCleanup(runId: string, cleanup: RunCleanup): void {
+    this.tx(() => {
+      const run = this.store.getRun(runId)
+      if (!run) return
+      this.store.putRun({ ...run, cleanup })
+      const left = cleanup.failed.length + cleanup.kept.length
+      this.ctx.log(runId, 'cleanup', `Cleaned up ${cleanup.removed} worktree${cleanup.removed === 1 ? '' : 's'}${left ? `; ${left} left (${[...cleanup.failed, ...cleanup.kept].join('; ')})` : ''}`, null)
     })
   }
 

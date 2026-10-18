@@ -18,6 +18,7 @@ import { OrchStore } from './store'
 import { listSpecVersions, readSpecVersion, snapshotSpec } from './specs'
 import { OrchUsageCollector, type UsageSourceInfo } from './usageCollector'
 import * as worktrees from './worktrees'
+import { cleanUpRun } from './cleanup'
 
 const POLL_MS = 5_000
 const USAGE_MS = 30_000
@@ -207,6 +208,16 @@ export class OrchRuntime {
     return { ok: true, value: undefined }
   }
 
+  /** Tries again to remove a finished run's worktrees and branches. */
+  async retryCleanup(runId: string): Promise<OrchResult> {
+    const service = this.service
+    const run = service?.run(runId)
+    if (!service || !run) return { ok: false, error: 'That run no longer exists.' }
+    if (run.imported || run.stage !== 'done') return { ok: false, error: 'Only runs marked as done can be cleaned up.' }
+    service.recordCleanup(runId, await cleanUpRun(run.projectPath, runId))
+    return { ok: true, value: undefined }
+  }
+
   answer(decisionId: string, answer: string): OrchResult {
     if (!this.service) return { ok: false, error: 'The orchestrator is off.' }
     try {
@@ -324,6 +335,7 @@ export class OrchRuntime {
       service,
       settings: this.deps.settings,
       worktrees,
+      cleanUp: (repo, runId) => cleanUpRun(repo, runId),
       mcpUrl: () => server.url,
       configDir: (agentId) => join(this.deps.configRoot, agentId),
       writeFiles: async (files) => {

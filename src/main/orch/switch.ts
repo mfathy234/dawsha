@@ -24,6 +24,7 @@ export interface OrchestratorIpc {
   exportRuns(runIds: string[]): Promise<OrchResult<OrchArchiveFileResult[]>>
   importRuns(): Promise<OrchResult<OrchArchiveFileResult[]>>
   cancelRun(runId: string): OrchResult
+  retryCleanup(runId: string): Promise<OrchResult>
   spec(runId: string): Promise<OrchSpecView | null>
   specVersion(runId: string, version: number): Promise<OrchSpecContent | null>
 }
@@ -54,6 +55,7 @@ export function createOrchestratorSwitch(runtime: OrchRuntime, log: (message: st
     restart: (runId, agentId) => runtime.restart(runId, agentId),
     handoff: (input) => runtime.handoff(input),
     cancelRun: (runId) => runtime.cancelRun(runId),
+    retryCleanup: (runId) => runtime.retryCleanup(runId),
     spec: (runId) => runtime.spec(runId),
     specVersion: (runId, version) => runtime.specVersion(runId, version),
     exportRun: (runId, format) => runtime.exportRun(runId, format),
@@ -107,6 +109,8 @@ export function registerOrchestratorIpc(orchestrator: OrchestratorIpc): void {
     }
     return orchestrator.handoff({ runId: raw.runId, taskKey: raw.taskKey, profileId: raw.profileId, note: raw.note })
   })
+  ipcMain.handle(IPC.orchRetryCleanup, (_event, runId: unknown) =>
+    validId(runId) ? orchestrator.retryCleanup(runId) : { ok: false, error: 'The run could not be read.' })
   ipcMain.handle(IPC.orchCancelRun, (_event, runId: unknown) =>
     isText(runId, 100) ? orchestrator.cancelRun(runId) : { ok: false, error: 'The run could not be read.' }
   )

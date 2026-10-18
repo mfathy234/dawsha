@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
-import { existsSync, rmSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, rmdirSync, unlinkSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
 import { compareNames, isCompareBranch, isCompareWorktree, isShortId } from '../shared/compare'
 import type { WorktreeStatus } from '../shared/compare'
 import type { GitResult, RepoProbe, WorktreeRemoval, WorktreesResult } from '../shared/types'
@@ -68,7 +69,36 @@ export async function worktreeStatus(repo: string, path: string, branch: string)
 
 const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
+const LINK_SCAN_DEPTH = 2
+
+/**
+ * Unlinks symlinks and Windows junctions (such as a node_modules pointing at the main checkout) near the
+ * top of a worktree, so removing the folder can never follow them and delete the real files.
+ */
+export function unlinkLinks(dir: string, depth = 0): void {
+  let names: string[]
+  try {
+    names = readdirSync(dir)
+  } catch {
+    return
+  }
+  for (const name of names) {
+    const full = join(dir, name)
+    try {
+      const info = lstatSync(full)
+      if (info.isSymbolicLink()) {
+        try { unlinkSync(full) } catch { rmdirSync(full) }
+      } else if (info.isDirectory() && depth < LINK_SCAN_DEPTH && name !== '.git' && name !== 'node_modules') {
+        unlinkLinks(full, depth + 1)
+      }
+    } catch {
+      // A locked or vanished entry is left for the removal retries to report.
+    }
+  }
+}
+
 export async function removeWorktreeFolder(repo: string, path: string, force: boolean | undefined): Promise<string | null> {
+  if (existsSync(path)) unlinkLinks(path)
   for (let attempt = 1; ; attempt += 1) {
     const removed = await git(['worktree', 'remove', ...(force ? ['--force'] : []), path], repo)
     if (removed.ok || !existsSync(path)) return null

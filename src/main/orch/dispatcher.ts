@@ -3,7 +3,7 @@ import { agentRunnerName, buildLaunch } from '../../shared/orch/launch'
 import { DEFAULT_PLAN_ID, fixerProfileOf, profileFor, type OrchPlan, type OrchProfile, type OrchSettings } from '../../shared/orch/profiles'
 import { firstMessage } from '../../shared/orch/rolePrompts'
 import { isFinal } from '../../shared/orch/taskMachine'
-import type { OrchAgent, OrchDecision, OrchRole, OrchRun, OrchTask } from '../../shared/orch/types'
+import type { OrchAgent, OrchDecision, OrchRole, OrchRun, OrchTask, RunCleanup } from '../../shared/orch/types'
 import { normalizeAnswer } from './answers'
 import { ACTIVE } from './context'
 import type { OrchService } from './service'
@@ -19,6 +19,8 @@ export interface DispatcherDeps {
     runWorktree(repo: string, runId: string): Promise<OrchWorktree>
     mergeTaskIntoRun(repo: string, runId: string, taskKey: string): Promise<MergeOutcome>
   }
+  /** Removes the run's worktrees and merged branches once it is done. */
+  cleanUp: (repo: string, runId: string) => Promise<RunCleanup>
   mcpUrl: () => string | null
   configDir: (agentId: string) => string
   writeFiles: (files: { path: string; content: string }[]) => Promise<void>
@@ -90,7 +92,7 @@ export class Dispatcher {
     await this.continueElsewhere(run)
     await this.mergeApproved(run)
     this.retireFinishedAgents(run)
-    if (this.finishIfAnswered(run)) return
+    if (await this.finishIfAnswered(run)) return
     const tasks = this.deps.service.tasks(run.id)
     const plan = this.planOf(run)
     const specPending = tasks.some((t) => t.role === 'spec-writer' && !isFinal(t.status))
@@ -128,7 +130,7 @@ export class Dispatcher {
    * In the merge stage the human answers the run-complete question. "Mark as done" ends the run; anything else
    * (push and open a PR, or their own instructions) becomes a task for the lead, after which they are asked again.
    */
-  private finishIfAnswered(run: OrchRun): boolean {
+  private async finishIfAnswered(run: OrchRun): Promise<boolean> {
     if (run.stage !== 'merge') return false
     const asked = this.deps.service.decisions(run.id).filter((d) => d.kind === 'run-complete').sort((a, b) => a.createdAt - b.createdAt).at(-1)
     if (!asked || asked.answer === null) return true
@@ -136,6 +138,7 @@ export class Dispatcher {
       // The agents have nothing left to do: close their panes with the run, as cancelling does.
       for (const agent of this.deps.service.agents(run.id).filter((a) => !a.retiredAt)) this.deps.closePane(agent.id)
       this.deps.service.finishRun(run.id)
+      await this.cleanUpRun(run)
       return true
     }
     const pushPr = normalizeAnswer(asked.answer).startsWith(normalizeAnswer(PUSH_AND_PR))
@@ -145,6 +148,17 @@ export class Dispatcher {
       extra ? `The human said: ${extra}` : ''
     ].filter(Boolean).join('\n\n'))
     return true
+  }
+
+  /** Clears the finished run's worktrees; a failure is recorded on the run so the human can retry. */
+  private async cleanUpRun(run: OrchRun): Promise<void> {
+    try {
+      this.deps.service.recordCleanup(run.id, await this.deps.cleanUp(run.projectPath, run.id))
+    } catch (error) {
+      const failed = [`Clean-up did not run: ${(error as Error).message}`]
+      this.deps.service.recordCleanup(run.id, { at: Date.now(), removed: 0, deletedBranches: [], kept: [], failed })
+      this.deps.log(failed[0])
+    }
   }
 
   private needsMerge(task: OrchTask): boolean {

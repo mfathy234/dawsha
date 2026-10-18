@@ -179,6 +179,7 @@ export interface GridApi {
   orchRestart(runId: string, agentId: string): Promise<OrchResult>
   orchHandoff(input: OrchHandoffInput): Promise<OrchResult>
   orchCancelRun(runId: string): Promise<OrchResult>
+  orchRetryCleanup(runId: string): Promise<OrchResult>
   orchSpec(runId: string): Promise<OrchSpecView | null>
   orchSpecVersion(runId: string, version: number): Promise<OrchSpecContent | null>
   orchExportRun(runId: string, format: OrchExportFormat): Promise<OrchResult<string | null>>

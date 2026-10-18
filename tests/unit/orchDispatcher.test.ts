@@ -14,6 +14,7 @@ function setup(settings: OrchSettings = defaultOrchSettings()) {
   const merges: string[] = []
   const written: string[] = []
   const folders: string[] = []
+  const cleanups: string[] = []
   let onRunFolder = () => {}
   let mergeResult: MergeOutcome = { ok: true, conflict: false, message: 'merged' }
   const dispatcher = new Dispatcher({
@@ -27,6 +28,7 @@ function setup(settings: OrchSettings = defaultOrchSettings()) {
         return mergeResult
       }
     },
+    cleanUp: async () => { cleanups.push('run'); return { at: 1, removed: 2, deletedBranches: [], kept: [], failed: [] } },
     mcpUrl: () => 'http://127.0.0.1:5000/mcp',
     configDir: (id) => `C:/data/orch/${id}`,
     writeFiles: async (files) => {
@@ -37,7 +39,7 @@ function setup(settings: OrchSettings = defaultOrchSettings()) {
     newSessionId: () => `session-${(session += 1)}`,
     log: () => undefined
   })
-  return { svc, dispatcher, panes, closed, merges, written, folders, setRunFolder: (fn: () => void) => { onRunFolder = fn }, setMerge: (m: MergeOutcome) => (mergeResult = m) }
+  return { svc, dispatcher, cleanups, panes, closed, merges, written, folders, setRunFolder: (fn: () => void) => { onRunFolder = fn }, setMerge: (m: MergeOutcome) => (mergeResult = m) }
 }
 
 const agentOf = (svc: OrchService, pane: OrchPaneRequest) => {
@@ -201,7 +203,7 @@ describe('orchestrator dispatcher', () => {
   })
 
   it('a larger change: the lead hands a task to an implementer and asks for its review', async () => {
-    const { svc, dispatcher, panes, merges, closed } = setup()
+    const { svc, dispatcher, panes, merges, closed, cleanups } = setup()
     const run = svc.startRun({ projectPath: 'C:/work/app', title: 'Hide server field', story: 'Hide one field.', plan: 'default' })
     expect(svc.tasks(run.id)).toEqual([])
     await dispatcher.tick()
@@ -239,6 +241,10 @@ describe('orchestrator dispatcher', () => {
     expect(svc.agents(run.id).every((a) => a.retiredAt)).toBe(true)
     // The finished agents' panes close with the run.
     expect([...closed].sort()).toEqual(panes.map((p) => p.agentId).sort())
+    // Worktrees are cleared once, after the panes closed, and the result is kept on the run.
+    expect(cleanups).toEqual(['run'])
+    expect(svc.run(run.id)?.cleanup?.removed).toBe(2)
+    expect(svc.events(run.id).some((e) => e.kind === 'cleanup' && e.text === 'Cleaned up 2 worktrees')).toBe(true)
   })
 
   it('a small change: the lead does it itself, one agent and no review', async () => {

@@ -146,6 +146,7 @@ const api: GridApi = {
   orchExportRuns: (ids) => ipcRenderer.invoke(IPC.orchExportRuns, ids),
   orchImportRuns: () => ipcRenderer.invoke(IPC.orchImportRuns),
   orchCancelRun: (runId) => ipcRenderer.invoke(IPC.orchCancelRun, runId),
+  orchRetryCleanup: (runId) => ipcRenderer.invoke(IPC.orchRetryCleanup, runId),
   orchSpec: (runId) => ipcRenderer.invoke(IPC.orchSpec, runId),
   orchSpecVersion: (runId, version) => ipcRenderer.invoke(IPC.orchSpecVersion, runId, version),
   compareStatus: (repo, path, branch) => ipcRenderer.invoke(IPC.compareStatus, repo, path, branch),

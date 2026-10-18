@@ -1,6 +1,7 @@
 import { selectMenu, syncSelectMenu } from '../selectMenu'
 import type { OrchRunDetail } from '../../../shared/orch/api'
 import { totalCostLabel } from '../../../shared/orch/board'
+import { cleanupPanel } from './cleanupPanel'
 import { historyResult, historyRuns, type HistoryFilter } from '../../../shared/orch/history'
 import { clear, h } from '../../dom'
 import { exportHistoryRun, exportHistoryRuns, importHistoryRuns, showOrch } from '../../orchActions'
@@ -118,6 +119,7 @@ export class OrchHistoryView {
     return h('aside', { class: 'orch-history-details orch-panel', 'aria-label': 'Selected run details' },
       h('h3', {}, `${run.title} · what’s kept`), h('ul', {},
         ...['The story and plan', 'Every task with its reviews, rounds and final summaries', 'Your decisions, options and answers', 'Agent messages, notes and the full timeline', 'Runners, models and usage per agent'].map((text) => h('li', {}, text))),
+      cleanupPanel(run),
       h('h3', {}, 'Export and import'), h('p', {}, 'Export saves one .dawsharun file per run. A Markdown report is also available.'),
       h('p', {}, 'Imported runs are read-only history. Agent credentials and local launch settings are left out.'))
   }

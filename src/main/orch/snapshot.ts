@@ -40,6 +40,7 @@ export function runDetail(service: OrchService, run: OrchRun, open: readonly Orc
     leadProfileId: run.leadProfileId,
     solo: run.solo,
     estimate: run.estimate ?? null,
+    cleanup: run.cleanup,
     decisions: service.decisions(run.id),
     id: run.id,
     kind: run.kind,
