@@ -3,6 +3,35 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] - 2026-10-19
+
+### Added
+
+- Arabic in every session. Replies and prompts in Arabic show joined letters in right-to-left order, with numbers and English words kept in place and harakat intact, in Claude Code, Codex, Gemini and shell sessions and in Replay. Claude Code lays Arabic out itself, and Dawsha keeps its layout while joining the letters. Copy, Copy last reply, Copy prompt, transcripts and find work in normal reading order, so an Arabic word you type into find matches Claude's reply. The terminal text itself is never changed.
+- A bundled Arabic font (IBM Plex Sans Arabic), sized to match the code font, so Arabic looks the same on every computer. Text boxes switch to right-to-left as you type Arabic, and Arabic session titles read correctly in the sidebar, board and panes.
+- Voice dictation. Press the mic in a pane header or Ctrl+Shift+Space, speak Arabic or English, and press it again. The text is typed into the session, or into the text box you were in, without sending it. Speech becomes text on your computer with Whisper large-v3-turbo, which handles Egyptian and Gulf Arabic and Arabic mixed with English. The model downloads once (about 570 MB) and then works offline. It starts loading while you speak, so text arrives about two seconds after you stop.
+- A live microphone level while you dictate, and a microphone picker in Settings > Voice dictation. If the microphone sends only silence (a muted or switched-off headset), Dawsha says so and names the microphone instead of typing nothing.
+- Keyboard shortcuts sheet. Press Ctrl+/ or search the palette for Keyboard shortcuts to see every shortcut, grouped and searchable.
+- Reopen a closed session. Closing an agent session shows a toast with Reopen for a few seconds.
+- Remote Control checks its connection. While it is on, Dawsha checks the public link every minute, after the computer wakes or unlocks, and before it shows the link or code. If the connection has dropped, it reconnects and shows the new link with a note to scan it again, instead of a link that no longer works.
+
+### Changed
+
+- A calmer pane header. It keeps New terminal, Dictate, Pane actions, Maximize and Close. Session timeline, Replay, Open in VS Code and Move pane are in the pane menu and the palette.
+- Full mode keeps every session name on one line, cut off with an ellipsis and shown in full on hover, in normal case with the agent's icon. Each session's close button sits right next to its name.
+- In full mode and in the board peek, Esc inside a terminal always goes to the agent, so one press interrupts it. Leave full mode with Ctrl+Enter, the restore button, or Esc outside the terminal.
+- Orchestrator: Mark as done closes the run's panes and removes every worktree it created, along with its merged branches. Branches with unmerged work are kept and listed, with a Retry clean-up button.
+- Orchestrator: a working lead shows as Coordinating, and tasks that are waiting say why.
+
+### Removed
+
+- Snippets. Existing snippets in your settings are ignored.
+
+### Fixed
+
+- Orchestrator: work added after a run was reported as finished now starts. Before, the new tasks waited until the old "finished" question was answered.
+- Dialogs never grow taller than the window. They scroll inside it, so their buttons stay reachable on small screens.
+
 ## [1.5.0] - 2026-10-17
 
 ### Added
