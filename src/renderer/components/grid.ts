@@ -1,9 +1,10 @@
 import { forgetStateClocks } from '../stateClock'
 import { forgetTimelineLogs } from '../timelineLog'
-import { focusPane, openQuickPick, setSplits, showView } from '../actions'
+import { closePane, focusPane, openQuickPick, setSplits, showView } from '../actions'
 import { OthersPanelComponent } from './othersPanel'
 import { derivePanes, type PaneView } from '../derive'
-import { clear, h } from '../dom'
+import { clear, h, iconButton } from '../dom'
+import { ICONS } from '../icons'
 import { pairOf } from '../../shared/compare'
 import { layoutForCount } from '../../shared/layout'
 import { resolveSplit, withSplit } from '../../shared/splits'
@@ -219,25 +220,29 @@ export class GridComponent {
     if (signature === this.stripSignature) return
     this.stripSignature = signature
     clear(this.strip)
-    for (const view of views) {
-      const selected = view.pane.id === state.maximizedId
-      const label = h('span', { class: 'strip-status' }, ` · ${view.status}`)
-      label.classList.add(view.status)
-      this.strip.append(
-        h(
-          'button',
-          {
-            class: `strip-tab${selected ? ' selected' : ''}`,
-            type: 'button',
-            role: 'tab',
-            'aria-selected': selected ? 'true' : 'false',
-            onClick: () => focusPane(view.pane.id)
-          },
-          `${view.index + 1} ${view.title.toUpperCase()}`,
-          label
-        )
-      )
-    }
+    for (const view of views) this.strip.append(this.stripTab(view, view.pane.id === state.maximizedId))
+    this.strip.querySelector('.strip-tab.selected')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }
+
+  private stripTab(view: PaneView, selected: boolean): HTMLElement {
+    const name = view.title.toUpperCase()
+    const status = h('span', { class: `strip-status ${view.status}` }, ` · ${view.status}`)
+    const label = h(
+      'button',
+      {
+        class: 'strip-label',
+        type: 'button',
+        role: 'tab',
+        'aria-selected': selected ? 'true' : 'false',
+        title: `${name} · ${view.status}`,
+        onClick: () => focusPane(view.pane.id)
+      },
+      h('span', { class: 'strip-index' }, `${view.index + 1}`),
+      h('span', { class: 'strip-name' }, name),
+      status
+    )
+    const close = iconButton(`Close ${name}`, ICONS.closeSmall, () => void closePane(view.pane.id), 'strip-close')
+    return h('div', { class: `strip-tab${selected ? ' selected' : ''}`, 'data-pane-id': view.pane.id }, label, close)
   }
 
   private updateEmpty(state: AppState, count: number): void {

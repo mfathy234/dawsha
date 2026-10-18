@@ -1053,33 +1053,80 @@ button {
   padding: 0 6px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
 
+.pane-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* A session entry: its label shrinks and ends in an ellipsis, the close X stays visible next to it. */
 .strip-tab {
+  flex: 0 1 auto;
+  min-width: 72px;
+  max-width: 240px;
   display: flex;
   align-items: center;
-  padding: 0 6px;
-  border: 0;
   border-bottom: 2px solid transparent;
-  background: transparent;
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
 }
 
 .strip-tab.selected {
+  flex-shrink: 0;
   border-bottom-color: var(--accent);
   color: var(--accent);
 }
 
+.strip-label {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px 0 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.strip-index {
+  flex: none;
+}
+
+.strip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .strip-status {
+  flex: none;
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
   white-space: pre;
+}
+
+.strip-close {
+  width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  opacity: 0.6;
+}
+
+.strip-tab:hover .strip-close,
+.strip-tab.selected .strip-close,
+.strip-close:focus-visible {
+  opacity: 1;
 }
 
 
@@ -6100,7 +6147,7 @@ body.dragging-ui {
   text-transform: none;
 }
 
-.strip-tab {
+.strip-label {
   font-size: 11.5px;
   font-weight: 500;
   letter-spacing: 0;
