@@ -188,7 +188,11 @@ test('recording is off by default; turning it on records new sessions and turnin
       .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.enabled, { timeout: SLOW })
       .toBe(true)
     const days = page.locator('#recordings-days')
-    await days.fill('30')
+    // Type into the number box as a person does; fill() on a number input is not reliable across runners.
+    await days.click()
+    await days.press('Control+a')
+    await days.pressSequentially('30')
+    await expect(days).toHaveValue('30')
     await days.press('Tab')
     await expect
       .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.keepDays, { timeout: SLOW })
