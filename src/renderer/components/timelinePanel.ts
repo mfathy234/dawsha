@@ -1,5 +1,6 @@
 import { findOpenSession, focusOpenSession, openChanges, resumeInNewPane } from '../actions'
 import { api } from '../api'
+import { bind, formatShortcut } from '../../shared/shortcuts'
 import { h, icon } from '../dom'
 import type { PaneView } from '../derive'
 import { sessionState, type SessionState } from '../../shared/sessionState'
@@ -31,6 +32,7 @@ import { closeTimeline, openTimelineWith, takeTimelineIntent, timelineRequest, t
 import { localEvents, localVersion } from '../timelineLog'
 import { replayPane } from '../replayActions'
 import { ICONS } from '../icons'
+import { getTerminal } from '../terminals'
 import type { SearchHit } from '../../shared/timelineSearch'
 import type { ResumeSession } from '../../shared/types'
 import { AllSessionsSearch } from './timelineAllSearch'
@@ -150,7 +152,7 @@ export class TimelinePanel {
     const back = h('button', { class: 'btn small tl-back', type: 'button', onClick: () => this.leavePast() }, 'Back to results')
     this.pastBar.append(this.pastTitle, h('span', { class: 'spacer' }), back, resume)
     const top = h('div', { class: 'tl-top' }, head, this.pastBar, h('div', { class: 'tl-bar-wrap' }, this.bar, this.legend), this.filters, scopeRow, searchRow)
-    const foot = h('div', { class: 'tl-foot' }, this.exportButton, h('span', { class: 'spacer' }), h('span', { class: 'tl-hint' }, 'Ctrl+Shift+T'))
+    const foot = h('div', { class: 'tl-foot' }, this.exportButton, h('span', { class: 'spacer' }), h('span', { class: 'tl-hint' }, formatShortcut(bind('Ctrl+Shift+T'))))
     this.el = h('aside', { class: 'timeline-panel', 'aria-label': 'Timeline', hidden: true }, top, this.insights, h('div', { class: 'tl-scroll' }, this.all.el, this.note, this.list, this.empty), foot)
     for (const button of this.scopeButtons) button.addEventListener('click', () => this.setScope(button.dataset.scope === 'all' ? 'all' : 'session'))
     this.search.addEventListener('input', () => {
@@ -387,7 +389,10 @@ export class TimelinePanel {
         if (this.searchingAll()) this.all.schedule(0)
         this.render(true)
       } else {
+        // The hidden box would keep focus until the next frame and swallow the next shortcut.
+        const pane = paneById(store.state, this.paneId)
         closeTimeline()
+        if (pane) getTerminal(pane.activeTabId)?.focus()
       }
     }
   }

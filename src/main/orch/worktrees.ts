@@ -20,6 +20,9 @@ const FALLBACK_IDENTITY = ['-c', 'user.name=Dawsha', '-c', 'user.email=dawsha@lo
 
 const shortOf = (runId: string): string => runId.replace(/^run_/, '').slice(0, SHORT_LENGTH)
 
+/** Prefix shared by every branch of a run: orch/<short id>/. */
+export const runPrefix = (runId: string): string => `orch/${shortOf(runId)}/`
+
 export const runBranch = (runId: string): string => `orch/${shortOf(runId)}/run`
 
 export const taskBranch = (runId: string, taskKey: string): string => `orch/${shortOf(runId)}/${taskKey.toLowerCase()}`

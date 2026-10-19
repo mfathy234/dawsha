@@ -7,7 +7,9 @@ import type { OrchStore } from './store'
 export function exportStoredRun(store: OrchStore, runId: string, version: string, at: number): RunArchive {
   const run = store.getRun(runId)
   if (!run) throw new Error(`Run ${runId} not found.`)
-  return buildArchive({ run, tasks: store.listTasks({ runId }), agents: store.listAgents(runId), decisions: store.listDecisions(runId),
+  // Clean-up results name folders on this machine, so they stay out of the archive.
+  const { cleanup: _local, ...portable } = run
+  return buildArchive({ run: portable, tasks: store.listTasks({ runId }), agents: store.listAgents(runId), decisions: store.listDecisions(runId),
     notes: store.listNotes(runId), events: store.listEvents(runId), messages: store.listMessages(runId) }, version, at)
 }
 

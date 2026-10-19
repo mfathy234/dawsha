@@ -1,3 +1,5 @@
+import { placeMenu } from '../shared/menuPlacement'
+
 type Child = Node | string | null | undefined | false
 type Attrs = Record<string, string | number | boolean | EventListener | undefined | null>
 
@@ -42,11 +44,12 @@ export function placeNearAnchor(menu: HTMLElement, anchor: Element | null, gap =
   if (!anchor) return
   const a = anchor.getBoundingClientRect()
   menu.classList.add('floating')
+  menu.style.maxHeight = ''
   const m = menu.getBoundingClientRect()
-  const left = a.right - m.width < 8 ? Math.min(a.left, window.innerWidth - m.width - 8) : a.right - m.width
-  const below = a.bottom + gap + m.height <= window.innerHeight - 8
-  const top = below ? a.bottom + gap : Math.max(8, a.top - gap - m.height)
-  menu.style.left = `${Math.max(8, left)}px`
-  menu.style.top = `${top}px`
+  const placed = placeMenu(a, m.width, m.height, window.innerWidth, window.innerHeight, gap)
+  menu.style.left = `${placed.left}px`
+  menu.style.top = `${placed.top}px`
   menu.style.right = 'auto'
+  menu.style.maxHeight = placed.maxHeight === null ? '' : `${placed.maxHeight}px`
+  menu.style.overflowY = placed.maxHeight === null ? '' : 'auto'
 }

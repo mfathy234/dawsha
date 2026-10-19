@@ -89,14 +89,6 @@ export interface SavedLayout {
   splits?: GridSplits
 }
 
-export interface Snippet {
-  id: string
-  name: string
-  text: string
-  projectId: string | null
-  shortcut: number | null
-}
-
 export interface KeptSession {
   projectId: string
   agent: AgentKind
@@ -132,7 +124,6 @@ export interface Settings {
   onboardingDismissed: boolean
   workspace: Workspace
   layouts: SavedLayout[]
-  snippets: Snippet[]
   keptSessions: KeptSession[]
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
   ticketNotes: import('./ticketNotes').TicketNotes
@@ -144,6 +135,7 @@ export interface Settings {
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
   recordings: RecordingSettings
+  dictation: import('./dictation').DictationSettings
   experimental: ExperimentalSettings
   orchestrator: OrchSettings
 }
@@ -174,10 +166,11 @@ export interface RemoteAccessDevice {
 }
 
 export interface RemoteAccessState {
-  status: 'off' | 'setup-required' | 'connecting' | 'available'
+  status: 'off' | 'setup-required' | 'connecting' | 'reconnecting' | 'available'
   enabled: boolean
   url: string | null
   message: string
+  notice: string | null
   devices: RemoteAccessDevice[]
   pairing: { code: string; expiresAt: number } | null
   permissions: RemoteAccessSettings

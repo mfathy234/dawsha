@@ -1,7 +1,7 @@
 {
   "name": "dawsha",
   "productName": "Dawsha",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "One window for all your AI coding agents: a grid of readable terminals for Claude Code, Codex CLI and Gemini CLI",
   "homepage": "https://dawsha.pages.dev/",
   "repository": {
@@ -32,6 +32,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-sans-arabic": "5.3.0",
+    "@huggingface/transformers": "4.2.0",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/addon-search": "0.16.0",
     "@xterm/addon-serialize": "0.14.0",
@@ -39,6 +41,7 @@
     "@xterm/addon-webgl": "0.19.0",
     "@xterm/headless": "6.0.0",
     "@xterm/xterm": "6.0.0",
+    "bidi-js": "1.0.3",
     "electron-updater": "6.8.9",
     "node-pty": "1.1.0",
     "qrcode-generator": "2.0.4",

@@ -234,6 +234,11 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
     }
     const path = url.pathname.slice(REMOTE_PREFIX.length) || '/'
     if (request.method === 'GET' && await serveAsset(options, path, response)) return
+    if (request.method === 'GET' && path === '/api/health') {
+      response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' })
+      response.end(JSON.stringify({ ok: true, app: 'dawsha' }))
+      return
+    }
 
     if (request.method === 'POST' && path === '/api/pair') {
       const body = await readJson(request, response)

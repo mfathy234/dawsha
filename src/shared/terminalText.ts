@@ -1,4 +1,3 @@
-import { SNIPPET_NAME_MAX } from './settingsSchema'
 
 export interface ScreenLine {
   text: string
@@ -76,10 +75,4 @@ export function displayWidth(text: string): number {
     width += wide ? 2 : 1
   }
   return width
-}
-
-export function suggestSnippetName(text: string): string {
-  const words = text.trim().split(/\s+/).filter(Boolean).slice(0, 5).join(' ')
-  const name = words.length > SNIPPET_NAME_MAX ? words.slice(0, SNIPPET_NAME_MAX).trimEnd() : words
-  return name || 'Terminal selection'
 }

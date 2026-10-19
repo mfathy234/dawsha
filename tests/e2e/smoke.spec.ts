@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { QUIT_BUDGET_MS, activeTermId, bufferText, closeApp, closeBounded, createSandbox, fontSize, launchApp } from './helpers'
+import { QUIT_BUDGET_MS, activeTermId, bufferText, closeApp, closeBounded, createSandbox, fontSize, lastInput, launchApp } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -37,6 +37,13 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await expect(page.locator('.sidebar.rail')).toHaveCount(1)
     await expect(page.locator('.pane-strip')).toBeVisible()
     await page.screenshot({ path: join(SCREENS, '3-maximized.png') })
+    // Esc inside a terminal goes to the agent and never leaves full mode, whatever the status says.
+    const fullId = await activeTermId(page)
+    await page.locator('.term-host.active .xterm-helper-textarea').focus()
+    await page.keyboard.press('Escape')
+    await expect.poll(() => lastInput(page, fullId)).toBe('')
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
     await page.keyboard.press('Escape')
     await expect(page.locator('.pane.maximized')).toHaveCount(0)
     await expect(page.locator('.sidebar.rail')).toHaveCount(0)
@@ -98,6 +105,8 @@ test('opens panes from the quick pick with the keyboard and reopens them on the 
     await first.page.keyboard.press('Enter')
     await expect(first.page.locator('.pane')).toHaveCount(1)
     await expect(first.page.locator('.quickpick')).toHaveCount(0)
+    // Typing goes straight into the new session, not to the button that opened the pick.
+    await expect(first.page.locator('.pane .term-host.active .xterm-helper-textarea')).toBeFocused()
     await first.page.keyboard.press('Control+n')
     await expect(first.page.locator('.quickpick')).toHaveCount(1)
     await first.page.keyboard.press('Enter')
@@ -129,6 +138,23 @@ test('projects view validates folders and confirms removal by name', async () =>
     await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible()
     await expect(page.locator('[data-project-id="gone"] .field-error')).toHaveText('This folder does not exist.')
     await page.screenshot({ path: join(SCREENS, '8-projects.png') })
+    // The sidebar stays mounted next to the Projects view, so both filters must keep their own ids.
+    const duplicateIds = await page.evaluate(() => {
+      const ids = [...document.querySelectorAll('[id]')].map(el => el.id)
+      return [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))]
+    })
+    expect(duplicateIds).toEqual([])
+
+    // An empty name is the name box's error: the folder is not marked, and Escape clears it.
+    const smoke = page.locator('[data-project-id="smoke"]')
+    await page.getByRole('button', { name: 'More for Smoke' }).click()
+    await page.getByRole('menuitem', { name: 'Rename' }).click()
+    await smoke.getByRole('textbox', { name: 'Name of Smoke' }).fill('')
+    await page.keyboard.press('Enter')
+    await expect(smoke.locator('.field-error')).toHaveText('Name cannot be empty.')
+    await expect(smoke.locator('.pv-folder')).not.toHaveClass(/invalid/)
+    await page.keyboard.press('Escape')
+    await expect(smoke.locator('.field-error')).toBeHidden()
 
     await page.getByRole('button', { name: 'More for Missing' }).click()
     await page.getByRole('menuitem', { name: 'Remove Missing…' }).click()
@@ -205,7 +231,8 @@ test('reorders panes from the move menu and the keyboard, and opens pane menus n
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
 
-    await panes.nth(2).getByRole('button', { name: 'Move pane' }).click()
+    await panes.nth(2).getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Move pane…' }).click()
     await expect(menu.getByRole('menuitem')).toHaveCount(3)
     await menu.getByRole('menuitem').first().click()
     await expect
@@ -255,9 +282,15 @@ test('starts Codex from the quick-pick with Tab, shows the OpenAI mark and adds 
     await page.getByRole('menuitem', { name: 'Claude session' }).click()
     await expect(page.locator('.tabs .agent-mark.claude')).toHaveCount(1)
     await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('claude')
-    await page.keyboard.press('Tab')
-    await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('codex')
+    // In the terminal, Tab and Shift+Tab go to the agent; Ctrl+PageDown/PageUp switch tabs.
+    await page.locator('.term-host.active').click()
+    const claudeId = await activeTermId(page)
     await page.keyboard.press('Shift+Tab')
+    await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('claude')
+    await expect.poll(() => lastInput(page, claudeId)).toBe('[Z')
+    await page.keyboard.press('Control+PageUp')
+    await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('codex 2')
+    await page.keyboard.press('Control+PageDown')
     await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('claude')
     await expect(page.locator('.topbar-count')).toContainText('1 session')
     await page.screenshot({ path: join(SCREENS, '10-codex-tabs.png') })

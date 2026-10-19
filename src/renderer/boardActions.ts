@@ -26,7 +26,7 @@ export function peekInGrid(paneId: string): void {
   focusPane(paneId)
 }
 
-/** Sends a reply to the pane's agent terminal: typed in like a snippet, then Enter. */
+/** Sends a reply to the pane's agent terminal: typed in, then Enter. */
 export function sendReply(paneId: string, text: string): boolean {
   const reply = text.trim()
   const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
@@ -42,6 +42,8 @@ export function sendReply(paneId: string, text: string): boolean {
     return false
   }
   terminal.insertText(reply)
+  // Mark the prompt as typing Enter would, so Copy last reply and Ctrl+Up point at this reply.
+  terminal.prompts.noteInput('\r')
   api.write(view.primaryTabId, '\r')
   return true
 }

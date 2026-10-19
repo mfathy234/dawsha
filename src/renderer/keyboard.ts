@@ -3,11 +3,13 @@ import { DEFAULT_PALETTE_SHORTCUT } from '../shared/settingsSchema'
 import { bind, formatShortcut, matchesBinding, parseShortcut, type KeyBinding, type KeyEventLike } from '../shared/shortcuts'
 import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, zoomPane } from './actions'
 import { commandForEvent } from './commands/registry'
-import { derivePanes } from './derive'
 import { store, type AppState } from './state'
 import { closeTimeline } from './timelineActions'
 import { closePeek } from './boardActions'
 import { boardShowing } from './sessionsLayout'
+import { DICTATION_SHORTCUT } from '../shared/dictation'
+import { cancelDictation, toggleDictation } from './dictation/dictationActions'
+import { dictationStatus } from './dictation/dictationState'
 
 const overlayOpen = (): boolean => document.querySelector('.overlay, .popover') !== null
 
@@ -33,20 +35,20 @@ function zoomDelta(event: KeyboardEvent): number | 'reset' | null {
   return null
 }
 
+// Esc inside a terminal always belongs to the agent: session status lags, so guessing "busy" made interrupts take two presses.
+const inTerminal = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.xterm') != null
+
 function escapeShouldRestore(event: KeyboardEvent): boolean {
-  const { maximizedId, focusedId } = store.state
-  if (!maximizedId) return false
-  const inTerminal = (event.target as HTMLElement | null)?.closest('.xterm') !== null
-  if (!inTerminal) return true
-  const focused = derivePanes(store.state).find((v) => v.pane.id === focusedId)
-  return focused?.status !== 'busy'
+  return store.state.maximizedId !== null && !inTerminal(event)
 }
 
 function peekShouldClose(event: KeyboardEvent): boolean {
-  const inTerminal = (event.target as HTMLElement | null)?.closest('.xterm') != null
-  if (!inTerminal) return true
-  const peeked = derivePanes(store.state).find((v) => v.pane.id === store.state.boardPeekId)
-  return peeked?.status !== 'busy'
+  return !inTerminal(event)
+}
+
+function inTerminalOrField(event: KeyboardEvent): boolean {
+  const target = event.target as HTMLElement | null
+  return target?.closest('.xterm, input, textarea, select, [contenteditable="true"]') != null
 }
 
 function consume(event: KeyboardEvent): void {
@@ -56,8 +58,28 @@ function consume(event: KeyboardEvent): void {
 
 const inFindBar = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.term-find, .timeline-search') != null
 
+const DICTATION_BINDING = bind(DICTATION_SHORTCUT)
+
+// Dictation works from dialogs and text boxes too, so it is handled before the overlay guard.
+function handleDictationKey(event: KeyboardEvent): boolean {
+  if (matchesBinding(event, DICTATION_BINDING)) {
+    consume(event)
+    // Holding the keys repeats keydown; only the first press toggles.
+    if (!event.repeat) void toggleDictation()
+    return true
+  }
+  if (event.key === 'Escape' && dictationStatus().phase !== 'idle') {
+    consume(event)
+    cancelDictation()
+    return true
+  }
+  return false
+}
+
 function onKeyDown(event: KeyboardEvent): void {
-  if (event.isComposing || overlayOpen() || inFindBar(event)) return
+  if (event.isComposing) return
+  if (handleDictationKey(event)) return
+  if (overlayOpen() || inFindBar(event)) return
   const state = store.state
   if (isPaletteShortcut(event, state)) {
     consume(event)
@@ -78,11 +100,15 @@ function onKeyDown(event: KeyboardEvent): void {
     }
     return
   }
-  if (event.key === 'Tab' && state.focusedId) {
+  // Ctrl+PageDown/PageUp switch a pane's terminal tabs from anywhere. Tab does it only outside the terminal and text
+  // boxes: there Tab and Shift+Tab belong to the agent (Claude's mode switch, shell completion) or the field.
+  const pageKey = (event.key === 'PageDown' || event.key === 'PageUp') && event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey
+  const plainTab = event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.metaKey && !inTerminalOrField(event)
+  if ((pageKey || plainTab) && state.focusedId) {
     const focused = state.panes.find((pane) => pane.id === state.focusedId)
     if (focused && focused.tabs.length > 1) {
       consume(event)
-      cycleActiveTab(event.shiftKey ? -1 : 1)
+      cycleActiveTab(pageKey ? (event.key === 'PageUp' ? -1 : 1) : event.shiftKey ? -1 : 1)
       return
     }
   }

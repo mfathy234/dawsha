@@ -16,7 +16,7 @@ export interface PaletteGroup<T extends PaletteItem> {
   rows: PaletteRow<T>[]
 }
 
-export const GROUP_ORDER = ['Sessions', 'Actions', 'Projects', 'Snippets', 'Layouts'] as const
+export const GROUP_ORDER = ['Sessions', 'Actions', 'Projects', 'Layouts'] as const
 export const RECENT_GROUP = 'Recent'
 export const RECENT_LIMIT = 6
 

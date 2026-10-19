@@ -23,6 +23,7 @@ export const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../pac
 
 interface GridHook {
   bufferText(id: string): string
+  rawBufferText(id: string): string
   lastInput(id: string): string
   fontSize(id: string): number
   feed(id: string, data: string): void
@@ -67,12 +68,13 @@ export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
 
 export async function launchApp(
   sandbox: Sandbox,
-  extraEnv: Record<string, string> = {}
+  extraEnv: Record<string, string> = {},
+  chromiumArgs: string[] = []
 ): Promise<{ app: ElectronApplication; page: Page }> {
   const env = { ...process.env } as Record<string, string>
   delete env.ELECTRON_RUN_AS_NODE
   const app = await electron.launch({
-    args: [resolve(__dirname, '../../out/main/index.js')],
+    args: [resolve(__dirname, '../../out/main/index.js'), ...chromiumArgs],
     env: {
       ...env,
       DAWSHA_USER_DATA: sandbox.userData,
@@ -114,6 +116,10 @@ export async function activeTermId(page: Page): Promise<string> {
 
 export const bufferText = (page: Page, id: string): Promise<string> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.bufferText(termId), id)
+
+/** The buffer as the program wrote it; bufferText puts Claude Code's visual-order Arabic back in reading order. */
+export const rawBufferText = (page: Page, id: string): Promise<string> =>
+  page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.rawBufferText(termId), id)
 
 export const lastInput = (page: Page, id: string): Promise<string> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.lastInput(termId), id)

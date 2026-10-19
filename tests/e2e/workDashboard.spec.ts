@@ -155,6 +155,10 @@ test('the Tickets tab counts a branch once and keeps the name and link the user 
     await expect(row).toBeVisible()
     await expect(row.locator('.work-ticket-head .work-chip')).toHaveText('Bug')
     await expect(row).toContainText('1 session')
+    // Four ticket tiles fill the row instead of leaving a fifth column empty.
+    const tilesBox = (await page.locator('.work-ticket-tiles').boundingBox())!
+    const totalBox = (await page.locator('#work-tickets-total').boundingBox())!
+    expect(Math.abs(tilesBox.x + tilesBox.width - (totalBox.x + totalBox.width))).toBeLessThan(2)
     // A web link only: anything else is refused with a message.
     await row.getByRole('button', { name: 'Edit' }).click()
     await row.getByLabel('Ticket name').fill('Login crash on expired token')
@@ -163,7 +167,13 @@ test('the Tickets tab counts a branch once and keeps the name and link the user 
     await expect(row.getByRole('alert')).toContainText('web address')
     // What was typed survives the error.
     await expect(row.getByLabel('Ticket name')).toHaveValue('Login crash on expired token')
-    await row.getByLabel('Ticket link').fill('dev.azure.com/MicrotecEgypt/_workitems/edit/18550')
+    await row.getByLabel('Ticket link').fill('dev.azure.com/MicrotecEgypt/_workitems/edit/')
+    // A refresh (as the 30-second timer does, without moving focus) keeps the caret in the editor.
+    await page.locator('.work-view .usage-head button', { hasText: 'Refresh' }).dispatchEvent('click')
+    await expect(page.locator('.work-view')).toHaveAttribute('aria-busy', 'false')
+    await expect(row.getByLabel('Ticket link')).toBeFocused()
+    await page.keyboard.type('18550')
+    await expect(row.getByLabel('Ticket link')).toHaveValue('dev.azure.com/MicrotecEgypt/_workitems/edit/18550')
     await row.getByRole('button', { name: 'Save' }).click()
     await expect(row.locator('.work-ticket-name')).toHaveText('Login crash on expired token')
     await expect(row.getByRole('link', { name: 'Open link ↗' })).toHaveAttribute('href', 'https://dev.azure.com/MicrotecEgypt/_workitems/edit/18550')

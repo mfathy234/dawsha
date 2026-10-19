@@ -26,13 +26,16 @@ function row(title: string, control: HTMLElement, ...notes: (HTMLElement | null)
 
 function numberField(id: string, label: string, value: number, min: number, max: number, onCommit: (value: number) => void): HTMLElement {
   const input = h('input', { class: 'text-input replay-number', type: 'number', id, min, max, step: 1, value, 'aria-label': label })
+  let committed = value
   input.addEventListener('change', () => {
     const parsed = Number(input.value)
-    if (!Number.isFinite(parsed)) {
-      input.value = String(value)
+    // An emptied box reads as 0, which would clamp to the minimum and prune recordings.
+    if (input.value.trim() === '' || !Number.isFinite(parsed)) {
+      input.value = String(committed)
       return
     }
-    onCommit(Math.min(max, Math.max(min, Math.round(parsed))))
+    committed = Math.min(max, Math.max(min, Math.round(parsed)))
+    onCommit(committed)
   })
   return input
 }

@@ -1,5 +1,6 @@
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
 import { bind, formatShortcut } from '../../shared/shortcuts'
+import { DICTATION_SHORTCUT } from '../../shared/dictation'
 import {
   addTab,
   closePane,
@@ -30,17 +31,18 @@ import {
 } from '../actions'
 import { derivePanes } from '../derive'
 import { applyStashPane, fetchPane, pullPane, stashPane, switchBranchPane } from '../gitQuickActions'
-import { saveSelectionAsSnippet } from '../snippetActions'
+import { toggleDictation } from '../dictation/dictationActions'
 import { openInstructionsForPane } from '../instructionsActions'
 import {
   canJumpPrompt,
   clearScrollback,
   copyCurrentPrompt,
   copyLastReply,
-  focusedHasSelection,
   jumpPrompt
 } from '../terminalActions'
 import { exportTranscript } from '../transcriptActions'
+import { replayPane } from '../replayActions'
+import { openShortcutsSheet } from '../components/shortcutsSheet'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setSessionsLayout } from '../sessionsLayout'
@@ -77,6 +79,14 @@ export function installBuiltinCommands(): void {
       ...withKeys('Ctrl+Shift+N'),
       searchOnly: true,
       run: () => openQuickPick('other')
+    },
+    {
+      id: 'dictation.toggle',
+      title: 'Dictate',
+      group: 'Actions',
+      keywords: 'voice speech microphone talk arabic whisper',
+      shortcut: formatShortcut(bind(DICTATION_SHORTCUT)),
+      run: () => void toggleDictation()
     },
     { id: 'session.resume', title: 'Resume a session', group: 'Actions', ...withKeys('Ctrl+Shift+R'), run: () => openResumePicker() },
     {
@@ -210,10 +220,6 @@ export function installBuiltinCommands(): void {
       ...focusedAction('terminal.copy-prompt', 'Copy the prompt you are typing', copyCurrentPrompt, 'clipboard input draft current'),
       ...withKeys('Ctrl+Alt+P')
     },
-    {
-      ...focusedAction('terminal.save-snippet', 'Save selection as a snippet', saveSelectionAsSnippet, 'selected text create'),
-      enabled: (state) => hasPane(state) && focusedHasSelection()
-    },
     focusedAction('terminal.clear-scrollback', 'Clear the terminal scrollback', clearScrollback, 'history wipe screen output'),
     focusedAction('pane.instructions', 'Edit project instructions', openInstructionsForPane, 'claude agents gemini md rules'),
     focusedAction('pane.vscode', 'Open in VS Code', (id) => openPaneFolder(id, 'vscode'), 'editor folder'),
@@ -242,11 +248,12 @@ export function installBuiltinCommands(): void {
       ...focusedAction('timeline.search-all', 'Search all session timelines…', (id) => openTimelineWith(id, { scope: 'all' }), 'find prompts edits commands tests old closed past sessions history'),
       ...withKeys('Ctrl+Alt+F')
     },
+    focusedAction('pane.replay', 'Replay the session', replayPane, 'play back terminal recording history'),
     focusedAction('pane.transcript', 'Export transcript…', exportTranscript, 'save markdown html conversation chat history'),
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),
     focusedAction('pane.close', 'Close the pane', closePane, 'stop session'),
     { id: 'view.sidebar', title: 'Toggle the sidebar', group: 'Actions', run: () => toggleSidebar() },
-    { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'snippets folders', run: () => showView('projects') },
+    { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'folders', run: () => showView('projects') },
     { id: 'view.agents', title: 'Open Agents', group: 'Actions', keywords: 'install update cli', run: () => showView('agents') },
     { id: 'view.skills', title: 'Open Skills', group: 'Actions', keywords: 'installed export copy agent', run: () => showView('skills') },
     { id: 'view.usage', title: 'Open Usage', group: 'Actions', keywords: 'tokens cost limits history', run: () => showView('usage') },
@@ -278,6 +285,15 @@ export function installBuiltinCommands(): void {
       run: () => setSessionsLayout('grid')
     },
     { id: 'view.grid', title: 'Back to the grid', group: 'Actions', searchOnly: true, run: () => showView('grid') },
+    {
+      id: 'app.shortcuts',
+      title: 'Keyboard shortcuts',
+      group: 'Actions',
+      keywords: 'keys hotkeys help bindings cheat sheet',
+      shortcut: 'Ctrl+/',
+      keys: [{ key: '/', ctrl: true, shift: false, alt: false }],
+      run: () => void openShortcutsSheet()
+    },
     { id: 'app.theme', title: 'Choose a theme', group: 'Actions', keywords: 'colors background', run: () => toggleThemePicker(true) },
     { id: 'app.updates', title: 'Check for updates', group: 'Actions', run: () => runUpdateAction('check') },
     { id: 'app.whats-new', title: "Show what's new", group: 'Actions', searchOnly: true, run: () => openWhatsNew() },

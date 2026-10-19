@@ -48,6 +48,7 @@ import { CHANGELOG_ENTRIES } from '../changelog'
 import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
+import { dictationRows } from './dictationSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
 import { orchestratorSettingsRows } from './orch/orchSettings'
 
@@ -117,12 +118,19 @@ export class SettingsViewComponent {
   private remoteAccess: RemoteAccessState | null = null
   private remoteError: string | null = null
   private remoteBusy = false
+  private remoteChecking = false
+  private remoteVerifiedAt = 0
   private remotePollTimer: ReturnType<typeof setTimeout> | null = null
   private pairingExpiryTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
     void api.paneonImportPreview().then((preview) => { this.paneonImport = preview; this.refresh() }).catch(() => undefined)
-    if (isRemoteControlBuild) void this.loadRemoteAccess()
+    if (isRemoteControlBuild) {
+      void this.loadRemoteAccess().then(() => this.verifyRemote(true))
+      window.addEventListener('focus', () => {
+        if (this.el.getClientRects().length > 0) void this.verifyRemote()
+      })
+    }
     this.nav.addEventListener('keydown', (event) => this.onNavKey(event))
     this.panel.addEventListener('click', (event) => {
       const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-link]')
@@ -168,6 +176,7 @@ export class SettingsViewComponent {
 
   show(): void {
     invalidateRecordingStats()
+    if (isRemoteControlBuild) void this.verifyRemote()
     this.refresh()
   }
 
@@ -266,6 +275,22 @@ export class SettingsViewComponent {
     this.refresh()
   }
 
+  // Ask main to check the tunnel end to end before the link or QR is shown, so a stale address is never presented as working.
+  private async verifyRemote(force = false): Promise<void> {
+    const remote = api.remoteAccess
+    if (!remote || this.remoteChecking || this.remoteAccess?.status !== 'available') return
+    if (!force && Date.now() - this.remoteVerifiedAt < 60_000) return
+    this.remoteChecking = true
+    this.refresh()
+    try { this.remoteAccess = await remote.verify() } catch (error) {
+      this.remoteError = (error as Error).message || 'Remote Access could not be checked.'
+    } finally {
+      this.remoteChecking = false
+      this.remoteVerifiedAt = Date.now()
+      this.refresh()
+    }
+  }
+
   private async runRemoteAction(action: () => Promise<RemoteAccessState>): Promise<void> {
     this.remoteBusy = true
     this.remoteError = null
@@ -292,7 +317,7 @@ export class SettingsViewComponent {
     const status = state?.status ?? 'off'
     const enabled = state?.enabled === true
     if (this.remotePollTimer) clearTimeout(this.remotePollTimer)
-    this.remotePollTimer = status === 'connecting'
+    this.remotePollTimer = status === 'connecting' || status === 'reconnecting'
       ? setTimeout(() => { this.remotePollTimer = null; void this.loadRemoteAccess() }, 2000)
       : null
     const mainAction = h('button', {
@@ -305,10 +330,12 @@ export class SettingsViewComponent {
     const securityNote = h('p', { class: 'hint remote-hero-note' }, state?.permissions.allowedEmail
       ? 'Cloudflare will send a PIN to this email before Dawsha asks for its pairing code. Cloudflare processes traffic through the public-facing URL.'
       : 'With no PIN email, the short-lived Dawsha pairing code is the only login gate. Keep the public-facing URL private; Cloudflare processes proxied traffic.')
-    const statusLine = h('p', { class: `remote-status remote-status-${status}`, role: 'status' },
-      h('span', { class: 'remote-status-dot', 'aria-hidden': 'true' }), state?.message ?? 'Remote Access is off.')
-    const qrTarget = enabled && state.url ? pairingLink(state.url, state.pairing?.code) : ''
-    const qr = enabled && state.url
+    const checking = this.remoteChecking && status === 'available'
+    const statusLine = h('p', { class: `remote-status remote-status-${checking ? 'connecting' : status}`, role: 'status' },
+      h('span', { class: 'remote-status-dot', 'aria-hidden': 'true' }), checking ? 'Checking the connection…' : state?.message ?? 'Remote Access is off.')
+    const notice = state?.notice && !checking ? h('p', { class: 'hint remote-notice', id: 'remote-address-changed', role: 'status' }, state.notice) : null
+    const qrTarget = enabled && state.url && !checking ? pairingLink(state.url, state.pairing?.code) : ''
+    const qr = enabled && state.url && !checking
       ? h('section', { class: 'remote-qr-card' },
           h('div', { class: 'remote-qr', 'data-qr': qrTarget },
             qrSvg(qrTarget, state.pairing ? 'QR code that opens Dawsha and pairs your phone' : 'QR code that opens Dawsha on your phone')),
@@ -319,7 +346,7 @@ export class SettingsViewComponent {
               : 'Point your camera at the code to open Dawsha, then create a pairing code.'),
             state.pairing ? this.pairingCountdown(state.pairing.expiresAt) : null))
       : null
-    const steps = enabled && state.url
+    const steps = enabled && state.url && !checking
       ? h('div', { class: 'remote-steps' },
           h('section', { class: 'remote-step' },
             h('div', { class: 'remote-step-head' }, h('span', { class: 'remote-step-number' }, '1'), h('h4', {}, 'Open on your phone')),
@@ -347,13 +374,13 @@ export class SettingsViewComponent {
         h('div', { class: 'remote-hero-head' },
           h('div', { class: 'remote-hero-copy' },
             h('h3', {}, enabled ? 'Connect your phone' : 'Use Dawsha from your phone'),
-            statusLine),
+            statusLine, notice),
           mainAction),
         qr || steps ? h('div', { class: 'remote-connect' }, qr, h('div', { class: 'remote-manual' }, qr ? h('p', { class: 'remote-manual-label' }, 'Or connect by hand') : null, steps)) : null,
         securityNote,
         this.remoteError ? h('p', { class: 'note error set-note', role: 'alert' }, this.remoteError) : null)
     ]
-    const allowedEmail = h('input', { class: 'text-input', type: 'email', value: state?.permissions.allowedEmail ?? '', placeholder: 'you@example.com', autocomplete: 'email', disabled: this.remoteBusy || enabled }) as HTMLInputElement
+    const allowedEmail = h('input', { class: 'text-input', type: 'email', value: state?.permissions.allowedEmail ?? '', placeholder: 'you@example.com', autocomplete: 'email', 'aria-label': 'Cloudflare PIN email', disabled: this.remoteBusy || enabled }) as HTMLInputElement
     rows.push(row('Cloudflare PIN email (optional)', h('div', { class: 'remote-email-setting' }, allowedEmail,
       h('button', { class: 'btn ghost small', type: 'button', disabled: this.remoteBusy || enabled, onClick: () => void this.runRemoteAction(() => remote.setAllowedEmail(allowedEmail.value)) }, 'Save email')),
     h('p', { class: 'hint' }, 'Dawsha checks for a compatible Cloudflare Tunnel and installs a verified copy in app data if needed. First setup needs internet access; no administrator access is required.')))
@@ -530,6 +557,8 @@ export class SettingsViewComponent {
         h('button', { class: 'btn ghost small', type: 'button', id: 'getting-started', onClick: () => openOnboarding() }, 'Getting started…'),
         h('p', { class: 'hint' }, 'Reopen the setup guide for projects, agents and session info.')
       ),
+      h('h3', { class: 'set-subhead', id: 'dictation-heading' }, 'Voice dictation'),
+      ...dictationRows(state),
       h('h3', { class: 'set-subhead', id: 'recordings-heading' }, 'Recordings'),
       ...recordingRows(state, () => this.refresh()),
       h('h3', { class: 'set-subhead', id: 'transfer-heading' }, 'Back up and move'),
@@ -538,7 +567,7 @@ export class SettingsViewComponent {
         h('div', { class: 'set-inline' },
           h('button', { class: 'btn ghost small', type: 'button', id: 'export-settings', onClick: () => void exportSettingsFromUi() }, 'Export settings…'),
           h('button', { class: 'btn ghost small', type: 'button', id: 'import-settings', onClick: () => void importSettingsFromUi() }, 'Import settings…')),
-        h('p', { class: 'hint' }, 'Save your projects, snippets, layouts, highlight rules and preferences to one file to move Dawsha to another PC. Remote Access, open sessions and usage history are never included.')
+        h('p', { class: 'hint' }, 'Save your projects, layouts, highlight rules and preferences to one file to move Dawsha to another PC. Remote Access, open sessions and usage history are never included.')
       ),
       ...(this.paneonImport?.available ? [row(
         'Paneon settings',
@@ -550,7 +579,7 @@ export class SettingsViewComponent {
         h('p', { class: 'hint', id: 'paneon-import-summary' },
           this.paneonImport.pending
             ? 'Import queued; close and reopen Dawsha to apply it.'
-            : this.paneonImport.error ?? `${this.paneonImport.projects} project${this.paneonImport.projects === 1 ? '' : 's'}, ${this.paneonImport.layouts} layout${this.paneonImport.layouts === 1 ? '' : 's'} and ${this.paneonImport.snippets} snippet${this.paneonImport.snippets === 1 ? '' : 's'} found. Your current Dawsha settings will be backed up.`
+            : this.paneonImport.error ?? `${this.paneonImport.projects} project${this.paneonImport.projects === 1 ? '' : 's'}, ${this.paneonImport.layouts} layout${this.paneonImport.layouts === 1 ? '' : 's'} found. Your current Dawsha settings will be backed up.`
         )
       )] : [])
     ]

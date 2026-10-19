@@ -4,6 +4,7 @@ import { boardCards, DEFAULT_BOARD_FILTER, isFinishedRun, timelineEvents, totalC
 import type { OrchProfile } from '../../../shared/orch/profiles'
 import { focusPane } from '../../actions'
 import { clear, h } from '../../dom'
+import { cleanupPanel } from './cleanupPanel'
 import { cancelRun, handoffTask, restartAgent, showOrch } from '../../orchActions'
 import type { AppState } from '../../state'
 import { renderTaskBoard } from './boardsView'
@@ -12,7 +13,7 @@ import './runView.css'
 
 const TIMELINE_LIMIT = 100
 const HANDOFF_STATES = new Set(['working', 'waiting', 'stalled', 'idle'])
-const TONE: Record<string, string> = { working: 'working', waiting: 'waiting', stalled: 'stalled', idle: 'idle', done: 'done' }
+const TONE: Record<string, string> = { working: 'working', coordinating: 'working', waiting: 'waiting', stalled: 'stalled', idle: 'idle', done: 'done' }
 
 interface Handoff {
   agentId: string
@@ -72,6 +73,10 @@ export class OrchRunView {
   }
 
   private render(run: OrchRunDetail, state: AppState): void {
+    // New events and the minute tick rebuild the view; keep the caret in the handoff note.
+    const focused = document.activeElement
+    const activeId = focused instanceof HTMLTextAreaElement && this.el.contains(focused) ? focused.id : ''
+    const caret = focused instanceof HTMLTextAreaElement ? [focused.selectionStart, focused.selectionEnd] : null
     clear(this.el)
     this.el.append(this.switcher(run, state), this.header(run))
     const story = this.story(run)
@@ -82,6 +87,11 @@ export class OrchRunView {
       const open = state.orch?.decisions.some((d) => d.runId === run.id && d.kind === 'spec-approval')
       const link = h('button', { class: open ? 'btn primary' : 'btn', type: 'button', onClick: () => showOrch('spec', run.id) }, open ? 'Review spec' : 'Spec')
       this.el.insertBefore(link, this.el.children[2])
+    }
+    const restored = activeId ? document.getElementById(activeId) : null
+    if (restored instanceof HTMLTextAreaElement && caret) {
+      restored.focus()
+      restored.setSelectionRange(caret[0], caret[1])
     }
   }
 
@@ -133,7 +143,8 @@ export class OrchRunView {
         run.estimate
           ? h('p', { class: 'orch-run-estimate' }, h('strong', {}, `Estimate: ${run.estimate.size}`), ` · ${!run.solo && run.estimate.size === 'large' ? 'team' : 'lead works alone'} · `, h('span', { class: 'orch-muted' }, run.estimate.reason))
           : run.kind === 'feature' && run.stage === 'plan' ? h('p', { class: 'orch-muted orch-run-estimate' }, 'The lead is sizing the work…') : null,
-        run.imported ? h('p', { class: 'orch-muted' }, `Imported from ${run.imported.from} · read-only`) : finished ? h('p', { class: 'orch-muted' }, 'Finished · read-only') : null
+        run.imported ? h('p', { class: 'orch-muted' }, `Imported from ${run.imported.from} · read-only`) : finished ? h('p', { class: 'orch-muted' }, 'Finished · read-only') : null,
+        cleanupPanel(run)
       ),
       h(
         'div',
@@ -141,7 +152,7 @@ export class OrchRunView {
         kpi(`${done} / ${count}`, 'tasks done'),
         kpi(elapsed(run.createdAt, run.finishedAt ?? Date.now()), finished ? 'total time' : 'elapsed'),
         kpi(cost, 'spent'),
-        kpi(String(run.openDecisions), 'need you', run.openDecisions > 0 ? 'orch-warn' : '')
+        kpi(String(run.openDecisions), run.openDecisions === 1 ? 'needs you' : 'need you', run.openDecisions > 0 ? 'orch-warn' : '')
       ),
       finished ? null : h('button', { class: 'btn danger orch-cancel', type: 'button', onClick: () => void cancelRun(run.id, run.title) }, 'Cancel run')
     )
@@ -202,6 +213,7 @@ export class OrchRunView {
       selectedKey: this.taskKey,
       emptyText: 'No tasks yet. The lead creates them once the plan is approved.',
       onOpen: (card) => {
+        if (card.lead) return
         this.taskKey = this.taskKey === card.key ? null : card.key
         this.rerender()
       }
@@ -224,13 +236,14 @@ export class OrchRunView {
     const canHandoff = !run.imported && !isFinishedRun(run) && !agent.retired && agent.taskKey !== null && HANDOFF_STATES.has(agent.state)
     const open = h('button', { class: 'btn orch-small', type: 'button', disabled: pane ? undefined : true, title: pane ? 'Focus this agent’s pane' : 'This agent has no open pane', onClick: () => pane && focusPane(pane.id) }, 'Open pane')
     const restart = !agent.retired || run.imported || isFinishedRun(run) ? h('button', { class: 'btn orch-small', type: 'button', disabled: Boolean(run.imported) || isFinishedRun(run), onClick: () => void restartAgent(run.id, agent.id, `${ROLE_LABEL[agent.role]} \u00b7 ${agent.model}${agent.taskKey ? ` on ${agent.taskKey}` : ''}`) }, 'Restart') : null
+    const retiredDone = isFinishedRun(run) || run.tasks.some((t) => t.assignee === agent.id && t.status === 'approved')
     const actions = h('div', { class: 'orch-actions' }, open, restart, canHandoff ? h('button', { class: 'btn orch-small', type: 'button', onClick: () => this.openHandoff(agent, state) }, 'Continue with…') : null)
     const main = h(
       'tr',
       { class: agent.retired ? 'retired' : '' },
       h('td', {}, h('div', { class: 'orch-role' }, ROLE_LABEL[agent.role]), h('div', { class: 'orch-sub' }, modelBadge(agent.runner, agent.model), agent.taskKey ? h('span', { class: 'orch-mono' }, ` ${agent.taskKey}`) : null)),
-      // A retired agent of a finished run is done; in a live run it was replaced (handed over or restarted).
-      h('td', {}, agent.retired ? pill(isFinishedRun(run) ? 'done' : 'replaced', isFinishedRun(run) ? 'done' : 'idle') : pill(AGENT_STATE_LABEL[agent.state], TONE[agent.state] ?? 'idle')),
+      // A retired agent is done when its run finished or its own task was approved; otherwise it was replaced (handed over or restarted).
+      h('td', {}, agent.retired ? pill(retiredDone ? 'done' : 'replaced', retiredDone ? 'done' : 'idle') : pill(AGENT_STATE_LABEL[agent.state], TONE[agent.state] ?? 'idle')),
       h('td', { class: 'num' }, cost ? `${row.input} in / ${row.output} out` : '–'),
       h('td', { class: 'num' }, row ? row.cost : '–'),
       h('td', {}, actions)

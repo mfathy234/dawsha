@@ -1,6 +1,6 @@
 import { formatTokens, formatUsd } from '../usage'
 import type { OrchRunDetail } from './api'
-import type { OrchEvent, OrchRole, TaskStatus } from './types'
+import type { OrchEvent, OrchRole, OrchTask, TaskStatus } from './types'
 import type { CostSource, RunUsage } from './usage'
 import { runTag as sharedRunTag } from './review'
 
@@ -44,6 +44,10 @@ export interface BoardCard {
   agent: { role: OrchRole; runner: string; model: string } | null
   reviewRound: number
   attempts: number
+  /** Why a 'To do' card has not started; null once it has. */
+  waiting: string | null
+  /** The run's lead shown as active between tasks; not a task. */
+  lead?: boolean
   search: string
 }
 
@@ -101,9 +105,31 @@ export function projectTabs(runs: readonly OrchRunDetail[], projects: readonly P
   return [{ id: '', label: 'All projects', count: count('') }, ...tabs]
 }
 
+/** Why a task that has not started is waiting: an unfinished dependency, the spec, the human, or a free agent slot. */
+export function waitingReason(task: OrchTask, run: Pick<OrchRunDetail, 'tasks' | 'stage' | 'decisions'>): string | null {
+  if (task.status !== 'todo' || task.assignee) return null
+  const unmet = task.dependsOn.filter((key) => run.tasks.find((t) => t.key === key)?.status !== 'approved')
+  if (unmet.length > 0) return `Waiting for ${unmet.join(', ')}`
+  const specPending = run.tasks.some((t) => t.role === 'spec-writer' && t.status !== 'approved' && t.status !== 'cancelled')
+  if (specPending && task.role !== 'spec-writer') return 'Waiting for the spec'
+  if (run.stage === 'merge' && (run.decisions ?? []).some((d) => d.kind === 'run-complete' && d.answer === null)) return 'Waiting for your answer in Human review'
+  return 'Waiting for a free agent slot'
+}
+
+/** The live lead with no task of its own is still working (answering, planning): a card so the board shows it. */
+function leadCard(run: OrchRunDetail, projectName: string | null): BoardCard[] {
+  const lead = run.agents.find((a) => a.role === 'lead' && !a.retired)
+  if (!lead || lead.state !== 'coordinating' || isFinishedRun(run) || run.imported) return []
+  return [{
+    id: `${run.id}:lead`, key: 'Lead', runId: run.id, runTitle: run.title, runTag: runTag(run.title), projectId: run.projectId, projectName,
+    title: 'Lead · coordinating', status: 'in_progress', column: 'progress', role: 'lead', agent: { role: 'lead', runner: lead.runner, model: lead.model },
+    reviewRound: 0, attempts: 0, waiting: null, lead: true, search: 'lead coordinating'
+  }]
+}
+
 function cardsOf(run: OrchRunDetail, projects: readonly ProjectRef[]): BoardCard[] {
   const projectName = projects.find((p) => p.id === run.projectId)?.name ?? null
-  return run.tasks.map((t) => {
+  const tasks = run.tasks.map((t) => {
     const found = t.assignee ? run.agents.find((a) => a.id === t.assignee) : undefined
     return {
       id: t.id,
@@ -120,9 +146,11 @@ function cardsOf(run: OrchRunDetail, projects: readonly ProjectRef[]): BoardCard
       agent: found ? { role: found.role, runner: found.runner, model: found.model } : null,
       reviewRound: t.reviewRound,
       attempts: t.attempts ?? 0,
+      waiting: waitingReason(t, run),
       search: [t.title, t.spec, t.summary, t.feedback].filter(Boolean).join('\n').toLowerCase()
     }
   })
+  return [...leadCard(run, projectName), ...tasks]
 }
 
 /** The runs the board covers with `filter`; shown as their own row, so a run is visible before it has tasks. */

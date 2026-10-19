@@ -197,6 +197,10 @@ test('fix a bug from the Orchestrator view and finish it in Human review', async
     expect(side!.y).toBeGreaterThanOrEqual(board!.y + board!.height)
     await page.setViewportSize({ width: 1440, height: 900 })
     await expect(page.locator('.orch-card').first()).toBeInViewport()
+    // The fixer finished its task, so it is done rather than replaced, and one open question 'needs you'.
+    await expect(page.locator('.orch-panel', { hasText: 'Agents' }).locator('tbody tr').first()).toContainText('done')
+    await expect(page.locator('.orch-panel', { hasText: 'Agents' }).locator('tbody tr').first()).not.toContainText('replaced')
+    await expect(page.locator('.orch-runhead')).toContainText('needs you')
     await shot(page, 'run-dashboard')
 
     await page.locator('#orch-tab-runs').click()
@@ -392,3 +396,42 @@ for (const solo of [true, false]) {
     } finally { await closeApp(app) }
   })
 }
+
+test('a lead between tasks shows as coordinating and waiting tasks say why', async () => {
+  const sandbox = createSandbox()
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({
+    version: 2, lastSeenVersion: APP_VERSION, onboardingDismissed: true, experimental: { orchestrator: true }
+  }))
+  const { app, page } = await launchApp(sandbox)
+  const task = (key: string, status: string, dependsOn: string[]) => ({
+    id: `lead-live:${key}`, key, runId: 'lead-live', title: `Task ${key}`, spec: '', role: 'implementer', status, dependsOn,
+    acceptance: [], reviewOf: null, reviewRound: 0, review: false, assignee: null, summary: null, files: [], branch: null,
+    feedback: null, pausedFrom: null, createdAt: 1, updatedAt: 1
+  })
+  const run = {
+    id: 'lead-live', kind: 'feature', stage: 'build', title: 'Lead live', projectId: null,
+    createdAt: 1, taskCount: 2, tasksDone: 0, openDecisions: 0,
+    story: 'story', plan: 'Budget', projectPath: '', finishedAt: null, branch: '',
+    tasks: [task('T-1', 'todo', []), task('T-2', 'todo', ['T-1'])],
+    agents: [{ id: 'lead-1', role: 'lead', runner: 'claude', model: 'default', state: 'coordinating', taskKey: null, retired: false }],
+    events: [],
+    usage: { agents: [], byRole: [], total: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0,
+      cacheWriteTokens: 0, totalTokens: 0, costUsd: 0, complete: true } }
+  } as unknown as OrchRunDetail
+  try {
+    await app.evaluate(({ ipcMain, webContents }, value) => {
+      ipcMain.removeHandler('orch:snapshot')
+      ipcMain.handle('orch:snapshot', () => ({ status: { enabled: true, running: true, error: null }, runs: [value], decisions: [] }))
+      for (const contents of webContents.getAllWebContents()) contents.send('orch:changed')
+    }, run)
+    await page.locator('#orchestrator-button').click()
+    await page.getByRole('button', { name: 'Open', exact: true }).first().click()
+    await expect(page.locator('.orch-run-title')).toHaveText('Lead live')
+    const progress = page.locator('.orch-col', { hasText: 'In progress' })
+    await expect(progress.locator('.orch-card.lead')).toContainText('Lead · coordinating')
+    await expect(page.locator('.orch-card', { hasText: 'Task T-2' })).toContainText('Waiting for T-1')
+    await expect(page.locator('.orch-card', { hasText: 'Task T-1' })).toContainText('Waiting for a free agent slot')
+    await expect(page.locator('.orch-panel', { hasText: 'Agents' }).getByText('Coordinating')).toBeVisible()
+    await shot(page, 'lead-coordinating')
+  } finally { await closeApp(app) }
+})

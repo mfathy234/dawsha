@@ -51,7 +51,8 @@ export function matchesBinding(event: KeyEventLike, binding: KeyBinding, platfor
   const mac = isMac(platform)
   const primary = mac ? event.metaKey : event.ctrlKey
   if (primary !== binding.ctrl || (mac ? event.ctrlKey : event.metaKey) || event.shiftKey !== binding.shift || event.altKey !== binding.alt) return false
-  return binding.key.length === 1 ? event.key.toLowerCase() === binding.key : event.key === binding.key
+  const pressed = event.key === ' ' ? 'Space' : event.key
+  return binding.key.length === 1 ? pressed.toLowerCase() === binding.key : pressed === binding.key
 }
 
 export function primaryModifierPressed(event: Pick<KeyEventLike, 'ctrlKey' | 'metaKey'>, platform = runtimePlatform()): boolean {

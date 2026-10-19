@@ -1,3 +1,36 @@
+@font-face {
+  font-family: 'Dawsha Arabic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+  /* Arabic letters sit lower and smaller than Latin at the same size; this matches them to the code font. */
+  size-adjust: 112%;
+}
+
+@font-face {
+  font-family: 'Dawsha Arabic';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../../node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-500-normal.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+  /* Arabic letters sit lower and smaller than Latin at the same size; this matches them to the code font. */
+  size-adjust: 112%;
+}
+
+@font-face {
+  font-family: 'Dawsha Arabic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../../node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-700-normal.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+  /* Arabic letters sit lower and smaller than Latin at the same size; this matches them to the code font. */
+  size-adjust: 112%;
+}
+
 :root {
   --bg: #0c0e12;
   --sidebar: #0e1116;
@@ -16,8 +49,9 @@
   --radius: 8px;
   --image-url: none;
   --image-blur: 0px;
-  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+  /* 'Dawsha Arabic' only covers Arabic characters, so everything else still uses the fonts after it. */
+  --font-ui: 'Dawsha Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Dawsha Arabic', 'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
   color-scheme: dark;
 }
 
@@ -51,6 +85,12 @@ body {
 button,
 input {
   font-family: inherit;
+}
+
+/* Arabic typed or dictated into a text box reads right-to-left and aligns right, English stays left. */
+input,
+textarea {
+  unicode-bidi: plaintext;
 }
 
 button {
@@ -872,9 +912,6 @@ button {
 }
 
 @container pane-header (max-width: 640px) {
-  .pane-header .pane-prev,
-  .pane-header .pane-next,
-  .pane-header .pane-vscode,
   .pane-header .chip-compare,
   .pane-header .chip-from {
     display: none;
@@ -890,7 +927,8 @@ button {
 
   .pane-title {
     flex: 1 1 auto;
-    min-width: 0;
+    /* Never shrink the session name away: a few letters always stay readable. */
+    min-width: 56px;
   }
 }
 
@@ -907,8 +945,19 @@ button {
   flex: 0 0 28px;
 }
 
+/* Previous and next pane only matter in full mode, where the grid is hidden. */
+.pane:not(.maximized) .pane-header > .pane-prev,
+.pane:not(.maximized) .pane-header > .pane-next {
+  display: none;
+}
+
 .pane-fresh {
-  flex: none;
+  /* Gives way first in a narrow header, so the session title keeps its room. */
+  flex: 0 100 auto;
+  min-width: 4em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 12px;
   color: var(--muted);
 }
@@ -1053,33 +1102,79 @@ button {
   padding: 0 6px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
 
+.pane-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* A session entry: its label shrinks and ends in an ellipsis, the close X stays visible next to it. */
 .strip-tab {
+  flex: 0 1 auto;
+  min-width: 72px;
+  max-width: 240px;
   display: flex;
   align-items: center;
-  padding: 0 6px;
-  border: 0;
   border-bottom: 2px solid transparent;
-  background: transparent;
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
 }
 
 .strip-tab.selected {
+  flex-shrink: 0;
   border-bottom-color: var(--accent);
   color: var(--accent);
 }
 
+.strip-label {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px 0 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.strip-index {
+  flex: none;
+}
+
+.strip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .strip-status {
+  flex: none;
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
   white-space: pre;
+}
+
+.strip-close {
+  width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  opacity: 0.6;
+}
+
+.strip-tab:hover .strip-close,
+.strip-tab.selected .strip-close,
+.strip-close:focus-visible {
+  opacity: 1;
 }
 
 
@@ -1326,7 +1421,14 @@ input[type='checkbox'] {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
   background: rgba(8, 10, 14, 0.72);
+}
+
+/* A dialog never grows past the window: it scrolls inside so its buttons stay reachable. */
+.overlay > .dialog {
+  max-height: 100%;
+  overflow-y: auto;
 }
 
 .dialog {
@@ -1467,6 +1569,55 @@ input[type='checkbox'] {
 
 .proj-actions {
   padding-top: 16px;
+}
+
+.term-arabic-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.term-arabic-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Clip sideways only, so harakat above and below the letters are not cut off. */
+  overflow-x: clip;
+  overflow-y: visible;
+  white-space: pre;
+  unicode-bidi: isolate;
+  background: var(--arabic-bg);
+  color: var(--arabic-fg);
+  font-variant-ligatures: normal;
+}
+
+.term-arabic-rtl {
+  unicode-bidi: isolate;
+}
+
+.term-arabic-cursor {
+  background: var(--arabic-cursor);
+  color: var(--arabic-bg);
+  outline: 1px solid var(--arabic-cursor);
+  outline-offset: -1px;
+}
+
+.term-host:focus-within .term-arabic-cursor {
+  animation: term-arabic-blink 1.2s steps(1) infinite;
+}
+
+.term-host:not(:focus-within) .term-arabic-cursor {
+  background: transparent;
+  color: inherit;
+}
+
+@keyframes term-arabic-blink {
+  50% {
+    background: transparent;
+    color: inherit;
+  }
 }
 
 .term-host .xterm,
@@ -3093,6 +3244,11 @@ input[type='checkbox'] {
   color: var(--muted);
 }
 
+.dialog-actions .dialog-hint {
+  margin-right: auto;
+  align-self: center;
+}
+
 .dialog .field-error {
   margin: 0;
   font-size: 12px;
@@ -3191,50 +3347,6 @@ input[type='checkbox'] {
   margin: 12px 0 16px;
 }
 
-.snippet-bar {
-  padding-bottom: 12px;
-}
-
-.snippet-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px 64px auto auto;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.snippet-main {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.snippet-preview {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.snippet-scope {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.snippet-key {
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-.snippet-dialog {
-  width: 520px;
-}
-
 .dialog .field {
   display: flex;
   flex-direction: column;
@@ -3252,50 +3364,13 @@ input[type='checkbox'] {
   height: 36px;
 }
 
-.snippet-text {
+.dialog-text {
   height: auto;
   padding: 8px 10px;
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.5;
   resize: vertical;
-}
-
-.snippet-preview-wrap {
-  display: grid;
-  gap: 3px;
-  margin: -3px 0 9px;
-  padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.snippet-preview { margin: 0; color: var(--text); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.snippet-count { justify-self: end; font-variant-numeric: tabular-nums; }
-
-.snippet-vars {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px 12px;
-  margin: 0;
-  font-size: 12px;
-}
-
-.snippet-vars dt,
-.snippet-vars dd {
-  margin: 0;
-}
-
-.snippet-vars dd {
-  color: var(--muted);
-}
-
-.snippet-vars code {
-  font-family: var(--font-mono);
-  color: var(--accent);
 }
 
 .compare-group {
@@ -4622,6 +4697,9 @@ body.dragging-ui {
 
 .remote-status-available { color: var(--accent); }
 .remote-status-available .remote-status-dot { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+.remote-status-reconnecting { color: var(--busy); }
+.remote-status-reconnecting .remote-status-dot { background: var(--busy); }
+.remote-notice { margin: 6px 0 0; color: var(--busy); }
 .remote-status-setup-required { color: var(--busy); }
 .remote-status-setup-required .remote-status-dot { background: var(--busy); }
 
@@ -6100,7 +6178,7 @@ body.dragging-ui {
   text-transform: none;
 }
 
-.strip-tab {
+.strip-label {
   font-size: 11.5px;
   font-weight: 500;
   letter-spacing: 0;
@@ -6180,12 +6258,6 @@ body.dragging-ui {
   .pane-header .pane-project {
     display: none;
   }
-
-  /* Timeline and Replay stay in the pane menu; on narrow panes the title needs the room. */
-  .pane-header .pane-timeline,
-  .pane-header .pane-replay {
-    display: none;
-  }
 }
 
 @container pane-header (max-width: 400px) {
@@ -6194,10 +6266,6 @@ body.dragging-ui {
     padding: 0;
     justify-content: center;
     font-size: 0;
-  }
-
-  .pane-header .pane-move {
-    display: none;
   }
 }
 
@@ -7843,3 +7911,214 @@ button.tl-event:hover { background: var(--raised); }
 .import-mode { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
 .import-mode:has(input:checked) { border-color: var(--accent); background: var(--raised); }
 .import-mode > span { display: grid; gap: 2px; }
+
+.pane-mic.recording {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  animation: dictation-pulse 1.2s ease-in-out infinite;
+}
+
+.pane-mic.busy {
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.pane-dictation {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pane-dictation[hidden],
+.dictation-pill[hidden] {
+  display: none;
+}
+
+.pane-dictation,
+.dictation-pill {
+  gap: 10px;
+}
+
+.dictation-pill {
+  display: flex;
+  align-items: center;
+}
+
+.dictation-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dictation-meter {
+  flex: none;
+  width: 56px;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+.dictation-meter[hidden] {
+  display: none;
+}
+
+.dictation-meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 90ms linear;
+}
+
+.dictation-meter.quiet {
+  outline: 1px solid var(--busy);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dictation-meter-fill { transition: none; }
+}
+
+.dictation-pill {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 2000;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 35%);
+}
+
+.dictation-pill.recording {
+  border-color: var(--danger);
+}
+
+@keyframes dictation-pulse {
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pane-mic.recording { animation: none; }
+}
+
+/* Session titles: the name picks its own direction and stays isolated from the number and project beside it. */
+.pane-title bdi,
+.others-title bdi,
+.strip-name,
+.sess-name {
+  unicode-bidi: isolate;
+}
+
+.board-card-title,
+.board-peek-title {
+  unicode-bidi: plaintext;
+}
+
+/* Full mode: the title shrinks with an ellipsis so the close X, which sits right after it, is never pushed off. */
+.pane.maximized .pane-header .pane-title {
+  min-width: 0;
+}
+
+.pane-header > .pane-project {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strip-label > .agent-mark {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.strip-label > .agent-mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+
+/* Keyboard shortcuts sheet: a searchable, read-only list grouped by area. */
+.shortcuts-dialog {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shortcuts-search {
+  width: 100%;
+}
+
+.shortcuts-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 14px;
+}
+
+.shortcuts-group h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.shortcuts-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shortcuts-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcuts-title {
+  min-width: 0;
+}
+
+.shortcuts-list kbd {
+  flex: none;
+}
+
+.shortcuts-empty {
+  color: var(--muted);
+}
+
+.toast.with-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast.with-action .toast-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

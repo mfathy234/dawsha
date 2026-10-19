@@ -45,6 +45,8 @@ test('History exports a finished bug run and imports it as a read-only run', asy
     await expect(rows.first().locator('.orch-actions')).toHaveCSS('flex-wrap', 'nowrap')
     expect((await rows.first().boundingBox())!.height).toBeGreaterThanOrEqual(40)
     await rows.first().getByRole('checkbox').check()
+    // Marking the run done cleared its worktrees; History says so.
+    await expect(page.locator('.orch-history-details .orch-cleanup')).toContainText(/Cleaned up \d+ worktrees?/, { timeout: 15000 })
     await page.getByRole('button', { name: 'Export selected (1)', exact: true }).click()
     await expect.poll(() => existsSync(path)).toBe(true)
     const archive = JSON.parse(gunzipSync(readFileSync(path)).toString())

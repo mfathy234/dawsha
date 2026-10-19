@@ -1,5 +1,7 @@
 import { SearchAddon } from '@xterm/addon-search'
 import { Terminal } from '@xterm/xterm'
+import { TerminalArabic } from './terminalArabic'
+import type { TextOrder } from '../shared/arabicRows'
 import type { ParsedCast } from '../shared/cast'
 import {
   advancePosition,
@@ -36,6 +38,7 @@ const yieldToUi = (): Promise<void> => new Promise((resolve) => setTimeout(resol
 
 export class ReplayPlayer {
   readonly term: Terminal
+  private readonly arabic: TerminalArabic
   private readonly search = new SearchAddon()
   private timeline: Timeline
   private applied = 0
@@ -54,7 +57,8 @@ export class ReplayPlayer {
     private readonly cast: ParsedCast,
     private readonly endAt: number,
     bundle: ThemeBundle,
-    private readonly onChange: (state: PlayerState) => void
+    private readonly onChange: (state: PlayerState) => void,
+    textOrder: TextOrder = 'logical'
   ) {
     this.term = new Terminal({
       cols: cast.header.width,
@@ -71,17 +75,21 @@ export class ReplayPlayer {
       minimumContrastRatio: bundle.minimumContrastRatio
     })
     this.term.loadAddon(this.search)
+    this.arabic = new TerminalArabic(this.term, () => textOrder)
+    this.arabic.setTheme(bundle.theme.term)
     this.timeline = buildTimeline(cast.events, endAt, this.skipIdle)
   }
 
   mount(parent: HTMLElement): void {
     this.term.open(parent)
+    this.arabic.attach()
     this.emit()
   }
 
   applyBundle(bundle: ThemeBundle): void {
     this.term.options.theme = bundle.xterm
     this.term.options.minimumContrastRatio = bundle.minimumContrastRatio
+    this.arabic.setTheme(bundle.theme.term)
   }
 
   get state(): PlayerState {
@@ -199,6 +207,7 @@ export class ReplayPlayer {
     for (const release of this.waiters) release()
     this.waiters.clear()
     cancelAnimationFrame(this.frame)
+    this.arabic.dispose()
     this.term.dispose()
   }
 

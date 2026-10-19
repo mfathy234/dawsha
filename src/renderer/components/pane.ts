@@ -34,7 +34,6 @@ import { continueIn, continueLabel } from '../handoffActions'
 import { exportTranscript } from '../transcriptActions'
 import { replayPane, toggleRecordingPause } from '../replayActions'
 import { api } from '../api'
-import { saveSelectionAsSnippet } from '../snippetActions'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
@@ -56,6 +55,9 @@ import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
+import { toggleDictation } from '../dictation/dictationActions'
+import { dictationIndicator } from '../dictation/dictationIndicator'
+import { onDictationStatus, type DictationStatus } from '../dictation/dictationState'
 
 const RESUMED_CHIP_MS = 60_000
 
@@ -63,6 +65,8 @@ export class PaneComponent {
   readonly el: HTMLElement
   private readonly mark = h('span', { class: 'slot' })
   private readonly index = h('span', { class: 'pane-title' })
+  private titleText = ''
+  private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly projectName = h('span', { class: 'pane-project', hidden: true })
   private readonly pin = h('span', { class: 'pane-pin', title: 'Pinned pane', role: 'img', 'aria-label': 'Pinned pane', hidden: true })
   private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
@@ -89,17 +93,24 @@ export class PaneComponent {
   private infoSignature = ''
   private readonly hint = h('div', { class: 'pane-hint', role: 'status', hidden: true })
   private hintSignature = ''
+  private readonly dictation = dictationIndicator()
+  private readonly dictationStrip = h('div', { class: 'pane-dictation', role: 'status', hidden: true }, this.dictation.meter, this.dictation.text)
+  private readonly mic = iconButton('Dictate (Ctrl+Shift+Space)', ICONS.mic, () => void toggleDictation(), 'pane-mic')
+  private readonly stopDictationStatus: () => void
   private readonly drawer = new AgentsDrawer()
   private readonly details = h('aside', { class: 'pane-details', 'aria-label': 'Details', hidden: true })
   private detailsSignature = ''
   private readonly timeline: TimelinePanel
   private actionsMenu: HTMLElement | null = null
+  /** The header button whose menu is open: a second click on it closes the menu, the other one switches. */
+  private actionsAnchor: HTMLElement | null = null
   private readonly restart = h('button', { class: 'btn small pane-restart', type: 'button' }, 'Restart')
   private readonly maxButton = h('span', { class: 'slot pane-maximize-slot' })
   private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'pane-body' })
   private tabSignature = ''
   private menu: HTMLElement | null = null
+  private menuAnchor: HTMLElement | null = null
   private current: PaneView | null = null
   private lastActiveTab = ''
 
@@ -121,15 +132,12 @@ export class PaneComponent {
       this.restart,
       h('span', { class: 'spacer' }),
       this.tabAdd,
-      iconButton('Session timeline', ICONS.history, () => toggleTimeline(paneId), 'pane-timeline'),
-      iconButton('Replay session', ICONS.replay, () => void replayPane(paneId), 'pane-replay'),
-      iconButton('Open in VS Code', ICONS.code, () => void openPaneFolder(paneId, 'vscode'), 'pane-vscode'),
-      iconButton('Move pane', ICONS.layout, () => this.toggleMove(), 'pane-move'),
+      this.mic,
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
       iconButton('Previous pane', ICONS.prev, () => focusRelative(-1), 'pane-prev'),
       iconButton('Next pane', ICONS.next, () => focusRelative(1), 'pane-next'),
       this.maxButton,
-      iconButton('Close pane', ICONS.close, () => void closePane(paneId), 'close-pane')
+      this.closeButton
     )
     header.addEventListener('dblclick', (event) => {
       if ((event.target as HTMLElement).closest('button')) return
@@ -156,15 +164,18 @@ export class PaneComponent {
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.hint, this.drawer.el, content, this.permission, this.foot)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.hint, this.dictationStrip, this.drawer.el, content, this.permission, this.foot)
     this.watchFileDrops()
+    // Keep the pointer from moving focus to the button, so a focused text box stays the dictation target.
+    this.mic.addEventListener('mousedown', (event) => event.preventDefault())
+    this.stopDictationStatus = onDictationStatus((status) => this.showDictation(status))
     this.el.addEventListener('pointerdown', () => focusPane(paneId, true), true)
   }
 
   update(view: PaneView, focused: boolean, maximized: boolean): void {
     this.current = view
     const title = view.title
-    this.index.textContent = `${view.index + 1} · ${title}`
+    this.updateTitle(view.index + 1, title)
     this.updateMark(view.agent)
     const projectName = view.named ? (view.project?.name ?? '') : ''
     this.projectName.hidden = projectName === ''
@@ -203,12 +214,33 @@ export class PaneComponent {
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
     this.restart.hidden = !view.activeExited
     this.updateMaximizeButton(maximized)
+    this.placeCloseButton(maximized)
     this.updateTabs(view)
     this.updateTerminals(view)
     if (focused && this.lastActiveTab && this.lastActiveTab !== view.pane.activeTabId) {
       ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
     }
     this.lastActiveTab = view.pane.activeTabId
+  }
+
+  // The number prefix stays put; only the session name picks its own direction, so an Arabic title does not reorder '4 · '.
+  private updateTitle(number: number, title: string): void {
+    const signature = `${number}|${title}`
+    if (signature === this.titleText) return
+    this.titleText = signature
+    this.index.replaceChildren(`${number} · `, h('bdi', { dir: 'auto' }, title))
+    this.index.title = title
+  }
+
+  // In full mode the X sits right after the name, like the strip tabs; in the grid it stays at the far right.
+  private placeCloseButton(maximized: boolean): void {
+    const header = this.closeButton.parentElement
+    if (!header) return
+    if (maximized) {
+      if (this.index.nextElementSibling !== this.closeButton) this.index.after(this.closeButton)
+    } else if (header.lastElementChild !== this.closeButton) {
+      header.append(this.closeButton)
+    }
   }
 
   private updateState(view: PaneView, state: SessionState): void {
@@ -339,8 +371,10 @@ export class PaneComponent {
     this.details.replaceChildren(...children)
   }
 
-  private toggleMove(): void {
-    if (this.actionsMenu) return this.closeActions()
+  /** Opened from Pane actions › Move pane…, so it takes that button's place: clicking it again closes the menu. */
+  private openMove(): void {
+    if (this.actionsMenu) this.closeActions()
+    this.actionsAnchor = this.el.querySelector<HTMLElement>('.pane-actions')
     const views = derivePanes(store.state)
     const items = views.map((view, i) => {
       const here = view.pane.id === this.paneId
@@ -367,14 +401,18 @@ export class PaneComponent {
       this.closeActions()
     })
     this.el.append(this.actionsMenu)
-    placeNearAnchor(this.actionsMenu, this.el.querySelector('.pane-move'))
+    placeNearAnchor(this.actionsMenu, this.el.querySelector('.pane-actions'))
     items.find((b) => !(b as HTMLButtonElement).disabled)?.focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outsideActions, true), 0)
     document.addEventListener('keydown', this.escapeActions, true)
   }
 
   private toggleActions(): void {
-    if (this.actionsMenu) return this.closeActions()
+    const anchor = this.el.querySelector<HTMLElement>('.pane-actions')
+    const reopen = this.actionsAnchor !== anchor
+    if (this.actionsMenu) this.closeActions()
+    if (!reopen) return
+    this.actionsAnchor = anchor
     const run = (action: () => unknown): void => {
       this.closeActions()
       void action()
@@ -403,11 +441,6 @@ export class PaneComponent {
       changesItem.setAttribute('disabled', '')
       changesItem.title = 'This pane folder is not a git repository'
     }
-    const snippetItem = item('Save selection as snippet', () => saveSelectionAsSnippet(this.paneId), ICONS.snippet, 'terminal.save-snippet')
-    if (!paneTerminal(this.paneId)?.hasSelection()) {
-      snippetItem.setAttribute('disabled', '')
-      snippetItem.title = 'Select some text in the terminal first'
-    }
     const pauseItem = item('Pause recording', () => toggleRecordingPause(this.paneId), ICONS.history)
     pauseItem.setAttribute('disabled', '')
     pauseItem.title = 'This terminal is not being recorded'
@@ -426,7 +459,7 @@ export class PaneComponent {
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
     const maximized = store.state.maximizedId === this.paneId
     const maximizeItem = item(
-      maximized ? 'Restore pane to grid' : 'Expand pane',
+      maximized ? 'Restore pane to grid' : 'Maximize pane',
       () => maximized ? restoreGrid() : toggleMaximize(this.paneId),
       maximized ? ICONS.restore : ICONS.maximize,
       'pane.maximize'
@@ -449,16 +482,16 @@ export class PaneComponent {
       studioItem,
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),
       item('Open terminal here', () => addTab(this.paneId, 'shell'), ICONS.terminal),
+      item('Move pane…', () => this.openMove(), ICONS.layout),
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
-      item('Replay session', () => replayPane(this.paneId), ICONS.replay),
+      item('Replay session', () => replayPane(this.paneId), ICONS.replay, 'pane.replay'),
       pauseItem,
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
       item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),
-      snippetItem,
       item('Clear scrollback', () => clearScrollback(this.paneId), ICONS.eraser),
       showDetails,
       pinItem,
@@ -478,7 +511,7 @@ export class PaneComponent {
 
   private readonly outsideActions = (event: Event): void => {
     const target = event.target as HTMLElement
-    if (this.actionsMenu && !this.actionsMenu.contains(target) && !target.closest('.pane-actions')) this.closeActions()
+    if (this.actionsMenu && !this.actionsMenu.contains(target) && !this.actionsAnchor?.contains(target)) this.closeActions()
   }
 
   private readonly escapeActions = (event: KeyboardEvent): void => {
@@ -492,6 +525,7 @@ export class PaneComponent {
     document.removeEventListener('keydown', this.escapeActions, true)
     this.actionsMenu?.remove()
     this.actionsMenu = null
+    this.actionsAnchor = null
   }
 
   private paneTargetAt(x: number, y: number): HTMLElement | null {
@@ -605,7 +639,10 @@ export class PaneComponent {
   }
 
   private toggleMenu(anchor: HTMLElement): void {
-    if (this.menu) return this.closeMenu()
+    const reopen = this.menuAnchor !== anchor
+    if (this.menu) this.closeMenu()
+    if (!reopen) return
+    this.menuAnchor = anchor
     const choose = (agent: TabAgent): void => {
       this.closeMenu()
       void addTab(this.paneId, agent)
@@ -628,16 +665,28 @@ export class PaneComponent {
   }
 
   private readonly outside = (event: Event): void => {
-    if (this.menu && !this.menu.contains(event.target as Node)) this.closeMenu()
+    const target = event.target as Node
+    if (this.menu && !this.menu.contains(target) && !this.menuAnchor?.contains(target)) this.closeMenu()
   }
 
   private closeMenu(): void {
     document.removeEventListener('pointerdown', this.outside, true)
     this.menu?.remove()
     this.menu = null
+    this.menuAnchor = null
+  }
+
+  private showDictation(status: DictationStatus): void {
+    const mine = status.phase !== 'idle' && status.paneId === this.paneId
+    this.dictationStrip.hidden = !mine
+    this.dictation.update(mine ? status : { ...status, phase: 'idle' })
+    this.mic.classList.toggle('recording', mine && status.phase === 'recording')
+    this.mic.classList.toggle('busy', mine && status.phase !== 'recording')
+    this.mic.setAttribute('aria-pressed', String(mine && status.phase === 'recording'))
   }
 
   dispose(): void {
+    this.stopDictationStatus()
     this.closeMenu()
     this.closeActions()
     this.timeline.dispose()

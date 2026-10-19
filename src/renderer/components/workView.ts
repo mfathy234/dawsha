@@ -128,8 +128,19 @@ export class WorkViewComponent {
 
   private render(): void {
     const focused = document.activeElement
-    const restoreSearch = focused instanceof HTMLInputElement && focused.id === 'work-search'
-    const selection = restoreSearch ? [focused.selectionStart, focused.selectionEnd] : null
+    // The 30-second refresh rebuilds the view, so the search box and an open ticket editor keep focus.
+    const restoreSelector = !(focused instanceof HTMLInputElement) ? null
+      : focused.id === 'work-search' ? '#work-search'
+        : focused.closest('.work-ticket-form') ? `.work-ticket-form input[aria-label="${focused.getAttribute('aria-label')}"]` : null
+    const selection = restoreSelector && focused instanceof HTMLInputElement ? [focused.selectionStart, focused.selectionEnd] : null
+    this.renderContent()
+    const input = restoreSelector ? this.el.querySelector<HTMLInputElement>(restoreSelector) : null
+    if (!input) return
+    input.focus()
+    if (selection) input.setSelectionRange(selection[0], selection[1])
+  }
+
+  private renderContent(): void {
     this.el.setAttribute('aria-busy', String(this.loading))
     this.el.replaceChildren(h('div', { class: 'usage-head' },
       h('h1', {}, 'Work'),
@@ -148,11 +159,6 @@ export class WorkViewComponent {
       h('button', { class: 'btn ghost', type: 'button', disabled: this.loading || !this.report, onClick: () => void this.copySummary() }, 'Copy summary'),
       h('button', { class: 'btn ghost', type: 'button', disabled: this.loading, onClick: () => void this.load() }, 'Refresh')))
     this.el.append(this.filters())
-    if (restoreSearch) {
-      const input = this.el.querySelector<HTMLInputElement>('#work-search')!
-      input.focus()
-      if (selection) input.setSelectionRange(selection[0], selection[1])
-    }
     if (this.error) this.el.append(h('p', { class: 'field-error', role: 'alert' }, this.error))
     const source = this.report
     if (!source) {

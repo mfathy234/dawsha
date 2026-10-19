@@ -2,10 +2,13 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
-import { insertionData } from '../shared/snippets'
+import type { TextOrder } from '../shared/arabicRows'
+import { logicalText, visualFromLogical } from '../shared/visualOrder'
+import { insertionData } from '../shared/insertText'
 import { primaryModifierPressed } from '../shared/shortcuts'
 import { h } from './dom'
 import { TerminalPrompts } from './terminalPrompts'
+import { TerminalArabic } from './terminalArabic'
 import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
 import { registerFileLinks, type FileLinkHost } from './terminalLinks'
 import { TerminalSearch } from './terminalSearch'
@@ -24,6 +27,8 @@ export interface TerminalCallbacks {
   openLink(url: string): void
   fileLinks: FileLinkHost
   highlights: HighlightHost
+  /** How the program in this terminal writes right-to-left text. */
+  textOrder(): TextOrder
 }
 
 export class TerminalView {
@@ -34,9 +39,11 @@ export class TerminalView {
   private readonly search: TerminalSearch
   readonly prompts: TerminalPrompts
   private readonly highlights: TerminalHighlights
+  private readonly arabic: TerminalArabic
   private opened = false
   private frame = 0
   private lent: HTMLElement | null = null
+  private bundleTerm: ThemeBundle['theme']['term']
 
   constructor(
     readonly id: string,
@@ -61,6 +68,7 @@ export class TerminalView {
     registerFileLinks(this.term, callbacks.fileLinks)
     this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.prompts = new TerminalPrompts(this.term)
+    this.arabic = new TerminalArabic(this.term, () => callbacks.textOrder())
     this.term.onData((data) => {
       this.prompts.noteInput(data)
       callbacks.onInput(data)
@@ -70,7 +78,11 @@ export class TerminalView {
     this.observer = new ResizeObserver(() => this.scheduleFit())
     this.el.addEventListener('wheel', (event) => this.handleWheel(event), { capture: true, passive: false })
     this.el.addEventListener('focusin', () => callbacks.onFocus())
-    this.search = new TerminalSearch(this.term, this.el)
+    this.search = new TerminalSearch(this.term, this.el, {
+      toBuffer: (query) => (callbacks.textOrder() === 'visual' ? visualFromLogical(query) : query),
+      toReading: (text) => this.readable(text)
+    })
+    this.bundleTerm = bundle.theme.term
     this.applyBundle(bundle)
   }
 
@@ -101,6 +113,8 @@ export class TerminalView {
     this.opened = true
     this.term.open(this.el)
     this.loadWebgl()
+    this.arabic.attach()
+    this.arabic.setTheme(this.bundleTerm)
     this.observer.observe(this.el)
     this.scheduleFit()
   }
@@ -113,7 +127,17 @@ export class TerminalView {
     this.term.write(`\r\n${message}\r\n`)
   }
 
+  /** Text as the program meant it: rows a program wrote in visual order (Claude Code's Arabic) are put back in reading order. */
+  private readable(text: string): string {
+    return this.callbacks.textOrder() === 'visual' ? logicalText(text) : text
+  }
+
   bufferText(): string {
+    return this.readable(this.rawBufferText())
+  }
+
+  /** The buffer exactly as the program wrote it, without putting visual-order rows back in reading order. */
+  rawBufferText(): string {
     const buffer = this.term.buffer.active
     const lines: string[] = []
     for (let row = 0; row < buffer.length; row += 1) {
@@ -146,7 +170,7 @@ export class TerminalView {
       if (line?.isWrapped && lines.length > 0) lines[lines.length - 1] += value
       else lines.push(value)
     }
-    return lines.join('\n')
+    return this.readable(lines.join('\n'))
   }
 
   selectAll(): void {
@@ -154,7 +178,7 @@ export class TerminalView {
   }
 
   selection(): string {
-    return this.term.getSelection()
+    return this.readable(this.term.getSelection())
   }
 
   hasSelection(): boolean {
@@ -219,6 +243,7 @@ export class TerminalView {
   setFontSize(size: number): void {
     if (this.term.options.fontSize === size) return
     this.term.options.fontSize = size
+    this.arabic.refresh()
     this.scheduleFit()
   }
 
@@ -227,12 +252,15 @@ export class TerminalView {
     this.term.options.minimumContrastRatio = bundle.minimumContrastRatio
     this.el.style.background = bundle.hostBackground
     this.el.dataset.termBackground = String(bundle.xterm.background)
+    this.bundleTerm = bundle.theme.term
+    this.arabic.setTheme(bundle.theme.term)
   }
 
   fitNow(): void {
     if (!this.opened || this.el.clientWidth < 40 || this.el.clientHeight < 20) return
     try {
       this.fitAddon.fit()
+      this.arabic.refresh()
     } catch (error) {
       console.warn('Terminal fit failed', error)
     }
@@ -244,6 +272,7 @@ export class TerminalView {
     this.search.dispose()
     this.prompts.dispose()
     this.highlights.dispose()
+    this.arabic.dispose()
     this.term.dispose()
     this.el.remove()
   }
@@ -278,7 +307,7 @@ export class TerminalView {
     if (event.type !== 'keydown') return true
     const key = event.key.toLowerCase()
     if (primaryModifierPressed(event) && !event.altKey && key === 'c' && this.term.hasSelection()) {
-      void this.callbacks.writeClipboard(this.term.getSelection())
+      void this.callbacks.writeClipboard(this.selection())
       this.term.clearSelection()
       return false
     }

@@ -1,4 +1,5 @@
 import type { TabAgent } from '../shared/types'
+import { textOrderFor } from '../shared/arabicRows'
 import { api } from './api'
 import { pasteText, shellKindOf } from '../shared/clipboard'
 import { noteOutput } from './ptyActivity'
@@ -55,7 +56,8 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     writeClipboard: (text) => api.writeClipboard(text),
     openLink: (url) => void api.openExternal(url),
     fileLinks: fileLinkHost(id),
-    highlights: highlightHost()
+    highlights: highlightHost(),
+    textOrder: () => textOrderFor(tabAgent(id))
   })
   views.set(id, view)
   for (const chunk of pending.take(id)) view.write(chunk)
@@ -80,6 +82,7 @@ export function applyBundleToAll(): void {
 Object.defineProperty(window, '__grid', {
   value: {
     bufferText: (id: string): string => views.get(id)?.bufferText() ?? '',
+    rawBufferText: (id: string): string => views.get(id)?.rawBufferText() ?? '',
     lastInput: (id: string): string => lastInput.get(id) ?? '',
     fontSize: (id: string): number => views.get(id)?.fontSize ?? 0,
     feed: (id: string, data: string): void => views.get(id)?.write(data),

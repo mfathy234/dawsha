@@ -56,18 +56,12 @@ function seedFeatures(sandbox: Sandbox): void {
     },
     { id: 'l-docs', name: 'Docs day', createdAt: 2, focusedIndex: 0, panes: [pane('docs-site', 'claude'), pane('docs-site', 'gemini')] }
   ]
-  const snippets = [
-    { id: 's1', name: 'Review the diff', text: 'Review the staged changes and list risks.', projectId: null, shortcut: 1 },
-    { id: 's2', name: 'Write tests for the changed files', text: 'Write tests for the files changed on {{branch}}.', projectId: 'acme-web', shortcut: 2 },
-    { id: 's3', name: 'Explain this error', text: 'Explain this error and suggest a fix:\n{{selection}}', projectId: null, shortcut: 3 },
-    { id: 's4', name: 'Commit message', text: 'Write a short commit message for the staged diff.', projectId: null, shortcut: 4 }
-  ]
-  writeFileSync(path, JSON.stringify({ ...stored, layouts, snippets }), 'utf8')
+  writeFileSync(path, JSON.stringify({ ...stored, layouts }), 'utf8')
 }
 
 test.afterAll(() => rmSync(DEMO_ROOT, { recursive: true, force: true }))
 
-test('generates the palette, layouts, snippets, handoff and usage screenshots from fake projects only', async () => {
+test('generates the palette, layouts, handoff and usage screenshots from fake projects only', async () => {
   mkdirSync(OUT, { recursive: true })
   const sandbox = createSandbox()
   seed(sandbox, true)
@@ -115,16 +109,6 @@ test('generates the palette, layouts, snippets, handoff and usage screenshots fr
     await page.screenshot({ path: join(OUT, 'handoff.png') })
     await page.getByRole('button', { name: 'Cancel' }).click()
     await expect(page.locator('.handoff-dialog')).toHaveCount(0)
-
-    await page.locator('#projects-button').click()
-    await page.getByRole('tab', { name: 'Snippets' }).click()
-    await expect(page.locator('.snippet-row')).toHaveCount(4)
-    await page.getByRole('button', { name: 'Edit snippet Explain this error' }).click()
-    await expect(page.getByRole('dialog', { name: 'Edit snippet' })).toBeVisible()
-    await settle(page, 800)
-    await page.screenshot({ path: join(OUT, 'snippets.png') })
-    await page.getByRole('button', { name: 'Cancel' }).click()
-    await page.locator('#projects-button').click()
 
     await page.locator('#usage-button').click()
     await expect(page.locator('.usage-col')).toHaveCount(7)

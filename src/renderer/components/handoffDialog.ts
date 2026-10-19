@@ -13,7 +13,7 @@ export interface HandoffDialogOptions {
 export function handoffDialog(options: HandoffDialogOptions): Promise<string | null> {
   const id = nextDialogId()
   const area = h('textarea', {
-    class: 'text-input snippet-text handoff-text',
+    class: 'text-input dialog-text handoff-text',
     id: `ho-text-${id}`,
     rows: '14',
     spellcheck: 'false',

@@ -40,7 +40,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="التنقل الرئيسي">
-      <a href="#new">الجديد في 1.5</a>
+      <a href="#new">الجديد في 1.6</a>
       <a href="#showcase">صور التطبيق</a>
       <a href="#remote">عن بُعد</a>
       <a href="#features">المميزات</a>
@@ -57,7 +57,7 @@
     <div class="wrap hero-grid">
       <div class="hero-copy">
         <img class="logo hero-logo" src="../favicon.svg?v=0.2.0-2" width="40" height="40" alt="شعار دوشة: طرفية داخل فقاعة محادثة">
-        <a class="new-pill" href="#new"><strong>الجديد في 1.5</strong><span>المنسّق ولوحة العمل</span></a>
+        <a class="new-pill" href="#new"><strong>الجديد في 1.6</strong><span>دوشة تدعم العربية أصلًا، مع الإملاء الصوتي</span></a>
         <p class="eyebrow">لـ Claude Code وCodex CLI وGemini CLI</p>
         <h1>كل وكلاء البرمجة بالذكاء الاصطناعي في نافذة واحدة واضحة.</h1>
         <p class="lead">شغّل Claude Code وCodex وGemini جنبًا إلى جنب في طرفيات واسعة وواضحة، مع مساحة مستقلة لكل مهمة.</p>
@@ -105,7 +105,77 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">الجديد في 1.5</h2>
+      <h2 id="new-h">الجديد في 1.6</h2>
+      <p class="section-lead">دوشة تدعم العربية الآن. اقرأ الردود بحروف متصلة، وأمْلِ بالعربية أو الإنجليزية، واعمل في نافذة أهدأ.</p>
+      <div class="launch-video" id="launch-1-6">
+        <figure class="shot demo-shot">
+          <video class="demo-video" muted="" loop="" playsinline="" preload="none" poster="../assets/launch-1.6-poster.jpg" width="1920" height="1080" aria-label="A 20 second look at Dawsha 1.6: a Claude reply in Arabic turns from disconnected letters into joined right-to-left text, Arabic is dictated into a session, and full mode keeps every session on one line">
+            <source src="../assets/launch-1.6.mp4" type="video/mp4">
+          </video>
+          <button class="demo-toggle" type="button" hidden="" aria-label="إيقاف العرض مؤقتًا"><svg class="demo-pause" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"></rect><rect x="9.5" y="2" width="3.5" height="12" rx="1"></rect></svg><svg class="demo-play" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11a.8.8 0 0 0 1.2.7l9-5.5a.8.8 0 0 0 0-1.4l-9-5.5A.8.8 0 0 0 4 2.5Z"></path></svg></button>
+        </figure>
+      </div>
+      <div class="feat-row" id="arabic">
+        <div class="feat-copy">
+          <h3>العربية في كل جلسة</h3>
+          <p>تظهر الردود والأسئلة العربية بحروف متصلة وبترتيب من اليمين إلى اليسار في جلسات Claude Code وCodex وGemini والطرفية، وفي إعادة التشغيل.</p>
+          <ul><li>تبقى الأرقام والكلمات الإنجليزية في مكانها، وتبقى الحركات كما هي.</li><li>يرتّب Claude Code النص العربي بنفسه، وتحافظ دوشة على ترتيبه وتصل الحروف.</li><li>يعمل النسخ ونسخ آخر رد ونسخ السؤال والسجلات والبحث بترتيب القراءة الطبيعي، فتطابق الكلمة العربية التي تكتبها في البحث رد Claude.</li><li>لا يتغير نص الطرفية نفسه أبدًا.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="../assets/arabic-reply.png" width="1600" height="1000" alt="مساحة Claude Code بسؤال عربي ورد عربي عن تغيير السمة، بحروف متصلة واسم الملف src/context/theme.tsx والرقم 41 في مكانهما">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="dictation">
+        <div class="feat-copy">
+          <h3>الإملاء الصوتي بالعربية والإنجليزية</h3>
+          <p>اضغط على الميكروفون في رأس الجلسة أو اضغط Ctrl+Shift+Space، وتكلّم، ثم اضغط مرة أخرى. يُكتب النص في الجلسة، أو في مربع النص الذي كنت فيه، دون أن يُرسل.</p>
+          <ul><li>يتحول الكلام إلى نص على جهازك بنموذج Whisper large-v3-turbo، ولا يغادر شيء جهازك.</li><li>يفهم اللهجتين المصرية والخليجية، والعربية الممزوجة بالإنجليزية.</li><li>يُنزَّل النموذج مرة واحدة بحجم نحو 570 ميغابايت، ثم يعمل دون اتصال.</li><li>يُظهر مقياس مستوى مباشر أن الميكروفون يسمعك. وإذا لم يرسل سوى الصمت، تذكر دوشة اسم الميكروفون. اختر الميكروفون من الإعدادات &gt; الإملاء الصوتي.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="../assets/dictation.png" width="1600" height="1000" alt="مساحة أثناء الإملاء: زر الميكروفون أحمر وشريط تحت الرأس يعرض الاستماع مع مقياس مباشر لمستوى الصوت">
+        </figure>
+      </div>
+      <div class="feat-row" id="native-arabic">
+        <div class="feat-copy">
+          <h3>العربية أصلًا</h3>
+          <p>تظهر العربية بالشكل نفسه على كل جهاز، ويتبعها نص دوشة نفسه.</p>
+          <ul><li>خط عربي مدمج هو IBM Plex Sans Arabic، بحجم يناسب خط الكود.</li><li>تتحول مربعات النص إلى اتجاه اليمين لليسار فور أن تكتب بالعربية.</li><li>تُقرأ عناوين الجلسات العربية بشكل صحيح في الشريط الجانبي واللوحة والمساحات.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="../assets/arabic-native.png" width="1600" height="1000" alt="دوشة بمشروعين بأسماء عربية: العناوين في الشريط الجانبي ورؤوس المساحات تُقرأ من اليمين لليسار، وكذلك مربع التصفية فوقها">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="calm">
+        <div class="feat-copy">
+          <h3>مساحة عمل أهدأ</h3>
+          <p>أقل ما يشغلك، وكل اختصار على بُعد بحث واحد.</p>
+          <ul><li>يحتفظ رأس الجلسة بأزرار طرفية جديدة والإملاء وإجراءات الجلسة والتكبير والإغلاق. أما الخط الزمني وإعادة التشغيل والفتح في VS Code ونقل الجلسة ففي قائمة الجلسة ولوحة الأوامر.</li><li>يُبقي الوضع الكامل اسم كل جلسة في سطر واحد، ويختصره بثلاث نقاط ويعرضه كاملًا عند التمرير فوقه. ويقع زر الإغلاق بجوار الاسم مباشرة.</li><li>اضغط Ctrl+/ لتفتح قائمة اختصارات لوحة المفاتيح، مجمّعة وقابلة للبحث.</li><li>عند إغلاق جلسة وكيل يظهر زر إعادة الفتح لبضع ثوانٍ.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="../assets/full-mode.png" width="1600" height="1000" alt="الوضع الكامل بست جلسات بأسماء طويلة: شريط في الأعلى يعرض كل اسم في سطر واحد مع ثلاث نقاط وزر إغلاق بجواره، وبقية الجلسات في القائمة على اليمين">
+        </figure>
+      </div>
+      <div class="feat-row" id="shortcuts">
+        <div class="feat-copy">
+          <h3>كل اختصار قابل للبحث</h3>
+          <p>يفتح Ctrl+/ القائمة، وكذلك البحث عن اختصارات لوحة المفاتيح في لوحة الأوامر.</p>
+          <ul><li>مجمّعة حسب الجلسات والمساحات والطرفية والعروض والإملاء وعام.</li><li>اكتب في مربع البحث لتجد اختصارًا أو إجراءً.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="../assets/shortcuts.png" width="1600" height="1000" alt="قائمة اختصارات لوحة المفاتيح فوق جلسة، مع مربع بحث واختصارات مجمّعة تحت الجلسات والمساحات والطرفية">
+        </figure>
+      </div>
+      <div class="feat-copy feat-note" id="remote-checks">
+        <h3>Remote Control يتحقق من اتصاله</h3>
+        <p>أثناء تشغيله تفحص دوشة الرابط العام كل دقيقة، وبعد أن يستيقظ الجهاز أو يُفتح قفله، وقبل أن تعرض لك الرابط أو الرمز.</p>
+        <ul><li>إذا انقطع الاتصال أعادته وعرضت الرابط الجديد مع تنبيه لمسحه مجددًا، بدل رابط لم يعد يعمل.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="new-1-5" aria-labelledby="new-15-h">
+    <div class="wrap">
+      <h2 id="new-15-h">الجديد في 1.5</h2>
       <p class="section-lead">سلّم ميزة أو خطأً إلى فريق من الوكلاء، واعرف أين ذهب يومك، وابقَ متصلًا بالتحكم عن بُعد.</p>
       <div class="feat-row" id="orchestrator">
         <div class="feat-copy">
@@ -231,7 +301,7 @@
         </figure>
         <figure class="shot">
           <img loading="lazy" src="../assets/palette.png" width="1600" height="1000" alt="لوحة الأوامر تعرض الجلسات والإجراءات والمشاريع">
-          <figcaption><strong>لوحة الأوامر.</strong> اختصار Ctrl+K يوصلك إلى الجلسات والمشاريع والمقاطع والتخطيطات.</figcaption>
+          <figcaption><strong>لوحة الأوامر.</strong> اختصار Ctrl+K يوصلك إلى الجلسات والمشاريع والتخطيطات من لوحة المفاتيح.</figcaption>
         </figure>
         <figure class="shot">
           <img loading="lazy" src="../assets/compare.png" width="1600" height="1000" alt="وكيلان يجيبان على السؤال نفسه جنبًا إلى جنب في مساحتي عمل منفصلتين">
@@ -288,8 +358,8 @@
         <figcaption><strong>النشاط أمامك.</strong> العمليات الجارية، وتقدم الوكلاء الفرعيين في Claude عند توفره، بجانب كل مساحة.</figcaption>
       </figure>
       <div class="fgroups">
-        <div class="fgroup"><h3>شغّل</h3><ul><li><strong>ثلاثة وكلاء في شبكة واحدة</strong><span>حتى ٦ طرفيات حقيقية. غيّر الحجم، واسحب وثبّت وكبّر أي مساحة، وتنقّل بينها بـ Ctrl+Tab.</span></li><li><strong>أمر dawsha</strong><span>ابدأ الجلسات واستأنفها وافتح التخطيطات من طرفيتك المعتادة.</span></li><li><strong>احفظ التغييرات وارفعها</strong><span>راجع الملفات المتغيرة واختر ما تريد حفظه أو رفعه. اسحب التحديثات وبدّل الفروع واحفظ العمل مؤقتًا بنقرة.</span></li><li><strong>التخطيطات والمقاطع والتعليمات</strong><span>استعد ترتيبك المحفوظ، وأدرج المقاطع، وأبقِ ملفات تعليمات الوكلاء متناسقة.</span></li><li><strong>استيراد إعدادات سابقة</strong><span>انقل مشاريعك وتفضيلاتك من إعداد سابق مع الاحتفاظ بنسخة احتياطية من إعدادات دوشة الحالية.</span></li><li><strong>انسخ احتياطيًا وانقل</strong><span>صدّر إعداداتك إلى ملف JSON واحد دون أسرار الوصول عن بُعد، ثم استورده على جهاز آخر بخيار الدمج أو الاستبدال.</span></li><li><strong>السمات</strong><span>سبع سمات، منها سمات فاتحة وداكنة بتصميم البطاقات، مع فحص للتباين وخيار إضافة صورة خلفية.</span></li><li><strong>المهارات المثبتة</strong><span>تصفح مهارات كل وكيل، بما فيها مهارات المشاريع، وافتحها وانسخها أو صدّرها.</span></li></ul></div>
-        <div class="fgroup"><h3>تنقّل<img class="ill ill-hop brand-logo" src="../favicon.svg?v=0.2.0-2" width="38" height="38" alt="Dawsha logo"></h3><ul><li><strong>التحكم عن بُعد <span class="beta-badge">بيتا</span></strong><span>اقرن متصفحًا بتطبيق دوشة المشغّل. يظل إدخال الأوامر والتحكم بالجلسات معطّلَين حتى تفعيلهما.</span></li><li><strong>لوحة مشاريع قابلة لتغيير الحجم</strong><span>اسحب حافة الشريط الجانبي لتختار العرض المناسب لمشاريعك، وسيتذكره دوشة.</span></li><li><strong>ابحث عن الجلسات واستأنفها</strong><span>ابحث في الأسئلة والردود باستخدام Ctrl+Shift+R. اختر المشروع الحالي أو جميع المشاريع.</span></li><li><strong>احتفظ بالجلسات المغلقة</strong><span>تبقى الألسنة المغلقة تحت مشروعها حتى تزيلها منه. يمكنك استئنافها وقتما تشاء.</span></li><li><strong>مهام المشروع</strong><span>احتفظ بسجل للمهمة يتضمن الملاحظات ومراجع الالتزامات والجلسات المرتبطة.</span></li><li><strong>لوحة الأوامر</strong><span>ابحث عن الجلسات والمشاريع والمقاطع والتخطيطات بـ Ctrl+K.</span></li><li><strong>ابحث وانسخ</strong><span>ابحث داخل أي مساحة، وافتح الملفات في التطبيق المناسب، وانسخ آخر رد أو سؤالك الجاري.</span></li><li><strong>اسأل وكيلين</strong><span>سؤال واحد ومساحتا عمل وإجابتان للمقارنة.</span></li><li><strong>أكمل مع وكيل آخر</strong><span>انقل الجلسة مع ملخص قابل للتعديل، أو صدّرها بصيغة Markdown.</span></li></ul></div>
+        <div class="fgroup"><h3>شغّل</h3><ul><li><strong>ثلاثة وكلاء في شبكة واحدة</strong><span>حتى ٦ طرفيات حقيقية. غيّر الحجم، واسحب وثبّت وكبّر أي مساحة، وتنقّل بينها بـ Ctrl+Tab.</span></li><li><strong>أمر dawsha</strong><span>ابدأ الجلسات واستأنفها وافتح التخطيطات من طرفيتك المعتادة.</span></li><li><strong>احفظ التغييرات وارفعها</strong><span>راجع الملفات المتغيرة واختر ما تريد حفظه أو رفعه. اسحب التحديثات وبدّل الفروع واحفظ العمل مؤقتًا بنقرة.</span></li><li><strong>التخطيطات والتعليمات</strong><span>استعد ترتيبك المحفوظ بالاسم، وأبقِ ملفات CLAUDE.md وAGENTS.md وGEMINI.md متناسقة.</span></li><li><strong>الإملاء الصوتي</strong><span>تكلّم بالعربية أو الإنجليزية ويُكتب النص في الجلسة. يعمل على جهازك ودون اتصال.</span></li><li><strong>دعم العربية</strong><span>عربية متصلة الحروف ومن اليمين إلى اليسار في كل جلسة، مع نسخ وبحث بترتيب القراءة.</span></li><li><strong>استيراد إعدادات سابقة</strong><span>انقل مشاريعك وتفضيلاتك من إعداد سابق مع الاحتفاظ بنسخة احتياطية من إعدادات دوشة الحالية.</span></li><li><strong>انسخ احتياطيًا وانقل</strong><span>صدّر إعداداتك إلى ملف JSON واحد دون أسرار الوصول عن بُعد، ثم استورده على جهاز آخر بخيار الدمج أو الاستبدال.</span></li><li><strong>السمات</strong><span>سبع سمات، منها سمات فاتحة وداكنة بتصميم البطاقات، مع فحص للتباين وخيار إضافة صورة خلفية.</span></li><li><strong>المهارات المثبتة</strong><span>تصفح مهارات كل وكيل، بما فيها مهارات المشاريع، وافتحها وانسخها أو صدّرها.</span></li></ul></div>
+        <div class="fgroup"><h3>تنقّل<img class="ill ill-hop brand-logo" src="../favicon.svg?v=0.2.0-2" width="38" height="38" alt="Dawsha logo"></h3><ul><li><strong>التحكم عن بُعد <span class="beta-badge">بيتا</span></strong><span>اقرن متصفحًا بتطبيق دوشة المشغّل. يظل إدخال الأوامر والتحكم بالجلسات معطّلَين حتى تفعيلهما.</span></li><li><strong>لوحة مشاريع قابلة لتغيير الحجم</strong><span>اسحب حافة الشريط الجانبي لتختار العرض المناسب لمشاريعك، وسيتذكره دوشة.</span></li><li><strong>ابحث عن الجلسات واستأنفها</strong><span>ابحث في الأسئلة والردود باستخدام Ctrl+Shift+R. اختر المشروع الحالي أو جميع المشاريع.</span></li><li><strong>احتفظ بالجلسات المغلقة</strong><span>تبقى الألسنة المغلقة تحت مشروعها حتى تزيلها منه. يمكنك استئنافها وقتما تشاء.</span></li><li><strong>مهام المشروع</strong><span>احتفظ بسجل للمهمة يتضمن الملاحظات ومراجع الالتزامات والجلسات المرتبطة.</span></li><li><strong>لوحة الأوامر</strong><span>ابحث عن الجلسات والمشاريع والتخطيطات بـ Ctrl+K.</span></li><li><strong>ابحث وانسخ</strong><span>ابحث داخل أي مساحة، وافتح الملفات في التطبيق المناسب، وانسخ آخر رد أو سؤالك الجاري.</span></li><li><strong>اسأل وكيلين</strong><span>سؤال واحد ومساحتا عمل وإجابتان للمقارنة.</span></li><li><strong>أكمل مع وكيل آخر</strong><span>انقل الجلسة مع ملخص قابل للتعديل، أو صدّرها بصيغة Markdown.</span></li></ul></div>
         <div class="fgroup"><h3>تابع كل شيء</h3><ul><li><strong>تنبيهات تحتاج تدخلك</strong><span>إطار كهرماني وتنبيه عندما تنتظر إحدى المساحات ردك.</span></li><li><strong>تأكيد الإغلاق</strong><span>تسألك دوشة قبل إغلاق الجلسة فقط وهي تعمل. أما الجلسات الخاملة والمنتهية والمغلقة فتُغلق فورًا.</span></li><li><strong>التمييز والسياق</strong><span>الأخطاء واضحة، ويُنبهك التطبيق قبل امتلاء سياق الجلسة.</span></li><li><strong>العد التنازلي لتجديد الحدود</strong><span>تعرض مساحات Claude الوقت المتبقي لتجديد حدود الخمس ساعات والأسبوع عندما يوفّر Claude وقت التجديد.</span></li><li><strong>التكلفة والاستخدام</strong><span>الوقت والرموز والتكلفة لكل مساحة، مع صفحة كاملة للاستخدام.</span></li><li><strong>نشاط أدوات Gemini</strong><span>اطّلع على أحدث أدوات Gemini بجوار مساحته وفي لوحة الوكلاء.</span></li><li><strong>التحديث داخل التطبيق</strong><span>تتحدث النسخة المثبتة دون إيقاف جلساتك الجارية.</span></li><li class="has-ill"><strong>محلي بشكل افتراضي</strong><span>بلا حساب أو تتبع. التحكم عن بُعد اختياري ويمرّر الحركة عبر Cloudflare.</span><svg class="ill ill-lock" width="56" height="42" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" style="--dd:0ms" d="M9 5 Q9 3 11 3 L53 3.3 Q55 3.5 55 6 L54.6 33 Q54.5 35 52.5 35 L11 34.8 Q9 34.5 9 32.5Z"></path><path class="dr" pathLength="1" style="--dd:200ms" d="M3 40 Q3 38 6 38 L58 38.4 Q61 38.5 61 40.5 Q61 43 58 43 L6 43 Q3 42.8 3 40Z"></path><path class="dr" pathLength="1" style="--dd:400ms" d="M27 38.5 Q32 41 37 38.5"></path><path class="fd" d="M25.5 20.5 Q25.5 19 27 19 L37 19.2 Q38.5 19.4 38.5 21 L38.3 28 Q38.2 29.6 36.7 29.6 L27 29.5 Q25.5 29.4 25.5 28Z" fill="#34d399" fill-opacity=".25" stroke="#34d399"></path><circle class="fd" cx="32" cy="24" r="1.2" fill="#34d399" stroke="none"></circle><path class="shk" stroke="#34d399" d="M28.5 19 L28.4 15.5 Q28.5 11.5 32 11.5 Q35.5 11.5 35.6 15.5 L35.5 19"></path></svg></li></ul></div>
       </div>
     </div>

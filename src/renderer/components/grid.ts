@@ -1,15 +1,18 @@
 import { forgetStateClocks } from '../stateClock'
 import { forgetTimelineLogs } from '../timelineLog'
-import { focusPane, openQuickPick, setSplits, showView } from '../actions'
+import { closePane, focusPane, openQuickPick, setSplits, showView } from '../actions'
 import { OthersPanelComponent } from './othersPanel'
 import { derivePanes, type PaneView } from '../derive'
-import { clear, h } from '../dom'
+import { clear, h, iconButton } from '../dom'
+import { ICONS } from '../icons'
 import { pairOf } from '../../shared/compare'
+import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
 import { layoutForCount } from '../../shared/layout'
 import { resolveSplit, withSplit } from '../../shared/splits'
 import type { CompareLink, GridSplits } from '../../shared/types'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
+import { agentMark } from './agentMark'
 import { ComparePairComponent } from './comparePair'
 import { GridGutters } from './gutters'
 import { PaneComponent } from './pane'
@@ -215,29 +218,37 @@ export class GridComponent {
   private updateStrip(views: PaneView[], state: AppState, maximized: boolean): void {
     this.strip.hidden = !maximized
     if (!maximized) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status]), state.focusedId])
+    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status, v.agent, v.attention]), state.focusedId])
     if (signature === this.stripSignature) return
     this.stripSignature = signature
     clear(this.strip)
-    for (const view of views) {
-      const selected = view.pane.id === state.maximizedId
-      const label = h('span', { class: 'strip-status' }, ` · ${view.status}`)
-      label.classList.add(view.status)
-      this.strip.append(
-        h(
-          'button',
-          {
-            class: `strip-tab${selected ? ' selected' : ''}`,
-            type: 'button',
-            role: 'tab',
-            'aria-selected': selected ? 'true' : 'false',
-            onClick: () => focusPane(view.pane.id)
-          },
-          `${view.index + 1} ${view.title.toUpperCase()}`,
-          label
-        )
-      )
-    }
+    for (const view of views) this.strip.append(this.stripTab(view, view.pane.id === state.maximizedId))
+    this.strip.querySelector('.strip-tab.selected')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }
+
+  private stripTab(view: PaneView, selected: boolean): HTMLElement {
+    const name = view.title
+    // The same words as the sidebar, so a session that needs you says so in the focus view too.
+    const stateName = sessionState({ status: view.status, attention: view.attention })
+    const stateLabel = SESSION_STATE_LABELS[stateName]
+    const status = h('span', { class: `strip-status state-${stateName}` }, ` · ${stateLabel}`)
+    const label = h(
+      'button',
+      {
+        class: 'strip-label',
+        type: 'button',
+        role: 'tab',
+        'aria-selected': selected ? 'true' : 'false',
+        title: `${name} · ${stateLabel}`,
+        onClick: () => focusPane(view.pane.id)
+      },
+      h('span', { class: 'strip-index' }, `${view.index + 1}`),
+      agentMark(view.agent),
+      h('bdi', { class: 'strip-name', dir: 'auto' }, name),
+      status
+    )
+    const close = iconButton(`Close ${name}`, ICONS.closeSmall, () => void closePane(view.pane.id), 'strip-close')
+    return h('div', { class: `strip-tab${selected ? ' selected' : ''}`, 'data-pane-id': view.pane.id }, label, close)
   }
 
   private updateEmpty(state: AppState, count: number): void {

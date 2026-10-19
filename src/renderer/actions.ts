@@ -362,7 +362,7 @@ async function stopTerminal(termId: string): Promise<void> {
   disposeTerminal(termId)
 }
 
-function keepClosedTabs(pane: PaneState, tabs: TermState[]): void {
+function keepClosedTabs(pane: PaneState, tabs: TermState[]): KeptSession[] {
   const state = store.state
   const view = derivePanes(state).find((item) => item.pane.id === pane.id)
   const matches = matchAll(state)
@@ -379,11 +379,44 @@ function keepClosedTabs(pane: PaneState, tabs: TermState[]): void {
     const title = observed?.trim() || tab.titleHint || (tab.label !== tab.agent ? tab.label : null) || (tab.id === pane.activeTabId && view?.named ? view.title : null) || tab.label
     return [{ projectId: pane.projectId, agent: tab.agent, sessionId, title, closedAt: Date.now() }]
   })
-  if (additions.length === 0) return
+  if (additions.length === 0) return []
   const keys = new Set(additions.map((item) => `${item.agent}:${item.sessionId}`))
   const keptSessions = [...state.settings.keptSessions.filter((item) => !keys.has(`${item.agent}:${item.sessionId}`)), ...additions]
   store.set((current) => ({ ...current, settings: { ...current.settings, keptSessions } }))
   void saveSettings({ keptSessions })
+  return additions
+}
+
+// Closing is quick and easy to do by mistake, so an agent session offers a way back for a few seconds. Shell tabs have nothing to resume.
+function offerReopen(name: string, kept: KeptSession[], reopen: () => Promise<void>): void {
+  if (kept.length === 0) return
+  toast(`Closed ${name}`, 'info', { label: 'Reopen', run: () => void reopen() })
+}
+
+async function reopenTab(paneId: string, session: KeptSession): Promise<void> {
+  const open = findOpenSession(store.state, session.agent, session.sessionId)
+  if (open) return focusOpenSession(open)
+  const pane = paneById(store.state, paneId)
+  if (!pane) {
+    await startSession(session.projectId, session.agent, session.sessionId, true, session.title)
+    return
+  }
+  const tab: TermState = { ...makeTerm(session.agent, pane.tabs, session.sessionId), titleHint: session.title, resumeChipAt: Date.now() }
+  store.set((s) => mapPane(s, paneId, (p) => ({ ...p, tabs: [...p.tabs, tab], activeTabId: tab.id })))
+  persistWorkspace()
+  await launch(paneId, tab.id, true)
+}
+
+// The pane comes back at the end of the grid; move it to the slot it left when that slot is still there.
+async function reopenPane(kept: KeptSession[], index: number): Promise<void> {
+  const [first, ...rest] = kept
+  const open = findOpenSession(store.state, first.agent, first.sessionId)
+  if (open) return focusOpenSession(open)
+  const number = await startSession(first.projectId, first.agent, first.sessionId, true, first.title)
+  const pane = store.state.panes[number - 1]
+  if (!pane) return
+  for (const extra of rest) await reopenTab(pane.id, extra)
+  movePane(pane.id, index)
 }
 
 export function removeKeptSession(agent: AgentKind, sessionId: string): void {
@@ -411,7 +444,8 @@ function removePane(state: AppState, paneId: string): AppState {
     ...state,
     panes: closing ? panes.map((p) => (p.compare?.id === closing ? { ...p, compare: undefined } : p)) : panes,
     focusedId: state.focusedId === paneId ? (neighbour?.id ?? null) : state.focusedId,
-    maximizedId: state.maximizedId === paneId ? null : state.maximizedId
+    // Closing the shown session in the focus view moves to its neighbour instead of leaving the view.
+    maximizedId: state.maximizedId === paneId ? (neighbour?.id ?? null) : state.maximizedId
   }
 }
 
@@ -429,16 +463,20 @@ export async function closeTerminal(paneId: string, termId: string): Promise<voi
     })
     if (!confirmed) return
   }
-  keepClosedTabs(pane, [tab])
+  const kept = keepClosedTabs(pane, [tab])
   await stopTerminal(termId)
   store.set((s) => removeTab(s, paneId, termId))
   persistWorkspace()
+  offerReopen(kept[0]?.title ?? tab.label, kept, () => reopenTab(paneId, kept[0]))
 }
 
 export async function closePane(paneId: string): Promise<void> {
   const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
   if (!view) return
-  if (!confirmsClose(view.status)) return discardPane(paneId)
+  if (!confirmsClose(view.status)) {
+    await closeAndOffer(paneId, view.title)
+    return
+  }
   const project = view.project?.name ?? 'this project'
   const hasAgent = view.pane.tabs.some((t) => t.agent !== 'shell')
   const agentName = AGENT_NAMES[view.agent === 'shell' ? 'claude' : view.agent]
@@ -449,16 +487,23 @@ export async function closePane(paneId: string): Promise<void> {
     : `A command is still running in ${project}. Closing stops the terminal${view.pane.tabs.length === 1 ? '' : 's'}.`
   const confirmed = await confirmDialog({ ...closeCopy(view.title), body })
   if (!confirmed) return
-  await discardPane(paneId)
+  await closeAndOffer(paneId, view.title)
 }
 
-export async function discardPane(paneId: string): Promise<void> {
+async function closeAndOffer(paneId: string, name: string): Promise<void> {
+  const index = store.state.panes.findIndex((p) => p.id === paneId)
+  const kept = await discardPane(paneId)
+  offerReopen(name, kept, () => reopenPane(kept, index))
+}
+
+export async function discardPane(paneId: string): Promise<KeptSession[]> {
   const pane = paneById(store.state, paneId)
-  if (!pane) return
-  keepClosedTabs(pane, pane.tabs)
+  if (!pane) return []
+  const kept = keepClosedTabs(pane, pane.tabs)
   await Promise.all(pane.tabs.map((t) => stopTerminal(t.id)))
   store.set((s) => removePane(s, paneId))
   persistWorkspace()
+  return kept
 }
 
 export function focusPane(paneId: string, keepMaximized = false): void {
@@ -760,10 +805,6 @@ export function showProjectsTab(projectsTab: AppState['projectsTab']): void {
   store.patch({ projectsTab })
 }
 
-export function openSnippets(): void {
-  store.patch({ view: 'projects', projectsTab: 'snippets' })
-}
-
 export function openQuickPick(preset: AgentPreset = 'default'): void {
   store.patch({
     quickPickOpen: true,
@@ -969,12 +1010,10 @@ export async function removeProject(projectId: string): Promise<void> {
   const project = projectById(store.state, projectId)
   if (!project) return
   const open = store.state.panes.filter((p) => p.projectId === projectId)
-  const scoped = store.state.settings.snippets.filter((s) => s.projectId === projectId).length
-  const snippetNote = scoped > 0 ? ` Its ${scoped} snippet${scoped === 1 ? '' : 's'} ${scoped === 1 ? 'is' : 'are'} removed too.` : ''
   const body =
     open.length > 0
-      ? `This removes ${project.name} from Dawsha and stops its ${open.length} open session${open.length === 1 ? '' : 's'}. The folder stays on disk.${snippetNote}`
-      : `This removes ${project.name} from Dawsha. The folder stays on disk.${snippetNote}`
+      ? `This removes ${project.name} from Dawsha and stops its ${open.length} open session${open.length === 1 ? '' : 's'}. The folder stays on disk.`
+      : `This removes ${project.name} from Dawsha. The folder stays on disk.`
   const confirmed = await confirmDialog({
     title: `Remove ${project.name}?`,
     body,
@@ -983,11 +1022,10 @@ export async function removeProject(projectId: string): Promise<void> {
   if (!confirmed) return
   for (const pane of open) await discardPane(pane.id)
   const projects = store.state.settings.projects.filter((p) => p.id !== projectId)
-  const snippets = store.state.settings.snippets.filter((s) => s.projectId !== projectId)
   const keptSessions = store.state.settings.keptSessions.filter((s) => s.projectId !== projectId)
   const tasks = store.state.settings.tasks.filter((task) => task.projectId !== projectId)
-  store.set((s) => ({ ...s, settings: { ...s.settings, projects, snippets, keptSessions, tasks } }))
-  void saveSettings({ projects, snippets, keptSessions, tasks })
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects, keptSessions, tasks } }))
+  void saveSettings({ projects, keptSessions, tasks })
 }
 
 export function buildPane(saved: SavedPane, project: Project): PaneState {

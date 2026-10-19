@@ -285,13 +285,14 @@ export class OrchNewRunView {
 
   private footer(state: AppState, plan: OrchPlan | undefined): HTMLElement {
     const bug = this.draft.kind === 'bug'
-    const label = this.draft.submitting ? 'Starting…' : bug ? 'Start fix' : 'Start spec'
+    // A feature run starts with the lead, which writes a spec only for larger or unclear work.
+    const label = this.draft.submitting ? 'Starting…' : bug ? 'Start fix' : 'Start run'
     const button = h('button', { class: 'btn primary', type: 'button', id: 'orch-nr-start', disabled: this.draft.submitting, onClick: () => void this.submit(state, plan) }, label)
     const note = bug
       ? 'The fixer works on its own branch. Nothing merges until you review it.'
       : this.plan(state.settings.orchestrator)?.specApproval === false
-        ? 'The run builds straight after the spec.'
-        : 'Nothing is built until you approve the spec.'
+        ? 'If the lead writes a spec, the run builds straight after it.'
+        : 'If the lead writes a spec, nothing is built until you approve it.'
     return h(
       'div',
       { class: 'orch-nr-footer' },

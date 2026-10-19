@@ -1,5 +1,5 @@
-import { migrateSettings, MAX_LAYOUTS, MAX_SNIPPETS } from './settingsSchema'
-import type { Project, SavedLayout, Settings, Snippet } from './types'
+import { migrateSettings, MAX_LAYOUTS } from './settingsSchema'
+import type { Project, SavedLayout, Settings } from './types'
 
 export const TRANSFER_APP = 'dawsha'
 export const TRANSFER_KIND = 'settings-export'
@@ -8,13 +8,13 @@ export const TRANSFER_MAX_BYTES = 2 * 1024 * 1024
 
 export const INCLUDED_KEYS = [
   'projects',
-  'snippets',
   'layouts',
   'highlights',
   'theme',
   'paletteShortcut',
   'sessionsLayout',
   'recordings',
+  'dictation',
   'sessionInfo',
   'autoUpdateCheck',
   'sidebarCollapsed',
@@ -92,8 +92,8 @@ export type ParseResult = { ok: true; transfer: ParsedTransfer } | { ok: false; 
 
 const fail = (error: string): ParseResult => ({ ok: false, error })
 
-const LIST_KEYS = ['projects', 'snippets', 'layouts'] as const
-const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo'] as const
+const LIST_KEYS = ['projects', 'layouts'] as const
+const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'dictation', 'sessionInfo'] as const
 const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'othersCollapsed'] as const
 
 function checkShapes(data: Raw): string | null {
@@ -170,14 +170,11 @@ export interface ImportSummary {
   projectsNew: number
   projectsExisting: number
   projectsMissing: number
-  snippetsTotal: number
-  snippetsNew: number
   layoutsTotal: number
   layoutsNew: number
   skippedLayouts: number
   preferences: string[]
   removedProjects: string[]
-  replacedSnippets: number
   replacedLayouts: number
 }
 
@@ -200,11 +197,13 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['paletteShortcut', 'Palette shortcut'],
   ['sessionsLayout', 'Sessions view'],
   ['recordings', 'Recording settings'],
+  ['dictation', 'Dictation settings'],
   ['sessionInfo', 'Notifications'],
   ['autoUpdateCheck', 'Update checks'],
   ['sidebarCollapsed', 'Sidebar'],
   ['sidebarWidth', 'Sidebar'],
-  ['othersCollapsed', 'Sidebar']
+  ['othersCollapsed', 'Sidebar'],
+  ['orchestrator', 'Orchestrator settings']
 ]
 
 export function preferenceLabels(data: Partial<TransferData>): string[] {
@@ -215,7 +214,7 @@ export function preferenceLabels(data: Partial<TransferData>): string[] {
 function preferencePatch(current: Settings, data: Partial<TransferData>): Partial<Settings> {
   const patch: Partial<Settings> = {}
   for (const key of INCLUDED_KEYS) {
-    if (key === 'projects' || key === 'snippets' || key === 'layouts' || data[key] === undefined) continue
+    if (key === 'projects' || key === 'layouts' || data[key] === undefined) continue
     if (key === 'theme') patch.theme = { ...current.theme, id: data.theme!.id }
     else Object.assign(patch, { [key]: data[key] })
   }
@@ -268,29 +267,6 @@ function planProjects(input: PlanInput): ProjectOutcome {
 
 const nameKey = (name: string): string => name.trim().toLowerCase()
 
-function mapSnippet(snippet: Snippet, idMap: Map<string, string>, id: string): Snippet | null {
-  if (snippet.projectId === null) return { ...snippet, id }
-  const projectId = idMap.get(snippet.projectId)
-  return projectId ? { ...snippet, id, projectId } : null
-}
-
-function planSnippets(input: PlanInput, idMap: Map<string, string>): { snippets: Snippet[]; added: number } {
-  const incoming = input.data.snippets ?? []
-  const base = input.mode === 'merge' ? input.current.snippets : []
-  const taken = new Set(base.map((s) => s.id))
-  const seen = new Set(base.map((s) => `${nameKey(s.name)}|${s.projectId ?? ''}`))
-  const added: Snippet[] = []
-  for (const snippet of incoming) {
-    const mapped = mapSnippet(snippet, idMap, snippet.id)
-    if (!mapped) continue
-    const key = `${nameKey(mapped.name)}|${mapped.projectId ?? ''}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    added.push({ ...mapped, id: uniqueId(mapped.id, taken, input.newId) })
-  }
-  return { snippets: [...base, ...added].slice(0, MAX_SNIPPETS), added: added.length }
-}
-
 function mapLayout(layout: SavedLayout, idMap: Map<string, string>, id: string): SavedLayout | null {
   const panes = layout.panes.flatMap((pane) => {
     const projectId = idMap.get(pane.projectId)
@@ -324,11 +300,9 @@ export function planImport(input: PlanInput): ImportPlan {
   const { current, data, mode } = input
   const patch = preferencePatch(current, data)
   const outcome = planProjects(input)
-  const snippets = planSnippets(input, outcome.idMap)
   const layouts = planLayouts(input, outcome.idMap)
   const touchesProjects = data.projects !== undefined
   if (touchesProjects) patch.projects = outcome.projects
-  if (data.snippets !== undefined || (mode === 'replace' && touchesProjects)) patch.snippets = snippets.snippets
   if (data.layouts !== undefined || (mode === 'replace' && touchesProjects)) patch.layouts = layouts.layouts
   const keptIds = new Set(outcome.projects.map((p) => p.id))
   const removedProjects = mode === 'replace' ? current.projects.filter((p) => !keptIds.has(p.id)).map((p) => p.name) : []
@@ -340,14 +314,11 @@ export function planImport(input: PlanInput): ImportPlan {
       projectsNew: outcome.added,
       projectsExisting: outcome.existing,
       projectsMissing: outcome.missing,
-      snippetsTotal: data.snippets?.length ?? 0,
-      snippetsNew: snippets.added,
       layoutsTotal: data.layouts?.length ?? 0,
       layoutsNew: layouts.added,
       skippedLayouts: layouts.skipped,
       preferences: preferenceLabels(data),
       removedProjects,
-      replacedSnippets: mode === 'replace' ? current.snippets.length : 0,
       replacedLayouts: mode === 'replace' ? current.layouts.length : 0
     }
   }
@@ -364,7 +335,6 @@ export function previewLines(summary: ImportSummary): string[] {
       lines.push(`${plural(summary.projectsMissing, 'folder')} not found on this PC, shown as Missing until you point them at a new folder`)
     }
   }
-  if (summary.snippetsTotal > 0) lines.push(`${plural(summary.snippetsTotal, 'snippet')} (${summary.snippetsNew} new)`)
   if (summary.layoutsTotal > 0) lines.push(`${plural(summary.layoutsTotal, 'layout')} (${summary.layoutsNew} new)`)
   if (summary.preferences.length > 0) lines.push(`Preferences: ${summary.preferences.join(', ')}`)
   return lines
@@ -373,19 +343,23 @@ export function previewLines(summary: ImportSummary): string[] {
 export function replaceWarning(summary: ImportSummary, openSessions: number): string {
   const parts = [
     plural(summary.removedProjects.length, 'project') + (summary.removedProjects.length > 0 ? ` (${summary.removedProjects.slice(0, 5).join(', ')}${summary.removedProjects.length > 5 ? ', …' : ''})` : ''),
-    plural(summary.replacedSnippets, 'snippet'),
     plural(summary.replacedLayouts, 'layout')
   ]
   const closing = openSessions > 0 ? ` ${plural(openSessions, 'open session')} in removed projects will be closed.` : ''
-  return `This replaces your current projects, snippets and layouts with the ones in the file. Not in the file and removed: ${parts.join(', ')}.${closing} Folders on disk are not touched. This cannot be undone.`
+  return `This replaces your current projects and layouts with the ones in the file. Not in the file and removed: ${parts.join(', ')}.${closing} Folders on disk are not touched. This cannot be undone.`
+}
+
+/** The Replace button names what it removes, as the warning above it does. */
+export function replaceConfirmLabel(summary: ImportSummary): string {
+  return `Replace and remove ${plural(summary.removedProjects.length, 'project')}, ${plural(summary.replacedLayouts, 'layout')}`
 }
 
 export function importToastText(summary: ImportSummary): string {
   const parts: string[] = []
   if (summary.projectsTotal > 0) parts.push(plural(summary.projectsNew + (summary.mode === 'replace' ? summary.projectsExisting : 0), 'project'))
-  if (summary.snippetsNew > 0) parts.push(plural(summary.snippetsNew, 'snippet'))
   if (summary.layoutsNew > 0) parts.push(plural(summary.layoutsNew, 'layout'))
-  const base = parts.length > 0 ? `Imported ${parts.join(', ')} and preferences.` : 'Imported preferences.'
+  const preferences = summary.preferences.length > 0
+  const base = parts.length > 0 ? `Imported ${parts.join(', ')}${preferences ? ' and preferences' : ''}.` : preferences ? 'Imported preferences.' : 'Nothing new to import.'
   return summary.projectsMissing > 0 ? `${base} ${plural(summary.projectsMissing, 'project folder')} not found on this PC.` : base
 }
 

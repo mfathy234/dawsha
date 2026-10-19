@@ -24,7 +24,7 @@ export function chooseImportMode(summary: ImportSummary, transfer: ParsedTransfe
   const cancel = h('button', { class: 'btn ghost', type: 'button' }, 'Cancel')
   const confirm = h('button', { class: 'btn primary', type: 'button', id: 'import-confirm', 'data-confirm': '' }, 'Import')
   const merge = modeOption(group, 'merge', 'Merge', 'Add what is new and keep what is already here. Imported preferences are applied.', true)
-  const replace = modeOption(group, 'replace', 'Replace', 'Replace your projects, snippets and layouts with the ones in the file.', false)
+  const replace = modeOption(group, 'replace', 'Replace', 'Replace your projects and layouts with the ones in the file.', false)
   const dialog = h(
     'div',
     { class: 'dialog import-preview', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId },

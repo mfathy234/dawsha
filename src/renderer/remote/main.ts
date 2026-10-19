@@ -168,8 +168,9 @@ function showPair(message?: string): void {
   }
   const deviceInput = document.querySelector<HTMLInputElement>('#device-name')!
   if (deviceInput.value === 'My browser') deviceInput.value = deviceNameFromAgent(navigator.userAgent)
+  // A code works once, so a used one is not left in the box after Disconnect.
+  document.querySelector<HTMLInputElement>('#pairing-code')!.value = scannedCode ?? ''
   if (scannedCode) {
-    document.querySelector<HTMLInputElement>('#pairing-code')!.value = scannedCode
     scannedCode = null
     pairForm.requestSubmit()
   }

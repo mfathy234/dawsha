@@ -13,7 +13,7 @@ function seedSource(sandbox: Sandbox): void {
     ...stored,
     lastSeenVersion: APP_VERSION,
     sessionsLayout: 'board',
-    snippets: [{ id: 'sn1', name: 'Review the diff', text: 'Review the staged changes.', projectId: null, shortcut: null }],
+    snippets: [{ id: 'sn1', name: 'Legacy', text: 'Kept in old exports.', projectId: null, shortcut: null }],
     layouts: [
       {
         id: 'l1',
@@ -44,7 +44,7 @@ test('exports settings without remote access data and imports them into a fresh 
   const envelope = JSON.parse(text)
   expect(envelope).toMatchObject({ app: 'dawsha', kind: 'settings-export', version: 1, appVersion: APP_VERSION })
   expect(envelope.data.projects.map((p: { name: string }) => p.name)).toEqual(['Smoke', 'Missing'])
-  expect(envelope.data.snippets).toHaveLength(1)
+  expect(envelope.data.snippets).toBeUndefined()
   expect(envelope.data.layouts).toHaveLength(1)
   expect(envelope.data.sessionsLayout).toBe('board')
   expect(envelope.data.remoteAccess).toBeUndefined()
@@ -59,21 +59,16 @@ test('exports settings without remote access data and imports them into a fresh 
     await page.locator('#import-settings').click()
     const dialog = page.getByRole('dialog', { name: 'Import settings' })
     await expect(dialog).toContainText('2 projects (2 new, 0 already here)')
-    await expect(dialog).toContainText('1 snippet (1 new)')
     await expect(dialog).toContainText('1 folder not found on this PC')
     await expect(dialog.getByLabel('Merge')).toBeChecked()
     await dialog.getByRole('button', { name: 'Import' }).click()
-    await expect(page.locator('.toast').last()).toContainText('Imported 2 projects, 1 snippet, 1 layout')
+    await expect(page.locator('.toast').last()).toContainText('Imported 2 projects, 1 layout')
     await expect.poll(() => readSettings(target.userData).projects.length).toBe(4)
     const merged = readSettings(target.userData)
-    expect(merged.snippets.map((s: { name: string }) => s.name)).toEqual(['Review the diff'])
+    expect(merged.snippets).toBeUndefined()
     expect(merged.layouts.map((l: { name: string }) => l.name)).toEqual(['Morning'])
     expect(merged.sessionsLayout).toBe('board')
     expect(merged.remoteAccess?.allowedEmail ?? '').toBe('')
-
-    await page.getByRole('button', { name: 'Projects', exact: true }).click()
-    await page.getByRole('tab', { name: 'Snippets' }).click()
-    await expect(page.locator('.snippet-row')).toContainText('Review the diff')
 
     await openSettings(page)
     await page.locator('#import-settings').click()
@@ -81,10 +76,10 @@ test('exports settings without remote access data and imports them into a fresh 
     await expect(again).toContainText('2 projects (0 new, 2 already here)')
     await again.getByLabel('Replace').check()
     await again.getByRole('button', { name: 'Import' }).click()
-    const confirm = page.getByRole('alertdialog', { name: 'Replace your projects, snippets and layouts?' })
+    const confirm = page.getByRole('alertdialog', { name: 'Replace your projects and layouts?' })
     await expect(confirm).toContainText('Smoke')
     await expect(confirm).toContainText('Missing')
-    await expect(confirm.getByRole('button', { name: 'Replace 2 projects, 1 snippets, 1 layouts' })).toBeVisible()
+    await expect(confirm.getByRole('button', { name: 'Replace and remove 2 projects, 1 layout' })).toBeVisible()
     await confirm.getByRole('button', { name: 'Cancel' }).click()
     expect(readSettings(target.userData).projects).toHaveLength(4)
 

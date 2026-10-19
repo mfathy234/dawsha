@@ -29,6 +29,9 @@ test('the lead asks while planning, the human replies in Human review, and the r
     await page.locator('#orchestrator-button').click()
     await page.locator('#orch-tab-new').click()
     await page.locator('#orch-nr-story').fill('ASK: Which config key should provisioning use?')
+    // The lead decides whether a spec is needed, so the button does not promise one.
+    await expect(page.locator('#orch-nr-start')).toHaveText('Start run')
+    await expect(page.locator('.orch-nr-footer')).toContainText('If the lead writes a spec, nothing is built until you approve it.')
     await page.locator('#orch-nr-start').click()
     // The question shows up for the human.
     await expect(page.locator('#orchestrator-button .orch-badge')).toHaveText('1', { timeout: 30_000 })

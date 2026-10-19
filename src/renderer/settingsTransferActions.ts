@@ -1,6 +1,7 @@
 import {
   importToastText,
   planImport,
+  replaceConfirmLabel,
   replaceWarning,
   type ImportPlan,
   type ParsedTransfer,
@@ -56,11 +57,13 @@ export async function importSettingsFromUi(): Promise<void> {
     if (!mode) return
     const plan = mode === 'merge' ? mergePlan : planFor(read.transfer, 'replace', missing)
     if (mode === 'replace') {
-      const open = store.state.panes.filter((pane) => !(plan.patch.projects ?? []).some((project) => project.id === pane.projectId)).length
+      // Counted the way applyPlan closes them: a file without projects keeps the current ones.
+      const kept = plan.patch.projects ?? store.state.settings.projects
+      const open = store.state.panes.filter((pane) => !kept.some((project) => project.id === pane.projectId)).length
       const confirmed = await confirmDialog({
-        title: 'Replace your projects, snippets and layouts?',
+        title: 'Replace your projects and layouts?',
         body: replaceWarning(plan.summary, open),
-        confirmLabel: `Replace ${plan.summary.removedProjects.length} projects, ${plan.summary.replacedSnippets} snippets, ${plan.summary.replacedLayouts} layouts`
+        confirmLabel: replaceConfirmLabel(plan.summary)
       })
       if (!confirmed) return
     }
