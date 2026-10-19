@@ -193,7 +193,11 @@ test('recording is off by default; turning it on records new sessions and turnin
     await expect
       .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.keepDays, { timeout: SLOW })
       .toBe(30)
-    await days.fill('')
+    // Clear the box the way a person does; fill('') on a number input can leave a transient 0 behind.
+    await days.click()
+    await days.press('Control+a')
+    await days.press('Backspace')
+    await expect(days).toHaveValue('')
     await days.press('Tab')
     await expect(days).toHaveValue('30')
     await new Promise((resolve) => setTimeout(resolve, 500))
