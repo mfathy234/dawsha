@@ -5,6 +5,7 @@ import { clear, h, icon } from '../dom'
 import { runQuick } from '../gitQuickActions'
 import { ICONS } from '../icons'
 import { toast } from './toast'
+import { popupDismissButton } from './popupDismiss'
 
 interface Refusal {
   message: string
@@ -70,7 +71,7 @@ export async function openBranchPicker(folder: string): Promise<void> {
   const dialog = h(
     'div',
     { class: 'palette branch-picker', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Switch branch' },
-    h('div', { class: 'palette-head' }, icon(ICONS.branch), input),
+    h('div', { class: 'palette-head' }, icon(ICONS.branch), input, popupDismissButton(() => close())),
     results,
     h(
       'div',

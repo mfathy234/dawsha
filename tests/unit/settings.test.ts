@@ -22,6 +22,17 @@ describe('migrateSettings', () => {
     expect(migrated.tasks).toEqual(tasks)
     expect(migrateSettings(JSON.parse(JSON.stringify(migrated))).tasks).toEqual(tasks)
   })
+  it('keeps sidebar folds only for known projects, once each', () => {
+    const projects = [{ id: 'api', name: 'API', folder: 'C:\\work\\api' }, { id: 'web', name: 'Web', folder: 'C:\\work\\web' }]
+    expect(defaultSettings().foldedProjects).toEqual([])
+    expect(defaultSettings().foldedClosedSessions).toEqual([])
+    const migrated = migrateSettings({ projects, foldedProjects: ['web', 'gone', 'web', 3, null], foldedClosedSessions: ['api', {}] })
+    expect(migrated.foldedProjects).toEqual(['web'])
+    expect(migrated.foldedClosedSessions).toEqual(['api'])
+    expect(migrateSettings({ projects, foldedProjects: 'api', foldedClosedSessions: { api: true } }).foldedProjects).toEqual([])
+    expect(migrateSettings({ foldedProjects: ['api'] }).foldedProjects).toEqual([])
+    expect(migrateSettings(JSON.parse(JSON.stringify(migrated))).foldedProjects).toEqual(['web'])
+  })
   it('keeps the onboarding dismissal only when it is exactly true', () => {
     expect(migrateSettings({}).onboardingDismissed).toBe(false)
     expect(migrateSettings({ onboardingDismissed: 'yes' }).onboardingDismissed).toBe(false)

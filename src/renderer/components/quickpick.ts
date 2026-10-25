@@ -19,6 +19,7 @@ import { chargeBar } from './chargeBar'
 import { modeTabs } from './pickerTabs'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
+import { popupDismissButton } from './popupDismiss'
 
 const MAC = navigator.platform.toLowerCase().includes('mac')
 
@@ -83,7 +84,7 @@ export class QuickPickComponent {
       h(
         'div',
         { class: 'rp-head' },
-        h('div', { class: 'rp-top' }, modeTabs('new'), h('span', { class: 'spacer' }), hint),
+        h('div', { class: 'rp-top' }, modeTabs('new'), h('span', { class: 'spacer' }), hint, popupDismissButton(() => closeQuickPick())),
         h('div', { class: 'rp-search-wrap' }, icon(ICONS.search), this.input)
       ),
       h(

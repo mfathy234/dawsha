@@ -235,7 +235,7 @@ export function openChangesDialog(options: ChangesOptions): Promise<void> {
   const allButton = h('button', { class: 'seg-btn', type: 'button' }, 'All changes') as HTMLButtonElement
   const sessionButton = h('button', { class: 'seg-btn', type: 'button' }, 'This session') as HTMLButtonElement
   const scopeSeg = h('div', { class: 'changes-seg', role: 'group', 'aria-label': 'Which changes', hidden: !baseline }, allButton, sessionButton)
-  const close = h('button', { class: 'cbtn quiet', type: 'button' }, 'Close') as HTMLButtonElement
+  const close = h('button', { class: 'cbtn quiet changes-close', type: 'button', 'aria-label': 'Close', title: 'Close' }, icon(ICONS.close)) as HTMLButtonElement
   const head = h(
     'div',
     { class: 'changes-head' },
@@ -322,7 +322,7 @@ export function openChangesDialog(options: ChangesOptions): Promise<void> {
 
   const dialog = h(
     'div',
-    { class: 'dialog changes-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': `Changes in ${options.title}`, tabindex: '-1' },
+    { class: 'dialog changes-dialog', 'data-own-dismiss': '', role: 'dialog', 'aria-modal': 'true', 'aria-label': `Changes in ${options.title}`, tabindex: '-1' },
     head,
     sinceBar,
     changesBody,

@@ -103,7 +103,8 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
           if (width === 1440) expect(new Set(bounds.map((r) => r.top)).size).toBe(1)
           expect(await track.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
           for (let i = 1; i < bounds.length; i++) {
-            expect(bounds[i].top > bounds[i - 1].top || bounds[i].left >= bounds[i - 1].right).toBe(true)
+            // 1px tolerance: adjacent flex items can differ by sub-pixel rounding at fractional zoom/text widths.
+            expect(bounds[i].top > bounds[i - 1].top + 1 || bounds[i].left >= bounds[i - 1].right - 1).toBe(true)
           }
         }
         await page.setViewportSize({ width: 1440, height: 900 })
@@ -352,7 +353,7 @@ for (const solo of [true, false]) {
       }
       await page.locator('#orch-nr-story').fill(solo ? 'RESTART: solo' : 'RESTART: team')
       await page.locator('#orch-nr-title').fill(solo ? 'Solo restart' : 'Team restart')
-      const shots = 'C:/Users/tuy_2/Desktop/orch-user-data-shots'
+      const shots = resolve(__dirname, '../../test-results/orch-user-data-shots')
       mkdirSync(shots, { recursive: true })
       if (solo) await page.screenshot({ path: join(shots, 'overrides-new-run.png') })
       await page.locator('#orch-nr-start').click()

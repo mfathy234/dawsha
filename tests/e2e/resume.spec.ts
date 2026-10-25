@@ -163,10 +163,186 @@ test('closed sessions stay under their project until removed there', async () =>
     await page.getByRole('button', { name: 'Close pane' }).click()
     await expect(page.locator('.pane')).toHaveCount(0)
     await expect(page.locator('.kept-session-row')).toContainText('Add dark mode toggle')
+    const closedToast = page.locator('.toast', { hasText: 'Closed' })
+    await expect(closedToast.getByRole('button', { name: 'Reopen' })).toBeVisible()
+    await closedToast.hover()
+    await page.screenshot({ path: join(SCREENS, '65-toast-dismiss.png') })
+    await closedToast.getByRole('button', { name: 'Dismiss notification' }).click()
+    await expect(closedToast).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).keptSessions?.length).toBe(1)
     await page.getByRole('button', { name: 'Remove Add dark mode toggle from Smoke' }).click()
     await expect(page.locator('.kept-session-row')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).keptSessions?.length).toBe(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('closed sessions list the newest first, fold away and clear after a confirm', async () => {
+  const sandbox = createSandbox()
+  const settings = readSettings(sandbox.userData)
+  const now = Date.now()
+  const kept = Array.from({ length: 7 }, (_, i) => ({
+    projectId: 'smoke',
+    agent: 'claude',
+    sessionId: `00000000-0000-4000-8000-00000000000${i}`,
+    title: `Closed ${i}`,
+    closedAt: now - (7 - i) * 3_600_000
+  }))
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({ ...settings, keptSessions: kept }), 'utf8')
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const names = page.locator('.kept-session-row.closed .sess-name')
+    await expect(names).toHaveCount(5)
+    await expect(names).toHaveText(['Closed 6', 'Closed 5', 'Closed 4', 'Closed 3', 'Closed 2'])
+    await expect(page.locator('.kept-session-row.closed .sess-ago').first()).toHaveText('1h')
+    await page.getByRole('button', { name: 'Show all 7' }).click()
+    await expect(names).toHaveCount(7)
+    await expect(names.last()).toHaveText('Closed 0')
+    await page.locator('.closed-head').hover()
+    await page.screenshot({ path: join(SCREENS, '63-closed-sessions.png') })
+
+    const toggle = page.getByRole('button', { name: 'Closed sessions (7)' })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(names).toHaveCount(0)
+    await toggle.click()
+    await expect(names).toHaveCount(7)
+
+    await page.getByRole('button', { name: 'Clear closed sessions in Smoke' }).click()
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(names).toHaveCount(7)
+    await page.getByRole('button', { name: 'Clear closed sessions in Smoke' }).click()
+    await page.screenshot({ path: join(SCREENS, '64-dialog-dismiss.png') })
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Dismiss' }).click()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(names).toHaveCount(7)
+    await page.getByRole('button', { name: 'Clear closed sessions in Smoke' }).click()
+    await page.getByRole('button', { name: 'Clear 7 closed sessions in Smoke' }).click()
+    await expect(page.locator('.closed-head')).toHaveCount(0)
+    await expect.poll(() => readSettings(sandbox.userData).keptSessions?.length).toBe(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+function seedKept(sandbox: Sandbox, titles: [string, number][], extra: Record<string, unknown> = {}): void {
+  const settings = readSettings(sandbox.userData)
+  const keptSessions = titles.map(([title, closedAt], i) => ({
+    projectId: 'smoke',
+    agent: 'claude',
+    sessionId: `00000000-0000-4000-8000-00000000010${i}`,
+    title,
+    closedAt
+  }))
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({ ...settings, keptSessions, ...extra }), 'utf8')
+}
+
+test('the sidebar filter also finds sessions, even inside folds and past the row cap', async () => {
+  const sandbox = createSandbox()
+  const now = Date.now()
+  const titles: [string, number][] = Array.from({ length: 7 }, (_, i) => [`Chore ${i}`, now - (i + 1) * 60_000])
+  titles.push(['Rotate the Zebra keys', now - 9 * 60_000])
+  seedKept(sandbox, titles, { foldedClosedSessions: ['smoke'] })
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const filter = page.getByRole('textbox', { name: 'Filter projects and sessions' })
+    const names = page.locator('.kept-session-row.closed .sess-name')
+    await expect(page.getByRole('button', { name: 'Closed sessions (8)' })).toHaveAttribute('aria-expanded', 'false')
+    await expect(names).toHaveCount(0)
+    await filter.fill(' zEBRA ')
+    await expect(names).toHaveText(['Rotate the Zebra keys'])
+    await expect(page.locator('.proj-name', { hasText: 'Missing' })).toHaveCount(0)
+    await expect(page.locator('.closed-more')).toHaveCount(0)
+    await filter.fill('chore')
+    await expect(names).toHaveCount(7)
+    await filter.fill('smok')
+    await expect(names).toHaveCount(8)
+    await filter.fill('no such thing')
+    await expect(page.getByText('No project or session matches.')).toBeVisible()
+    await filter.fill('')
+    await expect(names).toHaveCount(0)
+    await expect(page.locator('.proj-name', { hasText: 'Missing' })).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('removing a closed session offers an undo that restores its place', async () => {
+  const sandbox = createSandbox()
+  const now = Date.now()
+  seedKept(sandbox, [['First', now - 3_000], ['Second', now - 2_000], ['Third', now - 1_000]])
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const names = page.locator('.kept-session-row.closed .sess-name')
+    await expect(names).toHaveText(['Third', 'Second', 'First'])
+    await page.getByRole('button', { name: 'Remove Second from Smoke' }).click()
+    await expect(names).toHaveText(['Third', 'First'])
+    await expect.poll(() => readSettings(sandbox.userData).keptSessions.map((k: any) => k.title)).toEqual(['First', 'Third'])
+    const removed = page.locator('.toast', { hasText: 'Removed Second' })
+    await expect(removed).toBeVisible()
+    await removed.getByRole('button', { name: 'Undo' }).click()
+    await expect(names).toHaveText(['Third', 'Second', 'First'])
+    await expect.poll(() => readSettings(sandbox.userData).keptSessions.map((k: any) => k.title)).toEqual(['First', 'Second', 'Third'])
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('project and closed session folds survive a restart', async () => {
+  const sandbox = createSandbox()
+  const now = Date.now()
+  seedKept(sandbox, [['Alpha run', now - 2_000], ['Beta run', now - 1_000]])
+  let session = await launchApp(sandbox)
+  try {
+    const names = session.page.locator('.kept-session-row.closed .sess-name')
+    await expect(names).toHaveCount(2)
+    await session.page.getByRole('button', { name: 'Closed sessions (2)' }).click()
+    await expect(names).toHaveCount(0)
+    await expect.poll(() => readSettings(sandbox.userData).foldedClosedSessions).toEqual(['smoke'])
+  } finally {
+    await closeApp(session.app)
+  }
+  session = await launchApp(sandbox)
+  try {
+    const names = session.page.locator('.kept-session-row.closed .sess-name')
+    const closedToggle = session.page.getByRole('button', { name: 'Closed sessions (2)' })
+    await expect(closedToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(names).toHaveCount(0)
+    await closedToggle.click()
+    await expect(names).toHaveCount(2)
+    await session.page.getByRole('button', { name: 'Hide sessions for Smoke' }).click()
+    await expect(session.page.locator('.closed-head')).toHaveCount(0)
+    await expect.poll(() => readSettings(sandbox.userData)).toMatchObject({ foldedProjects: ['smoke'], foldedClosedSessions: [] })
+  } finally {
+    await closeApp(session.app)
+  }
+  session = await launchApp(sandbox)
+  try {
+    const toggle = session.page.getByRole('button', { name: 'Show sessions for Smoke' })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(session.page.locator('.closed-head')).toHaveCount(0)
+    await toggle.click()
+    await expect(session.page.locator('.kept-session-row.closed')).toHaveCount(2)
+  } finally {
+    await closeApp(session.app)
+  }
+})
+
+test('closed sessions are grouped under day labels only when they span several days', async () => {
+  const sandbox = createSandbox()
+  const today = new Date()
+  const daysAgo = (days: number): number => new Date(today.getFullYear(), today.getMonth(), today.getDate() - days, 12).getTime()
+  seedKept(sandbox, [['Old one', daysAgo(10)], ['Midweek', daysAgo(3)], ['Yesterday one', daysAgo(1)], ['Fresh', Date.now() - 1_000]])
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const labels = page.locator('.closed-day')
+    await expect(labels).toHaveText(['Today', 'Yesterday', 'This week', 'Earlier'])
+    await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Fresh', 'Yesterday one', 'Midweek', 'Old one'])
+    await page.getByRole('textbox', { name: 'Filter projects and sessions' }).fill('midweek')
+    await expect(page.locator('.kept-session-row.closed')).toHaveCount(1)
+    await expect(labels).toHaveCount(0)
   } finally {
     await closeApp(app)
   }

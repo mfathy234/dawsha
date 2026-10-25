@@ -1,11 +1,11 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
 import { closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
 import { OrchStore } from '../../src/main/orch/store'
 
-const SHOTS = 'C:/Users/tuy_2/Desktop/work-dashboard-shots'
+const SHOTS = resolve(__dirname, '../../test-results/work-dashboard-shots')
 const id = (n: number) => `11111111-2222-4333-8444-${String(n).padStart(12, '0')}`
 const lines = (...records: unknown[]) => records.map(r => JSON.stringify(r)).join('\n') + '\n'
 function seed(s: Sandbox): void {

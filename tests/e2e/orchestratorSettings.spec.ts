@@ -1,9 +1,9 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
 
-const shots = 'C:/Users/tuy_2/Desktop/orch-ui-simplify-shots'
+const shots = resolve(__dirname, '../../test-results/orch-ui-simplify-shots')
 
 for (const theme of ['dawsha-night', 'dawsha-daylight']) {
   test(`Orchestrator settings shows the team and keeps advanced edits available in ${theme}`, async () => {

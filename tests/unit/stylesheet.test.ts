@@ -11,8 +11,9 @@ describe('styles.css', () => {
       if (char === '\n') line += 1
       if (char === '{') depth += 1
       if (char === '}') depth -= 1
-      expect(depth, `unbalanced brace near line ${line}`).toBeGreaterThanOrEqual(0)
-      expect(depth, `a rule is still open near line ${line}`).toBeLessThanOrEqual(2)
+      // Checked by hand first: two expect calls per character time out on a 5,000-line stylesheet.
+      if (depth < 0) expect.fail(`unbalanced brace near line ${line}`)
+      if (depth > 2) expect.fail(`a rule is still open near line ${line}`)
     }
     expect(depth).toBe(0)
   })

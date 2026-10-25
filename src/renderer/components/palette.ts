@@ -9,6 +9,7 @@ import { isPaletteShortcut, paletteShortcutLabel } from '../keyboard'
 import { store, type AppState } from '../state'
 import { getTerminal } from '../terminals'
 import { agentMark } from './agentMark'
+import { popupDismissButton } from './popupDismiss'
 
 const GROUP_ICONS: Record<string, string> = {
   Actions: ICONS.bolt,
@@ -78,7 +79,8 @@ export class PaletteComponent {
         { class: 'palette-head' },
         icon(ICONS.search),
         this.input,
-        h('span', { class: 'palette-kbd' }, paletteShortcutLabel(store.state))
+        h('span', { class: 'palette-kbd' }, paletteShortcutLabel(store.state)),
+        popupDismissButton(() => this.dismiss())
       ),
       this.list,
       h(
