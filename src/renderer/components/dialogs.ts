@@ -1,4 +1,5 @@
-import { h } from '../dom'
+import { h, iconButton } from '../dom'
+import { ICONS } from '../icons'
 
 export interface ConfirmOptions {
   title: string
@@ -43,6 +44,14 @@ export const nextDialogId = (): number => {
   return dialogCount
 }
 
+// Every dialog gets the same corner X. It is labelled Dismiss so it never competes with a dialog's own Close button.
+export function addDismissButton(dialog: HTMLElement, dismiss: () => void): void {
+  // A dialog with its own X in a header (Changes) marks itself so it does not get two.
+  if (dialog.hasAttribute('data-own-dismiss') || dialog.querySelector(':scope > .dialog-x')) return
+  dialog.classList.add('has-x')
+  dialog.prepend(iconButton('Dismiss', ICONS.close, dismiss, 'small dialog-x'))
+}
+
 export function present<T>(dialog: HTMLElement, cancelValue: T, focus: HTMLElement): Presented<T> {
   const previous = document.activeElement as HTMLElement | null
   const overlay = h('div', { class: 'overlay' }, dialog)
@@ -76,6 +85,7 @@ export function present<T>(dialog: HTMLElement, cancelValue: T, focus: HTMLEleme
   overlay.addEventListener('mousedown', (event) => {
     if (event.target === overlay) finish(cancelValue)
   })
+  addDismissButton(dialog, () => finish(cancelValue))
   document.addEventListener('keydown', onKey, true)
   document.body.appendChild(overlay)
   focus.focus()

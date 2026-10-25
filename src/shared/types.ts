@@ -13,6 +13,7 @@ export interface Project {
   folder: string
   defaultAgent: AgentKind
   fontSize?: number
+  pinned?: boolean
 }
 
 export interface BackgroundImage {
@@ -125,6 +126,10 @@ export interface Settings {
   workspace: Workspace
   layouts: SavedLayout[]
   keptSessions: KeptSession[]
+  /** Ids of projects whose session list is folded in the sidebar. */
+  foldedProjects: string[]
+  /** Ids of projects whose "Closed sessions" group is folded in the sidebar. */
+  foldedClosedSessions: string[]
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
   ticketNotes: import('./ticketNotes').TicketNotes
   tasks: ProjectTask[]

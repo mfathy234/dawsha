@@ -11,6 +11,7 @@ import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { modeTabs } from './pickerTabs'
 import type { AppState } from '../state'
+import { popupDismissButton } from './popupDismiss'
 
 const SEARCH_DELAY_MS = 120
 const CACHE_LIMIT = 24
@@ -100,7 +101,7 @@ export class ResumePickerComponent {
     this.root = h(
       'div',
       { class: 'popover quickpick resume-picker', role: 'dialog', 'aria-label': 'Start or resume a session' },
-      h('div', { class: 'rp-head' }, h('div', { class: 'rp-top' }, modeTabs('resume'), h('span', { class: 'spacer' }), hint),
+      h('div', { class: 'rp-head' }, h('div', { class: 'rp-top' }, modeTabs('resume'), h('span', { class: 'spacer' }), hint, popupDismissButton(() => closeQuickPick())),
         h('div', { class: 'rp-filters' }, h('div', { class: 'rp-search-wrap' }, icon(ICONS.search), this.search), this.projectSelect,
           h('label', { class: 'rp-scope', for: 'rp-all-projects' }, this.allProjects, 'Search all projects')),
         this.chips),
@@ -189,6 +190,7 @@ export class ResumePickerComponent {
   }
 
   private onKey(event: KeyboardEvent): void {
+    if ((event.target as HTMLElement).closest('.popup-x') && event.key !== 'Escape') return
     const onSelect = (event.target as HTMLElement).tagName === 'SELECT'
     const ordered = this.ordered()
     const index = ordered.findIndex((s) => `${s.agent}:${s.id}` === this.selectedId)

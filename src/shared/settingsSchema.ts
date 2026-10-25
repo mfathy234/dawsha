@@ -76,6 +76,8 @@ export const defaultSettings = (): Settings => ({
   workspace: { panes: [], focusedIndex: 0 },
   layouts: [],
   keptSessions: [],
+  foldedProjects: [],
+  foldedClosedSessions: [],
   ticketNotes: {},
   tasks: [],
   lastSeenVersion: null,
@@ -109,6 +111,7 @@ function sanitizeProjects(value: unknown): Project[] {
       defaultAgent: isAgent(item.defaultAgent) ? item.defaultAgent : 'claude'
     }
     if (typeof item.fontSize === 'number') project.fontSize = clampFontSize(item.fontSize)
+    if (item.pinned === true) project.pinned = true
     projects.push(project)
   }
   return projects
@@ -303,6 +306,12 @@ function sanitizeTasks(value: unknown, projectIds: Set<string>): ProjectTask[] {
   return tasks.slice(0, 300)
 }
 
+function sanitizeProjectIds(value: unknown, projects: readonly Project[]): string[] {
+  if (!Array.isArray(value)) return []
+  const known = new Set(projects.map((p) => p.id))
+  return [...new Set(value.filter((id): id is string => typeof id === 'string' && known.has(id)))]
+}
+
 function sanitizeShortcut(value: unknown): string {
   const binding = typeof value === 'string' ? parseShortcut(value) : null
   return binding ? formatShortcut(binding) : DEFAULT_PALETTE_SHORTCUT
@@ -330,6 +339,8 @@ export function migrateSettings(raw: unknown): Settings {
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
     layouts: sanitizeLayouts(raw.layouts),
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
+    foldedProjects: sanitizeProjectIds(raw.foldedProjects, projects),
+    foldedClosedSessions: sanitizeProjectIds(raw.foldedClosedSessions, projects),
     ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,

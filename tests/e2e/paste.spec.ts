@@ -2,6 +2,7 @@ import { mkdtempSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
+import { imagePasteText } from '../../src/shared/clipboard'
 import { bufferText, closeApp, createSandbox, lastInput, launchApp } from './helpers'
 
 const PNG_1PX =
@@ -42,7 +43,7 @@ test('Ctrl+V with a screenshot on the clipboard saves it and pastes its path', a
 
     await expect.poll(() => readdirSync(pasteDir).filter((name) => name.endsWith('.png')).length, { timeout: 15_000 }).toBe(1)
     const saved = readdirSync(pasteDir)[0]
-    await expect.poll(() => lastInput(page, id), { timeout: 15_000 }).toBe(`${join(pasteDir, saved)} `)
+    await expect.poll(() => lastInput(page, id), { timeout: 15_000 }).toBe(imagePasteText('shell', join(pasteDir, saved), 'cmd'))
   } finally {
     await app.evaluate(async ({ clipboard }) => clipboard.writeText(''))
     await closeApp(app)

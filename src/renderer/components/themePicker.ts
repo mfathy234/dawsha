@@ -3,6 +3,7 @@ import { api } from '../api'
 import { THEMES, findTheme, hasLightTerminal } from '../../shared/themes'
 import { h } from '../dom'
 import type { AppState } from '../state'
+import { popupDismissButton } from './popupDismiss'
 
 const LIGHT_NOTE =
   "Claude Code's own colours follow its /theme setting: run /theme and pick light for best contrast."
@@ -59,7 +60,7 @@ export class ThemePickerComponent {
     const active = findTheme(theme.id)
     const focusedId = (document.activeElement as HTMLElement | null)?.id
     const children: (HTMLElement | null)[] = [
-      h('h2', { class: 'popover-title' }, 'Theme'),
+      h('div', { class: 'popup-head' }, h('h2', { class: 'popover-title' }, 'Theme'), popupDismissButton(() => toggleThemePicker(false))),
       h('div', { class: 'theme-list', role: 'radiogroup', 'aria-label': 'Theme' }, ...THEMES.map((t) => this.row(t.id, theme.id))),
       hasLightTerminal(active) ? h('p', { class: 'note', id: 'light-note' }, LIGHT_NOTE) : null,
       this.imageSection(state)

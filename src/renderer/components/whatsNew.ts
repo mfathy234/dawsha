@@ -2,6 +2,7 @@ import { closeWhatsNew, openUpdateLink, showFullChangelog } from '../actions'
 import { entryToMarkdown, type ChangelogEntry } from '../../shared/changelog'
 import { renderMarkdown } from '../../shared/markdown'
 import { h } from '../dom'
+import { addDismissButton } from './dialogs'
 import type { AppState, WhatsNewView } from '../state'
 
 export function entryBlock(entry: ChangelogEntry): HTMLElement {
@@ -72,6 +73,7 @@ export class WhatsNewComponent {
         got
       )
     )
+    addDismissButton(dialog, () => closeWhatsNew())
     this.root.replaceChildren(dialog)
     if (showOlder) this.root.querySelector<HTMLElement>('#wn-older')?.scrollIntoView({ block: 'nearest' })
     else got.focus()

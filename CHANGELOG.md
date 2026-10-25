@@ -3,6 +3,25 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.6.1] - 2026-10-25
+
+### Added
+
+- The sidebar filter finds sessions too. Type part of a session name, open or closed, and its project shows with just the matching sessions, even when the project or its closed sessions are folded.
+- Pin a project to the top of the sidebar, and move projects up or down, from the project's ⋯ menu. The order is kept after a restart.
+- The collapsed sidebar shows each project's status: a count when sessions need you, a dot while one is working. Hovering says which.
+- Move around the sidebar with the keyboard. Up and Down go through projects and sessions, Home and End jump to the ends, Right and Left open and fold a project, and Delete removes a closed session. Down from the filter box goes into the list.
+- Clear closed sessions. The eraser next to Closed sessions empties that project's list after you confirm. The sessions stay on disk and Resume still finds them.
+- Undo after removing a closed session from the sidebar.
+
+### Changed
+
+- Closed sessions in the sidebar list the most recently closed first, grouped into Today, Yesterday, This week and Earlier, and each one shows how long ago it was closed (hover for the exact time).
+- A project shows its five latest closed sessions, with Show all for the rest.
+- Closed sessions fold away: click Closed sessions under a project to hide or show them. Folded projects and folded closed sessions stay folded after a restart.
+- Every popup has an X to close it: dialogs, the command palette, the new session and resume pickers, the branch and replay pickers, and the layouts, theme and update popups. The X does the same as Esc.
+- Notifications have an X too, and stay on screen while the pointer is over them, so a Reopen, an Undo or an error can be read before it goes.
+
 ## [1.6.0] - 2026-10-19
 
 ### Added

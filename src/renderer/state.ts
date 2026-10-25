@@ -133,7 +133,7 @@ export interface AppState {
   windowFocused: boolean
   now: number
   sidebarOverride: boolean | null
-  collapsedProjects: Record<string, boolean>
+  closedShowAll: Record<string, boolean>
   quickPickOpen: boolean
   quickPickPreset: AgentPreset
   quickPickMode: QuickPickMode
@@ -185,7 +185,7 @@ export const initialState = (): AppState => ({
   windowFocused: true,
   now: Date.now(),
   sidebarOverride: null,
-  collapsedProjects: {},
+  closedShowAll: {},
   quickPickOpen: false,
   quickPickPreset: 'default',
   quickPickMode: 'new',

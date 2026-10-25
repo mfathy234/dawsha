@@ -8,6 +8,7 @@ import { closeReplayPicker, openReplay } from '../replayActions'
 import { store } from '../state'
 import type { AppState } from '../state'
 import { agentMark } from './agentMark'
+import { popupDismissButton } from './popupDismiss'
 
 const SEARCH_DELAY_MS = 100
 
@@ -57,7 +58,7 @@ export class ReplayPickerComponent {
     })
     this.list = h('div', { class: 'palette-list', id: 'replay-picker-list', role: 'listbox', 'aria-label': 'Recordings, newest first' })
     const dialog = h('div', { class: 'palette replay-picker', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Replay a session' },
-      h('div', { class: 'palette-head' }, icon(ICONS.history), this.input),
+      h('div', { class: 'palette-head' }, icon(ICONS.history), this.input, popupDismissButton(() => this.dismiss())),
       this.list,
       h('div', { class: 'palette-foot' },
         h('span', { class: 'palette-hint-item' }, h('span', { class: 'palette-kbd' }, 'Enter'), ' replay'),

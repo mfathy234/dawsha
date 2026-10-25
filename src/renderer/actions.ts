@@ -1,3 +1,4 @@
+import { canMoveProject, moveProject, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -44,6 +45,7 @@ import { openChangesDialog } from './components/changesDialog'
 import { recordApproval } from './timelineLog'
 import { confirmDialog } from './components/dialogs'
 import { toast } from './components/toast'
+import { closedSessionsFor, insertKept, keptSessionKey, sameKept } from '../shared/keptSessions'
 import { derivePanes, matchAll, workFolderOfPane } from './derive'
 import { nextFrame } from './dom'
 import {
@@ -420,7 +422,19 @@ async function reopenPane(kept: KeptSession[], index: number): Promise<void> {
 }
 
 export function removeKeptSession(agent: AgentKind, sessionId: string): void {
-  const keptSessions = store.state.settings.keptSessions.filter((item) => item.agent !== agent || item.sessionId !== sessionId)
+  const current = store.state.settings.keptSessions
+  const index = current.findIndex((item) => sameKept(item, { agent, sessionId }))
+  if (index < 0) return
+  const removed = current[index]
+  const keptSessions = current.filter((_, i) => i !== index)
+  store.set((state) => ({ ...state, settings: { ...state.settings, keptSessions } }))
+  void saveSettings({ keptSessions })
+  toast(`Removed ${removed.title}`, 'info', { label: 'Undo', run: () => restoreKeptSession(removed, index) })
+}
+
+function restoreKeptSession(session: KeptSession, index: number): void {
+  if (!projectById(store.state, session.projectId)) return
+  const keptSessions = insertKept(store.state.settings.keptSessions, session, index)
   store.set((state) => ({ ...state, settings: { ...state.settings, keptSessions } }))
   void saveSettings({ keptSessions })
 }
@@ -730,11 +744,45 @@ export function toggleSidebar(): void {
   void saveSettings({ sidebarCollapsed: !collapsed })
 }
 
+const toggled = (ids: readonly string[], id: string): string[] => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id])
+
 export function toggleProjectExpanded(projectId: string): void {
-  store.set((s) => ({
-    ...s,
-    collapsedProjects: { ...s.collapsedProjects, [projectId]: !s.collapsedProjects[projectId] }
-  }))
+  const foldedProjects = toggled(store.state.settings.foldedProjects, projectId)
+  store.set((s) => ({ ...s, settings: { ...s.settings, foldedProjects } }))
+  void saveSettings({ foldedProjects })
+}
+
+export function toggleClosedSessions(projectId: string): void {
+  const foldedClosedSessions = toggled(store.state.settings.foldedClosedSessions, projectId)
+  store.set((s) => ({ ...s, settings: { ...s.settings, foldedClosedSessions } }))
+  void saveSettings({ foldedClosedSessions })
+}
+
+export function toggleClosedShowAll(projectId: string): void {
+  store.set((s) => ({ ...s, closedShowAll: { ...s.closedShowAll, [projectId]: !s.closedShowAll[projectId] } }))
+}
+
+export async function clearClosedSessions(projectId: string): Promise<void> {
+  const project = projectById(store.state, projectId)
+  if (!project) return
+  const openKeys = openSessionKeys(store.state)
+  const closed = closedSessionsFor(store.state.settings.keptSessions, projectId, openKeys)
+  if (closed.length === 0) return
+  const count = `${closed.length} closed session${closed.length === 1 ? '' : 's'}`
+  const confirmed = await confirmDialog({
+    title: `Clear closed sessions in ${project.name}?`,
+    body: `This removes ${count} from the ${project.name} list in the sidebar. The sessions stay on disk and can still be found with Resume.`,
+    confirmLabel: `Clear ${count} in ${project.name}`
+  })
+  if (!confirmed) return
+  const cleared = new Set(closed.map(keptSessionKey))
+  const keptSessions = store.state.settings.keptSessions.filter((item) => !cleared.has(keptSessionKey(item)))
+  store.set((s) => ({ ...s, settings: { ...s.settings, keptSessions } }))
+  void saveSettings({ keptSessions })
+}
+
+export function openSessionKeys(state: AppState): Set<string> {
+  return new Set(state.panes.flatMap((pane) => pane.tabs.flatMap((tab) => tab.sessionId ? [`${tab.agent}:${tab.sessionId}`] : [])))
 }
 
 export function showView(view: AppState['view']): void {
@@ -1006,6 +1054,19 @@ export function updateProject(
   saveProjects()
 }
 
+export function pinProject(projectId: string, pinned: boolean): void {
+  const projects = setProjectPinned(store.state.settings.projects, projectId, pinned)
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
+  saveProjects()
+}
+
+export function moveProjectInList(projectId: string, direction: MoveDirection): void {
+  if (!canMoveProject(store.state.settings.projects, projectId, direction)) return
+  const projects = moveProject(store.state.settings.projects, projectId, direction)
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
+  saveProjects()
+}
+
 export async function removeProject(projectId: string): Promise<void> {
   const project = projectById(store.state, projectId)
   if (!project) return
@@ -1024,8 +1085,10 @@ export async function removeProject(projectId: string): Promise<void> {
   const projects = store.state.settings.projects.filter((p) => p.id !== projectId)
   const keptSessions = store.state.settings.keptSessions.filter((s) => s.projectId !== projectId)
   const tasks = store.state.settings.tasks.filter((task) => task.projectId !== projectId)
-  store.set((s) => ({ ...s, settings: { ...s.settings, projects, keptSessions, tasks } }))
-  void saveSettings({ projects, keptSessions, tasks })
+  const foldedProjects = store.state.settings.foldedProjects.filter((id) => id !== projectId)
+  const foldedClosedSessions = store.state.settings.foldedClosedSessions.filter((id) => id !== projectId)
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects, keptSessions, tasks, foldedProjects, foldedClosedSessions } }))
+  void saveSettings({ projects, keptSessions, tasks, foldedProjects, foldedClosedSessions })
 }
 
 export function buildPane(saved: SavedPane, project: Project): PaneState {

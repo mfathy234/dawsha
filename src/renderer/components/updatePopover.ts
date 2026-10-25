@@ -3,6 +3,7 @@ import { RELEASE_LATEST_URL, releaseTagUrl, renderMarkdown } from '../../shared/
 import { h } from '../dom'
 import type { AppState } from '../state'
 import type { UpdateState } from '../../shared/updates'
+import { popupDismissButton } from './popupDismiss'
 
 const BACKGROUND_NOTE = 'Downloads in the background. Your sessions keep running until you restart.'
 const RESTART_NOTE = 'Open sessions reopen after the restart'
@@ -71,7 +72,7 @@ export class UpdatePopoverComponent {
     if (signature === this.signature) return
     this.signature = signature
     const hadFocus = this.root.contains(document.activeElement)
-    this.root.replaceChildren(...this.content(update))
+    this.root.replaceChildren(popupDismissButton(() => toggleUpdatePopover(false), 'popup-x-corner'), ...this.content(update))
     if (!hadFocus) this.root.querySelector<HTMLElement>('.btn')?.focus()
   }
 

@@ -1444,6 +1444,80 @@ input[type='checkbox'] {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
+.dialog.has-x {
+  position: relative;
+}
+
+.dialog .dialog-x {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+  z-index: 1;
+  color: var(--muted);
+}
+
+.dialog .dialog-x:hover {
+  color: var(--text);
+}
+
+/* Corner X for palettes and popovers. It sits in a row (search row, header) or, on the update popover, in the corner. */
+.popup-x {
+  flex: none;
+  color: var(--muted);
+}
+
+.popup-x:hover {
+  color: var(--text);
+}
+
+.popup-x-corner {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  z-index: 1;
+}
+
+.update-popover .update-title {
+  padding-inline-end: 28px;
+}
+
+.popup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.popup-head .popover-title {
+  margin: 0;
+}
+
+.palette-head .popup-x {
+  margin-inline-end: -6px;
+}
+
+.rp-top .popup-x {
+  margin-inline-end: -4px;
+}
+
+.layouts-head {
+  gap: 8px;
+}
+
+.layouts-head .muted {
+  margin-inline-start: auto;
+}
+
+.layouts-head .popup-x {
+  align-self: center;
+}
+
+.dialog.has-x > h2,
+.dialog.has-x > .ob-head {
+  padding-inline-end: 28px;
+}
+
 .dialog h2 {
   margin: 0;
   font-size: 18px;
@@ -5633,6 +5707,120 @@ body.dragging-ui {
   padding: 10px 8px 2px 18px;
 }
 
+.closed-head {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-top: 6px;
+}
+
+.closed-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 8px 2px 14px;
+  border: 0;
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+}
+
+.closed-toggle:hover {
+  color: var(--text);
+}
+
+.closed-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius);
+}
+
+.closed-toggle svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+
+.closed-clear {
+  flex: none;
+  opacity: 0;
+}
+
+.closed-head:hover .closed-clear,
+.closed-clear:focus-visible {
+  opacity: 1;
+}
+
+.proj-pin {
+  display: inline-flex;
+  flex: none;
+  margin-left: 2px;
+  color: var(--muted);
+}
+
+.proj-pin svg {
+  width: 12px;
+  height: 12px;
+}
+
+.rail-btn {
+  position: relative;
+}
+
+.rail-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--state-needs);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.rail-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--state-working);
+  pointer-events: none;
+}
+
+.sess-ago {
+  flex: none;
+  margin-left: auto;
+  color: color-mix(in srgb, var(--muted) 75%, transparent);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.closed-day {
+  margin: 4px 0 1px;
+  padding: 0 8px 0 28px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.closed-more {
+  display: block;
+  margin: 2px 0 4px 28px;
+  text-align: start;
+  font-size: 12px;
+}
+
 /* ---------------------------------------------------------------------------
    Grid stage: the pane grid, and beside a maximized pane the Other sessions panel.
    --------------------------------------------------------------------------- */
@@ -8111,13 +8299,23 @@ button.tl-event:hover { background: var(--raised); }
   color: var(--muted);
 }
 
-.toast.with-action {
+.toast {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding-right: 6px;
 }
 
-.toast.with-action .toast-text {
+.toast .toast-x {
+  flex: none;
+  color: var(--muted);
+}
+
+.toast .toast-x:hover {
+  color: var(--text);
+}
+
+.toast .toast-text {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;

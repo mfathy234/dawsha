@@ -5,6 +5,7 @@ import { deleteLayout, openLayoutFromUi, renameLayout, saveCurrentLayout } from 
 import { h } from '../dom'
 import { projectById, type AppState } from '../state'
 import { agentMark } from './agentMark'
+import { popupDismissButton } from './popupDismiss'
 
 const POPOVER_WIDTH = 460
 
@@ -71,7 +72,11 @@ export class LayoutsPopoverComponent {
       'div',
       { class: 'layouts-head' },
       h('h2', { class: 'popover-title' }, 'Saved layouts'),
-      h('span', { class: 'muted' }, `${layouts.length} saved`)
+      h('span', { class: 'muted' }, `${layouts.length} saved`),
+      popupDismissButton(() => {
+        toggleLayouts(false)
+        this.anchor().focus()
+      })
     )
     const list = h(
       'div',
