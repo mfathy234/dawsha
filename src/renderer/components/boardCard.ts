@@ -103,7 +103,7 @@ export class BoardCard {
     }
     const project = view.project?.name ?? 'project'
     setText(this.title, view.title)
-    this.showTag(view.tag)
+    this.showTag(view.tag, view.tagAuto)
     this.title.title = view.title
     setText(this.meta, view.branch ? `${project} · ${view.branch}` : project)
     setText(this.time, column === 'reviewed' ? SESSION_STATE_LABELS[state].toLowerCase() : timeInState(view.pane.id, state, view.now))
@@ -113,11 +113,12 @@ export class BoardCard {
     this.refresh(column)
   }
 
-  private showTag(tag: PaneView['tag']): void {
-    if ((tag ?? '') === this.tagShown) return
-    this.tagShown = tag ?? ''
+  private showTag(tag: PaneView['tag'], source: PaneView['tagAuto']): void {
+    const shown = `${tag ?? ''}:${source ?? ''}`
+    if (shown === this.tagShown) return
+    this.tagShown = shown
     this.tag.hidden = tag === null
-    this.tag.replaceChildren(...(tag ? [tagChip(tag, true)] : []))
+    this.tag.replaceChildren(...(tag ? [tagChip(tag, true, source)] : []))
   }
 
   refreshPreview(): void {

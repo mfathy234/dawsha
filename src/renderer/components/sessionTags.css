@@ -47,12 +47,16 @@
   gap: 8px;
 }
 
-.tag-dot {
+.menu-item-tag .tag-dot {
   width: 9px;
   height: 9px;
   flex: none;
   border-radius: 50%;
   background: var(--tag);
+}
+
+:root[data-tag-colors='off'] .tag-chip {
+  display: none;
 }
 
 .menu-item-tag .tag-check {

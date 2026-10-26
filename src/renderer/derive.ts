@@ -6,7 +6,7 @@ import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsF
 import type { ProcessActivity } from '../shared/processActivity'
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { formatDuration, sessionUsage } from '../shared/sessionCost'
-import type { SessionTag } from '../shared/sessionTags'
+import { autoTag, type SessionTag } from '../shared/sessionTags'
 import { pickWorkFolder } from '../shared/workFolder'
 import { lastOutputAt } from './ptyActivity'
 import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, RateLimitWindow, SessionFile, StatusInfo, TabAgent } from '../shared/types'
@@ -61,6 +61,7 @@ export interface PaneView {
   title: string
   named: boolean
   tag: SessionTag | null
+  tagAuto: 'branch' | 'conversation' | null
   agent: TabAgent
   status: PaneStatus
   branch: string | null
@@ -312,6 +313,11 @@ function infoFor(
   return withUsage(state, tab, matches, baseInfoFor(state, tab, matches, folder, snapshot, opsLive))
 }
 
+function autoTagSource(branch: string | null, text: string): 'branch' | 'conversation' | null {
+  if (autoTag(branch, '')) return 'branch'
+  return autoTag(null, text) ? 'conversation' : null
+}
+
 export function derivePanes(state: AppState): PaneView[] {
   const matches = matchAll(state)
   return state.panes.map((pane, index) => {
@@ -323,13 +329,16 @@ export function derivePanes(state: AppState): PaneView[] {
     const status = statusOf(primary, matches, state.now)
     const snapshot = opsSnapshotFor(state, primary, matches)
     const opsLive = snapshot !== null && !snapshot.ended && status !== 'exited'
+    const branch = folder ? (state.branches[folder] ?? null) : null
+    const tagAuto = primary.tag ? null : autoTagSource(branch, named ? title : '')
     return {
       pane,
       project,
       index,
       title,
       named,
-      tag: primary.tag ?? null,
+      tag: primary.tag ?? autoTag(branch, named ? title : ''),
+      tagAuto,
       agent: primary.agent,
       status,
       snapshot,
@@ -340,7 +349,7 @@ export function derivePanes(state: AppState): PaneView[] {
       now: state.now,
       detailsOpen: state.detailsPaneId === pane.id && state.maximizedId === pane.id,
       timelineOpen: state.timelinePaneId === pane.id && state.maximizedId === pane.id,
-      branch: folder ? (state.branches[folder] ?? null) : null,
+      branch,
       sync: folder ? (state.gitSync[folder] ?? null) : null,
       activeExited: active.status === 'exited',
       primaryTabId: primary.id,

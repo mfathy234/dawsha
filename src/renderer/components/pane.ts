@@ -38,7 +38,7 @@ import { api } from '../api'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
-import { tagChip, tagMenuItems } from './sessionTagUi'
+import { tagChip, tagMenuItems, type TagSource } from './sessionTagUi'
 import type { SessionTag } from '../../shared/sessionTags'
 import { AgentsDrawer } from './agentsDrawer'
 import { openBranchMenu } from './gitMenu'
@@ -194,7 +194,7 @@ export class PaneComponent {
     this.projectName.hidden = projectName === ''
     this.projectName.textContent = projectName
     this.fresh.hidden = view.named
-    this.updateTag(view.tag)
+    this.updateTag(view.tag, view.tagAuto)
     const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
     const origin = view.pane.tabs.find((t) => t.id === view.primaryTabId)?.from
@@ -400,11 +400,12 @@ export class PaneComponent {
     this.details.replaceChildren(...children)
   }
 
-  private updateTag(tag: SessionTag | null): void {
-    if ((tag ?? '') === this.tagShown) return
-    this.tagShown = tag ?? ''
+  private updateTag(tag: SessionTag | null, source: TagSource): void {
+    const shown = `${tag ?? ''}:${source ?? ''}`
+    if (shown === this.tagShown) return
+    this.tagShown = shown
     this.tagHost.hidden = tag === null
-    this.tagHost.replaceChildren(...(tag ? [tagChip(tag)] : []))
+    this.tagHost.replaceChildren(...(tag ? [tagChip(tag, false, source)] : []))
   }
 
   /** Opened from Pane actions › Tag…, in the place of that button's menu. */

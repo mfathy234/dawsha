@@ -26,6 +26,7 @@ import {
   startSession,
   toggleMaximize,
   toggleSidebar,
+  setColorSessionsByTag,
   toggleThemePicker,
   focusPane
 } from '../actions'
@@ -253,6 +254,7 @@ export function installBuiltinCommands(): void {
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),
     focusedAction('pane.close', 'Close the pane', closePane, 'stop session'),
     { id: 'view.sidebar', title: 'Toggle the sidebar', group: 'Actions', run: () => toggleSidebar() },
+    { id: 'view.toggleTagColors', title: 'Toggle tag colours', group: 'Actions', keywords: 'session tag bug feature colour color chip', run: () => setColorSessionsByTag(!store.state.settings.colorSessionsByTag) },
     { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'folders', run: () => showView('projects') },
     { id: 'view.background', title: 'Open background agents', group: 'Actions', keywords: 'agents subagents sub-agents timeline running tasks codex claude', ...withKeys('Ctrl+Shift+L'), run: () => showView('background') },
     { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },

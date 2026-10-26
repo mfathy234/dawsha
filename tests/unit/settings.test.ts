@@ -18,6 +18,9 @@ describe('migrateSettings', () => {
     expect(migrateSettings({}).showRecap).toBe(true)
     expect(migrateSettings({ showRecap: 'no' }).showRecap).toBe(true)
     expect(migrateSettings({ showRecap: false }).showRecap).toBe(false)
+    expect(defaultSettings().colorSessionsByTag).toBe(true)
+    expect(migrateSettings({ colorSessionsByTag: 'no' }).colorSessionsByTag).toBe(true)
+    expect(migrateSettings({ colorSessionsByTag: false }).colorSessionsByTag).toBe(false)
   })
   it('keeps closed sessions and task history only for known projects', () => {
     const projects = [{ id: 'api', name: 'API', folder: 'C:\\work\\api', defaultAgent: 'codex' }]

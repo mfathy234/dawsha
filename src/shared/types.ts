@@ -127,6 +127,7 @@ export interface Settings {
   sidebarCollapsed: boolean
   dimIdlePanes: boolean
   showRecap: boolean
+  colorSessionsByTag: boolean
   sidebarWidth: number
   othersCollapsed: boolean
   sessionsLayout: SessionsLayout

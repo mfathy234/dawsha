@@ -12,6 +12,7 @@ import {
   setHighlights,
   setPaletteShortcut,
   setSessionInfo,
+  setColorSessionsByTag,
   setDimIdlePanes,
   setShowRecap,
   setSidebarCollapsed,
@@ -554,6 +555,7 @@ export class SettingsViewComponent {
         this.shortcutError ? h('p', { class: 'field-error', id: 'palette-shortcut-error', role: 'alert' }, this.shortcutError) : null
       ),
       row('Sessions', checkbox('dim-idle-panes', "Dim sessions you're not working in", state.settings.dimIdlePanes, false, setDimIdlePanes)),
+      row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag)),
       row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap)),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed)),
       row(

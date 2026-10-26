@@ -903,6 +903,11 @@ export function setShowRecap(showRecap: boolean): void {
   void saveSettings({ showRecap })
 }
 
+export function setColorSessionsByTag(colorSessionsByTag: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, colorSessionsByTag } }))
+  void saveSettings({ colorSessionsByTag })
+}
+
 export function setDimIdlePanes(dimIdlePanes: boolean): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, dimIdlePanes } }))
   void saveSettings({ dimIdlePanes })
