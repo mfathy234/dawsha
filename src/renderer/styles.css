@@ -6129,8 +6129,7 @@ body.dragging-ui {
 }
 .pane-permission .btn { display: inline-flex; align-items: center; gap: var(--s-2); flex: none; }
 .pane-permission-key {
-  font-family: var(--font-mono); font-size: var(--fs-status); padding: 0 var(--s-1); border-radius: var(--r-control);
-  border: 1px solid color-mix(in srgb, currentColor 35%, transparent); opacity: 0.8;
+  font-size: var(--fs-status); font-weight: 400; margin-inline-start: var(--s-1); opacity: 0.7;
 }
 .pane-foot .chip-branch .chip-text { direction: rtl; text-align: left; white-space: nowrap; }
 .pane-foot .chip-branch .chip-text bdi { unicode-bidi: isolate; direction: ltr; }

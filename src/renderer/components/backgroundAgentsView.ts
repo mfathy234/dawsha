@@ -238,7 +238,7 @@ export class BackgroundAgentsViewComponent {
     return h('aside', { class: 'bg-details', id: 'bg-details', 'aria-label': `Details for ${agent.description}` },
       h('div', { class: 'bg-details-head' },
         h('h2', {}, agent.description),
-        h('button', { class: 'btn ghost small', type: 'button', id: 'bg-details-close', 'aria-label': 'Close details', onClick: () => this.select(agent.key) }, icon(ICONS.close))),
+        h('button', { class: 'icon-btn', type: 'button', id: 'bg-details-close', 'aria-label': 'Close details', onClick: () => this.select(agent.key) }, icon(ICONS.close))),
       h('span', { class: `bg-status st-${agent.status}${agent.automatic ? ' auto' : ''}`, id: 'bg-detail-status' }, h('span', { class: 'bg-status-icon', 'aria-hidden': 'true' }, statusGlyph(agent.status)), STATUS_LABELS[agent.status]),
       agent.statusNote ? h('p', { class: 'bg-note' }, agent.statusNote) : null,
       h('dl', { class: 'bg-facts' },
