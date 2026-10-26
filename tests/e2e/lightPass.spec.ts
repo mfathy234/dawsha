@@ -46,7 +46,7 @@ for (const [mode, themeId] of THEMES) {
       await page.getByRole('button', { name: 'Pane actions' }).first().click()
       await page.getByRole('menuitem', { name: 'Tag…' }).click()
       await page.getByRole('menuitemradio', { name: 'Tag as Bug' }).click()
-      await page.locator('.pane').nth(2).locator('.pane-header').click({ position: { x: 200, y: 20 } })
+      await page.locator('.pane').nth(2).locator('.pane-title').click()
       const first = page.locator('.pane').first()
       const termId = (await first.locator('.term-host').first().getAttribute('data-term-id')) ?? ''
       await expect(async () => {

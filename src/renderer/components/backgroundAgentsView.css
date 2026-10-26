@@ -37,7 +37,7 @@
 .bg-filters > .select-menu { flex: 0 0 180px; width: 180px; }
 .bg-check { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text); cursor: pointer; }
 
-.bg-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; min-height: 0; }
+.bg-body { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; gap: 14px; align-items: start; min-height: 0; overflow: auto; }
 .bg-body.has-details { grid-template-columns: minmax(0, 1fr) 320px; }
 .bg-empty { padding: 40px 12px; text-align: center; color: var(--muted); }
 .bg-empty p { margin: 0 0 6px; }
