@@ -1,6 +1,6 @@
 import { openUpdateLink, runUpdateAction, toggleUpdatePopover } from '../actions'
 import { RELEASE_LATEST_URL, releaseTagUrl, renderMarkdown } from '../../shared/markdown'
-import { h } from '../dom'
+import { h, leave } from '../dom'
 import type { AppState } from '../state'
 import type { UpdateState } from '../../shared/updates'
 import { popupDismissButton } from './popupDismiss'
@@ -62,7 +62,7 @@ export class UpdatePopoverComponent {
 
   private close(): void {
     document.removeEventListener('pointerdown', this.outside, true)
-    this.root?.remove()
+    leave(this.root)
     this.root = null
   }
 

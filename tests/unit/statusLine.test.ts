@@ -88,8 +88,10 @@ describe('model family, gauge and formatting', () => {
     expect(gauge(100)).toBe('▰▰▰▰▰')
     expect(gauge(250)).toBe('▰▰▰▰▰')
     expect(gaugeStage(10)).toBe('ok')
-    expect(gaugeStage(50)).toBe('warn')
-    expect(gaugeStage(75)).toBe('high')
+    expect(gaugeStage(69)).toBe('ok')
+    expect(gaugeStage(70)).toBe('warn')
+    expect(gaugeStage(79)).toBe('warn')
+    expect(gaugeStage(80)).toBe('high')
     expect(gaugeStage(95)).toBe('critical')
   })
 

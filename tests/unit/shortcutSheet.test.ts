@@ -21,7 +21,7 @@ describe('shortcut sheet', () => {
       ],
       fixedEntries('Ctrl+K', 'Ctrl')
     )
-    expect(groups.map((g) => g.label)).toEqual(['Sessions', 'Panes', 'Terminal', 'General'])
+    expect(groups.map((g) => g.label)).toEqual(['Sessions', 'Panes', 'Terminal', 'Views', 'General'])
     expect(groups[0].entries).toEqual([{ title: 'New session', keys: 'Ctrl+N' }])
     expect(groups.flatMap((g) => g.entries).some((e) => e.title === 'Show git diff')).toBe(false)
   })

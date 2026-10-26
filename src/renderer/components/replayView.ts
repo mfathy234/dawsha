@@ -270,7 +270,7 @@ export class ReplayViewComponent {
 
   private readonly onKey = (event: KeyboardEvent): void => {
     if (event.isComposing) return
-    if (document.querySelector('.overlay')) return
+    if (document.querySelector('.overlay:not(.leaving)')) return
     if (event.key === 'Escape') {
       // Only a filled text box clears first; a checkbox's value is always 'on'.
       if (event.target instanceof HTMLInputElement && event.target.type !== 'checkbox' && event.target.value !== '') {

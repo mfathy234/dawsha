@@ -11,7 +11,7 @@ import { DICTATION_SHORTCUT } from '../shared/dictation'
 import { cancelDictation, toggleDictation } from './dictation/dictationActions'
 import { dictationStatus } from './dictation/dictationState'
 
-const overlayOpen = (): boolean => document.querySelector('.overlay, .popover') !== null
+const overlayOpen = (): boolean => document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)') !== null
 
 const ALTERNATE_PALETTE = bind('Ctrl+Shift+P')
 

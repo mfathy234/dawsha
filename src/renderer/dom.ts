@@ -23,6 +23,22 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return element
 }
 
+/** Removes a popup after a short fade; the node is inert and ignored by overlay checks meanwhile. */
+export function leave(element: Element | null | undefined): void {
+  if (!element?.isConnected) return
+  if (element.classList.contains('leaving')) return
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    element.remove()
+    return
+  }
+  element.classList.add('leaving')
+  element.setAttribute('inert', '')
+  element.setAttribute('aria-hidden', 'true')
+  element.removeAttribute('id')
+  element.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'))
+  window.setTimeout(() => element.remove(), 100)
+}
+
 export function icon(svg: string): HTMLElement {
   const wrapper = document.createElement('span')
   wrapper.className = 'icon'

@@ -1,6 +1,6 @@
 import { filterMenuOptions, stepIndex, type FilterMenuOption } from '../../shared/board'
 import type { AgentKind } from '../../shared/types'
-import { h, icon } from '../dom'
+import { h, icon, leave } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 
@@ -179,7 +179,7 @@ export class FilterMenu {
     if (this.listenTimer !== null) clearTimeout(this.listenTimer)
     this.listenTimer = null
     document.removeEventListener('pointerdown', this.outside, true)
-    this.menu?.remove()
+    leave(this.menu)
     this.menu = null
     this.search = null
     this.items = []

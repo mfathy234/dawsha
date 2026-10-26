@@ -1,4 +1,4 @@
-import { activeMs, WORK_TYPES, WORK_LABELS, workTickets, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../../shared/workDashboard'
+import { activeMs, WORK_TYPES, WORK_LABELS, WORK_NOUNS, workTickets, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../../shared/workDashboard'
 import { filterWorkReport, workProjectOptions } from '../../shared/workSearch'
 import { agentLabel } from '../../shared/agents'
 import { api } from '../api'
@@ -13,6 +13,7 @@ import { TicketsPanel } from './workTickets'
 import { selectMenu } from './selectMenu'
 import { formatWorkSummary } from '../../shared/workSummary'
 import { toast } from './toast'
+import { countLine } from './countLine'
 import './workView.css'
 
 type WorkMode = 'sessions' | 'tickets'
@@ -174,10 +175,7 @@ export class WorkViewComponent {
     }
     const searched = filterWorkReport(source, this.search, null, this.shownWindow().end)
     const report = filterWorkReport(source, this.search, this.projectId, this.shownWindow().end)
-    const tile = (id: string, label: string, count: number) => h('div', { class: 'usage-tile', id: `work-${id}` },
-      h('span', { class: 'usage-tile-label' }, label), h('span', { class: 'usage-tile-value' }, String(count)))
-    this.el.append(h('div', { class: 'usage-tiles work-tiles', role: 'group', 'aria-label': 'Work summary' },
-      ...WORK_TYPES.map(type => tile(type, WORK_LABELS[type], report.counts[type])), tile('total', 'Total', report.total)))
+    this.el.append(countLine([...WORK_TYPES.map((type) => ({ id: `work-${type}`, count: report.counts[type], ...WORK_NOUNS[type] })), { id: 'work-total', count: report.total, one: 'total', many: 'total' }], 'Work summary'))
     if (report.total === 0) {
       this.el.append(h('p', { class: 'usage-empty', role: 'status' }, this.search.trim()
         ? `No matches for “${this.search.trim()}”. Clear the search to see more work.`

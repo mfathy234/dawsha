@@ -55,12 +55,21 @@ export type SessionStatusResult =
   | { ok: false; error: string }
 
 export type ProjectFilesResult =
-  | { ok: true; files: string[]; truncated: boolean; repo: boolean }
+  | { ok: true; files: string[]; truncated: boolean; repo: boolean; prefix: string }
   | { ok: false; error: string }
 
 export type ProjectFileResult =
-  | { ok: true; text: string; size: number }
-  | { ok: true; text: null; size: number; reason: 'binary' | 'large' }
+  | { ok: true; text: string; size: number; mtimeMs: number }
+  | { ok: true; text: null; size: number; reason: 'binary' | 'large' | 'encoding'; mtimeMs: number }
+  | { ok: false; error: string }
+
+export type ProjectFileWriteResult =
+  | { ok: true; mtimeMs: number }
+  | { ok: false; conflict: true; error: string }
+  | { ok: false; conflict?: false; error: string }
+
+export type FileAgainstBaseResult =
+  | { ok: true; base: string | null; text: string; reason?: 'large' | 'norepo'; deleted?: true }
   | { ok: false; error: string }
 
 export interface CommitRequest {

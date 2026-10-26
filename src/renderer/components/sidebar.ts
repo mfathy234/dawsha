@@ -6,7 +6,7 @@ import { projectTodayLabel, projectTodayShort, projectTodayTooltip } from '../..
 import type { AgentKind, KeptSession, Project } from '../../shared/types'
 import { clearClosedSessions, closePane, focusPane, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeKeptSession, renameKeptSession, renameSession, reopenKeptSessions, reorderProject, showView, startSession, tagKeptSession, tagSession, toggleClosedSessions, toggleClosedShowAll, toggleProjectExpanded, toggleSidebar } from '../actions'
 import { CLOSED_PREVIEW_COUNT, closedAgoShort, closedDayLabel, closedUsageShort, closedUsageTooltip, groupClosedByDay, reopenGroupLabel } from '../../shared/keptSessions'
-import { cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
+import { autoTag, autoTagSource, cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
 import type { PaneView } from '../derive'
 import { clear, h, icon, iconButton } from '../dom'
 import { enableDrag } from '../drag'
@@ -14,7 +14,7 @@ import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
-import { tagDot, tagMenuItems } from './sessionTagUi'
+import { tagMenuItems, tagWord } from './sessionTagUi'
 import './sidebar.css'
 import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
 import { needsCount } from '../../shared/attentionBadge'
@@ -183,7 +183,7 @@ export class SidebarComponent {
       projects.map((p) => [p.id, p.name, p.defaultAgent, p.pinned === true]),
       state.settings.foldedProjects,
       projects.map((p) => projectTodayLabel(state.usage.projectsToday[p.id])),
-      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent, v.attention, v.tag]),
+      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent, v.attention, v.tag, v.tagAuto]),
       this.edit?.key,
       state.settings.keptSessions.map((session) => closedUsageShort(state.usage.sessions[session.sessionId])),
       state.settings.keptSessions,
@@ -387,13 +387,15 @@ export class SidebarComponent {
             onClick: () => focusPane(view.pane.id)
           },
           agentMark(view.agent),
-          h('span', { class: 'sess-name', dir: 'auto' }, view.title),
-          view.tag ? tagDot(view.tag) : null,
-          h('span', { class: `sess-state state-${sessionStateName}`, title: stateLabel }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, stateLabel))
+          h('span', { class: 'sess-body' },
+            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title)),
+            h('span', { class: 'sess-meta' },
+              h('span', { class: `sess-state state-${sessionStateName}`, title: stateLabel }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, stateLabel)),
+              view.tag ? tagWord(view.tag, view.tagAuto) : null))
         )
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}`, 'data-tag': view.tag ?? undefined },
       main,
-      this.sessionMenuButton(key, view.title, project, view.tag, (tag) => tagSession(view.pane.id, tag)),
+      this.sessionMenuButton(key, view.title, project, view.tagAuto ? null : view.tag, (tag) => tagSession(view.pane.id, tag), 'Close', () => void closePane(view.pane.id)),
       iconButton(`Close ${view.title} in ${project.name}`, ICONS.close, () => void closePane(view.pane.id), 'small sess-close')
     )
   }
@@ -447,6 +449,8 @@ export class SidebarComponent {
     const key = `c:${session.agent}:${session.sessionId}`
     const usage = state.usage.sessions[session.sessionId]
     const used = closedUsageShort(usage)
+    const closedTag = session.tag ?? autoTag(session.branch ?? null, session.title)
+    const closedSource = session.tag ? null : autoTagSource(session.branch ?? null, session.title)
     const resume = (): void => void startSession(project.id, session.agent, session.sessionId, true, session.title, session)
     // A double click renames, so a mouse click waits a moment to see whether a second one follows.
     const click = (event: Event): void => {
@@ -459,13 +463,15 @@ export class SidebarComponent {
       ? this.renameField(key, session.title, session.agent, false)
       : h('button', { class: 'sess-row', type: 'button', title: [`Resume ${session.title} (closed ${closedOn})`, closedUsageTooltip(usage)].filter(Boolean).join('\n'), 'data-nav': key, 'data-agent': session.agent, 'data-session-id': session.sessionId, onClick: click },
           agentMark(session.agent),
-          h('span', { class: 'sess-name', dir: 'auto' }, session.title),
-          session.tag ? tagDot(session.tag) : null,
-          h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now)),
-          used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)
-    return h('div', { class: 'kept-session-row closed', 'data-tag': session.tag ?? undefined },
+          h('span', { class: 'sess-body' },
+            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, session.title)),
+            h('span', { class: 'sess-meta' },
+              h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now)),
+              used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null,
+              closedTag ? tagWord(closedTag, closedSource) : null)))
+    return h('div', { class: 'kept-session-row closed', 'data-tag': closedTag ?? undefined },
       main,
-      this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag)),
+      this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag), 'Remove', () => removeKeptSession(session.agent, session.sessionId)),
       iconButton(`Remove ${session.title} from ${project.name}`, ICONS.close, () => removeKeptSession(session.agent, session.sessionId), 'small sess-close')
     )
   }
@@ -555,19 +561,20 @@ export class SidebarComponent {
     return button
   }
 
-  private sessionMenuButton(navKey: string, title: string, project: Project, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void): HTMLElement {
+  private sessionMenuButton(navKey: string, title: string, project: Project, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void, removeLabel: string, remove: () => void): HTMLElement {
     const key = `sm:${navKey}`
-    const button = iconButton(`Actions for ${title} in ${project.name}`, ICONS.more, () => this.toggleSessionMenu(key, navKey, title, tag, setTag), 'small sess-more')
+    const button = iconButton(`Actions for ${title} in ${project.name}`, ICONS.more, () => this.toggleSessionMenu(key, navKey, title, tag, setTag, removeLabel, remove), 'small sess-more')
     button.setAttribute('aria-haspopup', 'menu')
     button.dataset.menuKey = key
     return button
   }
 
-  private toggleSessionMenu(key: string, navKey: string, title: string, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void): void {
+  private toggleSessionMenu(key: string, navKey: string, title: string, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void, removeLabel: string, remove: () => void): void {
     if (this.popup.isOpenFor(key)) return this.popup.close()
     const rename = h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); this.startRename(navKey) } }, 'Rename')
     const tags = tagMenuItems(tag, (next) => { this.popup.close(); this.focusAfterRender(navKey); setTag(next) })
-    this.popup.open(key, [rename, h('div', { class: 'pv-menu-sep', role: 'separator' }), ...tags], `Actions for ${title}`)
+    const drop = h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); remove() } }, removeLabel)
+    this.popup.open(key, [rename, h('div', { class: 'pv-menu-sep', role: 'separator' }), ...tags, h('div', { class: 'pv-menu-sep', role: 'separator' }), drop], `Actions for ${title}`)
   }
 
   private toggleMenu(key: string, project: Project): void {

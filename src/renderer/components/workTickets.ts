@@ -1,9 +1,10 @@
 import { setTicketNote, type TicketNote, type TicketNotes } from '../../shared/ticketNotes'
-import { WORK_LABELS, WORK_TYPES, workTickets, type WorkItem, type WorkReport, type WorkTicket } from '../../shared/workDashboard'
+import { WORK_LABELS, WORK_NOUNS, WORK_TYPES, workTickets, type WorkItem, type WorkReport, type WorkTicket } from '../../shared/workDashboard'
 import { filterWorkTickets } from '../../shared/workSearch'
 import { saveSettings } from '../actions'
 import { api } from '../api'
 import { h } from '../dom'
+import { countLine } from './countLine'
 import { store } from '../state'
 
 /** Tickets are never plain conversations: only the types that changed something. */
@@ -38,10 +39,8 @@ export class TicketsPanel {
   }
 
   private tiles(tickets: WorkTicket[]): HTMLElement {
-    const tile = (id: string, label: string, count: number): HTMLElement => h('div', { class: 'usage-tile', id: `work-tickets-${id}` },
-      h('span', { class: 'usage-tile-label' }, label), h('span', { class: 'usage-tile-value' }, String(count)))
-    return h('div', { class: 'usage-tiles work-tiles work-ticket-tiles', role: 'group', 'aria-label': 'Tickets summary' },
-      ...TICKET_TYPES.map((type) => tile(type, WORK_LABELS[type], tickets.filter((t) => t.type === type).length)), tile('total', 'Tickets', tickets.length))
+    const parts = TICKET_TYPES.map((type) => ({ id: `work-tickets-${type}`, count: tickets.filter((t) => t.type === type).length, ...WORK_NOUNS[type] }))
+    return countLine([...parts, { id: 'work-tickets-total', count: tickets.length, one: 'ticket', many: 'tickets' }], 'Tickets summary')
   }
 
   private projects(tickets: WorkTicket[], ctx: TicketsContext): HTMLElement {

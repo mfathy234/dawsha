@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
@@ -39,22 +40,22 @@ test('a session tag follows the session: sidebar, pane header, board card, close
 
     await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Bug')
     await expect(openRow(page)).toHaveAttribute('data-tag', 'bug')
-    await expect(openRow(page).getByRole('img', { name: 'Tag: Bug' })).toBeVisible()
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Bug')
+    await expect(openRow(page).locator('.tag-word')).toHaveText('bug')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('bug')
     expect(await focusedNav(page)).toMatch(/^s:/)
 
     await page.getByRole('button', { name: 'Pane actions' }).click()
     await page.getByRole('menuitem', { name: 'Tag…' }).click()
     await expect(page.getByRole('menuitemradio', { name: 'Tag as Bug' })).toHaveAttribute('aria-checked', 'true')
     await page.getByRole('menuitemradio', { name: 'Tag as Review' }).click()
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Review')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('review')
     await expect(openRow(page)).toHaveAttribute('data-tag', 'review')
     await expect.poll(() => readSettings(sandbox.userData).workspace.panes[0].tabs[0].tag).toBe('review')
     mkdirSync(SCREENS, { recursive: true })
     await page.locator('.pane-header').first().screenshot({ path: join(SCREENS, '162-sidebar-pane-header-tag.png') })
 
     await page.locator('#layout-board').click()
-    await expect(page.locator('.board-card .tag-chip')).toHaveText('Review')
+    await expect(page.locator('.board-card .tag-word')).toHaveText('review')
     await page.locator('.board-view').screenshot({ path: join(SCREENS, '162-sidebar-board-card-tag.png') })
     await page.locator('#layout-grid').click()
 
@@ -63,11 +64,11 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     await expect.poll(() => readSettings(sandbox.userData).keptSessions[0]?.tag).toBe('review')
     const closed = page.locator('.kept-session-row.closed')
     await expect(closed).toHaveAttribute('data-tag', 'review')
-    await expect(closed.getByRole('img', { name: 'Tag: Review' })).toBeVisible()
+    await expect(closed.locator('.tag-word')).toHaveText('review')
 
     await closed.locator('.sess-row').click()
     await expect(page.locator('.pane')).toHaveCount(1)
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Review')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('review')
   } finally {
     await closeApp(session.app)
   }
@@ -75,7 +76,7 @@ test('a session tag follows the session: sidebar, pane header, board card, close
   try {
     const { page } = session
     await expect(page.locator('.pane')).toHaveCount(1)
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Review')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('review')
     await expect(openRow(page)).toHaveAttribute('data-tag', 'review')
 
     await pickTag(page, 'Actions for Smoke in Smoke', 'Remove tag', 'menuitem')
@@ -111,16 +112,58 @@ test('closed sessions take a tag from their menu and a right click opens it', as
   }
 })
 
+test('a session takes its tag from the branch, a manual tag wins, and the setting hides the colours', async () => {
+  const sandbox = createSandbox()
+  const git = (...args: string[]): void => void execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd: sandbox.projectFolder })
+  git('init', '-q', '-b', 'feature/x')
+  writeFileSync(join(sandbox.projectFolder, 'a.txt'), 'a', 'utf8')
+  git('add', '.')
+  git('commit', '-q', '-m', 'first')
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await startGemini(page)
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('feature')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveAttribute('title', 'Tag: Feature (from the branch)')
+    await expect(openRow(page)).toHaveAttribute('data-tag', 'feature')
+    await expect(openRow(page).locator('.tag-word')).toHaveText('feature')
+
+    await openRow(page).hover()
+    await page.getByRole('button', { name: 'Actions for Smoke in Smoke' }).click()
+    await expect(page.getByRole('menuitemradio', { checked: true })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: 'Remove tag' })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+
+    await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Bug')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('bug')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveAttribute('title', 'Tag: Bug')
+
+    await page.keyboard.press('Control+Shift+P')
+    await page.keyboard.type('Toggle tag colours')
+    await page.keyboard.press('Enter')
+    await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'off')
+    const word = openRow(page).locator('.tag-word')
+    await expect(word).toBeVisible()
+    const muted = await page.locator('.pane-project').first().evaluate((el) => getComputedStyle(el).color)
+    await expect.poll(() => word.evaluate((el) => getComputedStyle(el).color)).toBe(muted)
+    await expect.poll(() => readSettings(sandbox.userData).colorSessionsByTag).toBe(false)
+  } finally {
+    await closeApp(app)
+  }
+})
+
 for (const [theme, name] of [['dawsha-night', 'dark'], ['dawsha-daylight', 'light']] as const) {
   test(`tags, cost and the reopen affordance look right in the ${name} theme`, async () => {
     const sandbox = createSandbox()
     const now = Date.now()
     const date = new Date()
+    const startOfToday = new Date().setHours(0, 0, 0, 0)
+    const earlierToday = (hours: number, floorSeconds: number): number => Math.max(now - hours * 3_600_000, startOfToday + floorSeconds * 1_000)
     const day = (days: number): number => new Date(date.getFullYear(), date.getMonth(), date.getDate() - days, 12).getTime()
     const kept = [
-      ['Fix the invoice export', 'bug', now - 60_000],
-      ['Add a dark mode toggle', 'feature', now - 3_600_000],
-      ['Review the auth change', 'review', now - 7_200_000],
+      ['Fix the invoice export', 'bug', earlierToday(0, 30)],
+      ['Add a dark mode toggle', 'feature', earlierToday(1, 20)],
+      ['Review the auth change', 'review', earlierToday(2, 10)],
       ['Compare SQL drivers', 'research', day(1)],
       ['Update the README', 'docs', day(1)],
       ['Untagged scratch session', undefined, day(4)]

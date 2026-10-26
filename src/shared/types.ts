@@ -103,6 +103,8 @@ export interface KeptSession {
   /** The title was typed by the user, so it stays the session's name when reopened. */
   renamed?: true
   tag?: SessionTag
+  /** The git branch the session was on when it closed, to guess a tag for the closed row. */
+  branch?: string
 }
 
 export interface ProjectTask {
@@ -125,7 +127,9 @@ export interface Settings {
   projects: Project[]
   theme: ThemeSettings
   sidebarCollapsed: boolean
-  dimIdlePanes: boolean
+  dimOtherPanes: boolean
+  showRecap: boolean
+  colorSessionsByTag: boolean
   sidebarWidth: number
   othersCollapsed: boolean
   sessionsLayout: SessionsLayout
@@ -138,6 +142,8 @@ export interface Settings {
   foldedProjects: string[]
   /** Ids of projects whose "Closed sessions" group is folded in the sidebar. */
   foldedClosedSessions: string[]
+  /** Open files of the Files view, by project id (at most FILES_TABS_MAX each). */
+  filesTabs: Record<string, string[]>
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
   ticketNotes: import('./ticketNotes').TicketNotes
   tasks: ProjectTask[]

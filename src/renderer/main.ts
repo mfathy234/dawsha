@@ -3,6 +3,7 @@ import { installBackgroundAgents } from './backgroundAgents'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import './orchestrator.css'
+import './components/controls.css'
 import {
   flushWorkspace,
   attachRemoteSession,
@@ -44,6 +45,7 @@ import { installReplayCommands } from './commands/replay'
 import { installSettingsTransferCommands } from './commands/settingsTransfer'
 import { installKeyboard } from './keyboard'
 import { store } from './state'
+import { confirmQuitWithUnsavedFiles } from './files/filesActions'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
 import { applyTheme, onThemeChange } from './themeManager'
 
@@ -75,7 +77,15 @@ async function boot(): Promise<void> {
 
   const shell = new AppShell()
   document.getElementById('app')?.append(shell.el)
-  store.subscribe((state) => shell.render(state))
+  const applyTagColors = (on: boolean): void => {
+    if (on) delete document.documentElement.dataset.tagColors
+    else document.documentElement.dataset.tagColors = 'off'
+  }
+  applyTagColors(store.state.settings.colorSessionsByTag)
+  store.subscribe((state) => {
+    applyTagColors(state.settings.colorSessionsByTag)
+    shell.render(state)
+  })
   shell.render(store.state)
 
   setTerminalEvents({
@@ -123,6 +133,7 @@ async function boot(): Promise<void> {
   api.onUpdateState(setUpdateState)
   initWhatsNew()
   api.onFlushRequest(flushWorkspace)
+  api.onCloseCheck(confirmQuitWithUnsavedFiles)
   api.onCliRun(runCliCommand)
   api.onOrchOpenPane(openOrchPane)
   api.onOrchClosePane(closeOrchPane)

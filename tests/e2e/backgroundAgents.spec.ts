@@ -69,7 +69,7 @@ function seed(sandbox: Sandbox): void {
   ], 29)
 }
 
-const bars = (page: Page) => page.locator('.bg-bar')
+const bars = (page: Page) => page.locator('.bg-item')
 const openAgents = async (page: Page): Promise<void> => {
   await page.locator('#background-button').click()
   await expect(page.locator('.bg-view')).toBeVisible()
@@ -80,27 +80,37 @@ async function pick(page: Page, trigger: string, option: string): Promise<void> 
   await page.getByRole('option', { name: option, exact: true }).click()
 }
 
-test('Agents tab sits after Sessions, shows the running count, lanes and bars', async () => {
+test('Agents tab sits after Sessions, shows the running count and agents grouped by session', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
     const ids = await page.locator('.topbar-nav > button').evaluateAll((nodes) => nodes.map((node) => node.id))
-    expect(ids.slice(0, 3)).toEqual(['sessions-button', 'background-button', 'projects-button'])
-    await expect(page.locator('#background-button .bg-badge')).toHaveText('1', { timeout: 15_000 })
+    expect(ids.slice(0, 3)).toEqual(['sessions-button', 'background-button', 'files-button'])
+    await expect(page.locator('#background-button .count-badge')).toHaveText('1', { timeout: 15_000 })
     await expect(page.locator('#background-button')).toHaveAccessibleName('Agents, 1 running')
     await openAgents(page)
     await expect(page.locator('#background-button')).toHaveAttribute('aria-pressed', 'true')
-    await expect(page.locator('.bg-lane')).toHaveCount(3)
+    await expect(page.locator('.bg-group')).toHaveCount(3)
     await expect(bars(page)).toHaveCount(6)
-    await expect(page.locator('.bg-lane').first()).toContainText('Release polish')
-    await expect(page.locator('.bg-lane').first()).toContainText('Smoke · 4 agents')
+    const first = page.locator('.bg-group').first()
+    await expect(first.locator('.bg-group-title')).toHaveText('Release polish')
+    await expect(first.locator('.bg-group-project')).toHaveText('Smoke')
+    await expect(first.locator('.bg-group-counts')).toHaveText('4 agents')
+    await expect(first.locator('.bg-item').first()).toHaveAttribute('data-status', 'running')
+    await expect(page.locator('.bg-track, .bg-fill, .bg-dot')).toHaveCount(0)
+    await expect(first.locator('.bg-item').first().locator('.bg-item-time')).toHaveText(/^[0-9]+[smh]/)
+    const radius = await page.locator('#bg-status-running').evaluate((node) => getComputedStyle(node).borderRadius)
+    expect(parseFloat(radius)).toBeLessThanOrEqual(6)
+    await expect(page.locator('#bg-status-running')).toHaveCSS('border-top-width', '0px')
+    await page.setViewportSize({ width: 1024, height: 728 })
+    await expect(first.locator('.bg-item-name').first()).toBeVisible()
     await expect(page.locator('#bg-status-running')).toHaveText('1 running')
     await expect(page.locator('#bg-status-done')).toHaveText('4 done')
     await expect(page.locator('#bg-status-failed')).toHaveText('1 failed')
-    await expect(page.locator('.bg-bar.st-running')).toHaveAccessibleName(/Option A grid pass, general-purpose, running/)
+    await expect(page.locator('.bg-item.st-running')).toHaveAccessibleName(/Option A grid pass, general-purpose, running/)
     await expect(page.locator('#bg-totals')).toContainText('tokens')
-    expect(await page.locator('.bg-ticks span').count()).toBeGreaterThanOrEqual(3)
+    await expect(page.locator('.bg-axis, .bg-now, .bg-grid')).toHaveCount(0)
     await page.keyboard.press('Control+Shift+L')
     await expect(page.locator('.bg-view')).toBeVisible()
   } finally {
@@ -108,7 +118,7 @@ test('Agents tab sits after Sessions, shows the running count, lanes and bars', 
   }
 })
 
-test('every filter narrows the timeline and Clear filters resets them', async () => {
+test('every filter narrows the list and Clear filters resets them', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -157,8 +167,8 @@ test('every filter narrows the timeline and Clear filters resets them', async ()
     await expect(bars(page)).toHaveCount(6)
     await page.locator('#bg-automatic').check()
     await expect(bars(page)).toHaveCount(7)
-    await expect(page.locator('.bg-bar.auto')).toHaveCount(1)
-    await expect(page.locator('.bg-bar.auto')).toHaveAccessibleName(/Safety review · allow, automatic review, done/)
+    await expect(page.locator('.bg-item.auto')).toHaveCount(1)
+    await expect(page.locator('.bg-item.auto')).toHaveAccessibleName(/Safety review · allow, automatic review, done/)
     await expect(page.locator('#bg-clear')).toBeVisible()
     await page.locator('#bg-clear').click()
     await expect(bars(page)).toHaveCount(6)
@@ -175,7 +185,7 @@ test('details panel shows the agent and Copy result, Show file and Go to session
   const { app, page } = await launchApp(sandbox)
   try {
     await openAgents(page)
-    await page.locator('.bg-bar', { hasText: 'Sidebar session features' }).focus()
+    await page.locator('.bg-item', { hasText: 'Sidebar session features' }).focus()
     await page.keyboard.press('Enter')
     const details = page.locator('#bg-details')
     await expect(details).toBeVisible()
@@ -183,11 +193,13 @@ test('details panel shows the agent and Copy result, Show file and Go to session
     await expect(details).toContainText('Release polish')
     await expect(details).toContainText('Sonnet')
     await expect(details).toContainText('general-purpose')
-    await expect(page.locator('#bg-detail-status')).toHaveText('done')
+    await expect(page.locator('#bg-detail-status')).toHaveText(/done$/)
     await expect(page.locator('#bg-detail-result')).toHaveText(RESULT)
 
+    const before = await page.locator('.bg-item:focus').getAttribute('data-key')
     await page.keyboard.press('ArrowDown')
-    await expect(page.locator('.bg-bar:focus')).toHaveCount(1)
+    await expect(page.locator('.bg-item:focus')).toHaveCount(1)
+    expect(await page.locator('.bg-item:focus').getAttribute('data-key')).not.toBe(before)
 
     await page.locator('#bg-copy').click()
     await expect(page.locator('.toast.info')).toContainText('Result copied')
@@ -201,7 +213,7 @@ test('details panel shows the agent and Copy result, Show file and Go to session
     await expect(page.locator('#sessions-button')).toHaveAttribute('aria-pressed', 'true')
 
     await openAgents(page)
-    await page.locator('.bg-bar', { hasText: 'Copy tenant settings' }).click()
+    await page.locator('.bg-item', { hasText: 'Copy tenant settings' }).click()
     await expect(page.locator('#bg-go')).toBeDisabled()
     await page.locator('#bg-details-close').click()
     await expect(page.locator('#bg-details')).toHaveCount(0)
@@ -249,7 +261,10 @@ for (const [mode, themeId] of [['dark', undefined], ['light', 'dawsha-daylight']
       await openAgents(page)
       await expect(bars(page)).toHaveCount(6)
       await page.screenshot({ path: join(SHOTS, `agents-${mode}-overview.png`) })
-      await page.locator('.bg-bar', { hasText: 'Sidebar session features' }).click()
+      await page.setViewportSize({ width: 1024, height: 728 })
+      await page.screenshot({ path: join(SHOTS, `agents-${mode}-ci-size.png`) })
+      await page.setViewportSize({ width: 1440, height: 880 })
+      await page.locator('.bg-item', { hasText: 'Sidebar session features' }).click()
       await page.locator('#bg-automatic').check()
       await page.locator('#bg-project-filter-trigger').click()
       await expect(page.getByRole('listbox')).toBeVisible()

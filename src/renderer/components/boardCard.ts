@@ -11,7 +11,7 @@ import { SESSION_STATE_LABELS, type SessionState } from '../../shared/sessionSta
 import { lastLines } from '../../shared/topbarSummary'
 import type { BoardColumn } from '../../shared/board'
 import { agentMark } from './agentMark'
-import { tagChip } from './sessionTagUi'
+import { tagWord } from './sessionTagUi'
 
 const PREVIEW_LINES = 2
 const WAITING_TEXT = 'Waiting for your permission'
@@ -58,7 +58,8 @@ export class BoardCard {
   private readonly time = h('span', { class: 'board-card-time' })
   private readonly tag = h('span', { class: 'board-card-tag', hidden: true })
   private tagShown = ''
-  private readonly meta = h('div', { class: 'board-card-meta' })
+  private readonly metaText = h('span', {})
+  private readonly meta = h('div', { class: 'board-card-meta' }, this.metaText, this.tag)
   private readonly body = h('div', { class: 'board-card-body' })
   private readonly actions = h('div', { class: 'board-card-actions' })
   private agent = ''
@@ -74,7 +75,7 @@ export class BoardCard {
     this.el = h(
       'article',
       { class: 'board-card', tabindex: '0', 'data-pane-id': paneId },
-      h('div', { class: 'board-card-head' }, this.mark, this.title, this.tag, this.time),
+      h('div', { class: 'board-card-head' }, this.mark, this.title, this.time),
       this.meta,
       this.body,
       this.actions
@@ -103,9 +104,9 @@ export class BoardCard {
     }
     const project = view.project?.name ?? 'project'
     setText(this.title, view.title)
-    this.showTag(view.tag)
+    this.showTag(view.tag, view.tagAuto)
     this.title.title = view.title
-    setText(this.meta, view.branch ? `${project} · ${view.branch}` : project)
+    setText(this.metaText, view.branch ? `${project} · ${view.branch}` : project)
     setText(this.time, column === 'reviewed' ? SESSION_STATE_LABELS[state].toLowerCase() : timeInState(view.pane.id, state, view.now))
     this.el.setAttribute('aria-label', `${view.title}, ${project}, ${SESSION_STATE_LABELS[state]}`)
     this.el.setAttribute('data-state', state)
@@ -113,11 +114,12 @@ export class BoardCard {
     this.refresh(column)
   }
 
-  private showTag(tag: PaneView['tag']): void {
-    if ((tag ?? '') === this.tagShown) return
-    this.tagShown = tag ?? ''
+  private showTag(tag: PaneView['tag'], source: PaneView['tagAuto']): void {
+    const shown = `${tag ?? ''}:${source ?? ''}`
+    if (shown === this.tagShown) return
+    this.tagShown = shown
     this.tag.hidden = tag === null
-    this.tag.replaceChildren(...(tag ? [tagChip(tag, true)] : []))
+    this.tag.replaceChildren(...(tag ? [tagWord(tag, source)] : []))
   }
 
   refreshPreview(): void {

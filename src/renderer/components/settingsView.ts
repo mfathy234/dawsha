@@ -12,7 +12,9 @@ import {
   setHighlights,
   setPaletteShortcut,
   setSessionInfo,
-  setDimIdlePanes,
+  setColorSessionsByTag,
+  setDimOtherPanes,
+  setShowRecap,
   setSidebarCollapsed,
   showSettingsSection,
   showView
@@ -203,7 +205,7 @@ export class SettingsViewComponent {
     }
     this.title.replaceChildren(section.label)
     if (section.id === 'remote') {
-      this.title.append(h('span', { id: 'remote-settings-beta', class: 'beta-badge' }, 'BETA'))
+      this.title.append(h('span', { id: 'remote-settings-beta', class: 'beta-badge' }, 'Beta'))
     }
     this.lede.textContent = section.lede
     this.panel.setAttribute('aria-labelledby', `settings-tab-${section.id}`)
@@ -552,7 +554,9 @@ export class SettingsViewComponent {
           : `Ctrl or Alt plus a key, such as ${DEFAULT_PALETTE_SHORTCUT} or Alt+Space. Ctrl+Shift+P always works too.`),
         this.shortcutError ? h('p', { class: 'field-error', id: 'palette-shortcut-error', role: 'alert' }, this.shortcutError) : null
       ),
-      row('Sessions', checkbox('dim-idle-panes', "Dim sessions you're not working in", state.settings.dimIdlePanes, false, setDimIdlePanes)),
+      row('Sessions', checkbox('dim-other-panes', "Dim sessions you're not working in", state.settings.dimOtherPanes, false, setDimOtherPanes)),
+      row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag)),
+      row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap)),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed)),
       row(
         'Getting started',

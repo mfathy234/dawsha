@@ -29,7 +29,7 @@ import {
 import { derivePanes, type PaneView } from '../derive'
 import { store } from '../state'
 import { shortcutFor } from '../commands/registry'
-import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
+import { clear, h, icon, iconButton, placeNearAnchor, leave } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
 import { continueIn, continueLabel } from '../handoffActions'
 import { exportTranscript } from '../transcriptActions'
@@ -38,8 +38,8 @@ import { api } from '../api'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
-import { tagChip, tagMenuItems } from './sessionTagUi'
-import type { SessionTag } from '../../shared/sessionTags'
+import { tagMenuItems, tagWord, type TagSource } from './sessionTagUi'
+import { SESSION_TAG_LABELS, type SessionTag } from '../../shared/sessionTags'
 import { AgentsDrawer } from './agentsDrawer'
 import { openBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
@@ -194,7 +194,8 @@ export class PaneComponent {
     this.projectName.hidden = projectName === ''
     this.projectName.textContent = projectName
     this.fresh.hidden = view.named
-    this.updateTag(view.tag)
+    this.updateTag(view.tag, view.tagAuto)
+    this.index.title = [title, projectName, view.tag ? SESSION_TAG_LABELS[view.tag] : ''].filter((part) => part !== '').join(' · ')
     const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
     const origin = view.pane.tabs.find((t) => t.id === view.primaryTabId)?.from
@@ -206,7 +207,7 @@ export class PaneComponent {
     this.compareChip.title = link ? `Side ${link.slot.toUpperCase()} of a comparison` : ''
     this.el.setAttribute('aria-label', `Task ${view.index + 1} ${title.toUpperCase()}${maximized ? ', maximized' : ''}`)
     this.el.classList.toggle('focused', focused)
-    this.el.classList.toggle('calm', !focused && store.state.settings.dimIdlePanes)
+    this.el.classList.toggle('calm', !focused && store.state.settings.dimOtherPanes)
     this.el.classList.toggle('maximized', maximized)
     this.pin.hidden = view.pane.pinned !== true
     this.el.classList.toggle('pinned', view.pane.pinned === true)
@@ -222,6 +223,7 @@ export class PaneComponent {
     this.updateInfo(view, maximized)
     this.foot.hidden = this.info.hidden && this.branch.hidden
     this.updateRecap(view)
+    this.recap.hidden = !store.state.settings.showRecap || this.recapText === ''
     this.updateHint(view)
     this.updatePermission(view, state)
     this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now, view.info.geminiTools)
@@ -245,7 +247,6 @@ export class PaneComponent {
     if (signature === this.titleText) return
     this.titleText = signature
     this.index.replaceChildren(`${number} · `, h('bdi', { dir: 'auto' }, title))
-    this.index.title = title
   }
 
   // In full mode the X sits right after the name, like the strip tabs; in the grid it stays at the far right.
@@ -330,13 +331,16 @@ export class PaneComponent {
 
   // Read off the visible screen, so no file is read; at most once per RECAP_REFRESH_MS for each pane.
   private updateRecap(view: PaneView): void {
+    if (!store.state.settings.showRecap) {
+      this.recapAt = 0
+      return
+    }
     const now = Date.now()
     if (now - this.recapAt < RECAP_REFRESH_MS) return
     this.recapAt = now
     const text = recapFromScreen(getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? '')
     if (text === this.recapText) return
     this.recapText = text
-    this.recap.hidden = text === ''
     this.recap.textContent = text
     this.recap.title = text
   }
@@ -400,18 +404,19 @@ export class PaneComponent {
     this.details.replaceChildren(...children)
   }
 
-  private updateTag(tag: SessionTag | null): void {
-    if ((tag ?? '') === this.tagShown) return
-    this.tagShown = tag ?? ''
+  private updateTag(tag: SessionTag | null, source: TagSource): void {
+    const shown = `${tag ?? ''}:${source ?? ''}`
+    if (shown === this.tagShown) return
+    this.tagShown = shown
     this.tagHost.hidden = tag === null
-    this.tagHost.replaceChildren(...(tag ? [tagChip(tag)] : []))
+    this.tagHost.replaceChildren(...(tag ? [tagWord(tag, source)] : []))
   }
 
   /** Opened from Pane actions › Tag…, in the place of that button's menu. */
   private openTag(): void {
     if (this.actionsMenu) this.closeActions()
     this.actionsAnchor = this.el.querySelector<HTMLElement>('.pane-actions')
-    const items = tagMenuItems(this.current?.tag ?? null, (tag) => {
+    const items = tagMenuItems(this.current?.tagAuto ? null : (this.current?.tag ?? null), (tag) => {
       this.closeActions()
       tagSession(this.paneId, tag)
     })
@@ -576,7 +581,7 @@ export class PaneComponent {
   private closeActions(): void {
     document.removeEventListener('pointerdown', this.outsideActions, true)
     document.removeEventListener('keydown', this.escapeActions, true)
-    this.actionsMenu?.remove()
+    leave(this.actionsMenu)
     this.actionsMenu = null
     this.actionsAnchor = null
   }
@@ -724,7 +729,7 @@ export class PaneComponent {
 
   private closeMenu(): void {
     document.removeEventListener('pointerdown', this.outside, true)
-    this.menu?.remove()
+    leave(this.menu)
     this.menu = null
     this.menuAnchor = null
   }

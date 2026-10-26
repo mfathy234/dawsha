@@ -1,19 +1,21 @@
-import { readdir, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { open, readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
+import { basename, dirname, join, relative } from 'node:path'
 import {
   MAX_BASELINE_UNTRACKED,
   parseNumstatZ,
   sanitizeBaseline,
   validateRepoPaths,
   type GitDiffResult,
+  type FileAgainstBaseResult,
   type GitFileEntry,
   type ProjectFileResult,
+  type ProjectFileWriteResult,
   type ProjectFilesResult,
   type SessionBaseline,
   type SessionBaselineResult,
   type SessionStatusResult
 } from '../shared/gitStatus'
-import { asAddedDiff, git, hasHead, insideRoot, readTextFile, repoRoot, repoStatus } from './gitCommit'
+import { asAddedDiff, decodeText, git, hasHead, insideRoot, readTextFile, repoRoot, repoStatus } from './gitCommit'
 
 const MAX_LISTED = 20_000
 const MAX_WALKED = 5_000
@@ -54,7 +56,7 @@ export async function projectFiles(folder: unknown): Promise<ProjectFilesResult>
   const root = await repoRoot(folder)
   if (!root) {
     const walked = await walk(folder)
-    return { ok: true, files: walked.files.sort(), truncated: walked.truncated, repo: false }
+    return { ok: true, files: walked.files.sort(), truncated: walked.truncated, repo: false, prefix: '' }
   }
   // Ask git for the folder's place in the repo: comparing paths breaks when one side went through a symlink
   // (macOS /var is /private/var) or a Windows short name.
@@ -63,28 +65,183 @@ export async function projectFiles(folder: unknown): Promise<ProjectFilesResult>
   const listed = await git(root, ['ls-files', '-z', '-c', '-o', '--exclude-standard', '--', scope || '.'])
   if (!listed.ok) return { ok: false, error: listed.message }
   const all = [...new Set(splitZ(listed.stdout))].sort()
-  return { ok: true, files: all.slice(0, MAX_LISTED), truncated: all.length > MAX_LISTED, repo: true }
+  return { ok: true, files: all.slice(0, MAX_LISTED), truncated: all.length > MAX_LISTED, repo: true, prefix: scope }
+}
+
+interface Missing {
+  root: string
+  realRoot: string
+  scope: string
+  rel: string
+}
+
+type Resolved = { ok: true; root: string; rel: string; full: string; realRel: string } | { ok: false; error: string; missing?: Missing }
+
+const lower = (text: string): string => (process.platform === 'win32' ? text.toLowerCase() : text)
+
+// A project can be a sub folder of its repository: paths are repo-relative, but only those under the project's own prefix are the project's.
+const inScope = (scope: string, rel: string): boolean => scope === '' || lower(rel).startsWith(`${lower(scope)}/`)
+
+// The real path of a project file for other main-side features (opening it in an editor), or null when it is not one.
+export async function resolveProjectPath(folder: unknown, path: unknown): Promise<string | null> {
+  const target = await resolveProjectFile(folder, path)
+  return target.ok ? target.full : null
+}
+
+// The one validator for a project file: relative path checks, then the real location (symlinks resolved)
+// must still be inside the project's real root. realRel is that location relative to the real root, in its
+// on-disk casing, for git.
+async function resolveProjectFile(folder: unknown, path: unknown): Promise<Resolved> {
+  if (typeof folder !== 'string' || folder === '') return { ok: false, error: 'No project folder.' }
+  const checked = validateRepoPaths([path])
+  if (!checked.ok) return { ok: false, error: checked.error }
+  const rel = checked.paths[0]
+  if (process.platform === 'win32' && rel.includes(':')) return { ok: false, error: `Invalid file path: ${rel}` }
+  const root = (await repoRoot(folder)) ?? folder
+  const lexical = insideRoot(root, rel)
+  if (!lexical) return { ok: false, error: `Path is outside the project: ${rel}` }
+  let realRoot: string
+  let scope: string
+  try {
+    realRoot = await realpath(root)
+    scope = relative(realRoot, await realpath(folder)).replace(/\\/g, '/')
+  } catch {
+    return { ok: false, error: 'No project folder.' }
+  }
+  if (scope.startsWith('..')) scope = ''
+  if (!inScope(scope, rel)) return { ok: false, error: `Path is outside the project: ${rel}` }
+  try {
+    const full = await realpath(lexical)
+    const realRel = relative(realRoot, full).replace(/\\/g, '/')
+    if (!insideRoot(realRoot, full) || !inScope(scope, realRel)) return { ok: false, error: `Path is outside the project: ${rel}` }
+    return { ok: true, root, rel, full, realRel }
+  } catch {
+    return { ok: false, error: `${rel} no longer exists.`, missing: { root, realRoot, scope, rel } }
+  }
+}
+
+async function readResolved(target: Extract<Resolved, { ok: true }>): Promise<ProjectFileResult> {
+  let size: number
+  let mtimeMs: number
+  try {
+    const info = await stat(target.full)
+    if (!info.isFile()) return { ok: false, error: `${target.rel} is not a file.` }
+    size = info.size
+    mtimeMs = info.mtimeMs
+  } catch {
+    return { ok: false, error: `${target.rel} no longer exists.` }
+  }
+  if (size > MAX_READ_BYTES) return { ok: true, text: null, size, reason: 'large', mtimeMs }
+  let bytes: Buffer
+  try {
+    bytes = await readFile(target.full)
+  } catch {
+    return { ok: false, error: `${target.rel} no longer exists.` }
+  }
+  const decoded = decodeText(bytes)
+  return decoded.ok ? { ok: true, text: decoded.text, size, mtimeMs } : { ok: true, text: null, size, reason: decoded.reason, mtimeMs }
 }
 
 // One project file as text, refusing paths outside the project, binary files and very large files.
 export async function readProjectFile(folder: unknown, path: unknown): Promise<ProjectFileResult> {
-  if (typeof folder !== 'string' || folder === '') return { ok: false, error: 'No project folder.' }
-  const checked = validateRepoPaths([path])
-  if (!checked.ok) return { ok: false, error: checked.error }
-  const base = (await repoRoot(folder)) ?? folder
-  const full = insideRoot(base, checked.paths[0])
-  if (!full) return { ok: false, error: `Path is outside the project: ${checked.paths[0]}` }
-  let size: number
+  const target = await resolveProjectFile(folder, path)
+  return target.ok ? readResolved(target) : target
+}
+
+// Saves an existing text file through one open handle, so the checks and the write see the same file.
+// A changed mtime means someone else wrote it since it was read.
+export async function writeProjectFile(folder: unknown, path: unknown, text: unknown, expectedMtime: unknown): Promise<ProjectFileWriteResult> {
+  if (typeof text !== 'string' || typeof expectedMtime !== 'number' || !Number.isFinite(expectedMtime)) return { ok: false, error: 'Invalid save request.' }
+  if (Buffer.byteLength(text, 'utf8') > MAX_READ_BYTES) return { ok: false, error: 'File is too large to save here.' }
+  const target = await resolveProjectFile(folder, path)
+  if (!target.ok) return target.missing ? createProjectFile(target.missing, text) : target
+  let handle
   try {
-    const info = await stat(full)
-    if (!info.isFile()) return { ok: false, error: `${checked.paths[0]} is not a file.` }
-    size = info.size
-  } catch {
-    return { ok: false, error: `${checked.paths[0]} no longer exists.` }
+    handle = await open(target.full, 'r+')
+  } catch (error) {
+    return { ok: false, error: `Could not open ${target.rel}: ${(error as Error).message}` }
   }
-  if (size > MAX_READ_BYTES) return { ok: true, text: null, size, reason: 'large' }
-  const text = await readTextFile(full)
-  return text === null ? { ok: true, text: null, size, reason: 'binary' } : { ok: true, text, size }
+  try {
+    const info = await handle.stat()
+    if (!info.isFile()) return { ok: false, error: `${target.rel} is not a file.` }
+    if (info.size > MAX_READ_BYTES) return { ok: false, error: `${target.rel} is too large to edit here.` }
+    const bytes = await handle.readFile()
+    const decoded = decodeText(bytes)
+    if (!decoded.ok) return { ok: false, error: decoded.reason === 'binary' ? `${target.rel} is a binary file.` : `${target.rel} is not UTF-8, so it cannot be saved here. Open it in VS Code.` }
+    if (info.mtimeMs !== expectedMtime) return { ok: false, conflict: true, error: `${target.rel} changed on disk.` }
+    const out = decoded.text.includes('\r\n') ? text.replace(/\r?\n/g, '\r\n') : text
+    await handle.truncate(0)
+    await handle.write(out, 0, 'utf8')
+    await handle.sync()
+    return { ok: true, mtimeMs: (await handle.stat()).mtimeMs }
+  } catch (error) {
+    return { ok: false, error: `Could not save ${target.rel}: ${(error as Error).message}` }
+  } finally {
+    await handle.close().catch(() => undefined)
+  }
+}
+
+// Saving a file that was deleted on disk while it was open writes it again, as long as its folder is still inside the project.
+async function createProjectFile(missing: Missing, text: string): Promise<ProjectFileWriteResult> {
+  const lexical = insideRoot(missing.root, missing.rel)
+  if (!lexical) return { ok: false, error: `Path is outside the project: ${missing.rel}` }
+  try {
+    const parent = await realpath(dirname(lexical))
+    const full = join(parent, basename(lexical))
+    const realRel = relative(missing.realRoot, full).replace(/\\/g, '/')
+    if (realRel.startsWith('..') || !inScope(missing.scope, realRel)) return { ok: false, error: `Path is outside the project: ${missing.rel}` }
+    await writeFile(full, text, { encoding: 'utf8', flag: 'wx' })
+    return { ok: true, mtimeMs: (await stat(full)).mtimeMs }
+  } catch (error) {
+    return { ok: false, error: `Could not save ${missing.rel}: ${(error as Error).message}` }
+  }
+}
+
+const MERGE_BASE_TTL_MS = 5000
+const mergeBases = new Map<string, { at: number; base: Promise<string | null> }>()
+
+// The merge base is the same for every file of a root, so a burst of watcher refreshes asks git once.
+function mergeBase(root: string): Promise<string | null> {
+  const hit = mergeBases.get(root)
+  if (hit && Date.now() - hit.at < MERGE_BASE_TTL_MS) return hit.base
+  const base = findMergeBase(root)
+  mergeBases.set(root, { at: Date.now(), base })
+  return base
+}
+
+async function findMergeBase(root: string): Promise<string | null> {
+  if (!(await hasHead(root))) return null
+  for (const ref of ['origin/main', 'main', 'master']) {
+    if (!(await git(root, ['rev-parse', '--verify', '-q', `${ref}^{commit}`])).ok) continue
+    const base = await git(root, ['merge-base', 'HEAD', ref])
+    if (base.ok && base.stdout.trim()) return base.stdout.trim()
+  }
+  return 'HEAD'
+}
+
+// The file's text at the merge base with main (null for a file that is new on this branch) next to the working copy.
+// A base over the size cap comes back as null with reason 'large'.
+export async function fileAgainstBase(folder: unknown, path: unknown): Promise<FileAgainstBaseResult> {
+  const target = await resolveProjectFile(folder, path)
+  if (!target.ok) return target.missing ? deletedAgainstBase(target.missing, target.error) : target
+  const current = await readResolved(target)
+  if (!current.ok) return current
+  if (current.text === null) return { ok: false, error: current.reason === 'large' ? 'File is too large to compare.' : current.reason === 'encoding' ? 'File is not UTF-8.' : 'File is binary.' }
+  const root = await repoRoot(folder)
+  const base = root ? await mergeBase(root) : null
+  if (!root) return { ok: true, base: null, text: current.text, reason: 'norepo' }
+  if (!base) return { ok: true, base: null, text: current.text }
+  const shown = await git(root, ['show', `${base}:${target.realRel}`])
+  if ((shown.ok && Buffer.byteLength(shown.stdout, 'utf8') > MAX_READ_BYTES) || (!shown.ok && /maxBuffer/i.test(shown.message))) return { ok: true, base: null, text: current.text, reason: 'large' }
+  return { ok: true, base: shown.ok ? shown.stdout : null, text: current.text }
+}
+
+// A file that is gone from the working tree: its merge-base text next to an empty file, so Files can show what was deleted.
+async function deletedAgainstBase(missing: { root: string; rel: string }, error: string): Promise<FileAgainstBaseResult> {
+  const base = await mergeBase(missing.root)
+  const shown = base ? await git(missing.root, ['show', `${base}:${missing.rel}`]) : null
+  if (!shown?.ok || Buffer.byteLength(shown.stdout, 'utf8') > MAX_READ_BYTES) return { ok: false, error }
+  return { ok: true, base: shown.stdout, text: '', deleted: true }
 }
 
 // Records the repo state when a session starts, without touching the working tree or the stash list.

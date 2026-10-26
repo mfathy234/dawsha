@@ -416,7 +416,7 @@ test('public build exposes beta Remote Access settings and stays off until confi
     await page.locator('#settings-button').click()
     await expect(page.locator('#settings-tab-remote')).toBeVisible()
     await page.locator('#settings-tab-remote').click()
-    await expect(page.locator('#remote-settings-beta')).toHaveText('BETA')
+    await expect(page.locator('#remote-settings-beta')).toHaveText('Beta')
     await expect(page.locator('#remote-access-toggle')).toBeEnabled()
     await expect(page.getByText(/pairing code is the only login gate/i)).toBeVisible()
     await expect(page.locator('.remote-status-off')).toContainText('off')

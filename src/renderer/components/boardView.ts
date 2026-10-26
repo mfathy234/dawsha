@@ -152,7 +152,7 @@ export class BoardComponent {
     const body = h('div', { class: 'board-col-body' }, empty)
     const closeAll =
       id === 'reviewed'
-        ? h('button', { class: 'btn small ghost', type: 'button', 'aria-label': 'Close all reviewed sessions', onClick: () => void closeReviewed(this.reviewedIds) }, 'Close all…')
+        ? h('button', { class: 'link-quiet', type: 'button', 'aria-label': 'Close all reviewed sessions', onClick: () => void closeReviewed(this.reviewedIds) }, 'Close all…')
         : null
     const head = h('div', { class: 'board-col-head' }, columnIcon(id), h('span', { class: 'board-col-title' }, label), count, h('span', { class: 'board-spacer' }), closeAll)
     const foot = id === 'reviewed' ? h('button', { class: 'board-new', type: 'button', onClick: () => openQuickPick() }, '+ New session') : null

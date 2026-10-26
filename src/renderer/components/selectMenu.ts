@@ -1,5 +1,5 @@
 import { stepIndex } from '../../shared/board'
-import { h, icon } from '../dom'
+import { h, icon, leave } from '../dom'
 import { ICONS } from '../icons'
 import './selectMenu.css'
 
@@ -181,7 +181,7 @@ class SelectMenu {
     document.removeEventListener('pointerdown', this.outside, true)
     window.removeEventListener('resize', this.dismiss)
     document.removeEventListener('scroll', this.onScroll, true)
-    this.menu?.remove()
+    leave(this.menu)
     this.menu = null
     this.items = []
     this.trigger.setAttribute('aria-expanded', 'false')

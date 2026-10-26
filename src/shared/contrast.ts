@@ -25,3 +25,8 @@ export function withAlpha(hex: string, alpha: number): string {
   const [r, g, b] = parseHex(hex)
   return `rgba(${r}, ${g}, ${b}, ${Math.min(1, Math.max(0, alpha))})`
 }
+
+export function shadowRgb(background: string, text: string, kind: 'dark' | 'light'): string {
+  const [r, g, b] = kind === 'dark' ? parseHex(background).map((c) => Math.round(c * 0.35)) : parseHex(text)
+  return `${r} ${g} ${b}`
+}

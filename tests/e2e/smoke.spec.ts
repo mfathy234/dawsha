@@ -200,7 +200,9 @@ test('names panes from Claude session files and lays three panes out with a tall
       'utf8'
     )
     await expect(page.locator('.pane-title', { hasText: 'User avatars' })).toHaveCount(1, { timeout: 15_000 })
-    await expect(page.locator('.pane-fresh:visible')).toHaveCount(2)
+    await expect(page.locator('.pane-fresh:not([hidden])')).toHaveCount(2)
+    const widths = await page.locator('.pane-title').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width))
+    for (const width of widths) expect(width).toBeGreaterThanOrEqual(100)
     await expect(page.locator('.pane-state .state-pill.state-working')).toHaveCount(1)
     await expect(page.locator('.topbar-count')).toContainText('1 working')
     await page.screenshot({ path: join(SCREENS, '9-three-panes-named.png') })

@@ -1,5 +1,11 @@
-.handoff-file { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--raised); }
-.handoff-file-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-.handoff-file-path { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: 12px; line-height: 1.4; }
-.handoff-file-actions { display: inline-flex; gap: 6px; }
-.handoff-note { margin: 0 0 10px; padding: 8px 10px; border-left: 2px solid var(--muted); border-radius: 0 var(--radius) var(--radius) 0; background: var(--raised); color: var(--muted); font-size: 12px; line-height: 1.45; }
+.handoff-dialog { width: 680px; }
+.handoff-head { display: flex; align-items: center; gap: var(--s-3); padding-inline-end: 40px; }
+.handoff-head h2 { margin: 0; }
+.handoff-marks { display: inline-flex; align-items: center; gap: var(--s-1); color: var(--muted); }
+.handoff-marks .icon svg { width: 12px; height: 12px; }
+.handoff-text { min-height: 260px; font-size: var(--fs-ui); }
+.handoff-file { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-3); margin: 0 0 var(--s-3); color: var(--muted); }
+.handoff-file .icon svg { width: 14px; height: 14px; }
+.handoff-file-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: var(--fs-ui); }
+.handoff-file-actions { display: inline-flex; gap: var(--s-1); margin-inline-start: auto; }
+.handoff-note { margin: 0 0 var(--s-3); padding: var(--s-2) var(--s-3); border-radius: var(--r-control); background: var(--raised); color: var(--muted); font-size: var(--fs-ui); line-height: 1.45; }

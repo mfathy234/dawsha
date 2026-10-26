@@ -5,7 +5,7 @@ import type { AgentKind, ResumeQuery, ResumeSession } from '../../shared/types'
 import { primaryModifierPressed } from '../../shared/shortcuts'
 import { closeQuickPick, findOpenSession, openQuickPick, resumeInFocusedPane, resumeInNewPane, setQuickPickMode } from '../actions'
 import { api } from '../api'
-import { clear, h, icon } from '../dom'
+import { clear, h, icon, leave } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { modeTabs } from './pickerTabs'
@@ -89,14 +89,7 @@ export class ResumePickerComponent {
     this.list = h('div', { class: 'rp-list', id: 'rp-list', role: 'listbox', 'aria-label': 'Recent sessions' })
     this.preview = h('div', { class: 'rp-preview', 'aria-live': 'polite' })
     this.foot = h('div', { class: 'rp-foot' })
-    const hint = h(
-      'span',
-      { class: 'rp-hint' },
-      h('span', { class: 'kbd' }, 'Tab'),
-      ' switches agent · ',
-      h('span', { class: 'kbd' }, navigator.platform.toLowerCase().includes('mac') ? 'Cmd+R' : 'Ctrl+R'),
-      ' toggles New/Resume'
-    )
+    const hint = h('span', { class: 'rp-hint' }, `Tab switches agent · ${navigator.platform.toLowerCase().includes('mac') ? 'Cmd+R' : 'Ctrl+R'} toggles New/Resume`)
     this.root = h(
       'div',
       { class: 'popover quickpick resume-picker', role: 'dialog', 'aria-label': 'Start or resume a session' },
@@ -143,7 +136,7 @@ export class ResumePickerComponent {
     window.clearTimeout(this.timer)
     this.token += 1
     document.removeEventListener('pointerdown', this.outside, true)
-    this.root?.remove()
+    leave(this.root)
     this.root = null
     this.search = null
     this.allProjects = null
@@ -355,7 +348,7 @@ export class ResumePickerComponent {
       h('div', { class: 'rp-pv-head' }, agentMark(session.agent), h('h2', { class: 'rp-pv-title', dir: 'auto' }, session.title)),
       h('p', { class: 'rp-pv-sub' }, [agentLabel(session.agent), session.model].filter(Boolean).join(' · ')),
       h('p', { class: 'rp-pv-sub' }, project?.name ?? '', project ? ' ' : '', h('span', { class: 'mono' }, project?.folder ?? '')),
-      h('ul', { class: 'rp-facts', 'aria-label': 'Session facts' }, ...facts.map((fact) => h('li', {}, fact))),
+      h('p', { class: 'rp-facts', 'aria-label': 'Session facts' }, facts.join(' · ')),
       field('What it was about', session.firstPrompt, 5),
       field('Where it ended', session.lastAssistant, 7),
       field('Matching content', session.matchExcerpt, 4, ' rp-match'),
@@ -365,14 +358,14 @@ export class ResumePickerComponent {
         h(
           'button',
           { class: 'btn primary', type: 'button', id: 'rp-new-pane', onClick: () => this.choose(session, false) },
-          'Resume in new pane ',
-          h('span', { class: 'kbd' }, 'Enter')
+          'Resume in new pane',
+          h('span', { class: 'btn-hint' }, 'Enter')
         ),
         h(
           'button',
           { class: 'btn ghost', type: 'button', id: 'rp-this-pane', onClick: () => this.choose(session, true) },
-          'Resume in this pane ',
-          h('span', { class: 'kbd' }, 'Shift+Enter')
+          'Resume in this pane',
+          h('span', { class: 'btn-hint' }, 'Shift+Enter')
         )
       )
     ]
@@ -385,7 +378,7 @@ export class ResumePickerComponent {
     this.foot.replaceChildren(
       h('span', { class: 'rp-count' }, this.sessions.length > 0 ? sessionSummary(this.sessions.length, projects) : ''),
       h('span', { class: 'spacer' }),
-      h('span', {}, 'Up Down move · Esc closes')
+      h('span', {}, '↑ ↓ move · Esc closes')
     )
   }
 }

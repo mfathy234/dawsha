@@ -69,7 +69,9 @@ export const defaultSettings = (): Settings => ({
   projects: [],
   theme: { id: DEFAULT_THEME_ID, image: defaultImage() },
   sidebarCollapsed: false,
-  dimIdlePanes: true,
+  dimOtherPanes: false,
+  showRecap: true,
+  colorSessionsByTag: true,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   othersCollapsed: false,
   sessionsLayout: 'grid',
@@ -80,6 +82,7 @@ export const defaultSettings = (): Settings => ({
   keptSessions: [],
   foldedProjects: [],
   foldedClosedSessions: [],
+  filesTabs: {},
   ticketNotes: {},
   tasks: [],
   lastSeenVersion: null,
@@ -273,6 +276,8 @@ function sanitizeRemoteAccess(value: unknown): RemoteAccessSettings {
   }
 }
 
+const KEPT_BRANCH_MAX = 200
+
 function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSession[] {
   if (!Array.isArray(value)) return []
   const seen = new Set<string>()
@@ -288,6 +293,8 @@ function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSess
     const kept: KeptSession = { projectId: String(item.projectId), agent: item.agent, sessionId, title: title.slice(0, SESSION_NAME_MAX), closedAt: clampNumber(item.closedAt, 0, Date.now() + 86_400_000, Date.now()) }
     if (item.renamed === true) kept.renamed = true
     if (isSessionTag(item.tag)) kept.tag = item.tag
+    const branch = asString(item.branch)
+    if (branch) kept.branch = branch.slice(0, KEPT_BRANCH_MAX)
     sessions.push(kept)
   }
   return sessions.slice(-500)
@@ -320,6 +327,20 @@ function sanitizeProjectIds(value: unknown, projects: readonly Project[]): strin
   return [...new Set(value.filter((id): id is string => typeof id === 'string' && known.has(id)))]
 }
 
+export const FILES_TABS_MAX = 12
+
+function sanitizeFilesTabs(value: unknown, projects: readonly Project[]): Record<string, string[]> {
+  if (!isRecord(value)) return {}
+  const known = new Set(projects.map((p) => p.id))
+  const out: Record<string, string[]> = {}
+  for (const [id, paths] of Object.entries(value)) {
+    if (!known.has(id) || !Array.isArray(paths)) continue
+    const list = [...new Set(paths.filter((path): path is string => typeof path === 'string' && path !== '' && path.length <= 500))].slice(0, FILES_TABS_MAX)
+    if (list.length > 0) out[id] = list
+  }
+  return out
+}
+
 function sanitizeShortcut(value: unknown): string {
   const binding = typeof value === 'string' ? parseShortcut(value) : null
   return binding ? formatShortcut(binding) : DEFAULT_PALETTE_SHORTCUT
@@ -336,7 +357,9 @@ export function migrateSettings(raw: unknown): Settings {
     projects,
     theme: { id: resolveThemeId(asString(theme.id) ?? defaults.theme.id), image: sanitizeImage(theme.image) },
     sidebarCollapsed: raw.sidebarCollapsed === true,
-    dimIdlePanes: raw.dimIdlePanes !== false,
+    dimOtherPanes: raw.dimOtherPanes === true,
+    showRecap: raw.showRecap !== false,
+    colorSessionsByTag: raw.colorSessionsByTag !== false,
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,
     sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
@@ -350,6 +373,7 @@ export function migrateSettings(raw: unknown): Settings {
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
     foldedProjects: sanitizeProjectIds(raw.foldedProjects, projects),
     foldedClosedSessions: sanitizeProjectIds(raw.foldedClosedSessions, projects),
+    filesTabs: sanitizeFilesTabs(raw.filesTabs, projects),
     ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,

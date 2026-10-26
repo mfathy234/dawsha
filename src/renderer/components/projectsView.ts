@@ -4,7 +4,7 @@ import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
 import { countSessionStates, sessionState, type SessionState } from '../../shared/sessionState'
 import type { AgentKind, Project } from '../../shared/types'
 import { derivePanes } from '../derive'
-import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
+import { clear, h, icon, iconButton, placeNearAnchor, leave } from '../dom'
 import { ICONS } from '../icons'
 import type { AppState, ProjectsTab } from '../state'
 import { agentMark } from './agentMark'
@@ -327,7 +327,7 @@ export class ProjectsViewComponent {
   private closeMenu(restoreFocus = false): void {
     document.removeEventListener('pointerdown', this.outside, true)
     this.menuAnchor?.removeAttribute('aria-expanded')
-    this.menu?.remove()
+    leave(this.menu)
     if (restoreFocus && this.menuAnchor?.isConnected) this.menuAnchor.focus()
     this.menu = null
     this.menuAnchor = null

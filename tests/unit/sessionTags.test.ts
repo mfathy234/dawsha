@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { closedUsageShort, closedUsageTooltip, renameKept, reopenGroupLabel, tagKept } from '../../src/shared/keptSessions'
 import { moveProjectTo, canDropProject } from '../../src/shared/projectOrder'
-import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from '../../src/shared/sessionTags'
+import { autoTag, autoTagSource, cleanSessionName, isSessionTag, SESSION_NAME_MAX } from '../../src/shared/sessionTags'
 import { migrateSettings } from '../../src/shared/settingsSchema'
 import { snapshotWorkspace } from '../../src/shared/layouts'
 import type { KeptSession, Project } from '../../src/shared/types'
@@ -54,6 +54,31 @@ describe('session names and tags', () => {
   })
 })
 
+describe('autoTag', () => {
+  it('reads the branch prefix first, case-insensitively', () => {
+    expect(autoTag('feature/x', 'fix the crash')).toBe('feature')
+    expect(autoTag('Feat/x', '')).toBe('feature')
+    expect(autoTag('hotfix/login', '')).toBe('bug')
+    expect(autoTag('bugfix/a', '')).toBe('bug')
+    expect(autoTag('doc/readme', '')).toBe('docs')
+    expect(autoTag('review/pr-4', '')).toBe('review')
+    expect(autoTag('SPIKE/idea', '')).toBe('research')
+  })
+  it('falls back to the conversation for main, develop, no branch or an unknown prefix', () => {
+    expect(autoTag('main', 'Fix the login crash')).toBe('bug')
+    expect(autoTag('master', 'add a dark theme')).toBe('feature')
+    expect(autoTag('develop', 'review the diff')).toBe('review')
+    expect(autoTag(null, 'update the README')).toBe('docs')
+    expect(autoTag('chore/deps', 'build it')).toBe('feature')
+  })
+  it('lets the first matching rule win and gives null when nothing matches', () => {
+    expect(autoTag(null, 'add a fix for the crash')).toBe('bug')
+    expect(autoTag(null, 'refactor things')).toBeNull()
+    expect(autoTag('main', 'prefix and debugging')).toBeNull()
+    expect(autoTag(null, '')).toBeNull()
+  })
+})
+
 describe('closed session usage and reopen labels', () => {
   it('shows dollars when known, tokens otherwise, nothing when empty', () => {
     expect(closedUsageShort({ tokens: 1_500_000, costUsd: 0.4231 })).toBe('$0.42')
@@ -97,5 +122,32 @@ describe('tags in settings', () => {
   it('saves a tab name and tag with the workspace', () => {
     const workspace = snapshotWorkspace([{ id: 'p', projectId: 'api', fontSize: 14, activeTabId: 't', tabs: [{ id: 't', agent: 'claude', label: 'claude', name: 'Mine', tag: 'bug' }] }], 'p')
     expect(workspace.panes[0].tabs[0]).toMatchObject({ name: 'Mine', tag: 'bug' })
+  })
+})
+
+describe('autoTag in Arabic', () => {
+  it('reads Arabic words for each rule', () => {
+    expect(autoTag(null, 'إصلاح خطأ تسجيل الدخول')).toBe('bug')
+    expect(autoTag(null, 'مشكلة في الشاشة')).toBe('bug')
+    expect(autoTag(null, 'إضافة ميزة جديدة')).toBe('feature')
+    expect(autoTag(null, 'بناء الواجهة')).toBe('feature')
+    expect(autoTag(null, 'مراجعة الكود')).toBe('review')
+    expect(autoTag(null, 'توثيق الواجهة')).toBe('docs')
+  })
+  it('does not match inside a longer word, Arabic or Latin', () => {
+    expect(autoTag(null, 'الإضافة')).toBeNull()
+    expect(autoTag(null, 'debugging prefixes')).toBeNull()
+  })
+  it('matches a word next to punctuation', () => {
+    expect(autoTag(null, 'Fix: login')).toBe('bug')
+    expect(autoTag(null, '(إصلاح)')).toBe('bug')
+  })
+})
+
+describe('autoTagSource', () => {
+  it('says whether the branch or the conversation gave the tag', () => {
+    expect(autoTagSource('fix/login', 'add a thing')).toBe('branch')
+    expect(autoTagSource('main', 'add a thing')).toBe('conversation')
+    expect(autoTagSource(null, 'refactor')).toBeNull()
   })
 })

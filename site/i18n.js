@@ -1,6 +1,36 @@
 (() => {
   const translations = {
     'New in 1.6': 'الجديد في 1.6',
+    'New in 1.7': 'الجديد في 1.7',
+    '1.7 adds a light Files view and Ctrl+P quick open, colours your session tags for you and calms the grid down.': 'يضيف 1.7 عرض ملفات خفيفًا وفتحًا سريعًا بـ Ctrl+P، ويلوّن وسوم جلساتك عنك، ويجعل الشبكة أهدأ.',
+    'The Files view and Ctrl+P quick open': 'عرض الملفات والفتح السريع بـ Ctrl+P',
+    'The Files view': 'عرض الملفات',
+    'A light editor beside your sessions. Open it from the Files tab, right after Agents, or with Ctrl+Shift+E.': 'محرر خفيف بجانب جلساتك. افتحه من تبويب الملفات بعد الوكلاء مباشرة، أو بـ Ctrl+Shift+E.',
+    'A file tree for each project and worktree, with git badges M, A and D and the filters All, Changed and Open in sessions.': 'شجرة ملفات لكل مشروع ولكل شجرة عمل، مع شارات git بالحروف M وA وD ومرشحات الكل والمتغيّر والمفتوح في الجلسات.',
+    'A file opens read-only, so you can select and copy freely. The Changes toggle shows what changed since main, and back.': 'يُفتح الملف للقراءة فقط، فتحدد وتنسخ كما تشاء. ويعرض مفتاح التغييرات ما تغيّر منذ main ثم يعود.',
+    'Press E or Edit for a small edit and Ctrl+S to save. If an agent changes the file meanwhile, a bar offers Reload theirs or Keep mine.': 'اضغط E أو تعديل لإجراء تعديل صغير، وCtrl+S للحفظ. وإذا غيّر وكيل الملف في أثناء ذلك، يعرض شريط خيار إعادة تحميل نسخته أو الإبقاء على نسختك.',
+    'The right panel lists the sessions that touched the file and an outline of it.': 'تسرد اللوحة اليمنى الجلسات التي لمست الملف، ومعها مخطط له.',
+    'Add to prompt types @path, with the selected lines, into the focused session. Open in VS Code and Copy path are there too.': 'تكتب إضافة إلى الطلب المسار @path مع الأسطر المحددة في الجلسة المركَّز عليها. وهناك أيضًا الفتح في VS Code ونسخ المسار.',
+    'Only files inside your projects can be read or saved.': 'لا يمكن قراءة أو حفظ إلا الملفات داخل مشاريعك.',
+    'Quick open with Ctrl+P': 'الفتح السريع بـ Ctrl+P',
+    'Jump to any file in your projects from anywhere, terminals included, with a preview beside the list.': 'انتقل إلى أي ملف في مشاريعك من أي مكان، ومنه الطرفيات، مع معاينة بجانب القائمة.',
+    'Enter opens the file in Files.': 'يفتح Enter الملف في عرض الملفات.',
+    'Alt+Enter adds it to the prompt.': 'يضيفه Alt+Enter إلى الطلب.',
+    'Ctrl+Enter opens it in VS Code.': 'ويفتحه Ctrl+Enter في VS Code.',
+    'Tags that colour themselves': 'وسوم تتلوّن من تلقاء نفسها',
+    'Sessions get a tag colour without you doing anything.': 'تأخذ الجلسات لون الوسم دون أن تفعل شيئًا.',
+    'From the branch: feature/ is Feature, fix/, bug/ and hotfix/ are Bug, and docs/, review/ and research/ match their tags.': 'من الفرع: تعني feature/ ميزة، وتعني fix/ وbug/ وhotfix/ خطأ، وتطابق docs/ وreview/ وresearch/ وسومها.',
+    'Without a branch, from the conversation title, in English and Arabic words.': 'وإذا لم يكن هناك فرع، فمن عنوان المحادثة بكلمات عربية وإنجليزية.',
+    'A tag you set always wins, and closed sessions keep their branch.': 'الوسم الذي تضعه أنت يغلب دائمًا، وتحتفظ الجلسات المغلقة بفرعها.',
+    'Turn colours off with the Tag colours setting or the palette command.': 'أوقف الألوان من إعداد ألوان الوسوم أو من أمر في لوحة الأوامر.',
+    'A calmer grid': 'شبكة أهدأ',
+    'Fewer outlines and more room for the terminal.': 'حدود أقل ومساحة أكبر للطرفية.',
+    'Panes have no coloured top bar. State is an icon and a word, the recap is plain text, and the focused pane lifts with a soft shadow.': 'لا شريط علوي ملون في الأجزاء. الحالة أيقونة وكلمة، والموجز نص عادي، ويرتفع الجزء المركَّز عليه بظل ناعم.',
+    'Popups, dialogs, menus, the resume picker, settings, the board and the main views use fills and soft shadows instead of borders. Focus rings stay clear for keyboard users.': 'تستخدم النوافذ المنبثقة والحوارات والقوائم ومنتقي الاستئناف والإعدادات واللوحة والعروض الرئيسية تعبئة وظلالًا ناعمة بدل الحدود. وتبقى حلقات التركيز واضحة لمن يستخدم لوحة المفاتيح.',
+    'Sidebar rows show time and cost on their own line. The × and ⋯ buttons appear on hover or focus and never cover text.': 'تعرض صفوف الشريط الجانبي الوقت والتكلفة في سطر مستقل. وتظهر الأزرار × و⋯ عند التمرير أو التركيز ولا تغطي النص أبدًا.',
+    'Dim others is a switch in the top bar and is off by default. The one-line recap can be hidden in settings.': 'تعتيم الباقي مفتاح في الشريط العلوي، وهو مطفأ افتراضيًا. ويمكن إخفاء الموجز ذي السطر الواحد من الإعدادات.',
+    'The Agents tab groups background agents by session, running first, each with a small bar scaled to its session, instead of a 24-hour timeline.': 'يجمع تبويب الوكلاء وكلاء الخلفية بحسب الجلسة، فيبدأ بالعاملين، ويظهر لكل منهم شريط صغير بمقياس جلسته، بدل الخط الزمني لـ 24 ساعة.',
+    'Right-click gives Copy, Cut and Paste in text fields and the editor.': 'يعرض النقر بالزر الأيمن نسخ وقص ولصق في حقول النص والمحرر.',
     'A 20 second look at Dawsha 1.6: a Claude reply in Arabic turns from disconnected letters into joined right-to-left text, Arabic is dictated into a session, and full mode keeps every session on one line': 'لمحة عن دوشة 1.6 في 20 ثانية: رد عربي من Claude يتحول من حروف متقطعة إلى نص متصل من اليمين إلى اليسار، وإملاء بالعربية في جلسة، ووضع كامل يُبقي كل جلسة في سطر واحد',
     'Native Arabic support and voice dictation': 'دوشة تدعم العربية أصلًا، مع الإملاء الصوتي',
     'Dawsha now speaks Arabic. Read replies with joined letters, dictate in Arabic or English, and work in a calmer window.': 'دوشة تدعم العربية الآن. اقرأ الردود بحروف متصلة، وأمْلِ بالعربية أو الإنجليزية، واعمل في نافذة أهدأ.',
@@ -267,7 +297,14 @@
     'Requirements.': 'المتطلبات.',
     'Windows 10 or 11 (x64), or an Apple Silicon Mac with macOS 13 or later. Install the agent CLIs you want to use: Claude Code, Codex CLI, Gemini CLI. Node.js 20+ is only needed to install Codex and Gemini from inside Dawsha.': 'ويندوز 10 أو 11 بمعمارية x64، أو Mac بمعالج Apple Silicon وmacOS 13 أو أحدث. ثبّت أدوات الوكلاء التي تريدها: Claude Code وCodex CLI وGemini CLI. تحتاج Node.js 20+ فقط لتثبيت Codex وGemini من داخل دوشة.',
     'Stop hunting for the right window.': 'لا تبحث عن النافذة المناسبة بعد الآن.', 'Put every agent where you can read it.': 'ضع كل وكيل أمام عينيك.',
-    'View on GitHub': 'اعرضه على GitHub', 'Changelog': 'سجل التغييرات', 'MIT licence': 'رخصة MIT'
+    'View on GitHub': 'اعرضه على GitHub', 'Changelog': 'سجل التغييرات', 'MIT licence': 'رخصة MIT',
+    'Earlier releases': 'الإصدارات السابقة',
+    'Arabic in every session, voice dictation, a calmer grid, the Agents tab and a handoff that carries the whole conversation. Installing Claude Code from Dawsha no longer breaks an existing install.': 'العربية في كل جلسة، والإملاء الصوتي، وشبكة أهدأ، وتبويب الوكلاء، ونقل يحمل المحادثة كاملة. ولم يعد تثبيت Claude Code من دوشة يُفسد تثبيتًا موجودًا.',
+    'The Orchestrator hands a feature or a bug to a team of agents. The Work dashboard and Tickets show where your day went, and Remote Control connects more reliably.': 'يسلّم المنسّق ميزة أو خطأً إلى فريق من الوكلاء. وتُظهر لوحة العمل والتذاكر أين ذهب يومك، ويتصل التحكم عن بُعد بثبات أكبر.',
+    'The sessions board, the session timeline, search across every session, Replay, and approvals from your phone.': 'لوحة الجلسات، والخط الزمني للجلسة، والبحث في كل الجلسات، وإعادة التشغيل، والموافقة من هاتفك.',
+    'Notes for 1.6': 'ملاحظات الإصدار 1.6', 'Notes for 1.5': 'ملاحظات الإصدار 1.5', 'Notes for 1.0': 'ملاحظات الإصدار 1.0',
+    'Full changelog': 'سجل التغييرات الكامل',
+    'Remote Control is a beta feature.': 'التحكم عن بُعد في مرحلة بيتا.'
   };
 
   const attributeTranslations = {
@@ -297,6 +334,14 @@
     'Dawsha Skills tab showing installed agent definitions with their locations': 'تبويب المهارات في دوشة يعرض تعريفات الوكلاء المثبتة ومواقعها',
     'A session with the sub-agents drawer open next to its terminal': 'مساحة في دوشة تعرض لوحة نشاط الوكلاء بجوار الطرفية',
     'Dawsha logo: a terminal inside a speech bubble': 'شعار دوشة: طرفية داخل فقاعة محادثة',
+    'The Files view with a file tree and git badges on the left, a file open in the middle and the sessions that touched it on the right': 'عرض الملفات: شجرة ملفات بشارات git على اليسار، وملف مفتوح في الوسط، والجلسات التي لمسته على اليمين',
+    'The Ctrl+P quick open list over a session, with a file name typed in the search box and a preview of the selected file beside the results': 'قائمة الفتح السريع بـ Ctrl+P فوق جلسة، مع اسم ملف في مربع البحث ومعاينة للملف المحدد بجانب النتائج',
+    'The sidebar and the sessions board with coloured Feature, Bug, Docs and Review tags on sessions whose branches start with feature, fix and docs': 'الشريط الجانبي ولوحة الجلسات مع وسوم ملونة للميزة والخطأ والتوثيق والمراجعة على جلسات فروعها تبدأ بـ feature وfix وdocs',
+    'A grid of four sessions without coloured top bars, where the focused pane is lifted by a soft shadow and the others sit flat with no outlines': 'شبكة من أربع جلسات بلا أشرطة علوية ملونة، يرتفع فيها الجزء المركَّز عليه بظل ناعم وتبقى الأجزاء الأخرى مسطحة بلا حدود',
+    'The Files view with a file tree and git badges on the left and a file open beside it': 'عرض الملفات: شجرة ملفات بشارات git على اليسار وملف مفتوح بجانبها',
+    'Two sessions without coloured top bars, where the focused pane is lifted by a soft shadow and a waiting approval sits at the bottom of the pane': 'جلستان بلا أشرطة علوية ملونة، يرتفع فيها الجزء المركَّز عليه بظل ناعم، وتظهر موافقة تنتظر في أسفل الجزء',
+    'The sidebar with coloured Feature, Bug, Docs and Review tags on sessions whose branches start with feature, fix and docs, beside a card on the sessions board': 'الشريط الجانبي مع وسوم ملونة للميزة والخطأ والتوثيق والمراجعة على جلسات فروعها تبدأ بـ feature وfix وdocs، بجانب بطاقة من لوحة الجلسات',
+    'Dawsha with the Projects sidebar on the left and a Claude Code session on the right, working on a dark mode toggle in a sample project': 'دوشة: شريط المشاريع على اليسار وجلسة Claude Code على اليمين تعمل على مفتاح الوضع الداكن في مشروع تجريبي',
     'Primary': 'التنقل الرئيسي', 'Dawsha home': 'الصفحة الرئيسية لدوشة',
     'A 20 second tour: four agent windows become one Dawsha grid, an amber border marks the session that needs you, Ctrl+K opens the palette, and Remote Control answers from a phone': 'جولة في 20 ثانية: أربع نوافذ للوكلاء تصبح شبكة واحدة في دوشة، وإطار كهرماني يميز الجلسة التي تحتاجك، وCtrl+K يفتح لوحة الأوامر، والتحكم عن بُعد يرد من الهاتف',
     'Pause the demo': 'إيقاف العرض مؤقتًا',
@@ -306,6 +351,12 @@
     'Dawsha Remote on a phone listing running Claude and Codex sessions and recent sessions to resume': 'دوشة عن بُعد على الهاتف تعرض جلسات Claude وCodex الجارية وجلسات حديثة للاستئناف',
     'Dawsha Remote on a phone showing a Claude Code reply with numbered steps and a code block, above a message box': 'دوشة عن بُعد على الهاتف تعرض رد Claude Code بخطوات مرقمة ومقطع كود، فوق مربع الرسالة'
   };
+
+  const NAMES = /(Claude Code|Codex CLI|Gemini CLI|Claude|Codex|Gemini)/g;
+  const isolate = (text) => text.replace(NAMES, '\u2068$1\u2069');
+  for (const table of [translations, attributeTranslations]) {
+    for (const key of Object.keys(table)) table[key] = isolate(table[key]);
+  }
 
   const button = document.querySelector('.lang-switch');
   const nodes = [];
@@ -326,7 +377,7 @@
   const englishTitle = document.title;
   const description = document.querySelector('meta[name="description"]');
   const englishDescription = description?.content;
-  const arabicTitle = 'دوشة — كل وكلاء البرمجة في نافذة واحدة';
+  const arabicTitle = 'دوشة: كل وكلاء البرمجة في نافذة واحدة';
   const arabicDescription = 'دوشة يجمع Claude Code وCodex وGemini في نافذة واحدة على ويندوز وأجهزة Mac بمعالج Apple Silicon ولينكس. مجاني، محلي، وبدون حساب.';
   const metadata = [
     ['meta[property="og:title"]', arabicTitle],
@@ -347,6 +398,10 @@
     for (const item of metadata) item.element.content = arabic ? item.arabic : item.english;
     for (const item of nodes) item.node.textContent = arabic ? item.arabic : item.english;
     for (const item of attributes) item.element.setAttribute(item.name, arabic ? item.arabic : item.english);
+    document.querySelectorAll('[data-poster-ar]').forEach((element) => {
+      if (!element.hasAttribute('data-poster-en')) element.setAttribute('data-poster-en', element.getAttribute('poster'));
+      element.setAttribute('poster', arabic ? element.getAttribute('data-poster-ar') : element.getAttribute('data-poster-en'));
+    });
     document.querySelectorAll('[data-version]').forEach((element) => {
       const match = element.textContent.match(/(?:Version|الإصدار)\s+([0-9][0-9.]*)/);
       if (match) element.textContent = (arabic ? 'الإصدار ' : 'Version ') + match[1];

@@ -89,10 +89,23 @@ export async function readTextFile(path: string): Promise<string | null> {
   try {
     const info = await stat(path)
     if (!info.isFile() || info.size > MAX_TEXT_BYTES) return null
-    const text = (await readFile(path)).toString('utf8')
-    return text.includes('\0') ? null : text
+    const decoded = decodeText(await readFile(path))
+    return decoded.ok ? decoded.text : null
   } catch {
     return null
+  }
+}
+
+export type DecodedText = { ok: true; text: string } | { ok: false; reason: 'binary' | 'encoding' }
+
+// Strict UTF-8: a file in another encoding (CP1252, UTF-16...) is refused rather than decoded lossily, because
+// saving the lossy text back would corrupt it. A BOM stays in the text, as before.
+export function decodeText(bytes: Buffer): DecodedText {
+  if (bytes.includes(0)) return { ok: false, reason: 'binary' }
+  try {
+    return { ok: true, text: new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes) }
+  } catch {
+    return { ok: false, reason: 'encoding' }
   }
 }
 

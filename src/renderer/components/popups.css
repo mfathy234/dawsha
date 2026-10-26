@@ -1,19 +1,22 @@
 /* One look for dialogs, popovers and pickers: radius, shadow, title, corner X and a short open animation. */
 :root {
-  --popup-radius: 12px;
-  --popup-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
-  --popup-title-size: 16px;
+  --popup-radius: var(--r-pop);
+  --popup-shadow: var(--shadow-pop);
+  --popup-title-size: var(--fs-title);
   --popup-x-size: 28px;
   --popup-x-inset: 10px;
 }
-:root[data-kind='light'] { --popup-shadow: 0 14px 40px rgba(24, 28, 40, 0.22); }
 
 :root .dialog,
 :root .popover,
 :root .palette {
+  --field-bg: var(--bg);
   border-radius: var(--popup-radius);
+  background: var(--surface-pop);
   box-shadow: var(--popup-shadow);
 }
+
+:is(.dialog, .popover, .palette) :is(.text-input, .field-select) { border: 0; background: var(--field-bg); }
 
 :root .dialog h2,
 :root .popup-head .popover-title,
@@ -42,11 +45,34 @@
 :root .dialog.has-x > .ob-head,
 :root .update-popover .update-title { padding-inline-end: calc(var(--popup-x-size) + 4px); }
 
+:root .dialog,
+:root .palette { transform-origin: 50% 20%; }
+:root .popover { transform-origin: top left; }
+:root .popover.pane-actions-menu { transform-origin: top right; }
+.leaving { pointer-events: none; }
+
 @media (prefers-reduced-motion: no-preference) {
   :root .dialog,
   :root .popover,
-  :root .palette { animation: popup-in 140ms ease-out; }
+  :root .palette { animation: popup-in 160ms var(--ease-out); }
+  .overlay { animation: scrim-in 160ms var(--ease-out); }
+  .leaving { animation: popup-out 100ms ease-out forwards; }
 }
 @keyframes popup-in {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: scale(.97); }
+}
+@keyframes scrim-in {
+  from { opacity: 0; }
+}
+@keyframes popup-out {
+  to { opacity: 0; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .overlay { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  :root .dialog, :root .popover, :root .palette { background: var(--raised); }
+}
+@media (prefers-contrast: more) {
+  :root .dialog, :root .popover, :root .palette { box-shadow: 0 0 0 1px var(--text); }
+  :root { --muted: color-mix(in srgb, var(--text) 78%, var(--bg)); }
 }

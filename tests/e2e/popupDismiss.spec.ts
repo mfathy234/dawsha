@@ -14,6 +14,7 @@ async function shot(page: Page, name: string): Promise<void> {
 }
 
 async function openPaletteCommand(page: Page, query: string, commandId: string): Promise<void> {
+  await expect(page.locator('.overlay')).toHaveCount(0)
   await page.keyboard.press('Control+k')
   const input = page.getByPlaceholder('Type a command, a session or a project')
   await expect(input).toBeVisible()

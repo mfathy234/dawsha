@@ -13,12 +13,29 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ experimental: { orchestrator: false } }).experimental).toEqual({ orchestrator: true })
     expect(migrateSettings({}).experimental).toEqual({ orchestrator: true })
   })
+  it('shows the recap by default and only turns it off when told to', () => {
+    expect(defaultSettings().showRecap).toBe(true)
+    expect(migrateSettings({}).showRecap).toBe(true)
+    expect(migrateSettings({ showRecap: 'no' }).showRecap).toBe(true)
+    expect(migrateSettings({ showRecap: false }).showRecap).toBe(false)
+    expect(defaultSettings().colorSessionsByTag).toBe(true)
+    expect(migrateSettings({ colorSessionsByTag: 'no' }).colorSessionsByTag).toBe(true)
+    expect(migrateSettings({ colorSessionsByTag: false }).colorSessionsByTag).toBe(false)
+  })
+  it('leaves dimming off by default, only turns it on when told to and ignores the old key', () => {
+    expect(defaultSettings().dimOtherPanes).toBe(false)
+    expect(migrateSettings({}).dimOtherPanes).toBe(false)
+    expect(migrateSettings({ dimIdlePanes: true }).dimOtherPanes).toBe(false)
+    expect(migrateSettings({ dimOtherPanes: 'yes' }).dimOtherPanes).toBe(false)
+    expect(migrateSettings({ dimOtherPanes: true }).dimOtherPanes).toBe(true)
+  })
   it('keeps closed sessions and task history only for known projects', () => {
     const projects = [{ id: 'api', name: 'API', folder: 'C:\\work\\api', defaultAgent: 'codex' }]
     const keptSessions = [{ projectId: 'api', agent: 'codex', sessionId: 'session-1', title: 'Fix export', closedAt: 100 }, { projectId: 'missing', agent: 'claude', sessionId: 'x', title: 'Orphan', closedAt: 100 }]
     const tasks = [{ id: 'task-1', projectId: 'api', title: 'Export cleanup', note: 'Keep output stable', createdAt: 100, sessionKeys: ['codex:session-1'], events: [{ id: 'event-1', kind: 'commit', text: 'abc123', at: 120 }] }]
     const migrated = migrateSettings({ projects, keptSessions, tasks })
     expect(migrated.keptSessions).toHaveLength(1)
+    expect(migrateSettings({ projects, keptSessions: [{ ...keptSessions[0], branch: 'fix/'+'x'.repeat(500) }, { ...keptSessions[0], sessionId: 's2', branch: 7 }] }).keptSessions.map((k) => k.branch?.length)).toEqual([200, undefined])
     expect(migrated.tasks).toEqual(tasks)
     expect(migrateSettings(JSON.parse(JSON.stringify(migrated))).tasks).toEqual(tasks)
   })
@@ -32,6 +49,15 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ projects, foldedProjects: 'api', foldedClosedSessions: { api: true } }).foldedProjects).toEqual([])
     expect(migrateSettings({ foldedProjects: ['api'] }).foldedProjects).toEqual([])
     expect(migrateSettings(JSON.parse(JSON.stringify(migrated))).foldedProjects).toEqual(['web'])
+  })
+  it('keeps open Files tabs for known projects, de-duplicated and capped at 12', () => {
+    const projects = [{ id: 'api', name: 'API', folder: 'C:\\work\\api' }]
+    const many = Array.from({ length: 20 }, (_, index) => `src/f${index}.ts`)
+    expect(defaultSettings().filesTabs).toEqual({})
+    const migrated = migrateSettings({ projects, filesTabs: { api: ['a.ts', 'a.ts', 5, '', 'b.ts'], gone: ['x.ts'], web: 'no' } })
+    expect(migrated.filesTabs).toEqual({ api: ['a.ts', 'b.ts'] })
+    expect(migrateSettings({ projects, filesTabs: { api: many } }).filesTabs.api).toHaveLength(12)
+    expect(migrateSettings({ projects, filesTabs: 'x' }).filesTabs).toEqual({})
   })
   it('keeps the onboarding dismissal only when it is exactly true', () => {
     expect(migrateSettings({}).onboardingDismissed).toBe(false)

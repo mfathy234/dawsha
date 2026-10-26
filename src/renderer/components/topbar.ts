@@ -3,6 +3,7 @@ import {
   openQuickPick,
   openSettings,
   openResumePicker,
+  setDimOtherPanes,
   showView,
   toggleLayouts,
   toggleThemePicker,
@@ -21,21 +22,22 @@ import { countSessionStates, sessionState } from '../../shared/sessionState'
 import { MORE_VIEWS, accountLimits, limitText, moreLabel, type MoreView } from '../../shared/topbarSummary'
 import { stateIcon } from './stateIcon'
 import { toolState } from '../../shared/agentTools'
-import { formatPercent, gaugeStage } from '../../shared/statusLine'
-import { chargeBar } from './chargeBar'
+import { formatPercent } from '../../shared/statusLine'
 import type { RateLimitWindow } from '../../shared/types'
-import { h, icon } from '../dom'
-import type { AppState } from '../state'
+import { h, icon, leave } from '../dom'
+import { store, type AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import { setSessionsLayout } from '../sessionsLayout'
 import { NotificationBell } from './notificationBell'
 import { onAgentsChange, runningAgents } from '../backgroundAgents'
+import './topbar.css'
 
 const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
 
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
 const BOARD_KEY_HINT = formatShortcut(bind('Ctrl+Shift+B'))
 const AGENTS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+L'))
+const FILES_KEY_HINT = formatShortcut(bind('Ctrl+Shift+E'))
 
 export class TopBarComponent {
   readonly el: HTMLElement
@@ -75,8 +77,9 @@ export class TopBarComponent {
     h('span', { class: 'utility-label' }, 'Theme')
   )
   private readonly sessions = h('button', { class: 'btn ghost', type: 'button', id: 'sessions-button', onClick: () => showView('grid') }, 'Sessions')
-  private readonly agentsBadge = h('span', { class: 'bg-badge', hidden: true, 'aria-hidden': 'true' })
+  private readonly agentsBadge = h('span', { class: 'count-badge', hidden: true, 'aria-hidden': 'true' })
   private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Background agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'background') }, 'Agents', this.agentsBadge)
+  private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
   private readonly projects = h('button', { class: 'btn ghost', type: 'button', id: 'projects-button' }, 'Projects')
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')
@@ -94,7 +97,7 @@ export class TopBarComponent {
   private activeMore: MoreView | null = null
   private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
   private readonly work = h('button', { class: 'btn ghost', type: 'button', id: 'work-button', onClick: () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work') }, 'Work')
-  private readonly orchBadge = h('span', { class: 'orch-badge', hidden: true })
+  private readonly orchBadge = h('span', { class: 'count-badge orch-badge', hidden: true })
   private readonly orchestrator = h('button', { class: 'btn ghost', type: 'button', id: 'orchestrator-button', hidden: true }, 'Orchestrator', this.orchBadge)
   private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings', title: 'Settings' },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
@@ -102,6 +105,9 @@ export class TopBarComponent {
   )
   private readonly gridMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-grid', title: 'Show sessions as a grid', onClick: () => setSessionsLayout('grid') }, 'Grid')
   private readonly boardMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-board', title: `Show sessions as a board (${BOARD_KEY_HINT})`, onClick: () => setSessionsLayout('board') }, 'Board')
+  private readonly dimSwitch = h('button', { class: 'icon-btn dim-toggle', type: 'button', id: 'dim-others', 'aria-pressed': 'false', 'aria-label': 'Dim others', title: 'Dim others', onClick: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
+    icon(ICONS.dim)
+  )
   private readonly summary = h('div', { class: 'topbar-count', role: 'status', 'aria-live': 'polite' })
   private summarySignature = ''
   private readonly zoomValue = h('span', { class: 'zoom-value', title: 'Terminal text size of the focused pane' }, '15px')
@@ -143,6 +149,7 @@ export class TopBarComponent {
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
         this.sessions,
         this.background,
+        this.files,
         this.projects,
         this.usage,
         this.work,
@@ -153,6 +160,7 @@ export class TopBarComponent {
       this.updatePill,
       h('span', { class: 'spacer' }),
       h('div', { class: 'layout-switch', role: 'group', 'aria-label': 'Sessions layout' }, this.gridMode, this.boardMode),
+      this.dimSwitch,
       this.limits,
       h('div', { class: 'topbar-tools' },
         h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
@@ -173,7 +181,10 @@ export class TopBarComponent {
     this.sessions.setAttribute('aria-pressed', String(state.view === 'grid'))
     this.gridMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'grid'))
     this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
+    const dim = state.settings.dimOtherPanes
+    this.dimSwitch.setAttribute('aria-pressed', String(dim))
     this.background.setAttribute('aria-pressed', String(state.view === 'background'))
+    this.files.setAttribute('aria-pressed', String(state.view === 'files'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
     this.work.setAttribute('aria-pressed', String(state.view === 'work'))
@@ -200,7 +211,7 @@ export class TopBarComponent {
     this.more.setAttribute('aria-pressed', String(this.activeMore !== null))
     this.more.setAttribute('aria-expanded', String(this.moreMenu !== null || state.layoutsOpen))
     this.more.setAttribute('aria-label', this.agentUpdates ? `${label}, agent updates available` : label)
-    this.moreText.textContent = label
+    this.moreText.textContent = 'More'
     this.moreDot.hidden = !this.agentUpdates
     for (const { view } of MORE_VIEWS) this.markMoreItem(view)
   }
@@ -266,7 +277,7 @@ export class TopBarComponent {
 
   private closeAgentMenu(): void {
     document.removeEventListener('pointerdown', this.outside, true)
-    this.agentMenu?.remove()
+    leave(this.agentMenu)
     this.agentMenu = null
     this.chevron.setAttribute('aria-expanded', 'false')
   }
@@ -362,7 +373,7 @@ export class TopBarComponent {
 
   private closeMoreMenu(): void {
     document.removeEventListener('pointerdown', this.moreOutside, true)
-    this.moreMenu?.remove()
+    leave(this.moreMenu)
     this.moreMenu = null
     this.moreItems = null
     this.more.setAttribute('aria-expanded', 'false')
@@ -455,12 +466,9 @@ function resetText(window: RateLimitWindow): string {
 function limitItem(window: RateLimitWindow, text: string, title: string): HTMLElement {
   return h(
     'span',
-    { class: `limit stage-${gaugeStage(window.percent)}`, title, 'data-limit': window.key },
+    { class: 'limit', title, 'data-limit': window.key },
     h('span', { class: `limit-label${window.family ? ` fam-${window.family}` : ''}` }, window.label),
-    ' ',
-    chargeBar(window.percent),
     ' ',
     h('span', { class: 'limit-value' }, text)
   )
-
 }

@@ -8,6 +8,7 @@ import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, MIN_SIDEBA
 import { BackgroundAgentsViewComponent } from './backgroundAgentsView'
 import { AgentsViewComponent } from './agentsView'
 import { BoardComponent } from './boardView'
+import { FilesViewComponent } from './filesView'
 import { GridComponent } from './grid'
 import { ProjectsViewComponent } from './projectsView'
 import { ReplayPickerComponent } from './replayPicker'
@@ -47,6 +48,7 @@ export class AppShell {
   private readonly projects = new ProjectsViewComponent()
   private readonly agents = new AgentsViewComponent()
   private readonly background = new BackgroundAgentsViewComponent()
+  private readonly files = new FilesViewComponent()
   private readonly skills = new SkillsViewComponent()
   private readonly usage = new UsageViewComponent()
   private readonly work = new WorkViewComponent()
@@ -67,7 +69,7 @@ export class AppShell {
   private resizeWidth = DEFAULT_SIDEBAR_WIDTH
 
   constructor() {
-    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.background.el, this.agents.el, this.skills.el, this.usage.el, this.work.el, this.orchestrator.el, this.settings.el, this.replay.el)
+    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.background.el, this.files.el, this.agents.el, this.skills.el, this.usage.el, this.work.el, this.orchestrator.el, this.settings.el, this.replay.el)
     this.sidebarResize.addEventListener('pointerdown', this.onResizeStart)
     this.sidebarResize.addEventListener('pointermove', this.onResizeMove)
     this.sidebarResize.addEventListener('pointerup', this.onResizeEnd)
@@ -133,7 +135,9 @@ export class AppShell {
     this.topbar.update(state, views)
     this.sidebar.update(state, views)
     this.setSidebarWidth(state.settings.sidebarWidth)
-    this.sidebarResize.hidden = isSidebarCollapsed(state)
+    // Files has its own project switcher, so the projects sidebar steps aside there (the saved collapsed setting is untouched).
+    this.sidebar.el.hidden = state.view === 'files'
+    this.sidebarResize.hidden = isSidebarCollapsed(state) || state.view === 'files'
     const boardShown = state.view === 'grid' && state.settings.sessionsLayout === 'board'
     this.grid.el.hidden = state.view !== 'grid' || boardShown
     this.projects.el.hidden = state.view !== 'projects'
@@ -141,6 +145,8 @@ export class AppShell {
     else if (state.view === 'projects') this.projects.update(state)
     this.background.el.hidden = state.view !== 'background'
     this.background.update(state)
+    this.files.el.hidden = state.view !== 'files'
+    this.files.update(state)
     this.agents.el.hidden = state.view !== 'agents'
     if (state.view === 'agents') this.agents.update(state)
     this.skills.el.hidden = state.view !== 'skills'

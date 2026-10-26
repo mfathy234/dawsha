@@ -17,16 +17,13 @@
   var main = document.querySelector('[data-main-download]');
   if (main && PLATFORMS[platform]) {
     var choice = PLATFORMS[platform];
-    var alt = document.querySelector('.download-alt-link[data-dl="' + choice.dl + '"]');
-    var altIcon = alt && alt.querySelector('.platform-icon');
+    var card = document.getElementById(platform + '-download');
+    var cardIcon = card && card.querySelector('.platform-icon');
     var mainIcon = main.querySelector('.platform-icon');
-    if (altIcon && mainIcon) mainIcon.replaceWith(altIcon.cloneNode(true));
+    if (cardIcon && mainIcon) mainIcon.replaceWith(cardIcon.cloneNode(true));
     main.setAttribute('data-dl', choice.dl);
     main.querySelector('.download-title').textContent = choice.title;
     main.querySelector('.download-meta-text').textContent = choice.meta;
-    if (alt) alt.hidden = true;
-    var winInstaller = document.querySelector('.download-alt-link[data-platform="windows"][data-dl="setup"]');
-    if (winInstaller) winInstaller.hidden = false;
   }
   document.documentElement.setAttribute('data-platform', platform);
 

@@ -124,79 +124,39 @@ export function projectOptions(agents: readonly BackgroundAgent[], projects: rea
   return present.has(OTHER_PROJECT) ? [...options, { value: OTHER_PROJECT, label: 'Other folders' }] : options
 }
 
-export interface BgLane {
-  key: string
-  kind: BgKind
-  parentId: string
+export interface BgSessionGroup {
+  sessionKey: string
   title: string
-  projectLabel: string
-  agents: BackgroundAgent[]
-  lastActivityAt: number
+  project: string
+  agentKind: BgKind
   running: number
+  done: number
+  failed: number
+  agents: BackgroundAgent[]
 }
 
-/** One lane per parent session, the most recently active first; agents inside run oldest to newest. */
-export function buildLanes(agents: readonly BackgroundAgent[]): BgLane[] {
+
+const endOf = (agent: Pick<BackgroundAgent, 'endedAt' | 'lastActivityAt' | 'status'>, now: number): number => (agent.status === 'running' ? now : agent.endedAt ?? agent.lastActivityAt)
+
+/** One group per parent session: groups with a running agent first, then the latest activity; inside, running first, then newest start. */
+export function groupBySession(agents: readonly BackgroundAgent[], now: number): BgSessionGroup[] {
   const groups = new Map<string, BackgroundAgent[]>()
   for (const agent of agents) groups.set(`${agent.kind}:${agent.parentId}`, [...(groups.get(`${agent.kind}:${agent.parentId}`) ?? []), agent])
   return [...groups.entries()]
-    .map(([key, members]): BgLane => {
-      const sorted = [...members].sort((a, b) => a.startedAt - b.startedAt || a.key.localeCompare(b.key))
+    .map(([sessionKey, members]) => {
+      const sorted = [...members].sort((a, b) => Number(b.status === 'running') - Number(a.status === 'running') || b.startedAt - a.startedAt || a.key.localeCompare(b.key))
       const newest = sorted.reduce((best, agent) => (agent.lastActivityAt > best.lastActivityAt ? agent : best), sorted[0])
-      return {
-        key,
-        kind: newest.kind,
-        parentId: newest.parentId,
-        title: newest.parentTitle,
-        projectLabel: newest.projectLabel,
-        agents: sorted,
-        lastActivityAt: newest.lastActivityAt,
-        running: sorted.filter((agent) => agent.status === 'running').length
+      const latest = Math.max(...sorted.map((agent) => (agent.status === 'running' ? now : agent.lastActivityAt)))
+      const group: BgSessionGroup = {
+        sessionKey, title: newest.parentTitle, project: newest.projectLabel, agentKind: newest.kind, agents: sorted,
+        running: sorted.filter((agent) => agent.status === 'running').length,
+        done: sorted.filter((agent) => agent.status === 'done').length,
+        failed: sorted.filter((agent) => agent.status === 'failed').length
       }
+      return { group, latest }
     })
-    .sort((a, b) => b.lastActivityAt - a.lastActivityAt || a.key.localeCompare(b.key))
-}
-
-export interface BgWindow {
-  start: number
-  end: number
-  /** Where "now" sits, in percent of the axis. */
-  nowPct: number
-}
-
-/** The axis covers the range plus a little room after now so running bars show their growing edge. */
-export function axisWindow(range: BgRange, now: number): BgWindow {
-  const span = rangeMs(range)
-  const end = now + span * 0.05
-  return { start: now - span, end, nowPct: (span / (span * 1.05)) * 100 }
-}
-
-const MIN_BAR_PCT = 0.8
-
-/** Percent position on the axis, clipped to it; running agents reach now. */
-export function barGeometry(agent: Pick<BackgroundAgent, 'startedAt' | 'endedAt' | 'lastActivityAt' | 'status'>, window: BgWindow, now: number): { left: number; width: number } {
-  const span = window.end - window.start
-  const to = agent.status === 'running' ? now : agent.endedAt ?? agent.lastActivityAt
-  const from = Math.min(Math.max(agent.startedAt, window.start), window.end)
-  const end = Math.min(Math.max(to, from), window.end)
-  const left = Math.min(((from - window.start) / span) * 100, 100 - MIN_BAR_PCT)
-  const width = Math.max(((end - from) / span) * 100, MIN_BAR_PCT)
-  return { left, width: Math.min(width, 100 - left) }
-}
-
-export const AXIS_TICKS = 6
-
-const MINUTE = 60_000
-const TICK_STEPS = [10, 15, 20, 30, 60, 120, 180, 240, 360, 720, 1440].map((minutes) => minutes * MINUTE)
-
-/** Ticks on round local times (12:00, 12:30, Tue 00:00), about AXIS_TICKS of them across the window. */
-export function axisTicks(window: BgWindow, tzOffsetMinutes = new Date(window.start).getTimezoneOffset()): { at: number; pct: number }[] {
-  const span = window.end - window.start
-  const step = TICK_STEPS.find((candidate) => span / candidate <= AXIS_TICKS) ?? TICK_STEPS[TICK_STEPS.length - 1]
-  const shift = -tzOffsetMinutes * MINUTE
-  const ticks: { at: number; pct: number }[] = []
-  for (let at = Math.ceil((window.start + shift) / step) * step - shift; at < window.end; at += step) ticks.push({ at, pct: ((at - window.start) / span) * 100 })
-  return ticks
+    .sort((a, b) => Number(b.group.running > 0) - Number(a.group.running > 0) || b.latest - a.latest || a.group.sessionKey.localeCompare(b.group.sessionKey))
+    .map((entry) => entry.group)
 }
 
 export function compactTokens(count: number): string {
@@ -216,8 +176,7 @@ export function spanLabel(ms: number): string {
 }
 
 export const STATUS_LABELS: Record<BgStatus, string> = { running: 'running', done: 'done', failed: 'failed' }
-
-/** The accessible name of a timeline bar. */
+/** The accessible name of an agent row. */
 export function barLabel(agent: BackgroundAgent, now: number): string {
   const end = agent.status === 'running' ? now : agent.endedAt ?? agent.lastActivityAt
   const kind = agent.automatic ? 'automatic review' : agent.type

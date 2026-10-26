@@ -1,7 +1,7 @@
 import { pickerRows, type BranchList, type PickerRow, type SwitchMode } from '../../shared/gitBranches'
 import { moveSelection } from '../../shared/quickPick'
 import { api } from '../api'
-import { clear, h, icon } from '../dom'
+import { clear, h, icon, leave } from '../dom'
 import { runQuick } from '../gitQuickActions'
 import { ICONS } from '../icons'
 import { toast } from './toast'
@@ -83,9 +83,9 @@ export async function openBranchPicker(folder: string): Promise<void> {
   const overlay = h('div', { class: 'overlay palette-overlay' }, dialog)
 
   const close = (): void => {
-    overlay.remove()
+    leave(overlay)
     requestAnimationFrame(() => {
-      if (!document.querySelector('.overlay, .popover')) previous?.focus()
+      if (!document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)')) previous?.focus()
     })
   }
 

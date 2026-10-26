@@ -44,6 +44,7 @@ let mainWindow: BrowserWindow | null = null
 let cli: CliRunner | null = null
 let updates: UpdateController | null = null
 let quitting = false
+let checkingQuit = false
 let rendererReady = false
 const pendingNotificationClicks: string[] = []
 
@@ -72,6 +73,32 @@ function flushRenderer(): Promise<void> {
     const timer = setTimeout(finish, FLUSH_TIMEOUT_MS)
     ipcMain.once(IPC.flushDone, finish)
     window.webContents.send(IPC.flushRequest)
+  })
+}
+
+// Asks the page whether the app may close (unsaved Files tabs ask the user); a page that is not there answers yes.
+// The page acknowledges at once, so a dialog can stay open as long as the user needs; a page that never
+// acknowledges (hung or gone) must not make the app unclosable, so no acknowledgement within CLOSE_ACK_MS means yes.
+const CLOSE_ACK_MS = 10_000
+
+function askMayClose(): Promise<boolean> {
+  const window = mainWindow
+  if (!window || window.isDestroyed() || !rendererReady) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const finish = (_event?: unknown, ok?: unknown): void => {
+      clearTimeout(ackTimer)
+      ipcMain.removeListener(IPC.closeCheckAck, acknowledged)
+      ipcMain.removeListener(IPC.closeCheckDone, finish)
+      window.webContents.removeListener('destroyed', onGone)
+      resolve(ok !== false)
+    }
+    const acknowledged = (): void => clearTimeout(ackTimer)
+    const onGone = (): void => finish(undefined, true)
+    const ackTimer = setTimeout(() => finish(undefined, true), CLOSE_ACK_MS)
+    ipcMain.once(IPC.closeCheckAck, acknowledged)
+    ipcMain.once(IPC.closeCheckDone, finish)
+    window.webContents.once('destroyed', onGone)
+    window.webContents.send(IPC.closeCheck)
   })
 }
 
@@ -130,15 +157,31 @@ function createWindow(): BrowserWindow {
     if (mainWindow === window) rendererReady = false
   })
   let flushedOnClose = false
+  let asking = false
   window.on('close', (event) => {
     if (flushedOnClose) return
-    flushedOnClose = true
     event.preventDefault()
-    void flushRenderer().finally(() => window.close())
+    if (asking) return
+    asking = true
+    // A quit that was already approved does not ask a second time as its windows close.
+    void (quitting ? Promise.resolve(true) : askMayClose()).then((ok) => {
+      asking = false
+      if (!ok) return
+      flushedOnClose = true
+      void flushRenderer().finally(() => window.close())
+    })
   })
   window.on('focus', () => window.flashFrame(false))
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
+  // Electron shows no context menu by default; offer Copy / Cut / Paste / Select all only where they apply
+  window.webContents.on('context-menu', (_event, params) => {
+    if (!params.selectionText && !params.isEditable) return
+    const items = params.isEditable
+      ? [{ role: 'cut' as const }, { role: 'copy' as const }, { role: 'paste' as const }, { type: 'separator' as const }, { role: 'selectAll' as const }]
+      : [{ role: 'copy' as const }, { type: 'separator' as const }, { role: 'selectAll' as const }]
+    Menu.buildFromTemplate(items).popup({ window })
+  })
   if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(process.env.ELECTRON_RENDERER_URL)
   else void window.loadFile(join(__dirname, isPrivateRemoteBuild ? '../renderer-private/index.html' : '../renderer/index.html'))
   return window
@@ -289,6 +332,7 @@ app.whenReady().then(async () => {
     send,
     shutdown,
     autoUpdates: !isPrivateRemoteBuild,
+    mayQuit: askMayClose,
     markQuitting: () => {
       quitting = true
     }
@@ -296,10 +340,16 @@ app.whenReady().then(async () => {
   app.on('before-quit', (event) => {
     quitLog(`before-quit fired (already quitting: ${quitting})`)
     if (quitting) return
-    quitting = true
     event.preventDefault()
-    armWatchdog()
-    void runQuit(shutdownDeps)
+    if (checkingQuit) return
+    checkingQuit = true
+    void askMayClose().then((ok) => {
+      checkingQuit = false
+      if (!ok) return
+      quitting = true
+      armWatchdog()
+      void runQuit(shutdownDeps)
+    })
   })
   app.on('will-quit', () => quitLog('will-quit'))
   app.on('quit', () => quitLog('quit'))

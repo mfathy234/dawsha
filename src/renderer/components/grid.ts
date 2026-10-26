@@ -281,7 +281,7 @@ export class GridComponent {
     if (state.focusedId === this.lastFocused) return
     this.lastFocused = state.focusedId
     const pane = state.panes.find((p) => p.id === state.focusedId)
-    if (!pane || state.view !== 'grid' || state.settings.sessionsLayout === 'board' || state.quickPickOpen || document.querySelector('.overlay')) return
+    if (!pane || state.view !== 'grid' || state.settings.sessionsLayout === 'board' || state.quickPickOpen || document.querySelector('.overlay:not(.leaving)')) return
     const active = document.activeElement
     if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
       if (!active.classList.contains('xterm-helper-textarea')) return

@@ -1,7 +1,7 @@
 import { buildGroups, flatten, jumpGroup, type PaletteGroup, type PaletteRow } from '../../shared/palette'
 import { moveSelection } from '../../shared/quickPick'
 import { closePalette } from '../actions'
-import { clear, h, icon, nextFrame } from '../dom'
+import { clear, h, icon, nextFrame, leave } from '../dom'
 import { ICONS } from '../icons'
 import { loadRecents, recordRecent } from '../commands/recents'
 import { listCommands, type Command } from '../commands/registry'
@@ -11,11 +11,9 @@ import { getTerminal } from '../terminals'
 import { agentMark } from './agentMark'
 import { popupDismissButton } from './popupDismiss'
 
-const GROUP_ICONS: Record<string, string> = {
-  Actions: ICONS.bolt,
-  Layouts: ICONS.layout,
-  Recent: ICONS.history
-}
+const KEY_GLYPHS: Record<string, string> = { ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' }
+
+export const shortcutGlyphs = (shortcut: string): string => shortcut.split('+').map((key) => KEY_GLYPHS[key] ?? key).join('+')
 
 function highlight(text: string, indexes: number[]): (Node | string)[] {
   if (indexes.length === 0) return [text]
@@ -38,7 +36,7 @@ function highlight(text: string, indexes: number[]): (Node | string)[] {
 }
 
 function hint(key: string, label: string): HTMLElement {
-  return h('span', { class: 'palette-hint-item' }, h('span', { class: 'palette-kbd' }, key), ` ${label}`)
+  return h('span', { class: 'palette-hint-item' }, h('span', { class: 'palette-key' }, key), ` ${label}`)
 }
 
 export class PaletteComponent {
@@ -88,7 +86,7 @@ export class PaletteComponent {
         { class: 'palette-foot' },
         hint('Enter', 'run'),
         hint('Tab', 'next group'),
-        hint('Up Down', 'move'),
+        hint('↑ ↓', 'move'),
         hint('Esc', 'close')
       )
     )
@@ -107,7 +105,7 @@ export class PaletteComponent {
   }
 
   private teardown(): void {
-    this.overlay?.remove()
+    leave(this.overlay)
     this.overlay = null
     this.input = null
     this.list = null
@@ -117,7 +115,7 @@ export class PaletteComponent {
     const previous = this.previous
     closePalette()
     requestAnimationFrame(() => {
-      if (!document.querySelector('.overlay, .popover')) previous?.focus()
+      if (!document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)')) previous?.focus()
     })
   }
 
@@ -159,7 +157,7 @@ export class PaletteComponent {
   }
 
   private refocus(): void {
-    if (document.querySelector('.overlay, .popover')) return
+    if (document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)')) return
     if (document.activeElement && document.activeElement !== document.body) return
     const { state } = store
     const pane = state.panes.find((p) => p.id === state.focusedId)
@@ -179,14 +177,14 @@ export class PaletteComponent {
     let position = 0
     for (const group of this.groups) {
       this.list.append(h('div', { class: 'palette-group', role: 'presentation' }, group.label))
-      for (const row of group.rows) this.list.append(this.buildRow(row, group.label, position++))
+      for (const row of group.rows) this.list.append(this.buildRow(row, position++))
     }
     this.select(this.selected)
   }
 
-  private buildRow(row: PaletteRow<Command>, groupLabel: string, position: number): HTMLElement {
+  private buildRow(row: PaletteRow<Command>, position: number): HTMLElement {
     const { item } = row
-    const lead = item.mark ? agentMark(item.mark) : icon(GROUP_ICONS[item.group] ?? GROUP_ICONS[groupLabel] ?? ICONS.bolt)
+    const lead = item.mark ? agentMark(item.mark) : null
     const element = h(
       'div',
       {
@@ -196,10 +194,10 @@ export class PaletteComponent {
         'aria-selected': 'false',
         'data-command': item.id
       },
-      h('span', { class: 'palette-lead' }, lead),
+      lead ? h('span', { class: 'palette-lead' }, lead) : null,
       h('span', { class: 'palette-title' }, ...highlight(item.title, row.indexes)),
       item.hint ? h('span', { class: 'palette-hint' }, item.hint) : null,
-      item.shortcut ? h('span', { class: 'palette-kbd' }, item.shortcut) : null
+      item.shortcut ? h('span', { class: 'palette-kbd' }, shortcutGlyphs(item.shortcut)) : null
     )
     element.addEventListener('mousemove', () => {
       if (this.selected !== position) this.select(position)

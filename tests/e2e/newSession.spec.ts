@@ -1,5 +1,10 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { closeApp, createSandbox, launchApp } from './helpers'
+import { writeOps } from '../screenshots/harness'
+
+const SESSION_ID = '7c1e04b2-5d3a-4f10-9a2e-1b8c6d4e0f01'
 
 test('top bar shows the brand and the split New session button picks the agent', async () => {
   const sandbox = createSandbox()
@@ -55,6 +60,46 @@ test('compact header keeps New session, zoom, Settings and Theme usable at 960px
     await expect(page.locator('.settings-view')).toBeVisible()
     await newSession.click()
     await expect(page.locator('.quickpick')).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('the top bar never pushes out its icons, with the usage limits shown and a sub-agent running', async () => {
+  const sandbox = createSandbox()
+  const now = Date.now()
+  const slug = sandbox.projectFolder.replace(/[^A-Za-z0-9]/g, '-')
+  const dir = join(sandbox.claudeHome, 'projects', slug)
+  const subagents = join(dir, SESSION_ID, 'subagents')
+  mkdirSync(subagents, { recursive: true })
+  const iso = (minutes: number): string => new Date(now - minutes * 60_000).toISOString()
+  writeFileSync(join(dir, `${SESSION_ID}.jsonl`), JSON.stringify({ type: 'user', timestamp: iso(30), cwd: sandbox.projectFolder, message: { content: 'Polish the release' } }) + '\n')
+  writeFileSync(join(subagents, 'agent-run1.meta.json'), JSON.stringify({ agentType: 'general-purpose', spawnDepth: 1, requestShape: 'background', model: 'sonnet', description: 'Unit tests' }))
+  const usage = { input_tokens: 100, output_tokens: 400, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
+  writeFileSync(join(subagents, 'agent-run1.jsonl'), [
+    { type: 'user', timestamp: iso(10), cwd: sandbox.projectFolder, isSidechain: true, message: { role: 'user', content: 'Go' } },
+    { type: 'assistant', timestamp: new Date(now - 1000).toISOString(), message: { id: 'm1', model: 'claude-sonnet-5-5', stop_reason: 'tool_use', usage, content: [{ type: 'tool_use', name: 'Bash', input: { command: 'npm test' } }] } }
+  ].map((record) => JSON.stringify(record)).join('\n'))
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.getByRole('button', { name: /^New (Claude|Codex|Gemini) session in Smoke$/ }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    writeFileSync(join(sandbox.sessionsDir, 'smoke.json'), JSON.stringify({ pid: process.pid, sessionId: SESSION_ID, cwd: sandbox.projectFolder, name: 'Polish the release', nameSource: 'user', status: 'busy', startedAt: now + 1000, updatedAt: now + 1000 }), 'utf8')
+    writeOps(sandbox)
+    // The limits hide below 1220px, and CI's window is about 1024px wide.
+    await page.setViewportSize({ width: 1600, height: 900 })
+    await expect(page.locator('.topbar-limits')).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('#background-button .count-badge')).toBeVisible({ timeout: 20_000 })
+    const navHeight = (await page.locator('#files-button').boundingBox())!.height
+    for (const width of [1600, 1440, 1280, 1024, 960]) {
+      await page.setViewportSize({ width, height: 900 })
+      const box = (await page.getByRole('button', { name: 'Settings', exact: true }).boundingBox())!
+      expect(box.x + box.width).toBeLessThanOrEqual(width)
+      await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
+      if (width >= 1280) await expect(page.locator('.topbar-limits')).toBeVisible()
+      expect((await page.locator('#background-button').boundingBox())!.height).toBeCloseTo(navHeight, 0)
+      expect(await page.locator('.topbar').evaluate((bar) => bar.scrollWidth <= bar.clientWidth)).toBe(true)
+    }
   } finally {
     await closeApp(app)
   }

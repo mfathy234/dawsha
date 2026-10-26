@@ -13,7 +13,9 @@ import type {
   DiscardRequest,
   GitCommitResult,
   GitDiffResult,
+  FileAgainstBaseResult,
   ProjectFileResult,
+  ProjectFileWriteResult,
   ProjectFilesResult,
   RepoStatusResult,
   SessionBaseline,
@@ -110,6 +112,14 @@ export interface GridApi {
   gitSessionStatus(folder: string, baseline: SessionBaseline): Promise<SessionStatusResult>
   projectFiles(folder: string): Promise<ProjectFilesResult>
   projectFile(folder: string, path: string): Promise<ProjectFileResult>
+  writeProjectFile(folder: string, path: string, text: string, expectedMtime: number): Promise<ProjectFileWriteResult>
+  fileAgainstBase(folder: string, path: string): Promise<FileAgainstBaseResult>
+  watchFiles(folder: string): Promise<void>
+  unwatchFiles(folder: string): Promise<void>
+  // folder is normalizeFolder(project folder); compare with normalizeFolder() on the renderer side. An empty paths list means refresh everything.
+  /** The watcher of a folder stopped (key is normalizeFolder of it); the view says live updates are off. */
+  onFilesWatchFailed(listener: (folder: string) => void): () => void
+  onFilesChanged(listener: (folder: string, paths: string[]) => void): () => void
   gitSync(folder: string): Promise<SyncCounts | null>
   gitBranches(folder: string): Promise<BranchListResult>
   gitQuick(request: GitQuickRequest): Promise<GitQuickResult>
@@ -119,6 +129,7 @@ export interface GridApi {
   findSolution(folder: string): Promise<string | null>
   existingFiles(folder: string, candidates: string[]): Promise<(string | null)[]>
   openFile(folder: string, ref: FileRef): Promise<void>
+  openFileInVsCode(folder: string, path: string, line?: number): Promise<void>
   readInstruction(folder: string, name: string): Promise<InstructionRead>
   writeInstruction(request: InstructionWriteRequest): Promise<InstructionWriteResult>
   openInstruction(folder: string, name: string): Promise<void>
@@ -201,4 +212,6 @@ export interface GridApi {
   /** Pass null to read the state. Resolves to null when the terminal is not being recorded. */
   setRecordingPaused(id: string, paused: boolean | null): Promise<boolean | null>
   onFlushRequest(listener: () => Promise<void>): void
+  /** Asked when the window is closing; resolve false to keep it open. */
+  onCloseCheck(listener: () => Promise<boolean>): void
 }

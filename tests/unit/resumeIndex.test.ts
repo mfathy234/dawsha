@@ -57,14 +57,16 @@ describe('labels', () => {
 })
 
 describe('sessionFacts', () => {
-  it('lists messages, work time and activity, leaving out what is unknown', async () => {
+  it('lists messages, work time and when it started, leaving out what is unknown', async () => {
     const { sessionFacts } = await import('../../src/shared/resumeIndex')
     const now = Date.parse('2026-10-20T12:00:00Z')
     const base = { agent: 'claude', id: 'a', title: 't', projectId: 'p', modifiedAt: now - 5 * 60_000, startedAt: now - 3 * 3_600_000, messageCount: 1 } as const
     const facts = sessionFacts({ ...base, activeSpans: [[now - 3_600_000, now - 1_800_000], [now - 600_000, now - 300_000]] }, now)
     expect(facts[0]).toBe('1 message')
     expect(facts[1]).toBe('35m of work')
-    expect(facts.at(-1)).toBe('Active 5m ago')
+    expect(facts).toHaveLength(3)
+    expect(facts.at(-1)).not.toMatch(/Started|Active/)
+    expect(facts.at(-1)).toMatch(/^(Today|Yesterday) /)
     const bare = sessionFacts({ ...base, messageCount: 0 }, now)
     expect(bare.some((f) => f.includes('message') || f.includes('work'))).toBe(false)
   })
