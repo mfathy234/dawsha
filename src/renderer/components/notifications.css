@@ -2,7 +2,7 @@
 .bell-badge { position: absolute; top: 1px; inset-inline-end: 1px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 600; line-height: 15px; text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
 .bell-badge[hidden] { display: none; }
 .notifications-popover { z-index: 40; padding: 0; max-height: min(520px, calc(100vh - 80px)); display: flex; flex-direction: column; outline: none; }
-.notifications-head { margin: 0; padding: 10px 10px 8px 14px; border-bottom: 1px solid var(--border); }
+.notifications-head { margin: 0; padding: 10px 10px 8px 14px; border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }
 .notifications-head .popover-title { flex: 1; font-size: 14px; }
 .notifications-list { list-style: none; margin: 0; padding: 4px; overflow-y: auto; }
 .notification-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: var(--radius); }
