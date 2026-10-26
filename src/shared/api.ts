@@ -117,6 +117,8 @@ export interface GridApi {
   watchFiles(folder: string): Promise<void>
   unwatchFiles(folder: string): Promise<void>
   // folder is normalizeFolder(project folder); compare with normalizeFolder() on the renderer side. An empty paths list means refresh everything.
+  /** The watcher of a folder stopped (key is normalizeFolder of it); the view says live updates are off. */
+  onFilesWatchFailed(listener: (folder: string) => void): () => void
   onFilesChanged(listener: (folder: string, paths: string[]) => void): () => void
   gitSync(folder: string): Promise<SyncCounts | null>
   gitBranches(folder: string): Promise<BranchListResult>

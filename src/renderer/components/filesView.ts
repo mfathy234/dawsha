@@ -31,6 +31,8 @@ interface DocSet {
   tabs: TabRef[]
   active: string | null
   openFolders: Set<string>
+  /** The project's place inside its git repository ("" at the root). File paths are repo-relative. */
+  prefix: string
 }
 
 const baseName = (path: string): string => path.slice(path.lastIndexOf('/') + 1)
@@ -51,10 +53,12 @@ export class FilesViewComponent {
   private flash = ''
   private readonly lastSignature = new WeakMap<FileDoc, string>()
   private projectSignature = ''
+  private watchFailed = false
 
   private readonly projectSelect = h('select', { id: 'files-project', 'aria-label': 'Project', onChange: (event: Event) => this.switchProject((event.target as HTMLSelectElement).value) })
   private readonly worktreeNote = h('div', { class: 'files-worktree', hidden: true })
-  private readonly tree = new FilesTree({ open: (path, pin, focus) => void this.openFile(path, { pin, focus }) }, h('div', { class: 'files-switcher' }, selectMenu(this.projectSelect), this.worktreeNote))
+  private readonly liveNote = h('div', { class: 'files-worktree', id: 'files-live-note', role: 'status', hidden: true }, 'Live updates are off for this folder')
+  private readonly tree = new FilesTree({ open: (path, pin, focus) => void this.openFile(path, { pin, focus }) }, h('div', { class: 'files-switcher' }, selectMenu(this.projectSelect), this.worktreeNote, this.liveNote))
   private readonly tabs = h('div', { class: 'files-tabs', role: 'tablist', 'aria-label': 'Open files' })
   private readonly crumb = h('div', { class: 'files-crumb', 'aria-label': 'File path' })
   private readonly fileButton = h('button', { class: 'files-seg', type: 'button', id: 'files-file', 'aria-pressed': 'true', onClick: () => void this.showFileMode() }, 'File')
@@ -64,10 +68,11 @@ export class FilesViewComponent {
   private readonly codeButton = h('button', { class: 'btn ghost small', type: 'button', id: 'files-open-code', 'aria-label': 'Open in VS Code', title: 'Open in VS Code', onClick: () => this.openActiveInCode() }, icon(ICONS.code), h('span', { class: 'files-btn-label' }, 'Open in VS Code'))
   private readonly copyButton = h('button', { class: 'icon-btn', type: 'button', id: 'files-copy-path', 'aria-label': 'Copy path', title: 'Copy path', onClick: () => void this.copyPath() }, icon(ICONS.copy))
   private readonly bar = h('div', { class: 'files-bar' })
-  private readonly conflict = h('div', { class: 'files-conflict', id: 'files-conflict', role: 'alert', hidden: true },
-    h('span', { class: 'files-conflict-text' }, 'This file changed on disk.'),
-    h('button', { class: 'btn small', type: 'button', id: 'files-reload-theirs', onClick: () => void this.active()?.reload() }, 'Reload theirs'),
-    h('button', { class: 'btn small', type: 'button', id: 'files-keep-mine', onClick: () => void this.active()?.overwrite() }, 'Keep mine (overwrite)'))
+  private readonly conflictText = h('span', { class: 'files-conflict-text' }, 'This file changed on disk.')
+  private readonly reloadButton = h('button', { class: 'btn small', type: 'button', id: 'files-reload-theirs', onClick: () => void this.active()?.reload() }, 'Reload theirs')
+  private readonly keepButton = h('button', { class: 'btn small', type: 'button', id: 'files-keep-mine', onClick: () => void this.active()?.overwrite() }, 'Keep mine (overwrite)')
+  private readonly conflict = h('div', { class: 'files-conflict', id: 'files-conflict', role: 'alert', hidden: true }, this.conflictText, this.reloadButton, this.keepButton)
+  private readonly segment = h('div', { class: 'files-segment', role: 'group', 'aria-label': 'View' }, this.fileButton, this.changesButton)
   private readonly stage = h('div', { class: 'files-stage' })
   private readonly empty = h('div', { class: 'files-placeholder', id: 'files-empty' })
   private readonly status = h('div', { class: 'files-status', id: 'files-status' })
@@ -76,14 +81,20 @@ export class FilesViewComponent {
   private readonly outlineList = h('div', { class: 'files-side-list', id: 'files-outline' })
 
   constructor() {
-    this.bar.append(this.crumb, h('span', { class: 'spacer' }), h('div', { class: 'files-segment', role: 'group', 'aria-label': 'View' }, this.fileButton, this.changesButton), this.editButton, this.promptButton, this.codeButton, this.copyButton)
+    this.bar.append(this.crumb, h('span', { class: 'spacer' }), this.segment, this.editButton, this.promptButton, this.codeButton, this.copyButton)
     this.stage.append(this.empty)
     this.side.append(
       h('section', { class: 'files-side-sec' }, h('h2', {}, 'Sessions that touched it'), this.sessionsList),
       h('section', { class: 'files-side-sec grow' }, h('h2', {}, 'Outline'), this.outlineList))
     this.el.append(this.tree.el, h('div', { class: 'files-main' }, this.tabs, this.bar, this.conflict, this.stage, this.status), this.side)
     this.el.addEventListener('keydown', (event) => this.onKey(event))
+    this.tabs.addEventListener('keydown', (event) => this.onTabKey(event))
     api.onFilesChanged((key, paths) => this.onDiskChange(key, paths))
+    api.onFilesWatchFailed((key) => {
+      if (!this.target || normalizeFolder(this.target.folder) !== key) return
+      this.watchFailed = true
+      this.renderLiveNote()
+    })
     onThemeChange(() => {
       for (const set of this.sets.values()) for (const doc of set.docs.values()) doc.setTheme(themeKind())
     })
@@ -152,14 +163,17 @@ export class FilesViewComponent {
     let set = this.sets.get(key)
     if (!set) {
       const saved = store.state.settings.filesTabs[target.projectId] ?? []
-      set = { projectId: target.projectId, folder: target.folder, docs: new Map(), tabs: saved.map((path) => ({ path, pinned: true })), active: saved[0] ?? null, openFolders: new Set() }
+      set = { projectId: target.projectId, folder: target.folder, docs: new Map(), tabs: saved.map((path) => ({ path, pinned: true })), active: saved[0] ?? null, openFolders: new Set(), prefix: '' }
       this.sets.set(key, set)
     }
     this.set = set
     this.tree.adoptFolders(set.openFolders)
     if (!same) void api.watchFiles(target.folder)
     this.touches = new Map()
-    void this.loadTree()
+    this.watchFailed = false
+    this.renderLiveNote()
+    // Files may have changed while the view was away, so open tabs look at the disk again once the tree is in.
+    void this.loadTree().then(() => this.checkOpenDocs())
     this.renderAll()
     const active = this.active()
     if (active) void this.loadActive(active)
@@ -203,15 +217,21 @@ export class FilesViewComponent {
     this.tree.setData(listing.ok ? listing.files : [], status, listing.ok ? '' : listing.error)
     const set = this.set
     if (set) {
+      if (listing.ok) set.prefix = listing.prefix
       this.tree.setActive(set.active)
-      for (const doc of set.docs.values()) void doc.refreshStat()
     }
+  }
+
+  private checkOpenDocs(paths: readonly string[] = []): void {
+    const set = this.set
+    if (!set) return
+    for (const doc of set.docs.values()) if (paths.length === 0 || paths.includes(doc.path)) void doc.checkDisk()
   }
 
   private async refreshTouches(): Promise<void> {
     const target = this.target
     if (!target) return
-    const touches = await loadTouches(target.projectId, target.folder).catch(() => new Map() as TouchMap)
+    const touches = await loadTouches(target.projectId, target.folder, this.set?.prefix ?? '').catch(() => new Map() as TouchMap)
     if (this.target !== target) return
     this.touches = touches
     this.tree.setTouched(touches.keys())
@@ -223,9 +243,7 @@ export class FilesViewComponent {
     window.clearTimeout(this.watchTimer)
     this.watchTimer = window.setTimeout(() => {
       void this.loadTree()
-      const set = this.set
-      if (!set) return
-      for (const doc of set.docs.values()) if (paths.length === 0 || paths.includes(doc.path)) void doc.checkDisk()
+      this.checkOpenDocs(paths)
     }, WATCH_DEBOUNCE_MS)
   }
 
@@ -314,14 +332,14 @@ export class FilesViewComponent {
     if (active) await this.loadActive(active)
   }
 
-  private activate(path: string): void {
+  private activate(path: string, focusEditor = true): void {
     const set = this.set
     if (!set || set.active === path) return
     set.active = path
     const doc = this.docFor(path)
     this.tree.setActive(path)
     this.renderAll()
-    if (doc) void this.loadActive(doc).then(() => doc.editor?.focus())
+    if (doc) void this.loadActive(doc).then(() => (focusEditor ? doc.editor?.focus() : undefined))
   }
 
   private persistTabs(): void {
@@ -380,7 +398,7 @@ export class FilesViewComponent {
     const doc = this.active()
     if (!doc) return
     const cursor = doc.editor?.cursor()
-    addToPrompt(doc.path, cursor && cursor.selected > 0 ? { start: cursor.startLine, end: cursor.endLine } : undefined)
+    addToPrompt(doc.path, cursor && cursor.selected > 0 ? { start: cursor.startLine, end: cursor.endLine } : undefined, this.set?.prefix ?? '')
   }
 
   private openActiveInCode(): void {
@@ -393,6 +411,29 @@ export class FilesViewComponent {
     if (!doc) return
     await api.writeClipboard(doc.path).catch(() => undefined)
     this.setFlash('Path copied')
+  }
+
+  // Roving tabindex: the active tab is the one Tab stops on; Left/Right/Home/End move between tabs.
+  private onTabKey(event: KeyboardEvent): void {
+    const set = this.set
+    const current = (event.target as HTMLElement).closest<HTMLElement>('.files-tab')
+    if (!set || !current || (event.target as HTMLElement).closest('.files-tab-close')) return
+    const paths = set.tabs.map((tab) => tab.path)
+    const at = paths.indexOf(current.dataset.path ?? '')
+    let next = at
+    if (event.key === 'ArrowRight') next = (at + 1) % paths.length
+    else if (event.key === 'ArrowLeft') next = (at - 1 + paths.length) % paths.length
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = paths.length - 1
+    else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      this.activate(paths[at])
+      return
+    } else return
+    event.preventDefault()
+    event.stopPropagation()
+    this.activate(paths[next], false)
+    this.tabs.querySelector<HTMLElement>(`.files-tab[data-path="${CSS.escape(paths[next])}"]`)?.focus()
   }
 
   private onKey(event: KeyboardEvent): void {
@@ -425,7 +466,7 @@ export class FilesViewComponent {
 
   // Typing reports a change per keystroke; the view only redraws when something it shows differs.
   private docChanged(doc: FileDoc): void {
-    const signature = `${doc.path}|${doc.status}|${doc.dirty}|${doc.editing}|${doc.changes}|${doc.conflict}|${doc.deleted}|${doc.stat?.added}|${doc.stat?.removed}|${doc.newFile}`
+    const signature = `${doc.path}|${doc.status}|${doc.dirty}|${doc.editing}|${doc.changes}|${doc.conflict}|${doc.gone}|${doc.noRepo}|${doc.deleted}|${doc.stat?.added}|${doc.stat?.removed}|${doc.newFile}`
     if (this.lastSignature.get(doc) === signature) return
     this.lastSignature.set(doc, signature)
     if (doc !== this.active()) this.renderTabs()
@@ -435,6 +476,10 @@ export class FilesViewComponent {
   private cursorMoved(doc: FileDoc): void {
     if (doc !== this.active()) return
     this.renderStatus()
+  }
+
+  private renderLiveNote(): void {
+    this.liveNote.hidden = !this.watchFailed
   }
 
   private renderAll(): void {
@@ -459,6 +504,7 @@ export class FilesViewComponent {
       const name = baseName(tab.path)
       return h('div', {
         class: classes.join(' '), role: 'tab', 'data-path': tab.path, 'aria-selected': String(tab.path === set.active), title: tab.path,
+        tabindex: tab.path === set.active ? '0' : '-1',
         onClick: () => this.activate(tab.path), onDblclick: () => this.pin(tab.path),
         onAuxclick: (event: Event) => {
           if ((event as MouseEvent).button === 1) void this.closeFile(tab.path)
@@ -493,6 +539,10 @@ export class FilesViewComponent {
     this.promptButton.disabled = false
     this.codeButton.disabled = false
     this.conflict.hidden = !doc.conflict
+    this.conflictText.textContent = doc.gone ? 'This file was deleted on disk.' : 'This file changed on disk.'
+    this.reloadButton.hidden = doc.gone
+    this.keepButton.textContent = doc.gone ? 'Keep mine (recreate)' : 'Keep mine (overwrite)'
+    this.segment.hidden = doc.noRepo
   }
 
   private renderStage(): void {

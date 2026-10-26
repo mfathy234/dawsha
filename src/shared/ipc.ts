@@ -61,6 +61,7 @@ export const IPC = {
   filesWatch: 'files:watch',
   filesUnwatch: 'files:unwatch',
   filesChanged: 'files:changed',
+  filesWatchFailed: 'files:watch-failed',
   gitSync: 'git:sync',
   gitBranches: 'git:branches',
   gitQuick: 'git:quick',

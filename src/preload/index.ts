@@ -76,6 +76,7 @@ const api: GridApi = {
   fileAgainstBase: (folder, path) => ipcRenderer.invoke(IPC.projectFileBase, folder, path),
   watchFiles: (folder) => ipcRenderer.invoke(IPC.filesWatch, folder),
   unwatchFiles: (folder) => ipcRenderer.invoke(IPC.filesUnwatch, folder),
+  onFilesWatchFailed: (listener) => subscribe<[string]>(IPC.filesWatchFailed, listener),
   onFilesChanged: (listener) => subscribe<[string, string[]]>(IPC.filesChanged, listener),
   gitSync: (folder) => ipcRenderer.invoke(IPC.gitSync, folder),
   gitBranches: (folder) => ipcRenderer.invoke(IPC.gitBranches, folder),

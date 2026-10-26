@@ -2,6 +2,7 @@ import { api } from '../api'
 import { focusPane, showView } from '../actions'
 import { confirmDialog } from '../components/dialogs'
 import { toast } from '../components/toast'
+import { toProjectPath } from '../../shared/projectPaths'
 import { unsavedQuitCopy } from '../../shared/dirtyFiles'
 import { folderOfPane, paneById, store, type AppState } from '../state'
 import { paneTerminal } from '../terminalActions'
@@ -78,7 +79,7 @@ export const promptReference = (path: string, range?: LineRange): string =>
   `@${path}${range ? `#L${range.start}${range.end > range.start ? `-${range.end}` : ''}` : ''} `
 
 /** Types `@path` (and `#Lx-y` for a selection) into the focused session and shows it; says so when there is none. */
-export function addToPrompt(path: string, range?: LineRange): boolean {
+export function addToPrompt(path: string, range?: LineRange, prefix = ''): boolean {
   const state = store.state
   const paneId = state.focusedId ?? state.panes[0]?.id ?? null
   const view = paneId ? paneTerminal(paneId) : undefined
@@ -88,7 +89,7 @@ export function addToPrompt(path: string, range?: LineRange): boolean {
   }
   focusPane(paneId)
   view.focus()
-  view.insertText(promptReference(path, range))
+  view.insertText(promptReference(toProjectPath(prefix, path), range))
   return true
 }
 

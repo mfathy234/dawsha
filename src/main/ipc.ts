@@ -211,6 +211,9 @@ export function registerIpc(
   const watchers = createWatchRegistry((key, paths) => {
     const window = getWindow()
     if (window && !window.isDestroyed()) window.webContents.send(IPC.filesChanged, key, paths)
+  }, undefined, undefined, (key) => {
+    const window = getWindow()
+    if (window && !window.isDestroyed()) window.webContents.send(IPC.filesWatchFailed, key)
   })
   let watchedWindow: BrowserWindow | null = null
   ipcMain.handle(IPC.filesWatch, async (_event, folder: unknown) => {

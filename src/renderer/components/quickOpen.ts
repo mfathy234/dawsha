@@ -74,7 +74,7 @@ export async function openQuickOpen(): Promise<void> {
       h('div', { class: 'qo-foot' }, hint('Enter', 'open'), hint('Alt+Enter', 'add to prompt'), hint('Ctrl+Enter', 'VS Code'), hint('Up Down', 'move'), hint('Esc', 'close'))))
   const state: Session = {
     overlay, input, list, preview, previewTitle, previous: document.activeElement as HTMLElement | null,
-    target: target ?? { projectId: '', folder: '' }, index: { files: [], status: new Map() }, results: [], selected: 0, token: 0, previewToken: 0, previewTimer: undefined
+    target: target ?? { projectId: '', folder: '' }, index: { files: [], prefix: '', status: new Map() }, results: [], selected: 0, token: 0, previewToken: 0, previewTimer: undefined
   }
   session = state
   if (target) projectSelect.value = target.projectId
@@ -85,13 +85,17 @@ export async function openQuickOpen(): Promise<void> {
     state.selected = 0
     render(state)
   })
-  input.addEventListener('keydown', (event) => onKey(state, event))
+  input.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab') onKey(state, event)
+  })
+  overlay.addEventListener('keydown', (event) => {
+    if (event.key === 'Tab') onKey(state, event)
+  })
   projectSelect.addEventListener('change', () => {
     const project = projects.find((p) => p.id === projectSelect.value)
     if (!project) return
-    void api.unwatchFiles(state.target.folder)
     state.target = { projectId: project.id, folder: project.folder }
-    state.index = { files: [], status: new Map() }
+    state.index = { files: [], prefix: '', status: new Map() }
     void load(state)
     input.focus()
   })
@@ -106,7 +110,6 @@ export function closeQuickOpen(restoreFocus: boolean): void {
   if (!current) return
   session = null
   window.clearTimeout(current.previewTimer)
-  if (current.target.folder) void api.unwatchFiles(current.target.folder)
   current.overlay.remove()
   if (restoreFocus) requestAnimationFrame(() => current.previous?.focus())
 }
@@ -115,7 +118,6 @@ async function load(state: Session): Promise<void> {
   const token = ++state.token
   const folder = state.target.folder
   if (!folder) return
-  void api.watchFiles(folder)
   const index = await fileIndex(folder)
   if (session !== state || token !== state.token) return
   state.index = index
@@ -194,7 +196,7 @@ function choose(state: Session, how: 'open' | 'prompt' | 'code'): void {
   if (!path) return
   const target = state.target
   if (how === 'prompt') {
-    if (!addToPrompt(path)) return
+    if (!addToPrompt(path, undefined, state.index.prefix)) return
     closeQuickOpen(false)
     return
   }
@@ -212,6 +214,12 @@ function onKey(state: Session, event: KeyboardEvent): void {
   } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault()
     highlightRow(state, moveSelection(state.selected, event.key === 'ArrowDown' ? 1 : -1, state.results.length))
+  } else if (event.key === 'Tab') {
+    // Focus stays inside the dialog: the input, the project picker and the close button.
+    const items = [...state.overlay.querySelectorAll<HTMLElement>('input, select, button')]
+    const at = items.indexOf(document.activeElement as HTMLElement)
+    event.preventDefault()
+    items[(at + (event.shiftKey ? -1 : 1) + items.length) % items.length]?.focus()
   } else if (event.key === 'Enter') {
     event.preventDefault()
     event.stopPropagation()
