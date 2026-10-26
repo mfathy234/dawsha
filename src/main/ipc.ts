@@ -26,7 +26,8 @@ import { changedFiles, currentBranch, gitChanges, gitSync } from './git'
 import { listBranches, runGitQuick } from './gitQuick'
 import type { GitQuickRequest } from '../shared/gitBranches'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
-import { fileDiffSince, projectFiles, readProjectFile, sessionBaseline, sessionStatus } from './gitWorkspace'
+import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
+import { createWatchRegistry } from './fileWatch'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
@@ -190,6 +191,29 @@ export function registerIpc(
   ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => sessionStatus(folder, baseline))
   ipcMain.handle(IPC.projectFiles, (_event, folder: unknown) => projectFiles(folder))
   ipcMain.handle(IPC.projectFile, (_event, folder: unknown, path: unknown) => readProjectFile(folder, path))
+  ipcMain.handle(IPC.projectFileWrite, (_event, folder: unknown, path: unknown, text: unknown, mtime: unknown) =>
+    writeProjectFile(folder, path, text, mtime)
+  )
+  ipcMain.handle(IPC.projectFileBase, (_event, folder: unknown, path: unknown) => fileAgainstBase(folder, path))
+  const watchers = createWatchRegistry((folder, paths) => {
+    const window = getWindow()
+    if (window && !window.isDestroyed()) window.webContents.send(IPC.filesChanged, folder, paths)
+  })
+  let watchedWindow: BrowserWindow | null = null
+  ipcMain.handle(IPC.filesWatch, (_event, folder: unknown) => {
+    const window = getWindow()
+    if (window && window !== watchedWindow) {
+      watchedWindow = window
+      window.once('closed', () => {
+        watchers.closeAll()
+        watchedWindow = null
+      })
+    }
+    if (typeof folder === 'string' && folder !== '') watchers.watch(folder)
+  })
+  ipcMain.handle(IPC.filesUnwatch, (_event, folder: unknown) => {
+    if (typeof folder === 'string') watchers.unwatch(folder)
+  })
   ipcMain.handle(IPC.gitSync, (_event, folder: string) => gitSync(folder))
   ipcMain.handle(IPC.gitBranches, (_event, folder: string) => listBranches(folder))
   ipcMain.handle(IPC.gitQuick, (_event, request: GitQuickRequest) => runGitQuick(request))

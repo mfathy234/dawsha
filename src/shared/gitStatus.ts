@@ -59,8 +59,17 @@ export type ProjectFilesResult =
   | { ok: false; error: string }
 
 export type ProjectFileResult =
-  | { ok: true; text: string; size: number }
-  | { ok: true; text: null; size: number; reason: 'binary' | 'large' }
+  | { ok: true; text: string; size: number; mtimeMs: number }
+  | { ok: true; text: null; size: number; reason: 'binary' | 'large'; mtimeMs: number }
+  | { ok: false; error: string }
+
+export type ProjectFileWriteResult =
+  | { ok: true; mtimeMs: number }
+  | { ok: false; conflict: true; error: string }
+  | { ok: false; conflict?: false; error: string }
+
+export type FileAgainstBaseResult =
+  | { ok: true; base: string | null; text: string }
   | { ok: false; error: string }
 
 export interface CommitRequest {

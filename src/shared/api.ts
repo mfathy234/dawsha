@@ -13,7 +13,9 @@ import type {
   DiscardRequest,
   GitCommitResult,
   GitDiffResult,
+  FileAgainstBaseResult,
   ProjectFileResult,
+  ProjectFileWriteResult,
   ProjectFilesResult,
   RepoStatusResult,
   SessionBaseline,
@@ -110,6 +112,11 @@ export interface GridApi {
   gitSessionStatus(folder: string, baseline: SessionBaseline): Promise<SessionStatusResult>
   projectFiles(folder: string): Promise<ProjectFilesResult>
   projectFile(folder: string, path: string): Promise<ProjectFileResult>
+  writeProjectFile(folder: string, path: string, text: string, expectedMtime: number): Promise<ProjectFileWriteResult>
+  fileAgainstBase(folder: string, path: string): Promise<FileAgainstBaseResult>
+  watchFiles(folder: string): Promise<void>
+  unwatchFiles(folder: string): Promise<void>
+  onFilesChanged(listener: (folder: string, paths: string[]) => void): () => void
   gitSync(folder: string): Promise<SyncCounts | null>
   gitBranches(folder: string): Promise<BranchListResult>
   gitQuick(request: GitQuickRequest): Promise<GitQuickResult>
