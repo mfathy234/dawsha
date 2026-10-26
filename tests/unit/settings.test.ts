@@ -18,6 +18,9 @@ describe('migrateSettings', () => {
     expect(migrateSettings({}).showRecap).toBe(true)
     expect(migrateSettings({ showRecap: 'no' }).showRecap).toBe(true)
     expect(migrateSettings({ showRecap: false }).showRecap).toBe(false)
+    expect(defaultSettings().colorSessionsByTag).toBe(true)
+    expect(migrateSettings({ colorSessionsByTag: 'no' }).colorSessionsByTag).toBe(true)
+    expect(migrateSettings({ colorSessionsByTag: false }).colorSessionsByTag).toBe(false)
   })
   it('leaves dimming off by default, only turns it on when told to and ignores the old key', () => {
     expect(defaultSettings().dimOtherPanes).toBe(false)

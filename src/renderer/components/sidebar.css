@@ -2,16 +2,23 @@
   position: relative;
 }
 
-.kept-session-row[data-tag]::before {
-  content: '';
-  position: absolute;
-  inset: 7px auto 7px 0;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--tag);
+.kept-session-row[data-tag] {
+  box-shadow: inset 3px 0 0 var(--tag);
 }
 
-.kept-session-row .sess-row .tag-dot {
+.kept-session-row.selected[data-tag] {
+  box-shadow: inset 3px 0 0 var(--tag), inset 0 0 0 1px var(--border);
+}
+
+:root[data-tag-colors='off'] .kept-session-row[data-tag] {
+  box-shadow: none;
+}
+
+:root[data-tag-colors='off'] .kept-session-row.selected[data-tag] {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.kept-session-row .sess-row .tag-chip {
   margin: 0 2px;
 }
 

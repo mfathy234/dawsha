@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
@@ -39,7 +40,7 @@ test('a session tag follows the session: sidebar, pane header, board card, close
 
     await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Bug')
     await expect(openRow(page)).toHaveAttribute('data-tag', 'bug')
-    await expect(openRow(page).getByRole('img', { name: 'Tag: Bug' })).toBeVisible()
+    await expect(openRow(page).locator('.tag-chip')).toHaveText('Bug')
     await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Bug')
     expect(await focusedNav(page)).toMatch(/^s:/)
 
@@ -63,7 +64,7 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     await expect.poll(() => readSettings(sandbox.userData).keptSessions[0]?.tag).toBe('review')
     const closed = page.locator('.kept-session-row.closed')
     await expect(closed).toHaveAttribute('data-tag', 'review')
-    await expect(closed.getByRole('img', { name: 'Tag: Review' })).toBeVisible()
+    await expect(closed.locator('.tag-chip')).toHaveText('Review')
 
     await closed.locator('.sess-row').click()
     await expect(page.locator('.pane')).toHaveCount(1)
@@ -106,6 +107,38 @@ test('closed sessions take a tag from their menu and a right click opens it', as
     await page.getByRole('menuitem', { name: 'Remove tag' }).click()
     await expect(row).not.toHaveAttribute('data-tag', /.+/)
     await expect.poll(() => readSettings(sandbox.userData).keptSessions[0].tag).toBeUndefined()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('a session takes its tag from the branch, a manual tag wins, and the setting hides the colours', async () => {
+  const sandbox = createSandbox()
+  const git = (...args: string[]): void => void execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd: sandbox.projectFolder })
+  git('init', '-q', '-b', 'feature/x')
+  writeFileSync(join(sandbox.projectFolder, 'a.txt'), 'a', 'utf8')
+  git('add', '.')
+  git('commit', '-q', '-m', 'first')
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await startGemini(page)
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Feature')
+    await expect(page.locator('.pane-tag .tag-chip')).toHaveAttribute('title', 'Tag: Feature (from the branch)')
+    await expect(openRow(page)).toHaveAttribute('data-tag', 'feature')
+    await expect(openRow(page).locator('.tag-chip')).toHaveText('Feature')
+
+    await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Bug')
+    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Bug')
+    await expect(page.locator('.pane-tag .tag-chip')).toHaveAttribute('title', 'Tag: Bug')
+
+    await page.keyboard.press('Control+Shift+P')
+    await page.keyboard.type('Toggle tag colours')
+    await page.keyboard.press('Enter')
+    await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'off')
+    await expect(page.locator('.pane-tag .tag-chip')).toBeHidden()
+    await expect(openRow(page).locator('.tag-chip')).toBeHidden()
+    await expect.poll(() => readSettings(sandbox.userData).colorSessionsByTag).toBe(false)
   } finally {
     await closeApp(app)
   }

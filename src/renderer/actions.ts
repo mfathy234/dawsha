@@ -908,6 +908,11 @@ export function setDimOtherPanes(dimOtherPanes: boolean): void {
   void saveSettings({ dimOtherPanes })
 }
 
+export function setColorSessionsByTag(colorSessionsByTag: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, colorSessionsByTag } }))
+  void saveSettings({ colorSessionsByTag })
+}
+
 export function setSidebarCollapsed(sidebarCollapsed: boolean): void {
   store.set((s) => ({ ...s, sidebarOverride: null, settings: { ...s.settings, sidebarCollapsed } }))
   void saveSettings({ sidebarCollapsed })

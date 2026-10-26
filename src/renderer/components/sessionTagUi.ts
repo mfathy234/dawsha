@@ -2,13 +2,14 @@ import { SESSION_TAGS, SESSION_TAG_LABELS, type SessionTag } from '../../shared/
 import { h } from '../dom'
 import './sessionTags.css'
 
-export function tagChip(tag: SessionTag, compact = false): HTMLElement {
-  return h('span', { class: `tag-chip${compact ? ' compact' : ''}`, 'data-tag': tag, title: `Tag: ${SESSION_TAG_LABELS[tag]}` }, SESSION_TAG_LABELS[tag])
-}
+export type TagSource = 'branch' | 'conversation' | null
 
-/** The sidebar's rows are narrow, so a tag there is a coloured dot with its name for assistive tech and the tooltip. */
-export const tagDot = (tag: SessionTag): HTMLElement =>
-  h('span', { class: 'tag-dot', 'data-tag': tag, role: 'img', 'aria-label': `Tag: ${SESSION_TAG_LABELS[tag]}`, title: `Tag: ${SESSION_TAG_LABELS[tag]}` })
+export const tagTooltip = (tag: SessionTag, source: TagSource = null): string =>
+  `Tag: ${SESSION_TAG_LABELS[tag]}${source ? ` (from the ${source === 'branch' ? 'branch' : 'conversation'})` : ''}`
+
+export function tagChip(tag: SessionTag, compact = false, source: TagSource = null): HTMLElement {
+  return h('span', { class: `tag-chip${compact ? ' compact' : ''}`, 'data-tag': tag, title: tagTooltip(tag, source) }, SESSION_TAG_LABELS[tag])
+}
 
 /** Menu entries to set or clear a session's tag; the caller closes its own menu in `pick`. */
 export function tagMenuItems(current: SessionTag | null, pick: (tag: SessionTag | null) => void): HTMLElement[] {

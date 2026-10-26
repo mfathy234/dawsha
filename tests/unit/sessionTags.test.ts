@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { closedUsageShort, closedUsageTooltip, renameKept, reopenGroupLabel, tagKept } from '../../src/shared/keptSessions'
 import { moveProjectTo, canDropProject } from '../../src/shared/projectOrder'
-import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from '../../src/shared/sessionTags'
+import { autoTag, cleanSessionName, isSessionTag, SESSION_NAME_MAX } from '../../src/shared/sessionTags'
 import { migrateSettings } from '../../src/shared/settingsSchema'
 import { snapshotWorkspace } from '../../src/shared/layouts'
 import type { KeptSession, Project } from '../../src/shared/types'
@@ -51,6 +51,31 @@ describe('session names and tags', () => {
     expect(tagged[1].tag).toBeUndefined()
     expect('tag' in tagKept(tagged, { agent: 'claude', sessionId: 'one' }, null)[0]).toBe(false)
     expect(list[0].tag).toBeUndefined()
+  })
+})
+
+describe('autoTag', () => {
+  it('reads the branch prefix first, case-insensitively', () => {
+    expect(autoTag('feature/x', 'fix the crash')).toBe('feature')
+    expect(autoTag('Feat/x', '')).toBe('feature')
+    expect(autoTag('hotfix/login', '')).toBe('bug')
+    expect(autoTag('bugfix/a', '')).toBe('bug')
+    expect(autoTag('doc/readme', '')).toBe('docs')
+    expect(autoTag('review/pr-4', '')).toBe('review')
+    expect(autoTag('SPIKE/idea', '')).toBe('research')
+  })
+  it('falls back to the conversation for main, develop, no branch or an unknown prefix', () => {
+    expect(autoTag('main', 'Fix the login crash')).toBe('bug')
+    expect(autoTag('master', 'add a dark theme')).toBe('feature')
+    expect(autoTag('develop', 'review the diff')).toBe('review')
+    expect(autoTag(null, 'update the README')).toBe('docs')
+    expect(autoTag('chore/deps', 'build it')).toBe('feature')
+  })
+  it('lets the first matching rule win and gives null when nothing matches', () => {
+    expect(autoTag(null, 'add a fix for the crash')).toBe('bug')
+    expect(autoTag(null, 'refactor things')).toBeNull()
+    expect(autoTag('main', 'prefix and debugging')).toBeNull()
+    expect(autoTag(null, '')).toBeNull()
   })
 })
 

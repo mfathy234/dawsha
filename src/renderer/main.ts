@@ -75,7 +75,15 @@ async function boot(): Promise<void> {
 
   const shell = new AppShell()
   document.getElementById('app')?.append(shell.el)
-  store.subscribe((state) => shell.render(state))
+  const applyTagColors = (on: boolean): void => {
+    if (on) delete document.documentElement.dataset.tagColors
+    else document.documentElement.dataset.tagColors = 'off'
+  }
+  applyTagColors(store.state.settings.colorSessionsByTag)
+  store.subscribe((state) => {
+    applyTagColors(state.settings.colorSessionsByTag)
+    shell.render(state)
+  })
   shell.render(store.state)
 
   setTerminalEvents({
