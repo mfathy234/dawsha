@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { APP_VERSION, closeApp, createSandbox, feedTerminal, launchApp } from './helpers'
@@ -33,7 +33,7 @@ async function shot(page: Page, name: string): Promise<void> {
 for (const [mode, themeId] of THEMES) {
   test(`${mode}: panes keep a calm shape from two to five sessions`, async () => {
     const sandbox = createSandbox()
-    const settings = { version: 2, lastSeenVersion: APP_VERSION, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }], ...(themeId ? { theme: { id: themeId } } : {}) }
+    const settings = { version: 2, lastSeenVersion: APP_VERSION, dimOtherPanes: true, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }], ...(themeId ? { theme: { id: themeId } } : {}) }
     writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(settings), 'utf8')
     const { app, page } = await launchApp(sandbox)
     try {
@@ -81,19 +81,32 @@ for (const [mode, themeId] of THEMES) {
   })
 }
 
-test('the dim setting turns the calm look off', async () => {
+test('dim others is off until the top bar switch is turned on, and it persists', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
     await addPanes(page, 2)
-    await expect(page.locator('.pane.calm')).toHaveCount(1)
-    await page.locator('#settings-button').click()
-    const toggle = page.getByRole('checkbox', { name: "Dim sessions you're not working in" })
-    await expect(toggle).toBeChecked()
-    await toggle.uncheck()
+    const toggle = page.getByRole('switch', { name: 'Dim others' })
+    await expect(toggle).toHaveAttribute('aria-checked', 'false')
     await expect(page.locator('.pane.calm')).toHaveCount(0)
-  } finally {
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-checked', 'true')
+    await expect(page.locator('.pane.calm')).toHaveCount(1)
+    await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).dimOtherPanes).toBe(true)
     await closeApp(app)
+    const again = await launchApp(sandbox)
+    try {
+      await addPanes(again.page, 2)
+      await expect(again.page.getByRole('switch', { name: 'Dim others' })).toHaveAttribute('aria-checked', 'true')
+      await expect(again.page.locator('.pane.calm')).toHaveCount(1)
+      await again.page.getByRole('switch', { name: 'Dim others' }).click()
+      await expect(again.page.locator('.pane.calm')).toHaveCount(0)
+    } finally {
+      await closeApp(again.app)
+    }
+    return
+  } finally {
+    await closeApp(app).catch(() => undefined)
   }
 })
 

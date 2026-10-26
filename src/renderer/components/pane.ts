@@ -206,7 +206,7 @@ export class PaneComponent {
     this.compareChip.title = link ? `Side ${link.slot.toUpperCase()} of a comparison` : ''
     this.el.setAttribute('aria-label', `Task ${view.index + 1} ${title.toUpperCase()}${maximized ? ', maximized' : ''}`)
     this.el.classList.toggle('focused', focused)
-    this.el.classList.toggle('calm', !focused && store.state.settings.dimIdlePanes)
+    this.el.classList.toggle('calm', !focused && store.state.settings.dimOtherPanes)
     this.el.classList.toggle('maximized', maximized)
     this.pin.hidden = view.pane.pinned !== true
     this.el.classList.toggle('pinned', view.pane.pinned === true)
