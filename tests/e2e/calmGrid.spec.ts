@@ -113,7 +113,17 @@ test('the recap setting hides the one-line recap', async () => {
     const toggle = page.getByRole('checkbox', { name: 'Show a one-line recap in each session' })
     await expect(toggle).toBeChecked()
     await toggle.uncheck()
+    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
+    await expect(pane).toBeVisible()
     await expect(pane.locator('.pane-recap')).toBeHidden()
+    await page.locator('#settings-button').click()
+    await page.getByRole('checkbox', { name: 'Show a one-line recap in each session' }).check()
+    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
+    await expect(async () => {
+      await feedTerminal(page, termId, '\r\n\u203b recap: Import script fixed; waiting on the dev migration before re-importing.\r\n')
+      await expect(pane.locator('.pane-recap')).toBeVisible({ timeout: 3500 })
+    }).toPass({ timeout: 30_000 })
+    await expect(pane.locator('.pane-recap')).toContainText('Import script fixed')
   } finally {
     await closeApp(app)
   }
