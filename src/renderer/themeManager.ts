@@ -1,5 +1,5 @@
 import type { ITheme } from '@xterm/xterm'
-import { withAlpha } from '../shared/contrast'
+import { shadowRgb, withAlpha } from '../shared/contrast'
 import { findTheme, hasLightTerminal, type Theme } from '../shared/themes'
 import type { ThemeSettings } from '../shared/types'
 
@@ -58,6 +58,7 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
   root.style.setProperty('--fam-sonnet', term.cyan)
   root.style.setProperty('--fam-haiku', term.blue)
   root.style.setProperty('--fam-fable', bundle.theme.kind === 'dark' ? term.brightWhite : term.foreground)
+  root.style.setProperty('--shadow-rgb', shadowRgb(bundle.theme.app.background, bundle.theme.app.text, bundle.theme.kind))
   root.dataset.theme = bundle.theme.id
   root.dataset.kind = bundle.theme.kind
   root.dataset.paneStyle = bundle.theme.style ?? 'flat'

@@ -37,8 +37,6 @@
   --surface: #11141a;
   --raised: #161b23;
   --surface-pop: color-mix(in srgb, var(--raised) 94%, white);
-  --shadow-pop: 0 16px 40px rgb(0 0 0 / .45);
-  --shadow-card: 0 1px 2px rgb(0 0 0 / .3), 0 2px 8px rgb(0 0 0 / .16);
   --border: #232833;
   --text: #d6dae3;
   --muted: #8a93a6;
@@ -49,9 +47,35 @@
   --exited: #f87171;
   --danger: #f87171;
   --on-danger: #2a0b0b;
-  --radius: 8px;
   --image-url: none;
   --image-blur: 0px;
+  /* Tinted from the theme background (see themeManager), never pure black. */
+  --shadow-rgb: 4 6 10;
+  --shadow-hairline: 0 1px 2px rgb(var(--shadow-rgb) / .24);
+  --shadow-lift: 0 6px 20px rgb(var(--shadow-rgb) / .28);
+  --shadow-pop: 0 0 0 1px rgb(var(--shadow-rgb) / .2), 0 16px 40px rgb(var(--shadow-rgb) / .4);
+  --shadow-card: var(--shadow-hairline);
+  --r-control: 6px;
+  --r-card: 10px;
+  --r-pop: 14px;
+  --r-full: 999px;
+  --radius: var(--r-control);
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --fs-status: 11px;
+  --fs-ui: 12px;
+  --fs-body: 13px;
+  --fs-title: 15px;
+  --fs-view: 22px;
+  --t-feedback: 120ms;
+  --t-surface: 200ms;
+  --ease-out: cubic-bezier(.2, .9, .3, 1);
+  --hover: color-mix(in srgb, var(--text) 7%, transparent);
+  --press: color-mix(in srgb, var(--text) 12%, transparent);
   /* 'Dawsha Arabic' only covers Arabic characters, so everything else still uses the fonts after it. */
   --font-ui: 'Dawsha Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Dawsha Arabic', 'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
@@ -61,8 +85,10 @@
 :root[data-kind='light'] {
   color-scheme: light;
   --surface-pop: color-mix(in srgb, var(--raised) 25%, white);
-  --shadow-pop: 0 0 0 1px rgb(24 28 40 / .06), 0 14px 36px rgb(24 28 40 / .26);
-  --shadow-card: 0 1px 2px rgb(24 28 40 / .1), 0 2px 8px rgb(24 28 40 / .08);
+  --shadow-rgb: 24 28 40;
+  --shadow-hairline: 0 1px 2px rgb(var(--shadow-rgb) / .1);
+  --shadow-lift: 0 6px 20px rgb(var(--shadow-rgb) / .14);
+  --shadow-pop: 0 0 0 1px rgb(var(--shadow-rgb) / .06), 0 14px 36px rgb(var(--shadow-rgb) / .22);
 }
 
 * {

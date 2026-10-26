@@ -1,8 +1,8 @@
 /* One look for dialogs, popovers and pickers: radius, shadow, title, corner X and a short open animation. */
 :root {
-  --popup-radius: 12px;
+  --popup-radius: var(--r-pop);
   --popup-shadow: var(--shadow-pop);
-  --popup-title-size: 16px;
+  --popup-title-size: var(--fs-title);
   --popup-x-size: 28px;
   --popup-x-inset: 10px;
 }
