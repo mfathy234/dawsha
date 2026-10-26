@@ -66,14 +66,6 @@ export class FilesTree {
     this.openFolders = folders
   }
 
-  statusOf(path: string): StatusLetter | undefined {
-    return this.status.get(path)
-  }
-
-  hasStatus(): boolean {
-    return this.status.size > 0
-  }
-
   setActive(path: string | null): void {
     this.active = path
     if (path) this.reveal(path)

@@ -1,6 +1,6 @@
 import { statusLetter } from '../../shared/gitStatus'
 import { normalizeFolder } from '../../shared/folderKey'
-import { languageLabel } from '../files/languages'
+import { languageLabel } from '../files/languageInfo'
 import { api } from '../api'
 import { focusPane, saveSettings } from '../actions'
 import { h, icon } from '../dom'
@@ -13,7 +13,7 @@ import { addToPrompt, filesTarget, onFilesRequest, openInVsCode, setCurrentTarge
 import { closeTab, openTab, pinTab, type TabRef } from '../files/filesState'
 import { FilesTree } from '../files/filesTree'
 import { loadTouches, type TouchMap } from '../files/sessionTouch'
-import type { CursorInfo, EditorTheme } from '../files/editor'
+import type { EditorTheme } from '../files/editor'
 import type { OutlineItem } from '../files/outline'
 import { confirmDialog } from './dialogs'
 import { selectMenu, syncSelectMenu } from './selectMenu'
@@ -49,7 +49,6 @@ export class FilesViewComponent {
   private watchTimer: number | undefined
   private flashTimer: number | undefined
   private flash = ''
-  private cursorText = ''
   private readonly lastSignature = new WeakMap<FileDoc, string>()
   private projectSignature = ''
 
@@ -100,10 +99,9 @@ export class FilesViewComponent {
 
   private readonly hooks: DocHooks = {
     theme: themeKind,
-    isChanged: (path) => this.tree.statusOf(path) !== undefined,
     changed: (doc) => this.docChanged(doc),
     edited: (doc) => this.pin(doc.path),
-    cursor: (doc, info) => this.cursorMoved(doc, info),
+    cursor: (doc) => this.cursorMoved(doc),
     outlineChanged: (doc) => {
       if (doc === this.active()) this.renderOutline()
     }
@@ -433,9 +431,8 @@ export class FilesViewComponent {
     else this.renderAll()
   }
 
-  private cursorMoved(doc: FileDoc, info: CursorInfo): void {
+  private cursorMoved(doc: FileDoc): void {
     if (doc !== this.active()) return
-    this.cursorText = `Ln ${info.line}, Col ${info.col}`
     this.renderStatus()
   }
 
@@ -529,7 +526,8 @@ export class FilesViewComponent {
     const doc = this.active()
     this.status.hidden = !doc
     if (!doc) return
-    const left = [this.cursorText && doc.status === 'ready' ? this.cursorText : null, languageLabel(doc.path)].filter(Boolean).join('  ·  ')
+    const cursor = doc.editor && doc.status === 'ready' ? doc.editor.cursor() : null
+    const left = [cursor ? `Ln ${cursor.line}, Col ${cursor.col}` : null, languageLabel(doc.path)].filter(Boolean).join('  ·  ')
     let mode = 'Read only · press E to edit'
     if (doc.deleted) mode = 'Deleted since main'
     else if (doc.changes) mode = 'Showing changes since main'

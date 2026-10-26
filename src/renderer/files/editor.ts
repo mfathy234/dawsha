@@ -84,7 +84,8 @@ function baseTheme(dark: boolean): Extension {
       '.cm-deletedChunk': { backgroundColor: 'color-mix(in srgb, var(--danger) 12%, transparent)', paddingLeft: '8px' },
       '.cm-insertedLine': { backgroundColor: 'color-mix(in srgb, var(--accent) 12%, transparent)' },
       '.cm-deletedLine': { backgroundColor: 'color-mix(in srgb, var(--danger) 12%, transparent)' },
-      '.cm-changedText': { backgroundColor: 'color-mix(in srgb, var(--accent) 24%, transparent)' }
+      '&.cm-merge-b .cm-changedText, &.cm-merge-a .cm-changedText': { background: 'color-mix(in srgb, var(--accent) 24%, transparent) !important' },
+      '.cm-deletedChunk .cm-deletedText': { background: 'color-mix(in srgb, var(--danger) 26%, transparent) !important' }
     },
     { dark }
   )

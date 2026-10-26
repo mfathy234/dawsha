@@ -23,7 +23,6 @@ export type DocStatus = 'idle' | 'loading' | 'ready' | 'binary' | 'large' | 'mis
 
 export interface DocHooks {
   theme(): EditorTheme
-  isChanged(path: string): boolean
   /** Something the view shows changed: dirty, mode, conflict, status. */
   changed(doc: FileDoc): void
   /** The first edit pins a preview tab. */
@@ -50,6 +49,7 @@ export class FileDoc {
   stat: DiffStat | null = null
   newFile = false
   private loading: Promise<void> | null = null
+  private toggling: Promise<void> = Promise.resolve()
   private outlineTimer: number | undefined
 
   constructor(readonly folder: string, readonly path: string, private readonly hooks: DocHooks) {}
@@ -140,7 +140,12 @@ export class FileDoc {
   }
 
   /** The Changes toggle: shows the diff against main over the same editor buffer, or returns to the file. Edits are kept either way. */
-  async toggleChanges(): Promise<void> {
+  toggleChanges(): Promise<void> {
+    this.toggling = this.toggling.then(() => this.flipChanges())
+    return this.toggling
+  }
+
+  private async flipChanges(): Promise<void> {
     const editor = this.editor
     if (!editor || this.deleted) return
     if (this.changes) {
@@ -160,21 +165,15 @@ export class FileDoc {
     this.hooks.changed(this)
   }
 
-  /** Lines added and removed against main for the status bar; only asked for files git reports as changed. */
+  /** Lines added and removed against main for the status bar (none when the file matches main). */
   async refreshStat(): Promise<void> {
     if (!this.editor || this.deleted) return
-    if (!this.hooks.isChanged(this.path)) {
-      if (this.stat !== null) {
-        this.stat = null
-        this.hooks.changed(this)
-      }
-      return
-    }
     const result = await api.fileAgainstBase(this.folder, this.path).catch(() => null)
     if (!result?.ok || !this.editor) return
     const { diffStat } = await loadStatModule()
     this.newFile = result.base === null
-    this.stat = diffStat(result.base, this.savedText)
+    const stat = diffStat(result.base, this.savedText)
+    this.stat = stat.added + stat.removed === 0 ? null : stat
     this.hooks.changed(this)
   }
 
