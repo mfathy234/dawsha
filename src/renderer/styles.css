@@ -813,7 +813,7 @@ button {
 }
 
 .has-image .pane {
-  background: transparent;
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
 }
 
 .pane-header {
@@ -1864,10 +1864,6 @@ input[type='checkbox'] {
   align-items: center;
   font-family: var(--font-mono);
   font-size: 12px;
-}
-
-.pane.attention.focused {
-  border-color: var(--busy);
 }
 
 .popover.menu.pane-actions-menu {
@@ -6131,10 +6127,6 @@ body.dragging-ui {
   opacity: 1;
 }
 
-.pane.attention {
-  border-color: color-mix(in srgb, var(--busy) 60%, var(--border));
-}
-
 .pane-foot {
   flex: none;
   display: flex;
@@ -6414,8 +6406,7 @@ body.dragging-ui {
   display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0;
   font-size: 11.5px; font-weight: 500; white-space: nowrap; background: transparent;
 }
-.state-pill .state-icon { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.state-pill .state-icon svg { display: none; }
+.state-pill .state-icon svg { width: 10px; height: 10px; }
 .state-pill .state-pill-text { color: color-mix(in srgb, currentColor 75%, var(--text)); }
 .state-pill.state-needs { font-weight: 700; }
 .state-pill.state-needs .state-pill-text { color: var(--state-needs); }
@@ -6427,7 +6418,9 @@ body.dragging-ui {
 .skill-search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* Pane, sidebar and attention badge polish. */
 .pane-state { display: inline-flex; align-items: center; flex: none; }
-.pane.needs-you { border-color: var(--state-needs); box-shadow: 0 0 0 1px color-mix(in srgb, var(--state-needs) 45%, transparent); }
+.pane.needs-you { box-shadow: 0 0 0 1px color-mix(in srgb, var(--state-needs) 55%, transparent); }
+.pane.needs-you.focused { box-shadow: 0 0 0 1px color-mix(in srgb, var(--state-needs) 55%, transparent), 0 8px 24px rgb(0 0 0 / .35); }
+:root[data-kind='light'] .pane.needs-you.focused { box-shadow: 0 0 0 1px color-mix(in srgb, var(--state-needs) 55%, transparent), 0 6px 18px rgb(0 0 0 / .12); }
 .pane-tab-add-slot { display: inline-flex; align-items: center; }
 .pane-tab-add-slot[hidden], .tabs[hidden] { display: none; }
 .pane-permission {

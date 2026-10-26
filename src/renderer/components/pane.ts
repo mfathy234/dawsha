@@ -331,6 +331,7 @@ export class PaneComponent {
 
   // Read off the visible screen, so no file is read; at most once per RECAP_REFRESH_MS for each pane.
   private updateRecap(view: PaneView): void {
+    if (!store.state.settings.showRecap) return
     const now = Date.now()
     if (now - this.recapAt < RECAP_REFRESH_MS) return
     this.recapAt = now
