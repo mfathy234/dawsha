@@ -2755,8 +2755,8 @@ input[type='checkbox'] {
   display: grid;
   gap: 12px;
   padding: 12px;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
+  background: var(--bg);
 }
 
 .ob-num {
@@ -6803,7 +6803,7 @@ body.dragging-ui {
 }
 
 .ob-step.active {
-  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
 }
 
 .ob-step.locked {
@@ -6853,9 +6853,8 @@ body.dragging-ui {
   align-items: flex-start;
   gap: 8px;
   padding: 10px;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--bg);
+  background: var(--raised);
 }
 
 .ob-agent-name {
@@ -6891,8 +6890,9 @@ body.dragging-ui {
 .ob-chip {
   height: 28px;
   padding: 0 10px;
+  border: 0;
   border-radius: 14px;
-  background: transparent;
+  background: var(--raised);
   font-family: inherit;
   font-size: 12.5px;
   cursor: pointer;
@@ -6900,12 +6900,12 @@ body.dragging-ui {
 }
 
 .ob-chip:hover:not(:disabled) {
-  background: var(--raised);
+  background: color-mix(in srgb, var(--text) 8%, var(--raised));
   color: var(--text);
 }
 
 .ob-chip.on {
-  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--raised));
   color: var(--accent);
 }
 
