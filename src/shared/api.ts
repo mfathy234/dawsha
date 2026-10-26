@@ -116,6 +116,7 @@ export interface GridApi {
   fileAgainstBase(folder: string, path: string): Promise<FileAgainstBaseResult>
   watchFiles(folder: string): Promise<void>
   unwatchFiles(folder: string): Promise<void>
+  // folder is normalizeFolder(project folder); compare with normalizeFolder() on the renderer side. An empty paths list means refresh everything.
   onFilesChanged(listener: (folder: string, paths: string[]) => void): () => void
   gitSync(folder: string): Promise<SyncCounts | null>
   gitBranches(folder: string): Promise<BranchListResult>

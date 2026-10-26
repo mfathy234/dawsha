@@ -28,6 +28,7 @@ import type { GitQuickRequest } from '../shared/gitBranches'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
 import { createWatchRegistry } from './fileWatch'
+import { knownProjectFolder } from './knownFolder'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
@@ -189,18 +190,32 @@ export function registerIpc(
   ipcMain.handle(IPC.gitDiffSince, (_event, folder: unknown, path: unknown, baseline: unknown) => fileDiffSince(folder, path, baseline))
   ipcMain.handle(IPC.gitBaseline, (_event, folder: unknown) => sessionBaseline(folder))
   ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => sessionStatus(folder, baseline))
-  ipcMain.handle(IPC.projectFiles, (_event, folder: unknown) => projectFiles(folder))
-  ipcMain.handle(IPC.projectFile, (_event, folder: unknown, path: unknown) => readProjectFile(folder, path))
-  ipcMain.handle(IPC.projectFileWrite, (_event, folder: unknown, path: unknown, text: unknown, mtime: unknown) =>
-    writeProjectFile(folder, path, text, mtime)
-  )
-  ipcMain.handle(IPC.projectFileBase, (_event, folder: unknown, path: unknown) => fileAgainstBase(folder, path))
-  const watchers = createWatchRegistry((folder, paths) => {
+  const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
+  const refused = { ok: false as const, error: 'Not a project folder.' }
+  ipcMain.handle(IPC.projectFiles, async (_event, folder: unknown) => {
+    const root = await known(folder)
+    return root ? projectFiles(root) : refused
+  })
+  ipcMain.handle(IPC.projectFile, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    return root ? readProjectFile(root, path) : refused
+  })
+  ipcMain.handle(IPC.projectFileWrite, async (_event, folder: unknown, path: unknown, text: unknown, mtime: unknown) => {
+    const root = await known(folder)
+    return root ? writeProjectFile(root, path, text, mtime) : refused
+  })
+  ipcMain.handle(IPC.projectFileBase, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    return root ? fileAgainstBase(root, path) : refused
+  })
+  const watchers = createWatchRegistry((key, paths) => {
     const window = getWindow()
-    if (window && !window.isDestroyed()) window.webContents.send(IPC.filesChanged, folder, paths)
+    if (window && !window.isDestroyed()) window.webContents.send(IPC.filesChanged, key, paths)
   })
   let watchedWindow: BrowserWindow | null = null
-  ipcMain.handle(IPC.filesWatch, (_event, folder: unknown) => {
+  ipcMain.handle(IPC.filesWatch, async (_event, folder: unknown) => {
+    const root = await known(folder)
+    if (!root) return
     const window = getWindow()
     if (window && window !== watchedWindow) {
       watchedWindow = window
@@ -208,8 +223,9 @@ export function registerIpc(
         watchers.closeAll()
         watchedWindow = null
       })
+      window.webContents.on('did-navigate', () => watchers.closeAll())
     }
-    if (typeof folder === 'string' && folder !== '') watchers.watch(folder)
+    watchers.watch(root)
   })
   ipcMain.handle(IPC.filesUnwatch, (_event, folder: unknown) => {
     if (typeof folder === 'string') watchers.unwatch(folder)

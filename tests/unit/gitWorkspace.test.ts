@@ -89,6 +89,9 @@ describe('saving project files', () => {
     writeFileSync(join(repo, 'logo.png'), Buffer.from([0x89, 0x50, 0x00, 0x01]))
     expect(await writeProjectFile(repo, 'logo.png', 'x', await mtimeOf(repo, 'logo.png'))).toMatchObject({ ok: false })
     expect(await writeProjectFile(repo, 'src/a.ts', 5, 0)).toMatchObject({ ok: false })
+    expect(await writeProjectFile(repo, 'src/a.ts', 'x', Number.NaN)).toEqual({ ok: false, error: 'Invalid save request.' })
+    expect(await writeProjectFile(repo, 'src/a.ts', 'x', Infinity)).toEqual({ ok: false, error: 'Invalid save request.' })
+    if (process.platform === 'win32') expect(await writeProjectFile(repo, 'src/a.ts:stream', 'x', 0)).toMatchObject({ ok: false })
     expect(await writeProjectFile(repo, 'src/a.ts', 'x'.repeat(1024 * 1024 + 1), 0)).toMatchObject({ ok: false })
   })
 

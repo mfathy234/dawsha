@@ -69,7 +69,7 @@ export type ProjectFileWriteResult =
   | { ok: false; conflict?: false; error: string }
 
 export type FileAgainstBaseResult =
-  | { ok: true; base: string | null; text: string }
+  | { ok: true; base: string | null; text: string; reason?: 'large' }
   | { ok: false; error: string }
 
 export interface CommitRequest {
