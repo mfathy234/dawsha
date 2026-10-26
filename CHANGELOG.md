@@ -33,8 +33,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Installing Claude Code from Dawsha no longer breaks an existing install. Dawsha now finds Claude Code installed with npm anywhere (custom npm folders, `%APPDATA%
-pm`, nvm, Volta and fnm), never runs the native installer over it, and updates each install the way it was installed. Sessions start with an npm-only install on Windows. When two installs are found, Dawsha changes neither and shows both with the commands to remove one. On macOS and Linux it uses the right installer command.
+- Installing Claude Code from Dawsha no longer breaks an existing install. Dawsha now finds Claude Code installed with npm anywhere (custom npm folders, `%APPDATA%\npm`, nvm, Volta and fnm), never runs the native installer over it, and updates each install the way it was installed. Sessions start with an npm-only install on Windows. When two installs are found, Dawsha changes neither and shows both with the commands to remove one. On macOS and Linux it uses the right installer command.
 - The resume picker's project menu opened behind the picker.
 - Unfocused sessions in light themes no longer look washed out.
 
