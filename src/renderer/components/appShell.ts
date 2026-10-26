@@ -135,7 +135,9 @@ export class AppShell {
     this.topbar.update(state, views)
     this.sidebar.update(state, views)
     this.setSidebarWidth(state.settings.sidebarWidth)
-    this.sidebarResize.hidden = isSidebarCollapsed(state)
+    // Files has its own project switcher, so the projects sidebar steps aside there (the saved collapsed setting is untouched).
+    this.sidebar.el.hidden = state.view === 'files'
+    this.sidebarResize.hidden = isSidebarCollapsed(state) || state.view === 'files'
     const boardShown = state.view === 'grid' && state.settings.sessionsLayout === 'board'
     this.grid.el.hidden = state.view !== 'grid' || boardShown
     this.projects.el.hidden = state.view !== 'projects'

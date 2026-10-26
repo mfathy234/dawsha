@@ -169,6 +169,11 @@ const api: GridApi = {
   openRecordingsFolder: () => ipcRenderer.invoke(IPC.recordingsOpenFolder),
   setRecordingPaused: (id, paused) => ipcRenderer.invoke(IPC.recordingsPause, id, paused),
   setRecordingTitle: (id, title) => ipcRenderer.send(IPC.recordingsTitle, id, title),
+  onCloseCheck: (listener) => {
+    ipcRenderer.on(IPC.closeCheck, () => {
+      void listener().then((ok) => ipcRenderer.send(IPC.closeCheckDone, ok), () => ipcRenderer.send(IPC.closeCheckDone, true))
+    })
+  },
   onFlushRequest: (listener) => {
     ipcRenderer.on(IPC.flushRequest, () => {
       void listener().finally(() => ipcRenderer.send(IPC.flushDone))

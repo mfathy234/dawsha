@@ -22,12 +22,20 @@ function lineOf(starts: number[], pos: number): number {
   return low
 }
 
-function touched(starts: number[], from: number, to: number, into: Set<number>): void {
-  if (to <= from) return
-  for (let line = lineOf(starts, from); line <= lineOf(starts, to - 1); line += 1) into.add(line)
+const atLineStart = (starts: number[], pos: number): boolean => starts[lineOf(starts, pos)] === pos
+
+// A range made of whole lines (or empty at a line start); anything else changes part of a line.
+function wholeLines(starts: number[], length: number, from: number, to: number): boolean {
+  return atLineStart(starts, from) && (to === length || atLineStart(starts, to))
 }
 
-/** Lines added and removed between a base text and the current one, for the "+14 -3 since main" status. */
+function touched(starts: number[], from: number, to: number, whole: boolean, into: Set<number>): void {
+  if (whole && to <= from) return
+  const last = to > from ? lineOf(starts, to - 1) : lineOf(starts, from)
+  for (let line = lineOf(starts, from); line <= last; line += 1) into.add(line)
+}
+
+/** Lines added and removed between a base text and the current one, counted the way the Changes view shows them: a line edited in place is one removed and one added. */
 export function diffStat(base: string | null, text: string): DiffStat {
   const before = base ?? ''
   const a = lineStarts(before)
@@ -35,8 +43,9 @@ export function diffStat(base: string | null, text: string): DiffStat {
   const added = new Set<number>()
   const removed = new Set<number>()
   for (const change of diff(before, text)) {
-    touched(a, change.fromA, change.toA, removed)
-    touched(b, change.fromB, change.toB, added)
+    const whole = wholeLines(a, before.length, change.fromA, change.toA) && wholeLines(b, text.length, change.fromB, change.toB)
+    touched(a, change.fromA, change.toA, whole, removed)
+    touched(b, change.fromB, change.toB, whole, added)
   }
   return { added: added.size, removed: removed.size }
 }

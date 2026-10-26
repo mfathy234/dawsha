@@ -48,6 +48,8 @@ test('Files opens a file read-only, lets you copy from it, and Changes toggles w
     await page.locator('#files-button').click()
     await expect(page.locator('#files-view')).toBeVisible()
     await expect(page.locator('#files-button')).toHaveAttribute('aria-pressed', 'true')
+    // the projects sidebar steps aside in Files and comes back afterwards
+    await expect(page.locator('.sidebar')).toBeHidden()
     await expect(page.locator('.files-row[data-path="README.md"] .files-badge')).toHaveText('M')
 
     await openA(page)
@@ -88,9 +90,11 @@ test('Files opens a file read-only, lets you copy from it, and Changes toggles w
     // edit: the tab is pinned and dirty, and toggling Changes never loses the text
     await editor(page).click()
     await page.keyboard.press('e')
-    await expect(page.locator('#files-edit')).toHaveText('Done')
     await page.keyboard.press('Control+End')
     await page.keyboard.type('// my edited')
+    await expect(page.locator('#files-edit')).toHaveText('Done')
+    // every typed character arrives, the slashes included
+    expect(await editor(page).textContent()).toMatch(/\}\/\/ my edited$/)
     await expect(page.locator('.files-tab.active')).toHaveClass(/dirty/)
     await expect(page.locator('.files-tab.active')).not.toHaveClass(/preview/)
     await page.locator('#files-changes').click()
@@ -229,6 +233,33 @@ test('Ctrl+P opens quick open from a terminal, opens files in Files and adds the
     await expect(page.locator('.files-row.file')).toHaveCount(2)
     await expect(page.locator('.files-row.file .files-name')).toHaveText(['new.ts', 'README.md'])
     await page.screenshot({ path: join(SCREENS, '64-files-changed-filter.png') })
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('closing the window with unsaved Files tabs asks first, naming the file, and Cancel keeps everything', async () => {
+  test.setTimeout(120_000)
+  const sandbox = createSandbox()
+  const repo = makeRepo(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.locator('#files-button').click()
+    await openA(page)
+    await editor(page).click()
+    await page.keyboard.press('e')
+    await page.keyboard.type('// unsaved')
+    await expect(page.locator('.files-tab.active')).toHaveClass(/dirty/)
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close())
+    const confirm = page.getByRole('alertdialog')
+    await expect(confirm).toContainText('a.ts')
+    await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeFocused()
+    await confirm.getByRole('button', { name: 'Cancel' }).click()
+    await expect(confirm).toHaveCount(0)
+    await expect(editor(page)).toContainText('// unsaved')
+    expect(diskText(repo, 'src/a.ts')).not.toContain('// unsaved')
+    await page.locator('#sessions-button').click()
+    await expect(page.locator('.sidebar')).toBeVisible()
   } finally {
     await closeApp(app)
   }

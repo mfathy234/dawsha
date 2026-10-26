@@ -9,7 +9,7 @@ import { currentBundle, onThemeChange } from '../themeManager'
 import { projectById, store, type AppState } from '../state'
 import { FileDoc, type DocHooks } from '../files/fileDoc'
 import { noteOpened } from '../files/fileIndex'
-import { addToPrompt, filesTarget, onFilesRequest, openInVsCode, setCurrentTarget, takeFilesRequest, type FilesTarget } from '../files/filesActions'
+import { addToPrompt, filesTarget, onFilesRequest, openInVsCode, setCurrentTarget, setDirtyProvider, takeFilesRequest, type FilesTarget } from '../files/filesActions'
 import { closeTab, openTab, pinTab, type TabRef } from '../files/filesState'
 import { FilesTree } from '../files/filesTree'
 import { loadTouches, type TouchMap } from '../files/sessionTouch'
@@ -88,6 +88,7 @@ export class FilesViewComponent {
       for (const set of this.sets.values()) for (const doc of set.docs.values()) doc.setTheme(themeKind())
     })
     onFilesRequest(() => this.takeRequest())
+    setDirtyProvider(() => [...this.sets.values()].flatMap((set) => [...set.docs.values()].filter((doc) => doc.dirty).map((doc) => doc.path)))
   }
 
   update(state: AppState): void {

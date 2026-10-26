@@ -49,7 +49,7 @@ const highlight = HighlightStyle.define([
   { tag: [t.keyword, t.modifier, t.operatorKeyword, t.controlKeyword], color: 'var(--accent)' },
   { tag: [t.string, t.special(t.string), t.regexp], color: mix('var(--accent)', 55) },
   { tag: [t.number, t.bool, t.null, t.atom], color: mix('var(--accent)', 70) },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: 'var(--muted)', fontStyle: 'italic' },
+  { tag: [t.comment, t.lineComment, t.blockComment], color: 'var(--muted)' },
   { tag: [t.function(t.variableName), t.function(t.propertyName), t.definition(t.variableName)], color: 'var(--text)', fontWeight: '600' },
   { tag: [t.typeName, t.className, t.namespace], color: mix('var(--accent)', 40) },
   { tag: [t.propertyName, t.attributeName], color: mix('var(--muted)', 45) },
@@ -66,7 +66,7 @@ function baseTheme(dark: boolean): Extension {
       '&': { height: '100%', color: 'var(--text)', backgroundColor: 'var(--bg)', fontSize: '13px' },
       '&.cm-focused': { outline: 'none' },
       '.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.6', overflow: 'auto' },
-      '.cm-content': { caretColor: 'var(--accent)', padding: '8px 0' },
+      '.cm-content': { caretColor: 'var(--accent)', padding: '8px 0', fontVariantLigatures: 'none', fontFeatureSettings: '"liga" 0, "calt" 0' },
       '.cm-line': { padding: '0 16px 0 8px' },
       '.cm-gutters': { backgroundColor: 'var(--bg)', color: 'var(--muted)', border: 'none', opacity: '0.7' },
       '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 16px', minWidth: '3ch' },
@@ -80,12 +80,11 @@ function baseTheme(dark: boolean): Extension {
       '.cm-matchingBracket': { backgroundColor: 'color-mix(in srgb, var(--accent) 22%, transparent)', outline: 'none' },
       '.cm-panels': { backgroundColor: 'var(--surface)', color: 'var(--text)', border: 'none' },
       '.cm-panels input, .cm-panels button': { fontFamily: 'inherit' },
-      '.cm-changedLine': { backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)' },
+      '&.cm-merge-b .cm-changedLine, &.cm-merge-b .cm-inlineChangedLine': { backgroundColor: 'color-mix(in srgb, var(--accent) 12%, transparent)' },
       '.cm-deletedChunk': { backgroundColor: 'color-mix(in srgb, var(--danger) 12%, transparent)', paddingLeft: '8px' },
-      '.cm-insertedLine': { backgroundColor: 'color-mix(in srgb, var(--accent) 12%, transparent)' },
-      '.cm-deletedLine': { backgroundColor: 'color-mix(in srgb, var(--danger) 12%, transparent)' },
-      '&.cm-merge-b .cm-changedText, &.cm-merge-a .cm-changedText': { background: 'color-mix(in srgb, var(--accent) 24%, transparent) !important' },
-      '.cm-deletedChunk .cm-deletedText': { background: 'color-mix(in srgb, var(--danger) 26%, transparent) !important' }
+      '.cm-changeGutter': { width: '2px', paddingLeft: '0' },
+      '&.cm-merge-b .cm-changedLineGutter': { background: 'var(--accent) !important' },
+      '.cm-deletedLineGutter': { background: 'var(--danger) !important' }
     },
     { dark }
   )
@@ -183,7 +182,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
       showingChanges = true
       view.dispatch({
         effects: [
-          merge.reconfigure(unifiedMergeView({ original: baseText ?? '', mergeControls: false })),
+          merge.reconfigure(unifiedMergeView({ original: baseText ?? '', mergeControls: false, highlightChanges: false, gutter: true, syntaxHighlightDeletions: true })),
           access.reconfigure(accessFor(true))
         ]
       })

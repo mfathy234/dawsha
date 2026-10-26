@@ -1,6 +1,8 @@
 import { api } from '../api'
 import { focusPane, showView } from '../actions'
+import { confirmDialog } from '../components/dialogs'
 import { toast } from '../components/toast'
+import { unsavedQuitCopy } from '../../shared/dirtyFiles'
 import { folderOfPane, paneById, store, type AppState } from '../state'
 import { paneTerminal } from '../terminalActions'
 
@@ -21,6 +23,21 @@ export interface LineRange {
 }
 
 let current: FilesTarget | null = null
+let dirtyProvider: () => string[] = () => []
+
+/** The Files view reports which open files have unsaved edits, so closing the window can ask first. */
+export function setDirtyProvider(provider: () => string[]): void {
+  dirtyProvider = provider
+}
+
+export const unsavedFiles = (): string[] => dirtyProvider()
+
+/** Asked as the window closes: with unsaved Files tabs it names them and keeps Cancel as the default. */
+export async function confirmQuitWithUnsavedFiles(): Promise<boolean> {
+  const dirty = [...new Set(unsavedFiles())]
+  if (dirty.length === 0) return true
+  return confirmDialog(unsavedQuitCopy(dirty))
+}
 let pending: FilesRequest | null = null
 const listeners = new Set<() => void>()
 

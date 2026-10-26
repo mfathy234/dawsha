@@ -50,6 +50,8 @@ export class FileDoc {
   newFile = false
   private loading: Promise<void> | null = null
   private toggling: Promise<void> = Promise.resolve()
+  private baseText: string | null | undefined
+  private statTimer: number | undefined
   private outlineTimer: number | undefined
 
   constructor(readonly folder: string, readonly path: string, private readonly hooks: DocHooks) {}
@@ -105,6 +107,8 @@ export class FileDoc {
       this.dirty = dirty
       this.hooks.changed(this)
       this.scheduleOutline()
+      window.clearTimeout(this.statTimer)
+      this.statTimer = window.setTimeout(() => void this.recomputeStat(), 400)
     })
     editor.onCursor((info) => this.hooks.cursor(this, info))
     editor.onLanguage(() => this.hooks.outlineChanged(this))
@@ -170,10 +174,20 @@ export class FileDoc {
     if (!this.editor || this.deleted) return
     const result = await api.fileAgainstBase(this.folder, this.path).catch(() => null)
     if (!result?.ok || !this.editor) return
-    const { diffStat } = await loadStatModule()
+    this.baseText = result.base
     this.newFile = result.base === null
-    const stat = diffStat(result.base, this.savedText)
-    this.stat = stat.added + stat.removed === 0 ? null : stat
+    await this.recomputeStat()
+  }
+
+  /** Counts against the text in the editor, so the numbers match the diff the Changes view shows. */
+  private async recomputeStat(): Promise<void> {
+    if (!this.editor || this.baseText === undefined) return
+    const { diffStat } = await loadStatModule()
+    if (!this.editor) return
+    const stat = diffStat(this.baseText, this.editor.getText())
+    const next = stat.added + stat.removed === 0 ? null : stat
+    if (next?.added === this.stat?.added && next?.removed === this.stat?.removed) return
+    this.stat = next
     this.hooks.changed(this)
   }
 
@@ -265,6 +279,7 @@ export class FileDoc {
 
   destroy(): void {
     window.clearTimeout(this.outlineTimer)
+    window.clearTimeout(this.statTimer)
     this.editor?.destroy()
     this.editor = null
     this.host.remove()

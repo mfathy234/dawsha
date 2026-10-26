@@ -119,6 +119,8 @@ export const IPC = {
   recordingsPause: 'recordings:pause',
   flushRequest: 'app:flush-request',
   flushDone: 'app:flush-done',
+  closeCheck: 'app:close-check',
+  closeCheckDone: 'app:close-check-done',
   orchOpenPane: 'orch:open-pane',
   orchClosePane: 'orch:close-pane',
   orchStatus: 'orch:status',

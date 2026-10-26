@@ -44,6 +44,7 @@ import { installReplayCommands } from './commands/replay'
 import { installSettingsTransferCommands } from './commands/settingsTransfer'
 import { installKeyboard } from './keyboard'
 import { store } from './state'
+import { confirmQuitWithUnsavedFiles } from './files/filesActions'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
 import { applyTheme, onThemeChange } from './themeManager'
 
@@ -123,6 +124,7 @@ async function boot(): Promise<void> {
   api.onUpdateState(setUpdateState)
   initWhatsNew()
   api.onFlushRequest(flushWorkspace)
+  api.onCloseCheck(confirmQuitWithUnsavedFiles)
   api.onCliRun(runCliCommand)
   api.onOrchOpenPane(openOrchPane)
   api.onOrchClosePane(closeOrchPane)

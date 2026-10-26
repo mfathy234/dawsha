@@ -75,6 +75,23 @@ function flushRenderer(): Promise<void> {
   })
 }
 
+// Asks the page whether the window may close (unsaved Files tabs ask the user); a page that is not there answers yes.
+function askMayClose(): Promise<boolean> {
+  const window = mainWindow
+  if (!window || window.isDestroyed() || !rendererReady) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const finish = (_event?: unknown, ok?: unknown): void => {
+      ipcMain.removeListener(IPC.closeCheckDone, finish)
+      window.webContents.removeListener('destroyed', onGone)
+      resolve(ok !== false)
+    }
+    const onGone = (): void => finish(undefined, true)
+    ipcMain.once(IPC.closeCheckDone, finish)
+    window.webContents.once('destroyed', onGone)
+    window.webContents.send(IPC.closeCheck)
+  })
+}
+
 function terminateProcess(code: number): void {
   quitLog(`terminating the process (code ${code})`)
   try {
@@ -130,11 +147,18 @@ function createWindow(): BrowserWindow {
     if (mainWindow === window) rendererReady = false
   })
   let flushedOnClose = false
+  let asking = false
   window.on('close', (event) => {
     if (flushedOnClose) return
-    flushedOnClose = true
     event.preventDefault()
-    void flushRenderer().finally(() => window.close())
+    if (asking) return
+    asking = true
+    void askMayClose().then((ok) => {
+      asking = false
+      if (!ok) return
+      flushedOnClose = true
+      void flushRenderer().finally(() => window.close())
+    })
   })
   window.on('focus', () => window.flashFrame(false))
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
