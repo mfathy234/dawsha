@@ -93,10 +93,20 @@ test('dim others is off until the top bar switch is turned on, and it persists',
     await expect(toggle).toHaveAttribute('aria-checked', 'true')
     await expect(page.locator('.pane.calm')).toHaveCount(1)
     await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).dimOtherPanes).toBe(true)
-    await toggle.click()
-    await expect(page.locator('.pane.calm')).toHaveCount(0)
-  } finally {
     await closeApp(app)
+    const again = await launchApp(sandbox)
+    try {
+      await addPanes(again.page, 2)
+      await expect(again.page.getByRole('switch', { name: 'Dim others' })).toHaveAttribute('aria-checked', 'true')
+      await expect(again.page.locator('.pane.calm')).toHaveCount(1)
+      await again.page.getByRole('switch', { name: 'Dim others' }).click()
+      await expect(again.page.locator('.pane.calm')).toHaveCount(0)
+    } finally {
+      await closeApp(again.app)
+    }
+    return
+  } finally {
+    await closeApp(app).catch(() => undefined)
   }
 })
 

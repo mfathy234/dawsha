@@ -26,7 +26,7 @@ import { formatPercent, gaugeStage } from '../../shared/statusLine'
 import { chargeBar } from './chargeBar'
 import type { RateLimitWindow } from '../../shared/types'
 import { h, icon } from '../dom'
-import type { AppState } from '../state'
+import { store, type AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import { setSessionsLayout } from '../sessionsLayout'
 import { NotificationBell } from './notificationBell'
@@ -103,10 +103,11 @@ export class TopBarComponent {
   )
   private readonly gridMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-grid', title: 'Show sessions as a grid', onClick: () => setSessionsLayout('grid') }, 'Grid')
   private readonly boardMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-board', title: `Show sessions as a board (${BOARD_KEY_HINT})`, onClick: () => setSessionsLayout('board') }, 'Board')
-  private readonly dimSwitch = h('button', { class: 'dim-switch', type: 'button', id: 'dim-others', role: 'switch', 'aria-checked': 'false', title: 'Dim the sessions you are not working in', onClick: () => setDimOtherPanes(this.dimSwitch.getAttribute('aria-checked') !== 'true') },
+  private readonly dimState = h('span', { class: 'dim-switch-state', 'aria-hidden': 'true' }, 'Off')
+  private readonly dimSwitch = h('button', { class: 'dim-switch', type: 'button', id: 'dim-others', role: 'switch', 'aria-checked': 'false', 'aria-label': 'Dim others', title: 'Dim others', onClick: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
     h('span', { class: 'dim-switch-track', 'aria-hidden': 'true' }, h('span', { class: 'dim-switch-thumb' })),
     h('span', { class: 'dim-switch-label' }, 'Dim others'),
-    h('span', { class: 'dim-switch-state' }, 'Off')
+    this.dimState
   )
   private readonly summary = h('div', { class: 'topbar-count', role: 'status', 'aria-live': 'polite' })
   private summarySignature = ''
@@ -182,7 +183,7 @@ export class TopBarComponent {
     this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
     const dim = state.settings.dimOtherPanes
     this.dimSwitch.setAttribute('aria-checked', String(dim))
-    this.dimSwitch.querySelector('.dim-switch-state')!.textContent = dim ? 'On' : 'Off'
+    this.dimState.textContent = dim ? 'On' : 'Off'
     this.background.setAttribute('aria-pressed', String(state.view === 'background'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
