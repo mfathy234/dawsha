@@ -282,7 +282,7 @@ html.lenis { scroll-behavior: auto; }
 .new-pill:hover { border-color: var(--accent); color: var(--text); }
 .new-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-#new, #new-1-0 { border-top: 1px solid var(--border); }
+#new, #new-1-6, #new-1-0 { border-top: 1px solid var(--border); }
 .launch-video { margin-top: 40px; }
 .launch-video[hidden] { display: none; }
 .launch-video + .feat-row { margin-top: 56px; }
@@ -299,4 +299,5 @@ html.lenis { scroll-behavior: auto; }
 @media (max-width: 900px) {
   .feat-row, .feat-row.flip { grid-template-columns: 1fr; gap: 28px; margin-top: 56px; }
   .feat-row.flip .feat-copy { order: 0; }
+  .feat-row > * { min-width: 0; }
 }

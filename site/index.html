@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.6</a>
+      <a href="#new">New in 1.7</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -59,7 +59,7 @@
     <div class="wrap hero-grid">
       <div class="hero-copy">
         <img class="logo hero-logo" src="favicon.svg?v=0.2.0-2" width="40" height="40" alt="Dawsha logo: a terminal inside a speech bubble">
-        <a class="new-pill" href="#new"><strong>New in 1.6</strong><span>The Agents tab and full-conversation handoff</span></a>
+        <a class="new-pill" href="#new"><strong>New in 1.7</strong><span>The Files view and Ctrl+P quick open</span></a>
         <p class="eyebrow">For Claude Code, Codex CLI and Gemini CLI</p>
         <h1>Every AI coding agent, one readable window.</h1>
         <p class="lead">Run Claude Code, Codex and Gemini side by side in large, readable terminals, one session per task.</p>
@@ -107,7 +107,54 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.6</h2>
+      <h2 id="new-h">New in 1.7</h2>
+      <p class="section-lead">1.7 adds a light Files view and Ctrl+P quick open, colours your session tags for you and calms the grid down.</p>
+      <div class="feat-row" id="files-view">
+        <div class="feat-copy">
+          <h3>The Files view</h3>
+          <p>A light editor beside your sessions. Open it from the Files tab, right after Agents, or with Ctrl+Shift+E.</p>
+          <ul><li>A file tree for each project and worktree, with git badges M, A and D and the filters All, Changed and Open in sessions.</li><li>A file opens read-only, so you can select and copy freely. The Changes toggle shows what changed since main, and back.</li><li>Press E or Edit for a small edit and Ctrl+S to save. If an agent changes the file meanwhile, a bar offers Reload theirs or Keep mine.</li><li>The right panel lists the sessions that touched the file and an outline of it.</li><li>Add to prompt types @path, with the selected lines, into the focused session. Open in VS Code and Copy path are there too.</li><li>Only files inside your projects can be read or saved.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/files-view.png" width="1600" height="1000" alt="The Files view with a file tree and git badges on the left, a file open in the middle and the sessions that touched it on the right">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="quick-open">
+        <div class="feat-copy">
+          <h3>Quick open with Ctrl+P</h3>
+          <p>Jump to any file in your projects from anywhere, terminals included, with a preview beside the list.</p>
+          <ul><li>Enter opens the file in Files.</li><li>Alt+Enter adds it to the prompt.</li><li>Ctrl+Enter opens it in VS Code.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/quick-open.png" width="1600" height="1000" alt="The Ctrl+P quick open list over a session, with a file name typed in the search box and a preview of the selected file beside the results">
+        </figure>
+      </div>
+      <div class="feat-row" id="tag-colours">
+        <div class="feat-copy">
+          <h3>Tags that colour themselves</h3>
+          <p>Sessions get a tag colour without you doing anything.</p>
+          <ul><li>From the branch: feature/ is Feature, fix/, bug/ and hotfix/ are Bug, and docs/, review/ and research/ match their tags.</li><li>Without a branch, from the conversation title, in English and Arabic words.</li><li>A tag you set always wins, and closed sessions keep their branch.</li><li>Turn colours off with the Tag colours setting or the palette command.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/tag-colours.png" width="1600" height="1000" alt="The sidebar and the sessions board with coloured Feature, Bug, Docs and Review tags on sessions whose branches start with feature, fix and docs">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="calm-panes">
+        <div class="feat-copy">
+          <h3>A calmer grid</h3>
+          <p>Fewer outlines and more room for the terminal.</p>
+          <ul><li>Panes have no coloured top bar. State is an icon and a word, the recap is plain text, and the focused pane lifts with a soft shadow.</li><li>Popups, dialogs, menus, the resume picker, settings, the board and the main views use fills and soft shadows instead of borders. Focus rings stay clear for keyboard users.</li><li>Sidebar rows show time and cost on their own line. The × and ⋯ buttons appear on hover or focus and never cover text.</li><li>Dim others is a switch in the top bar and is off by default. The one-line recap can be hidden in settings.</li><li>The Agents tab groups background agents by session, running first, each with a small bar scaled to its session, instead of a 24-hour timeline.</li><li>Right-click gives Copy, Cut and Paste in text fields and the editor.</li></ul>
+        </div>
+        <figure class="shot">
+          <img loading="lazy" src="assets/calm-grid.png" width="1600" height="1000" alt="A grid of four sessions without coloured top bars, where the focused pane is lifted by a soft shadow and the others sit flat with no outlines">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="new-1-6" aria-labelledby="new-16-h">
+    <div class="wrap">
+      <h2 id="new-16-h">New in 1.6</h2>
       <p class="section-lead">1.6.2 adds the Agents tab and a handoff that carries the whole conversation. Arabic, voice dictation and a calmer window came with 1.6.0.</p>
       <div class="feat-copy feat-note" id="agents-tab">
         <h3>The Agents tab</h3>
