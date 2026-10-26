@@ -1,6 +1,5 @@
+import { realPrompt, realReply } from './sessionText'
 import type { AgentKind } from './types'
-
-const MAX_TEXT = 400
 
 export interface SessionDetail {
   firstPrompt?: string
@@ -96,11 +95,6 @@ function records(text: string): Json[] {
   return out
 }
 
-function tidy(text: string): string {
-  const flat = text.replace(/\s+/g, ' ').trim()
-  return flat.length > MAX_TEXT ? `${flat.slice(0, MAX_TEXT - 1)}…` : flat
-}
-
 const asTime = (value: unknown): number | undefined => {
   if (typeof value !== 'string') return undefined
   const parsed = Date.parse(value)
@@ -118,8 +112,6 @@ function blockText(content: unknown, types: string[]): string {
     .join('')
 }
 
-const isPrompt = (text: string): boolean => text.trim() !== '' && !text.trim().startsWith('<')
-
 export function modelLabel(agent: AgentKind, model: string | undefined): string | undefined {
   if (!model) return undefined
   if (agent !== 'claude') return model
@@ -133,17 +125,20 @@ export function claudeDetail(text: string, scale = 1): SessionDetail {
   for (const record of records(text)) {
     const message = isRecord(record.message) ? record.message : {}
     if (detail.startedAt === undefined) detail.startedAt = asTime(record.timestamp)
+    if (record.isSidechain === true) continue
     if (record.type === 'user' && record.isMeta !== true) {
-      const prompt = blockText(message.content, ['text'])
-      if (!isPrompt(prompt)) continue
+      const prompt = realPrompt(blockText(message.content, ['text']))
+      if (prompt === null) continue
       messages += 1
-      if (detail.firstPrompt === undefined) detail.firstPrompt = tidy(prompt)
+      if (detail.firstPrompt === undefined) detail.firstPrompt = prompt
     } else if (record.type === 'assistant') {
-      const reply = blockText(message.content, ['text'])
-      if (reply.trim() === '') continue
+      const raw = blockText(message.content, ['text'])
+      if (raw.trim() === '') continue
       messages += 1
-      detail.lastAssistant = tidy(reply)
-      if (typeof message.model === 'string' && message.model !== '<synthetic>') detail.model = message.model
+      if (message.model === '<synthetic>') continue
+      const reply = realReply(raw)
+      if (reply !== null) detail.lastAssistant = reply
+      if (typeof message.model === 'string') detail.model = message.model
     }
   }
   detail.messages = Math.round(messages * scale)
@@ -170,14 +165,22 @@ export function codexDetail(text: string, scale = 1): SessionDetail {
     if (record.type === 'response_item' && payload.type === 'message') {
       const role = payload.role === 'user' ? 'user' : payload.role === 'assistant' ? 'assistant' : null
       const body = blockText(payload.content, ['input_text', 'output_text'])
-      if (role && body.trim() !== '' && (role === 'assistant' || isPrompt(body))) items.push({ role, text: body })
+      if (role && body.trim() !== '' && (role === 'assistant' || realPrompt(body) !== null)) items.push({ role, text: body })
     }
   }
   const turns = events.length > 0 ? events : items
-  const first = turns.find((t) => t.role === 'user' && isPrompt(t.text))
-  if (first) detail.firstPrompt = tidy(first.text)
-  const last = [...turns].reverse().find((t) => t.role === 'assistant')
-  if (last) detail.lastAssistant = tidy(last.text)
+  for (const turn of turns) {
+    const prompt = turn.role === 'user' ? realPrompt(turn.text) : null
+    if (prompt === null) continue
+    detail.firstPrompt = prompt
+    break
+  }
+  for (const turn of [...turns].reverse()) {
+    const reply = turn.role === 'assistant' ? realReply(turn.text) : null
+    if (reply === null) continue
+    detail.lastAssistant = reply
+    break
+  }
   detail.messages = Math.round(turns.length * scale)
   return detail
 }
@@ -189,10 +192,11 @@ export function geminiDetail(text: string, scale = 1): SessionDetail {
     const body = blockText(message.content, ['text']).trim()
     if (message.type === 'user' && body && !body.startsWith('/') && !body.startsWith('?')) {
       messages += 1
-      if (detail.firstPrompt === undefined) detail.firstPrompt = tidy(body)
+      if (detail.firstPrompt === undefined) detail.firstPrompt = realPrompt(body) ?? undefined
     } else if (message.type === 'gemini' && body) {
       messages += 1
-      detail.lastAssistant = tidy(body)
+      const reply = realReply(body)
+      if (reply !== null) detail.lastAssistant = reply
       if (typeof message.model === 'string' && message.model) detail.model = message.model
     }
   }

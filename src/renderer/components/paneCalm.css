@@ -1,0 +1,69 @@
+/* Calmer grid: a state edge on every pane, a one-line recap, a dimmed idle terminal and an approval bar above the footer. */
+.pane::before {
+  content: '';
+  flex: none;
+  height: 3px;
+  background: transparent;
+}
+.pane[data-state='needs']::before { background: var(--state-needs); }
+.pane[data-state='working']::before { background: var(--state-working); }
+.pane[data-state='done']::before,
+.pane[data-state='idle']::before { background: color-mix(in srgb, var(--idle) 55%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .pane[data-state='needs']::before { animation: pane-edge-pulse 2.6s ease-in-out infinite; }
+}
+@keyframes pane-edge-pulse {
+  50% { opacity: 0.55; }
+}
+
+.pane-recap {
+  flex: none;
+  padding: 5px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pane-recap[hidden] { display: none; }
+
+/* Darkened rather than faded: opacity lets the page show through a dark terminal and greys it out in light themes. */
+.pane .pane-body { transition: filter 120ms; }
+.pane.calm:not(:hover):not(:focus-within) .pane-body { filter: brightness(0.72) saturate(0.8); }
+@media (prefers-reduced-motion: reduce) {
+  .pane .pane-body { transition: none; }
+}
+
+.pane .pane-permission {
+  margin: 0 10px 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--state-needs) 60%, var(--border));
+  border-radius: var(--radius);
+}
+.pane .pane-permission .btn.primary {
+  background: var(--state-needs);
+  border-color: var(--state-needs);
+  color: var(--bg);
+}
+.pane .pane-permission .btn.primary:hover { filter: brightness(1.08); }
+:root[data-kind='light'] .pane.calm:not(:hover):not(:focus-within) .pane-body { filter: brightness(0.86) saturate(0.8); }
+
+/* Narrow panes (the small ones in the 3 and 5 pane shapes) keep their buttons and give up the extras first. */
+.pane-header > .icon-btn { flex: none; }
+.pane-header .pane-title { min-width: 3.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The session name keeps a few letters; "new session" and "resumed" stay visible on any width; they shrink with an ellipsis instead. */
+.pane-header .pane-fresh,
+.pane-header .chip-resumed { flex: 0 1 auto; min-width: 2.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@container pane-header (max-width: 460px) {
+  .pane-header { gap: 6px; }
+  .pane-header .pane-prev,
+  .pane-header .pane-next,
+  .pane-header .pane-mic { display: none; }
+}
+/* The smallest panes show the state as its icon (the word stays for screen readers) so Maximize and Close fit. */
+@container pane-header (max-width: 360px) {
+  .pane-header .state-pill .state-pill-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}

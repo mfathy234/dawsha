@@ -1,4 +1,5 @@
 import { installUsageSnapshot } from './usageSnapshot'
+import { installBackgroundAgents } from './backgroundAgents'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import './orchestrator.css'
@@ -35,7 +36,10 @@ import { installCompareCommands } from './commands/compare'
 import { installOrchestratorCommands } from './commands/orchestrator'
 import { closeOrchPane, openOrchPane, refreshOrch } from './orchActions'
 import { installHandoffCommands } from './commands/handoff'
+import { installClosedSessionCommands } from './commands/closedSessions'
 import { installLayoutCommands } from './commands/layouts'
+import { installNotificationCommands } from './commands/notifications'
+import { installNeedsNotices } from './needsNotice'
 import { installReplayCommands } from './commands/replay'
 import { installSettingsTransferCommands } from './commands/settingsTransfer'
 import { installKeyboard } from './keyboard'
@@ -99,15 +103,19 @@ async function boot(): Promise<void> {
   setInterval(() => void refreshGitChanges(), GIT_CHANGES_POLL_MS)
   document.addEventListener('visibilitychange', () => void refreshGitChanges())
   installAttention()
+  installNeedsNotices()
   guardWindowDrops()
   installUsageSnapshot()
+  installBackgroundAgents()
   void installOps()
   installProcessActivity()
   installBuiltinCommands()
   installDictationPill()
   installLayoutCommands()
+  installNotificationCommands()
   installCompareCommands()
   installHandoffCommands()
+  installClosedSessionCommands()
   installReplayCommands()
   installSettingsTransferCommands()
   installOrchestratorCommands()

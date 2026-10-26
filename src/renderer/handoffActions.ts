@@ -1,5 +1,5 @@
 import { AGENT_NAMES } from '../shared/agents'
-import { buildHandoff, type HandoffCheck } from '../shared/handoff'
+import { buildHandoff, buildTranscriptHandoff, type HandoffCheck } from '../shared/handoff'
 import { DEFAULT_FONT_SIZE, clampFontSize, type AgentKind } from '../shared/types'
 import { launch, makeTerm, persistWorkspace, refreshBranches, refreshGitChanges } from './actions'
 import { api } from './api'
@@ -8,6 +8,7 @@ import { toast } from './components/toast'
 import { derivePanes, type PaneView } from './derive'
 import { folderOfPane, newId, paneById, store, type PaneState } from './state'
 import { getTerminal } from './terminals'
+import { sessionIdOf } from './transcriptActions'
 
 function lastCheck(view: PaneView): HandoffCheck | null {
   const checks = view.snapshot?.checks ?? []
@@ -20,14 +21,28 @@ export function sourceAgent(paneId: string): AgentKind | null {
   return view && view.agent !== 'shell' ? view.agent : null
 }
 
-export async function summaryFor(paneId: string): Promise<{ text: string; from: AgentKind } | null> {
+export interface HandoffSummary {
+  text: string
+  from: AgentKind
+  transcriptPath: string | null
+}
+
+async function savedTranscript(view: PaneView, agent: AgentKind): Promise<string | null> {
+  const tab = view.pane.tabs.find((t) => t.id === view.pane.activeTabId) ?? view.pane.tabs[0]
+  const sessionId = tab ? sessionIdOf(tab) : undefined
+  if (!sessionId || !view.project) return null
+  const result = await api.writeHandoffTranscript({ projectId: view.project.id, agent, sessionId })
+  return result.status === 'saved' ? result.path : null
+}
+
+export async function summaryFor(paneId: string): Promise<HandoffSummary | null> {
   const state = store.state
   const view = derivePanes(state).find((v) => v.pane.id === paneId)
   if (!view || !view.project || view.agent === 'shell') return null
   const folder = folderOfPane(state, view.pane) ?? view.project.folder
   const files = (await api.gitFiles(folder)) ?? view.snapshot?.files.map((file) => file.path) ?? []
   const output = getTerminal(view.primaryTabId)?.tailText(120) ?? ''
-  const text = buildHandoff({
+  const input = {
     from: view.agent,
     projectName: view.project.name,
     title: view.named ? view.title : null,
@@ -35,8 +50,10 @@ export async function summaryFor(paneId: string): Promise<{ text: string; from: 
     plan: view.snapshot?.plan ?? null,
     check: lastCheck(view),
     output
-  })
-  return { text, from: view.agent }
+  }
+  const transcriptPath = await savedTranscript(view, view.agent)
+  const text = transcriptPath ? buildTranscriptHandoff({ ...input, transcriptPath }) : buildHandoff(input)
+  return { text, from: view.agent, transcriptPath }
 }
 
 export async function startHandoff(paneId: string, to: AgentKind, text: string, from: AgentKind): Promise<void> {
@@ -77,7 +94,7 @@ export async function continueIn(paneId: string, to: AgentKind): Promise<void> {
     toast('Only a pane with an agent session can be continued in another agent.', 'info')
     return
   }
-  const text = await handoffDialog({ from: summary.from, to, text: summary.text })
+  const text = await handoffDialog({ from: summary.from, to, text: summary.text, transcriptPath: summary.transcriptPath })
   if (text === null) return
   await startHandoff(paneId, to, text, summary.from)
 }

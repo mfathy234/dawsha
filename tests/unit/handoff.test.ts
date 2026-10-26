@@ -123,3 +123,75 @@ describe('buildHandoff', () => {
     expect(text).not.toContain('output line number 100 ')
   })
 })
+
+describe('transcript handoff', () => {
+  const base = {
+    from: 'claude' as const,
+    projectName: 'billing-api',
+    title: 'Fix flaky login test',
+    files: ['README.md', 'tests/login.spec.ts'],
+    plan: { title: 'Stabilise login', done: 3, total: 6 },
+    check: { kind: 'test' as const, ok: false, summary: '40 passed 1 failed' },
+    output: 'ok\nError: timeout waiting for #dashboard\n',
+    transcriptPath: 'C:\Users\me\AppData\Roaming\dawsha\handoffs\billing-api-claude-20261020-120000.md'
+  }
+
+  it('tells the next agent to read the quoted file first and to summarise before continuing', async () => {
+    const { buildTranscriptHandoff } = await import('../../src/shared/handoff')
+    const text = buildTranscriptHandoff(base)
+    expect(text.split('\n')[0]).toBe(
+      `Continue this task. First read the transcript file at "${base.transcriptPath}". It is the full conversation of the previous Claude Code session in billing-api.`
+    )
+    expect(text).toContain('Goal: Fix flaky login test')
+    expect(text).toContain('Files touched (2):\n- README.md\n- tests/login.spec.ts')
+    expect(text).toContain("What's left: 3 plan steps.")
+    expect(text).toContain('Last error: test failed: 40 passed 1 failed')
+    expect(text.trimEnd().endsWith('summarise in a few lines where things stand, then continue from there.')).toBe(true)
+    expect(text).not.toContain('Recent terminal output')
+  })
+
+  it('says what it does not know instead of inventing it', async () => {
+    const { buildTranscriptHandoff } = await import('../../src/shared/handoff')
+    const text = buildTranscriptHandoff({ ...base, title: null, files: [], plan: null, check: null, output: '' })
+    expect(text).toContain('Goal: (not captured, see the transcript)')
+    expect(text).toContain('Files touched: none found')
+    expect(text).toContain("What's left: (not captured, see the transcript)")
+    expect(text).toContain('Last error: none seen')
+  })
+
+  it('accepts only a project id, a known agent and a plain session id', async () => {
+    const { parseHandoffRequest } = await import('../../src/shared/handoff')
+    expect(parseHandoffRequest({ projectId: 'smoke', agent: 'codex', sessionId: '019aaaaa-0000-7000-8000-0000000000aa' })).toEqual({
+      projectId: 'smoke',
+      agent: 'codex',
+      sessionId: '019aaaaa-0000-7000-8000-0000000000aa'
+    })
+    for (const bad of [
+      null,
+      'x',
+      { projectId: 'smoke', agent: 'shell', sessionId: 'abc' },
+      { projectId: 'smoke', agent: 'claude', sessionId: '../../etc/passwd' },
+      { projectId: 'smoke', agent: 'claude', sessionId: 'a b' },
+      { projectId: '', agent: 'claude', sessionId: 'abc' },
+      { projectId: 'smoke', agent: 'claude', sessionId: 'a'.repeat(200) },
+      { projectId: 'smoke', agent: 'claude', sessionId: 5 }
+    ]) expect(parseHandoffRequest(bad)).toBeNull()
+  })
+
+  it('names files project-agent-date-time and keeps names safe', async () => {
+    const { handoffFileName } = await import('../../src/shared/handoff')
+    const when = new Date(2026, 9, 20, 9, 5, 7)
+    expect(handoffFileName('billing-api', 'claude', when)).toBe('billing-api-claude-20261020-090507.md')
+    expect(handoffFileName('..\My: Project/x', 'codex', when)).toBe('My-Project-x-codex-20261020-090507.md')
+    expect(handoffFileName('***', 'gemini', when)).toBe('project-gemini-20261020-090507.md')
+  })
+
+  it('keeps the newest 50 files and only ever names markdown files for deletion', async () => {
+    const { staleHandoffs, HANDOFF_KEEP_FILES } = await import('../../src/shared/handoff')
+    const files = Array.from({ length: 53 }, (_, i) => ({ name: `f${i}.md`, modifiedAt: i }))
+    const stale = staleHandoffs([...files, { name: 'notes.txt', modifiedAt: 0 }])
+    expect(HANDOFF_KEEP_FILES).toBe(50)
+    expect(stale.sort()).toEqual(['f0.md', 'f1.md', 'f2.md'])
+    expect(staleHandoffs(files.slice(0, 10))).toEqual([])
+  })
+})

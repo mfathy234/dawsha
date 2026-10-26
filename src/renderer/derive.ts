@@ -6,6 +6,7 @@ import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsF
 import type { ProcessActivity } from '../shared/processActivity'
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { formatDuration, sessionUsage } from '../shared/sessionCost'
+import type { SessionTag } from '../shared/sessionTags'
 import { pickWorkFolder } from '../shared/workFolder'
 import { lastOutputAt } from './ptyActivity'
 import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, RateLimitWindow, SessionFile, StatusInfo, TabAgent } from '../shared/types'
@@ -59,6 +60,7 @@ export interface PaneView {
   index: number
   title: string
   named: boolean
+  tag: SessionTag | null
   agent: TabAgent
   status: PaneStatus
   branch: string | null
@@ -128,7 +130,7 @@ function computeMatches(state: AppState): Matches {
   }
 }
 
-function primaryTab(pane: PaneState): TermState {
+export function primaryTab(pane: PaneState): TermState {
   const active = pane.tabs.find((t) => t.id === pane.activeTabId) ?? pane.tabs[0]
   if (active.agent !== 'shell') return active
   return pane.tabs.find((t) => t.agent !== 'shell') ?? active
@@ -165,6 +167,8 @@ function statusOf(tab: TermState, matches: Matches, now: number): PaneStatus {
 
 function titleFor(pane: PaneState, matches: Matches, project: Project | undefined) {
   const ordered = [primaryTab(pane), ...pane.tabs].filter((t) => t.agent !== 'shell')
+  const own = ordered.find((t) => t.name)
+  if (own?.name) return { title: own.name, named: true }
   for (const tab of ordered) {
     const name = nameOf(tab, matches)
     if (name) return { title: name, named: true }
@@ -241,7 +245,7 @@ function claudeInfo(
   }
 }
 
-function sessionIdOf(tab: TermState, matches: Matches): string | null {
+export function sessionIdOf(tab: TermState, matches: Matches): string | null {
   const matched =
     tab.agent === 'claude'
       ? matches.claude.get(tab.id)?.sessionId
@@ -325,6 +329,7 @@ export function derivePanes(state: AppState): PaneView[] {
       index,
       title,
       named,
+      tag: primary.tag ?? null,
       agent: primary.agent,
       status,
       snapshot,

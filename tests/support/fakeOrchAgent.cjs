@@ -44,6 +44,8 @@ async function main() {
       clearInterval(wait)
       say(`got answer: ${inbox[0].body}`)
       await tool('create_task', { title: `Do it: ${inbox[0].body.split(': ').pop()}`, spec: 's', role: 'implementer' })
+      // Stay open like the other leads; without a timer left, Node exits and the lead's pane closes too.
+      setInterval(() => undefined, 60_000)
     }, 500)
     return
   }

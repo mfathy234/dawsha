@@ -59,7 +59,7 @@
     <div class="wrap hero-grid">
       <div class="hero-copy">
         <img class="logo hero-logo" src="favicon.svg?v=0.2.0-2" width="40" height="40" alt="Dawsha logo: a terminal inside a speech bubble">
-        <a class="new-pill" href="#new"><strong>New in 1.6</strong><span>Native Arabic support and voice dictation</span></a>
+        <a class="new-pill" href="#new"><strong>New in 1.6</strong><span>The Agents tab and full-conversation handoff</span></a>
         <p class="eyebrow">For Claude Code, Codex CLI and Gemini CLI</p>
         <h1>Every AI coding agent, one readable window.</h1>
         <p class="lead">Run Claude Code, Codex and Gemini side by side in large, readable terminals, one session per task.</p>
@@ -108,7 +108,33 @@
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
       <h2 id="new-h">New in 1.6</h2>
-      <p class="section-lead">Dawsha now speaks Arabic. Read replies with joined letters, dictate in Arabic or English, and work in a calmer window.</p>
+      <p class="section-lead">1.6.2 adds the Agents tab and a handoff that carries the whole conversation. Arabic, voice dictation and a calmer window came with 1.6.0.</p>
+      <div class="feat-copy feat-note" id="agents-tab">
+        <h3>The Agents tab</h3>
+        <p>Every background agent your Claude Code and Codex sessions start, across all projects, on one timeline with a row per session. Open it with Ctrl+Shift+L.</p>
+        <ul><li>Filter by status, agent, project, time range and text, and choose whether Codex's automatic safety reviews show.</li><li>Select an agent to see what it did, its model, time, tokens and cost, its last step and its result.</li><li>Go to its session, show its file or copy its result.</li><li>The tab shows how many agents are running.</li></ul>
+      </div>
+      <div class="feat-copy feat-note" id="handoff">
+        <h3>Continue in another agent hands over the whole conversation</h3>
+        <p>Dawsha saves the session's transcript to a file and asks the new agent to read it first.</p>
+        <ul><li>The agent says where things stand, with the goal, files touched, what's left and the last error.</li><li>The dialog shows the file, with Show in folder and Copy path, and you can edit the prompt before it is sent.</li><li>A session without a transcript yet falls back to the recent terminal output.</li></ul>
+      </div>
+      <div class="feat-copy feat-note" id="calm-grid">
+        <h3>A calmer sessions grid</h3>
+        <p>No session is left stretched across the bottom, and each pane shows its state at a glance.</p>
+        <ul><li>Three sessions get a tall column on the left and two stacked on the right. Five get the same tall column with four on the right.</li><li>Each pane has a coloured top edge for its state: needs you, working or idle. The top bar counts idle sessions too.</li><li>Each pane shows a one-line recap of what the session is doing.</li><li>The approval bar sits at the bottom of the pane.</li><li>Small panes keep their name, Maximize and Close, and hide less important details first.</li></ul>
+      </div>
+      <div class="feat-copy feat-note" id="session-tools">
+        <h3>Tags, names, notifications and closed sessions</h3>
+        <p>Find your way back to a session faster.</p>
+        <ul><li>Mark a session Bug, Feature, Review, Research or Docs. The tag shows in the sidebar, the pane header and the board, and stays when the session is closed and reopened.</li><li>Rename a session with F2 or a double-click, open or closed.</li><li>The bell in the top bar keeps the last 50 notifications, with their Reopen, Undo or Go to session action.</li><li>Closed sessions list the most recently closed first, grouped into Today, Yesterday, This week and Earlier. Search them in the sidebar or the command palette and reopen one, or reopen a whole group.</li><li>Closed sessions show what they cost, or their tokens when the cost isn't known.</li></ul>
+      </div>
+      <div class="feat-copy feat-note" id="safe-installs">
+        <h3>Safe Claude Code installs</h3>
+        <p>Installing Claude Code from Dawsha no longer breaks an existing install.</p>
+        <ul><li>Dawsha finds Claude Code installed with npm anywhere, including custom npm folders, nvm, Volta and fnm, and never runs the native installer over it.</li><li>It updates each install the way it was installed.</li><li>If it finds two installs, it changes neither and shows both with the commands to remove one.</li></ul>
+      </div>
+      <p class="section-lead feat-note" id="since-1-6-0">Dawsha now speaks Arabic. Read replies with joined letters, dictate in Arabic or English, and work in a calmer window.</p>
       <div class="launch-video" id="launch-1-6">
         <figure class="shot demo-shot">
           <video class="demo-video" muted loop playsinline preload="none" poster="assets/launch-1.6-poster.jpg" width="1920" height="1080" aria-label="A 20 second look at Dawsha 1.6: a Claude reply in Arabic turns from disconnected letters into joined right-to-left text, Arabic is dictated into a session, and full mode keeps every session on one line">

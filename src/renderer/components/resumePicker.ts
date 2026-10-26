@@ -1,7 +1,6 @@
 import { AGENTS, AGENT_NAMES, agentLabel } from '../../shared/agents'
-import { groupSessions, messageWord, sessionSummary } from '../../shared/resumeIndex'
+import { groupSessions, messageWord, sessionFacts, sessionSummary } from '../../shared/resumeIndex'
 import { formatAge } from '../../shared/statusLine'
-import { ageGroup } from '../../shared/resumeIndex'
 import type { AgentKind, ResumeQuery, ResumeSession } from '../../shared/types'
 import { primaryModifierPressed } from '../../shared/shortcuts'
 import { closeQuickPick, findOpenSession, openQuickPick, resumeInFocusedPane, resumeInNewPane, setQuickPickMode } from '../actions'
@@ -12,6 +11,9 @@ import { agentMark } from './agentMark'
 import { modeTabs } from './pickerTabs'
 import type { AppState } from '../state'
 import { popupDismissButton } from './popupDismiss'
+import { selectMenu, syncSelectMenu } from './selectMenu'
+import { isAutomaticSession } from '../../shared/sessionText'
+import './resumePicker.css'
 
 const SEARCH_DELAY_MS = 120
 const CACHE_LIMIT = 24
@@ -28,18 +30,13 @@ function age(session: ResumeSession): string {
   return ms < 60_000 ? 'just now' : `${formatAge(ms)} ago`
 }
 
-function whenText(time: number): string {
-  const clock = new Date(time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  const group = ageGroup(time, Date.now())
-  if (group === 'Today' || group === 'Yesterday') return `${group}, ${clock}`
-  return `${new Date(time).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}, ${clock}`
-}
-
 export class ResumePickerComponent {
   private root: HTMLElement | null = null
   private search: HTMLInputElement | null = null
   private projectSelect: HTMLSelectElement | null = null
   private allProjects: HTMLInputElement | null = null
+  private showAutomatic: HTMLInputElement | null = null
+  private loaded: ResumeSession[] = []
   private chips: HTMLElement | null = null
   private list: HTMLElement | null = null
   private preview: HTMLElement | null = null
@@ -85,7 +82,9 @@ export class ResumePickerComponent {
     const scope = state.resumeProjectId ?? focused
     this.projectSelect.value = scope ?? ''
     this.allProjects = h('input', { type: 'checkbox', id: 'rp-all-projects', checked: !scope })
+    this.showAutomatic = h('input', { type: 'checkbox', id: 'rp-show-automatic', checked: false })
     this.projectSelect.disabled = this.allProjects.checked
+    syncSelectMenu(this.projectSelect)
     this.chips = h('div', { class: 'rp-chips', role: 'group', 'aria-label': 'Agent filter' })
     this.list = h('div', { class: 'rp-list', id: 'rp-list', role: 'listbox', 'aria-label': 'Recent sessions' })
     this.preview = h('div', { class: 'rp-preview', 'aria-live': 'polite' })
@@ -102,8 +101,9 @@ export class ResumePickerComponent {
       'div',
       { class: 'popover quickpick resume-picker', role: 'dialog', 'aria-label': 'Start or resume a session' },
       h('div', { class: 'rp-head' }, h('div', { class: 'rp-top' }, modeTabs('resume'), h('span', { class: 'spacer' }), hint, popupDismissButton(() => closeQuickPick())),
-        h('div', { class: 'rp-filters' }, h('div', { class: 'rp-search-wrap' }, icon(ICONS.search), this.search), this.projectSelect,
-          h('label', { class: 'rp-scope', for: 'rp-all-projects' }, this.allProjects, 'Search all projects')),
+        h('div', { class: 'rp-filters' }, h('div', { class: 'rp-search-wrap' }, icon(ICONS.search), this.search), selectMenu(this.projectSelect),
+          h('label', { class: 'rp-scope', for: 'rp-all-projects' }, this.allProjects, 'Search all projects'),
+          h('label', { class: 'rp-scope', for: 'rp-show-automatic', title: 'Sessions other tools started, such as automatic summaries and safety reviews' }, this.showAutomatic, 'Show automatic sessions')),
         this.chips),
       h('div', { class: 'rp-body' }, this.list, this.preview),
       this.foot
@@ -117,8 +117,13 @@ export class ResumePickerComponent {
       if (this.projectSelect) {
         this.projectSelect.disabled = this.allProjects?.checked ?? false
         if (!this.allProjects?.checked && !this.projectSelect.value) this.projectSelect.value = state.settings.projects[0]?.id ?? ''
+        syncSelectMenu(this.projectSelect)
       }
       this.load()
+    })
+    this.showAutomatic.addEventListener('change', () => {
+      this.sessions = this.visible(this.loaded)
+      this.renderAll()
     })
     this.root.addEventListener('keydown', (event) => this.onKey(event))
     document.body.appendChild(this.root)
@@ -130,7 +135,7 @@ export class ResumePickerComponent {
 
   private readonly outside = (event: Event): void => {
     const target = event.target as HTMLElement
-    if (target.closest?.('.overlay')) return
+    if (target.closest?.('.overlay, .select-menu-popover')) return
     if (this.root && !this.root.contains(target) && !this.anchor().contains(target)) closeQuickPick()
   }
 
@@ -142,6 +147,7 @@ export class ResumePickerComponent {
     this.root = null
     this.search = null
     this.allProjects = null
+    this.showAutomatic = null
     this.list = null
     this.preview = null
     if (!stillOpen) this.anchor().focus()
@@ -156,11 +162,18 @@ export class ResumePickerComponent {
     }
   }
 
+  private visible(sessions: ResumeSession[]): ResumeSession[] {
+    return this.showAutomatic?.checked ? sessions : sessions.filter((session) => !isAutomaticSession(session.firstPrompt))
+  }
+
   private load(): void {
     const query = this.currentQuery()
     const key = JSON.stringify(query)
     const cached = cache.get(key)
-    if (cached) this.sessions = cached
+    if (cached) {
+      this.loaded = cached
+      this.sessions = this.visible(cached)
+    }
     this.loading = !cached
     const token = ++this.token
     this.renderAll()
@@ -168,7 +181,8 @@ export class ResumePickerComponent {
       (sessions) => {
         if (token !== this.token || !this.root) return
         remember(key, sessions)
-        this.sessions = sessions
+        this.loaded = sessions
+        this.sessions = this.visible(sessions)
         this.loading = false
         this.renderAll()
       },
@@ -191,7 +205,7 @@ export class ResumePickerComponent {
 
   private onKey(event: KeyboardEvent): void {
     if ((event.target as HTMLElement).closest('.popup-x') && event.key !== 'Escape') return
-    const onSelect = (event.target as HTMLElement).tagName === 'SELECT'
+    const onSelect = (event.target as HTMLElement).closest('.select-menu') !== null
     const ordered = this.ordered()
     const index = ordered.findIndex((s) => `${s.agent}:${s.id}` === this.selectedId)
     if (event.key === 'Escape') {
@@ -332,23 +346,19 @@ export class ResumePickerComponent {
       return
     }
     const project = this.latest?.settings.projects.find((p) => p.id === session.projectId)
-    const field = (label: string, value: string | undefined, clamp = false): HTMLElement | null =>
-      value ? h('section', { class: 'rp-field' }, h('h3', {}, label), h('p', { class: clamp ? 'clamp' : '' }, value)) : null
+    const field = (label: string, value: string | undefined, lines: number, extra = ''): HTMLElement | null =>
+      value
+        ? h('section', { class: `rp-field${extra}` }, h('h3', {}, label), h('p', { dir: 'auto', style: `-webkit-line-clamp: ${lines}` }, value))
+        : null
+    const facts = sessionFacts(session, Date.now())
     const parts: (HTMLElement | null)[] = [
-      h('div', { class: 'rp-pv-head' }, agentMark(session.agent), h('h2', { class: 'rp-pv-title' }, session.title)),
+      h('div', { class: 'rp-pv-head' }, agentMark(session.agent), h('h2', { class: 'rp-pv-title', dir: 'auto' }, session.title)),
       h('p', { class: 'rp-pv-sub' }, [agentLabel(session.agent), session.model].filter(Boolean).join(' · ')),
       h('p', { class: 'rp-pv-sub' }, project?.name ?? '', project ? ' ' : '', h('span', { class: 'mono' }, project?.folder ?? '')),
-      h(
-        'dl',
-        { class: 'rp-times' },
-        h('dt', {}, 'Started'),
-        h('dd', {}, whenText(session.startedAt)),
-        h('dt', {}, 'Last active'),
-        h('dd', {}, age(session))
-      ),
-      field('First prompt', session.firstPrompt, true),
-      field('Last assistant message', session.lastAssistant, true),
-      field('Matching content', session.matchExcerpt, true),
+      h('ul', { class: 'rp-facts', 'aria-label': 'Session facts' }, ...facts.map((fact) => h('li', {}, fact))),
+      field('What it was about', session.firstPrompt, 5),
+      field('Where it ended', session.lastAssistant, 7),
+      field('Matching content', session.matchExcerpt, 4, ' rp-match'),
       h(
         'div',
         { class: 'rp-actions' },

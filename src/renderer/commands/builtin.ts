@@ -254,7 +254,8 @@ export function installBuiltinCommands(): void {
     focusedAction('pane.close', 'Close the pane', closePane, 'stop session'),
     { id: 'view.sidebar', title: 'Toggle the sidebar', group: 'Actions', run: () => toggleSidebar() },
     { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'folders', run: () => showView('projects') },
-    { id: 'view.agents', title: 'Open Agents', group: 'Actions', keywords: 'install update cli', run: () => showView('agents') },
+    { id: 'view.background', title: 'Open background agents', group: 'Actions', keywords: 'agents subagents sub-agents timeline running tasks codex claude', ...withKeys('Ctrl+Shift+L'), run: () => showView('background') },
+    { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },
     { id: 'view.skills', title: 'Open Skills', group: 'Actions', keywords: 'installed export copy agent', run: () => showView('skills') },
     { id: 'view.usage', title: 'Open Usage', group: 'Actions', keywords: 'tokens cost limits history', run: () => showView('usage') },
     {

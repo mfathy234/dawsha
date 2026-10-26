@@ -1,0 +1,52 @@
+/* One look for dialogs, popovers and pickers: radius, shadow, title, corner X and a short open animation. */
+:root {
+  --popup-radius: 12px;
+  --popup-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  --popup-title-size: 16px;
+  --popup-x-size: 28px;
+  --popup-x-inset: 10px;
+}
+:root[data-kind='light'] { --popup-shadow: 0 14px 40px rgba(24, 28, 40, 0.22); }
+
+:root .dialog,
+:root .popover,
+:root .palette {
+  border-radius: var(--popup-radius);
+  box-shadow: var(--popup-shadow);
+}
+
+:root .dialog h2,
+:root .popup-head .popover-title,
+:root .layouts-head .popover-title,
+:root .update-popover .update-title {
+  margin: 0;
+  font-size: var(--popup-title-size);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:root .popup-head { min-height: var(--popup-x-size); }
+
+:root .dialog-x,
+:root .popup-x {
+  width: var(--popup-x-size);
+  height: var(--popup-x-size);
+}
+:root .dialog .dialog-x,
+:root .popup-x-corner {
+  top: var(--popup-x-inset);
+  inset-inline-end: var(--popup-x-inset);
+}
+:root .dialog.has-x > h2,
+:root .dialog.has-x > .ob-head,
+:root .update-popover .update-title { padding-inline-end: calc(var(--popup-x-size) + 4px); }
+
+@media (prefers-reduced-motion: no-preference) {
+  :root .dialog,
+  :root .popover,
+  :root .palette { animation: popup-in 140ms ease-out; }
+}
+@keyframes popup-in {
+  from { opacity: 0; transform: translateY(4px); }
+}

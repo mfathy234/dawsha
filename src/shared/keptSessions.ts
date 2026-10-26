@@ -1,3 +1,6 @@
+import { cleanSessionName, type SessionTag } from './sessionTags'
+import { formatTokens, formatUsd } from './usage'
+import type { UsageTotals } from './sessionCost'
 import type { KeptSession } from './types'
 
 // How many closed sessions a project shows before "Show all".
@@ -62,4 +65,38 @@ export function closedAgoShort(closedAt: number, now: number): string {
   if (days < 7) return `${days}d`
   if (days < 365) return `${Math.floor(days / 7)}w`
   return `${Math.floor(days / 365)}y`
+}
+
+// Asking first only makes sense for a crowd: a few sessions are what someone reopening a day expects.
+export const REOPEN_CONFIRM_OVER = 4
+
+export const reopenGroupLabel = (count: number, day: ClosedDayLabel, project: string): string =>
+  `Reopen ${count} session${count === 1 ? '' : 's'} from ${day} in ${project}`
+
+/** Renames a closed session; an empty name, or one that changes nothing, leaves the list as it is. */
+export function renameKept(kept: readonly KeptSession[], target: Pick<KeptSession, 'agent' | 'sessionId'>, raw: string): KeptSession[] {
+  const title = cleanSessionName(raw)
+  return kept.map((item) => (title && sameKept(item, target) ? { ...item, title, renamed: true as const } : item))
+}
+
+export function tagKept(kept: readonly KeptSession[], target: Pick<KeptSession, 'agent' | 'sessionId'>, tag: SessionTag | null): KeptSession[] {
+  return kept.map((item) => {
+    if (!sameKept(item, target)) return item
+    const { tag: _tag, ...rest } = item
+    return tag ? { ...rest, tag } : rest
+  })
+}
+
+// Dollars when the cost is known (Claude), tokens otherwise; null when nothing was recorded.
+export function closedUsageShort(usage: UsageTotals | undefined): string | null {
+  if ((usage?.costUsd ?? 0) > 0) return formatUsd(usage!.costUsd as number)
+  return usage && usage.tokens > 0 ? formatTokens(usage.tokens) : null
+}
+
+export function closedUsageTooltip(usage: UsageTotals | undefined): string {
+  if (!usage) return ''
+  const parts: string[] = []
+  if ((usage.costUsd ?? 0) > 0) parts.push(formatUsd(usage.costUsd as number))
+  if (usage.tokens > 0) parts.push(`${formatTokens(usage.tokens)} tokens`)
+  return parts.join(' · ')
 }

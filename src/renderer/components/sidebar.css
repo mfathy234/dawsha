@@ -1,0 +1,138 @@
+.kept-session-row {
+  position: relative;
+}
+
+.kept-session-row[data-tag]::before {
+  content: '';
+  position: absolute;
+  inset: 7px auto 7px 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--tag);
+}
+
+.kept-session-row .sess-row .tag-dot {
+  margin: 0 2px;
+}
+
+/* A narrow sidebar gives up the state word before the session name. */
+.kept-session-row .sess-name {
+  min-width: 4.5em;
+}
+
+.kept-session-row .sess-state {
+  flex: 0 1 auto;
+  min-width: 14px;
+  overflow: hidden;
+}
+
+.kept-session-row .sess-state-word {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The session menu button only shows while the row is hovered or something in it has focus. */
+.sess-more {
+  flex: none;
+  opacity: 0;
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+}
+
+.kept-session-row:hover .sess-more,
+.kept-session-row:focus-within .sess-more,
+.sess-more[aria-expanded='true'] {
+  opacity: 1;
+}
+
+.sess-row.editing {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.sess-rename.text-input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 13px;
+  border-color: var(--accent);
+}
+
+.sess-cost {
+  flex: none;
+  color: color-mix(in srgb, var(--muted) 75%, transparent);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sess-ago + .sess-cost::before {
+  content: '·';
+  margin-right: 5px;
+}
+
+.closed-day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 8px;
+}
+
+.closed-day-row .closed-day {
+  flex: 1;
+}
+
+.closed-reopen {
+  margin-left: auto;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  opacity: 0;
+}
+
+.closed-day-row:hover .closed-reopen,
+.closed-reopen:focus-visible {
+  opacity: 1;
+}
+
+.closed-reopen:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Dragging a project: a line shows where it will land. */
+.proj-row {
+  position: relative;
+}
+
+.proj-row.drop-before::before,
+.proj-row.drop-after::after {
+  content: '';
+  position: absolute;
+  inset-inline: 4px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.proj-row.drop-before::before {
+  top: -6px;
+}
+
+.proj-row.drop-after::after {
+  bottom: -2px;
+}
+
+.proj-row.drag-source {
+  opacity: 0.55;
+}
+
+.sidebar-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px 8px 12px; }
+.sidebar-empty .proj-empty { margin: 0; color: var(--text); font-weight: 500; }
+.sidebar-empty-hint { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.sidebar-empty .btn { margin-top: 4px; }

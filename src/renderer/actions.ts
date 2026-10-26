@@ -1,4 +1,4 @@
-import { canMoveProject, moveProject, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
+import { canDropProject, canMoveProject, moveProject, moveProjectTo, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -22,12 +22,14 @@ import { agentOf, AGENT_NAMES } from '../shared/agents'
 import { folderName } from '../shared/cli'
 import {
   NODE_NOTE,
+  claudeNativeLocation,
   joinCommands,
   nodeProblem,
   planFor,
   taskOutcome,
   toolCommand,
-  type TaskPlan
+  type TaskPlan,
+  type ToolReport
 } from '../shared/agentTools'
 import { decideWhatsNew, effectiveLastSeen, entriesUpTo } from '../shared/changelog'
 import { showUpdatePill, type UpdateState } from '../shared/updates'
@@ -45,8 +47,9 @@ import { openChangesDialog } from './components/changesDialog'
 import { recordApproval } from './timelineLog'
 import { confirmDialog } from './components/dialogs'
 import { toast } from './components/toast'
-import { closedSessionsFor, insertKept, keptSessionKey, sameKept } from '../shared/keptSessions'
-import { derivePanes, matchAll, workFolderOfPane } from './derive'
+import { closedSessionsFor, insertKept, keptSessionKey, REOPEN_CONFIRM_OVER, renameKept, sameKept, tagKept } from '../shared/keptSessions'
+import { cleanSessionName, type SessionTag } from '../shared/sessionTags'
+import { derivePanes, matchAll, primaryTab, sessionIdOf, workFolderOfPane } from './derive'
 import { nextFrame } from './dom'
 import {
   AGENTS_PROJECT_ID,
@@ -224,13 +227,16 @@ export async function startSession(
   agent?: TabAgent,
   resumeId?: string,
   chip = false,
-  titleHint?: string
+  titleHint?: string,
+  kept?: Pick<KeptSession, 'tag' | 'renamed'>
 ): Promise<number> {
   const project = projectById(store.state, projectId)
   if (!project) return 0
   const tab: TermState = {
     ...makeTerm(agent ?? agentOf(project), [], resumeId),
     titleHint,
+    name: kept?.renamed ? titleHint : undefined,
+    tag: kept?.tag,
     resumeChipAt: chip ? Date.now() : undefined
   }
   const pane: PaneState = {
@@ -378,8 +384,12 @@ function keepClosedTabs(pane: PaneState, tabs: TermState[]): KeptSession[] {
     const observed = tab.agent === 'claude' ? sessionDisplayName(matches.claude.get(tab.id))
       : tab.agent === 'codex' ? matches.codex.get(tab.id)?.name
       : matches.gemini.get(tab.id)?.name
-    const title = observed?.trim() || tab.titleHint || (tab.label !== tab.agent ? tab.label : null) || (tab.id === pane.activeTabId && view?.named ? view.title : null) || tab.label
-    return [{ projectId: pane.projectId, agent: tab.agent, sessionId, title, closedAt: Date.now() }]
+    const kind = tab.agent
+    const earlier = state.settings.keptSessions.find((item) => sameKept(item, { agent: kind, sessionId }))
+    const own = tab.name ?? (earlier?.renamed ? earlier.title : undefined)
+    const tag = tab.tag ?? earlier?.tag
+    const title = own || observed?.trim() || tab.titleHint || (tab.label !== tab.agent ? tab.label : null) || (tab.id === pane.activeTabId && view?.named ? view.title : null) || tab.label
+    return [{ projectId: pane.projectId, agent: tab.agent, sessionId, title, closedAt: Date.now(), ...(own ? { renamed: true as const } : {}), ...(tag ? { tag } : {}) }]
   })
   if (additions.length === 0) return []
   const keys = new Set(additions.map((item) => `${item.agent}:${item.sessionId}`))
@@ -400,10 +410,10 @@ async function reopenTab(paneId: string, session: KeptSession): Promise<void> {
   if (open) return focusOpenSession(open)
   const pane = paneById(store.state, paneId)
   if (!pane) {
-    await startSession(session.projectId, session.agent, session.sessionId, true, session.title)
+    await startSession(session.projectId, session.agent, session.sessionId, true, session.title, session)
     return
   }
-  const tab: TermState = { ...makeTerm(session.agent, pane.tabs, session.sessionId), titleHint: session.title, resumeChipAt: Date.now() }
+  const tab: TermState = { ...makeTerm(session.agent, pane.tabs, session.sessionId), titleHint: session.title, name: session.renamed ? session.title : undefined, tag: session.tag, resumeChipAt: Date.now() }
   store.set((s) => mapPane(s, paneId, (p) => ({ ...p, tabs: [...p.tabs, tab], activeTabId: tab.id })))
   persistWorkspace()
   await launch(paneId, tab.id, true)
@@ -414,7 +424,7 @@ async function reopenPane(kept: KeptSession[], index: number): Promise<void> {
   const [first, ...rest] = kept
   const open = findOpenSession(store.state, first.agent, first.sessionId)
   if (open) return focusOpenSession(open)
-  const number = await startSession(first.projectId, first.agent, first.sessionId, true, first.title)
+  const number = await startSession(first.projectId, first.agent, first.sessionId, true, first.title, first)
   const pane = store.state.panes[number - 1]
   if (!pane) return
   for (const extra of rest) await reopenTab(pane.id, extra)
@@ -430,6 +440,60 @@ export function removeKeptSession(agent: AgentKind, sessionId: string): void {
   store.set((state) => ({ ...state, settings: { ...state.settings, keptSessions } }))
   void saveSettings({ keptSessions })
   toast(`Removed ${removed.title}`, 'info', { label: 'Undo', run: () => restoreKeptSession(removed, index) })
+}
+
+function saveKept(keptSessions: KeptSession[]): void {
+  store.set((state) => ({ ...state, settings: { ...state.settings, keptSessions } }))
+  void saveSettings({ keptSessions })
+}
+
+export function renameKeptSession(agent: AgentKind, sessionId: string, name: string): void {
+  saveKept(renameKept(store.state.settings.keptSessions, { agent, sessionId }, name))
+}
+
+export function tagKeptSession(agent: AgentKind, sessionId: string, tag: SessionTag | null): void {
+  saveKept(tagKept(store.state.settings.keptSessions, { agent, sessionId }, tag))
+}
+
+function primaryAgentTab(paneId: string): TermState | undefined {
+  const pane = paneById(store.state, paneId)
+  return pane ? primaryTab(pane) : undefined
+}
+
+/** Names the pane's session for the user; the agent's own name stays underneath and comes back if this is never set. */
+export function renameSession(paneId: string, raw: string): void {
+  const name = cleanSessionName(raw)
+  const tab = primaryAgentTab(paneId)
+  if (!name || !tab || tab.agent === 'shell') return
+  store.set((s) => mapTerm(s, tab.id, (t) => ({ ...t, name })))
+  persistWorkspace()
+}
+
+export function tagSession(paneId: string, tag: SessionTag | null): void {
+  const tab = primaryAgentTab(paneId)
+  if (!tab || tab.agent === 'shell') return
+  store.set((s) => mapTerm(s, tab.id, (t) => ({ ...t, tag: tag ?? undefined })))
+  persistWorkspace()
+  // A stale closed entry would bring a removed tag back when this session is closed again.
+  const sessionId = sessionIdOf(tab, matchAll(store.state))
+  if (sessionId) tagKeptSession(tab.agent, sessionId, tag)
+}
+
+/** Reopens closed sessions one after another, oldest first so the newest ends up focused. Over a few, it asks first. */
+export async function reopenKeptSessions(project: Project, sessions: KeptSession[], dayLabel: string): Promise<void> {
+  const open = openSessionKeys(store.state)
+  const todo = sessions.filter((session) => !open.has(keptSessionKey(session))).reverse()
+  if (todo.length === 0) return
+  if (todo.length > REOPEN_CONFIRM_OVER) {
+    const confirmed = await confirmDialog({
+      title: `Reopen ${todo.length} sessions in ${project.name}?`,
+      body: `This starts ${todo.length} closed sessions from ${dayLabel} in ${project.name}, one after another.`,
+      confirmLabel: `Reopen ${todo.length} sessions`,
+      danger: false
+    })
+    if (!confirmed) return
+  }
+  for (const session of todo) await startSession(project.id, session.agent, session.sessionId, true, session.title, session)
 }
 
 function restoreKeptSession(session: KeptSession, index: number): void {
@@ -834,6 +898,11 @@ export function toggleOthersPanel(): void {
   void saveSettings({ othersCollapsed })
 }
 
+export function setDimIdlePanes(dimIdlePanes: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, dimIdlePanes } }))
+  void saveSettings({ dimIdlePanes })
+}
+
 export function setSidebarCollapsed(sidebarCollapsed: boolean): void {
   store.set((s) => ({ ...s, sidebarOverride: null, settings: { ...s.settings, sidebarCollapsed } }))
   void saveSettings({ sidebarCollapsed })
@@ -1067,6 +1136,13 @@ export function moveProjectInList(projectId: string, direction: MoveDirection): 
   saveProjects()
 }
 
+export function reorderProject(projectId: string, targetId: string): void {
+  if (!canDropProject(store.state.settings.projects, projectId, targetId)) return
+  const projects = moveProjectTo(store.state.settings.projects, projectId, targetId)
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
+  saveProjects()
+}
+
 export async function removeProject(projectId: string): Promise<void> {
   const project = projectById(store.state, projectId)
   if (!project) return
@@ -1094,7 +1170,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline, orchAgentId: tab.orchAgentId })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline, orchAgentId: tab.orchAgentId, name: tab.name, tag: tab.tag })
   }
   return {
     id: newId(),
@@ -1286,6 +1362,16 @@ async function openTaskTab(plan: TaskPlan, command: string, before: TermState['t
   await launch(pane.id, tab.id, false)
 }
 
+/** The native installer is the one command that adds a Claude Code, so say exactly what it runs and where it puts it. */
+function confirmClaudeInstall(tool: ToolReport): Promise<boolean> {
+  return confirmDialog({
+    title: 'Install Claude Code?',
+    body: `No Claude Code was found on this computer. Dawsha will run "${toolCommand(tool).text}" in a terminal tab, which installs it to ${claudeNativeLocation(tool.platform)}.`,
+    confirmLabel: 'Run installer',
+    danger: false
+  })
+}
+
 export async function runAgentTask(selection: AgentKind[] | 'updates'): Promise<void> {
   const { report } = store.state.agents
   if (!report) return
@@ -1296,6 +1382,8 @@ export async function runAgentTask(selection: AgentKind[] | 'updates'): Promise<
     toast(NODE_NOTE, 'info')
     return
   }
+  const fresh = report.tools.find((tool) => tool.agent === 'claude' && !tool.present && plan.agents.includes('claude'))
+  if (fresh && !(await confirmClaudeInstall(fresh))) return
   const command = joinCommands(plan.commands, store.state.info.shellCommand)
   await openTaskTab(plan, command, { agents: plan.agents, before: report.tools })
 }

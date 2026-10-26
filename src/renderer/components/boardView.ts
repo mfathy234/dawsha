@@ -4,7 +4,7 @@ import { derivePanes, type PaneView } from '../derive'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
 import { AGENTS, AGENT_NAMES } from '../../shared/agents'
-import { BOARD_COLUMNS, BOARD_EMPTY_TEXT, canDropOn, groupByColumn, matchesBoardFilter, type BoardColumn, type BoardFilter } from '../../shared/board'
+import { BOARD_COLUMNS, BOARD_EMPTY_HINT, BOARD_EMPTY_TEXT, canDropOn, groupByColumn, matchesBoardFilter, type BoardColumn, type BoardFilter } from '../../shared/board'
 import { sessionState } from '../../shared/sessionState'
 import type { AppState } from '../state'
 import { BoardCard, drag, type BoardEntry } from './boardCard'
@@ -142,7 +142,13 @@ export class BoardComponent {
 
   private buildColumn(id: BoardColumn, label: string): Column {
     const count = h('span', { class: 'board-count' }, '0')
-    const empty = h('p', { class: 'board-empty' }, BOARD_EMPTY_TEXT[id])
+    const empty = h(
+      'div',
+      { class: 'board-empty' },
+      h('p', { class: 'board-empty-title' }, BOARD_EMPTY_TEXT[id]),
+      h('p', { class: 'board-empty-hint' }, BOARD_EMPTY_HINT[id]),
+      id === 'working' ? h('button', { class: 'btn small', type: 'button', onClick: () => openQuickPick() }, 'New session') : null
+    )
     const body = h('div', { class: 'board-col-body' }, empty)
     const closeAll =
       id === 'reviewed'

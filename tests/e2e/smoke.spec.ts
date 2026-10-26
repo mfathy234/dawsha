@@ -171,7 +171,7 @@ test('projects view validates folders and confirms removal by name', async () =>
   }
 })
 
-test('names panes from Claude session files and lays three panes out with a wide bottom pane', async () => {
+test('names panes from Claude session files and lays three panes out with a tall first pane', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
@@ -181,8 +181,8 @@ test('names panes from Claude session files and lays three panes out with a wide
     await add.click()
     await expect(page.locator('.pane')).toHaveCount(3)
     const boxes = await page.locator('.pane').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()))
-    expect(boxes[2].width).toBeGreaterThan(boxes[0].width * 1.8)
-    expect(boxes[2].top).toBeGreaterThan(boxes[0].bottom - 1)
+    expect(boxes[0].height).toBeGreaterThan(boxes[1].height * 1.8)
+    expect(boxes[2].top).toBeGreaterThan(boxes[1].bottom - 1)
 
     const now = Date.now()
     writeFileSync(

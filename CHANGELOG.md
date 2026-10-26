@@ -3,6 +3,40 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.6.2] - 2026-10-26
+
+### Added
+
+- The Agents tab, right after Sessions, shows every background agent your Claude Code and Codex sessions started, across all projects, on a timeline with one row per session. Filter by status, agent, project, time range and text, and choose whether Codex's automatic safety reviews show. Select an agent to see what it did, its model, time, tokens and cost, its last step and its result, and go to its session, show its file or copy its result. The tab shows how many agents are running. Open it with Ctrl+Shift+L.
+- Continue in another agent hands over the whole conversation. Dawsha saves the session's transcript to a file and asks the new agent to read it first and say where things stand, along with the goal, files touched, what's left and the last error. The dialog shows the file, with Show in folder and Copy path, and the prompt can be edited before it's sent. Sessions without a transcript yet fall back to the recent terminal output.
+- Notifications. A bell in the top bar keeps the last 50 notifications, including sessions that started needing you, with their Reopen, Undo or Go to session action. Clear asks first.
+- Session tags. Mark a session Bug, Feature, Review, Research or Docs from its menu in the sidebar or the pane menu. The tag shows in the sidebar, the pane header and the board, and stays with the session when it's closed and reopened.
+- Rename a session from the sidebar with F2 or a double-click, open or closed.
+- Drag projects in the sidebar to reorder them.
+- Reopen all the closed sessions from Today, Yesterday, This week or Earlier at once.
+- Closed sessions show what they cost, or their tokens when the cost isn't known.
+- Closed sessions in the command palette. Search them by name or project and reopen one.
+- Each pane shows a one-line recap of what the session is doing, taken from Claude Code's own recap when it prints one.
+- A setting to stop dimming the sessions you're not working in.
+
+### Changed
+
+- The screen for installing and updating Claude Code, Codex and Gemini CLI is now called Agent tools.
+- Three sessions no longer leave one stretched across the bottom: the first gets a tall column on the left and the other two stack on the right. Five sessions get the same tall column with four on the right, and no session count leaves one pane alone on a row.
+- Each pane has a coloured top edge for its state (needs you, working or idle), the top bar counts idle sessions too, and the approval bar sits at the bottom of the pane.
+- Small panes keep their name and their Maximize and Close buttons, and hide less important details first.
+- The resume preview says what a session was about and where it ended, in plain text without markup, with its message count and active time. Sessions other tools started, such as automatic summaries and safety reviews, are hidden unless you tick Show automatic sessions.
+- The project list in the resume picker and the lists in Ask two agents use Dawsha's own menus.
+- Dialogs, pickers and popups share one look and open with a short fade.
+- Empty sidebars and board columns say what to do next, with a button for it.
+- The project menu in the sidebar works with the arrow keys, and focus returns to the project after Pin or Move.
+
+### Fixed
+
+- Installing Claude Code from Dawsha no longer breaks an existing install. Dawsha now finds Claude Code installed with npm anywhere (custom npm folders, `%APPDATA%\npm`, nvm, Volta and fnm), never runs the native installer over it, and updates each install the way it was installed. Sessions start with an npm-only install on Windows. When two installs are found, Dawsha changes neither and shows both with the commands to remove one. On macOS and Linux it uses the right installer command.
+- The resume picker's project menu opened behind the picker.
+- Unfocused sessions in light themes no longer look washed out.
+
 ## [1.6.1] - 2026-10-25
 
 ### Added

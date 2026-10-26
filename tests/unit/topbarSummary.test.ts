@@ -30,7 +30,7 @@ describe('topbar summary helpers', () => {
   })
 
   it('labels the More button', () => {
-    expect(moreLabel('agents')).toBe('More · Agents')
+    expect(moreLabel('agents')).toBe('More · Agent tools')
     expect(moreLabel('grid')).toBe('More')
   })
 

@@ -11,6 +11,7 @@ import { SESSION_STATE_LABELS, type SessionState } from '../../shared/sessionSta
 import { lastLines } from '../../shared/topbarSummary'
 import type { BoardColumn } from '../../shared/board'
 import { agentMark } from './agentMark'
+import { tagChip } from './sessionTagUi'
 
 const PREVIEW_LINES = 2
 const WAITING_TEXT = 'Waiting for your permission'
@@ -55,6 +56,8 @@ export class BoardCard {
   private readonly mark = h('span', { class: 'board-card-mark' })
   private readonly title = h('b', { class: 'board-card-title', dir: 'auto' })
   private readonly time = h('span', { class: 'board-card-time' })
+  private readonly tag = h('span', { class: 'board-card-tag', hidden: true })
+  private tagShown = ''
   private readonly meta = h('div', { class: 'board-card-meta' })
   private readonly body = h('div', { class: 'board-card-body' })
   private readonly actions = h('div', { class: 'board-card-actions' })
@@ -71,7 +74,7 @@ export class BoardCard {
     this.el = h(
       'article',
       { class: 'board-card', tabindex: '0', 'data-pane-id': paneId },
-      h('div', { class: 'board-card-head' }, this.mark, this.title, this.time),
+      h('div', { class: 'board-card-head' }, this.mark, this.title, this.tag, this.time),
       this.meta,
       this.body,
       this.actions
@@ -100,6 +103,7 @@ export class BoardCard {
     }
     const project = view.project?.name ?? 'project'
     setText(this.title, view.title)
+    this.showTag(view.tag)
     this.title.title = view.title
     setText(this.meta, view.branch ? `${project} · ${view.branch}` : project)
     setText(this.time, column === 'reviewed' ? SESSION_STATE_LABELS[state].toLowerCase() : timeInState(view.pane.id, state, view.now))
@@ -107,6 +111,13 @@ export class BoardCard {
     this.el.setAttribute('data-state', state)
     this.el.classList.toggle('attention', column === 'needs')
     this.refresh(column)
+  }
+
+  private showTag(tag: PaneView['tag']): void {
+    if ((tag ?? '') === this.tagShown) return
+    this.tagShown = tag ?? ''
+    this.tag.hidden = tag === null
+    this.tag.replaceChildren(...(tag ? [tagChip(tag, true)] : []))
   }
 
   refreshPreview(): void {

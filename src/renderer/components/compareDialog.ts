@@ -5,6 +5,7 @@ import { api } from '../api'
 import { startCompare } from '../compareActions'
 import { h } from '../dom'
 import { nextDialogId, present } from './dialogs'
+import { selectMenu } from './selectMenu'
 
 export interface CompareDialogOptions {
   projects: Project[]
@@ -61,8 +62,8 @@ export function compareDialog(options: CompareDialogOptions): Promise<boolean> {
     { class: 'dialog compare-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Ask two agents' },
     h('h2', {}, 'Ask two agents'),
     h('p', { class: 'dialog-hint' }, 'Send one prompt to two agents at once and compare what they do.'),
-    field('Project', project.id, project),
-    h('div', { class: 'field-row' }, field('Agent A', agentA.id, agentA), field('Agent B', agentB.id, agentB)),
+    field('Project', project.id, selectMenu(project)),
+    h('div', { class: 'field-row' }, field('Agent A', agentA.id, selectMenu(agentA)), field('Agent B', agentB.id, selectMenu(agentB))),
     field('Prompt', prompt.id, prompt),
     h(
       'label',

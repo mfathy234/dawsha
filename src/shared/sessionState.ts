@@ -31,6 +31,7 @@ export interface SessionCounts {
   needs: number
   working: number
   done: number
+  idle: number
 }
 
 export function countSessionStates(states: readonly SessionState[]): SessionCounts {
@@ -38,7 +39,8 @@ export function countSessionStates(states: readonly SessionState[]): SessionCoun
     total: states.length,
     needs: states.filter((s) => s === 'needs').length,
     working: states.filter((s) => s === 'working').length,
-    done: states.filter((s) => s === 'done').length
+    done: states.filter((s) => s === 'done').length,
+    idle: states.filter((s) => s === 'idle').length
   }
 }
 

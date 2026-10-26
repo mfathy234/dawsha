@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, readdirSync, utimesSync, writeFileSync } from 'node:fs'
+import { basename, join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { activeTermId, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox, QUIT_BUDGET_MS } from './helpers'
 
@@ -23,6 +23,29 @@ function prepareRepo(folder: string): void {
   writeFileSync(join(folder, 'README.md'), 'hello again\n')
   mkdirSync(join(folder, 'tests'))
   writeFileSync(join(folder, 'tests', 'login.spec.ts'), 'test()\n')
+}
+
+function writeTranscriptSource(sandbox: Sandbox): void {
+  const dir = join(sandbox.claudeHome, 'projects', sandbox.projectFolder.replace(/[^A-Za-z0-9]/g, '-'))
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(
+    join(dir, `${SESSION}.jsonl`),
+    [
+      JSON.stringify({ type: 'user', timestamp: '2026-10-08T09:12:00.000Z', message: { content: 'Make the login test stop timing out on #dashboard' } }),
+      JSON.stringify({ type: 'assistant', message: { model: 'claude-opus-5-5', content: [{ type: 'text', text: 'I replaced the fixed sleep with a wait for the dashboard.' }] } })
+    ].join('\n') + '\n'
+  )
+}
+
+function seedOldHandoffs(sandbox: Sandbox): void {
+  const dir = join(sandbox.userData, 'handoffs')
+  mkdirSync(dir, { recursive: true })
+  for (let index = 0; index < 55; index += 1) {
+    const file = join(dir, `old-${String(index).padStart(2, '0')}.md`)
+    writeFileSync(file, 'old')
+    const when = new Date(Date.now() - (100 + index) * 60_000)
+    utimesSync(file, when, when)
+  }
 }
 
 function writeSession(sandbox: Sandbox): void {
@@ -66,6 +89,7 @@ function writeSession(sandbox: Sandbox): void {
 test('continues a session in another agent with an editable summary and a from chip', async () => {
   const sandbox = createSandbox()
   prepareRepo(sandbox.projectFolder)
+  seedOldHandoffs(sandbox)
   const logDir = join(sandbox.root, 'agent-log')
   const node = process.execPath
   const { app, page } = await launchApp(sandbox, {
@@ -80,6 +104,7 @@ test('continues a session in another agent with an editable summary and a from c
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     const sourceId = await activeTermId(page)
+    writeTranscriptSource(sandbox)
     writeSession(sandbox)
     await expect(page.locator('.pane-title', { hasText: 'Fix flaky login test' })).toHaveCount(1, { timeout: 20_000 })
     await expect(page.locator('.info-plan')).toHaveText('▸ 3/6', { timeout: 20_000 })
@@ -91,15 +116,32 @@ test('continues a session in another agent with an editable summary and a from c
     const dialog = page.getByRole('dialog', { name: 'Continue in Codex' })
     await expect(dialog).toBeVisible()
     const summary = dialog.getByLabel('Handoff summary')
-    await expect(summary).toHaveValue(/^Continue this task\. Handoff from Claude Code in Smoke\./)
+    await expect(summary).toHaveValue(
+      /^Continue this task\. First read the transcript file at "[^"]+handoffs[\\/]Smoke-claude-\d{8}-\d{6}\.md"\. It is the full conversation of the previous Claude Code session in Smoke\./
+    )
+    const path = /at "([^"]+)"/.exec(await summary.inputValue())?.[1] ?? ''
+    expect(path.startsWith(join(sandbox.userData, 'handoffs'))).toBe(true)
+    const saved = readFileSync(path, 'utf8')
+    expect(saved).toContain('Make the login test stop timing out on #dashboard')
+    expect(saved).toContain('I replaced the fixed sleep with a wait for the dashboard.')
+    const kept = readdirSync(join(sandbox.userData, 'handoffs'))
+    expect(kept).toHaveLength(50)
+    expect(kept).toContain(basename(path))
+    expect(kept).toContain('old-00.md')
+    expect(kept).not.toContain('old-54.md')
+    await expect(dialog.locator('.handoff-file-path')).toHaveText(path)
+    await expect(dialog.getByRole('button', { name: 'Show in folder' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Copy path' })).toBeVisible()
+    await expect(dialog.locator('.handoff-note')).toHaveCount(0)
+    await expect(summary).toHaveValue(/summarise in a few lines where things stand, then continue from there\.$/)
+    await expect(summary).not.toHaveValue(/Recent terminal output/)
     await expect(summary).toHaveValue(/Goal: Fix flaky login test/)
     await expect(summary).toHaveValue(/Files touched \(2\):\n- README\.md\n- tests\/login\.spec\.ts/)
-    await expect(summary).toHaveValue(/What's done: 3 of 6 plan steps done \(Stabilise login\)\. Last test: failed, 40 passed 1 failed\./)
     await expect(summary).toHaveValue(/What's left: 3 plan steps\./)
     await expect(summary).toHaveValue(/Last error: test failed: 40 passed 1 failed/)
-    await expect(summary).toHaveValue(/Error: timeout waiting for #dashboard/)
     expect(await summary.inputValue()).not.toContain('\x1b')
     await page.screenshot({ path: join(SCREENS, '50-handoff-dialog.png') })
+    await page.screenshot({ path: join(SCREENS, '162-handoff-dialog.png') })
 
     await summary.fill('')
     await dialog.getByRole('button', { name: 'Start Codex with this' }).click()
@@ -155,6 +197,10 @@ test('summarises an unnamed session outside a git repository and says what it do
     await page.getByRole('button', { name: 'Pane actions' }).click()
     await page.getByRole('menuitem', { name: 'Continue in Gemini' }).click()
     const summary = page.getByRole('dialog', { name: 'Continue in Gemini' }).getByLabel('Handoff summary')
+    const dialog = page.getByRole('dialog', { name: 'Continue in Gemini' })
+    await expect(dialog.locator('.handoff-note')).toContainText('No saved conversation was found')
+    await expect(dialog.locator('.handoff-file')).toHaveCount(0)
+    await expect(summary).toHaveValue(/^Continue this task\. Handoff from Claude Code in Smoke\./)
     await expect(summary).toHaveValue(/Goal: \(not captured, describe it here\)/)
     await expect(summary).toHaveValue(/Files touched: none found/)
     await expect(summary).toHaveValue(/Last error: none seen/)

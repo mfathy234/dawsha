@@ -19,6 +19,13 @@ export const BOARD_EMPTY_TEXT: Record<BoardColumn, string> = {
   reviewed: 'Reviewed sessions land here.'
 }
 
+export const BOARD_EMPTY_HINT: Record<BoardColumn, string> = {
+  needs: 'Sessions that ask for permission or an answer show up here.',
+  working: 'Start a session and it moves here while it runs.',
+  done: 'Finished sessions wait here until you have looked at them.',
+  reviewed: 'Drag a session here once you have reviewed it.'
+}
+
 /** Done sessions leave the Done column once seen; idle and exited ones are already past review. */
 export function boardColumn(state: SessionState): BoardColumn {
   if (state === 'needs') return 'needs'
