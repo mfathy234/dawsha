@@ -15,33 +15,67 @@
   margin: 0 2px;
 }
 
-/* A narrow sidebar gives up the state word before the session name. */
+/* Name on line 1 (the spot after it is for a tag chip), muted time/cost/state on line 2. */
+.kept-session-row .sess-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.kept-session-row .sess-line,
+.kept-session-row .sess-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .kept-session-row .sess-name {
-  min-width: 4.5em;
-}
-
-.kept-session-row .sess-state {
   flex: 0 1 auto;
-  min-width: 14px;
-  overflow: hidden;
-}
-
-.kept-session-row .sess-state-word {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* The session menu button only shows while the row is hovered or something in it has focus. */
-.sess-more {
+.kept-session-row .sess-meta {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.kept-session-row .sess-ago {
+  margin-left: 0;
+}
+
+.kept-session-row .sess-state {
   flex: none;
+}
+
+/* The close and menu buttons sit in the row's right gutter, stacked, and only show on hover or focus. */
+.kept-session-row .sess-more,
+.kept-session-row .sess-close {
+  position: absolute;
+  right: 4px;
+  width: 22px;
+  height: 20px;
   opacity: 0;
+}
+
+.kept-session-row .sess-more {
+  top: 2px;
   color: color-mix(in srgb, var(--muted) 80%, transparent);
 }
 
+.kept-session-row .sess-close {
+  bottom: 2px;
+}
+
 .kept-session-row:hover .sess-more,
+.kept-session-row:hover .sess-close,
 .kept-session-row:focus-within .sess-more,
+.kept-session-row:focus-within .sess-close,
 .sess-more[aria-expanded='true'] {
   opacity: 1;
 }

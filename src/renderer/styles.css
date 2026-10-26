@@ -5480,9 +5480,9 @@ body.dragging-ui {
 }
 
 .kept-session-row {
-  min-height: 36px;
+  min-height: 42px;
   margin: 2px 0 0 8px;
-  padding: 0 2px 0 0;
+  padding: 0 30px 0 0;
   border-radius: var(--radius);
 }
 
@@ -5497,9 +5497,10 @@ body.dragging-ui {
 
 .kept-session-row .sess-row,
 .sess-row {
-  height: 36px;
+  height: auto;
+  min-height: 42px;
   gap: 10px;
-  padding: 0 6px 0 10px;
+  padding: 5px 6px 5px 10px;
   background: transparent;
   color: color-mix(in srgb, var(--text) 85%, var(--muted));
   font-family: var(--font-ui);

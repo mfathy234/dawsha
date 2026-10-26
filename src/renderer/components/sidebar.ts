@@ -387,9 +387,10 @@ export class SidebarComponent {
             onClick: () => focusPane(view.pane.id)
           },
           agentMark(view.agent),
-          h('span', { class: 'sess-name', dir: 'auto' }, view.title),
-          view.tag ? tagDot(view.tag) : null,
-          h('span', { class: `sess-state state-${sessionStateName}`, title: stateLabel }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, stateLabel))
+          h('span', { class: 'sess-body' },
+            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title), view.tag ? tagDot(view.tag) : null),
+            h('span', { class: 'sess-meta' },
+              h('span', { class: `sess-state state-${sessionStateName}`, title: stateLabel }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, stateLabel))))
         )
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}`, 'data-tag': view.tag ?? undefined },
       main,
@@ -459,10 +460,11 @@ export class SidebarComponent {
       ? this.renameField(key, session.title, session.agent, false)
       : h('button', { class: 'sess-row', type: 'button', title: [`Resume ${session.title} (closed ${closedOn})`, closedUsageTooltip(usage)].filter(Boolean).join('\n'), 'data-nav': key, 'data-agent': session.agent, 'data-session-id': session.sessionId, onClick: click },
           agentMark(session.agent),
-          h('span', { class: 'sess-name', dir: 'auto' }, session.title),
-          session.tag ? tagDot(session.tag) : null,
-          h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now)),
-          used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)
+          h('span', { class: 'sess-body' },
+            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, session.title), session.tag ? tagDot(session.tag) : null),
+            h('span', { class: 'sess-meta' },
+              h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now)),
+              used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))
     return h('div', { class: 'kept-session-row closed', 'data-tag': session.tag ?? undefined },
       main,
       this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag)),

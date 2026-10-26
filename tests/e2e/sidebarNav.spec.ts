@@ -273,6 +273,35 @@ test('F2 and double click rename closed and open sessions; Enter and blur save, 
   }
 })
 
+test('a session row keeps time and cost on their own line and the close button stays hidden until hover', async () => {
+  const sandbox = createSandbox()
+  const now = Date.now()
+  writeSettings(sandbox, {
+    keptSessions: [{ projectId: 'smoke', agent: 'claude', sessionId: KEPT_ID(0), title: 'Trial of a rather long session name', closedAt: now - 33 * 60_000 }]
+  })
+  writeFileSync(join(sandbox.userData, 'usage-history.json'), JSON.stringify({ v: 1, limits: [], costs: { [KEPT_ID(0)]: { at: now - 1000, usd: 8.69, cwd: sandbox.projectFolder } } }), 'utf8')
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const row = page.locator('.kept-session-row.closed')
+    const cost = row.locator('.sess-cost')
+    await expect(cost).toHaveText('$8.69', { timeout: 20_000 })
+    const close = row.locator('.sess-close')
+    await expect(close).toHaveCSS('opacity', '0')
+    const name = (await row.locator('.sess-name').boundingBox())!
+    const meta = (await row.locator('.sess-meta').boundingBox())!
+    expect(meta.y).toBeGreaterThanOrEqual(name.y + name.height - 1)
+    await row.hover()
+    await expect(close).toHaveCSS('opacity', '1')
+    const costBox = (await cost.boundingBox())!
+    const closeBox = (await close.boundingBox())!
+    expect(costBox.x + costBox.width).toBeLessThanOrEqual(closeBox.x)
+    mkdirSync(SCREENS, { recursive: true })
+    await page.locator('.sidebar').screenshot({ path: join(SCREENS, '17-sidebar-rows.png') })
+  } finally {
+    await closeApp(app)
+  }
+})
+
 test('Reopen all brings a day of closed sessions back, asking first when it is a crowd', async () => {
   const sandbox = createSandbox()
   const now = Date.now()
