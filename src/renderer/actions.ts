@@ -903,9 +903,9 @@ export function setShowRecap(showRecap: boolean): void {
   void saveSettings({ showRecap })
 }
 
-export function setDimIdlePanes(dimIdlePanes: boolean): void {
-  store.set((s) => ({ ...s, settings: { ...s.settings, dimIdlePanes } }))
-  void saveSettings({ dimIdlePanes })
+export function setDimOtherPanes(dimOtherPanes: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, dimOtherPanes } }))
+  void saveSettings({ dimOtherPanes })
 }
 
 export function setSidebarCollapsed(sidebarCollapsed: boolean): void {

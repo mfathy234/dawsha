@@ -7834,6 +7834,19 @@ button.tl-event:hover { background: var(--raised); }
 .layout-switch .btn:hover { background: var(--raised); color: var(--text); }
 .layout-switch .btn[aria-pressed='true'] { background: color-mix(in srgb, var(--accent) 13%, var(--raised)); color: var(--accent); }
 
+.dim-switch {
+  display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 0; border-radius: 11px;
+  background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap;
+}
+.dim-switch:hover { background: var(--raised); color: var(--text); }
+.dim-switch-track { position: relative; width: 24px; height: 14px; border-radius: 7px; background: var(--raised); transition: background 0.15s; }
+.dim-switch-thumb { position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: transform 0.15s, background 0.15s; }
+.dim-switch[aria-checked='true'] .dim-switch-track { background: color-mix(in srgb, var(--accent) 30%, var(--raised)); }
+.dim-switch[aria-checked='true'] .dim-switch-thumb { transform: translateX(10px); background: var(--accent); }
+.dim-switch[aria-checked='true'] { color: var(--text); }
+.dim-switch-state { color: var(--muted); font-size: 11px; min-width: 18px; }
+@media (prefers-reduced-motion: reduce) { .dim-switch-track, .dim-switch-thumb { transition: none; } }
+
 /* Filter chips and their menu (board filters, timeline search). */
 .filter-chip {
   display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px 0 10px; max-width: 100%;

@@ -125,7 +125,7 @@ export interface Settings {
   projects: Project[]
   theme: ThemeSettings
   sidebarCollapsed: boolean
-  dimIdlePanes: boolean
+  dimOtherPanes: boolean
   showRecap: boolean
   sidebarWidth: number
   othersCollapsed: boolean

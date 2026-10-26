@@ -21,6 +21,7 @@ import {
   openOnboarding,
   openSettings,
   runUpdateAction,
+  setDimOtherPanes,
   showPaneDiff,
   showView,
   startSession,
@@ -285,6 +286,7 @@ export function installBuiltinCommands(): void {
       enabled: (state) => state.settings.sessionsLayout === 'board',
       run: () => setSessionsLayout('grid')
     },
+    { id: 'view.toggleDim', title: 'Toggle dimming of other sessions', group: 'Actions', keywords: 'dim others focus calm idle sessions', run: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
     { id: 'view.grid', title: 'Back to the grid', group: 'Actions', searchOnly: true, run: () => showView('grid') },
     {
       id: 'app.shortcuts',

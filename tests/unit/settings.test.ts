@@ -19,6 +19,13 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ showRecap: 'no' }).showRecap).toBe(true)
     expect(migrateSettings({ showRecap: false }).showRecap).toBe(false)
   })
+  it('leaves dimming off by default, only turns it on when told to and ignores the old key', () => {
+    expect(defaultSettings().dimOtherPanes).toBe(false)
+    expect(migrateSettings({}).dimOtherPanes).toBe(false)
+    expect(migrateSettings({ dimIdlePanes: true }).dimOtherPanes).toBe(false)
+    expect(migrateSettings({ dimOtherPanes: 'yes' }).dimOtherPanes).toBe(false)
+    expect(migrateSettings({ dimOtherPanes: true }).dimOtherPanes).toBe(true)
+  })
   it('keeps closed sessions and task history only for known projects', () => {
     const projects = [{ id: 'api', name: 'API', folder: 'C:\\work\\api', defaultAgent: 'codex' }]
     const keptSessions = [{ projectId: 'api', agent: 'codex', sessionId: 'session-1', title: 'Fix export', closedAt: 100 }, { projectId: 'missing', agent: 'claude', sessionId: 'x', title: 'Orphan', closedAt: 100 }]
