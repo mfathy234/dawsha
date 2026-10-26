@@ -38,10 +38,17 @@ export function demoEnv(): Record<string, string> {
 }
 
 export async function resize(app: ElectronApplication): Promise<void> {
-  await app.evaluate(({ BrowserWindow }, size) => {
+  await app.evaluate(async ({ BrowserWindow }, size) => {
     const window = BrowserWindow.getAllWindows()[0]
-    window.setContentSize(size.width, size.height)
-    window.center()
+    let want = [size.width, size.height]
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      window.setContentSize(want[0], want[1])
+      window.center()
+      await new Promise((done) => setTimeout(done, 300))
+      const inner = (await window.webContents.executeJavaScript('[innerWidth, innerHeight]')) as [number, number]
+      if (inner[0] === size.width && inner[1] === size.height) return
+      want = [want[0] + size.width - inner[0], want[1] + size.height - inner[1]]
+    }
   }, SIZE)
 }
 

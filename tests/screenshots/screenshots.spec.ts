@@ -91,7 +91,8 @@ test('generates the README screenshots from fake projects only', async () => {
     await settle(page, 1200)
     await page.locator('.agents-toggle').first().evaluate((button) => (button as HTMLButtonElement).click())
 
-    await page.getByRole('button', { name: 'Skills', exact: true }).click()
+    await page.locator('#more-button').click()
+    await page.locator('#skills-menu-item').click()
     await expect(page.locator('.skill-row')).toHaveCount(3)
     await settle(page, 800)
     await page.screenshot({ path: join(OUT, 'skills.png') })
@@ -99,7 +100,7 @@ test('generates the README screenshots from fake projects only', async () => {
     await expect(page.locator('.skill-row')).toHaveCount(3)
     await settle(page, 400)
     await page.screenshot({ path: join(OUT, 'installed-agents.png') })
-    await page.getByRole('button', { name: 'Skills', exact: true }).click()
+    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
     await expect(page.locator('.agents-drawer:visible')).toHaveCount(1)
     await settle(page)
     await page.screenshot({ path: join(OUT, 'agents-drawer.png') })
@@ -161,7 +162,8 @@ test('generates the README screenshots from fake projects only', async () => {
   })
   try {
     await resize(launched.app)
-    await launched.page.locator('#agents-button').click()
+    await launched.page.locator('#more-button').click()
+    await launched.page.locator('#agents-menu-item').click()
     await expect(launched.page.locator('.tool-flag.update')).toBeVisible()
     await launched.page.locator('.tool-block[data-agent="gemini"]').getByRole('button', { name: 'Show command' }).click()
     await settle(launched.page, 800)
@@ -202,7 +204,7 @@ test('generates the update and what is new screenshots', async () => {
   ].join('\n')
   const script = JSON.stringify({
     check: 'available',
-    info: { version: '0.3.1', releaseDate: '2026-10-15T09:00:00.000Z', releaseNotes: notes }
+    info: { version: '1.8.0', releaseDate: '2026-10-15T09:00:00.000Z', releaseNotes: notes }
   })
   const sandbox = createSandbox()
   seed(sandbox, true)
@@ -218,7 +220,7 @@ test('generates the update and what is new screenshots', async () => {
       await page.getByRole('button', { name: `New Claude session in ${project.name}`, exact: true }).click()
     }
     await expect(page.locator('.pane')).toHaveCount(2)
-    await expect(page.locator('#update-pill')).toHaveText('Update 0.3.1')
+    await expect(page.locator('#update-pill')).toHaveText('Update 1.8.0')
     await page.locator('#update-pill').click()
     await expect(page.locator('.update-popover')).toBeVisible()
     await settle(page, 1500)
