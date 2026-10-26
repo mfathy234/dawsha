@@ -130,7 +130,7 @@ export class BackgroundAgentsViewComponent {
     const filters = agentsFilters()
     const all = report?.agents ?? []
     const signature = JSON.stringify([
-      all.map((agent) => [agent.key, agent.status, agent.lastActivityAt, agent.endedAt, agent.tokens, agent.description, agent.lastStep]),
+      all.map((agent) => [agent.key, agent.status, agent.lastActivityAt, agent.endedAt, agent.tokens, agent.description, agent.lastStep, agent.result, agent.statusNote]),
       filters, this.selected, agentsFailed(), report === null, this.projects.map((project) => project.id + project.name),
       Math.floor((report?.generatedAt ?? 0) / 60_000)
     ])
@@ -151,7 +151,9 @@ export class BackgroundAgentsViewComponent {
     else if (shown.length === 0) content.push(this.empty(all, filters))
     else content.push(this.board(shown, report.generatedAt), selected ? this.details(selected) : null)
     this.body.className = `bg-body${selected ? ' has-details' : ''}`
+    const focusedKey = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.bg-item')?.dataset.key
     this.body.replaceChildren(...content.filter((node): node is HTMLElement => node !== null))
+    if (focusedKey) this.body.querySelector<HTMLElement>(`.bg-item[data-key="${CSS.escape(focusedKey)}"]`)?.focus()
   }
 
   private empty(all: readonly BackgroundAgent[], filters: BgFilters): HTMLElement {
@@ -174,17 +176,17 @@ export class BackgroundAgentsViewComponent {
     const groups = groupBySession(agents, now).map((group) => this.group(group, now))
     const hint = h('p', { class: 'bg-hint' }, 'Select a row for details. Arrow keys move between rows.')
     return h('section', { class: 'bg-board', id: 'bg-board', 'aria-label': 'Agents by session' },
-      h('div', { class: 'bg-groups', role: 'list', onKeydown: (event: Event) => this.moveFocus(event as KeyboardEvent) }, ...groups), hint)
+      h('div', { class: 'bg-groups', onKeydown: (event: Event) => this.moveFocus(event as KeyboardEvent) }, ...groups), hint)
   }
 
   private group(group: BgSessionGroup, now: number): HTMLElement {
     const span = sessionSpan(group.agents, now)
     const counts = ([['running', group.running], ['done', group.done], ['failed', group.failed]] as const).filter(([, n]) => n > 0).map(([status, n]) => `${n} ${STATUS_LABELS[status]}`)
-    return h('section', { class: 'bg-group', role: 'listitem', 'data-session': group.sessionKey },
+    return h('section', { class: 'bg-group', 'aria-label': group.title, 'data-session': group.sessionKey },
       h('header', { class: 'bg-group-head' },
         agentMark(group.agentKind),
         h('div', { class: 'bg-group-who' },
-          h('span', { class: 'bg-group-title', title: group.title }, group.title),
+          h('h2', { class: 'bg-group-title', title: group.title }, group.title),
           h('span', { class: 'bg-group-project' }, group.project)),
         h('span', { class: 'bg-group-counts' }, counts.join(' · '))),
       h('div', { class: 'bg-items' }, ...group.agents.map((agent) => this.item(agent, span, now))))
