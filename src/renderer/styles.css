@@ -36,6 +36,9 @@
   --sidebar: #0e1116;
   --surface: #11141a;
   --raised: #161b23;
+  --surface-pop: color-mix(in srgb, var(--raised) 94%, white);
+  --shadow-pop: 0 16px 40px rgb(0 0 0 / .45);
+  --focus-ring: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   --border: #232833;
   --text: #d6dae3;
   --muted: #8a93a6;
@@ -57,6 +60,8 @@
 
 :root[data-kind='light'] {
   color-scheme: light;
+  --surface-pop: color-mix(in srgb, var(--raised) 55%, white);
+  --shadow-pop: 0 14px 36px rgb(24 28 40 / .18);
 }
 
 * {
@@ -8172,4 +8177,12 @@ button.tl-event:hover { background: var(--raised); }
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* Top bar groups: filled, no outline. */
+.topbar-nav,
+.layout-switch,
+.zoom-control {
+  border: 0;
+  background: var(--raised);
 }

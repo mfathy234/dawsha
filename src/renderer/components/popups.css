@@ -1,19 +1,39 @@
 /* One look for dialogs, popovers and pickers: radius, shadow, title, corner X and a short open animation. */
 :root {
   --popup-radius: 12px;
-  --popup-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  --popup-shadow: var(--shadow-pop);
   --popup-title-size: 16px;
   --popup-x-size: 28px;
   --popup-x-inset: 10px;
 }
-:root[data-kind='light'] { --popup-shadow: 0 14px 40px rgba(24, 28, 40, 0.22); }
 
 :root .dialog,
 :root .popover,
 :root .palette {
+  border: 0;
   border-radius: var(--popup-radius);
+  background: var(--surface-pop);
   box-shadow: var(--popup-shadow);
 }
+
+:root .palette-head,
+:root .rp-head { border-bottom-color: color-mix(in srgb, var(--border) 45%, transparent); }
+
+:root :is(.dialog, .popover, .palette) :is(.text-input, .rp-project, .select-menu-trigger, .field-select) {
+  border: 0;
+  background: var(--bg);
+}
+:root :is(.dialog, .popover, .palette) :is(.text-input, .rp-project, .field-select):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+:root .rp-tabs { border: 0; background: var(--bg); }
+:root .rp-tab.selected { background: var(--raised); }
+:root .rp-chip { border: 0; background: var(--bg); }
+:root .rp-chip.selected { background: var(--raised); }
+:root .seg { border: 0; background: var(--bg); }
+:root .seg-btn + .seg-btn { border-left: 0; }
+:root .seg-btn:hover, :root .seg-btn.on { background: var(--raised); }
 
 :root .dialog h2,
 :root .popup-head .popover-title,
@@ -50,3 +70,4 @@
 @keyframes popup-in {
   from { opacity: 0; transform: translateY(4px); }
 }
+:root .rp-row.selected { outline: 0; background: var(--bg); }
