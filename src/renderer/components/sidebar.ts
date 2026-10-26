@@ -6,7 +6,7 @@ import { projectTodayLabel, projectTodayShort, projectTodayTooltip } from '../..
 import type { AgentKind, KeptSession, Project } from '../../shared/types'
 import { clearClosedSessions, closePane, focusPane, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeKeptSession, renameKeptSession, renameSession, reopenKeptSessions, reorderProject, showView, startSession, tagKeptSession, tagSession, toggleClosedSessions, toggleClosedShowAll, toggleProjectExpanded, toggleSidebar } from '../actions'
 import { CLOSED_PREVIEW_COUNT, closedAgoShort, closedDayLabel, closedUsageShort, closedUsageTooltip, groupClosedByDay, reopenGroupLabel } from '../../shared/keptSessions'
-import { autoTag, cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
+import { autoTag, autoTagSource, cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
 import type { PaneView } from '../derive'
 import { clear, h, icon, iconButton } from '../dom'
 import { enableDrag } from '../drag'
@@ -394,7 +394,7 @@ export class SidebarComponent {
         )
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}`, 'data-tag': view.tag ?? undefined },
       main,
-      this.sessionMenuButton(key, view.title, project, view.tag, (tag) => tagSession(view.pane.id, tag), 'Close', () => void closePane(view.pane.id)),
+      this.sessionMenuButton(key, view.title, project, view.tagAuto ? null : view.tag, (tag) => tagSession(view.pane.id, tag), 'Close', () => void closePane(view.pane.id)),
       iconButton(`Close ${view.title} in ${project.name}`, ICONS.close, () => void closePane(view.pane.id), 'small sess-close')
     )
   }
@@ -448,7 +448,8 @@ export class SidebarComponent {
     const key = `c:${session.agent}:${session.sessionId}`
     const usage = state.usage.sessions[session.sessionId]
     const used = closedUsageShort(usage)
-    const closedTag = session.tag ?? autoTag(null, session.title)
+    const closedTag = session.tag ?? autoTag(session.branch ?? null, session.title)
+    const closedSource = session.tag ? null : autoTagSource(session.branch ?? null, session.title)
     const resume = (): void => void startSession(project.id, session.agent, session.sessionId, true, session.title, session)
     // A double click renames, so a mouse click waits a moment to see whether a second one follows.
     const click = (event: Event): void => {
@@ -462,7 +463,7 @@ export class SidebarComponent {
       : h('button', { class: 'sess-row', type: 'button', title: [`Resume ${session.title} (closed ${closedOn})`, closedUsageTooltip(usage)].filter(Boolean).join('\n'), 'data-nav': key, 'data-agent': session.agent, 'data-session-id': session.sessionId, onClick: click },
           agentMark(session.agent),
           h('span', { class: 'sess-body' },
-            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, session.title), closedTag ? tagChip(closedTag, true, session.tag ? null : 'conversation') : null),
+            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, session.title), closedTag ? tagChip(closedTag, true, closedSource) : null),
             h('span', { class: 'sess-meta' },
               h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now)),
               used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))

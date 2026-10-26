@@ -35,6 +35,7 @@ describe('migrateSettings', () => {
     const tasks = [{ id: 'task-1', projectId: 'api', title: 'Export cleanup', note: 'Keep output stable', createdAt: 100, sessionKeys: ['codex:session-1'], events: [{ id: 'event-1', kind: 'commit', text: 'abc123', at: 120 }] }]
     const migrated = migrateSettings({ projects, keptSessions, tasks })
     expect(migrated.keptSessions).toHaveLength(1)
+    expect(migrateSettings({ projects, keptSessions: [{ ...keptSessions[0], branch: 'fix/'+'x'.repeat(500) }, { ...keptSessions[0], sessionId: 's2', branch: 7 }] }).keptSessions.map((k) => k.branch?.length)).toEqual([200, undefined])
     expect(migrated.tasks).toEqual(tasks)
     expect(migrateSettings(JSON.parse(JSON.stringify(migrated))).tasks).toEqual(tasks)
   })

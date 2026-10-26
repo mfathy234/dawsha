@@ -388,8 +388,9 @@ function keepClosedTabs(pane: PaneState, tabs: TermState[]): KeptSession[] {
     const earlier = state.settings.keptSessions.find((item) => sameKept(item, { agent: kind, sessionId }))
     const own = tab.name ?? (earlier?.renamed ? earlier.title : undefined)
     const tag = tab.tag ?? earlier?.tag
+    const branch = view?.branch ?? earlier?.branch
     const title = own || observed?.trim() || tab.titleHint || (tab.label !== tab.agent ? tab.label : null) || (tab.id === pane.activeTabId && view?.named ? view.title : null) || tab.label
-    return [{ projectId: pane.projectId, agent: tab.agent, sessionId, title, closedAt: Date.now(), ...(own ? { renamed: true as const } : {}), ...(tag ? { tag } : {}) }]
+    return [{ projectId: pane.projectId, agent: tab.agent, sessionId, title, closedAt: Date.now(), ...(own ? { renamed: true as const } : {}), ...(tag ? { tag } : {}), ...(branch ? { branch } : {}) }]
   })
   if (additions.length === 0) return []
   const keys = new Set(additions.map((item) => `${item.agent}:${item.sessionId}`))

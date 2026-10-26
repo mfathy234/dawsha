@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { closedUsageShort, closedUsageTooltip, renameKept, reopenGroupLabel, tagKept } from '../../src/shared/keptSessions'
 import { moveProjectTo, canDropProject } from '../../src/shared/projectOrder'
-import { autoTag, cleanSessionName, isSessionTag, SESSION_NAME_MAX } from '../../src/shared/sessionTags'
+import { autoTag, autoTagSource, cleanSessionName, isSessionTag, SESSION_NAME_MAX } from '../../src/shared/sessionTags'
 import { migrateSettings } from '../../src/shared/settingsSchema'
 import { snapshotWorkspace } from '../../src/shared/layouts'
 import type { KeptSession, Project } from '../../src/shared/types'
@@ -122,5 +122,32 @@ describe('tags in settings', () => {
   it('saves a tab name and tag with the workspace', () => {
     const workspace = snapshotWorkspace([{ id: 'p', projectId: 'api', fontSize: 14, activeTabId: 't', tabs: [{ id: 't', agent: 'claude', label: 'claude', name: 'Mine', tag: 'bug' }] }], 'p')
     expect(workspace.panes[0].tabs[0]).toMatchObject({ name: 'Mine', tag: 'bug' })
+  })
+})
+
+describe('autoTag in Arabic', () => {
+  it('reads Arabic words for each rule', () => {
+    expect(autoTag(null, 'إصلاح خطأ تسجيل الدخول')).toBe('bug')
+    expect(autoTag(null, 'مشكلة في الشاشة')).toBe('bug')
+    expect(autoTag(null, 'إضافة ميزة جديدة')).toBe('feature')
+    expect(autoTag(null, 'بناء الواجهة')).toBe('feature')
+    expect(autoTag(null, 'مراجعة الكود')).toBe('review')
+    expect(autoTag(null, 'توثيق الواجهة')).toBe('docs')
+  })
+  it('does not match inside a longer word, Arabic or Latin', () => {
+    expect(autoTag(null, 'الإضافة')).toBeNull()
+    expect(autoTag(null, 'debugging prefixes')).toBeNull()
+  })
+  it('matches a word next to punctuation', () => {
+    expect(autoTag(null, 'Fix: login')).toBe('bug')
+    expect(autoTag(null, '(إصلاح)')).toBe('bug')
+  })
+})
+
+describe('autoTagSource', () => {
+  it('says whether the branch or the conversation gave the tag', () => {
+    expect(autoTagSource('fix/login', 'add a thing')).toBe('branch')
+    expect(autoTagSource('main', 'add a thing')).toBe('conversation')
+    expect(autoTagSource(null, 'refactor')).toBeNull()
   })
 })

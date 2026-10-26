@@ -20,11 +20,14 @@ const BRANCH_PREFIX_TAGS: Record<string, SessionTag> = {
   research: 'research', spike: 'research'
 }
 
-const TEXT_RULES: [RegExp, SessionTag][] = [
-  [/\b(fix|bug|error|crash|broken|fails?|failing)\b/i, 'bug'],
-  [/\b(add|feature|implement|build|new|create)\b/i, 'feature'],
-  [/\breview\b/i, 'review'],
-  [/\b(docs?|readme|changelog)\b/i, 'docs']
+// Words are fenced by "not a letter or digit" rather than the word-boundary escape, which does not see Arabic letters.
+const word = (alternatives: string): RegExp => new RegExp(`(?<![\\p{L}\\p{N}])(?:${alternatives})(?![\\p{L}\\p{N}])`, 'iu')
+
+const TEXT_RULES:[RegExp, SessionTag][] = [
+  [word('fix|bug|error|crash|broken|fails?|failing|إصلاح|خطأ|مشكلة|عطل|تعطل'), 'bug'],
+  [word('add|feature|implement|build|new|create|إضافة|أضف|ميزة|إنشاء|بناء'), 'feature'],
+  [word('review|مراجعة|راجع'), 'review'],
+  [word('docs?|readme|changelog|توثيق|وثائق'), 'docs']
 ]
 
 const PLAIN_BRANCHES = new Set(['main', 'master', 'develop'])
@@ -37,6 +40,14 @@ export function autoTag(branch: string | null, text: string): SessionTag | null 
     if (fromBranch) return fromBranch
   }
   return TEXT_RULES.find(([pattern]) => pattern.test(text))?.[1] ?? null
+}
+
+export type AutoTagSource = 'branch' | 'conversation'
+
+/** Where autoTag(branch, text) took its tag from; null when it has none. */
+export function autoTagSource(branch: string | null, text: string): AutoTagSource | null {
+  if (autoTag(branch, '')) return 'branch'
+  return autoTag(null, text) ? 'conversation' : null
 }
 
 export const SESSION_NAME_MAX = 160

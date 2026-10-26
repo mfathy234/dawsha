@@ -6,20 +6,8 @@
   box-shadow: inset 3px 0 0 var(--tag);
 }
 
-.kept-session-row.selected[data-tag] {
-  box-shadow: inset 3px 0 0 var(--tag), inset 0 0 0 1px var(--border);
-}
-
 :root[data-tag-colors='off'] .kept-session-row[data-tag] {
   box-shadow: none;
-}
-
-:root[data-tag-colors='off'] .kept-session-row.selected[data-tag] {
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-
-.kept-session-row .sess-row .tag-chip {
-  margin: 0 2px;
 }
 
 /* Name on line 1 (the spot after it is for a tag chip), muted time/cost/state on line 2. */

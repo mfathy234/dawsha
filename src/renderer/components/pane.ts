@@ -416,7 +416,7 @@ export class PaneComponent {
   private openTag(): void {
     if (this.actionsMenu) this.closeActions()
     this.actionsAnchor = this.el.querySelector<HTMLElement>('.pane-actions')
-    const items = tagMenuItems(this.current?.tag ?? null, (tag) => {
+    const items = tagMenuItems(this.current?.tagAuto ? null : (this.current?.tag ?? null), (tag) => {
       this.closeActions()
       tagSession(this.paneId, tag)
     })

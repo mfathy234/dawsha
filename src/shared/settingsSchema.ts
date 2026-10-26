@@ -275,6 +275,8 @@ function sanitizeRemoteAccess(value: unknown): RemoteAccessSettings {
   }
 }
 
+const KEPT_BRANCH_MAX = 200
+
 function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSession[] {
   if (!Array.isArray(value)) return []
   const seen = new Set<string>()
@@ -290,6 +292,8 @@ function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSess
     const kept: KeptSession = { projectId: String(item.projectId), agent: item.agent, sessionId, title: title.slice(0, SESSION_NAME_MAX), closedAt: clampNumber(item.closedAt, 0, Date.now() + 86_400_000, Date.now()) }
     if (item.renamed === true) kept.renamed = true
     if (isSessionTag(item.tag)) kept.tag = item.tag
+    const branch = asString(item.branch)
+    if (branch) kept.branch = branch.slice(0, KEPT_BRANCH_MAX)
     sessions.push(kept)
   }
   return sessions.slice(-500)

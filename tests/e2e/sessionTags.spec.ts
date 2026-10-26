@@ -128,6 +128,12 @@ test('a session takes its tag from the branch, a manual tag wins, and the settin
     await expect(openRow(page)).toHaveAttribute('data-tag', 'feature')
     await expect(openRow(page).locator('.tag-chip')).toHaveText('Feature')
 
+    await openRow(page).hover()
+    await page.getByRole('button', { name: 'Actions for Smoke in Smoke' }).click()
+    await expect(page.getByRole('menuitemradio', { checked: true })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: 'Remove tag' })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+
     await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Bug')
     await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Bug')
     await expect(page.locator('.pane-tag .tag-chip')).toHaveAttribute('title', 'Tag: Bug')

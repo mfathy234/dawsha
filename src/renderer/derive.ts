@@ -6,7 +6,7 @@ import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsF
 import type { ProcessActivity } from '../shared/processActivity'
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { formatDuration, sessionUsage } from '../shared/sessionCost'
-import { autoTag, type SessionTag } from '../shared/sessionTags'
+import { autoTag, autoTagSource, type SessionTag } from '../shared/sessionTags'
 import { pickWorkFolder } from '../shared/workFolder'
 import { lastOutputAt } from './ptyActivity'
 import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, RateLimitWindow, SessionFile, StatusInfo, TabAgent } from '../shared/types'
@@ -311,11 +311,6 @@ function infoFor(
   opsLive: boolean
 ): PaneInfo {
   return withUsage(state, tab, matches, baseInfoFor(state, tab, matches, folder, snapshot, opsLive))
-}
-
-function autoTagSource(branch: string | null, text: string): 'branch' | 'conversation' | null {
-  if (autoTag(branch, '')) return 'branch'
-  return autoTag(null, text) ? 'conversation' : null
 }
 
 export function derivePanes(state: AppState): PaneView[] {

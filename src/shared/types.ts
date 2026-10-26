@@ -103,6 +103,8 @@ export interface KeptSession {
   /** The title was typed by the user, so it stays the session's name when reopened. */
   renamed?: true
   tag?: SessionTag
+  /** The git branch the session was on when it closed, to guess a tag for the closed row. */
+  branch?: string
 }
 
 export interface ProjectTask {
