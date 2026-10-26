@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { closeApp, createSandbox, launchApp } from './helpers'
+import { writeOps } from '../screenshots/harness'
 
 const SESSION_ID = '7c1e04b2-5d3a-4f10-9a2e-1b8c6d4e0f01'
 
@@ -84,14 +85,7 @@ test('the top bar never pushes out its icons, with the usage limits shown and a 
     await page.getByRole('button', { name: /^New (Claude|Codex|Gemini) session in Smoke$/ }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
     writeFileSync(join(sandbox.sessionsDir, 'smoke.json'), JSON.stringify({ pid: process.pid, sessionId: SESSION_ID, cwd: sandbox.projectFolder, name: 'Polish the release', nameSource: 'user', status: 'busy', startedAt: now + 1000, updatedAt: now + 1000 }), 'utf8')
-    mkdirSync(sandbox.opsDir, { recursive: true })
-    writeFileSync(join(sandbox.opsDir, `${SESSION_ID}.json`), JSON.stringify({
-      v: 1, sessionId: SESSION_ID, cwd: sandbox.projectFolder, updatedAt: now, ended: false, model: 'claude-opus-5-5', agents: [],
-      limits: [
-        { kind: 'five_hour', percentUsed: 62, resetsAt: new Date(now + 100 * 60_000).toISOString() },
-        { kind: 'seven_day', percentUsed: 18, resetsAt: new Date(now + 4 * 86_400_000).toISOString() }
-      ]
-    }), 'utf8')
+    writeOps(sandbox)
     await expect(page.locator('.topbar-limits')).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('#background-button .bg-badge')).toBeVisible({ timeout: 20_000 })
     const navHeight = (await page.locator('#files-button').boundingBox())!.height
