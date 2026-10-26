@@ -97,7 +97,7 @@ export class TopBarComponent {
   private activeMore: MoreView | null = null
   private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
   private readonly work = h('button', { class: 'btn ghost', type: 'button', id: 'work-button', onClick: () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work') }, 'Work')
-  private readonly orchBadge = h('span', { class: 'count-badge', hidden: true })
+  private readonly orchBadge = h('span', { class: 'count-badge orch-badge', hidden: true })
   private readonly orchestrator = h('button', { class: 'btn ghost', type: 'button', id: 'orchestrator-button', hidden: true }, 'Orchestrator', this.orchBadge)
   private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings', title: 'Settings' },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -208,7 +208,7 @@ describe('a project that is a sub folder of its repository', () => {
     expect(await writeProjectFile(sub, 'README.md', 'pwn', mtime)).toMatchObject({ ok: false })
     expect(readFileSync(join(repo, 'README.md'), 'utf8')).toBe('hello\n')
     expect(await writeProjectFile(sub, 'src/a.ts', 'two\n', mtime)).toMatchObject({ ok: true })
-    expect(await resolveProjectPath(sub, 'src/a.ts')).toBe(join(repo, 'src', 'a.ts'))
+    expect(await resolveProjectPath(sub, 'src/a.ts')).toBe(join(realpathSync(repo), 'src', 'a.ts'))
     expect(await resolveProjectPath(sub, 'README.md')).toBeNull()
   })
 })

@@ -42,7 +42,7 @@
 .pane-project { flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-ui); color: var(--muted); }
 .pane-tag { flex: 0 100 auto; min-width: 0; overflow: hidden; }
 .pane-fresh { flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-ui); color: var(--muted); }
-.pane-header .chip-resumed { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pane-header .chip-resumed { flex: none; white-space: nowrap; }
 .pane-header .spacer { flex: 1 1 0; min-width: 0; }
 .pane.maximized .pane-header .pane-title { min-width: 0; }
 @container pane-header (max-width: 640px) {
@@ -52,7 +52,10 @@
   .pane-header .pane-tag, .pane-header .pane-fresh { display: none; }
 }
 @container pane-header (max-width: 460px) {
-  .pane-header .pane-prev, .pane-header .pane-next, .pane-header .pane-mic, .pane-header .chip-resumed { display: none; }
+  .pane-header .pane-prev, .pane-header .pane-next, .pane-header .pane-mic { display: none; }
+}
+@container pane-header (max-width: 300px) {
+  .pane-header .chip-resumed { display: none; }
 }
 @container pane-header (max-width: 400px) {
   .pane-header .state-pill .state-pill-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

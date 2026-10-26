@@ -245,7 +245,7 @@ test('orchestrator gives text room and respects motion preferences in both theme
       await expect(column).toHaveCSS('max-width', '1200px')
       await expect(page.locator('.orch-nr-form')).toHaveCSS('padding', '20px')
       await expect(page.locator('.orch-view')).toHaveCSS('font-size', '13px')
-      await expect(page.locator('.orch-title')).toHaveCSS('font-size', '20px')
+      await expect(page.locator('.orch-title')).toHaveCSS('font-size', '22px')
       const bounds = await column.boundingBox()
       const center = await page.locator('.orch-body').evaluate((el) => el.getBoundingClientRect().left + el.clientWidth / 2)
       expect(Math.abs(bounds!.x + bounds!.width / 2 - center)).toBeLessThan(2)

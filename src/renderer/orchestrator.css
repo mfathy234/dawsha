@@ -81,7 +81,8 @@
   text-align: center;
 }
 
-#orchestrator-button .orch-badge { margin-left: var(--orch-space-2, 8px); }
+#orchestrator-button .orch-badge { margin-left: var(--s-2); min-width: 0; padding: 0; border-radius: 0; background: none; color: var(--muted); font-weight: 400; line-height: inherit; }
+#orchestrator-button .orch-badge[hidden] { display: none; }
 
 .orch-notice {
   margin: var(--orch-space-3) var(--orch-space-4) 0;
