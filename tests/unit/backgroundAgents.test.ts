@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseClaudeAgent, parseCodexAgent } from '../../src/shared/agentRecords'
 import {
-  DEFAULT_BG_FILTERS, applyFilters, axisTicks, axisWindow, barGeometry, barLabel, buildLanes, filtersActive, projectOptions, statusCounts, totalsOf,
+  DEFAULT_BG_FILTERS, applyFilters, barGeometry, barLabel, filtersActive, groupBySession, projectOptions, sessionSpan, statusCounts, totalsOf,
   type BackgroundAgent
 } from '../../src/shared/backgroundAgents'
 
@@ -118,7 +118,7 @@ const agent = (over: Partial<BackgroundAgent>): BackgroundAgent => ({
   tokens: 1000, tokensApprox: false, costUsd: null, lastStep: '', result: '', ...over
 })
 
-describe('filters and lanes', () => {
+describe('filters and groups', () => {
   const list = [
     agent({ id: 'a', status: 'running', endedAt: null }),
     agent({ id: 'b', kind: 'codex', parentId: 'p2', parentTitle: 'Import', projectId: null, projectLabel: 'misc', description: 'Write test', type: 'spawn_agent', status: 'failed', lastActivityAt: NOW - 5 * 60_000 }),
@@ -147,35 +147,50 @@ describe('filters and lanes', () => {
     expect(filtersActive({ ...DEFAULT_BG_FILTERS, query: '  ' })).toBe(false)
   })
 
-  it('groups lanes by parent, newest activity first, and lists project options', () => {
-    const lanes = buildLanes(list)
-    expect(lanes.map((lane) => lane.key)).toEqual(['codex:p2', 'claude:p1'])
-    expect(lanes[1].running).toBe(1)
+  it('lists project options and totals', () => {
     expect(projectOptions(list, [{ id: 'dawsha', name: 'Dawsha' }, { id: 'x', name: 'Unused' }])).toEqual([{ value: 'dawsha', label: 'Dawsha' }, { value: 'other', label: 'Other folders' }])
     expect(totalsOf([agent({ costUsd: 0.5 }), agent({ tokens: 10, tokensApprox: true })])).toEqual({ tokens: 1010, costUsd: 0.5, approx: true })
   })
 
-  it('places bars on the axis, running bars up to now', () => {
-    const window = axisWindow('1h', NOW)
-    expect(window.nowPct).toBeCloseTo(95.24, 1)
-    const done = barGeometry(agent({ startedAt: NOW - 30 * 60_000, endedAt: NOW - 15 * 60_000 }), window, NOW)
-    expect(done.left).toBeCloseTo(((30 * 60_000) / (3_600_000 * 1.05)) * 100 * -1 + 100 * (3_600_000 / (3_600_000 * 1.05)), 3)
-    const running = barGeometry(agent({ status: 'running', endedAt: null, startedAt: NOW - 3_600_000 * 5 }), window, NOW)
-    expect(running.left).toBe(0)
-    expect(running.width).toBeCloseTo(window.nowPct, 1)
-    expect(axisTicks(window).length).toBeGreaterThanOrEqual(3)
-    expect(axisTicks(window).length).toBeLessThanOrEqual(6)
-    expect(barLabel(agent({ description: 'Grid pass' }), NOW)).toBe('Grid pass, general-purpose, done, 20m')
+  it('groups by session: running groups first, then newest activity; running agents first inside', () => {
+    const groups = groupBySession([
+      agent({ id: 'a', parentId: 'p1', status: 'done', startedAt: NOW - 50 * 60_000 }),
+      agent({ id: 'b', parentId: 'p1', status: 'running', endedAt: null, startedAt: NOW - 40 * 60_000 }),
+      agent({ id: 'c', parentId: 'p1', status: 'failed', startedAt: NOW - 20 * 60_000 }),
+      agent({ id: 'd', parentId: 'p2', parentTitle: 'Import', kind: 'codex', status: 'done', lastActivityAt: NOW - 2 * 60_000, endedAt: NOW - 2 * 60_000 }),
+      agent({ id: 'e', parentId: 'p3', parentTitle: 'Older', status: 'done', lastActivityAt: NOW - 90 * 60_000, endedAt: NOW - 90 * 60_000 })
+    ], NOW)
+    expect(groups.map((g) => g.sessionKey)).toEqual(['claude:p1', 'codex:p2', 'claude:p3'])
+    expect(groups[0]).toMatchObject({ title: 'Release polish', project: 'Dawsha', agentKind: 'claude', running: 1, done: 1, failed: 1 })
+    expect(groups[0].agents.map((a) => a.id)).toEqual(['b', 'c', 'a'])
+    expect(groups[1].agentKind).toBe('codex')
   })
 })
 
-describe('timeline ticks', () => {
-  it('lands on round local times inside the window', () => {
-    const start = Date.UTC(2026, 9, 12, 9, 17)
-    const ticks = axisTicks({ start, end: start + 24 * 3_600_000, nowPct: 100 }, 0)
-    expect(ticks.map((t) => new Date(t.at).toISOString().slice(11, 16))).toEqual(['12:00', '16:00', '20:00', '00:00', '04:00', '08:00'])
-    expect(ticks.every((t) => t.pct > 0 && t.pct < 100)).toBe(true)
-    const short = axisTicks({ start, end: start + 2 * 3_600_000, nowPct: 100 }, 0)
-    expect(short.map((t) => new Date(t.at).toISOString().slice(11, 16))).toEqual(['09:20', '09:40', '10:00', '10:20', '10:40', '11:00'])
+describe('session waterfall', () => {
+  it('spans the earliest start to the latest end, a running agent ending at now', () => {
+    const span = sessionSpan([agent({ startedAt: NOW - 30 * 60_000, endedAt: NOW - 20 * 60_000 }), agent({ status: 'running', endedAt: null, startedAt: NOW - 10 * 60_000 })], NOW)
+    expect(span).toEqual({ from: NOW - 30 * 60_000, to: NOW })
+  })
+
+  it('is at least a minute wide for one short agent', () => {
+    const span = sessionSpan([agent({ startedAt: NOW - 5_000, endedAt: NOW - 1_000 })], NOW)
+    expect(span.to - span.from).toBe(60_000)
+  })
+
+  it('places bars in percent, at least 3% wide and never past 100%', () => {
+    const span = { from: NOW - 100 * 60_000, to: NOW }
+    const done = barGeometry(agent({ startedAt: NOW - 100 * 60_000, endedAt: NOW - 50 * 60_000 }), span, NOW)
+    expect(done.left).toBe(0)
+    expect(done.width).toBeCloseTo(50, 5)
+    const running = barGeometry(agent({ status: 'running', endedAt: null, startedAt: NOW - 25 * 60_000 }), span, NOW)
+    expect(running.left).toBeCloseTo(75, 5)
+    expect(running.left + running.width).toBeCloseTo(100, 5)
+    const tiny = barGeometry(agent({ startedAt: NOW - 1_000, endedAt: NOW - 500 }), span, NOW)
+    expect(tiny.width).toBe(3)
+    expect(tiny.left + tiny.width).toBeLessThanOrEqual(100)
+    const late = barGeometry(agent({ startedAt: NOW + 60_000, endedAt: NOW + 120_000 }), span, NOW)
+    expect(late.left + late.width).toBeLessThanOrEqual(100)
+    expect(barLabel(agent({ description: 'Grid pass' }), NOW)).toBe('Grid pass, general-purpose, done, 20m')
   })
 })

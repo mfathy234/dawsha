@@ -1,6 +1,6 @@
 import {
-  BG_RANGES, BG_STATUSES, DEFAULT_BG_FILTERS, STATUS_LABELS, applyFilters, axisTicks, axisWindow, barGeometry, barLabel, buildLanes, compactTokens, costLabel, filtersActive,
-  projectOptions, spanLabel, statusCounts, toggleIn, totalsOf, type BackgroundAgent, type BgFilters, type BgKind, type BgLane, type BgRange, type BgStatus
+  BG_RANGES, BG_STATUSES, DEFAULT_BG_FILTERS, STATUS_LABELS, applyFilters, barGeometry, barLabel, compactTokens, costLabel, filtersActive, groupBySession,
+  projectOptions, sessionSpan, spanLabel, statusCounts, toggleIn, totalsOf, type BackgroundAgent, type BgFilters, type BgKind, type BgRange, type BgSessionGroup, type BgStatus
 } from '../../shared/backgroundAgents'
 import { modelLabel } from '../../shared/sessionDetail'
 import { AGENT_NAMES } from '../../shared/agents'
@@ -17,9 +17,8 @@ import './backgroundAgentsView.css'
 const REFRESH_MS = 5000
 const KIND_CHIPS: { kind: BgKind; label: string }[] = [{ kind: 'claude', label: 'Claude Code' }, { kind: 'codex', label: 'Codex' }]
 
-const clock = (at: number): string => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 const stamp = (at: number): string => new Date(at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-const tickLabel = (at: number, range: BgRange): string => (range === '7d' ? new Date(at).toLocaleDateString([], { weekday: 'short', day: 'numeric' }) : clock(at))
+const STATUS_ICONS: Record<BgStatus, string> = { running: '●', done: '✓', failed: '✕' }
 const count = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 
 function makeSelect(id: string, label: string, onChange: (value: string) => void): HTMLSelectElement {
@@ -131,7 +130,7 @@ export class BackgroundAgentsViewComponent {
     const filters = agentsFilters()
     const all = report?.agents ?? []
     const signature = JSON.stringify([
-      all.map((agent) => [agent.key, agent.status, agent.lastActivityAt, agent.endedAt, agent.tokens, agent.description, agent.lastStep]),
+      all.map((agent) => [agent.key, agent.status, agent.lastActivityAt, agent.endedAt, agent.tokens, agent.description, agent.lastStep, agent.result, agent.statusNote]),
       filters, this.selected, agentsFailed(), report === null, this.projects.map((project) => project.id + project.name),
       Math.floor((report?.generatedAt ?? 0) / 60_000)
     ])
@@ -150,9 +149,11 @@ export class BackgroundAgentsViewComponent {
     if (agentsFailed() && !report) content.push(h('p', { class: 'field-error', role: 'alert' }, 'Could not read the agent transcripts. Try again in a moment.'))
     else if (!report) content.push(h('p', { class: 'bg-empty', role: 'status' }, 'Looking for background agents…'))
     else if (shown.length === 0) content.push(this.empty(all, filters))
-    else content.push(this.board(shown, filters.range, report.generatedAt), selected ? this.details(selected) : null)
+    else content.push(this.board(shown, report.generatedAt), selected ? this.details(selected) : null)
     this.body.className = `bg-body${selected ? ' has-details' : ''}`
+    const focusedKey = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.bg-item')?.dataset.key
     this.body.replaceChildren(...content.filter((node): node is HTMLElement => node !== null))
+    if (focusedKey) this.body.querySelector<HTMLElement>(`.bg-item[data-key="${CSS.escape(focusedKey)}"]`)?.focus()
   }
 
   private empty(all: readonly BackgroundAgent[], filters: BgFilters): HTMLElement {
@@ -171,58 +172,53 @@ export class BackgroundAgentsViewComponent {
       h('button', { class: 'btn', type: 'button', id: 'bg-empty-clear', onClick: () => this.clearFilters() }, 'Clear filters'))
   }
 
-  private board(agents: readonly BackgroundAgent[], range: BgRange, now: number): HTMLElement {
-    const window = axisWindow(range, now)
-    const lanes = buildLanes(agents)
-    const ticks = axisTicks(window)
-    const axis = h('div', { class: 'bg-axis', 'aria-hidden': 'true' },
-      h('span', { class: 'bg-axis-head' }, 'Session'),
-      h('div', { class: 'bg-ticks' }, ...ticks.map((tick) => h('span', { style: `left:${tick.pct}%` }, tickLabel(tick.at, range)))))
-    const legend = h('div', { class: 'bg-legend' },
-      ...(['running', 'done', 'failed'] as const).map((status) => h('span', { class: `st-${status}` }, h('span', { class: 'bg-dot' }), STATUS_LABELS[status])),
-      h('span', { class: 'auto' }, h('span', { class: 'bg-dot' }), 'automatic review'),
-      h('span', { class: 'spacer' }), h('span', {}, 'Select a bar for details. Arrow keys move between bars.'))
-    const rows = lanes.map((lane) => this.lane(lane, window, now))
-    for (const tracks of rows.flatMap((row) => [...row.querySelectorAll<HTMLElement>('.bg-tracks')])) {
-      tracks.prepend(...ticks.map((tick) => h('span', { class: 'bg-grid', 'aria-hidden': 'true', style: `left:${tick.pct}%` })))
-    }
-    return h('section', { class: 'bg-board', id: 'bg-board', 'aria-label': 'Agents timeline' }, axis,
-      h('div', { class: 'bg-lanes', role: 'list', onKeydown: (event: Event) => this.moveFocus(event as KeyboardEvent) }, ...rows), legend)
+  private board(agents: readonly BackgroundAgent[], now: number): HTMLElement {
+    const groups = groupBySession(agents, now).map((group) => this.group(group, now))
+    const hint = h('p', { class: 'bg-hint' }, 'Select a row for details. Arrow keys move between rows.')
+    return h('section', { class: 'bg-board', id: 'bg-board', 'aria-label': 'Agents by session' },
+      h('div', { class: 'bg-groups', onKeydown: (event: Event) => this.moveFocus(event as KeyboardEvent) }, ...groups), hint)
   }
 
-  private lane(lane: BgLane, window: ReturnType<typeof axisWindow>, now: number): HTMLElement {
-    const mark = agentMark(lane.kind)
-    return h('div', { class: 'bg-lane', role: 'listitem', 'data-lane': lane.key },
-      h('div', { class: 'bg-who' },
-        h('div', { class: 'bg-who-row' }, mark, h('span', { class: 'bg-who-name', title: lane.title }, lane.title)),
-        h('span', { class: 'bg-who-sub' }, `${lane.projectLabel} · ${count(lane.agents.length, 'agent')}`)),
-      h('div', { class: 'bg-tracks' },
-        h('div', { class: 'bg-now', style: `left:${window.nowPct}%`, 'aria-hidden': 'true' }),
-        ...lane.agents.map((agent) => this.bar(agent, window, now))))
+  private group(group: BgSessionGroup, now: number): HTMLElement {
+    const span = sessionSpan(group.agents, now)
+    const counts = ([['running', group.running], ['done', group.done], ['failed', group.failed]] as const).filter(([, n]) => n > 0).map(([status, n]) => `${n} ${STATUS_LABELS[status]}`)
+    return h('section', { class: 'bg-group', 'aria-label': group.title, 'data-session': group.sessionKey },
+      h('header', { class: 'bg-group-head' },
+        agentMark(group.agentKind),
+        h('div', { class: 'bg-group-who' },
+          h('h2', { class: 'bg-group-title', title: group.title }, group.title),
+          h('span', { class: 'bg-group-project' }, group.project)),
+        h('span', { class: 'bg-group-counts' }, counts.join(' · '))),
+      h('div', { class: 'bg-items' }, ...group.agents.map((agent) => this.item(agent, span, now))))
   }
 
-  private bar(agent: BackgroundAgent, window: ReturnType<typeof axisWindow>, now: number): HTMLElement {
-    const { left, width } = barGeometry(agent, window, now)
+  private item(agent: BackgroundAgent, span: { from: number; to: number }, now: number): HTMLElement {
+    const { left, width } = barGeometry(agent, span, now)
     const label = barLabel(agent, now)
     const end = agent.status === 'running' ? now : agent.endedAt ?? agent.lastActivityAt
-    return h('div', { class: 'bg-track' },
-      h('button', {
-        class: `bg-bar st-${agent.status}${agent.automatic ? ' auto' : ''}${agent.key === this.selected ? ' selected' : ''}`, type: 'button', 'data-key': agent.key, 'data-status': agent.status,
-        style: `left:${left}%;width:${width}%`, 'aria-label': label, 'aria-pressed': String(agent.key === this.selected), title: label,
-        onClick: () => this.select(agent.key)
-      }, h('span', { class: 'bg-dot', 'aria-hidden': 'true' }), h('span', { class: 'bg-bar-text', 'aria-hidden': 'true' }, `${agent.description} · ${spanLabel(end - agent.startedAt)}`)))
+    const note = (agent.status === 'running' ? agent.lastStep : agent.status === 'failed' ? agent.statusNote || agent.lastStep : agent.result || agent.lastStep) || ''
+    return h('button', {
+      class: `bg-item st-${agent.status}${agent.automatic ? ' auto' : ''}${agent.key === this.selected ? ' selected' : ''}`, type: 'button', 'data-key': agent.key, 'data-status': agent.status,
+      'aria-label': label, 'aria-pressed': String(agent.key === this.selected), title: label, onClick: () => this.select(agent.key)
+    },
+      h('span', { class: 'bg-item-icon', 'aria-hidden': 'true' }, STATUS_ICONS[agent.status]),
+      h('span', { class: 'bg-item-name', 'aria-hidden': 'true' }, agent.description),
+      h('span', { class: 'bg-item-status', 'aria-hidden': 'true' }, STATUS_LABELS[agent.status]),
+      h('span', { class: 'bg-item-time', 'aria-hidden': 'true' }, spanLabel(end - agent.startedAt)),
+      h('span', { class: 'bg-track', 'aria-hidden': 'true' }, h('span', { class: 'bg-fill', style: `left:${left}%;width:${width}%` })),
+      h('span', { class: 'bg-item-note', 'aria-hidden': 'true' }, note))
   }
 
   private select(key: string): void {
     this.selected = this.selected === key ? null : key
     this.render()
-    this.body.querySelector<HTMLElement>(`.bg-bar[data-key="${CSS.escape(key)}"]`)?.focus()
+    this.body.querySelector<HTMLElement>(`.bg-item[data-key="${CSS.escape(key)}"]`)?.focus()
   }
 
   private moveFocus(event: KeyboardEvent): void {
     const keys = ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End']
     if (!keys.includes(event.key)) return
-    const bars = [...this.body.querySelectorAll<HTMLElement>('.bg-bar')]
+    const bars = [...this.body.querySelectorAll<HTMLElement>('.bg-item')]
     const at = bars.indexOf(document.activeElement as HTMLElement)
     if (at < 0) return
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? bars.length - 1 : Math.min(bars.length - 1, Math.max(0, at + (event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : -1)))
