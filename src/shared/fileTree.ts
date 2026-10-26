@@ -2,11 +2,14 @@ import { fuzzyMatch } from './palette'
 
 export type TreeMode = 'all' | 'changed' | 'sessions'
 
+// Output of statusLetter() in gitStatus.ts: M, A, D, R, C, T, U or !.
+export type StatusLetter = string
+
 export interface TreeNode {
   name: string
   path: string
   kind: 'folder' | 'file'
-  status: string | null
+  status: StatusLetter | null
   changed: number
   children: TreeNode[]
 }
@@ -27,7 +30,7 @@ function normalize(path: string): string {
   return path.replace(/\\/g, '/')
 }
 
-function insert(root: Draft, path: string, status: Map<string, string>): void {
+function insert(root: Draft, path: string, status: Map<string, StatusLetter>): void {
   const segments = normalize(path).split('/').filter(Boolean)
   let node = root
   let full = ''
@@ -68,9 +71,10 @@ function freeze(draft: Draft): TreeNode {
   }
 }
 
-export function buildTree(files: string[], status: Map<string, string>): TreeNode[] {
+export function buildTree(files: string[], status: Map<string, StatusLetter>): TreeNode[] {
   const root: Draft = { name: '', path: '', file: false, status: null, children: new Map() }
   for (const file of files) insert(root, file, status)
+  for (const path of status.keys()) insert(root, path, status)
   return freeze(root).children
 }
 
@@ -90,10 +94,11 @@ function filterNode(node: TreeNode, mode: TreeMode, sessionFiles: Set<string>, t
 }
 
 export function filterTree(nodes: TreeNode[], mode: TreeMode, sessionFiles: Set<string>, text: string): TreeNode[] {
-  const query = text.trim()
+  const query = normalize(text.trim())
+  const sessions = new Set([...sessionFiles].map(normalize))
   if (mode === 'all' && query === '') return nodes
   return nodes.flatMap((node) => {
-    const kept = filterNode(node, mode, sessionFiles, query)
+    const kept = filterNode(node, mode, sessions, query)
     return kept ? [kept] : []
   })
 }
@@ -102,16 +107,24 @@ function basename(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1)
 }
 
+function isSubstring(query: string, text: string): boolean {
+  const lower = text.toLowerCase()
+  return query.toLowerCase().split(/\s+/).filter(Boolean).every((token) => lower.includes(token))
+}
+
 function recentBoost(file: string, recents: Map<string, number>): number {
   const index = recents.get(file)
   return index === undefined ? 0 : Math.max(0, RECENT_BOOST - index)
 }
 
 function rank(file: string, query: string, recents: Map<string, number>): number | null {
-  const byName = fuzzyMatch(query, basename(file))
-  if (byName) return byName.score + BASENAME_BOOST + recentBoost(file, recents)
+  const name = basename(file)
+  const byName = fuzzyMatch(query, name)
   const byPath = fuzzyMatch(query, file)
-  return byPath ? byPath.score + recentBoost(file, recents) : null
+  if (!byName && !byPath) return null
+  const nameScore = byName ? byName.score + (isSubstring(query, name) ? BASENAME_BOOST : 0) : -Infinity
+  const pathScore = byPath ? byPath.score : -Infinity
+  return Math.max(nameScore, pathScore) + recentBoost(file, recents)
 }
 
 export function quickOpen(files: string[], query: string, recent: string[]): string[] {
@@ -119,8 +132,9 @@ export function quickOpen(files: string[], query: string, recent: string[]): str
   recent.forEach((file, index) => {
     if (!recents.has(file)) recents.set(file, index)
   })
+  const text = normalize(query.trim())
   const scored = [...new Set(files)].flatMap((file) => {
-    const score = rank(file, query.trim(), recents)
+    const score = rank(file, text, recents)
     return score === null ? [] : [{ file, score }]
   })
   return scored

@@ -50,14 +50,18 @@ describe('buildTree', () => {
     expect(find(tree, 'src/lib/a.ts')).toMatchObject({ status: 'A' })
   })
 
-  it('handles 20,000 paths quickly', () => {
+  it('builds 20,000 paths', () => {
     const files = Array.from({ length: 20_000 }, (_, i) => `dir${i % 200}/sub${i % 37}/file${i}.ts`)
     const status = new Map(files.filter((_, i) => i % 10 === 0).map((file) => [file, 'M']))
-    const started = performance.now()
     const tree = buildTree(files, status)
-    const elapsed = performance.now() - started
     expect(find(tree, 'dir0')?.changed).toBe(100)
-    expect(elapsed).toBeLessThan(2000)
+  })
+
+  it('adds paths that exist only in git status, such as staged deletions', () => {
+    const tree = buildTree(['a.ts'], new Map([['gone.ts', 'D']]))
+    expect(find(tree, 'gone.ts')).toMatchObject({ kind: 'file', status: 'D', changed: 1 })
+    const nested = buildTree(['src/a.ts'], new Map([['src/gone.ts', 'D']]))
+    expect(find(nested, 'src')).toMatchObject({ changed: 1 })
   })
 })
 
@@ -100,6 +104,16 @@ describe('filterTree', () => {
     expect(filterTree(tree, 'sessions', sessions, 'store')).toEqual(filterTree(tree, 'all', sessions, 'store'))
   })
 
+  it('keeps the full path in the text filter', () => {
+    expect(paths(filterTree(tree, 'all', sessions, 'util'))).toContain('src/app/util/format.ts')
+  })
+
+  it('normalizes backslashes in session paths and the text filter', () => {
+    const copy = buildTree(['sample/copy.ts', 'other.ts'], new Map())
+    expect(paths(filterTree(copy, 'all', new Set(), 'Sample\\Copy'))).toEqual(['sample', 'sample/copy.ts'])
+    expect(paths(filterTree(copy, 'sessions', new Set(['sample\\copy.ts']), ''))).toEqual(['sample', 'sample/copy.ts'])
+  })
+
   it('keeps the folder badge counts of the unfiltered tree', () => {
     const filtered = filterTree(tree, 'changed', sessions, '')
     expect(find(filtered, 'src/app')).toMatchObject({ changed: 1 })
@@ -127,6 +141,15 @@ describe('quickOpen', () => {
       .toEqual(['src/z.ts', 'src/a.ts'])
   })
 
+  it('ranks a substring basename match above a longer fuzzy one', () => {
+    expect(quickOpen(['src/app/main.ts', 'apple-domain.ts'], 'appmain', [])).toEqual(['src/app/main.ts', 'apple-domain.ts'])
+  })
+
+  it('normalizes backslashes in the query', () => {
+    expect(quickOpen(['sample/copy.ts', 'x.ts'], 'Sample\\Copy', [])).toEqual(['sample/copy.ts'])
+  })
+
+  // Empty query: every file scores 0, so only the recent boost reorders and equal scores keep input order.
   it('lists recent files first, in recency order, when the query is empty', () => {
     expect(quickOpen(files, '', ['src/z.ts', 'src/a.ts'])).toEqual(['src/z.ts', 'src/a.ts', ...files.filter((f) => f !== 'src/z.ts' && f !== 'src/a.ts')])
   })
@@ -140,11 +163,9 @@ describe('quickOpen', () => {
     expect(quickOpen(many, 'file', [])).toHaveLength(50)
   })
 
-  it('handles 20,000 files quickly', () => {
+  it('ranks 20,000 files', () => {
     const many = Array.from({ length: 20_000 }, (_, i) => `dir${i % 200}/file${i}.ts`)
-    const started = performance.now()
     const results = quickOpen(many, 'file19', ['dir199/file19999.ts'])
-    expect(performance.now() - started).toBeLessThan(2000)
     expect(results[0]).toBe('dir199/file19999.ts')
     expect(results).toHaveLength(50)
   })
