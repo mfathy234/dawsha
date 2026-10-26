@@ -96,3 +96,25 @@ test('the dim setting turns the calm look off', async () => {
     await closeApp(app)
   }
 })
+
+test('the recap setting hides the one-line recap', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await addPanes(page, 1)
+    const pane = page.locator('.pane').first()
+    const termId = (await pane.locator('.term-host').first().getAttribute('data-term-id')) ?? ''
+    await expect(async () => {
+      await feedTerminal(page, termId, '\r\n※ recap: Import script fixed; waiting on the dev migration before re-importing.\r\n')
+      await expect(pane.locator('.pane-recap')).toContainText('Import script fixed', { timeout: 3500 })
+    }).toPass({ timeout: 30_000 })
+    await expect(pane.locator('.pane-recap')).toBeVisible()
+    await page.locator('#settings-button').click()
+    const toggle = page.getByRole('checkbox', { name: 'Show a one-line recap in each session' })
+    await expect(toggle).toBeChecked()
+    await toggle.uncheck()
+    await expect(pane.locator('.pane-recap')).toBeHidden()
+  } finally {
+    await closeApp(app)
+  }
+})

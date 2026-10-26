@@ -126,6 +126,7 @@ export interface Settings {
   theme: ThemeSettings
   sidebarCollapsed: boolean
   dimIdlePanes: boolean
+  showRecap: boolean
   sidebarWidth: number
   othersCollapsed: boolean
   sessionsLayout: SessionsLayout

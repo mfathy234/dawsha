@@ -222,6 +222,7 @@ export class PaneComponent {
     this.updateInfo(view, maximized)
     this.foot.hidden = this.info.hidden && this.branch.hidden
     this.updateRecap(view)
+    this.recap.hidden = !store.state.settings.showRecap || this.recapText === ''
     this.updateHint(view)
     this.updatePermission(view, state)
     this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now, view.info.geminiTools)
@@ -336,7 +337,6 @@ export class PaneComponent {
     const text = recapFromScreen(getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? '')
     if (text === this.recapText) return
     this.recapText = text
-    this.recap.hidden = text === ''
     this.recap.textContent = text
     this.recap.title = text
   }

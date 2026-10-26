@@ -1,28 +1,10 @@
-/* Calmer grid: a state edge on every pane, a one-line recap, a dimmed idle terminal and an approval bar above the footer. */
-.pane::before {
-  content: '';
-  flex: none;
-  height: 3px;
-  background: transparent;
-}
-.pane[data-state='needs']::before { background: var(--state-needs); }
-.pane[data-state='working']::before { background: var(--state-working); }
-.pane[data-state='done']::before,
-.pane[data-state='idle']::before { background: color-mix(in srgb, var(--idle) 55%, transparent); }
-@media (prefers-reduced-motion: no-preference) {
-  .pane[data-state='needs']::before { animation: pane-edge-pulse 2.6s ease-in-out infinite; }
-}
-@keyframes pane-edge-pulse {
-  50% { opacity: 0.55; }
-}
+/* Calmer grid: a one-line recap, a dimmed idle terminal and an approval bar above the footer. */
 
 .pane-recap {
   flex: none;
-  padding: 5px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  padding: 0 12px 6px 34px;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;

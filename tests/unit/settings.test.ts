@@ -13,6 +13,12 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ experimental: { orchestrator: false } }).experimental).toEqual({ orchestrator: true })
     expect(migrateSettings({}).experimental).toEqual({ orchestrator: true })
   })
+  it('shows the recap by default and only turns it off when told to', () => {
+    expect(defaultSettings().showRecap).toBe(true)
+    expect(migrateSettings({}).showRecap).toBe(true)
+    expect(migrateSettings({ showRecap: 'no' }).showRecap).toBe(true)
+    expect(migrateSettings({ showRecap: false }).showRecap).toBe(false)
+  })
   it('keeps closed sessions and task history only for known projects', () => {
     const projects = [{ id: 'api', name: 'API', folder: 'C:\\work\\api', defaultAgent: 'codex' }]
     const keptSessions = [{ projectId: 'api', agent: 'codex', sessionId: 'session-1', title: 'Fix export', closedAt: 100 }, { projectId: 'missing', agent: 'claude', sessionId: 'x', title: 'Orphan', closedAt: 100 }]

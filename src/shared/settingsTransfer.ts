@@ -19,6 +19,7 @@ export const INCLUDED_KEYS = [
   'autoUpdateCheck',
   'sidebarCollapsed',
   'dimIdlePanes',
+  'showRecap',
   'sidebarWidth',
   'othersCollapsed',
   'orchestrator'
@@ -98,7 +99,7 @@ const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
 const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'dictation', 'sessionInfo'] as const
-const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'dimIdlePanes', 'othersCollapsed'] as const
+const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'dimIdlePanes', 'showRecap', 'othersCollapsed'] as const
 
 function checkShapes(data: Raw): string | null {
   for (const key of LIST_KEYS) {
@@ -206,6 +207,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['autoUpdateCheck', 'Update checks'],
   ['sidebarCollapsed', 'Sidebar'],
   ['dimIdlePanes', 'Session dimming'],
+  ['showRecap', 'Session recap'],
   ['sidebarWidth', 'Sidebar'],
   ['othersCollapsed', 'Sidebar'],
   ['orchestrator', 'Orchestrator settings']

@@ -898,6 +898,11 @@ export function toggleOthersPanel(): void {
   void saveSettings({ othersCollapsed })
 }
 
+export function setShowRecap(showRecap: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, showRecap } }))
+  void saveSettings({ showRecap })
+}
+
 export function setDimIdlePanes(dimIdlePanes: boolean): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, dimIdlePanes } }))
   void saveSettings({ dimIdlePanes })

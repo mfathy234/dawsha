@@ -13,6 +13,7 @@ import {
   setPaletteShortcut,
   setSessionInfo,
   setDimIdlePanes,
+  setShowRecap,
   setSidebarCollapsed,
   showSettingsSection,
   showView
@@ -553,6 +554,7 @@ export class SettingsViewComponent {
         this.shortcutError ? h('p', { class: 'field-error', id: 'palette-shortcut-error', role: 'alert' }, this.shortcutError) : null
       ),
       row('Sessions', checkbox('dim-idle-panes', "Dim sessions you're not working in", state.settings.dimIdlePanes, false, setDimIdlePanes)),
+      row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap)),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed)),
       row(
         'Getting started',
