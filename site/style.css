@@ -287,6 +287,7 @@ html.lenis { scroll-behavior: auto; }
 .launch-video[hidden] { display: none; }
 .launch-video + .feat-row { margin-top: 56px; }
 .feat-note { margin-top: 72px; max-width: 62ch; }
+.feat-note + .feat-note { margin-top: 48px; }
 .feat-row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; margin-top: 72px; }
 .feat-row:first-of-type { margin-top: 56px; }
 .feat-row.flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
