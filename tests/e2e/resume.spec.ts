@@ -182,12 +182,13 @@ test('closed sessions list the newest first, fold away and clear after a confirm
   const sandbox = createSandbox()
   const settings = readSettings(sandbox.userData)
   const now = Date.now()
+  const startOfToday = new Date().setHours(0, 0, 0, 0)
   const kept = Array.from({ length: 7 }, (_, i) => ({
     projectId: 'smoke',
     agent: 'claude',
     sessionId: `00000000-0000-4000-8000-00000000000${i}`,
     title: `Closed ${i}`,
-    closedAt: now - (7 - i) * 3_600_000
+    closedAt: Math.max(now - (7 - i) * 3_600_000, startOfToday + (i + 1) * 1_000)
   }))
   writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({ ...settings, keptSessions: kept }), 'utf8')
   const { app, page } = await launchApp(sandbox)
@@ -195,7 +196,7 @@ test('closed sessions list the newest first, fold away and clear after a confirm
     const names = page.locator('.kept-session-row.closed .sess-name')
     await expect(names).toHaveCount(5)
     await expect(names).toHaveText(['Closed 6', 'Closed 5', 'Closed 4', 'Closed 3', 'Closed 2'])
-    await expect(page.locator('.kept-session-row.closed .sess-ago').first()).toHaveText('1h')
+    await expect(page.locator('.kept-session-row.closed .sess-ago').first()).toHaveText(/^\d+[mh]$/)
     await page.getByRole('button', { name: 'Show all 7' }).click()
     await expect(names).toHaveCount(7)
     await expect(names.last()).toHaveText('Closed 0')

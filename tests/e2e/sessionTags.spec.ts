@@ -157,11 +157,13 @@ for (const [theme, name] of [['dawsha-night', 'dark'], ['dawsha-daylight', 'ligh
     const sandbox = createSandbox()
     const now = Date.now()
     const date = new Date()
+    const startOfToday = new Date().setHours(0, 0, 0, 0)
+    const earlierToday = (hours: number, floorSeconds: number): number => Math.max(now - hours * 3_600_000, startOfToday + floorSeconds * 1_000)
     const day = (days: number): number => new Date(date.getFullYear(), date.getMonth(), date.getDate() - days, 12).getTime()
     const kept = [
-      ['Fix the invoice export', 'bug', now - 60_000],
-      ['Add a dark mode toggle', 'feature', now - 3_600_000],
-      ['Review the auth change', 'review', now - 7_200_000],
+      ['Fix the invoice export', 'bug', earlierToday(0, 30)],
+      ['Add a dark mode toggle', 'feature', earlierToday(1, 20)],
+      ['Review the auth change', 'review', earlierToday(2, 10)],
       ['Compare SQL drivers', 'research', day(1)],
       ['Update the README', 'docs', day(1)],
       ['Untagged scratch session', undefined, day(4)]
