@@ -13,6 +13,8 @@ export interface UpdatesOptions {
   send: (channel: string, ...args: unknown[]) => void
   shutdown: () => Promise<void>
   markQuitting: () => void
+  /** Asked before an update restart shuts the app down; false keeps the app running. */
+  mayQuit?: () => Promise<boolean>
   autoUpdates?: boolean
 }
 
@@ -44,6 +46,7 @@ export function setupUpdates(options: UpdatesOptions): UpdateController {
   ipcMain.handle(IPC.updateOpenLink, (_event, url: unknown) => openLink(typeof url === 'string' ? url : ''))
   ipcMain.handle(IPC.updateRestart, async () => {
     if (controller.state.status !== 'ready' || controller.state.mode !== 'installed') return
+    if (options.mayQuit && !(await options.mayQuit())) return
     await options.shutdown()
     options.markQuitting()
     controller.restart()

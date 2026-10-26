@@ -120,6 +120,7 @@ export const IPC = {
   flushRequest: 'app:flush-request',
   flushDone: 'app:flush-done',
   closeCheck: 'app:close-check',
+  closeCheckAck: 'app:close-check-ack',
   closeCheckDone: 'app:close-check-done',
   orchOpenPane: 'orch:open-pane',
   orchClosePane: 'orch:close-pane',

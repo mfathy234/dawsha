@@ -171,6 +171,7 @@ const api: GridApi = {
   setRecordingTitle: (id, title) => ipcRenderer.send(IPC.recordingsTitle, id, title),
   onCloseCheck: (listener) => {
     ipcRenderer.on(IPC.closeCheck, () => {
+      ipcRenderer.send(IPC.closeCheckAck)
       void listener().then((ok) => ipcRenderer.send(IPC.closeCheckDone, ok), () => ipcRenderer.send(IPC.closeCheckDone, true))
     })
   },
