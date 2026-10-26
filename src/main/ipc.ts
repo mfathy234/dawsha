@@ -26,7 +26,7 @@ import { changedFiles, currentBranch, gitChanges, gitSync } from './git'
 import { listBranches, runGitQuick } from './gitQuick'
 import type { GitQuickRequest } from '../shared/gitBranches'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
-import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
+import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder } from './knownFolder'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
@@ -242,7 +242,7 @@ export function registerIpc(
   ipcMain.handle(IPC.filesExist, (_event, folder: string, candidates: string[]) => existingFiles(folder, candidates))
   ipcMain.handle(IPC.filesOpenVsCode, async (_event, folder: unknown, path: unknown, line: unknown) => {
     const root = await known(folder)
-    const full = root ? resolveFile(root, path) : null
+    const full = root ? await resolveProjectPath(root, path) : null
     if (full && !full.includes('"')) await openInVsCode(full, Number.isInteger(line) && (line as number) > 0 ? (line as number) : undefined)
   })
   ipcMain.handle(IPC.filesOpen, (_event, folder: string, ref: FileRef) => openFile(folder, ref))

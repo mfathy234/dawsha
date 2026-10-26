@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
-import { appendFileSync, readdirSync } from 'node:fs'
-import { delimiter, join } from 'node:path'
+import { appendFileSync, existsSync, readdirSync } from 'node:fs'
+import { delimiter, dirname, join } from 'node:path'
 import { BrowserWindow, Notification, app, nativeImage, shell } from 'electron'
 import { OVERLAY_SIZE, badgeWindowTitle, normalizeBadgeCount, overlayBitmap } from '../shared/attentionBadge'
 import { safeLink } from '../shared/markdown'
@@ -51,11 +51,19 @@ export async function openInVsCode(full: string, line?: number): Promise<void> {
   const log = process.env.DAWSHA_OPEN_LOG
   if (log) return logTo(log, JSON.stringify({ kind: 'vscode-file', path: full, ...(line ? { line } : {}) }))
   const target = line ? `${full}:${line}` : full
+  const executable = resolveExecutable('code', platformExecutableDirs())
+  const args = ['--reuse-window', '-g', target]
+  // On Windows `code` is a .cmd, which needs a shell that expands %VAR% in the path; Code.exe next to it takes the arguments directly.
+  const exe = process.platform === 'win32' && executable ? join(dirname(executable), '..', 'Code.exe') : null
   const child = process.platform !== 'win32'
-    ? spawn(resolveExecutable('code', platformExecutableDirs()) ?? 'code', ['--reuse-window', '-g', target], { detached: true, stdio: 'ignore' })
-    : spawn(`code --reuse-window -g "${target}"`, { shell: true, detached: true, stdio: 'ignore', windowsHide: true })
-  child.on('error', () => undefined)
-  child.unref()
+    ? spawn(executable ?? 'code', args, { detached: true, stdio: 'ignore' })
+    : exe && existsSync(exe)
+      ? spawn(exe, args, { detached: true, stdio: 'ignore', windowsHide: true })
+      : target.includes('%')
+        ? null
+        : spawn(`code --reuse-window -g "${target}"`, { shell: true, detached: true, stdio: 'ignore', windowsHide: true })
+  child?.on('error', () => undefined)
+  child?.unref()
 }
 
 export async function openLink(url: string): Promise<void> {

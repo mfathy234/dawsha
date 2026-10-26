@@ -1,5 +1,5 @@
-import { open, readdir, readFile, realpath, stat } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { open, readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
+import { basename, dirname, join, relative } from 'node:path'
 import {
   MAX_BASELINE_UNTRACKED,
   parseNumstatZ,
@@ -56,7 +56,7 @@ export async function projectFiles(folder: unknown): Promise<ProjectFilesResult>
   const root = await repoRoot(folder)
   if (!root) {
     const walked = await walk(folder)
-    return { ok: true, files: walked.files.sort(), truncated: walked.truncated, repo: false }
+    return { ok: true, files: walked.files.sort(), truncated: walked.truncated, repo: false, prefix: '' }
   }
   // Ask git for the folder's place in the repo: comparing paths breaks when one side went through a symlink
   // (macOS /var is /private/var) or a Windows short name.
@@ -65,10 +65,28 @@ export async function projectFiles(folder: unknown): Promise<ProjectFilesResult>
   const listed = await git(root, ['ls-files', '-z', '-c', '-o', '--exclude-standard', '--', scope || '.'])
   if (!listed.ok) return { ok: false, error: listed.message }
   const all = [...new Set(splitZ(listed.stdout))].sort()
-  return { ok: true, files: all.slice(0, MAX_LISTED), truncated: all.length > MAX_LISTED, repo: true }
+  return { ok: true, files: all.slice(0, MAX_LISTED), truncated: all.length > MAX_LISTED, repo: true, prefix: scope }
 }
 
-type Resolved = { ok: true; root: string; rel: string; full: string; realRel: string } | { ok: false; error: string; missing?: { root: string; rel: string } }
+interface Missing {
+  root: string
+  realRoot: string
+  scope: string
+  rel: string
+}
+
+type Resolved = { ok: true; root: string; rel: string; full: string; realRel: string } | { ok: false; error: string; missing?: Missing }
+
+const lower = (text: string): string => (process.platform === 'win32' ? text.toLowerCase() : text)
+
+// A project can be a sub folder of its repository: paths are repo-relative, but only those under the project's own prefix are the project's.
+const inScope = (scope: string, rel: string): boolean => scope === '' || lower(rel).startsWith(`${lower(scope)}/`)
+
+// The real path of a project file for other main-side features (opening it in an editor), or null when it is not one.
+export async function resolveProjectPath(folder: unknown, path: unknown): Promise<string | null> {
+  const target = await resolveProjectFile(folder, path)
+  return target.ok ? target.full : null
+}
 
 // The one validator for a project file: relative path checks, then the real location (symlinks resolved)
 // must still be inside the project's real root. realRel is that location relative to the real root, in its
@@ -82,13 +100,23 @@ async function resolveProjectFile(folder: unknown, path: unknown): Promise<Resol
   const root = (await repoRoot(folder)) ?? folder
   const lexical = insideRoot(root, rel)
   if (!lexical) return { ok: false, error: `Path is outside the project: ${rel}` }
+  let realRoot: string
+  let scope: string
   try {
-    const realRoot = await realpath(root)
-    const full = await realpath(lexical)
-    if (!insideRoot(realRoot, full)) return { ok: false, error: `Path is outside the project: ${rel}` }
-    return { ok: true, root, rel, full, realRel: relative(realRoot, full).replace(/\\/g, '/') }
+    realRoot = await realpath(root)
+    scope = relative(realRoot, await realpath(folder)).replace(/\\/g, '/')
   } catch {
-    return { ok: false, error: `${rel} no longer exists.`, missing: { root, rel } }
+    return { ok: false, error: 'No project folder.' }
+  }
+  if (scope.startsWith('..')) scope = ''
+  if (!inScope(scope, rel)) return { ok: false, error: `Path is outside the project: ${rel}` }
+  try {
+    const full = await realpath(lexical)
+    const realRel = relative(realRoot, full).replace(/\\/g, '/')
+    if (!insideRoot(realRoot, full) || !inScope(scope, realRel)) return { ok: false, error: `Path is outside the project: ${rel}` }
+    return { ok: true, root, rel, full, realRel }
+  } catch {
+    return { ok: false, error: `${rel} no longer exists.`, missing: { root, realRoot, scope, rel } }
   }
 }
 
@@ -126,7 +154,7 @@ export async function writeProjectFile(folder: unknown, path: unknown, text: unk
   if (typeof text !== 'string' || typeof expectedMtime !== 'number' || !Number.isFinite(expectedMtime)) return { ok: false, error: 'Invalid save request.' }
   if (Buffer.byteLength(text, 'utf8') > MAX_READ_BYTES) return { ok: false, error: 'File is too large to save here.' }
   const target = await resolveProjectFile(folder, path)
-  if (!target.ok) return target
+  if (!target.ok) return target.missing ? createProjectFile(target.missing, text) : target
   let handle
   try {
     handle = await open(target.full, 'r+')
@@ -153,7 +181,35 @@ export async function writeProjectFile(folder: unknown, path: unknown, text: unk
   }
 }
 
-async function mergeBase(root: string): Promise<string | null> {
+// Saving a file that was deleted on disk while it was open writes it again, as long as its folder is still inside the project.
+async function createProjectFile(missing: Missing, text: string): Promise<ProjectFileWriteResult> {
+  const lexical = insideRoot(missing.root, missing.rel)
+  if (!lexical) return { ok: false, error: `Path is outside the project: ${missing.rel}` }
+  try {
+    const parent = await realpath(dirname(lexical))
+    const full = join(parent, basename(lexical))
+    const realRel = relative(missing.realRoot, full).replace(/\\/g, '/')
+    if (realRel.startsWith('..') || !inScope(missing.scope, realRel)) return { ok: false, error: `Path is outside the project: ${missing.rel}` }
+    await writeFile(full, text, { encoding: 'utf8', flag: 'wx' })
+    return { ok: true, mtimeMs: (await stat(full)).mtimeMs }
+  } catch (error) {
+    return { ok: false, error: `Could not save ${missing.rel}: ${(error as Error).message}` }
+  }
+}
+
+const MERGE_BASE_TTL_MS = 5000
+const mergeBases = new Map<string, { at: number; base: Promise<string | null> }>()
+
+// The merge base is the same for every file of a root, so a burst of watcher refreshes asks git once.
+function mergeBase(root: string): Promise<string | null> {
+  const hit = mergeBases.get(root)
+  if (hit && Date.now() - hit.at < MERGE_BASE_TTL_MS) return hit.base
+  const base = findMergeBase(root)
+  mergeBases.set(root, { at: Date.now(), base })
+  return base
+}
+
+async function findMergeBase(root: string): Promise<string | null> {
   if (!(await hasHead(root))) return null
   for (const ref of ['origin/main', 'main', 'master']) {
     if (!(await git(root, ['rev-parse', '--verify', '-q', `${ref}^{commit}`])).ok) continue
@@ -173,7 +229,8 @@ export async function fileAgainstBase(folder: unknown, path: unknown): Promise<F
   if (current.text === null) return { ok: false, error: current.reason === 'large' ? 'File is too large to compare.' : current.reason === 'encoding' ? 'File is not UTF-8.' : 'File is binary.' }
   const root = await repoRoot(folder)
   const base = root ? await mergeBase(root) : null
-  if (!root || !base) return { ok: true, base: null, text: current.text }
+  if (!root) return { ok: true, base: null, text: current.text, reason: 'norepo' }
+  if (!base) return { ok: true, base: null, text: current.text }
   const shown = await git(root, ['show', `${base}:${target.realRel}`])
   if ((shown.ok && Buffer.byteLength(shown.stdout, 'utf8') > MAX_READ_BYTES) || (!shown.ok && /maxBuffer/i.test(shown.message))) return { ok: true, base: null, text: current.text, reason: 'large' }
   return { ok: true, base: shown.ok ? shown.stdout : null, text: current.text }
