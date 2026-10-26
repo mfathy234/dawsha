@@ -10,30 +10,13 @@
 :root .dialog,
 :root .popover,
 :root .palette {
-  border: 0;
+  --field-bg: var(--bg);
   border-radius: var(--popup-radius);
   background: var(--surface-pop);
   box-shadow: var(--popup-shadow);
 }
 
-:root .palette-head,
-:root .rp-head { border-bottom-color: color-mix(in srgb, var(--border) 45%, transparent); }
-
-:root :is(.dialog, .popover, .palette) :is(.text-input, .rp-project, .select-menu-trigger, .field-select) {
-  border: 0;
-  background: var(--bg);
-}
-:root :is(.dialog, .popover, .palette) :is(.text-input, .rp-project, .field-select):focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-:root .rp-tabs { border: 0; background: var(--bg); }
-:root .rp-tab.selected { background: var(--raised); }
-:root .rp-chip { border: 0; background: var(--bg); }
-:root .rp-chip.selected { background: var(--raised); }
-:root .seg { border: 0; background: var(--bg); }
-:root .seg-btn + .seg-btn { border-left: 0; }
-:root .seg-btn:hover, :root .seg-btn.on { background: var(--raised); }
+:is(.dialog, .popover, .palette) :is(.text-input, .field-select) { border: 0; background: var(--field-bg); }
 
 :root .dialog h2,
 :root .popup-head .popover-title,
@@ -70,4 +53,3 @@
 @keyframes popup-in {
   from { opacity: 0; transform: translateY(4px); }
 }
-:root .rp-row.selected { outline: 0; background: var(--bg); }

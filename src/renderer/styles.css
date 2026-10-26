@@ -38,7 +38,6 @@
   --raised: #161b23;
   --surface-pop: color-mix(in srgb, var(--raised) 94%, white);
   --shadow-pop: 0 16px 40px rgb(0 0 0 / .45);
-  --focus-ring: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   --border: #232833;
   --text: #d6dae3;
   --muted: #8a93a6;
@@ -161,9 +160,8 @@ button {
   align-items: center;
   gap: 2px;
   padding: 3px;
-  border: 1px solid var(--border);
   border-radius: 11px;
-  background: var(--surface);
+  background: var(--raised);
 }
 
 .topbar-nav .btn {
@@ -206,7 +204,6 @@ button {
 .zoom-control {
   display: flex;
   padding-right: 4px;
-  border-right: 1px solid var(--border);
 }
 
 .zoom-control .zoom-button {
@@ -1148,10 +1145,7 @@ button {
   position: fixed;
   z-index: 30;
   padding: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
 .popover.menu {
@@ -1380,10 +1374,7 @@ input[type='checkbox'] {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
 .dialog.has-x {
@@ -1726,8 +1717,8 @@ input[type='checkbox'] {
 .seg {
   display: inline-flex;
   height: 36px;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
+  background: var(--bg);
   overflow: hidden;
 }
 
@@ -1738,10 +1729,6 @@ input[type='checkbox'] {
   color: var(--muted);
   font-size: 13px;
   cursor: pointer;
-}
-
-.seg-btn + .seg-btn {
-  border-left: 1px solid var(--border);
 }
 
 .seg-btn:hover {
@@ -2414,7 +2401,6 @@ input[type='checkbox'] {
   padding: 2px;
   gap: 2px;
   background: var(--bg);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
@@ -2496,8 +2482,8 @@ input[type='checkbox'] {
 .rp-actions .kbd {
   margin-left: 0;
   padding: 1px 5px;
-  border: 1px solid var(--border);
   border-radius: 6px;
+  background: var(--bg);
   font-family: var(--font-mono);
   font-size: 11px;
 }
@@ -2526,7 +2512,6 @@ input[type='checkbox'] {
   width: 170px;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
   color: var(--text);
@@ -2544,16 +2529,15 @@ input[type='checkbox'] {
   gap: 6px;
   height: 28px;
   padding: 0 10px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius);
-  background: transparent;
+  background: var(--bg);
   color: var(--text);
   font-size: 12px;
   cursor: pointer;
 }
 
 .rp-chip.selected {
-  border-color: var(--accent);
   background: var(--raised);
   color: var(--accent);
 }
@@ -2598,9 +2582,7 @@ input[type='checkbox'] {
 }
 
 .rp-row.selected {
-  background: var(--raised);
-  outline: 1px solid var(--accent);
-  outline-offset: -1px;
+  background: var(--bg);
 }
 
 .rp-row-main {
@@ -2641,8 +2623,8 @@ input[type='checkbox'] {
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 0 6px;
-  border: 1px solid var(--border);
   border-radius: 6px;
+  background: var(--bg);
   font-family: var(--font-mono);
   font-size: 11px;
 }
@@ -3029,10 +3011,7 @@ input[type='checkbox'] {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
 }
 
 .palette-head {
@@ -3042,7 +3021,7 @@ input[type='checkbox'] {
   align-items: center;
   gap: 10px;
   padding: 0 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
   color: var(--muted);
 }
 
@@ -3068,8 +3047,8 @@ input[type='checkbox'] {
 .palette-kbd {
   flex: none;
   padding: 1px 5px;
-  border: 1px solid var(--border);
   border-radius: 6px;
+  background: var(--bg);
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -4688,7 +4667,6 @@ body.dragging-ui {
   align-items: center;
   gap: 6px;
   padding: 4px 4px 4px 12px;
-  border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--bg);
 }
@@ -4915,14 +4893,14 @@ body.dragging-ui {
   padding: 0 8px;
   color: var(--text);
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: 6px;
   font: 13px var(--font-mono);
 }
 
 .term-find-input:focus {
-  outline: none;
-  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
 }
 
 .term-find-count {
@@ -5392,9 +5370,8 @@ body.dragging-ui {
   gap: 0;
   margin-right: 6px;
   padding: 0;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--raised);
   overflow: hidden;
 }
 
@@ -7832,9 +7809,8 @@ button.tl-event:hover { background: var(--raised); }
   align-items: center;
   gap: 2px;
   padding: 3px;
-  border: 1px solid var(--border);
   border-radius: 11px;
-  background: var(--surface);
+  background: var(--raised);
 }
 .layout-switch .btn { height: 26px; padding: 0 10px; border: 0; border-radius: 8px; color: var(--muted); font-weight: 500; }
 .layout-switch .btn:hover { background: var(--raised); color: var(--text); }
@@ -8182,12 +8158,4 @@ button.tl-event:hover { background: var(--raised); }
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-/* Top bar groups: filled, no outline. */
-.topbar-nav,
-.layout-switch,
-.zoom-control {
-  border: 0;
-  background: var(--raised);
 }
