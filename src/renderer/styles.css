@@ -232,6 +232,10 @@ button {
   .topbar-nav { gap: 0; }
   .topbar .split-main { padding: 0 8px; }
   .topbar-count, .topbar-limits, .utility-label { display: none; }
+  .topbar .sum-chip.state-working, .topbar .sum-chip.state-idle { display: none; }
+  /* Room for the Agents tab: the logo stays, its name goes, and the tabs tighten. */
+  .app-title { display: none; }
+  .topbar-nav .btn { padding: 0 5px; }
   .topbar-tools .zoom-button { padding: 0; }
   .app-title { margin-right: 0; }
 }

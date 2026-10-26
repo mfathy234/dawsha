@@ -114,7 +114,7 @@ export class BackgroundAgentScanner {
         parentId,
         parentTitle: titles.get(`${raw.agent.kind}:${parentId}`) ?? `${raw.agent.kind === 'claude' ? 'Claude' : 'Codex'} session ${parentId.slice(0, 8)}`,
         projectId: project?.id ?? null,
-        projectLabel: project?.name ?? (raw.agent.cwd ? basename(raw.agent.cwd) || raw.agent.cwd : raw.folderSlug ?? 'Unknown folder'),
+        projectLabel: project?.name ?? (raw.agent.cwd ? (raw.agent.cwd.split(/[\\/]/).filter(Boolean).pop() ?? raw.agent.cwd) : raw.folderSlug ?? 'Unknown folder'),
         description: raw.agent.description,
         type: raw.agent.type,
         automatic: raw.agent.automatic,

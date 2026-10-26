@@ -54,10 +54,9 @@
 /* Narrow panes (the small ones in the 3 and 5 pane shapes) keep their buttons and give up the extras first. */
 .pane-header > .icon-btn { flex: none; }
 .pane-header .pane-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@container pane-header (max-width: 440px) {
-  .pane-header .pane-fresh,
-  .pane-header .chip-resumed { display: none; }
-}
+/* "new session" and "resumed" stay visible on any width; they shrink with an ellipsis instead. */
+.pane-header .pane-fresh,
+.pane-header .chip-resumed { flex: 0 1 auto; min-width: 2.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @container pane-header (max-width: 460px) {
   .pane-header { gap: 6px; }
   .pane-header .pane-prev,

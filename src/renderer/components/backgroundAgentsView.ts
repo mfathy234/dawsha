@@ -123,10 +123,20 @@ export class BackgroundAgentsViewComponent {
     }, h('span', { class: 'bg-dot', 'aria-hidden': 'true' }), `${total} ${STATUS_LABELS[status]}`)
   }
 
+  // A refresh that changes nothing leaves the page alone, so focus, hover and an open details panel stay put.
+  private signature = ''
+
   private render(): void {
     const report = agentsReport()
     const filters = agentsFilters()
     const all = report?.agents ?? []
+    const signature = JSON.stringify([
+      all.map((agent) => [agent.key, agent.status, agent.lastActivityAt, agent.endedAt, agent.tokens, agent.description, agent.lastStep]),
+      filters, this.selected, agentsFailed(), report === null, this.projects.map((project) => project.id + project.name),
+      Math.floor((report?.generatedAt ?? 0) / 60_000)
+    ])
+    if (signature === this.signature && this.el.isConnected) return
+    this.signature = signature
     this.syncControls(filters, all)
     const shown = applyFilters(all, filters)
     const counts = statusCounts(applyFilters(all, filters, 'status'))
