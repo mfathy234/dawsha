@@ -159,7 +159,13 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
       suppress = true
       try {
         view.dispatch({ effects: eol.reconfigure(eolFor(text)) })
-        view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } })
+        const current = view.state.sliceDoc()
+        let start = 0
+        const shortest = Math.min(current.length, text.length)
+        while (start < shortest && current.charCodeAt(start) === text.charCodeAt(start)) start += 1
+        let tail = 0
+        while (tail < shortest - start && current.charCodeAt(current.length - 1 - tail) === text.charCodeAt(text.length - 1 - tail)) tail += 1
+        view.dispatch({ changes: { from: start, to: current.length - tail, insert: text.slice(start, text.length - tail) } })
       } finally {
         suppress = false
       }

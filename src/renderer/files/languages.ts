@@ -14,6 +14,13 @@ const BY_EXTENSION: Record<string, LanguageKey> = {
 
 const BY_NAME: Record<string, LanguageKey> = { dockerfile: 'shell', '.bashrc': 'shell', '.zshrc': 'shell', '.babelrc': 'json' }
 
+const LABELS: Record<LanguageKey, string> = {
+  javascript: 'JavaScript', typescript: 'TypeScript', jsx: 'JSX', tsx: 'TSX', json: 'JSON', markdown: 'Markdown', css: 'CSS',
+  html: 'HTML', python: 'Python', xml: 'XML', yaml: 'YAML', sql: 'SQL', csharp: 'C#', shell: 'Shell', powershell: 'PowerShell', plain: 'Plain text'
+}
+
+export const languageLabel = (path: string): string => LABELS[languageKey(path)]
+
 export function languageKey(path: string): LanguageKey {
   const name = path.split(/[\\/]/).pop()?.toLowerCase() ?? ''
   if (BY_NAME[name]) return BY_NAME[name]

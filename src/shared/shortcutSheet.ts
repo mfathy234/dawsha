@@ -38,6 +38,9 @@ export function fixedEntries(paletteKeys: string, mod: string): Array<SheetEntry
     { group: 'Panes', title: 'Leave full mode when focus is outside the terminal', keys: 'Esc' },
     { group: 'Panes', title: 'Next terminal tab in a pane', keys: 'Ctrl+PageDown' },
     { group: 'Panes', title: 'Previous terminal tab in a pane', keys: 'Ctrl+PageUp' },
+    { group: 'Views', title: 'Files: edit the open file (read only until then)', keys: 'E' },
+    { group: 'Views', title: 'Files: save the open file', keys: 'Ctrl+S' },
+    { group: 'Views', title: 'Files: close the open tab', keys: 'Ctrl+W' },
     { group: 'Terminal', title: 'Tab and Shift+Tab go to the agent (Claude Code mode switch, shell completion)', keys: 'Tab' }
   ]
 }
