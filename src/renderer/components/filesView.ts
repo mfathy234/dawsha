@@ -61,7 +61,7 @@ export class FilesViewComponent {
   private readonly changesButton = h('button', { class: 'files-seg', type: 'button', id: 'files-changes', 'aria-pressed': 'false', title: 'Show what changed since main (click again for the file)', onClick: () => void this.toggleChanges() }, 'Changes')
   private readonly editButton = h('button', { class: 'btn ghost small', type: 'button', id: 'files-edit', onClick: () => this.toggleEdit() }, 'Edit')
   private readonly promptButton = h('button', { class: 'btn ghost small', type: 'button', id: 'files-add-prompt', title: 'Type @path (and the selected lines) into the focused session', onClick: () => this.addActiveToPrompt() }, 'Add to prompt')
-  private readonly codeButton = h('button', { class: 'btn ghost small', type: 'button', id: 'files-open-code', onClick: () => this.openActiveInCode() }, icon(ICONS.code), 'Open in VS Code')
+  private readonly codeButton = h('button', { class: 'btn ghost small', type: 'button', id: 'files-open-code', 'aria-label': 'Open in VS Code', title: 'Open in VS Code', onClick: () => this.openActiveInCode() }, icon(ICONS.code), h('span', { class: 'files-btn-label' }, 'Open in VS Code'))
   private readonly copyButton = h('button', { class: 'icon-btn', type: 'button', id: 'files-copy-path', 'aria-label': 'Copy path', title: 'Copy path', onClick: () => void this.copyPath() }, icon(ICONS.copy))
   private readonly bar = h('div', { class: 'files-bar' })
   private readonly conflict = h('div', { class: 'files-conflict', id: 'files-conflict', role: 'alert', hidden: true },

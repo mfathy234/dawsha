@@ -73,10 +73,12 @@
 .files-tab.dirty .files-tab-close { opacity: 0.8; }
 
 .files-bar { display: flex; align-items: center; gap: 8px; flex: none; padding: 8px 12px; background: var(--raised); min-height: 46px; }
-.files-bar .spacer { flex: 1; }
-.files-crumb { min-width: 0; display: flex; align-items: center; gap: 4px; overflow: hidden; white-space: nowrap; font-size: 12.5px; color: var(--muted); }
+.files-bar .spacer { flex: 0 0 0; }
+.files-crumb { flex: 1 1 60px; min-width: 60px; display: flex; align-items: center; gap: 4px; overflow: hidden; white-space: nowrap; font-size: 12.5px; color: var(--muted); }
 .files-crumb-sep { opacity: 0.5; }
-.files-crumb-leaf { color: var(--text); font-weight: 600; }
+.files-crumb-part { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+.files-crumb-leaf { color: var(--text); font-weight: 600; flex: none; }
+.files-crumb-sep { flex: none; }
 .files-segment { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; background: color-mix(in srgb, var(--text) 7%, var(--raised)); flex: none; }
 .files-seg { height: 26px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer; }
 .files-seg:hover:not(:disabled) { color: var(--text); }
@@ -128,7 +130,11 @@
 @media (max-width: 1100px) {
   .files-view { grid-template-columns: 240px minmax(0, 1fr); }
   .files-side { display: none; }
+  .files-btn-label { display: none; }
 }
 @media (max-width: 1000px) {
   .files-bar .btn { padding: 0 8px; }
+  /* The Files tab joins the main nav; at the 960px minimum width the bar needs a little less air to still fit. */
+  .topbar { gap: 4px; }
+  .topbar .topbar-nav .btn { padding: 0 4px; }
 }
