@@ -1,6 +1,7 @@
+import { claudeConflict, claudeInstallKind, npmInstallCommand, type ClaudeInstall, type InstallKind } from './claudeInstalls'
 import type { AgentKind } from './types'
 
-export type InstallKind = 'native' | 'npm'
+export type { InstallKind }
 export type ToolState = 'missing' | 'update' | 'current' | 'unknown'
 
 export interface ToolReport {
@@ -10,6 +11,11 @@ export interface ToolReport {
   latest: string | null
   latestFailed: boolean
   installKind: InstallKind | null
+  /** Every Claude Code install found, in the order a terminal would reach them (Claude only). */
+  installs?: ClaudeInstall[]
+  /** npm's own global prefix, to aim `npm install -g` at the prefix that owns an existing install. */
+  defaultNpmPrefix?: string | null
+  platform?: string
 }
 
 export interface NodeInfo {
@@ -27,6 +33,8 @@ export interface ToolCommand {
   action: 'install' | 'update'
   text: string
   needsNode: boolean
+  /** Set when Dawsha must not run anything for this tool; the text says why. */
+  blocked?: string
 }
 
 export const MIN_NODE_MAJOR = 20
@@ -88,19 +96,29 @@ export function toolState(tool: ToolReport): ToolState {
   return compareSemver(tool.installed, tool.latest) < 0 ? 'update' : 'current'
 }
 
-export function claudeInstallKind(path: string | null): InstallKind | null {
-  if (path === null) return null
-  const lower = path.toLowerCase()
-  if (/\.(cmd|bat|ps1)$/.test(lower) || lower.includes('node_modules')) return 'npm'
-  return 'native'
-}
+export { claudeInstallKind }
+
+export const CLAUDE_NATIVE_INSTALL_UNIX = 'curl -fsSL https://claude.ai/install.sh | bash'
+
+export const claudeNativeInstall = (platform: string | undefined): string =>
+  platform === 'darwin' || platform === 'linux' ? CLAUDE_NATIVE_INSTALL_UNIX : CLAUDE_NATIVE_INSTALL
+
+export const claudeNativeLocation = (platform: string | undefined): string =>
+  platform === 'darwin' || platform === 'linux' ? '~/.local/bin/claude' : '%USERPROFILE%\\.local\\bin\\claude.exe'
 
 export function toolCommand(tool: ToolReport): ToolCommand {
   const action = tool.present ? 'update' : 'install'
-  const npm = `npm install -g ${NPM_PACKAGES[tool.agent]}@latest`
+  const pkg = NPM_PACKAGES[tool.agent]
+  const npm = `npm install -g ${pkg}@latest`
   if (tool.agent !== 'claude') return { action, text: npm, needsNode: true }
-  if (!tool.present) return { action, text: CLAUDE_NATIVE_INSTALL, needsNode: false }
-  if (tool.installKind === 'npm') return { action, text: npm, needsNode: true }
+  // The native installer only ever runs when no Claude Code exists anywhere on this machine.
+  if (!tool.present) return { action, text: claudeNativeInstall(tool.platform), needsNode: false }
+  const conflict = claudeConflict(tool.installs)
+  if (conflict) return { action, text: '', needsNode: false, blocked: conflict.title }
+  const active = tool.installs?.[0]
+  if (tool.installKind === 'npm' && !active?.legacyLocal) {
+    return { action, text: npmInstallCommand(pkg, active?.npmPrefix ?? null, tool.defaultNpmPrefix ?? null), needsNode: true }
+  }
   return { action, text: 'claude update', needsNode: false }
 }
 
@@ -128,8 +146,10 @@ export interface TaskPlan {
 }
 
 export function planFor(tools: ToolReport[], selection: AgentKind[] | 'updates'): TaskPlan | null {
-  const chosen =
+  const wanted =
     selection === 'updates' ? tools.filter((t) => toolState(t) === 'update') : tools.filter((t) => selection.includes(t.agent))
+  // A tool with two installs is never touched automatically.
+  const chosen = wanted.filter((t) => !toolCommand(t).blocked)
   if (chosen.length === 0) return null
   const commands = chosen.map((t) => toolCommand(t))
   const label = chosen.length === 1 ? `${commands[0].action} ${chosen[0].agent}` : 'update all'

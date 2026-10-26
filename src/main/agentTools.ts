@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process'
-import { delimiter, extname } from 'node:path'
+import { delimiter, extname, isAbsolute, join } from 'node:path'
 import { AGENTS } from '../shared/agents'
+import { classifyClaudeInstall, type ClaudeInstall } from '../shared/claudeInstalls'
 import {
   NPM_PACKAGES,
-  claudeInstallKind,
   parseNodeVersion,
   parseVersion,
   type AgentsReport,
@@ -11,7 +11,9 @@ import {
 } from '../shared/agentTools'
 import type { AgentKind } from '../shared/types'
 import { agentCommand } from './agentLaunch'
+import { scanClaudeInstalls, splitPath } from './claudeInstalls'
 import { claudeFallbackDirs, platformExecutableDirs, resolveExecutable } from './executables'
+import { clearLoginShellPath, loginShellPath } from './loginShellPath'
 
 export const LATEST_TTL_MS = 30 * 60 * 1000
 const RUN_TIMEOUT_MS = 20_000
@@ -64,10 +66,42 @@ function run(file: string, args: string[]): Promise<string | null> {
 }
 
 function locate(agent: AgentKind): string | null {
-  const command = agentCommand(agent)
-  const found = resolveExecutable(command, [...platformExecutableDirs(), ...(agent === 'claude' ? claudeFallbackDirs() : [])])
-  if (found || agent !== 'claude' || process.platform !== 'win32' || process.env.DAWSHA_CLAUDE_COMMAND) return found
-  return resolveExecutable('claude.cmd')
+  return resolveExecutable(agentCommand(agent), platformExecutableDirs())
+}
+
+async function npmGlobalPrefix(): Promise<string | null> {
+  const npm = resolveExecutable('npm', platformExecutableDirs())
+  const output = npm ? await run(npm, ['prefix', '-g']) : null
+  const line = (output ?? '')
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .filter((entry) => isAbsolute(entry))
+    .pop()
+  return line ?? null
+}
+
+const RUNNABLE = /\.(exe|cmd|bat)$/i
+
+async function withVersion(install: ClaudeInstall): Promise<ClaudeInstall> {
+  if (process.platform === 'win32' && !RUNNABLE.test(install.path)) return install
+  const output = await run(install.path, ['--version'])
+  return { ...install, version: output ? parseVersion('claude', output) : null }
+}
+
+/** Every Claude Code on this machine, found the way a terminal would find it plus the places a GUI app's PATH misses. */
+async function findClaudeInstalls(prefix: string | null): Promise<ClaudeInstall[]> {
+  const override = process.env.DAWSHA_CLAUDE_COMMAND
+  if (override) {
+    const file = resolveExecutable(override, platformExecutableDirs())
+    return file ? [await withVersion({ path: file, ...classifyClaudeInstall({ path: file }), onPath: true, version: null })] : []
+  }
+  const loginDirs = await loginShellPath()
+  const prefixBin = prefix ? [process.platform === 'win32' ? prefix : join(prefix, 'bin')] : []
+  const installs = scanClaudeInstalls({
+    pathDirs: [...splitPath(process.env.PATH), ...loginDirs],
+    extraDirs: [...prefixBin, ...claudeFallbackDirs(), ...platformExecutableDirs()]
+  })
+  return Promise.all(installs.map(withVersion))
 }
 
 async function nodeInfo(): Promise<AgentsReport['node']> {
@@ -110,7 +144,24 @@ async function latestVersion(agent: AgentKind, force: boolean): Promise<string |
   return version
 }
 
-async function inspect(agent: AgentKind, force: boolean): Promise<ToolReport> {
+async function inspectClaude(force: boolean, prefix: string | null): Promise<ToolReport> {
+  const [installs, latest] = await Promise.all([findClaudeInstalls(prefix), latestVersion('claude', force)])
+  const active = installs[0]
+  return {
+    agent: 'claude',
+    present: installs.length > 0,
+    installed: active?.version ?? null,
+    latest,
+    latestFailed: latest === null,
+    installKind: active?.kind ?? null,
+    installs,
+    defaultNpmPrefix: prefix,
+    platform: process.platform
+  }
+}
+
+async function inspect(agent: AgentKind, force: boolean, prefix: string | null): Promise<ToolReport> {
+  if (agent === 'claude') return inspectClaude(force, prefix)
   const path = locate(agent)
   const [output, latest] = await Promise.all([path ? run(path, ['--version']) : Promise.resolve(null), latestVersion(agent, force)])
   return {
@@ -119,11 +170,13 @@ async function inspect(agent: AgentKind, force: boolean): Promise<ToolReport> {
     installed: output ? parseVersion(agent, output) : null,
     latest,
     latestFailed: latest === null,
-    installKind: agent === 'claude' ? claudeInstallKind(path) : path ? 'npm' : null
+    installKind: path ? 'npm' : null
   }
 }
 
 export async function checkAgentTools(force: boolean): Promise<AgentsReport> {
-  const [tools, node] = await Promise.all([Promise.all(AGENTS.map((agent) => inspect(agent, force))), nodeInfo()])
+  if (force) clearLoginShellPath()
+  const prefix = await npmGlobalPrefix()
+  const [tools, node] = await Promise.all([Promise.all(AGENTS.map((agent) => inspect(agent, force, prefix))), nodeInfo()])
   return { tools, node, checkedAt: Date.now() }
 }

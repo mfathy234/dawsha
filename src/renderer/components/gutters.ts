@@ -4,7 +4,7 @@ import {
   MIN_PANE_WIDTH,
   SPLIT_STEP,
   applyDelta,
-  equalSizes
+  defaultSplit
 } from '../../shared/splits'
 import type { GridSplit } from '../../shared/types'
 
@@ -15,6 +15,8 @@ export interface GutterInfo {
   enabled: boolean
   cols: number
   rows: number
+  rowsFrom: number
+  variant: string
   sizes: GridSplit
   spanned: Set<number>
 }
@@ -94,9 +96,11 @@ export class GridGutters {
         style.height = `${length}px`
       } else {
         const offset = rows.slice(0, gutter.boundary + 1).reduce((sum, value) => sum + value, 0)
-        style.left = `${originX}px`
+        const skip = info.rowsFrom
+        const inset = columns.slice(0, skip).reduce((sum, value) => sum + value, 0) + gap * skip
+        style.left = `${originX + inset}px`
         style.top = `${originY + offset + rowGap * gutter.boundary}px`
-        style.width = `${width}px`
+        style.width = `${width - inset}px`
         style.height = `${rowGap}px`
       }
     }
@@ -120,10 +124,16 @@ export class GridGutters {
     el.addEventListener('pointercancel', (event) => this.end(event, el))
     el.addEventListener('dblclick', () => {
       const info = this.info
-      if (info) this.emit(axis, equalSizes(axis === 'cols' ? info.cols : info.rows))
+      if (info) this.emit(axis, this.defaults(axis))
     })
     el.addEventListener('keydown', (event) => this.key(event, axis, boundary))
     return { el, axis, boundary }
+  }
+
+  private defaults(axis: Axis): number[] {
+    const info = this.info
+    if (!info) return []
+    return defaultSplit(info.cols, info.rows, info.variant)[axis]
   }
 
   private emit(axis: Axis, sizes: number[]): void {

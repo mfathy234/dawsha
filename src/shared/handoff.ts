@@ -128,3 +128,72 @@ export function buildHandoff(input: HandoffInput): string {
   }
   return kept.length === 0 ? head : `${head}${heading}${kept.join('\n')}`
 }
+
+export const HANDOFF_KEEP_FILES = 50
+const HANDOFF_AGENTS: readonly string[] = ['claude', 'codex', 'gemini']
+const SESSION_ID = /^[\w-]{1,128}$/
+
+export interface HandoffTranscriptRequest {
+  projectId: string
+  agent: AgentKind
+  sessionId: string
+}
+
+export type HandoffTranscriptResult =
+  | { status: 'saved'; path: string }
+  | { status: 'no-session' }
+  | { status: 'error'; message: string }
+
+/** Checks what crossed the IPC boundary; the renderer never names a folder or a file. */
+export function parseHandoffRequest(value: unknown): HandoffTranscriptRequest | null {
+  if (typeof value !== 'object' || value === null) return null
+  const { projectId, agent, sessionId } = value as Record<string, unknown>
+  if (typeof projectId !== 'string' || projectId === '' || projectId.length > 128) return null
+  if (typeof agent !== 'string' || !HANDOFF_AGENTS.includes(agent)) return null
+  if (typeof sessionId !== 'string' || !SESSION_ID.test(sessionId)) return null
+  return { projectId, agent: agent as AgentKind, sessionId }
+}
+
+const two = (value: number): string => String(value).padStart(2, '0')
+
+export function handoffFileName(project: string, agent: AgentKind, now: Date): string {
+  const slug = project.normalize('NFKD').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '')
+  const day = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}`
+  const time = `${two(now.getHours())}${two(now.getMinutes())}${two(now.getSeconds())}`
+  return `${slug || 'project'}-${agent}-${day}-${time}.md`
+}
+
+/** Names to delete so that only the newest `keep` handoff files stay. */
+export function staleHandoffs(files: readonly { name: string; modifiedAt: number }[], keep: number = HANDOFF_KEEP_FILES): string[] {
+  return files
+    .filter((file) => file.name.endsWith('.md'))
+    .sort((a, b) => b.modifiedAt - a.modifiedAt || b.name.localeCompare(a.name))
+    .slice(keep)
+    .map((file) => file.name)
+}
+
+export interface TranscriptHandoffInput {
+  from: AgentKind
+  projectName: string
+  title: string | null
+  files: string[]
+  plan: HandoffInput['plan']
+  check: HandoffCheck | null
+  output: string
+  transcriptPath: string
+}
+
+/** Short prompt that points the next agent at the saved transcript instead of pasting a summary. */
+export function buildTranscriptHandoff(input: TranscriptHandoffInput): string {
+  const lines = tailLines(input.output)
+  return [
+    `Continue this task. First read the transcript file at "${input.transcriptPath}". It is the full conversation of the previous ${agentLabel(input.from)} session in ${input.projectName}.`,
+    '',
+    `Goal: ${input.title ? clip(input.title) : '(not captured, see the transcript)'}`,
+    ...filesBlock(input.files),
+    `What's left: ${planText(input.plan).left || '(not captured, see the transcript)'}`,
+    `Last error: ${lastError(input, lines)}`,
+    '',
+    'Once you have read it, summarise in a few lines where things stand, then continue from there.'
+  ].join('\n')
+}

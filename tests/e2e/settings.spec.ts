@@ -175,7 +175,7 @@ test('project panel can be resized by pointer and keyboard, with its width saved
   }
 })
 
-test('full access toggles in Settings and the Agents view stay in sync', async () => {
+test('full access toggles in Settings and the Agent tools view stay in sync', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox, fakeEnv())
   try {

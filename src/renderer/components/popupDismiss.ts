@@ -1,3 +1,4 @@
+import './popups.css'
 import { iconButton } from '../dom'
 import { ICONS } from '../icons'
 

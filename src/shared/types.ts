@@ -3,6 +3,7 @@ import type { SessionBaseline } from './gitStatus'
 import type { SessionsLayout } from './board'
 import type { HighlightSettings } from './highlights'
 import type { RecordingSettings } from './recordings'
+import type { SessionTag } from './sessionTags'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
 export type SessionStatus = 'busy' | 'idle'
@@ -56,6 +57,9 @@ export interface SavedTab {
   baseline?: SessionBaseline
   /** The orchestrator agent this pane runs; it reconnects with a fresh token when restored. */
   orchAgentId?: string
+  /** The user's own name for this session, shown instead of the one the agent reports. */
+  name?: string
+  tag?: SessionTag
 }
 
 export interface SavedPane {
@@ -96,6 +100,9 @@ export interface KeptSession {
   sessionId: string
   title: string
   closedAt: number
+  /** The title was typed by the user, so it stays the session's name when reopened. */
+  renamed?: true
+  tag?: SessionTag
 }
 
 export interface ProjectTask {
@@ -118,6 +125,7 @@ export interface Settings {
   projects: Project[]
   theme: ThemeSettings
   sidebarCollapsed: boolean
+  dimIdlePanes: boolean
   sidebarWidth: number
   othersCollapsed: boolean
   sessionsLayout: SessionsLayout

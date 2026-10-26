@@ -1,5 +1,6 @@
 import type { OrchExportFormat, OrchArchiveFileResult } from './orch/api'
 import type { WorkPeriod, WorkReport } from './workDashboard'
+import type { BackgroundAgentsReport, BgKind, BgRange } from './backgroundAgents'
 import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
@@ -31,6 +32,7 @@ import type { OrchDecisionView, OrchHandoffInput, OrchPaneRequest, OrchResult, O
 import type { TimelineExportRequest, TimelineExportResult, TimelineRequest, TimelineResult } from './timeline'
 import type { TimelineSearchRequest, TimelineSearchResult } from './timelineSearch'
 import type { TranscriptRequest, TranscriptResult } from './transcript'
+import type { HandoffTranscriptRequest, HandoffTranscriptResult } from './handoff'
 import type { UsageRange, UsageReport } from './usage'
 import type {
   AgentKind,
@@ -160,7 +162,11 @@ export interface GridApi {
   usageSnapshot(): Promise<UsageSnapshot>
   /** `offset`: periods back from now (0 now, -1 the one before). */
   workReport(period: WorkPeriod, offset?: number): Promise<WorkReport>
+  backgroundAgents(range: BgRange): Promise<BackgroundAgentsReport>
+  revealBackgroundAgent(kind: BgKind, id: string): Promise<boolean>
   exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
+  writeHandoffTranscript(request: HandoffTranscriptRequest): Promise<HandoffTranscriptResult>
+  revealHandoff(path: string): Promise<void>
   sessionTimeline(request: TimelineRequest): Promise<TimelineResult>
   exportTimeline(request: TimelineExportRequest): Promise<TimelineExportResult>
   searchTimelines(request: TimelineSearchRequest): Promise<TimelineSearchResult>

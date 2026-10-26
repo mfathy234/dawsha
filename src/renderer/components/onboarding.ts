@@ -128,7 +128,7 @@ export class OnboardingComponent {
           showView('agents')
         }
       },
-      'Open Agents'
+      'Open Agent tools'
     )
     return this.step(2, done ? 'done' : projectDone ? 'active' : 'locked', 'Your agents', 'Dawsha runs the agent CLIs you already use.', cards, open)
   }

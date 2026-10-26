@@ -11,6 +11,7 @@ import {
   toolState,
   type ToolReport
 } from '../../shared/agentTools'
+import { claudeConflict } from '../../shared/claudeInstalls'
 import type { AgentKind } from '../../shared/types'
 import { clear, h } from '../dom'
 import { agentMark } from './agentMark'
@@ -25,7 +26,7 @@ const DESCRIPTIONS: Record<AgentKind, string> = {
 }
 
 export class AgentsViewComponent {
-  readonly el = h('main', { class: 'agents-view', 'aria-label': 'Agents' })
+  readonly el = h('main', { class: 'agents-view', 'aria-label': 'Agent tools' })
   private readonly rows = h('div', { class: 'tool-list' })
   private readonly check = h(
     'button',
@@ -49,7 +50,7 @@ export class AgentsViewComponent {
         h(
           'div',
           { class: 'agents-title' },
-          h('h1', {}, 'Agents'),
+          h('h1', {}, 'Agent tools'),
           h('p', { class: 'lede' }, 'Install or update the command-line agents this app runs. Commands run in a visible shell tab.')
         ),
         this.check,
@@ -67,7 +68,7 @@ export class AgentsViewComponent {
     this.signature = signature
     this.check.disabled = checking
     this.check.textContent = checking ? 'Checking…' : 'Check again'
-    const updates = report ? report.tools.filter((tool) => toolState(tool) === 'update').length : 0
+    const updates = report ? report.tools.filter((tool) => toolState(tool) === 'update' && !toolCommand(tool).blocked).length : 0
     this.updateAll.disabled = updates === 0
     this.updateAll.textContent = updates > 0 ? `Update ${updates} agent${updates === 1 ? '' : 's'}` : 'Update all'
     clear(this.rows)
@@ -112,10 +113,26 @@ export class AgentsViewComponent {
       ),
       tool.present ? this.versions(tool) : h('p', { class: 'tool-desc' }, DESCRIPTIONS[tool.agent]),
       this.fullAccessToggle(tool.agent, fullAccess),
-      h('div', { class: 'tool-actions' }, this.action(tool, command, node), toggle)
+      ...this.conflict(tool),
+      h('div', { class: 'tool-actions' }, this.action(tool, command, node), ...(command.blocked ? [] : [toggle]))
     )
-    if (shown) card.append(h('pre', { class: 'tool-command' }, command.text))
+    if (shown && !command.blocked) card.append(h('pre', { class: 'tool-command' }, command.text))
     return card
+  }
+
+  private conflict(tool: ToolReport): HTMLElement[] {
+    const notice = claudeConflict(tool.installs)
+    if (!notice) return []
+    return [
+      h(
+        'div',
+        { class: 'tool-conflict', role: 'alert' },
+        h('strong', {}, `${notice.title}. Dawsha will not install or update either one.`),
+        ...notice.lines.map((line) => h('p', { class: 'tool-conflict-line' }, line)),
+        h('p', { class: 'tool-conflict-line' }, 'Keep one. Anthropic recommends the native install; to remove the others, run:'),
+        h('pre', { class: 'tool-command' }, notice.fix.join('\n'))
+      )
+    ]
   }
 
   private versions(tool: ToolReport): HTMLElement {
@@ -158,6 +175,9 @@ export class AgentsViewComponent {
   private action(tool: ToolReport, command: ReturnType<typeof toolCommand>, node: NodeInfo): HTMLElement {
     const state = toolState(tool)
     const name = TOOL_NAMES[tool.agent]
+    if (command.blocked) {
+      return h('button', { class: 'btn ghost', type: 'button', disabled: '', 'aria-label': `${command.action === 'install' ? 'Install' : 'Update'} ${name}` }, 'Resolve duplicate installs first')
+    }
     if (command.needsNode && nodeProblem(node)) {
       return h(
         'button',

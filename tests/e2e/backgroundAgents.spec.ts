@@ -1,0 +1,264 @@
+import { mkdirSync, utimesSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { expect, test, type Page } from '@playwright/test'
+import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+
+const SHOTS = process.env.DAWSHA_SHOTS ?? ''
+const NOW = Date.now()
+const slug = (folder: string): string => folder.replace(/[^A-Za-z0-9]/g, '-')
+const lines = (...records: unknown[]): string => records.map((r) => JSON.stringify(r)).join('\n')
+const iso = (minutes: number): string => new Date(NOW - minutes * 60_000).toISOString()
+const touch = (path: string, minutes: number): void => utimesSync(path, new Date(NOW - minutes * 60_000), new Date(NOW - minutes * 60_000))
+const usage = (input: number, output: number) => ({ input_tokens: input, output_tokens: output, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 })
+const PARENT = '4d1b16b0-2a58-42e8-a971-0fadf4e0f3e4'
+const OTHER_PARENT = '5e2c27c1-3b69-53f9-b082-1fbe05f4f5f5'
+const CODEX_ROOT = '01a171f0-a764-7871-b483-453daf64460c'
+const CODEX_SPAWN = '01a171f2-4dfd-7003-bf0f-a0a036758b6f'
+const CODEX_GUARD = '01a171f3-1111-7003-bf0f-a0a036758b6f'
+const RESULT = 'Rebased the branch and all 14 tests pass.'
+
+function claudeAgent(dir: string, id: string, meta: Record<string, unknown>, ageMinutes: number, durationMinutes: number, cwd: string, final: string | null): void {
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', spawnDepth: 1, requestShape: 'background', model: 'sonnet', ...meta }))
+  const first = { type: 'user', timestamp: iso(ageMinutes + durationMinutes), cwd, isSidechain: true, message: { role: 'user', content: 'Go' } }
+  const last = final
+    ? { type: 'assistant', timestamp: iso(ageMinutes), message: { id: `m-${id}`, model: 'claude-sonnet-5-5', stop_reason: 'end_turn', usage: usage(100, 400), content: [{ type: 'text', text: final }] } }
+    : { type: 'assistant', timestamp: iso(ageMinutes), message: { id: `m-${id}`, model: 'claude-sonnet-5-5', stop_reason: 'tool_use', usage: usage(100, 400), content: [{ type: 'tool_use', name: 'Bash', input: { command: 'npm test' } }] } }
+  writeFileSync(join(dir, `agent-${id}.jsonl`), lines(first, last))
+  touch(join(dir, `agent-${id}.jsonl`), ageMinutes)
+}
+
+function rollout(sandbox: Sandbox, id: string, records: unknown[], ageMinutes: number): void {
+  const at = new Date(NOW - 60 * 60_000)
+  const dir = join(sandbox.codexHome, 'sessions', String(at.getFullYear()), String(at.getMonth() + 1).padStart(2, '0'), String(at.getDate()).padStart(2, '0'))
+  mkdirSync(dir, { recursive: true })
+  const p = (n: number) => String(n).padStart(2, '0')
+  const path = join(dir, `rollout-${at.getFullYear()}-${p(at.getMonth() + 1)}-${p(at.getDate())}T${p(at.getHours())}-${p(at.getMinutes())}-00-${id}.jsonl`)
+  writeFileSync(path, lines(...records))
+  touch(path, ageMinutes)
+}
+
+function seed(sandbox: Sandbox): void {
+  const folder = sandbox.projectFolder
+  const dir = join(sandbox.claudeHome, 'projects', slug(folder))
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, `${PARENT}.jsonl`), lines({ type: 'user', timestamp: iso(90), cwd: folder, message: { content: 'Polish the release' } }, { type: 'ai-title', aiTitle: 'Release polish' }))
+  const sub = join(dir, PARENT, 'subagents')
+  claudeAgent(sub, 'run1', { description: 'Option A grid pass' }, 0.3, 25, folder, null)
+  claudeAgent(sub, 'done1', { description: 'Sidebar session features', finished: true }, 20, 30, folder, RESULT)
+  claudeAgent(sub, 'done2', { description: 'Handoff export', agentType: 'Explore', finished: true }, 75, 12, folder, 'Found the export code in handoff.ts.')
+  claudeAgent(sub, 'old1', { description: 'Ancient cleanup', finished: true }, 180, 10, folder, 'Cleaned up.')
+  const elsewhere = join(sandbox.root, 'elsewhere', 'Trial')
+  claudeAgent(join(sandbox.claudeHome, 'projects', slug(elsewhere), OTHER_PARENT, 'subagents'), 'oth1', { description: 'Copy tenant settings', agentType: 'Explore', finished: true }, 15, 6, elsewhere, 'Settings copied.')
+  const meta = (id: string, parent: string | null, source: unknown, extra: Record<string, unknown> = {}) => ({
+    type: 'session_meta', timestamp: iso(70), payload: { id, timestamp: iso(70), cwd: folder, ...(parent ? { parent_thread_id: parent, source } : { source: 'vscode' }), ...extra }
+  })
+  const event = (minutes: number, payload: Record<string, unknown>) => ({ type: 'event_msg', timestamp: iso(minutes), payload })
+  rollout(sandbox, CODEX_ROOT, [meta(CODEX_ROOT, null, null), { type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Import the trial server' }] } }], 5)
+  writeFileSync(join(sandbox.codexHome, 'session_index.jsonl'), lines({ id: CODEX_ROOT, thread_name: 'Trial server import' }))
+  rollout(sandbox, CODEX_SPAWN, [
+    meta(CODEX_SPAWN, CODEX_ROOT, { subagent: { thread_spawn: { parent_thread_id: CODEX_ROOT, depth: 1, agent_nickname: 'Hubble' } } }),
+    { type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Write the migration test' }] } },
+    event(40, { type: 'task_started' }),
+    event(35, { type: 'turn_aborted', reason: 'interrupted' })
+  ], 35)
+  rollout(sandbox, CODEX_GUARD, [
+    meta(CODEX_GUARD, CODEX_ROOT, { subagent: { other: 'guardian' } }, { thread_source: 'guardian_review' }),
+    event(30, { type: 'task_started' }),
+    event(29, { type: 'task_complete', last_agent_message: JSON.stringify({ risk_level: 'low', outcome: 'allow', rationale: 'Only runs the migration script.' }) })
+  ], 29)
+}
+
+const bars = (page: Page) => page.locator('.bg-bar')
+const openAgents = async (page: Page): Promise<void> => {
+  await page.locator('#background-button').click()
+  await expect(page.locator('.bg-view')).toBeVisible()
+}
+
+async function pick(page: Page, trigger: string, option: string): Promise<void> {
+  await page.locator(trigger).click()
+  await page.getByRole('option', { name: option, exact: true }).click()
+}
+
+test('Agents tab sits after Sessions, shows the running count, lanes and bars', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const ids = await page.locator('.topbar-nav > button').evaluateAll((nodes) => nodes.map((node) => node.id))
+    expect(ids.slice(0, 3)).toEqual(['sessions-button', 'background-button', 'projects-button'])
+    await expect(page.locator('#background-button .bg-badge')).toHaveText('1', { timeout: 15_000 })
+    await expect(page.locator('#background-button')).toHaveAccessibleName('Agents, 1 running')
+    await openAgents(page)
+    await expect(page.locator('#background-button')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.bg-lane')).toHaveCount(3)
+    await expect(bars(page)).toHaveCount(6)
+    await expect(page.locator('.bg-lane').first()).toContainText('Release polish')
+    await expect(page.locator('.bg-lane').first()).toContainText('Smoke · 4 agents')
+    await expect(page.locator('#bg-status-running')).toHaveText('1 running')
+    await expect(page.locator('#bg-status-done')).toHaveText('4 done')
+    await expect(page.locator('#bg-status-failed')).toHaveText('1 failed')
+    await expect(page.locator('.bg-bar.st-running')).toHaveAccessibleName(/Option A grid pass, general-purpose, running/)
+    await expect(page.locator('#bg-totals')).toContainText('tokens')
+    expect(await page.locator('.bg-ticks span').count()).toBeGreaterThanOrEqual(3)
+    await page.keyboard.press('Control+Shift+L')
+    await expect(page.locator('.bg-view')).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('every filter narrows the timeline and Clear filters resets them', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await openAgents(page)
+    await expect(bars(page)).toHaveCount(6)
+    await expect(page.locator('#bg-clear')).toBeHidden()
+
+    await page.locator('#bg-status-failed').click()
+    await expect(bars(page)).toHaveCount(1)
+    await expect(bars(page).first()).toHaveAccessibleName(/Write the migration test, spawn_agent, failed/)
+    await page.locator('#bg-status-failed').click()
+    await expect(bars(page)).toHaveCount(6)
+
+    await page.locator('#bg-kind-codex').click()
+    await expect(bars(page)).toHaveCount(1)
+    await page.locator('#bg-kind-codex').click()
+    await page.locator('#bg-kind-claude').click()
+    await expect(bars(page)).toHaveCount(5)
+    await page.locator('#bg-kind-claude').click()
+
+    await pick(page, '#bg-project-filter-trigger', 'Other folders')
+    await expect(bars(page)).toHaveCount(1)
+    await expect(bars(page).first()).toHaveAccessibleName(/Copy tenant settings/)
+    await pick(page, '#bg-project-filter-trigger', 'Smoke')
+    await expect(bars(page)).toHaveCount(5)
+    await pick(page, '#bg-project-filter-trigger', 'All projects')
+
+    await pick(page, '#bg-range-trigger', 'Last 2 hours')
+    await expect(bars(page)).toHaveCount(5)
+    await pick(page, '#bg-range-trigger', 'Last hour')
+    await expect(bars(page)).toHaveCount(4)
+    await pick(page, '#bg-range-trigger', 'Last 7 days')
+    await expect(bars(page)).toHaveCount(6)
+    await pick(page, '#bg-range-trigger', 'Last 24 hours')
+    await expect(bars(page)).toHaveCount(6)
+
+    await page.locator('#bg-search').fill('trial server')
+    await expect(bars(page)).toHaveCount(1)
+    await page.locator('#bg-search').fill('explore')
+    await expect(bars(page)).toHaveCount(2)
+    await page.locator('#bg-search').fill('sidebar')
+    await expect(bars(page)).toHaveCount(1)
+    await page.locator('#bg-search').fill('')
+
+    await expect(bars(page)).toHaveCount(6)
+    await page.locator('#bg-automatic').check()
+    await expect(bars(page)).toHaveCount(7)
+    await expect(page.locator('.bg-bar.auto')).toHaveCount(1)
+    await expect(page.locator('.bg-bar.auto')).toHaveAccessibleName(/Safety review · allow, automatic review, done/)
+    await expect(page.locator('#bg-clear')).toBeVisible()
+    await page.locator('#bg-clear').click()
+    await expect(bars(page)).toHaveCount(6)
+    await expect(page.locator('#bg-automatic')).not.toBeChecked()
+    await expect(page.locator('#bg-clear')).toBeHidden()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('details panel shows the agent and Copy result, Show file and Go to session work', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await openAgents(page)
+    await page.locator('.bg-bar', { hasText: 'Sidebar session features' }).focus()
+    await page.keyboard.press('Enter')
+    const details = page.locator('#bg-details')
+    await expect(details).toBeVisible()
+    await expect(details).toContainText('Sidebar session features')
+    await expect(details).toContainText('Release polish')
+    await expect(details).toContainText('Sonnet')
+    await expect(details).toContainText('general-purpose')
+    await expect(page.locator('#bg-detail-status')).toHaveText('done')
+    await expect(page.locator('#bg-detail-result')).toHaveText(RESULT)
+
+    await page.keyboard.press('ArrowDown')
+    await expect(page.locator('.bg-bar:focus')).toHaveCount(1)
+
+    await page.locator('#bg-copy').click()
+    await expect(page.locator('.toast.info')).toContainText('Result copied')
+    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(RESULT)
+
+    await page.locator('#bg-show-file').click()
+    await expect(page.locator('.toast.error')).toHaveCount(0)
+
+    await page.locator('#bg-go').click()
+    await expect(page.locator('.pane')).toHaveCount(1, { timeout: 15_000 })
+    await expect(page.locator('#sessions-button')).toHaveAttribute('aria-pressed', 'true')
+
+    await openAgents(page)
+    await page.locator('.bg-bar', { hasText: 'Copy tenant settings' }).click()
+    await expect(page.locator('#bg-go')).toBeDisabled()
+    await page.locator('#bg-details-close').click()
+    await expect(page.locator('#bg-details')).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('empty states follow the range and the filters', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await openAgents(page)
+    await expect(page.locator('#bg-empty')).toContainText('No background agents in the last 24 hours')
+    await expect(page.locator('#bg-empty')).toContainText('Claude Code or Codex session starts agents')
+    await pick(page, '#bg-range-trigger', 'Last hour')
+    await expect(page.locator('#bg-empty')).toContainText('No background agents in the last hour')
+  } finally {
+    await closeApp(app)
+  }
+  const seeded = createSandbox()
+  seed(seeded)
+  const second = await launchApp(seeded)
+  try {
+    await openAgents(second.page)
+    await second.page.locator('#bg-search').fill('zzzz-nothing')
+    await expect(second.page.locator('#bg-nomatch')).toContainText('No agents match these filters')
+    await second.page.locator('#bg-empty-clear').click()
+    await expect(bars(second.page)).toHaveCount(6)
+  } finally {
+    await closeApp(second.app)
+  }
+})
+
+for (const [mode, themeId] of [['dark', undefined], ['light', 'dawsha-daylight']] as const) {
+  test(`screenshots of the Agents view (${mode})`, async () => {
+    test.skip(!SHOTS, 'Set DAWSHA_SHOTS to a folder to capture screenshots')
+    const sandbox = createSandbox()
+    seed(sandbox)
+    writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({ version: 2, lastSeenVersion: APP_VERSION, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }], ...(themeId ? { theme: { id: themeId } } : {}) }), 'utf8')
+    const { app, page } = await launchApp(sandbox)
+    try {
+      await page.setViewportSize({ width: 1440, height: 880 })
+      mkdirSync(SHOTS, { recursive: true })
+      await openAgents(page)
+      await expect(bars(page)).toHaveCount(6)
+      await page.screenshot({ path: join(SHOTS, `agents-${mode}-overview.png`) })
+      await page.locator('.bg-bar', { hasText: 'Sidebar session features' }).click()
+      await page.locator('#bg-automatic').check()
+      await page.locator('#bg-project-filter-trigger').click()
+      await expect(page.getByRole('listbox')).toBeVisible()
+      await page.screenshot({ path: join(SHOTS, `agents-${mode}-filters-open.png`) })
+      await page.keyboard.press('Escape')
+      await page.locator('#bg-status-done').click()
+      await page.screenshot({ path: join(SHOTS, `agents-${mode}-filtered-details.png`) })
+    } finally {
+      await closeApp(app)
+    }
+  })
+}

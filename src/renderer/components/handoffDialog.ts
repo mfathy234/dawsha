@@ -1,14 +1,37 @@
 import { AGENT_NAMES } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
+import { api } from '../api'
 import { h } from '../dom'
 import { agentMark } from './agentMark'
 import { nextDialogId, present } from './dialogs'
+import { toast } from './toast'
+import './handoffDialog.css'
 
 export interface HandoffDialogOptions {
   from: AgentKind
   to: AgentKind
   text: string
+  /** Where the full conversation was saved; null when only the terminal tail could be summarised. */
+  transcriptPath: string | null
 }
+
+function transcriptRow(path: string): HTMLElement {
+  const copy = h('button', { class: 'btn ghost small', type: 'button' }, 'Copy path')
+  copy.addEventListener('click', () => {
+    void api.writeClipboard(path).then(() => toast('Path copied', 'info'), () => toast('Could not copy the path.'))
+  })
+  const reveal = h('button', { class: 'btn ghost small', type: 'button' }, 'Show in folder')
+  reveal.addEventListener('click', () => void api.revealHandoff(path))
+  return h(
+    'div',
+    { class: 'handoff-file', role: 'group', 'aria-label': 'Transcript file' },
+    h('span', { class: 'handoff-file-label' }, 'Transcript file'),
+    h('code', { class: 'handoff-file-path', dir: 'ltr', title: path }, path),
+    h('span', { class: 'handoff-file-actions' }, reveal, copy)
+  )
+}
+
+const NO_TRANSCRIPT = 'No saved conversation was found for this pane (a new session or a shell tab), so this summary uses the recent terminal output instead.'
 
 export function handoffDialog(options: HandoffDialogOptions): Promise<string | null> {
   const id = nextDialogId()
@@ -30,8 +53,11 @@ export function handoffDialog(options: HandoffDialogOptions): Promise<string | n
     h(
       'p',
       { class: 'dialog-hint' },
-      'This summary is what Dawsha sends as the first message. Edit it freely. The pane you continue from keeps running.'
+      options.transcriptPath
+        ? 'Dawsha saved the full conversation to a file. This message tells the new agent to read it first. Edit it freely. The pane you continue from keeps running.'
+        : 'This summary is what Dawsha sends as the first message. Edit it freely. The pane you continue from keeps running.'
     ),
+    options.transcriptPath ? transcriptRow(options.transcriptPath) : h('p', { class: 'handoff-note', role: 'note' }, NO_TRANSCRIPT),
     area,
     error,
     h('div', { class: 'dialog-actions' }, cancel, start)

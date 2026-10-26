@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, extname, isAbsolute, join } from 'node:path'
+import { claudeKnownDirs } from './claudeInstalls'
 
 const isFile = (path: string): boolean => {
   try {
@@ -28,8 +29,9 @@ export function resolveExecutable(command: string, extraDirs: string[] = [], pla
 }
 
 export function platformExecutableDirs(platform = process.platform, home = homedir()): string[] {
-  if (platform !== 'darwin') return []
+  if (platform !== 'darwin' && platform !== 'linux') return []
   const dirs = [
+    ...(platform === 'linux' ? ['/home/linuxbrew/.linuxbrew/bin'] : []),
     join(home, '.local', 'bin'),
     join(home, '.npm-global', 'bin'),
     join(home, '.volta', 'bin'),
@@ -55,7 +57,7 @@ export function platformExecutableDirs(platform = process.platform, home = homed
   return [...new Set(dirs)]
 }
 
-export const claudeFallbackDirs = (): string[] => [join(homedir(), '.local', 'bin')]
+export const claudeFallbackDirs = (): string[] => claudeKnownDirs()
 
 export function splitArgs(value: string | undefined): string[] {
   if (!value) return []

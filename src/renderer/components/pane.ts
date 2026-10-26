@@ -23,7 +23,8 @@ import {
   findInPane,
   toggleAgents,
   toggleDetails,
-  toggleMaximize
+  toggleMaximize,
+  tagSession
 } from '../actions'
 import { derivePanes, type PaneView } from '../derive'
 import { store } from '../state'
@@ -37,13 +38,15 @@ import { api } from '../api'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
+import { tagChip, tagMenuItems } from './sessionTagUi'
+import type { SessionTag } from '../../shared/sessionTags'
 import { AgentsDrawer } from './agentsDrawer'
 import { openBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
-import { ensureTerminal } from '../terminals'
+import { ensureTerminal, getTerminal } from '../terminals'
 import { enableDrag } from '../drag'
 import { canCompact, contextHintText, showContextHint } from '../../shared/contextWarning'
 import { dismissContextHint, typeCompact } from '../contextActions'
@@ -57,9 +60,13 @@ import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
 import { toggleDictation } from '../dictation/dictationActions'
 import { dictationIndicator } from '../dictation/dictationIndicator'
+import './paneCalm.css'
+import { recapFromScreen } from '../../shared/recap'
 import { onDictationStatus, type DictationStatus } from '../dictation/dictationState'
 
 const RESUMED_CHIP_MS = 60_000
+const RECAP_REFRESH_MS = 2_500
+const RECAP_SCREEN_ROWS = 60
 
 export class PaneComponent {
   readonly el: HTMLElement
@@ -68,6 +75,8 @@ export class PaneComponent {
   private titleText = ''
   private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly projectName = h('span', { class: 'pane-project', hidden: true })
+  private readonly tagHost = h('span', { class: 'pane-tag', hidden: true })
+  private tagShown = ''
   private readonly pin = h('span', { class: 'pane-pin', title: 'Pinned pane', role: 'img', 'aria-label': 'Pinned pane', hidden: true })
   private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
   private readonly resumed = h('span', { class: 'chip chip-resumed', hidden: true }, 'resumed')
@@ -85,6 +94,9 @@ export class PaneComponent {
   private readonly branchSync = h('span', { class: 'chip-sync', hidden: true })
   private readonly stateHost = h('span', { class: 'pane-state' })
   private stateSignature = ''
+  private readonly recap = h('div', { class: 'pane-recap', dir: 'auto', hidden: true })
+  private recapText = ''
+  private recapAt = 0
   private readonly permission = h('div', { class: 'pane-permission', role: 'alert', hidden: true })
   private permissionSignature = ''
   private readonly tabAdd = h('span', { class: 'pane-tab-add-slot', hidden: true })
@@ -124,6 +136,7 @@ export class PaneComponent {
       this.pin,
       this.index,
       this.projectName,
+      this.tagHost,
       this.stateHost,
       this.fresh,
       this.resumed,
@@ -164,7 +177,7 @@ export class PaneComponent {
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.hint, this.dictationStrip, this.drawer.el, content, this.permission, this.foot)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, this.dictationStrip, this.drawer.el, content, this.permission, this.foot)
     this.watchFileDrops()
     // Keep the pointer from moving focus to the button, so a focused text box stays the dictation target.
     this.mic.addEventListener('mousedown', (event) => event.preventDefault())
@@ -181,6 +194,7 @@ export class PaneComponent {
     this.projectName.hidden = projectName === ''
     this.projectName.textContent = projectName
     this.fresh.hidden = view.named
+    this.updateTag(view.tag)
     const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
     const origin = view.pane.tabs.find((t) => t.id === view.primaryTabId)?.from
@@ -192,6 +206,7 @@ export class PaneComponent {
     this.compareChip.title = link ? `Side ${link.slot.toUpperCase()} of a comparison` : ''
     this.el.setAttribute('aria-label', `Task ${view.index + 1} ${title.toUpperCase()}${maximized ? ', maximized' : ''}`)
     this.el.classList.toggle('focused', focused)
+    this.el.classList.toggle('calm', !focused && store.state.settings.dimIdlePanes)
     this.el.classList.toggle('maximized', maximized)
     this.pin.hidden = view.pane.pinned !== true
     this.el.classList.toggle('pinned', view.pane.pinned === true)
@@ -206,6 +221,7 @@ export class PaneComponent {
     this.updateState(view, state)
     this.updateInfo(view, maximized)
     this.foot.hidden = this.info.hidden && this.branch.hidden
+    this.updateRecap(view)
     this.updateHint(view)
     this.updatePermission(view, state)
     this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now, view.info.geminiTools)
@@ -312,6 +328,19 @@ export class PaneComponent {
     this.info.replaceChildren(...items)
   }
 
+  // Read off the visible screen, so no file is read; at most once per RECAP_REFRESH_MS for each pane.
+  private updateRecap(view: PaneView): void {
+    const now = Date.now()
+    if (now - this.recapAt < RECAP_REFRESH_MS) return
+    this.recapAt = now
+    const text = recapFromScreen(getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? '')
+    if (text === this.recapText) return
+    this.recapText = text
+    this.recap.hidden = text === ''
+    this.recap.textContent = text
+    this.recap.title = text
+  }
+
   private updateHint(view: PaneView): void {
     const percent = view.info.contextPercent
     const tabId = view.primaryTabId
@@ -369,6 +398,29 @@ export class PaneComponent {
     if (signature === this.detailsSignature) return
     this.detailsSignature = signature
     this.details.replaceChildren(...children)
+  }
+
+  private updateTag(tag: SessionTag | null): void {
+    if ((tag ?? '') === this.tagShown) return
+    this.tagShown = tag ?? ''
+    this.tagHost.hidden = tag === null
+    this.tagHost.replaceChildren(...(tag ? [tagChip(tag)] : []))
+  }
+
+  /** Opened from Pane actions › Tag…, in the place of that button's menu. */
+  private openTag(): void {
+    if (this.actionsMenu) this.closeActions()
+    this.actionsAnchor = this.el.querySelector<HTMLElement>('.pane-actions')
+    const items = tagMenuItems(this.current?.tag ?? null, (tag) => {
+      this.closeActions()
+      tagSession(this.paneId, tag)
+    })
+    this.actionsMenu = h('div', { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Tag session' }, ...items)
+    this.el.append(this.actionsMenu)
+    placeNearAnchor(this.actionsMenu, this.el.querySelector('.pane-actions'))
+    items[0]?.focus()
+    setTimeout(() => document.addEventListener('pointerdown', this.outsideActions, true), 0)
+    document.addEventListener('keydown', this.escapeActions, true)
   }
 
   /** Opened from Pane actions › Move pane…, so it takes that button's place: clicking it again closes the menu. */
@@ -483,6 +535,7 @@ export class PaneComponent {
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),
       item('Open terminal here', () => addTab(this.paneId, 'shell'), ICONS.terminal),
       item('Move pane…', () => this.openMove(), ICONS.layout),
+      item('Tag…', () => this.openTag(), ICONS.pin),
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,

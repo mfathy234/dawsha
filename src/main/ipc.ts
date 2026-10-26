@@ -30,7 +30,8 @@ import { fileDiffSince, projectFiles, readProjectFile, sessionBaseline, sessionS
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
-import { bridgeDirs, claudeHome, claudeSettingsPath } from './paths'
+import { bridgeDirs, claudeHome, claudeProjectsDir, claudeSettingsPath } from './paths'
+import { codexHome } from './agentLaunch'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
   import { previewPaneonImport, queuePaneonImport } from './paneonImport'
   import { paneonUserDataDir } from './paths'
@@ -40,6 +41,7 @@ import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type Bridg
 import type { OpsWatcher } from './opsWatcher'
 import type { StatusWatcher } from './statusWatcher'
 import { exportTranscript } from './transcriptExport'
+import { revealHandoff, writeHandoffTranscript } from './handoffTranscript'
 import { exportSettings, readSettingsImport } from './settingsTransfer'
 import { exportTimeline, sessionTimeline } from './sessionTimeline'
 import { searchTimelines } from './timelineSearch'
@@ -53,6 +55,10 @@ import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
 import { WorkService, readWorkRuns } from './workDashboard'
+import { BackgroundAgentScanner } from './backgroundAgents'
+import { revealAgentFile } from './backgroundAgentsReveal'
+import { DEFAULT_BG_RANGE, isBgRange } from '../shared/backgroundAgents'
+import { priceLookupFor } from '../shared/orch/profiles'
 import { MAX_STEPS_BACK, type WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
@@ -267,7 +273,14 @@ export function registerIpc(
     const runs = await readWorkRuns(join(app.getPath('userData'), 'orchestrator.db'))
     return work.report(valid, settings.get().projects, runs, steps)
   })
+  const agentScanner = new BackgroundAgentScanner(() => ({ claudeProjects: claudeProjectsDir(), codex: codexHome() }))
+  ipcMain.handle(IPC.backgroundAgents, (_event, range: unknown) =>
+    agentScanner.list(isBgRange(range) ? range : DEFAULT_BG_RANGE, settings.get().projects, priceLookupFor(settings.get().orchestrator)))
+  ipcMain.handle(IPC.backgroundAgentsReveal, (_event, kind: unknown, id: unknown) =>
+    revealAgentFile(typeof id === 'string' && (kind === 'claude' || kind === 'codex') ? agentScanner.pathOf(kind, id) : null, [claudeHome(), codexHome()], kind))
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
+  ipcMain.handle(IPC.handoffTranscript, (_event, request: unknown) => writeHandoffTranscript(settings.get().projects, join(app.getPath('userData'), 'handoffs'), request))
+  ipcMain.handle(IPC.handoffReveal, (_event, path: unknown) => revealHandoff(join(app.getPath('userData'), 'handoffs'), path))
   ipcMain.handle(IPC.timelineSession, (_event, request: TimelineRequest) => sessionTimeline(request))
   ipcMain.handle(IPC.timelineExport, (_event, request: TimelineExportRequest) => exportTimeline(getWindow(), request))
   ipcMain.handle(IPC.timelineSearch, (_event, request: TimelineSearchRequest) => searchTimelines(request, settings.get().projects))

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
+import { npmClaudeBinary, scanClaudeInstalls } from './claudeInstalls'
 import { claudeFallbackDirs, platformExecutableDirs, resolveExecutable, splitArgs } from './executables'
 import { AGENT_NAMES, FULL_ACCESS_FLAGS } from '../shared/agents'
 import { promptArgs } from '../shared/compare'
@@ -147,7 +148,9 @@ export function launchSpec(request: SpawnRequest, platform = process.platform, e
     return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...extraArgs, ...initial] }
   }
   const command = claudeCommand(platform)
-  const file = resolveExecutable(command, [...claudeFallbackDirs(), ...platformExecutableDirs(platform)], platform)
+  const file =
+    resolveExecutable(command, [...claudeFallbackDirs(), ...platformExecutableDirs(platform)], platform) ??
+    (platform === 'win32' && !process.env.DAWSHA_CLAUDE_COMMAND ? npmClaudeProgram(pathDirs) : null)
   if (!file) return `Could not find ${command}. Install Claude Code or set DAWSHA_CLAUDE_COMMAND.`
   const initial = promptFor({ file, args: [] }, request)
   if (typeof initial === 'string') return initial
@@ -158,6 +161,16 @@ export function launchSpec(request: SpawnRequest, platform = process.platform, e
     ...initial
   ]
   return { file, args }
+}
+
+/** An npm-installed Claude Code on Windows has no claude.exe on PATH; its program sits inside the npm package. */
+function npmClaudeProgram(pathDirs: string[]): string | null {
+  const installs = scanClaudeInstalls({ pathDirs, extraDirs: claudeFallbackDirs(), platform: 'win32' })
+  for (const install of installs) {
+    const binary = npmClaudeBinary(install)
+    if (binary) return binary
+  }
+  return null
 }
 
 function viaCmdShim(base: LaunchSpec): boolean {

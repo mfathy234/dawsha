@@ -12,6 +12,7 @@ import {
   setHighlights,
   setPaletteShortcut,
   setSessionInfo,
+  setDimIdlePanes,
   setSidebarCollapsed,
   showSettingsSection,
   showView
@@ -551,6 +552,7 @@ export class SettingsViewComponent {
           : `Ctrl or Alt plus a key, such as ${DEFAULT_PALETTE_SHORTCUT} or Alt+Space. Ctrl+Shift+P always works too.`),
         this.shortcutError ? h('p', { class: 'field-error', id: 'palette-shortcut-error', role: 'alert' }, this.shortcutError) : null
       ),
+      row('Sessions', checkbox('dim-idle-panes', "Dim sessions you're not working in", state.settings.dimIdlePanes, false, setDimIdlePanes)),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed)),
       row(
         'Getting started',
@@ -662,7 +664,7 @@ export class SettingsViewComponent {
     )
     const manage = row(
       'Installs',
-      h('button', { class: 'btn ghost small', type: 'button', id: 'settings-manage-agents', onClick: () => showView('agents') }, 'Manage installs in Agents'),
+      h('button', { class: 'btn ghost small', type: 'button', id: 'settings-manage-agents', onClick: () => showView('agents') }, 'Manage installs in Agent tools'),
       h('p', { class: 'hint' }, 'Install or update the command-line agents.')
     )
     return [...rows, manage]

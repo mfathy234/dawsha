@@ -11,6 +11,7 @@ import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './sidebarWidth'
 import { defaultHighlights, sanitizeHighlights } from './highlights'
 import { defaultRecordings, sanitizeRecordings } from './recordings'
 import { defaultDictation, sanitizeDictation } from './dictation'
+import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from './sessionTags'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -68,6 +69,7 @@ export const defaultSettings = (): Settings => ({
   projects: [],
   theme: { id: DEFAULT_THEME_ID, image: defaultImage() },
   sidebarCollapsed: false,
+  dimIdlePanes: true,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   othersCollapsed: false,
   sessionsLayout: 'grid',
@@ -144,6 +146,9 @@ function sanitizeTab(value: unknown): SavedTab | null {
   if (baseline) tab.baseline = baseline
   const orchAgentId = asString(value.orchAgentId)
   if (orchAgentId && agent !== 'shell') tab.orchAgentId = orchAgentId
+  const name = typeof value.name === 'string' ? cleanSessionName(value.name) : null
+  if (name && agent !== 'shell') tab.name = name
+  if (isSessionTag(value.tag) && agent !== 'shell') tab.tag = value.tag
   return tab
 }
 
@@ -280,7 +285,10 @@ function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSess
     const key = `${item.agent}:${sessionId}`
     if (seen.has(key)) continue
     seen.add(key)
-    sessions.push({ projectId: String(item.projectId), agent: item.agent, sessionId, title: title.slice(0, 160), closedAt: clampNumber(item.closedAt, 0, Date.now() + 86_400_000, Date.now()) })
+    const kept: KeptSession = { projectId: String(item.projectId), agent: item.agent, sessionId, title: title.slice(0, SESSION_NAME_MAX), closedAt: clampNumber(item.closedAt, 0, Date.now() + 86_400_000, Date.now()) }
+    if (item.renamed === true) kept.renamed = true
+    if (isSessionTag(item.tag)) kept.tag = item.tag
+    sessions.push(kept)
   }
   return sessions.slice(-500)
 }
@@ -328,6 +336,7 @@ export function migrateSettings(raw: unknown): Settings {
     projects,
     theme: { id: resolveThemeId(asString(theme.id) ?? defaults.theme.id), image: sanitizeImage(theme.image) },
     sidebarCollapsed: raw.sidebarCollapsed === true,
+    dimIdlePanes: raw.dimIdlePanes !== false,
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,
     sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',

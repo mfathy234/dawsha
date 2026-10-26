@@ -24,6 +24,7 @@ import type {
   TabAgent
 } from '../shared/types'
 import type { SessionBaseline } from '../shared/gitStatus'
+import type { SessionTag } from '../shared/sessionTags'
 
 export interface TermState {
   id: string
@@ -46,6 +47,9 @@ export interface TermState {
   task?: { agents: AgentKind[]; before: ToolReport[] }
   /** Orchestrator agent run in this tab. */
   orchAgentId?: string
+  /** The user's own name for the session; it wins over the name the agent reports. */
+  name?: string
+  tag?: SessionTag
 }
 
 export interface PaneState {
@@ -61,7 +65,7 @@ export interface PaneState {
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'orchestrator'
+export type View = 'grid' | 'background' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'orchestrator'
 
 /** Tabs of the Orchestrator view. A selected run (orchRunId) shows its dashboard instead. */
 export type OrchTab = 'runs' | 'boards' | 'review' | 'history' | 'new' | 'spec'
@@ -235,7 +239,7 @@ export const store = new Store()
 
 export const projectById = (state: AppState, id: string): Project | undefined =>
   state.settings.projects.find((p) => p.id === id) ??
-  (id === AGENTS_PROJECT_ID ? { id, name: 'Agents', folder: state.info.home, defaultAgent: 'claude' } : undefined)
+  (id === AGENTS_PROJECT_ID ? { id, name: 'Agent tools', folder: state.info.home, defaultAgent: 'claude' } : undefined)
 
 export const folderOfPane = (state: AppState, pane: PaneState): string | null =>
   pane.folder ?? projectById(state, pane.projectId)?.folder ?? null

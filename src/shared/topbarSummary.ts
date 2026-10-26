@@ -5,7 +5,7 @@ import { SESSION_STATE_LABELS, compareSessionStates, type SessionState } from '.
 export type MoreView = 'agents' | 'skills' | 'layouts'
 
 export const MORE_VIEWS: readonly { view: MoreView; label: string }[] = [
-  { view: 'agents', label: 'Agents' },
+  { view: 'agents', label: 'Agent tools' },
   { view: 'skills', label: 'Skills' },
   { view: 'layouts', label: 'Layouts' }
 ]

@@ -15,7 +15,7 @@ describe('sessionState', () => {
   })
 
   it('counts states and sorts the most urgent first', () => {
-    expect(countSessionStates(['needs', 'working', 'done', 'idle', 'working'])).toEqual({ total: 5, needs: 1, working: 2, done: 1 })
+    expect(countSessionStates(['needs', 'working', 'done', 'idle', 'working'])).toEqual({ total: 5, needs: 1, working: 2, done: 1, idle: 1 })
     const sorted = (['idle', 'working', 'needs', 'exited', 'done'] as const).slice().sort(compareSessionStates)
     expect(sorted).toEqual(['needs', 'done', 'working', 'idle', 'exited'])
   })

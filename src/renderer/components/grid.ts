@@ -52,7 +52,7 @@ export class GridComponent {
   private readonly stage = h('div', { class: 'grid-stage' }, this.grid, this.others.el)
   private readonly bg = h('div', { class: 'bg-layer', 'aria-hidden': 'true' })
   private readonly gutters = new GridGutters((axis, sizes) => this.resize(axis, sizes))
-  private shape = { cols: 1, rows: 1 }
+  private shape = { cols: 1, rows: 1, variant: '' }
   private lastFocused: string | null = null
   private stripSignature = ''
   private splits: GridSplits = {}
@@ -63,7 +63,7 @@ export class GridComponent {
   }
 
   private resize(axis: 'cols' | 'rows', sizes: number[]): void {
-    setSplits(withSplit(this.splits, this.shape.cols, this.shape.rows, axis, sizes))
+    setSplits(withSplit(this.splits, this.shape.cols, this.shape.rows, axis, sizes, this.shape.variant))
   }
 
   update(state: AppState): void {
@@ -150,7 +150,7 @@ export class GridComponent {
     }
     this.grid.classList.remove('with-pinned')
     const layout = layoutForCount(units.length)
-    const split = resolveSplit(this.splits, layout.cols, layout.rows)
+    const split = resolveSplit(this.splits, layout.cols, layout.rows, layout.variant)
     const track = (sizes: number[]): string => sizes.map((size) => `minmax(0, ${size}fr)`).join(' ')
     style.gridTemplateColumns = layout.scrolls ? `repeat(${layout.cols}, minmax(0, 1fr))` : track(split.cols)
     style.gridTemplateRows = layout.scrolls
@@ -164,15 +164,17 @@ export class GridComponent {
       element.hidden = false
       element.classList.remove('solo')
       element.style.gridColumn = `${cell.col} / span ${cell.colSpan}`
-      element.style.gridRow = String(cell.row)
+      element.style.gridRow = `${cell.row} / span ${cell.rowSpan}`
       for (let boundary = cell.col; boundary < cell.col + cell.colSpan - 1; boundary += 1) spanned.add(boundary - 1)
     })
-    this.shape = { cols: layout.cols, rows: layout.rows }
+    this.shape = { cols: layout.cols, rows: layout.rows, variant: layout.variant }
     this.gutters.update({
       grid: this.grid,
       enabled: !layout.scrolls && units.length > 1,
       cols: layout.cols,
       rows: layout.rows,
+      rowsFrom: layout.rowsFrom,
+      variant: layout.variant,
       sizes: split,
       spanned
     })
@@ -210,6 +212,8 @@ export class GridComponent {
       enabled: false,
       cols: 1,
       rows: 1,
+      rowsFrom: 0,
+      variant: '',
       sizes: { cols: [1], rows: [1] },
       spanned: new Set()
     })

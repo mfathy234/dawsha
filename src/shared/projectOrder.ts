@@ -39,3 +39,18 @@ export function setProjectPinned(projects: readonly Project[], id: string, pinne
     return rest
   })
 }
+
+/** Puts the project in the place of `targetId`, shifting the ones between; both must be in the same pinned/unpinned group, otherwise the list comes back unchanged. */
+export function moveProjectTo(projects: readonly Project[], id: string, targetId: string): Project[] {
+  const from = projects.findIndex((project) => project.id === id)
+  const to = projects.findIndex((project) => project.id === targetId)
+  if (from < 0 || to < 0 || from === to || isPinned(projects[from]) !== isPinned(projects[to])) return [...projects]
+  const rest = projects.filter((project) => project.id !== id)
+  return [...rest.slice(0, to), projects[from], ...rest.slice(to)]
+}
+
+export const canDropProject = (projects: readonly Project[], id: string, targetId: string): boolean => {
+  const from = projects.find((project) => project.id === id)
+  const target = projects.find((project) => project.id === targetId)
+  return from !== undefined && target !== undefined && from !== target && isPinned(from) === isPinned(target)
+}

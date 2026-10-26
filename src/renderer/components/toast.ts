@@ -1,5 +1,6 @@
 import { h, iconButton } from '../dom'
 import { ICONS } from '../icons'
+import { consumeNotificationAction, recordNotification } from '../notificationHistory'
 
 const ERROR_DURATION_MS = 7000
 const INFO_DURATION_MS = 4000
@@ -21,12 +22,18 @@ function ensureRegion(): HTMLElement {
 }
 
 export function toast(message: string, kind: 'error' | 'info' = 'error', action?: ToastAction): void {
+  // Every toast is also kept in the notification history, so one that vanished can still be found.
+  const recorded = recordNotification(message, kind, action)
   const item = h('div', { class: `toast ${kind}` }, h('span', { class: 'toast-text' }, message))
   const dismiss = (): void => item.remove()
   item.addEventListener('click', dismiss)
   if (action) {
     // The button runs first, then the click bubbles up and closes the toast.
-    item.append(h('button', { class: 'btn small toast-action', type: 'button', onClick: () => action.run() }, action.label))
+    const run = (): void => {
+      action.run()
+      consumeNotificationAction(recorded)
+    }
+    item.append(h('button', { class: 'btn small toast-action', type: 'button', onClick: run }, action.label))
   }
   item.append(iconButton('Dismiss notification', ICONS.closeSmall, dismiss, 'small toast-x'))
   const stack = ensureRegion()

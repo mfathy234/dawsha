@@ -28,11 +28,14 @@ import { h, icon } from '../dom'
 import type { AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import { setSessionsLayout } from '../sessionsLayout'
+import { NotificationBell } from './notificationBell'
+import { onAgentsChange, runningAgents } from '../backgroundAgents'
 
 const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
 
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
 const BOARD_KEY_HINT = formatShortcut(bind('Ctrl+Shift+B'))
+const AGENTS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+L'))
 
 export class TopBarComponent {
   readonly el: HTMLElement
@@ -64,6 +67,7 @@ export class TopBarComponent {
     icon(ICONS.chevronDown)
   )
   private agentMenu: HTMLElement | null = null
+  private readonly bell = new NotificationBell()
   readonly themeButton = h(
     'button',
     { class: 'btn ghost topbar-tool', type: 'button', id: 'theme-button', 'aria-label': 'Theme', title: 'Theme', 'aria-haspopup': 'dialog', onClick: () => toggleThemePicker() },
@@ -71,6 +75,8 @@ export class TopBarComponent {
     h('span', { class: 'utility-label' }, 'Theme')
   )
   private readonly sessions = h('button', { class: 'btn ghost', type: 'button', id: 'sessions-button', onClick: () => showView('grid') }, 'Sessions')
+  private readonly agentsBadge = h('span', { class: 'bg-badge', hidden: true, 'aria-hidden': 'true' })
+  private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Background agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'background') }, 'Agents', this.agentsBadge)
   private readonly projects = h('button', { class: 'btn ghost', type: 'button', id: 'projects-button' }, 'Projects')
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')
@@ -127,6 +133,7 @@ export class TopBarComponent {
       if (this.settings.getAttribute('aria-pressed') === 'true') showView('grid')
       else openSettings()
     })
+    onAgentsChange(() => this.updateAgentsBadge())
     this.el = h(
       'header',
       { class: 'topbar' },
@@ -135,6 +142,7 @@ export class TopBarComponent {
       h('div', { class: 'split' }, this.newSession, this.chevron),
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
         this.sessions,
+        this.background,
         this.projects,
         this.usage,
         this.work,
@@ -152,6 +160,7 @@ export class TopBarComponent {
           this.zoomValue,
           h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane (${ZOOM_MOD}+= for the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
         ),
+        this.bell.el,
         this.themeButton,
         this.settings
       )
@@ -164,6 +173,7 @@ export class TopBarComponent {
     this.sessions.setAttribute('aria-pressed', String(state.view === 'grid'))
     this.gridMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'grid'))
     this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
+    this.background.setAttribute('aria-pressed', String(state.view === 'background'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
     this.work.setAttribute('aria-pressed', String(state.view === 'work'))
@@ -175,6 +185,13 @@ export class TopBarComponent {
     this.zoomValue.textContent = focused ? `${focused.fontSize}px` : '15px'
     this.themeButton.setAttribute('aria-expanded', String(state.themePickerOpen))
     this.updateSummary(views)
+  }
+
+  private updateAgentsBadge(): void {
+    const running = runningAgents()
+    this.agentsBadge.hidden = running === 0
+    this.agentsBadge.textContent = String(running)
+    this.background.setAttribute('aria-label', running > 0 ? `Agents, ${running} running` : 'Agents')
   }
 
   private updateMore(state: AppState): void {
@@ -224,6 +241,7 @@ export class TopBarComponent {
       )
     }
     if (counts.done > 0) chips.push(h('span', { class: 'sum-chip state-done' }, stateIcon('done'), `${counts.done} to review`))
+    if (counts.idle > 0) chips.push(h('span', { class: 'sum-chip state-idle' }, stateIcon('idle'), `${counts.idle} idle`))
     this.summary.replaceChildren(...chips)
   }
 
