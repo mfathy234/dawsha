@@ -48,7 +48,8 @@ export async function loadLanguage(path: string): Promise<Extension | null> {
   if (!load) return null
   try {
     return await load()
-  } catch {
+  } catch (err) {
+    console.warn('[files] language load failed', path, err)
     return null
   }
 }

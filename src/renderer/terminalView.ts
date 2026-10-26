@@ -77,6 +77,7 @@ export class TerminalView {
     this.term.attachCustomKeyEventHandler((event) => this.handleKey(event))
     this.observer = new ResizeObserver(() => this.scheduleFit())
     this.el.addEventListener('wheel', (event) => this.handleWheel(event), { capture: true, passive: false })
+    this.el.addEventListener('contextmenu', (event) => event.preventDefault())
     this.el.addEventListener('focusin', () => callbacks.onFocus())
     this.search = new TerminalSearch(this.term, this.el, {
       toBuffer: (query) => (callbacks.textOrder() === 'visual' ? visualFromLogical(query) : query),

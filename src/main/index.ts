@@ -139,6 +139,14 @@ function createWindow(): BrowserWindow {
   window.on('focus', () => window.flashFrame(false))
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
+  // Electron shows no context menu by default; offer Copy / Cut / Paste / Select all only where they apply
+  window.webContents.on('context-menu', (_event, params) => {
+    if (!params.selectionText && !params.isEditable) return
+    const items = params.isEditable
+      ? [{ role: 'cut' as const }, { role: 'copy' as const }, { role: 'paste' as const }, { type: 'separator' as const }, { role: 'selectAll' as const }]
+      : [{ role: 'copy' as const }, { type: 'separator' as const }, { role: 'selectAll' as const }]
+    Menu.buildFromTemplate(items).popup({ window })
+  })
   if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(process.env.ELECTRON_RENDERER_URL)
   else void window.loadFile(join(__dirname, isPrivateRemoteBuild ? '../renderer-private/index.html' : '../renderer/index.html'))
   return window

@@ -21,6 +21,7 @@ export interface FileEditor {
   setText(text: string): void
   getText(): string
   setReadOnly(readOnly: boolean): void
+  setTheme(theme: EditorTheme): void
   showChanges(baseText: string | null): void
   showFile(): void
   onDirty(cb: () => void): void
@@ -66,20 +67,25 @@ function baseTheme(dark: boolean): Extension {
       '.cm-panels': { backgroundColor: 'var(--surface)', color: 'var(--text)', border: 'none' },
       '.cm-panels input, .cm-panels button': { fontFamily: 'inherit' },
       '.cm-changedLine': { backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)' },
-      '.cm-deletedChunk': { backgroundColor: 'color-mix(in srgb, #e5484d 12%, transparent)', paddingLeft: '8px' },
+      '.cm-deletedChunk': { backgroundColor: 'color-mix(in srgb, var(--danger) 12%, transparent)', paddingLeft: '8px' },
       '.cm-insertedLine': { backgroundColor: 'color-mix(in srgb, var(--accent) 12%, transparent)' },
-      '.cm-deletedLine': { backgroundColor: 'color-mix(in srgb, #e5484d 12%, transparent)' },
+      '.cm-deletedLine': { backgroundColor: 'color-mix(in srgb, var(--danger) 12%, transparent)' },
       '.cm-changedText': { backgroundColor: 'color-mix(in srgb, var(--accent) 24%, transparent)' }
     },
     { dark }
   )
 }
 
+// text with CRLF keeps its line endings through the editor so a save does not rewrite them
+const eolFor = (text: string): Extension => (text.includes('\r\n') ? EditorState.lineSeparator.of('\r\n') : [])
+
 // readOnly + editable keeps selection, Ctrl+A/C and the native context menu working while blocking edits
 const accessFor = (readOnly: boolean): Extension => [EditorState.readOnly.of(readOnly), EditorView.editable.of(true)]
 
 export function createEditor(host: HTMLElement, options: EditorOptions): FileEditor {
   const language = new Compartment()
+  const theme = new Compartment()
+  const eol = new Compartment()
   const access = new Compartment()
   const merge = new Compartment()
   const dirtyListeners: Array<() => void> = []
@@ -101,7 +107,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
         highlightSelectionMatches(),
         syntaxHighlighting(highlight),
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
-        baseTheme(options.theme === 'dark'),
+        theme.of(baseTheme(options.theme === 'dark')),
+        eol.of(eolFor(options.text)),
         language.of([]),
         access.of(accessFor(readOnly)),
         merge.of([]),
@@ -121,12 +128,16 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
     setText(text) {
       suppress = true
       try {
+        view.dispatch({ effects: eol.reconfigure(eolFor(text)) })
         view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } })
       } finally {
         suppress = false
       }
     },
-    getText: () => view.state.doc.toString(),
+    getText: () => view.state.sliceDoc(),
+    setTheme(next) {
+      view.dispatch({ effects: theme.reconfigure(baseTheme(next === 'dark')) })
+    },
     setReadOnly(next) {
       readOnly = next
       view.dispatch({ effects: access.reconfigure(accessFor(readOnly || showingChanges)) })
