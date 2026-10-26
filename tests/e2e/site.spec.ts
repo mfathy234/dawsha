@@ -92,7 +92,7 @@ test('keeps platform choices linked to releases when assets are missing', async 
   await expect(page.locator('[data-platform-card="mac"] [data-dl="mac"]')).toHaveAttribute('href', 'https://github.com/mfathy234/dawsha/releases/latest')
 })
 
-test('the main download button offers the installer, the version and links to the other platforms', async ({ page }) => {
+test('the main download button offers the installer and the version, and the download section links every platform', async ({ page }) => {
   const base = 'https://github.com/mfathy234/dawsha/releases/download/v0.3.0/'
   const packages = {
     setup: 'Dawsha-Setup-0.3.0.exe', portable: 'Dawsha-Portable-0.3.0.exe',
@@ -107,20 +107,16 @@ test('the main download button offers the installer, the version and links to th
   await expect(main).toContainText('Download for Windows')
   await expect(main).toHaveAttribute('href', base + packages.setup)
   await expect(main.locator('[data-version-tag]')).toHaveText('v0.3.0')
-  const alt = page.locator('.hero .download-alt')
-  await expect(alt.locator('.download-alt-link:visible')).toHaveCount(4)
-  for (const key of ['mac', 'linux-appimage', 'linux-deb', 'portable'] as const) {
-    await expect(alt.locator(`[data-dl="${key}"]`)).toHaveAttribute('href', base + packages[key])
-  }
+  await expect(page.locator('.hero a[href="#download"]')).toBeVisible()
   for (const [key, name] of Object.entries(packages)) {
     await expect(page.locator(`#download [data-dl="${key}"]`)).toHaveAttribute('href', base + name)
   }
-  const link = alt.locator('[data-dl="linux-appimage"]')
+  const link = page.locator('#download [data-dl="linux-appimage"]')
   await link.focus()
   await expect(link).toBeFocused()
 })
 
-test('a Mac visitor is offered the Mac download first, with Windows among the other platforms', async ({ browser }) => {
+test('a Mac visitor is offered the Mac download first, with Windows still in the download section', async ({ browser }) => {
   const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' })
   const page = await context.newPage()
   const dmg = 'https://github.com/mfathy234/dawsha/releases/download/v0.3.0/Dawsha-0.3.0-mac-arm64.dmg'
@@ -133,8 +129,9 @@ test('a Mac visitor is offered the Mac download first, with Windows among the ot
     await expect(main).toHaveAttribute('data-dl', 'mac')
     await expect(main).toHaveAttribute('href', dmg)
     await expect(main.locator('.apple-icon')).toHaveCount(1)
-    await expect(page.locator('.hero .download-alt [data-dl="mac"]')).toBeHidden()
-    await expect(page.locator('.hero .download-alt [data-dl="setup"]')).toBeVisible()
+    await expect(page.locator('.hero-copy .platform-icon')).toHaveCount(1)
+    await expect(page.locator('#windows-download [data-dl="setup"]')).toBeVisible()
+    await expect(page.locator('#mac-download [data-dl="mac"]')).toHaveAttribute('href', dmg)
   }
   await expect(page.locator('.hero [data-main-download]')).toContainText('macOS')
   await context.close()
@@ -154,8 +151,8 @@ test('download links stay usable on mobile without JavaScript', async ({ browser
   for (const address of [url, arabicUrl]) {
     await page.goto(address)
     await expect(page.locator('.hero [data-main-download]')).toHaveAttribute('data-dl', 'setup')
-    await expect(page.locator('.hero .download-alt [data-dl="linux-appimage"]')).toBeVisible()
-    await expect(page.locator('.hero .download-alt [data-dl="mac"]')).toBeVisible()
+    await expect(page.locator('#download [data-dl="linux-appimage"]')).toBeVisible()
+    await expect(page.locator('#download [data-dl="mac"]')).toBeVisible()
     await expect(page.locator('#download .platform-download')).toHaveCount(5)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   }
@@ -208,7 +205,7 @@ const countPlays = (): void => {
 }
 
 test('the demo clip stays out of the first load and plays only once it is on screen', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+  await page.setViewportSize({ width: 390, height: 560 })
   await page.addInitScript(countPlays)
   await page.goto(url)
   await page.waitForLoadState('load')
@@ -240,159 +237,121 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
   for (const toggle of await page.locator('.demo-toggle').all()) await expect(toggle).toBeHidden()
 })
 
-const newSections = ['board', 'timeline', 'search', 'replay']
-const newSections16 = ['arabic', 'dictation', 'native-arabic', 'calm', 'shortcuts']
-const newSections15 = ['orchestrator', 'orch-run', 'orch-boards', 'work', 'tickets']
+const releaseRows = [
+  { id: 'files-view', width: 1000, height: 580 },
+  { id: 'quick-open', width: 940, height: 557 },
+  { id: 'calm-panes', width: 1345, height: 470 },
+  { id: 'tag-colours', width: 640, height: 500 }
+]
 
-test('the 1.6 launch video stays out of the first load, plays on screen and has its own pause button', async ({ page }) => {
-  await page.addInitScript(countPlays)
-  await page.goto(url)
-  await page.waitForLoadState('load')
-  const video = page.locator('#launch-1-6 .demo-video')
-  await expect(video).toHaveAttribute('preload', 'none')
-  await expect(video).toHaveAttribute('poster', 'assets/launch-1.6-poster.jpg')
-  await expect(video.locator('source')).toHaveAttribute('src', 'assets/launch-1.6.mp4')
-  expect(((await video.getAttribute('aria-label')) ?? '').length).toBeGreaterThan(40)
-  await video.scrollIntoViewIfNeeded()
-  await expect.poll(() => video.evaluate((el: HTMLVideoElement) => !el.paused)).toBe(true)
-  const toggle = page.locator('#launch-1-6 .demo-toggle')
-  await toggle.click()
-  await expect(toggle).toHaveAttribute('aria-label', 'Play the demo')
-  expect(await video.evaluate((el: HTMLVideoElement) => el.paused)).toBe(true)
+test('the hero is three text elements with a readable crop of the app and no pill or platform row', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  for (const address of [url, arabicUrl]) {
+    await page.goto(address)
+    expect(await page.locator('.hero-copy > *').count()).toBeLessThanOrEqual(4)
+    await expect(page.locator('.hero .new-pill, .hero .eyebrow, .hero .download-alt, .hero-logo')).toHaveCount(0)
+    const image = page.locator('.hero-shot img')
+    await expect(image).toHaveAttribute('width', '920')
+    await expect(image).toHaveAttribute('height', '445')
+    expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(920)
+    const shown = await image.evaluate((el) => el.getBoundingClientRect().width)
+    expect(shown).toBeGreaterThan(500)
+  }
 })
 
-const newSections17 = ['files-view', 'quick-open', 'tag-colours', 'calm-panes']
+test('the page has no em or en dashes, no uppercase labels and no decorative badges', async ({ page }) => {
+  for (const address of [url, arabicUrl]) {
+    await page.goto(address)
+    const text = await page.evaluate(() => `${document.title}\n${document.documentElement.outerHTML.replace(/<script[\s\S]*?<\/script>/g, '')}`)
+    expect(text).not.toMatch(/[–—]/)
+    const uppercase = await page.evaluate(() => [...document.querySelectorAll('body *')].filter((el) => getComputedStyle(el).textTransform === 'uppercase').length)
+    expect(uppercase).toBe(0)
+    await expect(page.locator('.beta-badge, .remote-eyebrow, .small-h')).toHaveCount(0)
+  }
+})
 
-test('New in 1.7 leads the page with Files, quick open, tag colours and the calmer grid, with sized lazy images', async ({ page }) => {
+test('New in 1.7 leads the page with four sized lazy cropped screenshots and no run of three splits', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
-  await expect(page.locator('.new-pill')).toContainText('New in 1.7')
-  await expect(page.locator('.new-pill')).toContainText('Ctrl+P quick open')
-  await expect(page.locator('.new-pill')).toHaveAttribute('href', '#new')
   await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.7')
   await expect(page.locator('#new-h')).toHaveText('New in 1.7')
-  await expect(page.locator('#new')).toBeVisible()
-  await expect(page.locator('#new .feat-row')).toHaveCount(newSections17.length)
-  await expect(page.locator('#new .feat-row').first()).toHaveAttribute('id', 'files-view')
   await expect(page.locator('#new #files-view h3')).toHaveText('The Files view')
   await expect(page.locator('#new #quick-open')).toContainText('Alt+Enter adds it to the prompt')
   await expect(page.locator('#new #tag-colours')).toContainText('A tag you set always wins')
-  expect(await page.locator('#new').evaluate((el) => el.compareDocumentPosition(document.getElementById('new-1-6') as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy()
-  for (const id of newSections17) {
-    const row = page.locator(`#new #${id}`)
-    await expect(row).toHaveCount(1)
-    const image = row.locator('img')
+  await expect(page.locator('#new #calm-panes')).toContainText('the focused pane lifts with a soft shadow')
+  const order = await page.locator('#new .wrap > div').evaluateAll((nodes) => nodes.map((n) => n.id))
+  expect(order).toEqual(['files-view', 'quick-open', 'calm-panes', 'tag-colours'])
+  const splits = await page.locator('#new .wrap > div').evaluateAll((nodes) => nodes.map((n) => n.classList.contains('feat-row')))
+  for (let i = 0; i + 2 < splits.length; i += 1) expect(splits.slice(i, i + 3).every(Boolean)).toBe(false)
+  await expect(page.locator('#new li')).not.toHaveCount(0)
+  expect(await page.locator('#new li').first().evaluate((el) => getComputedStyle(el).borderInlineStartWidth)).toBe('0px')
+  for (const { id, width, height } of releaseRows) {
+    const image = page.locator(`#new #${id} img`)
     await expect(image).toHaveAttribute('loading', 'lazy')
-    await expect(image).toHaveAttribute('width', '1600')
-    await expect(image).toHaveAttribute('height', '1000')
+    await expect(image).toHaveAttribute('width', String(width))
+    await expect(image).toHaveAttribute('height', String(height))
     expect(((await image.getAttribute('alt')) ?? '').length).toBeGreaterThan(20)
     await image.scrollIntoViewIfNeeded()
     await expect(image).toHaveJSProperty('complete', true)
-    expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(1600)
+    expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(width)
+    expect(await image.evaluate((el) => getComputedStyle(el.closest('figure') as Element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
   }
-  await expect(page.locator('#new-16-h')).toHaveText('New in 1.6')
+  expect(await page.locator('#new').evaluate((el) => el.compareDocumentPosition(document.getElementById('earlier') as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy()
 })
 
-test('New in 1.6 leads with Arabic, shows the launch video and has sized lazy images', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' })
+test('Earlier releases is one compact section that keeps the old release anchors and links to the changelog', async ({ page }) => {
   await page.goto(url)
-  await expect(page.locator('#new-1-6 #agents-tab h3')).toHaveText('The Agents tab')
-  await expect(page.locator('#new-1-6 #safe-installs')).toContainText('never runs the native installer')
-  await expect(page.locator('#new-16-h')).toHaveText('New in 1.6')
-  await expect(page.locator('#new-1-6 #launch-1-6')).toBeVisible()
-  await expect(page.locator('#new-1-6 .feat-row').first()).toHaveAttribute('id', 'arabic')
-  for (const id of newSections16) {
-    const row = page.locator(`#new-1-6 #${id}`)
-    await expect(row).toHaveCount(1)
-    const image = row.locator('img')
-    await expect(image).toHaveAttribute('loading', 'lazy')
-    await expect(image).toHaveAttribute('width', '1600')
-    await expect(image).toHaveAttribute('height', '1000')
-    expect(((await image.getAttribute('alt')) ?? '').length).toBeGreaterThan(20)
-    await image.scrollIntoViewIfNeeded()
-    await expect(image).toHaveJSProperty('complete', true)
-    expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(1600)
-  }
-  await expect(page.locator('#remote-checks')).toContainText('every minute')
-  await expect(page.locator('#new-15-h')).toHaveText('New in 1.5')
+  await expect(page.locator('#earlier-h')).toHaveText('Earlier releases')
+  await expect(page.locator('#earlier #new-1-6, #earlier #new-1-5, #earlier #new-1-0')).toHaveCount(3)
+  await expect(page.locator('#earlier #new-1-6')).toContainText('Arabic in every session')
+  await expect(page.locator('#earlier #new-1-5')).toContainText('Orchestrator')
+  await expect(page.locator('#earlier #new-1-0')).toContainText('sessions board')
+  await expect(page.locator('#earlier a[href$="/releases"]')).toHaveCount(1)
+  await expect(page.locator('#earlier a[href*="/releases/tag/"]')).toHaveCount(3)
+  await expect(page.locator('#earlier img, #earlier video')).toHaveCount(0)
+  await expect(page.locator('section[id^="new-1"]')).toHaveCount(0)
+  expect(await page.locator('#earlier').evaluate((el) => el.textContent?.length ?? 0)).toBeLessThan(1100)
   await expect(page.locator('body')).not.toContainText(/snippet/i)
   await expect(page.locator('#features')).toContainText('Voice dictation')
 })
 
-test('New in 1.5 shows five feature rows with sized lazy images and the remote reliability note', async ({ page }) => {
+test('the remote section keeps its phone screenshots and says Remote Control is beta in plain text', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
-  for (const id of newSections15) {
-    const row = page.locator(`#new-1-5 #${id}`)
-    await expect(row).toHaveCount(1)
-    const image = row.locator('img')
-    await expect(image).toHaveAttribute('loading', 'lazy')
-    await expect(image).toHaveAttribute('width', '1600')
-    await expect(image).toHaveAttribute('height', '1000')
-    expect(((await image.getAttribute('alt')) ?? '').length).toBeGreaterThan(20)
-    await image.scrollIntoViewIfNeeded()
-    await expect(image).toHaveJSProperty('complete', true)
-    expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(1600)
-  }
-  await expect(page.locator('#remote-steady')).toContainText('Cloudflare address')
-  await expect(page.locator('#new-10-h')).toHaveText('New in 1.0')
-})
-
-test('The 1.0 section still shows four feature rows with sized lazy images and a phone approvals point', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto(url)
-  for (const id of newSections) {
-    const row = page.locator(`#new-1-0 #${id}`)
-    await expect(row).toHaveCount(1)
-    const image = row.locator('img')
-    await expect(image).toHaveAttribute('loading', 'lazy')
-    await expect(image).toHaveAttribute('width', '1600')
-    await expect(image).toHaveAttribute('height', '1000')
-    expect(((await image.getAttribute('alt')) ?? '').length).toBeGreaterThan(20)
-  }
   const phone = page.locator('#remote .phone img').first()
   await expect(phone).toHaveAttribute('src', 'assets/remote-approvals.png')
   await expect(phone).toHaveAttribute('width', '780')
   await expect(phone).toHaveAttribute('height', '1688')
   await expect(page.locator('#remote')).toContainText('Approve from your phone')
   await expect(page.locator('#remote')).toContainText('Only a plain Yes can be allowed from the phone')
-  for (const image of await page.locator('#new-1-0 img, #remote .phone img').all()) {
+  await expect(page.locator('#remote')).toContainText('Remote Control is a beta feature.')
+  for (const image of await page.locator('#remote .phone img').all()) {
     await image.scrollIntoViewIfNeeded()
     await expect(image).toHaveJSProperty('complete', true)
     expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0)
   }
 })
 
-test('the Arabic page translates the new sections and the English page has no horizontal scroll at 375px', async ({ page }) => {
+test('the Arabic page translates the 1.7 section, the earlier releases and the demo, and neither page scrolls sideways at 375px', async ({ page }) => {
   await page.goto(arabicUrl)
   await expect(page.locator('#new-h')).toHaveText('الجديد في 1.7')
-  await expect(page.locator('#new-16-h')).toHaveText('الجديد في 1.6')
   await expect(page.locator('#files-view h3')).toHaveText('عرض الملفات')
   await expect(page.locator('#quick-open h3')).toContainText('الفتح السريع')
   await expect(page.locator('#tag-colours h3')).toHaveText('وسوم تتلوّن من تلقاء نفسها')
   await expect(page.locator('#calm-panes h3')).toHaveText('شبكة أهدأ')
   await expect(page.locator('#files-view img')).toHaveAttribute('alt', /شجرة ملفات/)
-  await expect(page.locator('#new-15-h')).toHaveText('الجديد في 1.5')
-  await expect(page.locator('#arabic h3')).toHaveText('العربية في كل جلسة')
-  await expect(page.locator('#dictation h3')).toHaveText('الإملاء الصوتي بالعربية والإنجليزية')
-  await expect(page.locator('#arabic img')).toHaveAttribute('alt', /مساحة Claude Code/)
-  await expect(page.locator('#new-10-h')).toHaveText('الجديد في 1.0')
-  await expect(page.locator('#orchestrator h3')).toHaveText('المنسّق')
-  await expect(page.locator('#work h3')).toHaveText('لوحة العمل')
-  await expect(page.locator('#remote-steady h3')).toContainText('التحكم عن بُعد')
-  await expect(page.locator('#orch-run img')).toHaveAttribute('alt', /لوحة متابعة/)
-  await expect(page.locator('#board h3')).toHaveText('لوحة الجلسات')
-  await expect(page.locator('#timeline h3')).toHaveText('الخط الزمني للجلسة')
-  await expect(page.locator('#search h3')).toContainText('ابحث في كل الجلسات')
-  await expect(page.locator('#replay h3')).toHaveText('إعادة التشغيل')
+  await expect(page.locator('#earlier-h')).toHaveText('الإصدارات السابقة')
+  await expect(page.locator('#earlier')).toContainText('الخط الزمني للجلسة')
+  await expect(page.locator('#earlier #new-1-6 a')).toContainText('ملاحظات الإصدار 1.6')
   await expect(page.locator('#remote')).toContainText('وافق من هاتفك')
+  await expect(page.locator('#remote')).toContainText('في مرحلة بيتا')
   await expect(page.getByText('انسخ احتياطيًا وانقل')).toBeVisible()
-  await expect(page.locator('.new-pill')).toContainText('الجديد في 1.7')
-  await expect(page.locator('.new-pill')).toContainText('الفتح السريع')
-  await expect(page.locator('#agents-tab h3')).toHaveText('تبويب الوكلاء')
-  const english = await page.locator('#new, #new-1-6, #new-1-5, #new-1-0, #remote, .new-pill').evaluateAll((nodes) => nodes.map((node) => node.textContent ?? '').join(' '))
-  expect(english).not.toMatch(/Sessions board|Approve from your phone|Session timeline|Work dashboard|Orchestrator/)
-  await expect(page.locator('#board img')).toHaveAttribute('alt', /لوحة الجلسات/)
+  await expect(page.locator('.demo-video')).toHaveAttribute('poster', '../assets/demo-poster-ar.jpg')
+  const english = await page.locator('#new, #earlier, #remote').evaluateAll((nodes) => nodes.map((node) => node.textContent ?? '').join(' '))
+  expect(english).not.toMatch(/Sessions board|Approve from your phone|Session timeline|Work dashboard|Earlier releases|beta feature/)
+  const names = await page.locator('.works .badges bdi').allTextContents()
+  expect(names).toEqual(['Claude Code', 'Codex CLI', 'Gemini CLI'])
+  expect(await page.locator('.hero .lead').textContent()).toMatch(/⁨Claude Code⁩/)
   for (const address of [url, arabicUrl]) {
     await page.setViewportSize({ width: 375, height: 800 })
     await page.goto(address)
