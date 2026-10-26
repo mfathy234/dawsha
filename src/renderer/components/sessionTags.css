@@ -1,17 +1,17 @@
 :root {
-  --tag-bug: #f87171;
-  --tag-feature: #34d399;
-  --tag-review: #b69cfa;
-  --tag-research: #60a5fa;
-  --tag-docs: #fbbf24;
+  --tag-bug: #d6b392;
+  --tag-feature: #98c7b0;
+  --tag-review: #b4acdc;
+  --tag-research: #96b9db;
+  --tag-docs: #c6c0a8;
 }
 
 :root[data-kind='light'] {
-  --tag-bug: #c0302f;
-  --tag-feature: #0d7a52;
-  --tag-review: #6a3fd0;
-  --tag-research: #1a5fc2;
-  --tag-docs: #8f5f00;
+  --tag-bug: #86573a;
+  --tag-feature: #38765a;
+  --tag-review: #665a9b;
+  --tag-research: #3a6a99;
+  --tag-docs: #67634a;
 }
 
 [data-tag='bug'] { --tag: var(--tag-bug); }
@@ -22,12 +22,13 @@
 
 .tag-word {
   flex: none;
-  color: color-mix(in srgb, var(--tag) 70%, var(--muted));
+  color: var(--tag);
   font-weight: 400;
   white-space: nowrap;
 }
 
-:root[data-tag-colors='off'] .tag-word {
+:root[data-tag-colors='off'] .tag-word,
+:root[data-tag-colors='off'] .menu-item-tag .tag-name {
   color: var(--muted);
 }
 
@@ -35,7 +36,7 @@
 .board-card-tag .tag-word::before {
   content: '·';
   margin-right: var(--s-1);
-  color: color-mix(in srgb, var(--muted) 75%, transparent);
+  color: var(--muted);
 }
 
 .board-card-tag {
@@ -45,15 +46,11 @@
 .menu-item-tag {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
+  gap: var(--s-1);
 }
 
-.menu-item-tag .tag-dot {
-  width: 9px;
-  height: 9px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--tag);
+.menu-item-tag .tag-name {
+  color: var(--tag);
 }
 
 .menu-item-tag .tag-check {

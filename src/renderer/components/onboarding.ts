@@ -1,3 +1,4 @@
+import './onboarding.css'
 import { TOOL_NAMES } from '../../shared/agentTools'
 import { AGENTS, agentOf } from '../../shared/agents'
 import { STARTER_PROMPTS, onboardingProgress, pickStartAgent, starterPromptById } from '../../shared/onboardingSteps'
@@ -144,7 +145,7 @@ export class OnboardingComponent {
         h(
           'button',
           {
-            class: `chip ob-chip${this.starter === prompt.id ? ' on' : ''}`,
+            class: 'text-toggle ob-chip',
             type: 'button',
             disabled: !enabled,
             'aria-pressed': String(this.starter === prompt.id),
@@ -198,7 +199,7 @@ export class OnboardingComponent {
     const progress = onboardingProgress({ projects: state.settings.projects.length, installedAgents: installed })
     const close = h(
       'button',
-      { class: `btn ${projectDone ? 'primary' : 'ghost'}`, type: 'button', id: 'ob-close', onClick: () => dismissOnboarding() },
+      { class: `btn ${projectDone ? 'primary' : ''}`.trim(), type: 'button', id: 'ob-close', onClick: () => dismissOnboarding() },
       projectDone ? 'Done' : 'Skip'
     )
     const dialog = h(
@@ -209,19 +210,6 @@ export class OnboardingComponent {
         { class: 'ob-head' },
         h('h2', { id: 'ob-title' }, 'Set up Dawsha'),
         h('span', { class: 'ob-progress-label', id: 'ob-progress-label' }, progress.label)
-      ),
-      h(
-        'div',
-        {
-          class: 'ob-progress',
-          role: 'progressbar',
-          'aria-label': 'Setup progress',
-          'aria-valuemin': 0,
-          'aria-valuemax': progress.total,
-          'aria-valuenow': progress.done,
-          'aria-valuetext': `${progress.label} steps done`
-        },
-        h('div', { class: 'ob-progress-fill', style: `width:${progress.percent}%` })
       ),
       h(
         'ol',

@@ -1,4 +1,4 @@
-import { h, placeNearAnchor } from '../dom'
+import { h, placeNearAnchor, leave } from '../dom'
 
 const ITEMS = '[role^="menuitem"]:not([disabled])'
 
@@ -22,7 +22,7 @@ export class SidebarMenu {
   close(returnFocus = false): void {
     document.removeEventListener('pointerdown', this.outside, true)
     const key = this.key
-    this.el?.remove()
+    leave(this.el)
     this.el = null
     this.key = null
     if (returnFocus && key) this.anchorFor(key)?.focus()

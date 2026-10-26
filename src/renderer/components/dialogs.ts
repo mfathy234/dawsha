@@ -1,5 +1,5 @@
 import './popups.css'
-import { h, iconButton } from '../dom'
+import { h, iconButton, leave } from '../dom'
 import { ICONS } from '../icons'
 
 export interface ConfirmOptions {
@@ -60,13 +60,13 @@ export function present<T>(dialog: HTMLElement, cancelValue: T, focus: HTMLEleme
   const result = new Promise<T>((resolve) => {
     finish = (value) => {
       document.removeEventListener('keydown', onKey, true)
-      overlay.remove()
+      leave(overlay)
       previous?.focus()
       resolve(value)
     }
   })
   const onKey = (event: KeyboardEvent): void => {
-    const overlays = document.querySelectorAll('.overlay')
+    const overlays = document.querySelectorAll('.overlay:not(.leaving)')
     if (overlays[overlays.length - 1] !== overlay) return
     if (event.key === 'Escape') {
       event.preventDefault()

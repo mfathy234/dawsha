@@ -4,6 +4,12 @@ export const WORK_TYPES = ['feature', 'bug', 'other', 'conversation'] as const
 export type WorkType = typeof WORK_TYPES[number]
 export type WorkPeriod = 'today' | 'week' | 'month'
 export const WORK_LABELS: Record<WorkType, string> = { feature: 'Feature', bug: 'Bug', other: 'Other change', conversation: 'Conversation' }
+export const WORK_NOUNS: Record<WorkType, { one: string; many: string }> = {
+  feature: { one: 'feature', many: 'features' },
+  bug: { one: 'bug', many: 'bugs' },
+  other: { one: 'other change', many: 'other changes' },
+  conversation: { one: 'conversation', many: 'conversations' }
+}
 export type WorkCounts = Record<WorkType, number>
 export interface WorkItem {
   id: string

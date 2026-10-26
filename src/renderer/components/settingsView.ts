@@ -205,7 +205,7 @@ export class SettingsViewComponent {
     }
     this.title.replaceChildren(section.label)
     if (section.id === 'remote') {
-      this.title.append(h('span', { id: 'remote-settings-beta', class: 'beta-badge' }, 'BETA'))
+      this.title.append(h('span', { id: 'remote-settings-beta', class: 'beta-badge' }, 'Beta'))
     }
     this.lede.textContent = section.lede
     this.panel.setAttribute('aria-labelledby', `settings-tab-${section.id}`)

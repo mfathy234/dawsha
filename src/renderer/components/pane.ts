@@ -29,7 +29,7 @@ import {
 import { derivePanes, type PaneView } from '../derive'
 import { store } from '../state'
 import { shortcutFor } from '../commands/registry'
-import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
+import { clear, h, icon, iconButton, placeNearAnchor, leave } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
 import { continueIn, continueLabel } from '../handoffActions'
 import { exportTranscript } from '../transcriptActions'
@@ -39,7 +39,7 @@ import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from 
 import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
 import { tagMenuItems, tagWord, type TagSource } from './sessionTagUi'
-import type { SessionTag } from '../../shared/sessionTags'
+import { SESSION_TAG_LABELS, type SessionTag } from '../../shared/sessionTags'
 import { AgentsDrawer } from './agentsDrawer'
 import { openBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
@@ -195,6 +195,7 @@ export class PaneComponent {
     this.projectName.textContent = projectName
     this.fresh.hidden = view.named
     this.updateTag(view.tag, view.tagAuto)
+    this.index.title = [title, projectName, view.tag ? SESSION_TAG_LABELS[view.tag] : ''].filter((part) => part !== '').join(' · ')
     const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
     const origin = view.pane.tabs.find((t) => t.id === view.primaryTabId)?.from
@@ -246,7 +247,6 @@ export class PaneComponent {
     if (signature === this.titleText) return
     this.titleText = signature
     this.index.replaceChildren(`${number} · `, h('bdi', { dir: 'auto' }, title))
-    this.index.title = title
   }
 
   // In full mode the X sits right after the name, like the strip tabs; in the grid it stays at the far right.
@@ -581,7 +581,7 @@ export class PaneComponent {
   private closeActions(): void {
     document.removeEventListener('pointerdown', this.outsideActions, true)
     document.removeEventListener('keydown', this.escapeActions, true)
-    this.actionsMenu?.remove()
+    leave(this.actionsMenu)
     this.actionsMenu = null
     this.actionsAnchor = null
   }
@@ -729,7 +729,7 @@ export class PaneComponent {
 
   private closeMenu(): void {
     document.removeEventListener('pointerdown', this.outside, true)
-    this.menu?.remove()
+    leave(this.menu)
     this.menu = null
     this.menuAnchor = null
   }

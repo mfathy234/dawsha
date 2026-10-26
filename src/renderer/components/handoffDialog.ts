@@ -1,7 +1,8 @@
 import { AGENT_NAMES } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
 import { api } from '../api'
-import { h } from '../dom'
+import { h, icon } from '../dom'
+import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { nextDialogId, present } from './dialogs'
 import { toast } from './toast'
@@ -15,18 +16,20 @@ export interface HandoffDialogOptions {
   transcriptPath: string | null
 }
 
+const fileName = (path: string): string => path.split(/[/\\]/).pop() ?? path
+
 function transcriptRow(path: string): HTMLElement {
-  const copy = h('button', { class: 'btn ghost small', type: 'button' }, 'Copy path')
+  const copy = h('button', { class: 'link-quiet', type: 'button' }, 'Copy path')
   copy.addEventListener('click', () => {
     void api.writeClipboard(path).then(() => toast('Path copied', 'info'), () => toast('Could not copy the path.'))
   })
-  const reveal = h('button', { class: 'btn ghost small', type: 'button' }, 'Show in folder')
+  const reveal = h('button', { class: 'link-quiet', type: 'button' }, 'Show in folder')
   reveal.addEventListener('click', () => void api.revealHandoff(path))
   return h(
     'div',
     { class: 'handoff-file', role: 'group', 'aria-label': 'Transcript file' },
-    h('span', { class: 'handoff-file-label' }, 'Transcript file'),
-    h('code', { class: 'handoff-file-path', dir: 'ltr', title: path }, path),
+    icon(ICONS.file),
+    h('span', { class: 'handoff-file-path', dir: 'ltr', title: path }, fileName(path)),
     h('span', { class: 'handoff-file-actions' }, reveal, copy)
   )
 }
@@ -49,7 +52,7 @@ export function handoffDialog(options: HandoffDialogOptions): Promise<string | n
   const dialog = h(
     'div',
     { class: 'dialog handoff-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': `Continue in ${AGENT_NAMES[options.to]}` },
-    h('div', { class: 'handoff-head' }, h('h2', {}, `Continue in ${AGENT_NAMES[options.to]}`), h('span', { class: 'handoff-marks' }, agentMark(options.from), '→', agentMark(options.to))),
+    h('div', { class: 'handoff-head' }, h('span', { class: 'handoff-marks' }, agentMark(options.from), icon(ICONS.next), agentMark(options.to)), h('h2', {}, `Continue in ${AGENT_NAMES[options.to]}`)),
     h(
       'p',
       { class: 'dialog-hint' },

@@ -131,7 +131,7 @@
 .orch-panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--r-card);
   min-width: 0;
 }
 
@@ -140,10 +140,8 @@
   padding: var(--orch-panel-padding, 12px);
   border-bottom: 1px solid var(--border);
   color: var(--muted);
-  font-size: var(--fs-status);
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-size: var(--fs-ui);
+  font-weight: 500;
   display: flex;
   justify-content: space-between;
   align-items: center;

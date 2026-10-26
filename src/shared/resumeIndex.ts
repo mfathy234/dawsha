@@ -48,18 +48,16 @@ export const sessionSummary = (count: number, projects: number): string =>
 function whenText(time: number, now: number): string {
   const clock = new Date(time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
   const group = ageGroup(time, now)
-  if (group === 'Today' || group === 'Yesterday') return `${group}, ${clock}`
+  if (group === 'Today' || group === 'Yesterday') return `${group} ${clock}`
   return `${new Date(time).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}, ${clock}`
 }
 
 /** Small facts for the preview; each is left out when the index did not capture it. */
 export function sessionFacts(session: ResumeSession, now: number): string[] {
   const worked = (session.activeSpans ?? []).reduce((total, [start, end]) => total + (end - start), 0)
-  const ago = now - session.modifiedAt
   return [
     session.messageCount > 0 ? messageWord(session.messageCount) : '',
     worked > 0 ? `${formatDuration(worked)} of work` : '',
-    `Started ${whenText(session.startedAt, now)}`,
-    ago < 60_000 ? 'Active just now' : `Active ${formatAge(ago)} ago`
+    whenText(session.startedAt, now)
   ].filter(Boolean)
 }

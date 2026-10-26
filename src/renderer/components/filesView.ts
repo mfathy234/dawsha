@@ -3,7 +3,7 @@ import { normalizeFolder } from '../../shared/folderKey'
 import { languageLabel } from '../files/languageInfo'
 import { api } from '../api'
 import { focusPane, saveSettings } from '../actions'
-import { h, icon } from '../dom'
+import { h, icon, leave, placeNearAnchor } from '../dom'
 import { ICONS } from '../icons'
 import { currentBundle, onThemeChange } from '../themeManager'
 import { projectById, store, type AppState } from '../state'
@@ -63,10 +63,12 @@ export class FilesViewComponent {
   private readonly crumb = h('div', { class: 'files-crumb', 'aria-label': 'File path' })
   private readonly fileButton = h('button', { class: 'files-seg', type: 'button', id: 'files-file', 'aria-pressed': 'true', onClick: () => void this.showFileMode() }, 'File')
   private readonly changesButton = h('button', { class: 'files-seg', type: 'button', id: 'files-changes', 'aria-pressed': 'false', title: 'Show what changed since main (click again for the file)', onClick: () => void this.toggleChanges() }, 'Changes')
-  private readonly editButton = h('button', { class: 'btn ghost small', type: 'button', id: 'files-edit', onClick: () => this.toggleEdit() }, 'Edit')
-  private readonly promptButton = h('button', { class: 'btn ghost small', type: 'button', id: 'files-add-prompt', title: 'Type @path (and the selected lines) into the focused session', onClick: () => this.addActiveToPrompt() }, 'Add to prompt')
-  private readonly codeButton = h('button', { class: 'btn ghost small', type: 'button', id: 'files-open-code', 'aria-label': 'Open in VS Code', title: 'Open in VS Code', onClick: () => this.openActiveInCode() }, icon(ICONS.code), h('span', { class: 'files-btn-label' }, 'Open in VS Code'))
+  private readonly editButton = h('button', { class: 'btn small', type: 'button', id: 'files-edit', onClick: () => this.toggleEdit() }, 'Edit')
+  private readonly promptButton = h('button', { class: 'btn small', type: 'button', id: 'files-add-prompt', title: 'Type @path (and the selected lines) into the focused session', onClick: () => this.addActiveToPrompt() }, 'Add to prompt')
+  private readonly codeButton = h('button', { class: 'btn small', type: 'button', id: 'files-open-code', 'aria-label': 'Open in VS Code', title: 'Open in VS Code', onClick: () => this.openActiveInCode() }, icon(ICONS.code), h('span', { class: 'files-btn-label' }, 'Open in VS Code'))
   private readonly copyButton = h('button', { class: 'icon-btn', type: 'button', id: 'files-copy-path', 'aria-label': 'Copy path', title: 'Copy path', onClick: () => void this.copyPath() }, icon(ICONS.copy))
+  private readonly moreButton = h('button', { class: 'icon-btn files-more', type: 'button', id: 'files-more', 'aria-label': 'More actions', title: 'More actions', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: () => this.toggleMore() }, icon(ICONS.more))
+  private moreMenu: HTMLElement | null = null
   private readonly bar = h('div', { class: 'files-bar' })
   private readonly conflictText = h('span', { class: 'files-conflict-text' }, 'This file changed on disk.')
   private readonly reloadButton = h('button', { class: 'btn small', type: 'button', id: 'files-reload-theirs', onClick: () => void this.active()?.reload() }, 'Reload theirs')
@@ -81,7 +83,7 @@ export class FilesViewComponent {
   private readonly outlineList = h('div', { class: 'files-side-list', id: 'files-outline' })
 
   constructor() {
-    this.bar.append(this.crumb, h('span', { class: 'spacer' }), this.segment, this.editButton, this.promptButton, this.codeButton, this.copyButton)
+    this.bar.append(this.crumb, h('span', { class: 'spacer' }), this.segment, this.editButton, this.promptButton, this.codeButton, this.copyButton, this.moreButton)
     this.stage.append(this.empty)
     this.side.append(
       h('section', { class: 'files-side-sec' }, h('h2', {}, 'Sessions that touched it'), this.sessionsList),
@@ -511,12 +513,48 @@ export class FilesViewComponent {
         }
       },
       h('span', { class: 'files-tab-name' }, name),
-      doc?.dirty ? h('span', { class: 'files-dot', title: 'Unsaved changes', 'aria-label': 'Unsaved changes' }) : null,
+      doc?.dirty ? h('span', { class: 'files-dot', title: 'Unsaved changes', 'aria-label': 'Unsaved changes' }, '•') : null,
       h('button', { class: 'files-tab-close', type: 'button', 'aria-label': `Close ${name}`, title: `Close ${name}`, onClick: (event: Event) => {
         event.stopPropagation()
         void this.closeFile(tab.path)
       } }, icon(ICONS.closeSmall)))
     }))
+  }
+
+  private readonly moreOutside = (event: Event): void => {
+    const target = event.target as Node
+    if (this.moreMenu && !this.moreMenu.contains(target) && !this.moreButton.contains(target)) this.closeMore()
+  }
+
+  private closeMore(): void {
+    document.removeEventListener('pointerdown', this.moreOutside, true)
+    leave(this.moreMenu)
+    this.moreMenu = null
+    this.moreButton.setAttribute('aria-expanded', 'false')
+  }
+
+  /** On a narrow editor the bar keeps File/Changes, Edit and Copy path; the rest live in this menu. */
+  private toggleMore(): void {
+    if (this.moreMenu) {
+      this.closeMore()
+      return
+    }
+    const entry = (label: string, run: () => void): HTMLElement => h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.closeMore(); run() } }, label)
+    const items = [entry('Add to prompt', () => this.addActiveToPrompt()), entry('Open in VS Code', () => this.openActiveInCode())]
+    const menu = h('div', { class: 'popover menu floating', role: 'menu', 'aria-label': 'More actions' }, ...items)
+    menu.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      this.closeMore()
+      this.moreButton.focus()
+    })
+    document.body.appendChild(menu)
+    placeNearAnchor(menu, this.moreButton)
+    this.moreMenu = menu
+    this.moreButton.setAttribute('aria-expanded', 'true')
+    items[0].focus()
+    setTimeout(() => document.addEventListener('pointerdown', this.moreOutside, true), 0)
   }
 
   private renderBar(): void {

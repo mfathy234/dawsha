@@ -87,7 +87,7 @@ test('the top bar never pushes out its icons, with the usage limits shown and a 
     writeFileSync(join(sandbox.sessionsDir, 'smoke.json'), JSON.stringify({ pid: process.pid, sessionId: SESSION_ID, cwd: sandbox.projectFolder, name: 'Polish the release', nameSource: 'user', status: 'busy', startedAt: now + 1000, updatedAt: now + 1000 }), 'utf8')
     writeOps(sandbox)
     await expect(page.locator('.topbar-limits')).toBeVisible({ timeout: 20_000 })
-    await expect(page.locator('#background-button .bg-badge')).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('#background-button .count-badge')).toBeVisible({ timeout: 20_000 })
     const navHeight = (await page.locator('#files-button').boundingBox())!.height
     for (const width of [1600, 1440, 1280, 1024, 960]) {
       await page.setViewportSize({ width, height: 900 })

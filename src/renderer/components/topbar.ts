@@ -22,15 +22,15 @@ import { countSessionStates, sessionState } from '../../shared/sessionState'
 import { MORE_VIEWS, accountLimits, limitText, moreLabel, type MoreView } from '../../shared/topbarSummary'
 import { stateIcon } from './stateIcon'
 import { toolState } from '../../shared/agentTools'
-import { formatPercent, gaugeStage } from '../../shared/statusLine'
-import { chargeBar } from './chargeBar'
+import { formatPercent } from '../../shared/statusLine'
 import type { RateLimitWindow } from '../../shared/types'
-import { h, icon } from '../dom'
+import { h, icon, leave } from '../dom'
 import { store, type AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import { setSessionsLayout } from '../sessionsLayout'
 import { NotificationBell } from './notificationBell'
 import { onAgentsChange, runningAgents } from '../backgroundAgents'
+import './topbar.css'
 
 const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
 
@@ -77,7 +77,7 @@ export class TopBarComponent {
     h('span', { class: 'utility-label' }, 'Theme')
   )
   private readonly sessions = h('button', { class: 'btn ghost', type: 'button', id: 'sessions-button', onClick: () => showView('grid') }, 'Sessions')
-  private readonly agentsBadge = h('span', { class: 'bg-badge', hidden: true, 'aria-hidden': 'true' })
+  private readonly agentsBadge = h('span', { class: 'count-badge', hidden: true, 'aria-hidden': 'true' })
   private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Background agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'background') }, 'Agents', this.agentsBadge)
   private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
   private readonly projects = h('button', { class: 'btn ghost', type: 'button', id: 'projects-button' }, 'Projects')
@@ -97,7 +97,7 @@ export class TopBarComponent {
   private activeMore: MoreView | null = null
   private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
   private readonly work = h('button', { class: 'btn ghost', type: 'button', id: 'work-button', onClick: () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work') }, 'Work')
-  private readonly orchBadge = h('span', { class: 'orch-badge', hidden: true })
+  private readonly orchBadge = h('span', { class: 'count-badge', hidden: true })
   private readonly orchestrator = h('button', { class: 'btn ghost', type: 'button', id: 'orchestrator-button', hidden: true }, 'Orchestrator', this.orchBadge)
   private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings', title: 'Settings' },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
@@ -105,11 +105,8 @@ export class TopBarComponent {
   )
   private readonly gridMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-grid', title: 'Show sessions as a grid', onClick: () => setSessionsLayout('grid') }, 'Grid')
   private readonly boardMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-board', title: `Show sessions as a board (${BOARD_KEY_HINT})`, onClick: () => setSessionsLayout('board') }, 'Board')
-  private readonly dimState = h('span', { class: 'dim-switch-state', 'aria-hidden': 'true' }, 'Off')
-  private readonly dimSwitch = h('button', { class: 'dim-switch', type: 'button', id: 'dim-others', role: 'switch', 'aria-checked': 'false', 'aria-label': 'Dim others', title: 'Dim others', onClick: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
-    h('span', { class: 'dim-switch-track', 'aria-hidden': 'true' }, h('span', { class: 'dim-switch-thumb' })),
-    h('span', { class: 'dim-switch-label' }, 'Dim'),
-    this.dimState
+  private readonly dimSwitch = h('button', { class: 'icon-btn dim-toggle', type: 'button', id: 'dim-others', 'aria-pressed': 'false', 'aria-label': 'Dim others', title: 'Dim others', onClick: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
+    icon(ICONS.dim)
   )
   private readonly summary = h('div', { class: 'topbar-count', role: 'status', 'aria-live': 'polite' })
   private summarySignature = ''
@@ -185,8 +182,7 @@ export class TopBarComponent {
     this.gridMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'grid'))
     this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
     const dim = state.settings.dimOtherPanes
-    this.dimSwitch.setAttribute('aria-checked', String(dim))
-    this.dimState.textContent = dim ? 'On' : 'Off'
+    this.dimSwitch.setAttribute('aria-pressed', String(dim))
     this.background.setAttribute('aria-pressed', String(state.view === 'background'))
     this.files.setAttribute('aria-pressed', String(state.view === 'files'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
@@ -281,7 +277,7 @@ export class TopBarComponent {
 
   private closeAgentMenu(): void {
     document.removeEventListener('pointerdown', this.outside, true)
-    this.agentMenu?.remove()
+    leave(this.agentMenu)
     this.agentMenu = null
     this.chevron.setAttribute('aria-expanded', 'false')
   }
@@ -377,7 +373,7 @@ export class TopBarComponent {
 
   private closeMoreMenu(): void {
     document.removeEventListener('pointerdown', this.moreOutside, true)
-    this.moreMenu?.remove()
+    leave(this.moreMenu)
     this.moreMenu = null
     this.moreItems = null
     this.more.setAttribute('aria-expanded', 'false')
@@ -470,12 +466,9 @@ function resetText(window: RateLimitWindow): string {
 function limitItem(window: RateLimitWindow, text: string, title: string): HTMLElement {
   return h(
     'span',
-    { class: `limit stage-${gaugeStage(window.percent)}`, title, 'data-limit': window.key },
+    { class: 'limit', title, 'data-limit': window.key },
     h('span', { class: `limit-label${window.family ? ` fam-${window.family}` : ''}` }, window.label),
-    ' ',
-    chargeBar(window.percent),
     ' ',
     h('span', { class: 'limit-value' }, text)
   )
-
 }

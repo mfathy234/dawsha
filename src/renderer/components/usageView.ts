@@ -46,7 +46,6 @@ function busiestLabel(key: string, hourly: boolean): string {
   return `${WEEKDAYS[new Date(year, month - 1, day).getDay()]} ${day}`
 }
 
-const meterStage = (percent: number): string => (percent >= 90 ? 'high' : percent >= 70 ? 'mid' : 'low')
 
 function notesFor(report: UsageReport): string[] {
   const notes: string[] = []
@@ -291,24 +290,12 @@ export class UsageViewComponent {
     const rounded = Math.round(percent)
     return h(
       'div',
-      { class: 'usage-meter', 'data-limit': meter.key },
+      { class: 'usage-meter', 'data-limit': meter.key, role: 'meter', 'aria-label': `${meter.label} used`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': rounded },
       h(
         'div',
         { class: 'usage-meter-head' },
         h('span', { class: 'usage-meter-label' }, meter.label),
         h('span', { class: 'usage-meter-percent' }, `${rounded}% used`)
-      ),
-      h(
-        'div',
-        {
-          class: `usage-meter-track meter-${meterStage(percent)}`,
-          role: 'meter',
-          'aria-label': `${meter.label} used`,
-          'aria-valuemin': 0,
-          'aria-valuemax': 100,
-          'aria-valuenow': rounded
-        },
-        h('div', { class: 'usage-meter-fill', style: `width:${Math.min(100, Math.max(0, percent)).toFixed(1)}%` })
       ),
       h('div', { class: 'usage-meter-foot' }, h('span', {}, resetText(resetsAt, now)), pace ? h('span', { class: 'usage-meter-pace' }, pace) : null)
     )

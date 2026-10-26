@@ -40,24 +40,19 @@
   flex: none;
 }
 
-/* The close and menu buttons sit in the row's right gutter, stacked, and only show on hover or focus. */
-.kept-session-row .sess-more,
-.kept-session-row .sess-close {
+/* The menu and close buttons sit in the row's right gutter, 28px each, and only show on hover or focus; the text makes room for them then. */
+.kept-session-row .icon-btn.sess-more,
+.kept-session-row .icon-btn.sess-close {
   position: absolute;
-  right: 4px;
-  width: 22px;
-  height: 19px;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-50%);
   opacity: 0;
 }
 
-.kept-session-row .sess-more {
-  top: 1px;
-  color: color-mix(in srgb, var(--muted) 80%, transparent);
-}
-
-.kept-session-row .sess-close {
-  bottom: 1px;
-}
+.kept-session-row .icon-btn.sess-close { inset-inline-end: var(--s-1); }
+.kept-session-row .icon-btn.sess-more { inset-inline-end: 32px; }
 
 .kept-session-row:hover .sess-more,
 .kept-session-row:hover .sess-close,
@@ -65,6 +60,12 @@
 .kept-session-row:focus-within .sess-close,
 .sess-more[aria-expanded='true'] {
   opacity: 1;
+}
+
+.kept-session-row:hover .sess-row,
+.kept-session-row:focus-within .sess-row,
+.kept-session-row:has(.sess-more[aria-expanded='true']) .sess-row {
+  padding-inline-end: 64px;
 }
 
 .sess-row.editing {

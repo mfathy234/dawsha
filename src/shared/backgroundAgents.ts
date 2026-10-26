@@ -135,8 +135,6 @@ export interface BgSessionGroup {
   agents: BackgroundAgent[]
 }
 
-const MINUTE = 60_000
-const MIN_BAR_PCT = 3
 
 const endOf = (agent: Pick<BackgroundAgent, 'endedAt' | 'lastActivityAt' | 'status'>, now: number): number => (agent.status === 'running' ? now : agent.endedAt ?? agent.lastActivityAt)
 
@@ -161,23 +159,6 @@ export function groupBySession(agents: readonly BackgroundAgent[], now: number):
     .map((entry) => entry.group)
 }
 
-/** Earliest start to latest end (running agents end at now), at least a minute wide. */
-export function sessionSpan(agents: readonly BackgroundAgent[], now: number): { from: number; to: number } {
-  const from = Math.min(...agents.map((agent) => agent.startedAt))
-  const to = Math.max(...agents.map((agent) => endOf(agent, now)))
-  return { from, to: Math.max(to, from + MINUTE) }
-}
-
-/** Percent position inside a session's span; at least 3% wide and never past 100%. */
-export function barGeometry(agent: Pick<BackgroundAgent, 'startedAt' | 'endedAt' | 'lastActivityAt' | 'status'>, span: { from: number; to: number }, now: number): { left: number; width: number } {
-  const total = span.to - span.from
-  const start = Math.min(Math.max(agent.startedAt, span.from), span.to)
-  const end = Math.min(Math.max(endOf(agent, now), start), span.to)
-  const width = Math.max(((end - start) / total) * 100, MIN_BAR_PCT)
-  const left = Math.min(((start - span.from) / total) * 100, 100 - width)
-  return { left, width }
-}
-
 export function compactTokens(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(count >= 10_000_000 ? 0 : 1)}M`
   if (count >= 1_000) return `${(count / 1_000).toFixed(count >= 10_000 ? 0 : 1)}k`
@@ -195,8 +176,7 @@ export function spanLabel(ms: number): string {
 }
 
 export const STATUS_LABELS: Record<BgStatus, string> = { running: 'running', done: 'done', failed: 'failed' }
-/** The accessible name of an agent card (the Agents tab is a list, no longer a timeline). */
-/** The accessible name of a timeline bar. */
+/** The accessible name of an agent row. */
 export function barLabel(agent: BackgroundAgent, now: number): string {
   const end = agent.status === 'running' ? now : agent.endedAt ?? agent.lastActivityAt
   const kind = agent.automatic ? 'automatic review' : agent.type

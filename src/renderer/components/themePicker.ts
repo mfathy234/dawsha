@@ -1,7 +1,7 @@
 import { setImage, setTheme, toggleThemePicker } from '../actions'
 import { api } from '../api'
 import { THEMES, findTheme, hasLightTerminal } from '../../shared/themes'
-import { h } from '../dom'
+import { h, leave } from '../dom'
 import type { AppState } from '../state'
 import { popupDismissButton } from './popupDismiss'
 
@@ -47,7 +47,7 @@ export class ThemePickerComponent {
 
   private close(): void {
     document.removeEventListener('pointerdown', this.outside, true)
-    this.root?.remove()
+    leave(this.root)
     this.root = null
     this.anchor().focus()
   }

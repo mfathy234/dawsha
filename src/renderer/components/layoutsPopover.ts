@@ -2,7 +2,7 @@ import { layoutSlug, paneAgent, paneCountText } from '../../shared/layouts'
 import type { SavedLayout } from '../../shared/types'
 import { toggleLayouts } from '../actions'
 import { deleteLayout, openLayoutFromUi, renameLayout, saveCurrentLayout } from '../layoutActions'
-import { h } from '../dom'
+import { h, leave } from '../dom'
 import { projectById, type AppState } from '../state'
 import { agentMark } from './agentMark'
 import { popupDismissButton } from './popupDismiss'
@@ -42,7 +42,7 @@ export class LayoutsPopoverComponent {
   }
 
   private readonly onEscape = (event: KeyboardEvent): void => {
-    if (event.key !== 'Escape' || document.querySelector('.overlay')) return
+    if (event.key !== 'Escape' || document.querySelector('.overlay:not(.leaving)')) return
     event.stopPropagation()
     toggleLayouts(false)
     this.anchor().focus()
@@ -51,7 +51,7 @@ export class LayoutsPopoverComponent {
   private close(): void {
     document.removeEventListener('pointerdown', this.outside, true)
     document.removeEventListener('keydown', this.onEscape, true)
-    this.root?.remove()
+    leave(this.root)
     this.root = null
   }
 

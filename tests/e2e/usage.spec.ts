@@ -109,6 +109,7 @@ test('the usage view totals tokens and cost per day, project and agent from loca
     await expect(page.locator('#usage-tile-spend')).toContainText('$4.25')
     await expect(page.locator('.usage-meter[data-limit="five_hour"]')).toContainText('62% used')
     await expect(page.locator('.usage-meter[data-limit="seven_day"]')).toContainText('18% used')
+    await expect(page.locator('.usage-meter-track, .usage-meter-fill')).toHaveCount(0)
     await expect(page.locator('.usage-notes')).toContainText('Codex and Gemini report tokens only')
     await page.screenshot({ path: join(SCREENS, '60-usage.png') })
 

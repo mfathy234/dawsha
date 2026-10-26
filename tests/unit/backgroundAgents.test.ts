@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseClaudeAgent, parseCodexAgent } from '../../src/shared/agentRecords'
 import {
-  DEFAULT_BG_FILTERS, applyFilters, barGeometry, barLabel, filtersActive, groupBySession, projectOptions, sessionSpan, statusCounts, totalsOf,
+  DEFAULT_BG_FILTERS, applyFilters, barLabel, filtersActive, groupBySession, projectOptions, statusCounts, totalsOf,
   type BackgroundAgent
 } from '../../src/shared/backgroundAgents'
 
@@ -167,30 +167,8 @@ describe('filters and groups', () => {
   })
 })
 
-describe('session waterfall', () => {
-  it('spans the earliest start to the latest end, a running agent ending at now', () => {
-    const span = sessionSpan([agent({ startedAt: NOW - 30 * 60_000, endedAt: NOW - 20 * 60_000 }), agent({ status: 'running', endedAt: null, startedAt: NOW - 10 * 60_000 })], NOW)
-    expect(span).toEqual({ from: NOW - 30 * 60_000, to: NOW })
-  })
-
-  it('is at least a minute wide for one short agent', () => {
-    const span = sessionSpan([agent({ startedAt: NOW - 5_000, endedAt: NOW - 1_000 })], NOW)
-    expect(span.to - span.from).toBe(60_000)
-  })
-
-  it('places bars in percent, at least 3% wide and never past 100%', () => {
-    const span = { from: NOW - 100 * 60_000, to: NOW }
-    const done = barGeometry(agent({ startedAt: NOW - 100 * 60_000, endedAt: NOW - 50 * 60_000 }), span, NOW)
-    expect(done.left).toBe(0)
-    expect(done.width).toBeCloseTo(50, 5)
-    const running = barGeometry(agent({ status: 'running', endedAt: null, startedAt: NOW - 25 * 60_000 }), span, NOW)
-    expect(running.left).toBeCloseTo(75, 5)
-    expect(running.left + running.width).toBeCloseTo(100, 5)
-    const tiny = barGeometry(agent({ startedAt: NOW - 1_000, endedAt: NOW - 500 }), span, NOW)
-    expect(tiny.width).toBe(3)
-    expect(tiny.left + tiny.width).toBeLessThanOrEqual(100)
-    const late = barGeometry(agent({ startedAt: NOW + 60_000, endedAt: NOW + 120_000 }), span, NOW)
-    expect(late.left + late.width).toBeLessThanOrEqual(100)
+describe('row label', () => {
+  it('reads the description, agent type, status and duration', () => {
     expect(barLabel(agent({ description: 'Grid pass' }), NOW)).toBe('Grid pass, general-purpose, done, 20m')
   })
 })

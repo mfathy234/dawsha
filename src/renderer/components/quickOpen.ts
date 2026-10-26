@@ -2,7 +2,7 @@ import { moveSelection } from '../../shared/quickPick'
 import { quickOpen as rankFiles } from '../../shared/fileTree'
 import { fuzzyMatch } from '../../shared/palette'
 import { api } from '../api'
-import { h, icon } from '../dom'
+import { h, icon, leave } from '../dom'
 import { ICONS } from '../icons'
 import { addToPrompt, filesTarget, openInFiles, openInVsCode, type FilesTarget } from '../files/filesActions'
 import { fileIndex, recentFiles, type FileIndex } from '../files/fileIndex'
@@ -110,7 +110,7 @@ export function closeQuickOpen(restoreFocus: boolean): void {
   if (!current) return
   session = null
   window.clearTimeout(current.previewTimer)
-  current.overlay.remove()
+  leave(current.overlay)
   if (restoreFocus) requestAnimationFrame(() => current.previous?.focus())
 }
 

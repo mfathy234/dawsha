@@ -81,25 +81,25 @@ for (const [mode, themeId] of THEMES) {
   })
 }
 
-test('dim others is off until the top bar switch is turned on, and it persists', async () => {
+test('dim others is off until the top bar toggle is turned on, and it persists', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
     await addPanes(page, 2)
-    const toggle = page.getByRole('switch', { name: 'Dim others' })
-    await expect(toggle).toHaveAttribute('aria-checked', 'false')
+    const toggle = page.getByRole('button', { name: 'Dim others' })
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
     await expect(page.locator('.pane.calm')).toHaveCount(0)
     await toggle.click()
-    await expect(toggle).toHaveAttribute('aria-checked', 'true')
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.pane.calm')).toHaveCount(1)
     await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).dimOtherPanes).toBe(true)
     await closeApp(app)
     const again = await launchApp(sandbox)
     try {
       await addPanes(again.page, 2)
-      await expect(again.page.getByRole('switch', { name: 'Dim others' })).toHaveAttribute('aria-checked', 'true')
+      await expect(again.page.getByRole('button', { name: 'Dim others' })).toHaveAttribute('aria-pressed', 'true')
       await expect(again.page.locator('.pane.calm')).toHaveCount(1)
-      await again.page.getByRole('switch', { name: 'Dim others' }).click()
+      await again.page.getByRole('button', { name: 'Dim others' }).click()
       await expect(again.page.locator('.pane.calm')).toHaveCount(0)
     } finally {
       await closeApp(again.app)

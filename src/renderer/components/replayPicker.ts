@@ -1,7 +1,7 @@
 import { agentLabel } from '../../shared/agents'
 import { filterRecordings, formatBytes, formatDuration, recordingSeconds, type RecordingSummary } from '../../shared/recordings'
 import { api } from '../api'
-import { clear, h, icon } from '../dom'
+import { clear, h, icon, leave } from '../dom'
 import { ICONS } from '../icons'
 import { setRecordings } from '../actions'
 import { closeReplayPicker, openReplay } from '../replayActions'
@@ -100,7 +100,7 @@ export class ReplayPickerComponent {
   private teardown(): void {
     this.token += 1
     window.clearTimeout(this.timer)
-    this.overlay?.remove()
+    leave(this.overlay)
     this.overlay = null
     this.input = null
     this.list = null
@@ -112,7 +112,7 @@ export class ReplayPickerComponent {
     const previous = this.previous
     closeReplayPicker()
     requestAnimationFrame(() => {
-      if (!document.querySelector('.overlay, .popover')) previous?.focus()
+      if (!document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)')) previous?.focus()
     })
   }
 

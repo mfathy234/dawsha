@@ -12,7 +12,7 @@ import { formatPercent } from '../../shared/statusLine'
 import type { AgentKind, Project, RateLimitWindow } from '../../shared/types'
 import { primaryModifierPressed } from '../../shared/shortcuts'
 import type { PaneView } from '../derive'
-import { clear, h, icon } from '../dom'
+import { clear, h, icon, leave } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { chargeBar } from './chargeBar'
@@ -128,7 +128,7 @@ export class QuickPickComponent {
 
   private close(stillOpen: boolean): void {
     document.removeEventListener('pointerdown', this.outside, true)
-    this.root?.remove()
+    leave(this.root)
     this.root = null
     this.input = null
     this.list = null

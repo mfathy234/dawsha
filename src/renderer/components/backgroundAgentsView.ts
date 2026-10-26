@@ -1,15 +1,17 @@
 import {
-  BG_RANGES, BG_STATUSES, DEFAULT_BG_FILTERS, STATUS_LABELS, applyFilters, barGeometry, barLabel, compactTokens, costLabel, filtersActive, groupBySession,
-  projectOptions, sessionSpan, spanLabel, statusCounts, toggleIn, totalsOf, type BackgroundAgent, type BgFilters, type BgKind, type BgRange, type BgSessionGroup, type BgStatus
+  BG_RANGES, BG_STATUSES, DEFAULT_BG_FILTERS, STATUS_LABELS, applyFilters, barLabel, compactTokens, costLabel, filtersActive, groupBySession,
+  projectOptions, spanLabel, statusCounts, toggleIn, totalsOf, type BackgroundAgent, type BgFilters, type BgKind, type BgRange, type BgSessionGroup, type BgStatus
 } from '../../shared/backgroundAgents'
 import { modelLabel } from '../../shared/sessionDetail'
 import { AGENT_NAMES } from '../../shared/agents'
 import { agentsFailed, agentsFilters, agentsReport, onAgentsChange, refreshAgents, setAgentFilters } from '../backgroundAgents'
 import { findOpenSession, focusOpenSession, resumeInNewPane } from '../actions'
 import { api } from '../api'
-import { h } from '../dom'
+import { h, icon } from '../dom'
+import { ICONS } from '../icons'
 import { store, type AppState } from '../state'
 import { agentMark } from './agentMark'
+import { stateIcon } from './stateIcon'
 import { selectMenu, syncSelectMenu } from './selectMenu'
 import { toast } from './toast'
 import './backgroundAgentsView.css'
@@ -18,7 +20,7 @@ const REFRESH_MS = 5000
 const KIND_CHIPS: { kind: BgKind; label: string }[] = [{ kind: 'claude', label: 'Claude Code' }, { kind: 'codex', label: 'Codex' }]
 
 const stamp = (at: number): string => new Date(at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-const STATUS_ICONS: Record<BgStatus, string> = { running: '●', done: '✓', failed: '✕' }
+const statusGlyph = (status: BgStatus): Node => (status === 'running' ? stateIcon('working') : document.createTextNode(status === 'done' ? '✓' : '✕'))
 const count = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 
 function makeSelect(id: string, label: string, onChange: (value: string) => void): HTMLSelectElement {
@@ -33,7 +35,7 @@ export class BackgroundAgentsViewComponent {
   private projects: readonly { id: string; name: string }[] = []
   private projectSignature = ''
   private readonly chips = h('div', { class: 'bg-chips', role: 'group', 'aria-label': 'Filter by status' })
-  private readonly totals = h('span', { class: 'bg-chip bg-totals', id: 'bg-totals', role: 'status' })
+  private readonly totals = h('span', { class: 'bg-totals', id: 'bg-totals', role: 'status' })
   private readonly search = h('input', {
     class: 'text-input bg-search', id: 'bg-search', type: 'search', placeholder: 'Search agents…', 'aria-label': 'Search agents',
     onInput: (event: Event) => {
@@ -41,7 +43,7 @@ export class BackgroundAgentsViewComponent {
     }
   })
   private readonly kindChips = KIND_CHIPS.map(({ kind, label }) => h('button', {
-    class: 'bg-chip', type: 'button', id: `bg-kind-${kind}`, 'aria-pressed': 'false', onClick: () => this.change({ kinds: toggleIn(agentsFilters().kinds, kind) })
+    class: 'text-toggle', type: 'button', id: `bg-kind-${kind}`, 'aria-pressed': 'false', onClick: () => this.change({ kinds: toggleIn(agentsFilters().kinds, kind) })
   }, label))
   private readonly projectSelect = makeSelect('bg-project-filter', 'Filter by project', (value) => this.change({ project: value || null }))
   private readonly rangeSelect = makeSelect('bg-range', 'Time range', (value) => this.change({ range: value as BgRange }))
@@ -117,9 +119,9 @@ export class BackgroundAgentsViewComponent {
 
   private statusChip(status: BgStatus, total: number, filters: BgFilters): HTMLElement {
     return h('button', {
-      class: `bg-chip st-${status}`, type: 'button', id: `bg-status-${status}`, 'aria-pressed': String(filters.statuses.includes(status)),
+      class: `text-toggle st-${status}`, type: 'button', id: `bg-status-${status}`, 'aria-pressed': String(filters.statuses.includes(status)),
       onClick: () => this.change({ statuses: toggleIn(agentsFilters().statuses, status) })
-    }, h('span', { class: 'bg-dot', 'aria-hidden': 'true' }), `${total} ${STATUS_LABELS[status]}`)
+    }, `${total} ${STATUS_LABELS[status]}`)
   }
 
   // A refresh that changes nothing leaves the page alone, so focus, hover and an open details panel stay put.
@@ -180,20 +182,17 @@ export class BackgroundAgentsViewComponent {
   }
 
   private group(group: BgSessionGroup, now: number): HTMLElement {
-    const span = sessionSpan(group.agents, now)
-    const counts = ([['running', group.running], ['done', group.done], ['failed', group.failed]] as const).filter(([, n]) => n > 0).map(([status, n]) => `${n} ${STATUS_LABELS[status]}`)
-    return h('section', { class: 'bg-group', 'aria-label': group.title, 'data-session': group.sessionKey },
+        return h('section', { class: 'bg-group', 'aria-label': group.title, 'data-session': group.sessionKey },
       h('header', { class: 'bg-group-head' },
         agentMark(group.agentKind),
         h('div', { class: 'bg-group-who' },
           h('h2', { class: 'bg-group-title', title: group.title }, group.title),
           h('span', { class: 'bg-group-project' }, group.project)),
-        h('span', { class: 'bg-group-counts' }, counts.join(' · '))),
-      h('div', { class: 'bg-items' }, ...group.agents.map((agent) => this.item(agent, span, now))))
+        h('span', { class: 'bg-group-counts' }, count(group.agents.length, 'agent'))),
+      h('div', { class: 'bg-items' }, ...group.agents.map((agent) => this.item(agent, now))))
   }
 
-  private item(agent: BackgroundAgent, span: { from: number; to: number }, now: number): HTMLElement {
-    const { left, width } = barGeometry(agent, span, now)
+  private item(agent: BackgroundAgent, now: number): HTMLElement {
     const label = barLabel(agent, now)
     const end = agent.status === 'running' ? now : agent.endedAt ?? agent.lastActivityAt
     const note = (agent.status === 'running' ? agent.lastStep : agent.status === 'failed' ? agent.statusNote || agent.lastStep : agent.result || agent.lastStep) || ''
@@ -201,11 +200,10 @@ export class BackgroundAgentsViewComponent {
       class: `bg-item st-${agent.status}${agent.automatic ? ' auto' : ''}${agent.key === this.selected ? ' selected' : ''}`, type: 'button', 'data-key': agent.key, 'data-status': agent.status,
       'aria-label': label, 'aria-pressed': String(agent.key === this.selected), title: label, onClick: () => this.select(agent.key)
     },
-      h('span', { class: 'bg-item-icon', 'aria-hidden': 'true' }, STATUS_ICONS[agent.status]),
+      h('span', { class: 'bg-item-icon', 'aria-hidden': 'true' }, statusGlyph(agent.status)),
       h('span', { class: 'bg-item-name', 'aria-hidden': 'true' }, agent.description),
       h('span', { class: 'bg-item-status', 'aria-hidden': 'true' }, STATUS_LABELS[agent.status]),
       h('span', { class: 'bg-item-time', 'aria-hidden': 'true' }, spanLabel(end - agent.startedAt)),
-      h('span', { class: 'bg-track', 'aria-hidden': 'true' }, h('span', { class: 'bg-fill', style: `left:${left}%;width:${width}%` })),
       h('span', { class: 'bg-item-note', 'aria-hidden': 'true' }, note))
   }
 
@@ -240,8 +238,8 @@ export class BackgroundAgentsViewComponent {
     return h('aside', { class: 'bg-details', id: 'bg-details', 'aria-label': `Details for ${agent.description}` },
       h('div', { class: 'bg-details-head' },
         h('h2', {}, agent.description),
-        h('button', { class: 'btn ghost small', type: 'button', id: 'bg-details-close', 'aria-label': 'Close details', onClick: () => this.select(agent.key) }, '×')),
-      h('span', { class: `bg-status st-${agent.status}${agent.automatic ? ' auto' : ''}`, id: 'bg-detail-status' }, h('span', { class: 'bg-dot', 'aria-hidden': 'true' }), STATUS_LABELS[agent.status]),
+        h('button', { class: 'btn ghost small', type: 'button', id: 'bg-details-close', 'aria-label': 'Close details', onClick: () => this.select(agent.key) }, icon(ICONS.close))),
+      h('span', { class: `bg-status st-${agent.status}${agent.automatic ? ' auto' : ''}`, id: 'bg-detail-status' }, h('span', { class: 'bg-status-icon', 'aria-hidden': 'true' }, statusGlyph(agent.status)), STATUS_LABELS[agent.status]),
       agent.statusNote ? h('p', { class: 'bg-note' }, agent.statusNote) : null,
       h('dl', { class: 'bg-facts' },
         this.row('Agent', AGENT_NAMES[agent.kind]),

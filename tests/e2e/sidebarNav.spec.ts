@@ -190,6 +190,7 @@ test('dragging a project onto another moves it within its group, shows a drop li
 
     const menu = await openMenu(page, 'Smoke')
     await menu.getByRole('menuitem', { name: 'Pin to top' }).click()
+    await expect(projectNames(page)).toHaveText(['Smoke', 'Missing', 'Other'])
     await dragProject(page, 'Other', 'Smoke', 'drop')
     await expect(projectNames(page)).toHaveText(['Smoke', 'Missing', 'Other'])
   } finally {

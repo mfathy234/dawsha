@@ -1,0 +1,26 @@
+.onboarding-overlay { background: color-mix(in srgb, var(--bg) 96%, transparent); }
+.onboarding { width: 560px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.ob-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+.ob-head h2 { margin: 0; }
+.ob-progress-label { font-size: var(--fs-ui); font-variant-numeric: tabular-nums; color: var(--muted); }
+.ob-privacy { margin: 0 0 var(--s-4); font-size: var(--fs-ui); color: var(--muted); }
+.ob-steps { list-style: none; margin: var(--s-2) 0 var(--s-4); padding: 0; display: flex; flex-direction: column; gap: var(--s-4); }
+.ob-step { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: var(--s-3); align-items: start; }
+.ob-step.locked { opacity: .55; }
+.ob-num { display: inline-flex; justify-content: center; line-height: 20px; font-size: var(--fs-ui); font-variant-numeric: tabular-nums; color: var(--muted); }
+.ob-step.active .ob-num { color: var(--text); }
+.ob-step.done .ob-num { color: var(--accent); }
+.ob-text h3 { margin: 0; font-size: var(--fs-body); font-weight: 600; line-height: 20px; }
+.ob-text p { margin: var(--s-1) 0 0; font-size: var(--fs-ui); color: var(--muted); }
+.ob-project { display: flex; flex-direction: column; gap: 1px; margin-top: var(--s-1); min-width: 0; }
+.ob-folder { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: var(--fs-ui); color: var(--muted); }
+.ob-agents { display: flex; flex-direction: column; gap: var(--s-1); margin-top: var(--s-2); }
+.ob-agents-wait { margin-top: var(--s-2); }
+.ob-agent { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-height: 28px; }
+.ob-agent-name { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--fs-body); }
+.ob-ready { display: inline-flex; align-items: center; gap: var(--s-1); font-size: var(--fs-ui); color: var(--muted); }
+.ob-ready .icon { color: var(--accent); }
+.ob-start { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-3); margin-top: var(--s-2); }
+.ob-chips { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-inline: calc(var(--s-3) * -1); }
+.ob-tip { margin: 0 0 var(--s-2); font-size: var(--fs-body); }
+.ob-tip code { font-family: var(--font-mono); color: var(--accent); }

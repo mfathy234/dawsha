@@ -1,12 +1,11 @@
-.bell-button { position: relative; }
-.bell-badge { position: absolute; top: 1px; inset-inline-end: 1px; min-width: 15px; height: 15px; padding: 0 var(--s-1); border-radius: var(--r-control); background: var(--danger); color: #fff; font-size: var(--fs-status); font-weight: 600; line-height: 15px; text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
+.bell-button { gap: var(--s-1); }
+.bell-badge { color: var(--text); font-size: var(--fs-ui); font-weight: 500; font-variant-numeric: tabular-nums; }
 .bell-badge[hidden] { display: none; }
 .notifications-popover { z-index: 40; padding: 0; max-height: min(520px, calc(100vh - 80px)); display: flex; flex-direction: column; outline: none; }
-.notifications-head { margin: 0; padding: var(--s-3) var(--s-3) var(--s-2) var(--s-4); border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }
+.notifications-head { margin: 0; padding: var(--s-3) var(--s-3) var(--s-2) var(--s-4); }
 .notifications-head .popover-title { flex: 1; font-size: var(--fs-body); }
 .notifications-list { list-style: none; margin: 0; padding: var(--s-1); overflow-y: auto; }
 .notification-item { display: flex; align-items: flex-start; gap: var(--s-3); padding: var(--s-2) var(--s-3); border-radius: var(--radius); }
-.notification-item + .notification-item { border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
 .notification-item.fresh { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .notification-icon { flex: none; display: inline-flex; margin-top: 2px; color: var(--muted); }
 .kind-error .notification-icon { color: var(--danger); }

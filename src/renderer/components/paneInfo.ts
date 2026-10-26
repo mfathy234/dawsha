@@ -77,7 +77,7 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
         : h(
             'button',
             {
-              class: 'btn small info-enable-bridge',
+              class: 'link-quiet info-enable-bridge',
               type: 'button',
               title: 'Show context use and limits for Claude sessions. Asks before changing ~/.claude/settings.json.',
               onClick: handlers.onEnableBridge

@@ -35,6 +35,7 @@ export const ICONS = {
   chevronUp: svg(14, '<polyline points="18 15 12 9 6 15"/>'),
   chevronDown: svg(14, '<polyline points="6 9 12 15 18 9"/>'),
   compare: svg(14, '<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/>'),
+  dim: svg(16, '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>'),
   bolt: svg(14, '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>'),
   mic: svg(14, '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0 M12 18v3"/>'),
   layout: svg(14, '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16 M3 12h9"/>'),

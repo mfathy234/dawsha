@@ -58,7 +58,7 @@ test('Settings opens from the top bar and with Ctrl+comma, and every section ren
       await openSettings(page, section as SettingsSectionId)
       await expect(page.locator(selector)).toBeVisible()
     }
-    await expect(page.locator('#remote-settings-beta')).toHaveText('BETA')
+    await expect(page.locator('#remote-settings-beta')).toHaveText('Beta')
     await page.screenshot({ path: 'test-results/screens/50-settings-about.png' })
 
     await openSettings(page, 'general')

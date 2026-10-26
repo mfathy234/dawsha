@@ -1,4 +1,4 @@
-import { h, icon, placeNearAnchor } from '../dom'
+import { h, icon, placeNearAnchor, leave } from '../dom'
 import { applyStashPane, fetchPane, pullPane, stashPane, switchBranchPane } from '../gitQuickActions'
 import { ICONS } from '../icons'
 
@@ -50,7 +50,7 @@ export function openBranchMenu(paneId: string, anchor: HTMLElement): void {
   const close = (): void => {
     document.removeEventListener('pointerdown', outside, true)
     document.removeEventListener('keydown', onKey, true)
-    root.remove()
+    leave(root)
     open = null
   }
   document.body.appendChild(root)

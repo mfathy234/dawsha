@@ -18,8 +18,8 @@ export function tagMenuItems(current: SessionTag | null, pick: (tag: SessionTag 
     h(
       'button',
       { class: 'menu-item menu-item-tag', type: 'button', role: 'menuitemradio', 'aria-checked': String(tag === current), 'data-tag': tag, onClick: () => pick(tag) },
-      h('span', { class: 'tag-dot', 'aria-hidden': 'true' }),
-      `Tag as ${SESSION_TAG_LABELS[tag]}`,
+      'Tag as ',
+      h('span', { class: 'tag-name' }, SESSION_TAG_LABELS[tag]),
       tag === current ? h('span', { class: 'tag-check', 'aria-hidden': 'true' }, '✓') : null
     )
   )

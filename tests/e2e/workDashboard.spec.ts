@@ -75,11 +75,11 @@ test('work dashboard counts agent sessions, filters projects, resumes and suppor
     await page.getByRole('button', { name: 'Work', exact: true }).click()
     const view = page.getByRole('main', { name: 'Work dashboard' })
     await expect(view).toBeVisible()
-    await expect(page.locator('#work-total .usage-tile-value')).toHaveText('6')
-    await expect(page.locator('#work-feature .usage-tile-value')).toHaveText('2')
-    await expect(page.locator('#work-bug .usage-tile-value')).toHaveText('1')
-    await expect(page.locator('#work-other .usage-tile-value')).toHaveText('2')
-    await expect(page.locator('#work-conversation .usage-tile-value')).toHaveText('1')
+    await expect(page.locator('#work-total .count-value')).toHaveText('6')
+    await expect(page.locator('#work-feature .count-value')).toHaveText('2')
+    await expect(page.locator('#work-bug .count-value')).toHaveText('1')
+    await expect(page.locator('#work-other .count-value')).toHaveText('2')
+    await expect(page.locator('#work-conversation .count-value')).toHaveText('1')
     await expect(page.locator('.work-item')).toHaveCount(6)
     await expect(page.locator('#work-by-project tbody tr').first().locator('td')).toHaveText(['Smoke', '2', '1', '2', '0', '5', /5m/])
     await expect(view).toContainText('#26412')
@@ -96,7 +96,7 @@ test('work dashboard counts agent sessions, filters projects, resumes and suppor
       for (const period of ['Today', 'This week']) {
         await view.getByRole('tab', { name: period, exact: true }).click()
         await expect(view).toHaveAttribute('aria-busy', 'false')
-        await expect(page.locator('#work-total .usage-tile-value')).toHaveText('6')
+        await expect(page.locator('#work-total .count-value')).toHaveText('6')
         await page.screenshot({ path: join(SHOTS, `${theme}-${period === 'Today' ? 'today' : 'week'}.png`), animations: 'disabled' })
       }
     }
@@ -121,9 +121,9 @@ test('counts each orchestrator run once, excludes child sessions of all agents, 
   const { app, page } = await launchApp(sandbox)
   try {
     await page.locator('#work-button').click()
-    await expect(page.locator('#work-total .usage-tile-value')).toHaveText('5')
-    await expect(page.locator('#work-feature .usage-tile-value')).toHaveText('1')
-    await expect(page.locator('#work-bug .usage-tile-value')).toHaveText('2')
+    await expect(page.locator('#work-total .count-value')).toHaveText('5')
+    await expect(page.locator('#work-feature .count-value')).toHaveText('1')
+    await expect(page.locator('#work-bug .count-value')).toHaveText('2')
     await expect(page.locator('.work-item').filter({ hasText: 'Build stock service' })).toHaveCount(0)
     await expect(page.locator('.work-item').filter({ hasText: 'Explore options' })).toHaveCount(0)
     await expect(page.locator('.work-item').filter({ hasText: 'Build chart' })).toHaveCount(0)
@@ -138,7 +138,7 @@ test('work dashboard explains an empty period and can return to sessions', async
   try {
     await page.getByRole('button', { name: 'Work', exact: true }).click()
     await expect(page.locator('.work-view')).toContainText('No work in this period')
-    await expect(page.locator('#work-total .usage-tile-value')).toHaveText('0')
+    await expect(page.locator('#work-total .count-value')).toHaveText('0')
     await page.locator('#sessions-button').click()
     await expect(page.locator('.work-view')).toBeHidden()
   } finally { await closeApp(app) }
@@ -155,10 +155,9 @@ test('the Tickets tab counts a branch once and keeps the name and link the user 
     await expect(row).toBeVisible()
     await expect(row.locator('.work-ticket-head .work-chip')).toHaveText('Bug')
     await expect(row).toContainText('1 session')
-    // Four ticket tiles fill the row instead of leaving a fifth column empty.
-    const tilesBox = (await page.locator('.work-ticket-tiles').boundingBox())!
-    const totalBox = (await page.locator('#work-tickets-total').boundingBox())!
-    expect(Math.abs(tilesBox.x + tilesBox.width - (totalBox.x + totalBox.width))).toBeLessThan(2)
+    // The summary is one text line, not a row of tiles.
+    const line = (await page.locator('[aria-label="Tickets summary"]').boundingBox())!
+    expect(line.height).toBeLessThan(40)
     // A web link only: anything else is refused with a message.
     await row.getByRole('button', { name: 'Edit' }).click()
     await row.getByLabel('Ticket name').fill('Login crash on expired token')
@@ -193,7 +192,7 @@ test('steps back and forward through days, weeks and months', async () => {
   try {
     await page.getByRole('button', { name: 'Work', exact: true }).click()
     const label = page.locator('#work-period-label')
-    const total = page.locator('#work-total .usage-tile-value')
+    const total = page.locator('#work-total .count-value')
     await expect(label).toHaveText('Today')
     await expect(total).not.toHaveText('0')
     await expect(page.locator('#work-next')).toBeDisabled()
@@ -269,7 +268,7 @@ test('searches work, synchronizes project filters, preserves them across tabs an
     await search.pressSequentially('LoGiN 18550')
     await expect(search).toBeFocused()
     await expect(search).toHaveValue('LoGiN 18550')
-    await expect(page.locator('#work-total .usage-tile-value')).toHaveText('1')
+    await expect(page.locator('#work-total .count-value')).toHaveText('1')
     await expect(view.locator('#work-by-project tbody tr')).toHaveCount(1)
     await expect(view.locator('.work-item')).toHaveCount(1)
     await project.click()
@@ -282,7 +281,7 @@ test('searches work, synchronizes project filters, preserves them across tabs an
     await view.getByRole('tab', { name: 'Tickets', exact: true }).click()
     await expect(search).toHaveValue('LoGiN 18550')
     await expect(selected).toContainText('Smoke')
-    await expect(page.locator('#work-tickets-total .usage-tile-value')).toHaveText('1')
+    await expect(page.locator('#work-tickets-total .count-value')).toHaveText('1')
     await selected.getByRole('button', { name: 'Remove project filter' }).click()
     await expect(project).toContainText('All projects')
     await expect(view.locator('.work-ticket-head .work-project-chip')).toHaveText('Smoke')
@@ -327,7 +326,7 @@ test('searches work, synchronizes project filters, preserves them across tabs an
     }
     await search.fill('no-such-work')
     await expect(view.getByRole('status')).toContainText('No matches for “no-such-work”')
-    await expect(page.locator('#work-tickets-total .usage-tile-value')).toHaveText('0')
+    await expect(page.locator('#work-tickets-total .count-value')).toHaveText('0')
     await search.press('Escape')
     await view.getByRole('tab', { name: 'Sessions', exact: true }).click()
     await search.fill('roadmap')

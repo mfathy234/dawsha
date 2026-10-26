@@ -3,6 +3,7 @@ import { installBackgroundAgents } from './backgroundAgents'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import './orchestrator.css'
+import './components/controls.css'
 import {
   flushWorkspace,
   attachRemoteSession,

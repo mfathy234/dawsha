@@ -1,4 +1,4 @@
-import { h, icon } from '../dom'
+import { h, icon, leave } from '../dom'
 import {
   clearNotificationHistory,
   consumeNotificationAction,
@@ -101,7 +101,7 @@ export class NotificationBell {
     document.removeEventListener('pointerdown', this.outside, true)
     document.removeEventListener('keydown', this.onKey, true)
     clearInterval(this.timer)
-    this.popover.remove()
+    leave(this.popover)
     this.popover = null
     this.el.setAttribute('aria-expanded', 'false')
     if (returnFocus) this.el.focus()
