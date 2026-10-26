@@ -184,7 +184,7 @@ function showPreview(state: Session): void {
     if (session !== state || token !== state.previewToken) return
     state.previewTitle.textContent = path
     if (!result?.ok) state.preview.textContent = state.index.status.get(path) === 'D' ? 'This file was deleted.' : 'This file cannot be shown.'
-    else if (result.text === null) state.preview.textContent = result.reason === 'large' ? 'This file is too large to preview.' : 'This is a binary file.'
+    else if (result.text === null) state.preview.textContent = result.reason === 'large' ? 'This file is too large to preview.' : result.reason === 'encoding' ? 'This file is not UTF-8.' : 'This is a binary file.'
     else state.preview.textContent = result.text.split('\n').slice(0, PREVIEW_LINES).join('\n')
   }, PREVIEW_DELAY_MS)
 }

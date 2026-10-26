@@ -60,7 +60,7 @@ export type ProjectFilesResult =
 
 export type ProjectFileResult =
   | { ok: true; text: string; size: number; mtimeMs: number }
-  | { ok: true; text: null; size: number; reason: 'binary' | 'large'; mtimeMs: number }
+  | { ok: true; text: null; size: number; reason: 'binary' | 'large' | 'encoding'; mtimeMs: number }
   | { ok: false; error: string }
 
 export type ProjectFileWriteResult =

@@ -19,6 +19,12 @@ export function loadEditorModule(): Promise<EditorModule> {
 
 const loadStatModule = (): Promise<StatModule> => (statModule ??= import('./diffStat'))
 
+const NOT_SHOWN = {
+  large: 'This file is larger than 1 MB, so it is not shown here.',
+  binary: 'This is a binary file, so it is not shown here.',
+  encoding: "This file isn't UTF-8, so it is not shown here. Open it in VS Code."
+}
+
 export type DocStatus = 'idle' | 'loading' | 'ready' | 'binary' | 'large' | 'missing'
 
 export interface DocHooks {
@@ -76,7 +82,7 @@ export class FileDoc {
     }
     if (result.text === null) {
       this.status = result.reason === 'large' ? 'large' : 'binary'
-      this.message = result.reason === 'large' ? 'This file is larger than 1 MB, so it is not shown here.' : 'This is a binary file, so it is not shown here.'
+      this.message = NOT_SHOWN[result.reason]
       return
     }
     this.mtimeMs = result.mtimeMs

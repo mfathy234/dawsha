@@ -175,3 +175,22 @@ describe('this session', () => {
     expect(result.ok && result.status.files.map((file) => file.path)).toEqual(['src/a.ts'])
   })
 })
+
+describe('files that are not UTF-8', () => {
+  it('refuses to show or save a CP1252 file instead of corrupting it', async () => {
+    const repo = makeRepo()
+    const bytes = Buffer.concat([Buffer.from('caf'), Buffer.from([0xe9]), Buffer.from('\n')])
+    writeFileSync(join(repo, 'latin.txt'), bytes)
+    expect(await readProjectFile(repo, 'latin.txt')).toMatchObject({ ok: true, text: null, reason: 'encoding' })
+    const read = await readProjectFile(repo, 'latin.txt')
+    const mtime = read.ok ? read.mtimeMs : 0
+    expect(await writeProjectFile(repo, 'latin.txt', 'cafe\n', mtime)).toMatchObject({ ok: false })
+    expect(readFileSync(join(repo, 'latin.txt'))).toEqual(bytes)
+  })
+
+  it('still reads UTF-8 with a BOM and multibyte text', async () => {
+    const repo = makeRepo()
+    writeFileSync(join(repo, 'u.txt'), '﻿café ✓\n', 'utf8')
+    expect(await readProjectFile(repo, 'u.txt')).toMatchObject({ ok: true, text: '﻿café ✓\n' })
+  })
+})

@@ -1,4 +1,4 @@
-import { open, readdir, realpath, stat } from 'node:fs/promises'
+import { open, readdir, readFile, realpath, stat } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import {
   MAX_BASELINE_UNTRACKED,
@@ -15,7 +15,7 @@ import {
   type SessionBaselineResult,
   type SessionStatusResult
 } from '../shared/gitStatus'
-import { asAddedDiff, git, hasHead, insideRoot, readTextFile, repoRoot, repoStatus } from './gitCommit'
+import { asAddedDiff, decodeText, git, hasHead, insideRoot, readTextFile, repoRoot, repoStatus } from './gitCommit'
 
 const MAX_LISTED = 20_000
 const MAX_WALKED = 5_000
@@ -104,8 +104,14 @@ async function readResolved(target: Extract<Resolved, { ok: true }>): Promise<Pr
     return { ok: false, error: `${target.rel} no longer exists.` }
   }
   if (size > MAX_READ_BYTES) return { ok: true, text: null, size, reason: 'large', mtimeMs }
-  const text = await readTextFile(target.full)
-  return text === null ? { ok: true, text: null, size, reason: 'binary', mtimeMs } : { ok: true, text, size, mtimeMs }
+  let bytes: Buffer
+  try {
+    bytes = await readFile(target.full)
+  } catch {
+    return { ok: false, error: `${target.rel} no longer exists.` }
+  }
+  const decoded = decodeText(bytes)
+  return decoded.ok ? { ok: true, text: decoded.text, size, mtimeMs } : { ok: true, text: null, size, reason: decoded.reason, mtimeMs }
 }
 
 // One project file as text, refusing paths outside the project, binary files and very large files.
@@ -132,9 +138,10 @@ export async function writeProjectFile(folder: unknown, path: unknown, text: unk
     if (!info.isFile()) return { ok: false, error: `${target.rel} is not a file.` }
     if (info.size > MAX_READ_BYTES) return { ok: false, error: `${target.rel} is too large to edit here.` }
     const bytes = await handle.readFile()
-    if (bytes.includes(0)) return { ok: false, error: `${target.rel} is a binary file.` }
+    const decoded = decodeText(bytes)
+    if (!decoded.ok) return { ok: false, error: decoded.reason === 'binary' ? `${target.rel} is a binary file.` : `${target.rel} is not UTF-8, so it cannot be saved here. Open it in VS Code.` }
     if (info.mtimeMs !== expectedMtime) return { ok: false, conflict: true, error: `${target.rel} changed on disk.` }
-    const out = bytes.toString('utf8').includes('\r\n') ? text.replace(/\r?\n/g, '\r\n') : text
+    const out = decoded.text.includes('\r\n') ? text.replace(/\r?\n/g, '\r\n') : text
     await handle.truncate(0)
     await handle.write(out, 0, 'utf8')
     await handle.sync()
@@ -163,7 +170,7 @@ export async function fileAgainstBase(folder: unknown, path: unknown): Promise<F
   if (!target.ok) return target.missing ? deletedAgainstBase(target.missing, target.error) : target
   const current = await readResolved(target)
   if (!current.ok) return current
-  if (current.text === null) return { ok: false, error: current.reason === 'large' ? 'File is too large to compare.' : 'File is binary.' }
+  if (current.text === null) return { ok: false, error: current.reason === 'large' ? 'File is too large to compare.' : current.reason === 'encoding' ? 'File is not UTF-8.' : 'File is binary.' }
   const root = await repoRoot(folder)
   const base = root ? await mergeBase(root) : null
   if (!root || !base) return { ok: true, base: null, text: current.text }
