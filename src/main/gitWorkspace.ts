@@ -1,13 +1,15 @@
-import { readdir, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { open, readdir, realpath, stat } from 'node:fs/promises'
+import { join, relative } from 'node:path'
 import {
   MAX_BASELINE_UNTRACKED,
   parseNumstatZ,
   sanitizeBaseline,
   validateRepoPaths,
   type GitDiffResult,
+  type FileAgainstBaseResult,
   type GitFileEntry,
   type ProjectFileResult,
+  type ProjectFileWriteResult,
   type ProjectFilesResult,
   type SessionBaseline,
   type SessionBaselineResult,
@@ -66,25 +68,108 @@ export async function projectFiles(folder: unknown): Promise<ProjectFilesResult>
   return { ok: true, files: all.slice(0, MAX_LISTED), truncated: all.length > MAX_LISTED, repo: true }
 }
 
-// One project file as text, refusing paths outside the project, binary files and very large files.
-export async function readProjectFile(folder: unknown, path: unknown): Promise<ProjectFileResult> {
+type Resolved = { ok: true; root: string; rel: string; full: string; realRel: string } | { ok: false; error: string }
+
+// The one validator for a project file: relative path checks, then the real location (symlinks resolved)
+// must still be inside the project's real root. realRel is that location relative to the real root, in its
+// on-disk casing, for git.
+async function resolveProjectFile(folder: unknown, path: unknown): Promise<Resolved> {
   if (typeof folder !== 'string' || folder === '') return { ok: false, error: 'No project folder.' }
   const checked = validateRepoPaths([path])
   if (!checked.ok) return { ok: false, error: checked.error }
-  const base = (await repoRoot(folder)) ?? folder
-  const full = insideRoot(base, checked.paths[0])
-  if (!full) return { ok: false, error: `Path is outside the project: ${checked.paths[0]}` }
-  let size: number
+  const rel = checked.paths[0]
+  if (process.platform === 'win32' && rel.includes(':')) return { ok: false, error: `Invalid file path: ${rel}` }
+  const root = (await repoRoot(folder)) ?? folder
+  const lexical = insideRoot(root, rel)
+  if (!lexical) return { ok: false, error: `Path is outside the project: ${rel}` }
   try {
-    const info = await stat(full)
-    if (!info.isFile()) return { ok: false, error: `${checked.paths[0]} is not a file.` }
-    size = info.size
+    const realRoot = await realpath(root)
+    const full = await realpath(lexical)
+    if (!insideRoot(realRoot, full)) return { ok: false, error: `Path is outside the project: ${rel}` }
+    return { ok: true, root, rel, full, realRel: relative(realRoot, full).replace(/\\/g, '/') }
   } catch {
-    return { ok: false, error: `${checked.paths[0]} no longer exists.` }
+    return { ok: false, error: `${rel} no longer exists.` }
   }
-  if (size > MAX_READ_BYTES) return { ok: true, text: null, size, reason: 'large' }
-  const text = await readTextFile(full)
-  return text === null ? { ok: true, text: null, size, reason: 'binary' } : { ok: true, text, size }
+}
+
+async function readResolved(target: Extract<Resolved, { ok: true }>): Promise<ProjectFileResult> {
+  let size: number
+  let mtimeMs: number
+  try {
+    const info = await stat(target.full)
+    if (!info.isFile()) return { ok: false, error: `${target.rel} is not a file.` }
+    size = info.size
+    mtimeMs = info.mtimeMs
+  } catch {
+    return { ok: false, error: `${target.rel} no longer exists.` }
+  }
+  if (size > MAX_READ_BYTES) return { ok: true, text: null, size, reason: 'large', mtimeMs }
+  const text = await readTextFile(target.full)
+  return text === null ? { ok: true, text: null, size, reason: 'binary', mtimeMs } : { ok: true, text, size, mtimeMs }
+}
+
+// One project file as text, refusing paths outside the project, binary files and very large files.
+export async function readProjectFile(folder: unknown, path: unknown): Promise<ProjectFileResult> {
+  const target = await resolveProjectFile(folder, path)
+  return target.ok ? readResolved(target) : target
+}
+
+// Saves an existing text file through one open handle, so the checks and the write see the same file.
+// A changed mtime means someone else wrote it since it was read.
+export async function writeProjectFile(folder: unknown, path: unknown, text: unknown, expectedMtime: unknown): Promise<ProjectFileWriteResult> {
+  if (typeof text !== 'string' || typeof expectedMtime !== 'number' || !Number.isFinite(expectedMtime)) return { ok: false, error: 'Invalid save request.' }
+  if (Buffer.byteLength(text, 'utf8') > MAX_READ_BYTES) return { ok: false, error: 'File is too large to save here.' }
+  const target = await resolveProjectFile(folder, path)
+  if (!target.ok) return target
+  let handle
+  try {
+    handle = await open(target.full, 'r+')
+  } catch (error) {
+    return { ok: false, error: `Could not open ${target.rel}: ${(error as Error).message}` }
+  }
+  try {
+    const info = await handle.stat()
+    if (!info.isFile()) return { ok: false, error: `${target.rel} is not a file.` }
+    if (info.size > MAX_READ_BYTES) return { ok: false, error: `${target.rel} is too large to edit here.` }
+    const bytes = await handle.readFile()
+    if (bytes.includes(0)) return { ok: false, error: `${target.rel} is a binary file.` }
+    if (info.mtimeMs !== expectedMtime) return { ok: false, conflict: true, error: `${target.rel} changed on disk.` }
+    const out = bytes.toString('utf8').includes('\r\n') ? text.replace(/\r?\n/g, '\r\n') : text
+    await handle.truncate(0)
+    await handle.write(out, 0, 'utf8')
+    await handle.sync()
+    return { ok: true, mtimeMs: (await handle.stat()).mtimeMs }
+  } catch (error) {
+    return { ok: false, error: `Could not save ${target.rel}: ${(error as Error).message}` }
+  } finally {
+    await handle.close().catch(() => undefined)
+  }
+}
+
+async function mergeBase(root: string): Promise<string | null> {
+  if (!(await hasHead(root))) return null
+  for (const ref of ['origin/main', 'main', 'master']) {
+    if (!(await git(root, ['rev-parse', '--verify', '-q', `${ref}^{commit}`])).ok) continue
+    const base = await git(root, ['merge-base', 'HEAD', ref])
+    if (base.ok && base.stdout.trim()) return base.stdout.trim()
+  }
+  return 'HEAD'
+}
+
+// The file's text at the merge base with main (null for a file that is new on this branch) next to the working copy.
+// A base over the size cap comes back as null with reason 'large'.
+export async function fileAgainstBase(folder: unknown, path: unknown): Promise<FileAgainstBaseResult> {
+  const target = await resolveProjectFile(folder, path)
+  if (!target.ok) return target
+  const current = await readResolved(target)
+  if (!current.ok) return current
+  if (current.text === null) return { ok: false, error: current.reason === 'large' ? 'File is too large to compare.' : 'File is binary.' }
+  const root = await repoRoot(folder)
+  const base = root ? await mergeBase(root) : null
+  if (!root || !base) return { ok: true, base: null, text: current.text }
+  const shown = await git(root, ['show', `${base}:${target.realRel}`])
+  if ((shown.ok && Buffer.byteLength(shown.stdout, 'utf8') > MAX_READ_BYTES) || (!shown.ok && /maxBuffer/i.test(shown.message))) return { ok: true, base: null, text: current.text, reason: 'large' }
+  return { ok: true, base: shown.ok ? shown.stdout : null, text: current.text }
 }
 
 // Records the repo state when a session starts, without touching the working tree or the stash list.
