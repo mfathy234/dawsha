@@ -86,7 +86,7 @@ test('Agents tab sits after Sessions, shows the running count and agents grouped
   const { app, page } = await launchApp(sandbox)
   try {
     const ids = await page.locator('.topbar-nav > button').evaluateAll((nodes) => nodes.map((node) => node.id))
-    expect(ids.slice(0, 3)).toEqual(['sessions-button', 'background-button', 'projects-button'])
+    expect(ids.slice(0, 3)).toEqual(['sessions-button', 'background-button', 'files-button'])
     await expect(page.locator('#background-button .bg-badge')).toHaveText('1', { timeout: 15_000 })
     await expect(page.locator('#background-button')).toHaveAccessibleName('Agents, 1 running')
     await openAgents(page)

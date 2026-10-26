@@ -108,7 +108,7 @@ export class TopBarComponent {
   private readonly dimState = h('span', { class: 'dim-switch-state', 'aria-hidden': 'true' }, 'Off')
   private readonly dimSwitch = h('button', { class: 'dim-switch', type: 'button', id: 'dim-others', role: 'switch', 'aria-checked': 'false', 'aria-label': 'Dim others', title: 'Dim others', onClick: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
     h('span', { class: 'dim-switch-track', 'aria-hidden': 'true' }, h('span', { class: 'dim-switch-thumb' })),
-    h('span', { class: 'dim-switch-label' }, 'Dim others'),
+    h('span', { class: 'dim-switch-label' }, 'Dim'),
     this.dimState
   )
   private readonly summary = h('div', { class: 'topbar-count', role: 'status', 'aria-live': 'polite' })
@@ -215,7 +215,7 @@ export class TopBarComponent {
     this.more.setAttribute('aria-pressed', String(this.activeMore !== null))
     this.more.setAttribute('aria-expanded', String(this.moreMenu !== null || state.layoutsOpen))
     this.more.setAttribute('aria-label', this.agentUpdates ? `${label}, agent updates available` : label)
-    this.moreText.textContent = label
+    this.moreText.textContent = 'More'
     this.moreDot.hidden = !this.agentUpdates
     for (const { view } of MORE_VIEWS) this.markMoreItem(view)
   }

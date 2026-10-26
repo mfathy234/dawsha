@@ -8158,3 +8158,29 @@ button.tl-event:hover { background: var(--raised); }
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Top bar: the icons on the right never move; the summary and limits shrink and drop away first. */
+.topbar > * { flex-shrink: 0; }
+.topbar > .spacer { flex: 1 1 0; min-width: 0; }
+.topbar > .topbar-count { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.topbar > .topbar-limits { flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; }
+.topbar-nav .btn { display: inline-flex; align-items: center; white-space: nowrap; }
+.bg-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; white-space: nowrap; }
+.dim-switch-state { display: none; }
+@media (max-width: 1500px) {
+  .topbar { gap: 6px; }
+  .topbar-count .sum-chip:not(.sum-needs), .new-session-kbd { display: none; }
+  .topbar-nav .btn { padding: 0 9px; }
+}
+@media (max-width: 1400px) {
+  .app-title, .dim-switch-label { display: none; }
+  .topbar .dim-switch { padding: 0 6px; }
+}
+@media (max-width: 1220px) { .topbar-limits { display: none; } }
+
+@media (max-width: 1100px) {
+  .topbar { gap: 5px; }
+  .topbar-nav .btn { padding: 0 5px; }
+  .bg-badge { margin-left: 4px; }
+}
+@media (max-width: 1000px) { .zoom-value { display: none; } }
