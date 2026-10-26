@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { activeTermId, closeApp, createSandbox, lastInput, launchApp, type Sandbox } from './helpers'
@@ -260,6 +260,38 @@ test('closing the window with unsaved Files tabs asks first, naming the file, an
     expect(diskText(repo, 'src/a.ts')).not.toContain('// unsaved')
     await page.locator('#sessions-button').click()
     await expect(page.locator('.sidebar')).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('a file deleted on disk while edited can be saved again, and a touched but identical file is no conflict', async () => {
+  test.setTimeout(120_000)
+  const sandbox = createSandbox()
+  const repo = makeRepo(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.locator('#files-button').click()
+    await openA(page)
+    // touching the file without changing it raises nothing
+    writeFileSync(join(repo, 'src', 'a.ts'), A_TS)
+    await page.waitForTimeout(1500)
+    await expect(page.locator('#files-conflict')).toBeHidden()
+    await editor(page).click()
+    await page.keyboard.press('e')
+    await page.keyboard.press('Control+End')
+    await page.keyboard.type('// back')
+    rmSync(join(repo, 'src', 'a.ts'))
+    await expect(page.locator('#files-conflict')).toContainText('deleted', { timeout: 10_000 })
+    await page.locator('#files-keep-mine').click()
+    await expect.poll(() => {
+      try {
+        return diskText(repo, 'src/a.ts')
+      } catch {
+        return ''
+      }
+    }).toContain('// back')
+    await expect(page.locator('#files-conflict')).toBeHidden()
   } finally {
     await closeApp(app)
   }

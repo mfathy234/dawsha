@@ -3,6 +3,7 @@ import { derivePanes } from '../derive'
 import { folderOfPane, store } from '../state'
 import { timelineRequest } from '../timelineActions'
 import { relativePath } from '../../shared/timeline'
+import { toRepoPath } from '../../shared/projectPaths'
 
 export interface TouchingSession {
   paneId: string
@@ -15,7 +16,7 @@ export type TouchMap = ReadonlyMap<string, TouchingSession[]>
 const sameFolder = (a: string, b: string): boolean => a.replace(/[\\/]+$/, '').toLowerCase() === b.replace(/[\\/]+$/, '').toLowerCase()
 
 /** Which open sessions of this project edited which files, from the edit events their timelines already parse. */
-export async function loadTouches(projectId: string, folder: string): Promise<TouchMap> {
+export async function loadTouches(projectId: string, folder: string, prefix = ''): Promise<TouchMap> {
   const state = store.state
   const views = derivePanes(state).filter((view) => view.pane.projectId === projectId && view.agent !== 'shell')
   const touches = new Map<string, TouchingSession[]>()
@@ -30,7 +31,7 @@ export async function loadTouches(projectId: string, folder: string): Promise<To
       const counts = new Map<string, number>()
       for (const event of result.events) {
         if (event.kind !== 'edit' || !event.path) continue
-        const rel = relativePath(event.path, base)
+        const rel = toRepoPath(prefix, relativePath(event.path, base))
         counts.set(rel, (counts.get(rel) ?? 0) + 1)
       }
       for (const [path, edits] of counts) touches.set(path, [...(touches.get(path) ?? []), { paneId: view.pane.id, title: view.title, edits }])

@@ -7,6 +7,7 @@ const MAX_RECENT = 30
 
 export interface FileIndex {
   files: string[]
+  prefix: string
   status: Map<string, string>
 }
 
@@ -29,7 +30,7 @@ export async function fileIndex(folder: string): Promise<FileIndex> {
   const [listing, git] = await Promise.all([api.projectFiles(folder).catch(() => null), api.gitStatus(folder).catch(() => null)])
   const status = new Map<string, string>()
   if (git?.ok) for (const file of git.status.files) status.set(file.path, statusLetter(file))
-  const index: FileIndex = { files: listing?.ok ? listing.files : [], status }
+  const index: FileIndex = { files: listing?.ok ? listing.files : [], prefix: listing?.ok ? listing.prefix : '', status }
   if (listing?.ok) cache.set(key, { at: Date.now(), index })
   return index
 }

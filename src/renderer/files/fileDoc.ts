@@ -19,6 +19,12 @@ export function loadEditorModule(): Promise<EditorModule> {
 
 const loadStatModule = (): Promise<StatModule> => (statModule ??= import('./diffStat'))
 
+const NOT_SHOWN = {
+  large: 'This file is larger than 1 MB, so it is not shown here.',
+  binary: 'This is a binary file, so it is not shown here.',
+  encoding: "This file isn't UTF-8, so it is not shown here. Open it in VS Code."
+}
+
 export type DocStatus = 'idle' | 'loading' | 'ready' | 'binary' | 'large' | 'missing'
 
 export interface DocHooks {
@@ -46,6 +52,10 @@ export class FileDoc {
   changes = false
   conflict = false
   deleted = false
+  /** The file was removed on disk while this tab is open; saving writes it again. */
+  gone = false
+  /** Not inside a git repository: there is nothing to compare with. */
+  noRepo = false
   stat: DiffStat | null = null
   newFile = false
   private loading: Promise<void> | null = null
@@ -76,7 +86,7 @@ export class FileDoc {
     }
     if (result.text === null) {
       this.status = result.reason === 'large' ? 'large' : 'binary'
-      this.message = result.reason === 'large' ? 'This file is larger than 1 MB, so it is not shown here.' : 'This is a binary file, so it is not shown here.'
+      this.message = NOT_SHOWN[result.reason]
       return
     }
     this.mtimeMs = result.mtimeMs
@@ -174,6 +184,12 @@ export class FileDoc {
     if (!this.editor || this.deleted) return
     const result = await api.fileAgainstBase(this.folder, this.path).catch(() => null)
     if (!result?.ok || !this.editor) return
+    if (result.reason === 'norepo') {
+      this.noRepo = true
+      this.stat = null
+      this.hooks.changed(this)
+      return
+    }
     this.baseText = result.base
     this.newFile = result.base === null
     await this.recomputeStat()
@@ -195,8 +211,20 @@ export class FileDoc {
     const editor = this.editor
     if (!editor || !this.dirty) return 'saved'
     const text = editor.getText()
-    const result = await api.writeProjectFile(this.folder, this.path, text, this.mtimeMs).catch((error: Error) => ({ ok: false as const, error: error.message }))
+    let result = await api.writeProjectFile(this.folder, this.path, text, this.mtimeMs).catch((error: Error) => ({ ok: false as const, conflict: false as const, error: error.message }))
+    // A touched-but-identical file (a build step, a sync tool) is not a conflict: take its new time and write again.
+    if (!result.ok && result.conflict && (await this.adoptIdenticalDisk())) {
+      result = await api.writeProjectFile(this.folder, this.path, text, this.mtimeMs).catch((error: Error) => ({ ok: false as const, conflict: false as const, error: error.message }))
+    }
     return this.afterWrite(result, text)
+  }
+
+  /** True (and the new mtime is taken) when the file on disk has exactly the text this tab last saw. */
+  private async adoptIdenticalDisk(): Promise<boolean> {
+    const current = await api.projectFile(this.folder, this.path).catch(() => null)
+    if (!current?.ok || current.text !== this.savedText) return false
+    this.mtimeMs = current.mtimeMs
+    return true
   }
 
   private afterWrite(result: Awaited<ReturnType<typeof api.writeProjectFile>>, text: string): SaveOutcome {
@@ -205,6 +233,7 @@ export class FileDoc {
       this.savedText = text
       this.dirty = this.editor ? this.editor.getText() !== text : false
       this.conflict = false
+      this.gone = false
       this.hooks.changed(this)
       void this.refreshStat()
       return 'saved'
@@ -223,12 +252,12 @@ export class FileDoc {
     const editor = this.editor
     if (!editor) return 'failed'
     const current = await api.projectFile(this.folder, this.path).catch(() => null)
-    if (!current?.ok) {
+    if (!current?.ok && !(this.gone || /no longer exists/.test(current?.error ?? ''))) {
       toast(current?.error ?? 'Could not read the file on disk.')
       return 'failed'
     }
     const text = editor.getText()
-    const result = await api.writeProjectFile(this.folder, this.path, text, current.mtimeMs).catch((error: Error) => ({ ok: false as const, error: error.message }))
+    const result = await api.writeProjectFile(this.folder, this.path, text, current?.ok ? current.mtimeMs : 0).catch((error: Error) => ({ ok: false as const, error: error.message }))
     return this.afterWrite(result, text)
   }
 
@@ -253,7 +282,25 @@ export class FileDoc {
   async checkDisk(): Promise<void> {
     if (this.status !== 'ready' || this.deleted || !this.editor) return
     const result = await api.projectFile(this.folder, this.path).catch(() => null)
-    if (!result?.ok || result.text === null || result.mtimeMs === this.mtimeMs) return
+    if (result && !result.ok && /no longer exists/.test(result.error)) {
+      if (!this.gone) {
+        this.gone = true
+        if (this.dirty) this.conflict = true
+        this.hooks.changed(this)
+      }
+      return
+    }
+    if (!result?.ok || result.text === null) return
+    if (this.gone) {
+      this.gone = false
+      this.conflict = this.dirty
+    }
+    if (result.mtimeMs === this.mtimeMs) return
+    if (result.text === this.savedText) {
+      this.mtimeMs = result.mtimeMs
+      this.hooks.changed(this)
+      return
+    }
     if (this.dirty) {
       if (!this.conflict) {
         this.conflict = true

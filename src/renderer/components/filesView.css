@@ -136,5 +136,5 @@
   .files-bar .btn { padding: 0 8px; }
   /* The Files tab joins the main nav; at the 960px minimum width the bar needs a little less air to still fit. */
   .topbar { gap: 4px; }
-  .topbar .topbar-nav .btn { padding: 0 4px; }
+  .topbar .topbar-nav .btn { padding: 0 3px; }
 }

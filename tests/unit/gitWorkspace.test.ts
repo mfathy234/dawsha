@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, sessionBaseline, sessionStatus, writeProjectFile } from '../../src/main/gitWorkspace'
+import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from '../../src/main/gitWorkspace'
 
 const IDENTITY = ['-c', 'core.autocrlf=false', '-c', 'user.name=Test User', '-c', 'user.email=test@example.invalid']
 const git = (cwd: string, ...args: string[]): string => execFileSync('git', [...IDENTITY, ...args], { cwd, encoding: 'utf8' }).trim()
@@ -28,7 +28,7 @@ describe('project files', () => {
     writeFileSync(join(repo, 'dist', 'bundle.js'), 'x')
     writeFileSync(join(repo, 'src', 'new.ts'), 'fresh\n')
     const result = await projectFiles(repo)
-    expect(result).toEqual({ ok: true, files: ['.gitignore', 'README.md', 'src/a.ts', 'src/b.ts', 'src/new.ts'], truncated: false, repo: true })
+    expect(result).toEqual({ ok: true, files: ['.gitignore', 'README.md', 'src/a.ts', 'src/b.ts', 'src/new.ts'], truncated: false, repo: true, prefix: '' })
   })
 
   it('lists a sub folder, also when it is reached through a symlink', async () => {
@@ -173,5 +173,61 @@ describe('this session', () => {
     const result = await sessionStatus(repo, { ref: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', at: Date.now(), untracked: [] })
     expect(result.ok && result.fellBack).toBe(true)
     expect(result.ok && result.status.files.map((file) => file.path)).toEqual(['src/a.ts'])
+  })
+})
+
+describe('files that are not UTF-8', () => {
+  it('refuses to show or save a CP1252 file instead of corrupting it', async () => {
+    const repo = makeRepo()
+    const bytes = Buffer.concat([Buffer.from('caf'), Buffer.from([0xe9]), Buffer.from('\n')])
+    writeFileSync(join(repo, 'latin.txt'), bytes)
+    expect(await readProjectFile(repo, 'latin.txt')).toMatchObject({ ok: true, text: null, reason: 'encoding' })
+    const read = await readProjectFile(repo, 'latin.txt')
+    const mtime = read.ok ? read.mtimeMs : 0
+    expect(await writeProjectFile(repo, 'latin.txt', 'cafe\n', mtime)).toMatchObject({ ok: false })
+    expect(readFileSync(join(repo, 'latin.txt'))).toEqual(bytes)
+  })
+
+  it('still reads UTF-8 with a BOM and multibyte text', async () => {
+    const repo = makeRepo()
+    writeFileSync(join(repo, 'u.txt'), '﻿café ✓\n', 'utf8')
+    expect(await readProjectFile(repo, 'u.txt')).toMatchObject({ ok: true, text: '﻿café ✓\n' })
+  })
+})
+
+describe('a project that is a sub folder of its repository', () => {
+  it('lists its prefix and keeps reads and writes inside it', async () => {
+    const repo = makeRepo()
+    const sub = join(repo, 'src')
+    const listing = await projectFiles(sub)
+    expect(listing).toMatchObject({ ok: true, files: ['src/a.ts', 'src/b.ts'], prefix: 'src' })
+    expect(await readProjectFile(sub, 'src/a.ts')).toMatchObject({ ok: true, text: 'one\n' })
+    expect(await readProjectFile(sub, 'README.md')).toMatchObject({ ok: false })
+    const read = await readProjectFile(sub, 'src/a.ts')
+    const mtime = read.ok ? read.mtimeMs : 0
+    expect(await writeProjectFile(sub, 'README.md', 'pwn', mtime)).toMatchObject({ ok: false })
+    expect(readFileSync(join(repo, 'README.md'), 'utf8')).toBe('hello\n')
+    expect(await writeProjectFile(sub, 'src/a.ts', 'two\n', mtime)).toMatchObject({ ok: true })
+    expect(await resolveProjectPath(sub, 'src/a.ts')).toBe(join(repo, 'src', 'a.ts'))
+    expect(await resolveProjectPath(sub, 'README.md')).toBeNull()
+  })
+})
+
+describe('a file deleted on disk while it is open', () => {
+  it('is written again on save when its folder is still in the project', async () => {
+    const repo = makeRepo()
+    rmSync(join(repo, 'src', 'b.ts'))
+    expect(await writeProjectFile(repo, 'src/b.ts', 'back\n', 0)).toMatchObject({ ok: true, mtimeMs: expect.any(Number) })
+    expect(readFileSync(join(repo, 'src', 'b.ts'), 'utf8')).toBe('back\n')
+    expect(await writeProjectFile(repo, 'src/missing-dir/x.ts', 'x', 0)).toMatchObject({ ok: false })
+    expect(await writeProjectFile(repo, '../out.ts', 'x', 0)).toMatchObject({ ok: false })
+  })
+})
+
+describe('outside git', () => {
+  it('says there is no base to compare with', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dawsha-nogit-'))
+    writeFileSync(join(dir, 'a.txt'), 'x\n')
+    expect(await fileAgainstBase(dir, 'a.txt')).toEqual({ ok: true, base: null, text: 'x\n', reason: 'norepo' })
   })
 })

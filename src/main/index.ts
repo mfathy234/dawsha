@@ -44,6 +44,7 @@ let mainWindow: BrowserWindow | null = null
 let cli: CliRunner | null = null
 let updates: UpdateController | null = null
 let quitting = false
+let checkingQuit = false
 let rendererReady = false
 const pendingNotificationClicks: string[] = []
 
@@ -75,17 +76,26 @@ function flushRenderer(): Promise<void> {
   })
 }
 
-// Asks the page whether the window may close (unsaved Files tabs ask the user); a page that is not there answers yes.
+// Asks the page whether the app may close (unsaved Files tabs ask the user); a page that is not there answers yes.
+// The page acknowledges at once, so a dialog can stay open as long as the user needs; a page that never
+// acknowledges (hung or gone) must not make the app unclosable, so no acknowledgement within CLOSE_ACK_MS means yes.
+const CLOSE_ACK_MS = 10_000
+
 function askMayClose(): Promise<boolean> {
   const window = mainWindow
   if (!window || window.isDestroyed() || !rendererReady) return Promise.resolve(true)
   return new Promise((resolve) => {
     const finish = (_event?: unknown, ok?: unknown): void => {
+      clearTimeout(ackTimer)
+      ipcMain.removeListener(IPC.closeCheckAck, acknowledged)
       ipcMain.removeListener(IPC.closeCheckDone, finish)
       window.webContents.removeListener('destroyed', onGone)
       resolve(ok !== false)
     }
+    const acknowledged = (): void => clearTimeout(ackTimer)
     const onGone = (): void => finish(undefined, true)
+    const ackTimer = setTimeout(() => finish(undefined, true), CLOSE_ACK_MS)
+    ipcMain.once(IPC.closeCheckAck, acknowledged)
     ipcMain.once(IPC.closeCheckDone, finish)
     window.webContents.once('destroyed', onGone)
     window.webContents.send(IPC.closeCheck)
@@ -153,7 +163,8 @@ function createWindow(): BrowserWindow {
     event.preventDefault()
     if (asking) return
     asking = true
-    void askMayClose().then((ok) => {
+    // A quit that was already approved does not ask a second time as its windows close.
+    void (quitting ? Promise.resolve(true) : askMayClose()).then((ok) => {
       asking = false
       if (!ok) return
       flushedOnClose = true
@@ -321,6 +332,7 @@ app.whenReady().then(async () => {
     send,
     shutdown,
     autoUpdates: !isPrivateRemoteBuild,
+    mayQuit: askMayClose,
     markQuitting: () => {
       quitting = true
     }
@@ -328,10 +340,16 @@ app.whenReady().then(async () => {
   app.on('before-quit', (event) => {
     quitLog(`before-quit fired (already quitting: ${quitting})`)
     if (quitting) return
-    quitting = true
     event.preventDefault()
-    armWatchdog()
-    void runQuit(shutdownDeps)
+    if (checkingQuit) return
+    checkingQuit = true
+    void askMayClose().then((ok) => {
+      checkingQuit = false
+      if (!ok) return
+      quitting = true
+      armWatchdog()
+      void runQuit(shutdownDeps)
+    })
   })
   app.on('will-quit', () => quitLog('will-quit'))
   app.on('quit', () => quitLog('quit'))

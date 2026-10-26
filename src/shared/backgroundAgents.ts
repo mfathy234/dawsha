@@ -195,7 +195,7 @@ export function spanLabel(ms: number): string {
 }
 
 export const STATUS_LABELS: Record<BgStatus, string> = { running: 'running', done: 'done', failed: 'failed' }
-
+/** The accessible name of an agent card (the Agents tab is a list, no longer a timeline). */
 /** The accessible name of a timeline bar. */
 export function barLabel(agent: BackgroundAgent, now: number): string {
   const end = agent.status === 'running' ? now : agent.endedAt ?? agent.lastActivityAt

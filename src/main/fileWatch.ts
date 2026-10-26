@@ -60,7 +60,8 @@ export function watchProject(
 export function createWatchRegistry(
   emit: (folderKey: string, paths: string[]) => void,
   start: typeof watchProject = watchProject,
-  log: (message: string) => void = (message) => console.warn(message)
+  log: (message: string) => void = (message) => console.warn(message),
+  onFailed: (folderKey: string) => void = () => undefined
 ): { watch(folder: string): void; unwatch(folder: string): void; closeAll(): void } {
   const entries = new Map<string, { count: number; stop: () => void }>()
   return {
@@ -81,6 +82,7 @@ export function createWatchRegistry(
           entries.get(key)?.stop()
           entries.delete(key)
           log(`[files] watcher for ${folder} failed: ${error.message}`)
+          onFailed(key)
         }
       )
       if (!failed) entries.set(key, { count: 1, stop })
