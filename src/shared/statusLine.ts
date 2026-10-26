@@ -107,8 +107,8 @@ export type GaugeStage = 'ok' | 'warn' | 'high' | 'critical'
 
 export function gaugeStage(percent: number): GaugeStage {
   if (percent >= 90) return 'critical'
-  if (percent >= 75) return 'high'
-  if (percent >= 50) return 'warn'
+  if (percent >= 80) return 'high'
+  if (percent >= 70) return 'warn'
   return 'ok'
 }
 

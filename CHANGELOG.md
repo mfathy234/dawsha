@@ -20,6 +20,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The context battery turns yellow at 70% instead of 50%, orange at 80% and red at 90%. Usage limits follow the same steps.
 - Panes are calmer. They have no coloured top bar, the state shows as an icon and a word, the recap is plain text, and the focused pane lifts with a soft shadow instead of an outline.
 - Popups, dialogs, menus, the resume picker, the groups in the top bar, the board, settings and the main views use fills and soft shadows instead of borders. Focus rings stay clear for keyboard users.
 - Sidebar rows show time and cost on their own line. The × and ⋯ buttons appear on hover or focus and never cover text, and ⋯ offers Close and Remove.
