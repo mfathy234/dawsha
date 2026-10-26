@@ -75,6 +75,23 @@ function flushRenderer(): Promise<void> {
   })
 }
 
+// Asks the page whether the window may close (unsaved Files tabs ask the user); a page that is not there answers yes.
+function askMayClose(): Promise<boolean> {
+  const window = mainWindow
+  if (!window || window.isDestroyed() || !rendererReady) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const finish = (_event?: unknown, ok?: unknown): void => {
+      ipcMain.removeListener(IPC.closeCheckDone, finish)
+      window.webContents.removeListener('destroyed', onGone)
+      resolve(ok !== false)
+    }
+    const onGone = (): void => finish(undefined, true)
+    ipcMain.once(IPC.closeCheckDone, finish)
+    window.webContents.once('destroyed', onGone)
+    window.webContents.send(IPC.closeCheck)
+  })
+}
+
 function terminateProcess(code: number): void {
   quitLog(`terminating the process (code ${code})`)
   try {
@@ -130,15 +147,30 @@ function createWindow(): BrowserWindow {
     if (mainWindow === window) rendererReady = false
   })
   let flushedOnClose = false
+  let asking = false
   window.on('close', (event) => {
     if (flushedOnClose) return
-    flushedOnClose = true
     event.preventDefault()
-    void flushRenderer().finally(() => window.close())
+    if (asking) return
+    asking = true
+    void askMayClose().then((ok) => {
+      asking = false
+      if (!ok) return
+      flushedOnClose = true
+      void flushRenderer().finally(() => window.close())
+    })
   })
   window.on('focus', () => window.flashFrame(false))
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
+  // Electron shows no context menu by default; offer Copy / Cut / Paste / Select all only where they apply
+  window.webContents.on('context-menu', (_event, params) => {
+    if (!params.selectionText && !params.isEditable) return
+    const items = params.isEditable
+      ? [{ role: 'cut' as const }, { role: 'copy' as const }, { role: 'paste' as const }, { type: 'separator' as const }, { role: 'selectAll' as const }]
+      : [{ role: 'copy' as const }, { type: 'separator' as const }, { role: 'selectAll' as const }]
+    Menu.buildFromTemplate(items).popup({ window })
+  })
   if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(process.env.ELECTRON_RENDERER_URL)
   else void window.loadFile(join(__dirname, isPrivateRemoteBuild ? '../renderer-private/index.html' : '../renderer/index.html'))
   return window

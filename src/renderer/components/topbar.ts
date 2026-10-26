@@ -37,6 +37,7 @@ const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctr
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
 const BOARD_KEY_HINT = formatShortcut(bind('Ctrl+Shift+B'))
 const AGENTS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+L'))
+const FILES_KEY_HINT = formatShortcut(bind('Ctrl+Shift+E'))
 
 export class TopBarComponent {
   readonly el: HTMLElement
@@ -78,6 +79,7 @@ export class TopBarComponent {
   private readonly sessions = h('button', { class: 'btn ghost', type: 'button', id: 'sessions-button', onClick: () => showView('grid') }, 'Sessions')
   private readonly agentsBadge = h('span', { class: 'bg-badge', hidden: true, 'aria-hidden': 'true' })
   private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Background agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'background') }, 'Agents', this.agentsBadge)
+  private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
   private readonly projects = h('button', { class: 'btn ghost', type: 'button', id: 'projects-button' }, 'Projects')
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')
@@ -150,6 +152,7 @@ export class TopBarComponent {
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
         this.sessions,
         this.background,
+        this.files,
         this.projects,
         this.usage,
         this.work,
@@ -185,6 +188,7 @@ export class TopBarComponent {
     this.dimSwitch.setAttribute('aria-checked', String(dim))
     this.dimState.textContent = dim ? 'On' : 'Off'
     this.background.setAttribute('aria-pressed', String(state.view === 'background'))
+    this.files.setAttribute('aria-pressed', String(state.view === 'files'))
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
     this.work.setAttribute('aria-pressed', String(state.view === 'work'))

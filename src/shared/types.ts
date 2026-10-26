@@ -142,6 +142,8 @@ export interface Settings {
   foldedProjects: string[]
   /** Ids of projects whose "Closed sessions" group is folded in the sidebar. */
   foldedClosedSessions: string[]
+  /** Open files of the Files view, by project id (at most FILES_TABS_MAX each). */
+  filesTabs: Record<string, string[]>
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
   ticketNotes: import('./ticketNotes').TicketNotes
   tasks: ProjectTask[]

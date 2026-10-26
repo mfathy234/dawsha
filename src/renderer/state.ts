@@ -65,7 +65,7 @@ export interface PaneState {
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'background' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'orchestrator'
+export type View = 'grid' | 'background' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'orchestrator' | 'files'
 
 /** Tabs of the Orchestrator view. A selected run (orchRunId) shows its dashboard instead. */
 export type OrchTab = 'runs' | 'boards' | 'review' | 'history' | 'new' | 'spec'

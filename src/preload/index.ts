@@ -72,6 +72,11 @@ const api: GridApi = {
   gitSessionStatus: (folder, baseline) => ipcRenderer.invoke(IPC.gitSessionStatus, folder, baseline),
   projectFiles: (folder) => ipcRenderer.invoke(IPC.projectFiles, folder),
   projectFile: (folder, path) => ipcRenderer.invoke(IPC.projectFile, folder, path),
+  writeProjectFile: (folder, path, text, expectedMtime) => ipcRenderer.invoke(IPC.projectFileWrite, folder, path, text, expectedMtime),
+  fileAgainstBase: (folder, path) => ipcRenderer.invoke(IPC.projectFileBase, folder, path),
+  watchFiles: (folder) => ipcRenderer.invoke(IPC.filesWatch, folder),
+  unwatchFiles: (folder) => ipcRenderer.invoke(IPC.filesUnwatch, folder),
+  onFilesChanged: (listener) => subscribe<[string, string[]]>(IPC.filesChanged, listener),
   gitSync: (folder) => ipcRenderer.invoke(IPC.gitSync, folder),
   gitBranches: (folder) => ipcRenderer.invoke(IPC.gitBranches, folder),
   gitQuick: (request) => ipcRenderer.invoke(IPC.gitQuick, request),
@@ -81,6 +86,7 @@ const api: GridApi = {
   findSolution: (folder) => ipcRenderer.invoke(IPC.findSolution, folder),
   existingFiles: (folder, candidates) => ipcRenderer.invoke(IPC.filesExist, folder, candidates),
   openFile: (folder, ref) => ipcRenderer.invoke(IPC.filesOpen, folder, ref),
+  openFileInVsCode: (folder, path, line) => ipcRenderer.invoke(IPC.filesOpenVsCode, folder, path, line),
   readInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsRead, folder, name),
   writeInstruction: (request) => ipcRenderer.invoke(IPC.instructionsWrite, request),
   openInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsOpen, folder, name),
@@ -163,6 +169,11 @@ const api: GridApi = {
   openRecordingsFolder: () => ipcRenderer.invoke(IPC.recordingsOpenFolder),
   setRecordingPaused: (id, paused) => ipcRenderer.invoke(IPC.recordingsPause, id, paused),
   setRecordingTitle: (id, title) => ipcRenderer.send(IPC.recordingsTitle, id, title),
+  onCloseCheck: (listener) => {
+    ipcRenderer.on(IPC.closeCheck, () => {
+      void listener().then((ok) => ipcRenderer.send(IPC.closeCheckDone, ok), () => ipcRenderer.send(IPC.closeCheckDone, true))
+    })
+  },
   onFlushRequest: (listener) => {
     ipcRenderer.on(IPC.flushRequest, () => {
       void listener().finally(() => ipcRenderer.send(IPC.flushDone))
