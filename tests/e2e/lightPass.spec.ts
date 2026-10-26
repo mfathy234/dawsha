@@ -54,7 +54,7 @@ for (const [mode, themeId] of THEMES) {
         await expect(first).toHaveAttribute('data-state', 'needs', { timeout: 1500 })
         await expect(first.locator('.pane-recap')).toContainText('Import script fixed', { timeout: 3500 })
       }).toPass({ timeout: 30_000 })
-      await expect(first.locator('.pane-tag .tag-chip')).toHaveText('Bug')
+      await expect(first.locator('.pane-tag .tag-word')).toHaveText('bug')
       await page.mouse.move(700, 500)
       await shot(page, `${mode}-grid-tagged-approval`)
 

@@ -7,8 +7,9 @@ export type TagSource = 'branch' | 'conversation' | null
 export const tagTooltip = (tag: SessionTag, source: TagSource = null): string =>
   `Tag: ${SESSION_TAG_LABELS[tag]}${source ? ` (from the ${source === 'branch' ? 'branch' : 'conversation'})` : ''}`
 
-export function tagChip(tag: SessionTag, compact = false, source: TagSource = null): HTMLElement {
-  return h('span', { class: `tag-chip${compact ? ' compact' : ''}`, 'data-tag': tag, title: tagTooltip(tag, source) }, SESSION_TAG_LABELS[tag])
+/** The tag as a quiet lowercase word in the tag's muted colour; the caller places it in a meta line. */
+export function tagWord(tag: SessionTag, source: TagSource = null): HTMLElement {
+  return h('span', { class: 'tag-word', 'data-tag': tag, title: tagTooltip(tag, source) }, SESSION_TAG_LABELS[tag].toLowerCase())
 }
 
 /** Menu entries to set or clear a session's tag; the caller closes its own menu in `pick`. */

@@ -38,7 +38,7 @@ import { api } from '../api'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
-import { tagChip, tagMenuItems, type TagSource } from './sessionTagUi'
+import { tagMenuItems, tagWord, type TagSource } from './sessionTagUi'
 import type { SessionTag } from '../../shared/sessionTags'
 import { AgentsDrawer } from './agentsDrawer'
 import { openBranchMenu } from './gitMenu'
@@ -409,7 +409,7 @@ export class PaneComponent {
     if (shown === this.tagShown) return
     this.tagShown = shown
     this.tagHost.hidden = tag === null
-    this.tagHost.replaceChildren(...(tag ? [tagChip(tag, false, source)] : []))
+    this.tagHost.replaceChildren(...(tag ? [tagWord(tag, source)] : []))
   }
 
   /** Opened from Pane actions › Tag…, in the place of that button's menu. */

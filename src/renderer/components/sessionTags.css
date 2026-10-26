@@ -20,24 +20,26 @@
 [data-tag='research'] { --tag: var(--tag-research); }
 [data-tag='docs'] { --tag: var(--tag-docs); }
 
-.tag-chip {
-  display: inline-flex;
+.tag-word {
   flex: none;
-  align-items: center;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--tag) 16%, transparent);
-  color: var(--tag);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 17px;
+  color: color-mix(in srgb, var(--tag) 70%, var(--muted));
+  font-weight: 400;
   white-space: nowrap;
 }
 
-.tag-chip.compact {
-  padding: 0 6px;
-  font-size: 10px;
-  line-height: 15px;
+:root[data-tag-colors='off'] .tag-word {
+  color: var(--muted);
+}
+
+.sess-meta .tag-word::before,
+.board-card-tag .tag-word::before {
+  content: '·';
+  margin-right: 5px;
+  color: color-mix(in srgb, var(--muted) 75%, transparent);
+}
+
+.board-card-tag {
+  margin-left: 5px;
 }
 
 .menu-item-tag {
@@ -54,20 +56,7 @@
   background: var(--tag);
 }
 
-:root[data-tag-colors='off'] .tag-chip {
-  display: none;
-}
-
 .menu-item-tag .tag-check {
   margin-left: auto;
   color: var(--muted);
-}
-
-.board-card-tag {
-  flex: none;
-  display: inline-flex;
-}
-
-.board-card-head .board-card-tag {
-  margin-left: 6px;
 }

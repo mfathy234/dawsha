@@ -40,22 +40,22 @@ test('a session tag follows the session: sidebar, pane header, board card, close
 
     await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Bug')
     await expect(openRow(page)).toHaveAttribute('data-tag', 'bug')
-    await expect(openRow(page).locator('.tag-chip')).toHaveText('Bug')
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Bug')
+    await expect(openRow(page).locator('.tag-word')).toHaveText('bug')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('bug')
     expect(await focusedNav(page)).toMatch(/^s:/)
 
     await page.getByRole('button', { name: 'Pane actions' }).click()
     await page.getByRole('menuitem', { name: 'Tag…' }).click()
     await expect(page.getByRole('menuitemradio', { name: 'Tag as Bug' })).toHaveAttribute('aria-checked', 'true')
     await page.getByRole('menuitemradio', { name: 'Tag as Review' }).click()
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Review')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('review')
     await expect(openRow(page)).toHaveAttribute('data-tag', 'review')
     await expect.poll(() => readSettings(sandbox.userData).workspace.panes[0].tabs[0].tag).toBe('review')
     mkdirSync(SCREENS, { recursive: true })
     await page.locator('.pane-header').first().screenshot({ path: join(SCREENS, '162-sidebar-pane-header-tag.png') })
 
     await page.locator('#layout-board').click()
-    await expect(page.locator('.board-card .tag-chip')).toHaveText('Review')
+    await expect(page.locator('.board-card .tag-word')).toHaveText('review')
     await page.locator('.board-view').screenshot({ path: join(SCREENS, '162-sidebar-board-card-tag.png') })
     await page.locator('#layout-grid').click()
 
@@ -64,11 +64,11 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     await expect.poll(() => readSettings(sandbox.userData).keptSessions[0]?.tag).toBe('review')
     const closed = page.locator('.kept-session-row.closed')
     await expect(closed).toHaveAttribute('data-tag', 'review')
-    await expect(closed.locator('.tag-chip')).toHaveText('Review')
+    await expect(closed.locator('.tag-word')).toHaveText('review')
 
     await closed.locator('.sess-row').click()
     await expect(page.locator('.pane')).toHaveCount(1)
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Review')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('review')
   } finally {
     await closeApp(session.app)
   }
@@ -76,7 +76,7 @@ test('a session tag follows the session: sidebar, pane header, board card, close
   try {
     const { page } = session
     await expect(page.locator('.pane')).toHaveCount(1)
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Review')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('review')
     await expect(openRow(page)).toHaveAttribute('data-tag', 'review')
 
     await pickTag(page, 'Actions for Smoke in Smoke', 'Remove tag', 'menuitem')
@@ -123,10 +123,10 @@ test('a session takes its tag from the branch, a manual tag wins, and the settin
   try {
     await startGemini(page)
     await expect(page.locator('.pane')).toHaveCount(1)
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Feature')
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveAttribute('title', 'Tag: Feature (from the branch)')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('feature')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveAttribute('title', 'Tag: Feature (from the branch)')
     await expect(openRow(page)).toHaveAttribute('data-tag', 'feature')
-    await expect(openRow(page).locator('.tag-chip')).toHaveText('Feature')
+    await expect(openRow(page).locator('.tag-word')).toHaveText('feature')
 
     await openRow(page).hover()
     await page.getByRole('button', { name: 'Actions for Smoke in Smoke' }).click()
@@ -135,15 +135,17 @@ test('a session takes its tag from the branch, a manual tag wins, and the settin
     await page.keyboard.press('Escape')
 
     await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Bug')
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveText('Bug')
-    await expect(page.locator('.pane-tag .tag-chip')).toHaveAttribute('title', 'Tag: Bug')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveText('bug')
+    await expect(page.locator('.pane-tag .tag-word')).toHaveAttribute('title', 'Tag: Bug')
 
     await page.keyboard.press('Control+Shift+P')
     await page.keyboard.type('Toggle tag colours')
     await page.keyboard.press('Enter')
     await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'off')
-    await expect(page.locator('.pane-tag .tag-chip')).toBeHidden()
-    await expect(openRow(page).locator('.tag-chip')).toBeHidden()
+    const word = openRow(page).locator('.tag-word')
+    await expect(word).toBeVisible()
+    const muted = await page.locator('.pane-project').first().evaluate((el) => getComputedStyle(el).color)
+    await expect.poll(() => word.evaluate((el) => getComputedStyle(el).color)).toBe(muted)
     await expect.poll(() => readSettings(sandbox.userData).colorSessionsByTag).toBe(false)
   } finally {
     await closeApp(app)

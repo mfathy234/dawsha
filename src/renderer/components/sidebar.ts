@@ -14,7 +14,7 @@ import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
-import { tagChip, tagMenuItems } from './sessionTagUi'
+import { tagMenuItems, tagWord } from './sessionTagUi'
 import './sidebar.css'
 import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
 import { needsCount } from '../../shared/attentionBadge'
@@ -388,9 +388,10 @@ export class SidebarComponent {
           },
           agentMark(view.agent),
           h('span', { class: 'sess-body' },
-            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title), view.tag ? tagChip(view.tag, true, view.tagAuto) : null),
+            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title)),
             h('span', { class: 'sess-meta' },
-              h('span', { class: `sess-state state-${sessionStateName}`, title: stateLabel }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, stateLabel))))
+              h('span', { class: `sess-state state-${sessionStateName}`, title: stateLabel }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, stateLabel)),
+              view.tag ? tagWord(view.tag, view.tagAuto) : null))
         )
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}`, 'data-tag': view.tag ?? undefined },
       main,
@@ -463,10 +464,11 @@ export class SidebarComponent {
       : h('button', { class: 'sess-row', type: 'button', title: [`Resume ${session.title} (closed ${closedOn})`, closedUsageTooltip(usage)].filter(Boolean).join('\n'), 'data-nav': key, 'data-agent': session.agent, 'data-session-id': session.sessionId, onClick: click },
           agentMark(session.agent),
           h('span', { class: 'sess-body' },
-            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, session.title), closedTag ? tagChip(closedTag, true, closedSource) : null),
+            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, session.title)),
             h('span', { class: 'sess-meta' },
               h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now)),
-              used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))
+              used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null,
+              closedTag ? tagWord(closedTag, closedSource) : null)))
     return h('div', { class: 'kept-session-row closed', 'data-tag': closedTag ?? undefined },
       main,
       this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag), 'Remove', () => removeKeptSession(session.agent, session.sessionId)),

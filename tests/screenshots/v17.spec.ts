@@ -79,7 +79,7 @@ test('generates the Files view, quick open and tag colour screenshots from fake 
     writeFileSync(join(SITE, site), png)
   }
   try {
-    await expect(page.locator('.sidebar .tag-chip').first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator('.sidebar .tag-word').first()).toBeVisible({ timeout: 30_000 })
 
     await page.locator('.pane-title', { hasText: 'Add dark mode toggle' }).click()
     await page.locator('.pane').first().locator('.term-host').first().click()
@@ -113,7 +113,7 @@ test('generates the Files view, quick open and tag colour screenshots from fake 
     await expect(page.locator('.board-view')).toBeVisible()
     await askPermission(page, 1)
     await expect(page.locator('.board-col-needs .board-card')).toHaveCount(1, { timeout: 20_000 })
-    await expect(page.locator('.board-card .tag-chip').first()).toBeVisible()
+    await expect(page.locator('.board-card .tag-word').first()).toBeVisible()
     await settle(page, 1500)
     writeFileSync(join(SITE, 'tag-colours.png'), await page.screenshot())
 

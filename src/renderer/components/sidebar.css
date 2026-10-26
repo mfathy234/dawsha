@@ -2,15 +2,7 @@
   position: relative;
 }
 
-.kept-session-row[data-tag] {
-  box-shadow: inset 3px 0 0 var(--tag);
-}
-
-:root[data-tag-colors='off'] .kept-session-row[data-tag] {
-  box-shadow: none;
-}
-
-/* Name on line 1 (the spot after it is for a tag chip), muted time/cost/state on line 2. */
+/* Name on line 1, muted state/time/cost and the tag word on line 2. */
 .kept-session-row .sess-body {
   flex: 1;
   min-width: 0;
