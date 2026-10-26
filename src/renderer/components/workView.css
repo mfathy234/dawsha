@@ -8,14 +8,14 @@
 .work-search .text-input { width: 100%; padding-right: 38px; }
 .work-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
 .work-search-clear { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); padding: 4px 8px; }
-.work-project-chip, .work-selected-project { color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.work-project-chip, .work-selected-project { color: var(--muted); background: var(--surface); border-radius: var(--radius); }
 .work-project-chip { font-size: 11px; padding: 2px 7px; }
 .work-selected-project { display: inline-flex; align-items: center; gap: 4px; padding-left: 9px; font-size: 12px; }
 .work-selected-project .btn { padding: 4px 8px; }
 .work-projects h2 { margin-bottom: 12px; }
 .work-table-scroll { overflow-x: auto; }
 .work-items { list-style: none; padding: 0; margin: 0; }
-.work-item { display: flex; flex-direction: column; gap: 7px; width: 100%; padding: 12px 8px; background: transparent; color: var(--text); border: 0; border-bottom: 1px solid var(--border); text-align: left; cursor: pointer; }
+.work-item { display: flex; flex-direction: column; gap: 7px; width: 100%; padding: 12px 8px; background: transparent; color: var(--text); border: 0; border-radius: var(--radius); text-align: left; cursor: pointer; }
 .work-item:hover { background: color-mix(in srgb, var(--text) 5%, var(--surface)); }
 .work-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .work-item-main { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
@@ -28,7 +28,7 @@
 .work-other { background: var(--muted); }
 .work-conversation { background: var(--gemini-bg); }
 .work-tickets { list-style: none; padding: 0; margin: 0; }
-.work-ticket-row { display: flex; flex-direction: column; gap: 7px; padding: 12px 8px; border-bottom: 1px solid var(--border); }
+.work-ticket-row { display: flex; flex-direction: column; gap: 7px; padding: 12px 8px; }
 .work-ticket-head { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
 .work-ticket-head .spacer { flex: 1; }
 .work-ticket-name { font-size: 13px; overflow-wrap: anywhere; }
