@@ -3,6 +3,28 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] - 2026-10-27
+
+### Added
+
+- The Files view, a light editor beside your sessions. It is a new tab after Agents, opened with Ctrl+Shift+E. It shows a file tree for each project and worktree with git badges (M, A, D) and the filters All, Changed and Open in sessions.
+- Files open read-only, so you can select and copy freely. The Changes toggle shows what changed since main, and back. Press E or Edit for a small edit and Ctrl+S to save. If an agent changes the file meanwhile, a bar offers Reload theirs or Keep mine. Deleted files open on their changes.
+- File tabs, preview or pinned, are remembered for each project.
+- The right panel of the Files view lists the sessions that touched the file and an outline of it.
+- Add to prompt types @path, with the selected lines, into the focused session. Open in VS Code and Copy path are there too. Only files inside your projects can be read or saved.
+- Ctrl+P quick open works from anywhere, terminals included, with a preview. Enter opens the file in Files, Alt+Enter adds it to the prompt and Ctrl+Enter opens it in VS Code.
+- Sessions get a tag colour automatically. It comes from the branch (feature/ is Feature, fix/, bug/ and hotfix/ are Bug, and docs/, review/ and research/ match their tags) or, without a branch, from the conversation title in English and Arabic words. A tag you set always wins, and closed sessions keep their branch. The Tag colours setting and a command in the palette turn the colours off.
+- A Dim others switch in the top bar. Dimming is now off by default.
+- A setting to hide the one-line recap.
+- A right-click menu with Copy, Cut and Paste in text fields and the editor.
+
+### Changed
+
+- Panes are calmer. They have no coloured top bar, the state shows as an icon and a word, the recap is plain text, and the focused pane lifts with a soft shadow instead of an outline.
+- Popups, dialogs, menus, the resume picker, the groups in the top bar, the board, settings and the main views use fills and soft shadows instead of borders. Focus rings stay clear for keyboard users.
+- Sidebar rows show time and cost on their own line. The × and ⋯ buttons appear on hover or focus and never cover text, and ⋯ offers Close and Remove.
+- The Agents tab lists background agents grouped by session, running first, each with a small bar scaled to its session, instead of a 24-hour timeline.
+
 ## [1.6.2] - 2026-10-26
 
 ### Added
