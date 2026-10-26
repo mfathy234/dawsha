@@ -1,20 +1,20 @@
 .bell-button { position: relative; }
-.bell-badge { position: absolute; top: 1px; inset-inline-end: 1px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 600; line-height: 15px; text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
+.bell-badge { position: absolute; top: 1px; inset-inline-end: 1px; min-width: 15px; height: 15px; padding: 0 var(--s-1); border-radius: var(--r-control); background: var(--danger); color: #fff; font-size: var(--fs-status); font-weight: 600; line-height: 15px; text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
 .bell-badge[hidden] { display: none; }
 .notifications-popover { z-index: 40; padding: 0; max-height: min(520px, calc(100vh - 80px)); display: flex; flex-direction: column; outline: none; }
-.notifications-head { margin: 0; padding: 10px 10px 8px 14px; border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }
-.notifications-head .popover-title { flex: 1; font-size: 14px; }
-.notifications-list { list-style: none; margin: 0; padding: 4px; overflow-y: auto; }
-.notification-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: var(--radius); }
+.notifications-head { margin: 0; padding: var(--s-3) var(--s-3) var(--s-2) var(--s-4); border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }
+.notifications-head .popover-title { flex: 1; font-size: var(--fs-body); }
+.notifications-list { list-style: none; margin: 0; padding: var(--s-1); overflow-y: auto; }
+.notification-item { display: flex; align-items: flex-start; gap: var(--s-3); padding: var(--s-2) var(--s-3); border-radius: var(--radius); }
 .notification-item + .notification-item { border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
 .notification-item.fresh { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .notification-icon { flex: none; display: inline-flex; margin-top: 2px; color: var(--muted); }
 .kind-error .notification-icon { color: var(--danger); }
 .kind-needs .notification-icon { color: var(--accent); }
 .notification-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.notification-text { font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-line; }
-.notification-time { font-size: 11px; color: var(--muted); }
+.notification-text { font-size: var(--fs-body); line-height: 1.4; overflow-wrap: anywhere; white-space: pre-line; }
+.notification-time { font-size: var(--fs-status); color: var(--muted); }
 .notification-action { flex: none; align-self: center; }
-.notifications-empty { padding: 28px 20px 30px; text-align: center; }
-.notifications-empty-title { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
-.notifications-empty-note { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.notifications-empty { padding: var(--s-5) var(--s-5) 30px; text-align: center; }
+.notifications-empty-title { margin: 0 0 var(--s-2); font-size: var(--fs-body); font-weight: 600; }
+.notifications-empty-note { margin: 0; font-size: var(--fs-ui); color: var(--muted); line-height: 1.5; }

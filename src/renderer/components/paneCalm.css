@@ -2,9 +2,9 @@
 
 .pane-recap {
   flex: none;
-  padding: 0 12px 6px 34px;
+  padding: 0 var(--s-3) var(--s-2) 34px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-ui);
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
@@ -13,15 +13,15 @@
 .pane-recap[hidden] { display: none; }
 
 /* Darkened rather than faded: opacity lets the page show through a dark terminal and greys it out in light themes. */
-.pane .pane-body { transition: filter 120ms; }
+.pane .pane-body { transition: filter var(--t-feedback); }
 .pane.calm:not(:hover):not(:focus-within) .pane-body { filter: brightness(0.72) saturate(0.8); }
 @media (prefers-reduced-motion: reduce) {
   .pane .pane-body { transition: none; }
 }
 
 .pane .pane-permission {
-  margin: 0 10px 8px;
-  padding: 8px 10px;
+  margin: 0 var(--s-3) var(--s-2);
+  padding: var(--s-2) var(--s-3);
   border: 1px solid color-mix(in srgb, var(--state-needs) 60%, var(--border));
   border-radius: var(--radius);
 }
@@ -40,7 +40,7 @@
 .pane-header .pane-fresh,
 .pane-header .chip-resumed { flex: 0 1 auto; min-width: 2.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @container pane-header (max-width: 460px) {
-  .pane-header { gap: 6px; }
+  .pane-header { gap: var(--s-2); }
   .pane-header .pane-prev,
   .pane-header .pane-next,
   .pane-header .pane-mic { display: none; }

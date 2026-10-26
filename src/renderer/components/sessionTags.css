@@ -34,18 +34,18 @@
 .sess-meta .tag-word::before,
 .board-card-tag .tag-word::before {
   content: '·';
-  margin-right: 5px;
+  margin-right: var(--s-1);
   color: color-mix(in srgb, var(--muted) 75%, transparent);
 }
 
 .board-card-tag {
-  margin-left: 5px;
+  margin-left: var(--s-1);
 }
 
 .menu-item-tag {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .menu-item-tag .tag-dot {

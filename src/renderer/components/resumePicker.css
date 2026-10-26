@@ -1,6 +1,6 @@
 .rp-filters .select-menu { width: 190px; flex: 0 0 190px; }
-.rp-facts { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; padding: 0; list-style: none; }
-.rp-facts li { padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+.rp-facts { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-3) 0 var(--s-1); padding: 0; list-style: none; }
+.rp-facts li { padding: 2px var(--s-2); border-radius: var(--r-pop); background: var(--bg); color: var(--muted); font-size: var(--fs-status); white-space: nowrap; }
 .rp-field p { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.5; }
-.rp-field + .rp-field { margin-top: 4px; }
-.rp-match p { padding: 6px 8px; background: var(--bg); border-radius: var(--radius); }
+.rp-field + .rp-field { margin-top: var(--s-1); }
+.rp-match p { padding: var(--s-2) var(--s-2); background: var(--bg); border-radius: var(--radius); }

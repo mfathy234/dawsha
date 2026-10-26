@@ -48,7 +48,7 @@
 @media (prefers-reduced-motion: no-preference) {
   :root .dialog,
   :root .popover,
-  :root .palette { animation: popup-in 140ms ease-out; }
+  :root .palette { animation: popup-in var(--t-feedback) var(--ease-out); }
 }
 @keyframes popup-in {
   from { opacity: 0; transform: translateY(4px); }
