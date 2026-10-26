@@ -277,6 +277,7 @@ test('a session row keeps time and cost on their own line and the close button s
   const sandbox = createSandbox()
   const now = Date.now()
   writeSettings(sandbox, {
+    sidebarWidth: 208,
     keptSessions: [{ projectId: 'smoke', agent: 'claude', sessionId: KEPT_ID(0), title: 'Trial of a rather long session name', closedAt: now - 33 * 60_000 }]
   })
   writeFileSync(join(sandbox.userData, 'usage-history.json'), JSON.stringify({ v: 1, limits: [], costs: { [KEPT_ID(0)]: { at: now - 1000, usd: 8.69, cwd: sandbox.projectFolder } } }), 'utf8')

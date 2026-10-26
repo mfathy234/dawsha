@@ -59,17 +59,17 @@
   position: absolute;
   right: 4px;
   width: 22px;
-  height: 20px;
+  height: 19px;
   opacity: 0;
 }
 
 .kept-session-row .sess-more {
-  top: 2px;
+  top: 1px;
   color: color-mix(in srgb, var(--muted) 80%, transparent);
 }
 
 .kept-session-row .sess-close {
-  bottom: 2px;
+  bottom: 1px;
 }
 
 .kept-session-row:hover .sess-more,

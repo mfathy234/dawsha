@@ -394,7 +394,7 @@ export class SidebarComponent {
         )
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}`, 'data-tag': view.tag ?? undefined },
       main,
-      this.sessionMenuButton(key, view.title, project, view.tag, (tag) => tagSession(view.pane.id, tag)),
+      this.sessionMenuButton(key, view.title, project, view.tag, (tag) => tagSession(view.pane.id, tag), 'Close', () => void closePane(view.pane.id)),
       iconButton(`Close ${view.title} in ${project.name}`, ICONS.close, () => void closePane(view.pane.id), 'small sess-close')
     )
   }
@@ -467,7 +467,7 @@ export class SidebarComponent {
               used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))
     return h('div', { class: 'kept-session-row closed', 'data-tag': session.tag ?? undefined },
       main,
-      this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag)),
+      this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag), 'Remove', () => removeKeptSession(session.agent, session.sessionId)),
       iconButton(`Remove ${session.title} from ${project.name}`, ICONS.close, () => removeKeptSession(session.agent, session.sessionId), 'small sess-close')
     )
   }
@@ -557,19 +557,20 @@ export class SidebarComponent {
     return button
   }
 
-  private sessionMenuButton(navKey: string, title: string, project: Project, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void): HTMLElement {
+  private sessionMenuButton(navKey: string, title: string, project: Project, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void, removeLabel: string, remove: () => void): HTMLElement {
     const key = `sm:${navKey}`
-    const button = iconButton(`Actions for ${title} in ${project.name}`, ICONS.more, () => this.toggleSessionMenu(key, navKey, title, tag, setTag), 'small sess-more')
+    const button = iconButton(`Actions for ${title} in ${project.name}`, ICONS.more, () => this.toggleSessionMenu(key, navKey, title, tag, setTag, removeLabel, remove), 'small sess-more')
     button.setAttribute('aria-haspopup', 'menu')
     button.dataset.menuKey = key
     return button
   }
 
-  private toggleSessionMenu(key: string, navKey: string, title: string, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void): void {
+  private toggleSessionMenu(key: string, navKey: string, title: string, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void, removeLabel: string, remove: () => void): void {
     if (this.popup.isOpenFor(key)) return this.popup.close()
     const rename = h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); this.startRename(navKey) } }, 'Rename')
     const tags = tagMenuItems(tag, (next) => { this.popup.close(); this.focusAfterRender(navKey); setTag(next) })
-    this.popup.open(key, [rename, h('div', { class: 'pv-menu-sep', role: 'separator' }), ...tags], `Actions for ${title}`)
+    const drop = h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); remove() } }, removeLabel)
+    this.popup.open(key, [rename, h('div', { class: 'pv-menu-sep', role: 'separator' }), ...tags, h('div', { class: 'pv-menu-sep', role: 'separator' }), drop], `Actions for ${title}`)
   }
 
   private toggleMenu(key: string, project: Project): void {
