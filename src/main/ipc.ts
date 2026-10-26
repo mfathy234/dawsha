@@ -16,8 +16,8 @@ import type {
 } from '../shared/types'
 import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
-import { applyAttentionBadge, findSolution, notifyUser, quickOpen } from './desktop'
-import { existingFiles, openFile } from './fileOpen'
+import { applyAttentionBadge, findSolution, notifyUser, openInVsCode, quickOpen } from './desktop'
+import { existingFiles, openFile, resolveFile } from './fileOpen'
 import { projectFolder, readInstruction, writeInstruction } from './instructionFiles'
 import { isInstructionName, type InstructionWriteRequest } from '../shared/instructions'
 import type { FileRef } from '../shared/filePaths'
@@ -240,6 +240,11 @@ export function registerIpc(
   ipcMain.handle(IPC.quickOpen, (_event, kind: QuickOpenKind, folder: string) => quickOpen(kind, folder))
   ipcMain.handle(IPC.findSolution, (_event, folder: string) => (typeof folder === 'string' ? findSolution(folder) : null))
   ipcMain.handle(IPC.filesExist, (_event, folder: string, candidates: string[]) => existingFiles(folder, candidates))
+  ipcMain.handle(IPC.filesOpenVsCode, async (_event, folder: unknown, path: unknown, line: unknown) => {
+    const root = await known(folder)
+    const full = root ? resolveFile(root, path) : null
+    if (full && !full.includes('"')) await openInVsCode(full, Number.isInteger(line) && (line as number) > 0 ? (line as number) : undefined)
+  })
   ipcMain.handle(IPC.filesOpen, (_event, folder: string, ref: FileRef) => openFile(folder, ref))
   ipcMain.handle(IPC.instructionsRead, (_event, folder: unknown, name: unknown) =>
     readInstruction(settings.get().projects, folder, name)

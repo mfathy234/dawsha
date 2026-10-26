@@ -6,6 +6,7 @@ import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import { unifiedMergeView } from '@codemirror/merge'
 import { tags as t } from '@lezer/highlight'
 import { loadLanguage } from './languages'
+import { outlineOf, type OutlineItem } from './outline'
 
 export type EditorTheme = 'dark' | 'light'
 
@@ -14,6 +15,14 @@ export interface EditorOptions {
   path: string
   readOnly: boolean
   theme: EditorTheme
+}
+
+export interface CursorInfo {
+  line: number
+  col: number
+  startLine: number
+  endLine: number
+  selected: number
 }
 
 export interface FileEditor {
@@ -25,6 +34,11 @@ export interface FileEditor {
   showChanges(baseText: string | null): void
   showFile(): void
   onDirty(cb: () => void): void
+  onCursor(cb: (info: CursorInfo) => void): void
+  onLanguage(cb: () => void): void
+  cursor(): CursorInfo
+  outline(): OutlineItem[]
+  reveal(pos: number): void
   focus(): void
   destroy(): void
 }
@@ -89,6 +103,19 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
   const access = new Compartment()
   const merge = new Compartment()
   const dirtyListeners: Array<() => void> = []
+  const cursorListeners: Array<(info: CursorInfo) => void> = []
+  const languageListeners: Array<() => void> = []
+  const cursorOf = (state: EditorState): CursorInfo => {
+    const main = state.selection.main
+    const head = state.doc.lineAt(main.head)
+    return {
+      line: head.number,
+      col: main.head - head.from + 1,
+      startLine: state.doc.lineAt(main.from).number,
+      endLine: state.doc.lineAt(main.empty ? main.to : main.to - 1).number,
+      selected: main.to - main.from
+    }
+  }
   let readOnly = options.readOnly
   let showingChanges = false
   let destroyed = false
@@ -114,13 +141,16 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
         merge.of([]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !suppress) for (const cb of dirtyListeners) cb()
+          if (update.selectionSet || update.docChanged) for (const cb of cursorListeners) cb(cursorOf(update.state))
         })
       ]
     })
   })
 
   void loadLanguage(options.path).then((ext) => {
-    if (ext && !destroyed) view.dispatch({ effects: language.reconfigure(ext) })
+    if (!ext || destroyed) return
+    view.dispatch({ effects: language.reconfigure(ext) })
+    for (const cb of languageListeners) cb()
   })
 
   return {
@@ -157,6 +187,18 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
     },
     onDirty(cb) {
       dirtyListeners.push(cb)
+    },
+    onCursor(cb) {
+      cursorListeners.push(cb)
+    },
+    onLanguage(cb) {
+      languageListeners.push(cb)
+    },
+    cursor: () => cursorOf(view.state),
+    outline: () => outlineOf(view.state),
+    reveal(pos) {
+      view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'start', yMargin: 24 }) })
+      view.focus()
     },
     focus: () => view.focus(),
     destroy() {

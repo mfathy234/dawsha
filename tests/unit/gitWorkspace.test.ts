@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -129,6 +129,13 @@ describe('file against the merge base', () => {
     expect(await fileAgainstBase(repo, 'src/a.ts')).toEqual({ ok: true, base: 'one\n', text: 'one\ntwo\nthree\n' })
     expect(await fileAgainstBase(repo, 'src/new.ts')).toEqual({ ok: true, base: null, text: 'fresh\n' })
     expect(await fileAgainstBase(repo, '../x')).toMatchObject({ ok: false })
+  })
+
+  it('returns the base text next to an empty file for a deleted file', async () => {
+    const repo = makeRepo()
+    rmSync(join(repo, 'src', 'b.ts'))
+    expect(await fileAgainstBase(repo, 'src/b.ts')).toEqual({ ok: true, base: 'one\n', text: '', deleted: true })
+    expect(await fileAgainstBase(repo, 'src/never.ts')).toMatchObject({ ok: false })
   })
 })
 

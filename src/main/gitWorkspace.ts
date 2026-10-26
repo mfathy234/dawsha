@@ -68,7 +68,7 @@ export async function projectFiles(folder: unknown): Promise<ProjectFilesResult>
   return { ok: true, files: all.slice(0, MAX_LISTED), truncated: all.length > MAX_LISTED, repo: true }
 }
 
-type Resolved = { ok: true; root: string; rel: string; full: string; realRel: string } | { ok: false; error: string }
+type Resolved = { ok: true; root: string; rel: string; full: string; realRel: string } | { ok: false; error: string; missing?: { root: string; rel: string } }
 
 // The one validator for a project file: relative path checks, then the real location (symlinks resolved)
 // must still be inside the project's real root. realRel is that location relative to the real root, in its
@@ -88,7 +88,7 @@ async function resolveProjectFile(folder: unknown, path: unknown): Promise<Resol
     if (!insideRoot(realRoot, full)) return { ok: false, error: `Path is outside the project: ${rel}` }
     return { ok: true, root, rel, full, realRel: relative(realRoot, full).replace(/\\/g, '/') }
   } catch {
-    return { ok: false, error: `${rel} no longer exists.` }
+    return { ok: false, error: `${rel} no longer exists.`, missing: { root, rel } }
   }
 }
 
@@ -160,7 +160,7 @@ async function mergeBase(root: string): Promise<string | null> {
 // A base over the size cap comes back as null with reason 'large'.
 export async function fileAgainstBase(folder: unknown, path: unknown): Promise<FileAgainstBaseResult> {
   const target = await resolveProjectFile(folder, path)
-  if (!target.ok) return target
+  if (!target.ok) return target.missing ? deletedAgainstBase(target.missing, target.error) : target
   const current = await readResolved(target)
   if (!current.ok) return current
   if (current.text === null) return { ok: false, error: current.reason === 'large' ? 'File is too large to compare.' : 'File is binary.' }
@@ -170,6 +170,14 @@ export async function fileAgainstBase(folder: unknown, path: unknown): Promise<F
   const shown = await git(root, ['show', `${base}:${target.realRel}`])
   if ((shown.ok && Buffer.byteLength(shown.stdout, 'utf8') > MAX_READ_BYTES) || (!shown.ok && /maxBuffer/i.test(shown.message))) return { ok: true, base: null, text: current.text, reason: 'large' }
   return { ok: true, base: shown.ok ? shown.stdout : null, text: current.text }
+}
+
+// A file that is gone from the working tree: its merge-base text next to an empty file, so Files can show what was deleted.
+async function deletedAgainstBase(missing: { root: string; rel: string }, error: string): Promise<FileAgainstBaseResult> {
+  const base = await mergeBase(missing.root)
+  const shown = base ? await git(missing.root, ['show', `${base}:${missing.rel}`]) : null
+  if (!shown?.ok || Buffer.byteLength(shown.stdout, 'utf8') > MAX_READ_BYTES) return { ok: false, error }
+  return { ok: true, base: shown.stdout, text: '', deleted: true }
 }
 
 // Records the repo state when a session starts, without touching the working tree or the stash list.

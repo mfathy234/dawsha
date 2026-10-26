@@ -46,6 +46,18 @@ export async function quickOpen(kind: QuickOpenKind, folder: string): Promise<vo
   child.unref()
 }
 
+// One file in the running VS Code window, at a line when given. The path is already checked to be a project file.
+export async function openInVsCode(full: string, line?: number): Promise<void> {
+  const log = process.env.DAWSHA_OPEN_LOG
+  if (log) return logTo(log, JSON.stringify({ kind: 'vscode-file', path: full, ...(line ? { line } : {}) }))
+  const target = line ? `${full}:${line}` : full
+  const child = process.platform !== 'win32'
+    ? spawn(resolveExecutable('code', platformExecutableDirs()) ?? 'code', ['--reuse-window', '-g', target], { detached: true, stdio: 'ignore' })
+    : spawn(`code --reuse-window -g "${target}"`, { shell: true, detached: true, stdio: 'ignore', windowsHide: true })
+  child.on('error', () => undefined)
+  child.unref()
+}
+
 export async function openLink(url: string): Promise<void> {
   const href = safeLink(url)
   if (!href) return

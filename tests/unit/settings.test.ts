@@ -39,6 +39,15 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ foldedProjects: ['api'] }).foldedProjects).toEqual([])
     expect(migrateSettings(JSON.parse(JSON.stringify(migrated))).foldedProjects).toEqual(['web'])
   })
+  it('keeps open Files tabs for known projects, de-duplicated and capped at 12', () => {
+    const projects = [{ id: 'api', name: 'API', folder: 'C:\\work\\api' }]
+    const many = Array.from({ length: 20 }, (_, index) => `src/f${index}.ts`)
+    expect(defaultSettings().filesTabs).toEqual({})
+    const migrated = migrateSettings({ projects, filesTabs: { api: ['a.ts', 'a.ts', 5, '', 'b.ts'], gone: ['x.ts'], web: 'no' } })
+    expect(migrated.filesTabs).toEqual({ api: ['a.ts', 'b.ts'] })
+    expect(migrateSettings({ projects, filesTabs: { api: many } }).filesTabs.api).toHaveLength(12)
+    expect(migrateSettings({ projects, filesTabs: 'x' }).filesTabs).toEqual({})
+  })
   it('keeps the onboarding dismissal only when it is exactly true', () => {
     expect(migrateSettings({}).onboardingDismissed).toBe(false)
     expect(migrateSettings({ onboardingDismissed: 'yes' }).onboardingDismissed).toBe(false)

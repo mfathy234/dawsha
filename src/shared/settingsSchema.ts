@@ -81,6 +81,7 @@ export const defaultSettings = (): Settings => ({
   keptSessions: [],
   foldedProjects: [],
   foldedClosedSessions: [],
+  filesTabs: {},
   ticketNotes: {},
   tasks: [],
   lastSeenVersion: null,
@@ -321,6 +322,20 @@ function sanitizeProjectIds(value: unknown, projects: readonly Project[]): strin
   return [...new Set(value.filter((id): id is string => typeof id === 'string' && known.has(id)))]
 }
 
+export const FILES_TABS_MAX = 12
+
+function sanitizeFilesTabs(value: unknown, projects: readonly Project[]): Record<string, string[]> {
+  if (!isRecord(value)) return {}
+  const known = new Set(projects.map((p) => p.id))
+  const out: Record<string, string[]> = {}
+  for (const [id, paths] of Object.entries(value)) {
+    if (!known.has(id) || !Array.isArray(paths)) continue
+    const list = [...new Set(paths.filter((path): path is string => typeof path === 'string' && path !== '' && path.length <= 500))].slice(0, FILES_TABS_MAX)
+    if (list.length > 0) out[id] = list
+  }
+  return out
+}
+
 function sanitizeShortcut(value: unknown): string {
   const binding = typeof value === 'string' ? parseShortcut(value) : null
   return binding ? formatShortcut(binding) : DEFAULT_PALETTE_SHORTCUT
@@ -352,6 +367,7 @@ export function migrateSettings(raw: unknown): Settings {
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
     foldedProjects: sanitizeProjectIds(raw.foldedProjects, projects),
     foldedClosedSessions: sanitizeProjectIds(raw.foldedClosedSessions, projects),
+    filesTabs: sanitizeFilesTabs(raw.filesTabs, projects),
     ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
