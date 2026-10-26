@@ -207,7 +207,7 @@ export function writeSubagents(sandbox: Sandbox, folderOf: (name: string) => str
   const web = join(sandbox.claudeHome, 'projects', slug(folderOf('acme-web')), CLAUDE_IDS['acme-web'], 'subagents')
   subagent(web, 'w1', 'Read the settings components', 36, 4, folderOf('acme-web'), 'Settings.tsx renders the page; the theme lives in context/theme.tsx.', 'Explore')
   subagent(web, 'w2', 'Persist the choice in localStorage', 8, 22, folderOf('acme-web'), 'Added readStoredTheme and storeTheme; the choice survives a reload.')
-  subagent(web, 'w3', 'Unit tests for ThemeToggle', 3, 14, folderOf('acme-web'), 'Added two tests for the toggle; all 13 tests pass.')
+  subagent(web, 'w3', 'Unit tests for ThemeToggle', 0.3, 14, folderOf('acme-web'), null)
   const apiProject = join(sandbox.claudeHome, 'projects', slug(folderOf('billing-api')))
   mkdirSync(apiProject, { recursive: true })
   const apiRecords = [{ type: 'user', timestamp: new Date(Date.now() - 200 * MINUTE).toISOString(), cwd: folderOf('billing-api'), message: { content: 'Refactor the invoice export into smaller functions.' } }, { type: 'ai-title', aiTitle: 'Refactor invoice export' }]
