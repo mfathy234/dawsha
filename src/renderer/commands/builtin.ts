@@ -126,8 +126,7 @@ export function installBuiltinCommands(): void {
       title: 'Jump to the next pane that needs you',
       group: 'Actions',
       keywords: 'waiting done permission attention next jump',
-      keys: [bind('Ctrl+J'), bind('Ctrl+Shift+J')],
-      shortcut: formatShortcut(bind('Ctrl+J')),
+      ...withKeys('Ctrl+Shift+J'),
       enabled: (state) => Object.values(state.attention).some((a) => a !== 'none'),
       run: () => void focusNextAttention()
     },
