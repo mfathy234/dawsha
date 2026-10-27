@@ -3,6 +3,26 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.1] - 2026-10-27
+
+### Added
+
+- Session groups in the Agents tab fold. Groups with running or failed agents stay open, and finished ones fold to one line, such as "31 agents · 31 done". Click a header or press Left and Right to fold or unfold, or use Expand all and Collapse all. Dawsha remembers each group.
+- Ctrl+Shift+J jumps to the next session that needs you. Ctrl+J still adds a new line in Claude Code.
+- Files: a click opens a file in the preview tab, and Ctrl+click opens it in a new tab. Ctrl+click on a file path in a terminal opens it in Files at that line.
+- Files: code is coloured like VS Code's Dark+ and Light+ themes for every language, and files show type icons in the tree and tabs.
+- Right-click a file in the tree, a tab or a file path in a terminal to open it in Files or in a new tab, add it to the prompt, copy its path or relative path, open it in VS Code or show it in File Explorer.
+
+### Changed
+
+- Clear structure without borders. The window has distinct layers: the canvas, the top bar and sidebar, the panes, and popups. Terminals sit in a recessed well. Thin seams appear only where whole areas meet.
+- The focused session has a green ring, a bold title and a raised header. A session that needs you has a dashed orange outline and says "Needs you".
+- The top bar shows Sessions, Agents, Files and More. Projects, Usage, Work, Orchestrator and the other views are under More.
+- The 5-hour and weekly limits show their battery gauges again, which turn yellow at 70%, orange at 80% and red at 90%.
+- Focus rings show only when you use the keyboard, not after a click.
+- In the light theme, terminals are light. The "Dawsha Daylight, dark terminal" theme keeps a dark one.
+- Settings, the board, Files and the Agents tab follow the same layers. The orchestrator board no longer uses a coloured side stripe.
+
 ## [1.7.0] - 2026-10-27
 
 ### Added
