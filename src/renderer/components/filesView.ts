@@ -470,7 +470,10 @@ export class FilesViewComponent {
         return
       }
       case 'reveal':
-        return api.revealProjectPath(set.folder, path).catch(() => toast('Could not show that in the file manager.'))
+        return api.revealProjectPath(set.folder, path).then(
+          (result) => { if (!result.ok) toast('Could not show that in the file manager.') },
+          () => toast('Could not show that in the file manager.')
+        )
       case 'show-changes': {
         await this.openFile(path, { pin: true })
         const doc = this.active()
@@ -479,7 +482,10 @@ export class FilesViewComponent {
       }
       case 'close': return this.closeFile(path)
       case 'close-others': return this.closeMany(tabs.filter((known) => known !== path))
-      case 'close-right': return this.closeMany(tabs.slice(tabs.indexOf(path) + 1))
+      case 'close-right': {
+        const at = tabs.indexOf(path)
+        return at === -1 ? undefined : this.closeMany(tabs.slice(at + 1))
+      }
       default: return
     }
   }

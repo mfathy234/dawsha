@@ -1,7 +1,7 @@
 .ctx-menu { min-width: 220px; max-width: 320px; z-index: 60; }
 .ctx-item { justify-content: space-between; gap: var(--s-5); height: 30px; }
-.ctx-item:focus-visible { outline: none; background: color-mix(in srgb, var(--text) 12%, transparent); }
-.ctx-item:hover:not(:disabled) { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.ctx-item:focus-visible { outline: none; background: var(--raised); }
+.ctx-item:hover:not(:disabled) { background: var(--raised); }
 .ctx-item:disabled { color: var(--muted); cursor: default; opacity: 0.65; }
 .ctx-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ctx-keys { flex: none; color: var(--muted); font-size: var(--fs-ui); }

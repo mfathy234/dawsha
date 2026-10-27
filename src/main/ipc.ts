@@ -251,7 +251,9 @@ export function registerIpc(
   ipcMain.handle(IPC.filesReveal, async (_event, folder: unknown, path: unknown) => {
     const root = await known(folder)
     const full = root ? await resolveProjectPath(root, path) : null
-    if (full) revealInFolder(full)
+    if (!full) return refused
+    revealInFolder(full)
+    return { ok: true as const }
   })
   ipcMain.handle(IPC.filesOpen, (_event, folder: string, ref: FileRef) => openFile(folder, ref))
   ipcMain.handle(IPC.instructionsRead, (_event, folder: unknown, name: unknown) =>

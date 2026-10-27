@@ -131,6 +131,7 @@ test('right-click menus on a file, a folder and a tab: items, keyboard, clipboar
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('Enter')
     await expect.poll(() => clipboard(app)).toBe('src/a.ts')
+    await expect(page.locator('#files-tree')).toBeFocused()
 
     await row(page, 'src/a.ts').click({ button: 'right' })
     await menu.getByRole('menuitem', { name: /^Reveal in File Explorer/ }).click()

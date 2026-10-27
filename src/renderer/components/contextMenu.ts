@@ -40,7 +40,7 @@ export function openContextMenu(options: ContextMenuOptions): HTMLElement {
     return h('button', {
       class: 'menu-item ctx-item', type: 'button', role: 'menuitem', disabled: entry.disabled === true, 'aria-disabled': entry.disabled ? 'true' : undefined,
       onClick: () => {
-        close(false)
+        close(true)
         entry.run()
       }
     }, h('span', { class: 'ctx-label' }, entry.label), entry.keys ? h('span', { class: 'ctx-keys', 'aria-hidden': 'true' }, entry.keys) : null)
