@@ -1,3 +1,4 @@
+import { pathForms, tabMenu, treeMenu, type FileActionId, type FileMenuEntry } from '../../shared/fileMenus'
 import { statusLetter } from '../../shared/gitStatus'
 import { normalizeFolder } from '../../shared/folderKey'
 import { languageLabel } from '../files/languageInfo'
@@ -11,10 +12,12 @@ import { FileDoc, type DocHooks } from '../files/fileDoc'
 import { noteOpened } from '../files/fileIndex'
 import { addToPrompt, filesTarget, onFilesRequest, openInVsCode, setCurrentTarget, setDirtyProvider, takeFilesRequest, type FilesTarget } from '../files/filesActions'
 import { closeTab, openTab, pinTab, type TabRef } from '../files/filesState'
-import { FilesTree } from '../files/filesTree'
+import { fileIcon } from '../files/fileIcon'
+import { FilesTree, type TreeTarget } from '../files/filesTree'
 import { loadTouches, type TouchMap } from '../files/sessionTouch'
 import type { EditorTheme } from '../files/editor'
 import type { OutlineItem } from '../files/outline'
+import { openContextMenu, type ContextEntry } from './contextMenu'
 import { confirmDialog } from './dialogs'
 import { selectMenu, syncSelectMenu } from './selectMenu'
 import { toast } from './toast'
@@ -58,7 +61,11 @@ export class FilesViewComponent {
   private readonly projectSelect = h('select', { id: 'files-project', 'aria-label': 'Project', onChange: (event: Event) => this.switchProject((event.target as HTMLSelectElement).value) })
   private readonly worktreeNote = h('div', { class: 'files-worktree', hidden: true })
   private readonly liveNote = h('div', { class: 'files-worktree', id: 'files-live-note', role: 'status', hidden: true }, 'Live updates are off for this folder')
-  private readonly tree = new FilesTree({ open: (path, pin, focus) => void this.openFile(path, { pin, focus }) }, h('div', { class: 'files-switcher' }, selectMenu(this.projectSelect), this.worktreeNote, this.liveNote))
+  private readonly tree = new FilesTree({
+    open: (path, pin, focus) => void this.openFile(path, { pin, focus }),
+    action: (id, target) => void this.runFileAction(id, target.path, target.kind),
+    menu: (target, x, y, returnFocus) => this.openMenu(treeMenu(target.kind, target.open), target, x, y, returnFocus)
+  }, h('div', { class: 'files-switcher' }, selectMenu(this.projectSelect), this.worktreeNote, this.liveNote))
   private readonly tabs = h('div', { class: 'files-tabs', role: 'tablist', 'aria-label': 'Open files' })
   private readonly crumb = h('div', { class: 'files-crumb', 'aria-label': 'File path' })
   private readonly fileButton = h('button', { class: 'files-seg', type: 'button', id: 'files-file', 'aria-pressed': 'true', onClick: () => void this.showFileMode() }, 'File')
@@ -415,6 +422,68 @@ export class FilesViewComponent {
     this.setFlash('Path copied')
   }
 
+  // Right-click menus. Both the tree and the tabs run the same actions on a repo-relative path.
+
+  private entriesFor(spec: readonly FileMenuEntry[], path: string, kind: 'file' | 'folder'): ContextEntry[] {
+    return spec.map((entry) => (entry === 'separator' ? entry : { label: entry.label, keys: entry.keys, disabled: entry.disabled, run: () => void this.runFileAction(entry.id, path, kind) }))
+  }
+
+  private openMenu(spec: readonly FileMenuEntry[], target: TreeTarget, x: number, y: number, returnFocus: HTMLElement): void {
+    openContextMenu({ x, y, label: target.kind === 'folder' ? 'Folder actions' : 'File actions', entries: this.entriesFor(spec, target.path, target.kind), returnFocus })
+  }
+
+  private openTabMenu(path: string, x: number, y: number, returnFocus: HTMLElement): void {
+    const tabs = this.set?.tabs ?? []
+    openContextMenu({ x, y, label: 'Tab actions', entries: this.entriesFor(tabMenu(tabs.findIndex((tab) => tab.path === path), tabs.length), path, 'file'), returnFocus })
+  }
+
+  private async copyText(text: string, done: string): Promise<void> {
+    try {
+      await api.writeClipboard(text)
+      this.setFlash(done)
+    } catch {
+      toast('Could not copy to the clipboard.')
+    }
+  }
+
+  private async closeMany(paths: readonly string[]): Promise<void> {
+    for (const path of paths) await this.closeFile(path)
+  }
+
+  async runFileAction(id: FileActionId, path: string, kind: 'file' | 'folder' = 'file'): Promise<void> {
+    const set = this.set
+    if (!set) return
+    const forms = pathForms(set.folder, set.prefix, path)
+    const tabs = set.tabs.map((tab) => tab.path)
+    switch (id) {
+      case 'open': return this.openFile(path, { pin: true, focus: true })
+      case 'open-new-tab': return this.openFile(path, { pin: true })
+      case 'toggle': return this.tree.toggleFolder(path)
+      case 'add-prompt':
+        if (kind === 'file') addToPrompt(path, undefined, set.prefix)
+        return
+      case 'copy-path': return this.copyText(forms.absolute, 'Path copied')
+      case 'copy-relative': return this.copyText(forms.relative, 'Relative path copied')
+      case 'open-code': {
+        const doc = set.docs.get(path)
+        if (kind === 'file') openInVsCode(set.folder, path, doc?.editor ? doc.editor.cursor().line : undefined)
+        return
+      }
+      case 'reveal':
+        return api.revealProjectPath(set.folder, path).catch(() => toast('Could not show that in the file manager.'))
+      case 'show-changes': {
+        await this.openFile(path, { pin: true })
+        const doc = this.active()
+        if (doc && !doc.changes) await doc.toggleChanges()
+        return
+      }
+      case 'close': return this.closeFile(path)
+      case 'close-others': return this.closeMany(tabs.filter((known) => known !== path))
+      case 'close-right': return this.closeMany(tabs.slice(tabs.indexOf(path) + 1))
+      default: return
+    }
+  }
+
   // Roving tabindex: the active tab is the one Tab stops on; Left/Right/Home/End move between tabs.
   private onTabKey(event: KeyboardEvent): void {
     const set = this.set
@@ -422,6 +491,13 @@ export class FilesViewComponent {
     if (!set || !current || (event.target as HTMLElement).closest('.files-tab-close')) return
     const paths = set.tabs.map((tab) => tab.path)
     const at = paths.indexOf(current.dataset.path ?? '')
+    if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
+      event.preventDefault()
+      event.stopPropagation()
+      const box = current.getBoundingClientRect()
+      this.openTabMenu(paths[at], box.left + 12, box.bottom, current)
+      return
+    }
     let next = at
     if (event.key === 'ArrowRight') next = (at + 1) % paths.length
     else if (event.key === 'ArrowLeft') next = (at - 1 + paths.length) % paths.length
@@ -508,10 +584,16 @@ export class FilesViewComponent {
         class: classes.join(' '), role: 'tab', 'data-path': tab.path, 'aria-selected': String(tab.path === set.active), title: tab.path,
         tabindex: tab.path === set.active ? '0' : '-1',
         onClick: () => this.activate(tab.path), onDblclick: () => this.pin(tab.path),
+        onContextmenu: (event: Event) => {
+          event.preventDefault()
+          const at = event as MouseEvent
+          this.openTabMenu(tab.path, at.clientX, at.clientY, event.currentTarget as HTMLElement)
+        },
         onAuxclick: (event: Event) => {
           if ((event as MouseEvent).button === 1) void this.closeFile(tab.path)
         }
       },
+      fileIcon(tab.path),
       h('span', { class: 'files-tab-name' }, name),
       doc?.dirty ? h('span', { class: 'files-dot', title: 'Unsaved changes', 'aria-label': 'Unsaved changes' }, '•') : null,
       h('button', { class: 'files-tab-close', type: 'button', 'aria-label': `Close ${name}`, title: `Close ${name}`, onClick: (event: Event) => {

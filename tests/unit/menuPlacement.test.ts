@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { placeMenu } from '../../src/shared/menuPlacement'
+import { placeAtPoint, placeMenu } from '../../src/shared/menuPlacement'
 
 const button = (top: number, left = 900) => ({ left, top, right: left + 28, bottom: top + 28 })
 
@@ -22,5 +22,19 @@ describe('placeMenu', () => {
   it('keeps the menu inside the window horizontally', () => {
     expect(placeMenu(button(80, 20), 240, 100, 1024, 728).left).toBe(20)
     expect(placeMenu(button(80, 2), 240, 100, 1024, 728).left).toBe(8)
+  })
+})
+
+describe('placeAtPoint', () => {
+  it('opens on the pointer when it fits', () => {
+    expect(placeAtPoint(300, 200, 240, 280, 1440, 900)).toEqual({ left: 300, top: 200, maxHeight: null })
+  })
+
+  it('moves left and up so the menu stays inside the window', () => {
+    expect(placeAtPoint(1400, 880, 240, 280, 1440, 900)).toEqual({ left: 1192, top: 612, maxHeight: null })
+  })
+
+  it('shortens a menu that is taller than the window', () => {
+    expect(placeAtPoint(10, 300, 240, 900, 1024, 728)).toEqual({ left: 10, top: 8, maxHeight: 712 })
   })
 })

@@ -41,6 +41,11 @@ export function fixedEntries(paletteKeys: string, mod: string): Array<SheetEntry
     { group: 'Views', title: 'Files: edit the open file (read only until then)', keys: 'E' },
     { group: 'Views', title: 'Files: save the open file', keys: 'Ctrl+S' },
     { group: 'Views', title: 'Files: close the open tab', keys: 'Ctrl+W' },
+    { group: 'Views', title: 'Files: open a file in a new tab and keep the current one (tree click)', keys: 'Ctrl+click' },
+    { group: 'Views', title: 'Files: open in a new tab from Ctrl+P', keys: 'Ctrl+Enter' },
+    { group: 'Views', title: 'Files: menu for the file, folder or tab (right click)', keys: 'Shift+F10' },
+    { group: 'Terminal', title: 'Open a file path in Files, in a new tab at its line', keys: 'Ctrl+click' },
+    { group: 'Terminal', title: 'Open a file path in Files, even a picture or web page', keys: 'Ctrl+Shift+click' },
     { group: 'Terminal', title: 'Tab and Shift+Tab go to the agent (Claude Code mode switch, shell completion)', keys: 'Tab' }
   ]
 }

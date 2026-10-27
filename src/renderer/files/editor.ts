@@ -1,10 +1,11 @@
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import { EditorView, drawSelection, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { HighlightStyle, bracketMatching, syntaxHighlighting } from '@codemirror/language'
+import { bracketMatching, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import { unifiedMergeView } from '@codemirror/merge'
-import { tags as t } from '@lezer/highlight'
+import { EDITOR_COLORS } from '../../shared/syntaxPalette'
+import { highlightStyleFor } from './syntaxTheme'
 import { loadLanguage } from './languages'
 import { outlineOf, type OutlineItem } from './outline'
 
@@ -43,38 +44,26 @@ export interface FileEditor {
   destroy(): void
 }
 
-const mix = (color: string, pct: number): string => `color-mix(in srgb, ${color} ${pct}%, var(--text))`
+const CODE_FONT = "'Cascadia Code', 'JetBrains Mono', var(--font-mono)"
 
-const highlight = HighlightStyle.define([
-  { tag: [t.keyword, t.modifier, t.operatorKeyword, t.controlKeyword], color: 'var(--accent)' },
-  { tag: [t.string, t.special(t.string), t.regexp], color: mix('var(--accent)', 55) },
-  { tag: [t.number, t.bool, t.null, t.atom], color: mix('var(--accent)', 70) },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: 'var(--muted)' },
-  { tag: [t.function(t.variableName), t.function(t.propertyName), t.definition(t.variableName)], color: 'var(--text)', fontWeight: '600' },
-  { tag: [t.typeName, t.className, t.namespace], color: mix('var(--accent)', 40) },
-  { tag: [t.propertyName, t.attributeName], color: mix('var(--muted)', 45) },
-  { tag: [t.tagName, t.heading], color: 'var(--accent)', fontWeight: '600' },
-  { tag: [t.punctuation, t.bracket, t.separator, t.operator], color: 'var(--muted)' },
-  { tag: t.link, color: 'var(--accent)', textDecoration: 'underline' },
-  { tag: t.emphasis, fontStyle: 'italic' },
-  { tag: t.strong, fontWeight: '700' }
-])
-
+// The editor looks like VS Code: Dark+ on a dark theme, Light+ on a light one, whatever the app's accent is.
 function baseTheme(dark: boolean): Extension {
-  return EditorView.theme(
+  const colors = EDITOR_COLORS[dark ? 'dark' : 'light']
+  return [
+    EditorView.theme(
     {
-      '&': { height: '100%', color: 'var(--text)', backgroundColor: 'var(--bg)', fontSize: '13px' },
+      '&': { height: '100%', color: colors.foreground, backgroundColor: colors.background, fontSize: '13px' },
       '&.cm-focused': { outline: 'none' },
-      '.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.6', overflow: 'auto' },
-      '.cm-content': { caretColor: 'var(--accent)', padding: '8px 0', fontVariantLigatures: 'none', fontFeatureSettings: '"liga" 0, "calt" 0' },
+      '.cm-scroller': { fontFamily: CODE_FONT, lineHeight: '1.6', overflow: 'auto' },
+      '.cm-content': { caretColor: colors.caret, padding: '8px 0', fontVariantLigatures: 'none', fontFeatureSettings: '"liga" 0, "calt" 0' },
       '.cm-line': { padding: '0 16px 0 8px' },
-      '.cm-gutters': { backgroundColor: 'var(--bg)', color: 'var(--muted)', border: 'none', opacity: '0.7' },
+      '.cm-gutters': { backgroundColor: colors.background, color: colors.gutter, border: 'none' },
       '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 16px', minWidth: '3ch' },
-      '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--raised) 55%, transparent)' },
-      '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--text)' },
-      '.cm-cursor': { borderLeftColor: 'var(--accent)' },
+      '.cm-activeLine': { backgroundColor: colors.activeLine },
+      '.cm-activeLineGutter': { backgroundColor: 'transparent', color: colors.gutterActive },
+      '.cm-cursor': { borderLeftColor: colors.caret },
       '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-        backgroundColor: 'color-mix(in srgb, var(--accent) 28%, transparent)'
+        backgroundColor: colors.selection
       },
       '.cm-selectionMatch': { backgroundColor: 'color-mix(in srgb, var(--accent) 16%, transparent)' },
       '.cm-matchingBracket': { backgroundColor: 'color-mix(in srgb, var(--accent) 22%, transparent)', outline: 'none' },
@@ -87,7 +76,9 @@ function baseTheme(dark: boolean): Extension {
       '.cm-deletedLineGutter': { background: 'var(--danger) !important' }
     },
     { dark }
-  )
+    ),
+    syntaxHighlighting(highlightStyleFor(dark ? 'dark' : 'light'))
+  ]
 }
 
 // text with CRLF keeps its line endings through the editor so a save does not rewrite them
@@ -132,7 +123,6 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
         highlightActiveLine(),
         bracketMatching(),
         highlightSelectionMatches(),
-        syntaxHighlighting(highlight),
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
         theme.of(baseTheme(options.theme === 'dark')),
         eol.of(eolFor(options.text)),

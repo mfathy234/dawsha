@@ -1,9 +1,18 @@
 import type { IDisposable, ILink, Terminal } from '@xterm/xterm'
 import { findFilePaths, type FileMatch, type FileRef } from '../shared/filePaths'
+import { primaryHeld, type PointerMods } from '../shared/fileOpenMode'
 
 export interface FileLinkHost {
   existing(paths: string[]): Promise<(string | null)[]>
-  open(ref: FileRef): void
+  /** Ctrl/Cmd was held for the click; `mods` says whether Shift was too. */
+  open(ref: FileRef, mods: PointerMods): void
+  /** Right click on a file path: x and y are where the menu opens; `restoreFocus` puts the cursor back in the terminal. */
+  menu(ref: FileRef, x: number, y: number, restoreFocus: () => void): void
+}
+
+export interface FileLinks extends IDisposable {
+  /** The path under the pointer right now, if any. */
+  hovered(): FileRef | null
 }
 
 interface Segment {
@@ -25,7 +34,7 @@ function logicalLine(term: Terminal, row: number): { first: number; text: string
   return { first, text }
 }
 
-function toLink(term: Terminal, first: number, segment: Segment, host: FileLinkHost): ILink {
+function toLink(term: Terminal, first: number, segment: Segment, host: FileLinkHost, hover: (ref: FileRef | null) => void): ILink {
   const cols = term.cols
   const last = segment.match.end - 1
   const ref: FileRef = { path: segment.match.path }
@@ -39,13 +48,16 @@ function toLink(term: Terminal, first: number, segment: Segment, host: FileLinkH
     text: segment.text,
     decorations: { pointerCursor: true, underline: true },
     activate: (event) => {
-      if (event.ctrlKey || event.metaKey) host.open(ref)
-    }
+      if (primaryHeld(event)) host.open(ref, event)
+    },
+    hover: () => hover(ref),
+    leave: () => hover(null)
   }
 }
 
-export function registerFileLinks(term: Terminal, host: FileLinkHost): IDisposable {
-  return term.registerLinkProvider({
+export function registerFileLinks(term: Terminal, host: FileLinkHost): FileLinks {
+  let hovered: FileRef | null = null
+  const provider = term.registerLinkProvider({
     provideLinks(y, callback) {
       const { first, text } = logicalLine(term, y - 1)
       const segments = findFilePaths(text).map((match) => ({ match, text: text.slice(match.start, match.end) }))
@@ -56,7 +68,7 @@ export function registerFileLinks(term: Terminal, host: FileLinkHost): IDisposab
           const known = new Map(unique.map((path, i) => [path, found[i] ?? null]))
           const links = segments
             .filter((s) => known.get(s.match.path))
-            .map((s) => toLink(term, first, s, host))
+            .map((s) => toLink(term, first, s, host, (ref) => (hovered = ref)))
             .filter((link) => link.range.start.y <= y && link.range.end.y >= y)
           callback(links.length > 0 ? links : undefined)
         },
@@ -64,4 +76,5 @@ export function registerFileLinks(term: Terminal, host: FileLinkHost): IDisposab
       )
     }
   })
+  return { dispose: () => provider.dispose(), hovered: () => hovered }
 }

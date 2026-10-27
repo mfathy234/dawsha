@@ -46,6 +46,13 @@ export async function quickOpen(kind: QuickOpenKind, folder: string): Promise<vo
   child.unref()
 }
 
+// Shows a project file or folder selected in the system file manager. The path is already checked to be inside a project.
+export function revealInFolder(full: string): void {
+  const log = process.env.DAWSHA_OPEN_LOG
+  if (log) return logTo(log, JSON.stringify({ kind: 'reveal', path: full }))
+  shell.showItemInFolder(full)
+}
+
 // One file in the running VS Code window, at a line when given. The path is already checked to be a project file.
 export async function openInVsCode(full: string, line?: number): Promise<void> {
   const log = process.env.DAWSHA_OPEN_LOG
