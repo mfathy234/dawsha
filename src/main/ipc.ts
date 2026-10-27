@@ -29,6 +29,8 @@ import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './g
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder } from './knownFolder'
+import { listFilesWorkspaces } from './filesWorkspace'
+import { trashProjectPath } from './filesTrash'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
@@ -192,6 +194,8 @@ export function registerIpc(
   ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => sessionStatus(folder, baseline))
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
   const refused = { ok: false as const, error: 'Not a project folder.' }
+  ipcMain.handle(IPC.filesWorkspaces, (_event, projectId: unknown, folder: unknown) => listFilesWorkspaces(settings.get().projects, projectId, folder))
+  ipcMain.handle(IPC.filesTrash, (_event, folder: unknown, path: unknown) => trashProjectPath(settings.get().projects, folder, path, full => shell.trashItem(full)))
   ipcMain.handle(IPC.projectFiles, async (_event, folder: unknown) => {
     const root = await known(folder)
     return root ? projectFiles(root) : refused

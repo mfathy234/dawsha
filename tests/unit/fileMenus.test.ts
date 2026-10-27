@@ -5,11 +5,15 @@ const ids = (entries: FileMenuEntry[]): string[] => entries.map((entry) => (entr
 const find = (entries: FileMenuEntry[], id: string) => entries.find((entry) => entry !== 'separator' && entry.id === id)
 
 describe('menu item lists', () => {
+  it('offers separated Delete only on tree menus', () => {
+    for (const kind of ['file', 'folder'] as const) expect(ids(treeMenu(kind)).slice(-2)).toEqual(['-', 'delete'])
+    expect(ids(terminalMenu(true))).not.toContain('delete')
+  })
   it('lists the tree file items in the approved order with their keys', () => {
     const entries = treeMenu('file')
-    expect(ids(entries)).toEqual(['open', 'open-new-tab', 'add-prompt', '-', 'copy-path', 'copy-relative', '-', 'open-code', 'reveal', 'show-changes'])
+    expect(ids(entries)).toEqual(['open', 'open-new-tab', 'add-prompt', '-', 'copy-path', 'copy-relative', '-', 'open-code', 'reveal', 'show-changes', '-', 'delete'])
     expect(entries.map((entry) => (entry === 'separator' ? '' : entry.label))).toEqual([
-      'Open', 'Open in new tab', 'Add to prompt', '', 'Copy path', 'Copy relative path', '', 'Open in VS Code', 'Reveal in File Explorer', 'Show changes'
+      'Open', 'Open in new tab', 'Add to prompt', '', 'Copy path', 'Copy relative path', '', 'Open in VS Code', 'Reveal in File Explorer', 'Show changes', '', 'Delete…'
     ])
     expect(find(entries, 'open')).toMatchObject({ keys: 'Enter' })
     expect(find(entries, 'open-new-tab')).toMatchObject({ keys: 'Ctrl+click' })
@@ -17,7 +21,7 @@ describe('menu item lists', () => {
   })
 
   it('gives folders the subset that makes sense', () => {
-    expect(ids(treeMenu('folder', false))).toEqual(['toggle', '-', 'copy-path', 'copy-relative', '-', 'reveal'])
+    expect(ids(treeMenu('folder', false))).toEqual(['toggle', '-', 'copy-path', 'copy-relative', '-', 'reveal', '-', 'delete'])
     expect(find(treeMenu('folder', false), 'toggle')).toMatchObject({ label: 'Expand' })
     expect(find(treeMenu('folder', true), 'toggle')).toMatchObject({ label: 'Collapse' })
   })

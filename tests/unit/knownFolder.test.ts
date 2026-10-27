@@ -43,6 +43,7 @@ describe('knownProjectFolder', () => {
     const wt = join(mkdtempSync(join(tmpdir(), 'dawsha-wt-')), 'wt')
     git(repo, 'worktree', 'add', '-q', '-b', 'side', wt)
     expect(await knownProjectFolder([{ folder: repo }], wt)).toBe(wt)
+    expect(await knownProjectFolder([{ folder: wt }], repo)).toBe(repo)
     expect(await knownProjectFolder([{ folder: repo }], makeRepo())).toBeNull()
   })
 })

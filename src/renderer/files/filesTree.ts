@@ -69,6 +69,11 @@ export class FilesTree {
     this.render()
   }
 
+  setLoading(loading: boolean): void {
+    this.list.inert = loading
+    this.list.setAttribute('aria-busy', String(loading))
+  }
+
   setTouched(paths: Iterable<string>): void {
     this.touched = new Set(paths)
     if (this.mode === 'sessions') this.render()

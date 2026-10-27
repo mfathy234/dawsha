@@ -1,10 +1,10 @@
 .bg-fold-all { display: inline-flex; gap: var(--s-1); }
 .bg-group-head { display: block; margin: 0; padding: 0; font: inherit; }
 .bg-group-toggle {
-  display: flex; align-items: flex-start; gap: var(--s-3); width: 100%; padding: var(--s-2); border: 0; border-radius: var(--r-control);
-  background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 54px; padding: var(--s-2); border: 0; border-radius: var(--r-control);
+  background: color-mix(in srgb, var(--raised) 45%, var(--pane)); color: var(--text); font: inherit; text-align: left; cursor: pointer;
 }
-.bg-group-toggle:hover { background: color-mix(in srgb, var(--raised) 40%, transparent); }
+.bg-group-toggle:hover { background: var(--raised); }
 .bg-group-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .bg-group-toggle > :nth-child(2) { margin-top: 2px; flex: none; }
 .bg-chevron {
@@ -12,9 +12,8 @@
 }
 .bg-chevron .icon { display: inline-flex; transition: transform var(--t-feedback) var(--ease-out); }
 .bg-group.open .bg-chevron .icon { transform: rotate(90deg); }
-.bg-group-counts { text-align: right; }
-.bg-needs { color: var(--needs, #f08a3c); font-weight: 600; }
-:root[data-kind='light'] .bg-needs { color: var(--needs, #9a4a00); }
+.bg-group-counts { text-align: left; }
+.bg-needs { color: var(--bg-fail); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) {
   .bg-chevron .icon { transition: none; }
 }

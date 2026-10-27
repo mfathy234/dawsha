@@ -146,6 +146,8 @@ export interface Settings {
   agentFolds: import('./agentFolds').FoldMap
   /** Open files of the Files view, by project id (at most FILES_TABS_MAX each). */
   filesTabs: Record<string, string[]>
+  /** Locally saved run commands, kept separate from portable preferences. */
+  runCommands: import('./runCommands').RunOverrides
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
   ticketNotes: import('./ticketNotes').TicketNotes
   tasks: ProjectTask[]

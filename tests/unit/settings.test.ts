@@ -65,8 +65,8 @@ describe('migrateSettings', () => {
     const many = Array.from({ length: 20 }, (_, index) => `src/f${index}.ts`)
     expect(defaultSettings().filesTabs).toEqual({})
     const migrated = migrateSettings({ projects, filesTabs: { api: ['a.ts', 'a.ts', 5, '', 'b.ts'], gone: ['x.ts'], web: 'no' } })
-    expect(migrated.filesTabs).toEqual({ api: ['a.ts', 'b.ts'] })
-    expect(migrateSettings({ projects, filesTabs: { api: many } }).filesTabs.api).toHaveLength(12)
+    expect(migrated.filesTabs).toEqual({ 'api|c:/work/api': ['a.ts', 'b.ts'] })
+    expect(migrateSettings({ projects, filesTabs: { api: many } }).filesTabs['api|c:/work/api']).toHaveLength(12)
     expect(migrateSettings({ projects, filesTabs: 'x' }).filesTabs).toEqual({})
   })
   it('keeps the onboarding dismissal only when it is exactly true', () => {

@@ -141,6 +141,15 @@ function killTree(proc: ReturnType<ElectronApplication['process']>, reason: stri
   spawnSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true })
 }
 
+async function waitForCleanup(work: Promise<unknown>, ms: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([work, new Promise<void>((resolve) => { timer = setTimeout(resolve, ms) })])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 export async function closeApp(app: ElectronApplication): Promise<number> {
   const started = Date.now()
   let proc: ReturnType<ElectronApplication['process']>
@@ -149,12 +158,12 @@ export async function closeApp(app: ElectronApplication): Promise<number> {
   } catch {
     return 0
   }
-  const exited = new Promise<void>((resolve) => proc.once('exit', () => resolve()))
-  await app.evaluate(({ app: electronApp }) => electronApp.quit()).catch(() => undefined)
-  await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, QUIT_BUDGET_MS))])
+  // Let Playwright close its debugger connection as it requests quit, before Electron exits.
+  const closed = app.close().catch(() => undefined)
+  await waitForCleanup(closed, QUIT_BUDGET_MS)
   const elapsed = Date.now() - started
   killTree(proc, 'quit took longer than the budget')
-  await Promise.race([app.close().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 5_000))])
+  await waitForCleanup(closed, 5_000)
   return elapsed
 }
 

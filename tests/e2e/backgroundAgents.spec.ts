@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { contrastRatio } from '../../src/shared/contrast'
 
 const SHOTS = process.env.DAWSHA_SHOTS ?? ''
 const readSettings = (userData: string) => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -355,6 +356,40 @@ test('empty states follow the range and the filters', async () => {
 })
 
 for (const [mode, themeId] of [['dark', undefined], ['light', 'dawsha-daylight']] as const) {
+  test(`compact groups keep summaries and controls visible, with distinct readable status colours (${mode})`, async () => {
+    const sandbox = createSandbox()
+    seed(sandbox)
+    const settings = JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8'))
+    if (themeId) settings.theme = { id: themeId }
+    writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(settings))
+    const { app, page } = await launchApp(sandbox)
+    try {
+      await page.setViewportSize({ width: 1024, height: 728 })
+      await openAgentsExpanded(page)
+      await page.locator('#bg-collapse-all').click()
+      for (const group of await page.locator('.bg-group-toggle').all()) {
+        const title = await group.locator('.bg-group-title').boundingBox()
+        const summary = await group.locator('.bg-group-counts').boundingBox()
+        expect(title).not.toBeNull()
+        expect(summary).not.toBeNull()
+        expect(Math.abs(summary!.x - title!.x)).toBeLessThan(200)
+        expect((await group.boundingBox())!.height).toBeLessThanOrEqual(64)
+      }
+      await expect(page.locator('#bg-expand-all')).toBeVisible()
+      await expect(page.locator('#bg-collapse-all')).toBeVisible()
+      const colours = await page.evaluate(() => {
+        const hex = (value: string): string => '#' + (value.match(/[\d.]+/g) ?? []).slice(0, 3).map((part) => Math.round(Number(part)).toString(16).padStart(2, '0')).join('')
+        const read = (selector: string): string => hex(getComputedStyle(document.querySelector(selector)!).color)
+        return { running: read('#bg-status-running'), done: read('#bg-status-done'), failed: read('#bg-status-failed'), background: hex(getComputedStyle(document.querySelector('.bg-view')!).backgroundColor) }
+      })
+      expect(new Set([colours.running, colours.done, colours.failed]).size).toBe(3)
+      for (const foreground of [colours.running, colours.done, colours.failed]) expect(contrastRatio(foreground, colours.background)).toBeGreaterThanOrEqual(4.5)
+      await page.screenshot({ path: join('test-results/screens', `173-agents-${mode}-compact.png`) })
+    } finally {
+      await closeApp(app)
+    }
+  })
+
   test(`screenshots of the Agents view (${mode})`, async () => {
     test.skip(!SHOTS, 'Set DAWSHA_SHOTS to a folder to capture screenshots')
     const sandbox = createSandbox()
