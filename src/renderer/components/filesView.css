@@ -4,10 +4,12 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 270px;
-  --editor-bg: var(--well);
+  /* VS Code's Dark+ and Light+ backgrounds, so the active tab and file bar join the code below. */
+  --editor-bg: #1e1e1e;
   background: var(--canvas);
   overflow: hidden;
 }
+:root[data-kind='light'] .files-view { --editor-bg: #ffffff; }
 .files-view[hidden] { display: none; }
 
 /* Left column */
