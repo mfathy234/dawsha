@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { createRunPreload } from './runCommands'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
 import { isRemoteControlBuild } from '../shared/remoteBuild'
@@ -25,6 +26,7 @@ async function invokeRemote(channel: string, ...args: unknown[]): Promise<Remote
 }
 
 const api: GridApi = {
+  runs: createRunPreload(),
   ...(isRemoteControlBuild ? {
     remoteAccess: {
       getState: () => ipcRenderer.invoke(IPC.remoteAccessGet),
@@ -89,6 +91,8 @@ const api: GridApi = {
   openFile: (folder, ref) => ipcRenderer.invoke(IPC.filesOpen, folder, ref),
   openFileInVsCode: (folder, path, line) => ipcRenderer.invoke(IPC.filesOpenVsCode, folder, path, line),
   revealProjectPath: (folder, path) => ipcRenderer.invoke(IPC.filesReveal, folder, path),
+  filesWorkspaces: (projectId, folder) => ipcRenderer.invoke(IPC.filesWorkspaces, projectId, folder),
+  trashProjectPath: (folder, path) => ipcRenderer.invoke(IPC.filesTrash, folder, path),
   readInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsRead, folder, name),
   writeInstruction: (request) => ipcRenderer.invoke(IPC.instructionsWrite, request),
   openInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsOpen, folder, name),

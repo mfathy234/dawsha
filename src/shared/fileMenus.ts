@@ -2,7 +2,7 @@ import { toProjectPath } from './projectPaths'
 
 export type FileActionId =
   | 'open' | 'open-new-tab' | 'toggle' | 'add-prompt' | 'copy-path' | 'copy-relative' | 'open-code' | 'reveal' | 'show-changes'
-  | 'close' | 'close-others' | 'close-right' | 'open-files' | 'open-files-new-tab'
+  | 'close' | 'close-others' | 'close-right' | 'open-files' | 'open-files-new-tab' | 'delete'
 
 export interface FileMenuItem {
   id: FileActionId
@@ -23,7 +23,8 @@ export function treeMenu(kind: 'file' | 'folder', open = false): FileMenuEntry[]
       item('copy-path', 'Copy path', 'Shift+Alt+C'),
       item('copy-relative', 'Copy relative path', 'Ctrl+Shift+Alt+C'),
       'separator',
-      item('reveal', 'Reveal in File Explorer', 'Shift+Alt+R')
+      item('reveal', 'Reveal in File Explorer', 'Shift+Alt+R'),
+      'separator', item('delete', 'Delete…')
     ]
   }
   return [
@@ -36,7 +37,8 @@ export function treeMenu(kind: 'file' | 'folder', open = false): FileMenuEntry[]
     'separator',
     item('open-code', 'Open in VS Code', 'Ctrl+Enter'),
     item('reveal', 'Reveal in File Explorer', 'Shift+Alt+R'),
-    item('show-changes', 'Show changes')
+    item('show-changes', 'Show changes'),
+    'separator', item('delete', 'Delete…')
   ]
 }
 

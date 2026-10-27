@@ -67,6 +67,7 @@ import type {
 } from './types'
 
 export interface GridApi {
+  runs: import('./runCommands').RunApi
   getSettings(): Promise<SettingsLoadResult>
   updateSettings(patch: Partial<Settings>): Promise<Settings>
   exportSettings(): Promise<SettingsExportResult>
@@ -131,6 +132,8 @@ export interface GridApi {
   openFile(folder: string, ref: FileRef): Promise<void>
   openFileInVsCode(folder: string, path: string, line?: number): Promise<void>
   revealProjectPath(folder: string, path: string): Promise<{ ok: true } | { ok: false; error: string }>
+  filesWorkspaces(projectId: string, folder?: string): Promise<import('./filesWorkspace').FilesWorkspacesResult>
+  trashProjectPath(folder: string, path: string): Promise<import('./filesWorkspace').FilesTrashResult>
   readInstruction(folder: string, name: string): Promise<InstructionRead>
   writeInstruction(request: InstructionWriteRequest): Promise<InstructionWriteResult>
   openInstruction(folder: string, name: string): Promise<void>

@@ -26,6 +26,8 @@
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Activity per pane.** Native child-process activity works for Claude, Codex and Gemini without a mod. An optional Claude ops feed adds plan progress and sub-agent details. Context and any available 5-hour/weekly limits stay with their own pane.
 - **Files view.** A light editor beside your sessions (Ctrl+Shift+E): a file tree per project and worktree with git badges, read-only files with a Changes toggle, small edits saved with Ctrl+S, and the sessions that touched each file. Add a file to the prompt as `@path`, open it in VS Code or copy its path.
+- **Browse worktrees.** Choose a branch and checkout from the Files dropdown. Each checkout keeps its own open files and unsaved edits. Delete files or folders through the system Recycle Bin or Trash with confirmation.
+- **Run your project.** Files detects .NET solutions, startup projects and launch profiles, and Node scripts. Review and start a command in the selected checkout, follow its own output, stop it, or save a custom command when detection needs help.
 - **Quick open.** Ctrl+P finds a file from anywhere, terminals included, with a preview: Enter opens it in Files, Alt+Enter adds it to the prompt, Ctrl+Enter opens it in VS Code.
 - **Arrange panes your way.** Drag the borders between panes to resize them, drag a pane by its header or a tab along its strip to reorder, or use the **Move pane** button and the keyboard. Pin a pane so it stays beside whichever pane you maximize. Switch panes with **Ctrl+Tab**, jump to one with **Ctrl+1** to **Ctrl+9**, or to the next one waiting on you with **Ctrl+Shift+J**.
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
@@ -92,6 +94,12 @@
 | Projects | Agents |
 |---|---|
 | ![The projects view](docs/screenshots/projects.png) | ![The agents view with install and update buttons](docs/screenshots/agents.png) |
+
+| Background agent groups | Files and run commands |
+|---|---|
+| ![Compact session groups with visible agent summaries and status colours](docs/screenshots/agents-tab.png) | ![Files showing a checkout selector, C# file, and a detected startup command](docs/screenshots/run-commands.png) |
+
+In **Files**, choose the checkout, then select **Run commands**. Review the detected command and working directory before selecting **Run**. Use **Edit command** to save a local correction, **Add command** when nothing is detected, or **Choose solution/project** to point discovery at a nested app. **Stop** affects the selected run; its output stays available. Detection does not start applications or install missing tools.
 
 ![The Skills tab showing installed skills and their locations](docs/screenshots/skills.png)
 

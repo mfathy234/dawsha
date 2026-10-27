@@ -5,6 +5,7 @@ import { IPC } from '../shared/ipc'
 import { CodexWatcher } from './codexWatcher'
 import { GeminiWatcher } from './geminiWatcher'
 import { registerIpc } from './ipc'
+import { registerRunIpc } from './runCommands'
 import { PtyManager } from './ptyManager'
 import { Recorder } from './recorder'
 import { RecordingService } from './recordings'
@@ -274,6 +275,7 @@ app.whenReady().then(async () => {
   registerImageProtocol(store)
   const orchestratorSwitch = createOrchestratorSwitch(orchestrator, quitLog)
   registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings, orchestratorSwitch)
+  const stopRunCommands = registerRunIpc(() => mainWindow, store)
   recordings.startSchedule()
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
@@ -305,6 +307,7 @@ app.whenReady().then(async () => {
       updates?.stop()
       usage.flush()
       recordings.stopSchedule()
+      await stopRunCommands()
       await remoteAccess?.stop()
     },
     flushRenderer,

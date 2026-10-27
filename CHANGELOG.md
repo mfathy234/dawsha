@@ -3,6 +3,19 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.3] - 2026-10-27
+
+### Added
+
+- Files has a branch/worktree dropdown. Select an existing checkout to browse it without switching a Git branch or moving an agent. Open files and unsaved edits stay with their own checkout.
+- Delete a file or folder from its Files context menu, with confirmation and the system Recycle Bin or Trash. Unsaved edits are named before deletion; permanent deletion is never used as a fallback.
+- Run commands from Files in the selected checkout. Dawsha detects .NET solutions, runnable projects and launch profiles, and Node package scripts. Review or edit a command, save a local override, or add your own when detection cannot find it.
+- Each run has separate output, status and Stop controls. Runs keep their original working directory when you browse another checkout.
+
+### Changed
+
+- Agents groups use compact headers, quieter separation, and summaries beside each title. Running, done and failed states have readable colours in dark and light themes, with text labels as well.
+
 ## [1.7.1] - 2026-10-27
 
 ### Added

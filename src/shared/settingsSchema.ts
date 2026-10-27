@@ -1,5 +1,7 @@
 import { sanitizeTicketNotes } from './ticketNotes'
+import { checkoutTabsKey } from './filesWorkspace'
 import { parseFolds } from './agentFolds'
+import { sanitizeRunOverrides } from './runCommands'
 import { defaultOrchSettings, sanitizeOrchSettings } from './orch/profiles'
 import { isAgent } from './agents'
 import { isSessionsLayout } from './board'
@@ -85,6 +87,7 @@ export const defaultSettings = (): Settings => ({
   foldedClosedSessions: [],
   agentFolds: {},
   filesTabs: {},
+  runCommands: [],
   ticketNotes: {},
   tasks: [],
   lastSeenVersion: null,
@@ -336,9 +339,11 @@ function sanitizeFilesTabs(value: unknown, projects: readonly Project[]): Record
   const known = new Set(projects.map((p) => p.id))
   const out: Record<string, string[]> = {}
   for (const [id, paths] of Object.entries(value)) {
-    if (!known.has(id) || !Array.isArray(paths)) continue
+    const projectId = id.split('|')[0]
+    if (!known.has(projectId) || !Array.isArray(paths)) continue
     const list = [...new Set(paths.filter((path): path is string => typeof path === 'string' && path !== '' && path.length <= 500))].slice(0, FILES_TABS_MAX)
-    if (list.length > 0) out[id] = list
+    const project = projects.find(project => project.id === projectId)!
+    if (list.length > 0) out[id.includes('|') ? id : checkoutTabsKey(id, project.folder)] = list
   }
   return out
 }
@@ -377,6 +382,7 @@ export function migrateSettings(raw: unknown): Settings {
     foldedClosedSessions: sanitizeProjectIds(raw.foldedClosedSessions, projects),
     agentFolds: parseFolds(raw.agentFolds),
     filesTabs: sanitizeFilesTabs(raw.filesTabs, projects),
+    runCommands: sanitizeRunOverrides(raw.runCommands).filter((entry) => projects.some((project) => project.id === entry.projectId)),
     ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,

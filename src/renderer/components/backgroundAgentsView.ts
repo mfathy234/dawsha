@@ -223,7 +223,7 @@ export class BackgroundAgentsViewComponent {
     const listId = `bg-items-${group.sessionKey.replace(/[^A-Za-z0-9_-]/g, '_')}`
     const summary = groupSummary(group).flatMap((part, index) => [
       ...(index > 0 ? [document.createTextNode(' · ')] : []),
-      h('span', { class: part.tone === 'needs' ? 'bg-needs' : '' }, part.text)
+      h('span', { class: part.tone === 'needs' ? 'bg-needs' : part.text.endsWith(' running') ? 'bg-running' : part.text.endsWith(' done') ? 'bg-done' : '' }, part.text)
     ])
     return h('section', { class: `bg-group${open ? ' open' : ''}`, 'data-session': group.sessionKey },
       h('h2', { class: 'bg-group-head' },
@@ -235,8 +235,10 @@ export class BackgroundAgentsViewComponent {
         agentMark(group.agentKind),
         h('span', { class: 'bg-group-who' },
           h('span', { class: 'bg-group-title' }, group.title),
-          h('span', { class: 'bg-group-project' }, group.project)),
-        h('span', { class: 'bg-group-counts' }, ...summary))),
+          h('span', { class: 'bg-group-meta' },
+            h('span', { class: 'bg-group-project' }, group.project),
+            h('span', { class: 'bg-meta-separator', 'aria-hidden': 'true' }, '·'),
+            h('span', { class: 'bg-group-counts' }, ...summary))))),
       h('div', { class: 'bg-items', id: listId, role: 'group', 'aria-labelledby': `${listId}-toggle`, hidden: !open }, ...(open ? group.agents.map((agent) => this.item(agent, now)) : [])))
   }
 

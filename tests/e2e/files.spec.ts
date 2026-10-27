@@ -144,7 +144,7 @@ test('Files opens a file read-only, lets you copy from it, and Changes toggles w
     await expect.poll(() => diskText(repo, 'src/a.ts')).toContain('// keep')
 
     // open tabs are remembered per project
-    await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).filesTabs).toEqual({ smoke: ['src/a.ts'] })
+    await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).filesTabs).toEqual({ [`smoke|${repo.replace(/\\/g, '/').toLowerCase()}`]: ['src/a.ts'] })
   } finally {
     await closeApp(app)
   }
@@ -260,6 +260,11 @@ test('closing the window with unsaved Files tabs asks first, naming the file, an
     expect(diskText(repo, 'src/a.ts')).not.toContain('// unsaved')
     await page.locator('#sessions-button').click()
     await expect(page.locator('.sidebar')).toBeVisible()
+    // The cancellation assertions are complete; discard the fixture edit so teardown can quit normally.
+    await page.locator('#files-button').click()
+    await page.locator('.files-tab-close').click()
+    await page.getByRole('button', { name: /^Discard changes to/ }).click()
+    await expect(page.locator('.files-tab')).toHaveCount(0)
   } finally {
     await closeApp(app)
   }

@@ -1,6 +1,7 @@
 import { pathForms, tabMenu, treeMenu, type FileActionId, type FileMenuEntry } from '../../shared/fileMenus'
 import { statusLetter } from '../../shared/gitStatus'
 import { normalizeFolder } from '../../shared/folderKey'
+import { checkoutLabel, checkoutTabsKey, type FilesCheckout } from '../../shared/filesWorkspace'
 import { languageLabel } from '../files/languageInfo'
 import { api } from '../api'
 import { focusPane, saveSettings } from '../actions'
@@ -21,6 +22,7 @@ import { openContextMenu, type ContextEntry } from './contextMenu'
 import { confirmDialog } from './dialogs'
 import { selectMenu, syncSelectMenu } from './selectMenu'
 import { toast } from './toast'
+import { RunCommandsPanel } from './runCommandsPanel'
 import './filesView.css'
 
 const TOUCH_REFRESH_MS = 8000
@@ -44,6 +46,11 @@ const minus = '−'
 
 export class FilesViewComponent {
   readonly el = h('main', { class: 'files-view', id: 'files-view', 'aria-label': 'Files' })
+  private readonly runPanel = new RunCommandsPanel()
+  private readonly runButton = h('button', {
+    class: 'btn small', type: 'button', id: 'files-run-toggle', 'aria-controls': 'files-run-panel',
+    onClick: () => this.runPanel.el.hidden ? this.runPanel.show() : this.runPanel.hide()
+  }, 'Run commands')
   private visible = false
   private target: FilesTarget | null = null
   private readonly sets = new Map<string, DocSet>()
@@ -57,6 +64,12 @@ export class FilesViewComponent {
   private readonly lastSignature = new WeakMap<FileDoc, string>()
   private projectSignature = ''
   private watchFailed = false
+  private checkoutToken = 0
+  private activationToken = 0
+  private deletionPending = false
+  private checkouts: FilesCheckout[] = []
+  private readonly checkoutSelect = h('select', { id: 'files-checkout', 'aria-label': 'Checkout', onChange: (event: Event) => this.switchCheckout((event.target as HTMLSelectElement).value) })
+  private readonly checkoutRefresh = h('button', { class: 'btn small', type: 'button', id: 'files-checkout-refresh', title: 'Refresh checkouts and branch', onClick: () => void this.refreshCheckouts() }, 'Refresh')
 
   private readonly projectSelect = h('select', { id: 'files-project', 'aria-label': 'Project', onChange: (event: Event) => this.switchProject((event.target as HTMLSelectElement).value) })
   private readonly worktreeNote = h('div', { class: 'files-worktree', hidden: true })
@@ -65,7 +78,7 @@ export class FilesViewComponent {
     open: (path, pin, focus) => void this.openFile(path, { pin, focus }),
     action: (id, target) => void this.runFileAction(id, target.path, target.kind),
     menu: (target, x, y, returnFocus) => this.openMenu(treeMenu(target.kind, target.open), target, x, y, returnFocus)
-  }, h('div', { class: 'files-switcher' }, selectMenu(this.projectSelect), this.worktreeNote, this.liveNote))
+  }, h('div', { class: 'files-switcher' }, selectMenu(this.projectSelect), selectMenu(this.checkoutSelect), this.checkoutRefresh, this.runButton, this.worktreeNote, this.liveNote))
   private readonly tabs = h('div', { class: 'files-tabs', role: 'tablist', 'aria-label': 'Open files' })
   private readonly crumb = h('div', { class: 'files-crumb', 'aria-label': 'File path' })
   private readonly fileButton = h('button', { class: 'files-seg', type: 'button', id: 'files-file', 'aria-pressed': 'true', onClick: () => void this.showFileMode() }, 'File')
@@ -90,12 +103,13 @@ export class FilesViewComponent {
   private readonly outlineList = h('div', { class: 'files-side-list', id: 'files-outline' })
 
   constructor() {
+    this.runPanel.el.id = 'files-run-panel'
     this.bar.append(this.crumb, h('span', { class: 'spacer' }), this.segment, this.editButton, this.promptButton, this.codeButton, this.copyButton, this.moreButton)
     this.stage.append(this.empty)
     this.side.append(
       h('section', { class: 'files-side-sec' }, h('h2', {}, 'Sessions that touched it'), this.sessionsList),
       h('section', { class: 'files-side-sec grow' }, h('h2', {}, 'Outline'), this.outlineList))
-    this.el.append(this.tree.el, h('div', { class: 'files-main' }, this.tabs, this.bar, this.conflict, this.stage, this.status), this.side)
+    this.el.append(this.tree.el, h('div', { class: 'files-main' }, this.tabs, this.bar, this.conflict, this.stage, this.status, this.runPanel.el), this.side)
     this.el.addEventListener('keydown', (event) => this.onKey(event))
     this.tabs.addEventListener('keydown', (event) => this.onTabKey(event))
     api.onFilesChanged((key, paths) => this.onDiskChange(key, paths))
@@ -130,8 +144,9 @@ export class FilesViewComponent {
 
   // Showing and hiding
 
-  private show(state: AppState): void {
+  private async show(state: AppState): Promise<void> {
     this.visible = true
+    if (this.deletionPending) return
     const request = takeFilesRequest()
     const target = request ?? filesTarget(state)
     if (!target) {
@@ -140,7 +155,7 @@ export class FilesViewComponent {
       this.renderAll()
       return
     }
-    this.activateTarget(target)
+    if (!await this.activateTarget(target)) return
     if (request) void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
     void this.refreshTouches()
     this.touchTimer = window.setInterval(() => void this.refreshTouches(), TOUCH_REFRESH_MS)
@@ -148,51 +163,113 @@ export class FilesViewComponent {
 
   private hide(): void {
     this.visible = false
+    this.tree.setLoading(false)
+    this.runPanel.setTarget(null)
+    this.runPanel.hide()
     window.clearInterval(this.touchTimer)
     window.clearTimeout(this.watchTimer)
+    ++this.checkoutToken
+    ++this.activationToken
+    ++this.treeToken
     if (this.target) void api.unwatchFiles(this.target.folder)
     this.target = null
     setCurrentTarget(null)
   }
 
-  private takeRequest(): void {
-    if (!this.visible) return
+  private async takeRequest(): Promise<void> {
+    if (!this.visible || this.deletionPending) return
     const request = takeFilesRequest()
     if (!request) return
-    if (!this.target || normalizeFolder(this.target.folder) !== normalizeFolder(request.folder) || this.target.projectId !== request.projectId) this.activateTarget(request)
+    if (!this.target || normalizeFolder(this.target.folder) !== normalizeFolder(request.folder) || this.target.projectId !== request.projectId) {
+      if (!await this.activateTarget(request)) return
+    }
     void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
   }
 
-  private activateTarget(target: FilesTarget): void {
+  private async activateTarget(requested: FilesTarget): Promise<boolean> {
+    if (this.deletionPending) return false
+    const token = ++this.activationToken
+    this.tree.setLoading(true)
+    const metadata = await api.filesWorkspaces(requested.projectId, requested.folder).catch(() => ({ ok: false as const, error: 'Could not open this checkout.' }))
+    if (token !== this.activationToken || !this.visible || this.deletionPending) return false
+    if (!metadata.ok) {
+      this.tree.setLoading(false)
+      toast(metadata.error)
+      void this.refreshCheckouts()
+      return false
+    }
+    const target = { ...requested, folder: metadata.folder }
     if (this.target && normalizeFolder(this.target.folder) !== normalizeFolder(target.folder)) void api.unwatchFiles(this.target.folder)
     const same = this.target !== null && normalizeFolder(this.target.folder) === normalizeFolder(target.folder)
     this.target = target
+    this.runPanel.setTarget(target)
     setCurrentTarget(target)
-    const key = `${target.projectId}|${normalizeFolder(target.folder)}`
+    const key = checkoutTabsKey(target.projectId, target.folder)
     let set = this.sets.get(key)
     if (!set) {
-      const saved = store.state.settings.filesTabs[target.projectId] ?? []
+      const saved = store.state.settings.filesTabs[key] ?? []
       set = { projectId: target.projectId, folder: target.folder, docs: new Map(), tabs: saved.map((path) => ({ path, pinned: true })), active: saved[0] ?? null, openFolders: new Set(), prefix: '' }
       this.sets.set(key, set)
     }
     this.set = set
+    void this.refreshCheckouts()
     this.tree.adoptFolders(set.openFolders)
     if (!same) void api.watchFiles(target.folder)
     this.touches = new Map()
     this.watchFailed = false
     this.renderLiveNote()
     // Files may have changed while the view was away, so open tabs look at the disk again once the tree is in.
-    void this.loadTree().then(() => this.checkOpenDocs())
+    const treeReady = this.loadTree()
     this.renderAll()
     const active = this.active()
     if (active) void this.loadActive(active)
+    await treeReady
+    if (token !== this.activationToken || !this.visible) return false
+    this.tree.setLoading(false)
+    void this.checkOpenDocs()
+    return true
   }
 
   private switchProject(projectId: string): void {
     const project = projectById(store.state, projectId)
     if (!project || !this.visible) return
-    this.activateTarget({ projectId, folder: project.folder })
-    void this.refreshTouches()
+    void this.activateTarget({ projectId, folder: project.folder }).then((active) => {
+      if (active) void this.refreshTouches()
+    })
+  }
+
+  private switchCheckout(folder: string): void {
+    const checkout = this.checkouts.find(entry => normalizeFolder(entry.folder) === normalizeFolder(folder) && !entry.unavailable)
+    if (!checkout || !this.target || !this.visible) return
+    void this.activateTarget({ projectId: this.target.projectId, folder: checkout.folder }).then((active) => {
+      if (active) void this.refreshTouches()
+    })
+  }
+
+  private async refreshCheckouts(): Promise<void> {
+    const target = this.target
+    if (!target) return
+    const token = ++this.checkoutToken
+    const result = await api.filesWorkspaces(target.projectId).catch(() => ({ ok: false as const, error: 'Could not refresh checkouts.' }))
+    if (token !== this.checkoutToken || this.target !== target) return
+    if (!result.ok) { this.worktreeNote.hidden = false; this.worktreeNote.textContent = result.error; return }
+    this.checkouts = result.checkouts
+    if (!this.checkouts.some(entry => normalizeFolder(entry.folder) === normalizeFolder(target.folder))) {
+      this.checkouts.push({ folder: target.folder, branch: '', head: '', detached: false, unavailable: true, main: false })
+    }
+    this.checkoutSelect.replaceChildren(...this.checkouts.map(entry => h('option', { value: entry.folder, disabled: entry.unavailable, title: entry.folder }, checkoutLabel(entry))))
+    this.checkoutSelect.value = this.checkouts.find(entry => normalizeFolder(entry.folder) === normalizeFolder(target.folder))?.folder ?? target.folder
+    this.checkoutSelect.title = target.folder
+    syncSelectMenu(this.checkoutSelect)
+    this.renderCheckoutContext()
+    this.renderStatus()
+  }
+
+  private renderCheckoutContext(): void {
+    const checkout = this.checkouts.find(entry => this.target && normalizeFolder(entry.folder) === normalizeFolder(this.target.folder))
+    this.worktreeNote.hidden = !checkout
+    this.worktreeNote.textContent = checkout ? checkoutLabel(checkout) : ''
+    this.worktreeNote.title = checkout?.folder ?? ''
   }
 
   private syncProjects(state: AppState): void {
@@ -204,10 +281,7 @@ export class FilesViewComponent {
     }
     if (this.target) this.projectSelect.value = this.target.projectId
     syncSelectMenu(this.projectSelect)
-    const project = this.target ? projectById(state, this.target.projectId) : undefined
-    const tail = this.target && project && normalizeFolder(project.folder) !== normalizeFolder(this.target.folder) ? this.target.folder.replace(/[\\/]+$/, '').split(/[\\/]/).pop() : null
-    this.worktreeNote.hidden = !tail
-    this.worktreeNote.textContent = tail ? `Worktree: ${tail}` : ''
+    this.renderCheckoutContext()
   }
 
   // Data
@@ -238,6 +312,7 @@ export class FilesViewComponent {
   }
 
   private async refreshTouches(): Promise<void> {
+    void this.refreshCheckouts()
     const target = this.target
     if (!target) return
     const touches = await loadTouches(target.projectId, target.folder, this.set?.prefix ?? '').catch(() => new Map() as TouchMap)
@@ -280,6 +355,7 @@ export class FilesViewComponent {
   }
 
   async openFile(path: string, options: { pin?: boolean; focus?: boolean; line?: number } = {}): Promise<void> {
+    if (this.deletionPending) return
     const set = this.set
     if (!set) return
     const result = openTab(set.tabs, path, options.pin === true, set.active, this.protectedPaths(set))
@@ -302,7 +378,7 @@ export class FilesViewComponent {
     this.renderAll()
     if (!doc) return
     await this.loadActive(doc)
-    if (set.active !== path) return
+    if (this.set !== set || set.active !== path) return
     if (options.line && doc.editor) doc.editor.reveal(doc.editor.view.state.doc.line(Math.min(options.line, doc.editor.view.state.doc.lines)).from)
     if (options.focus) doc.editor?.focus()
   }
@@ -351,13 +427,13 @@ export class FilesViewComponent {
     if (doc) void this.loadActive(doc).then(() => (focusEditor ? doc.editor?.focus() : undefined))
   }
 
-  private persistTabs(): void {
-    const set = this.set
+  private persistTabs(set: DocSet | null = this.set): void {
     if (!set) return
     const filesTabs = { ...store.state.settings.filesTabs }
     const paths = set.tabs.map((tab) => tab.path)
-    if (paths.length === 0) delete filesTabs[set.projectId]
-    else filesTabs[set.projectId] = paths
+    const key = checkoutTabsKey(set.projectId, set.folder)
+    if (paths.length === 0) delete filesTabs[key]
+    else filesTabs[key] = paths
     if (JSON.stringify(filesTabs) === JSON.stringify(store.state.settings.filesTabs)) return
     store.set((s) => ({ ...s, settings: { ...s.settings, filesTabs } }))
     void saveSettings({ filesTabs })
@@ -451,6 +527,7 @@ export class FilesViewComponent {
   }
 
   async runFileAction(id: FileActionId, path: string, kind: 'file' | 'folder' = 'file'): Promise<void> {
+    if (this.deletionPending) return
     const set = this.set
     if (!set) return
     const forms = pathForms(set.folder, set.prefix, path)
@@ -459,6 +536,7 @@ export class FilesViewComponent {
       case 'open': return this.openFile(path, { pin: true, focus: true })
       case 'open-new-tab': return this.openFile(path, { pin: true })
       case 'toggle': return this.tree.toggleFolder(path)
+      case 'delete': return this.deletePath(path, kind)
       case 'add-prompt':
         if (kind === 'file') addToPrompt(path, undefined, set.prefix)
         return
@@ -487,6 +565,53 @@ export class FilesViewComponent {
         return at === -1 ? undefined : this.closeMany(tabs.slice(at + 1))
       }
       default: return
+    }
+  }
+
+  private async deletePath(path: string, kind: 'file' | 'folder'): Promise<void> {
+    const set = this.set
+    if (!set || this.deletionPending) return
+    // Keep the consent snapshot stable until Trash resolves, including across view changes.
+    this.deletionPending = true
+    ++this.activationToken
+    this.el.inert = true
+    this.el.setAttribute('aria-busy', 'true')
+    try {
+      const affected = [...set.docs.values()].filter(doc => doc.path === path || (kind === 'folder' && doc.path.startsWith(`${path}/`)))
+      const dirty = affected.filter(doc => doc.dirty)
+      const destination = navigator.platform.startsWith('Win') ? 'Recycle Bin' : 'Trash'
+      const confirmed = await confirmDialog({
+        title: `Move ${kind} to ${destination}?`,
+        body: `${pathForms(set.folder, set.prefix, path).relative}${kind === 'folder' ? '\nThis includes the folder and everything inside it.' : ''}\n${dirty.length ? `Unsaved changes will be discarded in:\n${dirty.map(doc => doc.path).join('\n')}\n` : ''}Move to ${destination}?`,
+        confirmLabel: dirty.length ? `Discard changes and move to ${destination}` : `Move to ${destination}`
+      })
+      if (!confirmed) return
+      toast(`Moving ${pathForms(set.folder, set.prefix, path).relative} to ${destination}…`, 'info')
+      const result = await api.trashProjectPath(set.folder, pathForms(set.folder, set.prefix, path).relative).catch((error: Error) => ({ ok: false as const, error: error.message }))
+      if (!result.ok) { toast(result.error); return }
+      for (const doc of affected) { doc.destroy(); set.docs.delete(doc.path) }
+      set.tabs = set.tabs.filter(tab => tab.path !== path && !(kind === 'folder' && tab.path.startsWith(`${path}/`)))
+      if (!set.tabs.some(tab => tab.path === set.active)) set.active = set.tabs[0]?.path ?? null
+      this.persistTabs(set)
+      if (this.set === set) {
+        this.renderAll()
+        await this.loadTree()
+        const active = set.active ? this.docFor(set.active) : null
+        if (active) await this.loadActive(active)
+      }
+    } finally {
+      this.deletionPending = false
+      this.el.inert = false
+      this.el.removeAttribute('aria-busy')
+      if (this.visible && !this.target) {
+        void this.activateTarget({ projectId: set.projectId, folder: set.folder }).then(active => {
+          if (!active) return
+          void this.refreshTouches()
+          window.clearInterval(this.touchTimer)
+          this.touchTimer = window.setInterval(() => void this.refreshTouches(), TOUCH_REFRESH_MS)
+          void this.takeRequest()
+        })
+      }
     }
   }
 
@@ -674,7 +799,7 @@ export class FilesViewComponent {
   private renderStage(): void {
     const set = this.set
     const doc = this.active()
-    if (set) for (const known of set.docs.values()) known.show(known === doc && known.status === 'ready')
+    for (const saved of this.sets.values()) for (const known of saved.docs.values()) known.show(saved === set && known === doc && known.status === 'ready')
     if (!set) {
       this.showPlaceholder('Add a project to browse its files.')
       return
@@ -701,8 +826,12 @@ export class FilesViewComponent {
 
   private renderStatus(): void {
     const doc = this.active()
-    this.status.hidden = !doc
-    if (!doc) return
+    const checkout = this.checkouts.find(entry => this.target && normalizeFolder(entry.folder) === normalizeFolder(this.target.folder))
+    this.status.hidden = !doc && !checkout
+    if (!doc) {
+      this.status.replaceChildren(...(checkout ? [h('span', { title: checkout.folder }, checkoutLabel(checkout))] : []))
+      return
+    }
     const cursor = doc.editor && doc.status === 'ready' ? doc.editor.cursor() : null
     const left = [cursor ? `Ln ${cursor.line}, Col ${cursor.col}` : null, languageLabel(doc.path)].filter(Boolean).join('  ·  ')
     let mode = 'Read only · press E to edit'
@@ -714,7 +843,7 @@ export class FilesViewComponent {
     const statEl = stat
       ? h('span', { class: 'files-stat' }, h('span', { class: 'plus' }, `+${stat.added}`), ' ', h('span', { class: 'minus' }, `${minus}${stat.removed}`), doc.newFile ? ' new file' : ' since main')
       : null
-    this.status.replaceChildren(h('span', {}, left), h('span', { class: 'files-status-mode' }, this.flash || mode), h('span', { class: 'spacer' }), ...(statEl ? [statEl] : []))
+    this.status.replaceChildren(h('span', {}, left), h('span', { class: 'files-status-mode' }, this.flash || mode), h('span', { class: 'spacer' }), ...(checkout ? [h('span', { title: checkout.folder }, checkoutLabel(checkout))] : []), ...(statEl ? [statEl] : []))
   }
 
   private renderSessions(): void {

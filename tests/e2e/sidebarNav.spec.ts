@@ -77,10 +77,14 @@ test('the collapsed rail marks projects whose sessions need you', async () => {
     const first = page.locator('.pane').nth(0)
     const second = page.locator('.pane').nth(1)
     const firstId = await first.locator('.term-host.active').getAttribute('data-term-id')
-    await feedTerminal(page, firstId!, ['Do you want to proceed?', '1. Yes', '3. No, and tell Claude what to do differently', ''].join('\r\n'))
-    await expect.poll(() => bufferText(page, firstId!), { timeout: 15_000 }).toContain('1. Yes')
     await second.locator('.pane-title').click()
-    await expect(first).toHaveAttribute('data-attention', 'needs', { timeout: 15_000 })
+    await expect(second).toHaveClass(/focused/)
+    // ConPTY may redraw after the new panes resize. Feed the simulated prompt until it survives that redraw.
+    await expect(async () => {
+      await feedTerminal(page, firstId!, ['Do you want to proceed?', '1. Yes', '3. No, and tell Claude what to do differently', ''].join('\r\n'))
+      await expect.poll(() => bufferText(page, firstId!), { timeout: 1500 }).toContain('1. Yes')
+      await expect(first).toHaveAttribute('data-attention', 'needs', { timeout: 1500 })
+    }).toPass({ timeout: 15_000 })
 
     await page.getByRole('button', { name: 'Collapse sidebar' }).click()
     const rail = page.locator('.sidebar.rail')

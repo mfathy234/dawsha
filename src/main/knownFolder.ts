@@ -38,10 +38,18 @@ export async function knownProjectFolder(projects: ReadonlyArray<{ folder: strin
     if (insideRoot(win ? root.toLowerCase() : root, win ? target.toLowerCase() : target)) return folder
   }
   const mine = await commonDir(target)
-  if (!mine || !mine.linked) return null
+  if (!mine) return null
   for (const root of roots) {
     const theirs = await commonDir(root)
-    if (theirs && same(theirs.common, mine.common)) return folder
+    if (theirs && same(theirs.common, mine.common)) {
+      const registered = await git(root, ['worktree', 'list', '--porcelain', '-z'])
+      if (!registered.ok) continue
+      for (const field of registered.stdout.split('\0')) {
+        if (!field.startsWith('worktree ')) continue
+        const checkout = await real(field.slice(9))
+        if (checkout && (same(checkout, target) || insideRoot(win ? checkout.toLowerCase() : checkout, win ? target.toLowerCase() : target))) return folder
+      }
+    }
   }
   return null
 }
