@@ -8,8 +8,7 @@
 .bg-group-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .bg-group-toggle > :nth-child(2) { margin-top: 2px; flex: none; }
 .bg-chevron {
-  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px;
-  background: var(--raised); color: var(--muted);
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: none; border: 0; border-radius: 0; color: var(--muted);
 }
 .bg-chevron .icon { display: inline-flex; transition: transform var(--t-feedback) var(--ease-out); }
 .bg-group.open .bg-chevron .icon { transform: rotate(90deg); }

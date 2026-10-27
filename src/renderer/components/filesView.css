@@ -4,12 +4,9 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 270px;
-  /* VS Code's Dark+ and Light+ backgrounds, so the active tab and file bar join the code below. */
-  --editor-bg: #1e1e1e;
   background: var(--canvas);
   overflow: hidden;
 }
-:root[data-kind='light'] .files-view { --editor-bg: #ffffff; }
 .files-view[hidden] { display: none; }
 
 /* Left column */
@@ -110,8 +107,6 @@
 .files-stage { position: relative; flex: 1; min-height: 0; background: var(--editor-bg); }
 .files-editor { position: absolute; inset: 0; }
 .files-editor .cm-editor { height: 100%; }
-/* The editor takes the surface of the tab above it; set --editor-bg on .files-view to restyle it. */
-.files-editor .cm-editor, .files-editor .cm-gutters { background-color: var(--editor-bg); }
 .files-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-3); padding: var(--s-5); color: var(--muted); text-align: center; font-size: var(--fs-body); }
 .files-placeholder p { margin: 0; max-width: 420px; }
 .files-status {

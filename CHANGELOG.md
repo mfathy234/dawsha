@@ -22,6 +22,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Focus rings show only when you use the keyboard, not after a click.
 - In the light theme, terminals are light. The "Dawsha Daylight, dark terminal" theme keeps a dark one.
 - Settings, the board, Files and the Agents tab follow the same layers. The orchestrator board no longer uses a coloured side stripe.
+- Built-in themes without their own well (Dawsha Cards, Graphite Cards, Nord, GitHub and others) now use the shared layer ladder, so their backgrounds shift slightly.
 
 ## [1.7.0] - 2026-10-27
 

@@ -1,6 +1,7 @@
 import type { ITheme } from '@xterm/xterm'
 import { shadowRgb, withAlpha } from '../shared/contrast'
 import { findTheme, hasLightTerminal, type Theme } from '../shared/themes'
+import { EDITOR_COLORS } from '../shared/syntaxPalette'
 import { needsColours } from '../shared/themeLadder'
 import type { ThemeSettings } from '../shared/types'
 
@@ -70,6 +71,7 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
   root.style.setProperty('--needs-ring', needs.fill)
   root.style.setProperty('--needs', needs.text)
   root.style.setProperty('--needs-ink', needs.text)
+  root.style.setProperty('--editor-bg', EDITOR_COLORS[bundle.theme.kind].background)
   root.dataset.theme = bundle.theme.id
   root.dataset.kind = bundle.theme.kind
   root.style.setProperty('--term-bg', term.background)
