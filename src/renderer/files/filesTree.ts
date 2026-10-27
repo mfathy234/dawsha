@@ -1,6 +1,9 @@
 import { buildTree, filterTree, type StatusLetter, type TreeMode, type TreeNode } from '../../shared/fileTree'
+import { treeClickPins } from '../../shared/fileOpenMode'
+import { treeShortcut, type FileActionId } from '../../shared/fileMenus'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
+import { fileIcon, folderIcon } from './fileIcon'
 import { ancestorsOf, flattenTree, treeKey, type TreeRow } from './filesState'
 
 const MAX_ROWS = 2000
@@ -16,6 +19,16 @@ const BADGE_TITLES: Record<string, string> = { M: 'Modified', A: 'Added', D: 'De
 export interface TreeHooks {
   /** A file was chosen: pin is true for a double click. focus moves the cursor into the editor (Enter). */
   open(path: string, pin: boolean, focus: boolean): void
+  /** A key the menu shows (Alt+Enter, Shift+Alt+C, …) was pressed on a row. */
+  action(id: FileActionId, target: TreeTarget): void
+  /** Right click, the Menu key or Shift+F10 on a row: x and y are where the menu opens. */
+  menu(target: TreeTarget, x: number, y: number, returnFocus: HTMLElement): void
+}
+
+export interface TreeTarget {
+  path: string
+  kind: 'file' | 'folder'
+  open: boolean
 }
 
 /** The left column: filter box, All / Changed / Open in sessions chips and the folder tree with M / A / D badges. */
@@ -44,6 +57,7 @@ export class FilesTree {
     this.el = h('div', { class: 'files-tree-col' }, head, h('div', { class: 'files-filter-row' }, this.filter), h('div', { class: 'files-chips', role: 'group', 'aria-label': 'Show' }, ...this.chips), this.list)
     this.list.addEventListener('keydown', (event) => this.onKey(event))
     this.list.addEventListener('click', (event) => this.onClick(event))
+    this.list.addEventListener('contextmenu', (event) => this.onContext(event))
     this.list.addEventListener('dblclick', (event) => this.onClick(event, true))
     this.syncChips()
   }
@@ -154,6 +168,7 @@ export class FilesTree {
       style: `padding-left:${8 + depth * 14}px`
     },
     folder ? h('span', { class: `files-twist${open ? ' open' : ''}`, 'aria-hidden': 'true' }, icon(ICONS.chevronRight)) : h('span', { class: 'files-twist none', 'aria-hidden': 'true' }),
+    folder ? folderIcon(open) : fileIcon(node.path),
     h('span', { class: 'files-name' }, node.name),
     folder
       ? (node.changed > 0 ? h('span', { class: 'files-count', title: `${node.changed} changed` }, String(node.changed)) : null)
@@ -182,8 +197,36 @@ export class FilesTree {
       return
     }
     this.list.focus()
-    this.hooks.open(path, pin, false)
+    this.hooks.open(path, pin || treeClickPins(event as MouseEvent), false)
     this.render()
+  }
+
+  private targetOf(path: string): TreeTarget | null {
+    const row = this.rows.find((candidate) => candidate.node.path === path)
+    return row ? { path, kind: row.node.kind, open: row.node.kind === 'folder' && this.isOpen(path) } : null
+  }
+
+  toggleFolder(path: string): void {
+    this.toggle(path, !this.isOpen(path))
+  }
+
+  private onContext(event: MouseEvent): void {
+    const path = (event.target as HTMLElement).closest<HTMLElement>('.files-row')?.dataset.path
+    const target = path ? this.targetOf(path) : null
+    if (!path || !target) return
+    event.preventDefault()
+    this.cursor = path
+    this.render()
+    this.hooks.menu(target, event.clientX, event.clientY, this.list)
+  }
+
+  private menuFromKeyboard(): void {
+    const row = this.cursorRow()
+    const target = row ? this.targetOf(row.node.path) : null
+    const el = row ? this.list.querySelector<HTMLElement>(`[id="${this.idOf(row.node.path)}"]`) : null
+    if (!target || !el) return
+    const box = el.getBoundingClientRect()
+    this.hooks.menu(target, box.left + 24, box.bottom, this.list)
   }
 
   private toggle(path: string, open: boolean): void {
@@ -193,6 +236,21 @@ export class FilesTree {
   }
 
   private onKey(event: KeyboardEvent): void {
+    if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
+      event.preventDefault()
+      event.stopPropagation()
+      this.menuFromKeyboard()
+      return
+    }
+    const shortcut = treeShortcut(event)
+    const at = shortcut ? this.cursorRow() : undefined
+    const target = at ? this.targetOf(at.node.path) : null
+    if (shortcut && target) {
+      event.preventDefault()
+      event.stopPropagation()
+      this.hooks.action(shortcut, target)
+      return
+    }
     if (event.ctrlKey || event.metaKey || event.altKey) return
     const current = this.cursorRow()
     const index = current ? this.rows.indexOf(current) : 0

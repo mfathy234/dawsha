@@ -10,7 +10,7 @@ import { h } from './dom'
 import { TerminalPrompts } from './terminalPrompts'
 import { TerminalArabic } from './terminalArabic'
 import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
-import { registerFileLinks, type FileLinkHost } from './terminalLinks'
+import { registerFileLinks, type FileLinkHost, type FileLinks } from './terminalLinks'
 import { TerminalSearch } from './terminalSearch'
 import type { ThemeBundle } from './themeManager'
 import { TERMINAL_FONT } from './terminalFont'
@@ -39,6 +39,7 @@ export class TerminalView {
   private readonly search: TerminalSearch
   readonly prompts: TerminalPrompts
   private readonly highlights: TerminalHighlights
+  private readonly fileLinks: FileLinks
   private readonly arabic: TerminalArabic
   private opened = false
   private frame = 0
@@ -65,7 +66,7 @@ export class TerminalView {
     })
     this.term.loadAddon(this.fitAddon)
     this.term.loadAddon(new WebLinksAddon((event, uri) => this.handleLink(event, uri)))
-    registerFileLinks(this.term, callbacks.fileLinks)
+    this.fileLinks = registerFileLinks(this.term, callbacks.fileLinks)
     this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.prompts = new TerminalPrompts(this.term)
     this.arabic = new TerminalArabic(this.term, () => callbacks.textOrder())
@@ -77,7 +78,11 @@ export class TerminalView {
     this.term.attachCustomKeyEventHandler((event) => this.handleKey(event))
     this.observer = new ResizeObserver(() => this.scheduleFit())
     this.el.addEventListener('wheel', (event) => this.handleWheel(event), { capture: true, passive: false })
-    this.el.addEventListener('contextmenu', (event) => event.preventDefault())
+    this.el.addEventListener('contextmenu', (event) => {
+      event.preventDefault()
+      const ref = this.fileLinks.hovered()
+      if (ref) callbacks.fileLinks.menu(ref, event.clientX, event.clientY, () => this.term.focus())
+    })
     this.el.addEventListener('focusin', () => callbacks.onFocus())
     this.search = new TerminalSearch(this.term, this.el, {
       toBuffer: (query) => (callbacks.textOrder() === 'visual' ? visualFromLogical(query) : query),

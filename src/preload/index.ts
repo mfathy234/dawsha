@@ -88,6 +88,7 @@ const api: GridApi = {
   existingFiles: (folder, candidates) => ipcRenderer.invoke(IPC.filesExist, folder, candidates),
   openFile: (folder, ref) => ipcRenderer.invoke(IPC.filesOpen, folder, ref),
   openFileInVsCode: (folder, path, line) => ipcRenderer.invoke(IPC.filesOpenVsCode, folder, path, line),
+  revealProjectPath: (folder, path) => ipcRenderer.invoke(IPC.filesReveal, folder, path),
   readInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsRead, folder, name),
   writeInstruction: (request) => ipcRenderer.invoke(IPC.instructionsWrite, request),
   openInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsOpen, folder, name),

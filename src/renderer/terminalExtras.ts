@@ -3,6 +3,7 @@ import type { FileLinkHost } from './terminalLinks'
 import type { HighlightHost } from './terminalHighlights'
 import { workFolderOfPane } from './derive'
 import { store } from './state'
+import { openTerminalLink, openTerminalLinkMenu } from './terminalFileLinks'
 import { currentBundle } from './themeManager'
 import type { TerminalView } from './terminalView'
 
@@ -37,10 +38,8 @@ export function fileLinkHost(id: string): FileLinkHost {
       const folder = folderOfTerm(id)
       return folder ? existing(folder, paths) : paths.map(() => null)
     },
-    open: (ref) => {
-      const folder = folderOfTerm(id)
-      if (folder) void api.openFile(folder, ref)
-    }
+    open: (ref, mods) => void openTerminalLink(id, ref, mods, existing),
+    menu: (ref, x, y, restoreFocus) => void openTerminalLinkMenu(id, ref, x, y, restoreFocus, existing)
   }
 }
 

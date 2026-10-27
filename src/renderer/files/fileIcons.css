@@ -1,0 +1,44 @@
+.fi {
+  --fi: var(--muted);
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 16px; color: var(--fi);
+  font: 700 10px/1 var(--font-mono); letter-spacing: -0.02em; font-variant-ligatures: none;
+}
+.fi svg { display: block; }
+.fi-folder { --fi: #c09553; }
+.fi-ts { --fi: #4a9ae8; }
+.fi-tsx, .fi-jsx { --fi: #4fc1ff; }
+.fi-js { --fi: #e8c84a; }
+.fi-json { --fi: #cbcb41; }
+.fi-md { --fi: #6aa9d4; }
+.fi-css { --fi: #42a5f5; }
+.fi-scss { --fi: #e06c9f; }
+.fi-html { --fi: #e8754a; }
+.fi-py { --fi: #5aa9e6; }
+.fi-cs { --fi: #b58bf0; }
+.fi-shell { --fi: #8fcf8a; }
+.fi-ps { --fi: #5fa4e8; }
+.fi-yaml { --fi: #e0707a; }
+.fi-xml { --fi: #e2a45b; }
+.fi-sql { --fi: #d9a441; }
+.fi-image { --fi: #c39be0; }
+.fi-git { --fi: #e8754a; }
+.fi-env { --fi: #a6c46a; }
+:root[data-kind='light'] .fi-folder { --fi: #9a6b1a; }
+:root[data-kind='light'] .fi-ts { --fi: #1d5fa8; }
+:root[data-kind='light'] .fi-tsx, :root[data-kind='light'] .fi-jsx { --fi: #0b6fa3; }
+:root[data-kind='light'] .fi-js { --fi: #8a6d00; }
+:root[data-kind='light'] .fi-json { --fi: #7a6b00; }
+:root[data-kind='light'] .fi-md { --fi: #2f6f9f; }
+:root[data-kind='light'] .fi-css { --fi: #1565c0; }
+:root[data-kind='light'] .fi-scss { --fi: #b0306e; }
+:root[data-kind='light'] .fi-html { --fi: #b8431a; }
+:root[data-kind='light'] .fi-py { --fi: #2b6cb0; }
+:root[data-kind='light'] .fi-cs { --fi: #6b3fa0; }
+:root[data-kind='light'] .fi-shell { --fi: #2f7d32; }
+:root[data-kind='light'] .fi-ps { --fi: #1f5fae; }
+:root[data-kind='light'] .fi-yaml { --fi: #b0303c; }
+:root[data-kind='light'] .fi-xml { --fi: #9a5f12; }
+:root[data-kind='light'] .fi-sql { --fi: #8a5a00; }
+:root[data-kind='light'] .fi-image { --fi: #7a4aa8; }
+:root[data-kind='light'] .fi-git { --fi: #b8431a; }
+:root[data-kind='light'] .fi-env { --fi: #4f6b17; }
