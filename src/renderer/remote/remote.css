@@ -84,7 +84,7 @@ svg { display: block; flex: none; }
 #pair-form { display: flex; flex-direction: column; gap: 8px; }
 #pair-form label, .session-dialog label { margin-top: 8px; color: var(--muted); font-size: 13px; font-weight: 500; }
 .pair-code-input, .device-input, .session-dialog select { width: 100%; min-height: 48px; border: 0; border-radius: 12px; padding: 0 14px; color: #fff; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line-strong); font-size: 16px; }
-.pair-code-input:focus, .device-input:focus, .session-dialog select:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.pair-code-input:focus-visible, .device-input:focus-visible, .session-dialog select:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
 .pair-code-input { min-height: 60px; font-family: var(--font-mono); font-size: 26px; text-align: center; letter-spacing: .4em; text-indent: .4em; }
 .primary-button { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; margin-top: 12px; padding: 0 18px; color: var(--on-accent); background: var(--accent); font-size: 15px; font-weight: 650; }
 .primary-button:hover { background: #5be3b0; }
@@ -353,7 +353,7 @@ svg { display: block; flex: none; }
 .quick-reason { min-height: 44px; border: 0; border-radius: 22px; padding: 8px 14px; color: var(--text); background: var(--raised); box-shadow: inset 0 0 0 1px var(--line-strong); font-size: 14px; text-align: left; }
 .quick-reason.on { color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
 .deny-message { width: 100%; border: 0; border-radius: 12px; padding: 12px 14px; color: #fff; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line-strong); font-size: 16px; resize: vertical; }
-.deny-message:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.deny-message:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
 .danger-button { color: #2a0b0b; background: var(--danger); }
 .danger-button:hover { background: #fca5a5; }
 

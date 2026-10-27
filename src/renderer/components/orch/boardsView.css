@@ -123,7 +123,7 @@
   white-space: nowrap;
 }
 
-.orch-col.needs .orch-col-head { color: var(--busy); }
+.orch-col.needs .orch-col-head { color: var(--needs-ink); }
 
 .orch-col-cards { display: flex; flex-direction: column; gap: var(--orch-space-2); }
 
@@ -145,8 +145,9 @@
 .orch-card:hover { border-color: var(--muted); }
 .orch-card-waiting { font-size: 11px; color: var(--muted); }
 .orch-card.lead { border-style: dashed; }
-.orch-card.needs { border-left: 3px solid var(--busy); }
-.orch-card.selected { border-color: var(--accent); background: var(--raised); }
+.orch-card.needs { outline: 2px dashed var(--needs-ring); outline-offset: -2px; }
+.orch-card.needs .orch-card-title::before { content: '◆ '; color: var(--needs-ink); }
+.orch-card.selected { border-color: transparent; background: var(--raised); box-shadow: var(--sel-ring); }
 
 .orch-card-id {
   display: flex;

@@ -40,7 +40,7 @@
   padding: var(--orch-space-3) var(--orch-space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--bg);
+  background: var(--well);
   color: var(--text);
   text-align: left;
   font: inherit;
@@ -87,7 +87,7 @@
   padding: var(--orch-space-2) var(--orch-space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--bg);
+  background: var(--well);
   font-size: 13px;
 }
 

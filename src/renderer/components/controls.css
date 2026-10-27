@@ -37,6 +37,23 @@ input[type='checkbox']:checked::before {
 }
 input[type='checkbox']:disabled { opacity: .5; cursor: default; }
 
+/* In Settings every checkbox is a real switch. */
+.settings-view input[type='checkbox'] {
+  width: 30px; height: 18px; border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--muted) 30%, var(--pane));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--muted) 70%, transparent);
+}
+.settings-view input[type='checkbox']:hover:not(:disabled) { background: color-mix(in srgb, var(--muted) 42%, var(--pane)); }
+.settings-view input[type='checkbox']::before {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--text); transition: transform var(--t-feedback) var(--ease-out);
+}
+.settings-view input[type='checkbox']:checked { background: var(--accent); box-shadow: none; }
+.settings-view input[type='checkbox']:checked::before {
+  inset: auto; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--on-accent);
+  -webkit-mask: none; mask: none; transform: translateX(12px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
 }

@@ -57,7 +57,7 @@
   gap: var(--orch-space-2);
   padding: var(--orch-space-2) var(--orch-space-3);
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--r-control) var(--r-control) 0 0;
   background: none;
   color: var(--muted);
   font: inherit;
@@ -65,7 +65,7 @@
 }
 
 .orch-tab:hover { color: var(--text); }
-.orch-tab[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
+.orch-tab[aria-selected='true'] { background: var(--raised); color: var(--text); font-weight: 600; }
 .orch-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .orch-badge {
@@ -81,8 +81,8 @@
   text-align: center;
 }
 
-#orchestrator-button .orch-badge { margin-left: var(--s-2); min-width: 0; padding: 0; border-radius: 0; background: none; color: var(--muted); font-weight: 400; line-height: inherit; }
-#orchestrator-button .orch-badge[hidden] { display: none; }
+.topbar .orch-badge { margin-left: var(--s-2); min-width: 0; padding: 0; border-radius: 0; background: none; color: var(--muted); font-weight: 400; line-height: inherit; }
+.topbar .orch-badge[hidden] { display: none; }
 
 .orch-notice {
   margin: var(--orch-space-3) var(--orch-space-4) 0;

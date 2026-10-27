@@ -28,7 +28,7 @@
   padding: 5px 12px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--bg);
+  background: var(--well);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -105,7 +105,7 @@
   padding: 7px 10px;
   border: 0;
   border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--well);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -115,7 +115,7 @@
 
 .orch-set-item:last-child { border-bottom: 0; }
 .orch-set-item:hover { background: var(--raised); }
-.orch-set-item.selected { background: var(--raised); box-shadow: inset 3px 0 0 var(--accent); }
+.orch-set-item.selected { background: var(--raised); box-shadow: var(--sel-ring); font-weight: 600; }
 .orch-set-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .orch-set-item-meta { color: var(--muted); font-size: 12px; white-space: nowrap; }
 
