@@ -4,7 +4,6 @@ import { expect, test, type Page } from '@playwright/test'
 import { bufferText, closeApp, closeSettings, createSandbox, feedTerminal, launchApp, openSettings, type Sandbox } from './helpers'
 
 const CLEAR = '\x1b[2J\x1b[H'
-const SHOTS = process.env.DAWSHA_SHOTS ?? ''
 
 const readSettings = (sandbox: Sandbox): any => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8'))
 
@@ -177,10 +176,6 @@ test('right-clicking a file path in a terminal opens a path menu that opens it i
     await rightClick(point)
     await expect(page.locator('.ctx-menu:not(.leaving) .ctx-label')).toHaveText(['Open in Files', 'Open in Files, new tab', 'Open in VS Code', 'Copy path', 'Copy relative path'])
     await expect(page.locator('.ctx-menu:not(.leaving) .ctx-keys')).toHaveText(['Ctrl+click'])
-    if (SHOTS) {
-      mkdirSync(SHOTS, { recursive: true })
-      await page.screenshot({ path: join(SHOTS, 'terminal-path-menu-open.png') })
-    }
     await page.keyboard.press('Escape')
     await expect(page.locator('.ctx-menu:not(.leaving)')).toHaveCount(0)
     await expect(page.locator('.term-host.active .xterm-helper-textarea')).toBeFocused()

@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { APP_VERSION, bufferText, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox } from './helpers'
 
 const SHOTS = process.env.DAWSHA_SHOTS ?? ''
 const A_TS = 'export const one = 1\nexport function run() {\n  return one\n}\n'
@@ -109,10 +109,6 @@ test('right-click menus on a file, a folder and a tab: items, keyboard, clipboar
     await expect(menu.locator('.ctx-keys')).toHaveText(['Enter', 'Ctrl+click', 'Alt+Enter', 'Shift+Alt+C', 'Ctrl+Shift+Alt+C', 'Ctrl+Enter', 'Shift+Alt+R'])
     await expect(menu.getByRole('menuitem').first()).toBeFocused()
     await expect(menu.getByRole('separator')).toHaveCount(2)
-    if (SHOTS) {
-      mkdirSync(SHOTS, { recursive: true })
-      await page.screenshot({ path: join(SHOTS, 'files-tree-menu-open.png') })
-    }
 
     await page.keyboard.press('ArrowDown')
     await expect(menu.getByRole('menuitem', { name: /^Open in new tab/ })).toBeFocused()
@@ -275,12 +271,6 @@ test('the editor uses the VS Code Dark+ colours and the tree and tabs carry file
     await expect(code.locator('.cm-line span').filter({ hasText: '"name"' }).first()).toHaveCSS('color', 'rgb(156, 220, 254)')
     await expect(code.locator('.cm-line span').filter({ hasText: '"acme"' }).first()).toHaveCSS('color', 'rgb(206, 145, 120)')
     await expect(token('true')).toHaveCSS('color', 'rgb(86, 156, 214)')
-    if (SHOTS) {
-      mkdirSync(SHOTS, { recursive: true })
-      await row(page, 'src/a.ts').click({ modifiers: ['Control'] })
-      await expect(token('const')).toBeVisible()
-      await page.screenshot({ path: join(SHOTS, 'files-dark-syntax-tabs.png') })
-    }
   } finally {
     await closeApp(app)
   }
@@ -302,13 +292,67 @@ test('light themes get the VS Code Light+ colours', async () => {
     await expect(token('run')).toHaveCSS('color', 'rgb(121, 94, 38)')
     await expect(code.locator('.cm-editor')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await expect(row(page, 'src/a.ts').locator('.fi-ts')).toHaveCSS('color', 'rgb(29, 95, 168)')
-    if (SHOTS) {
-      mkdirSync(SHOTS, { recursive: true })
-      await row(page, 'src/a.ts').click({ button: 'right' })
-      await expect(page.locator('.ctx-menu:not(.leaving)')).toBeVisible()
-      await page.screenshot({ path: join(SHOTS, 'files-light-syntax-menu.png') })
-    }
   } finally {
     await closeApp(app)
   }
 })
+
+for (const [mode, themeId] of [['dark', undefined], ['light', 'dawsha-daylight']] as const) {
+  test(`screenshots of Files, the menus and the terminal path menu (${mode})`, async () => {
+    test.skip(!SHOTS, 'Set DAWSHA_SHOTS to a folder to capture screenshots')
+    test.setTimeout(120_000)
+    const sandbox = createSandbox()
+    makeRepo(sandbox)
+    mkdirSync(join(sandbox.projectFolder, 'src', 'invoices'), { recursive: true })
+    writeFileSync(join(sandbox.projectFolder, 'src', 'invoices', 'totals.ts'), Array.from({ length: 30 }, (_, i) => `export const total${i + 1} = ${i + 1}`).join('\n') + '\n')
+    writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({ version: 2, lastSeenVersion: APP_VERSION, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }], ...(themeId ? { theme: { id: themeId } } : {}) }), 'utf8')
+    const { app, page } = await launchApp(sandbox)
+    try {
+      mkdirSync(SHOTS, { recursive: true })
+      await page.setViewportSize({ width: 1440, height: 880 })
+      await openFiles(page)
+      await row(page, 'src/a.ts').click({ modifiers: ['Control'] })
+      await row(page, 'package.json').click({ modifiers: ['Control'] })
+      await row(page, 'README.md').click()
+      await row(page, 'src/a.ts').click({ modifiers: ['Control'] })
+      const code = page.locator('.files-editor:not([hidden])')
+      await expect(code.locator('.cm-line span').filter({ hasText: /^const$/ }).first()).toBeVisible()
+      await page.screenshot({ path: join(SHOTS, `files-${mode}-tabs-syntax.png`) })
+      await row(page, 'src/util/helpers.ts').click({ button: 'right' })
+      await expect(page.locator('.ctx-menu:not(.leaving)')).toBeVisible()
+      await page.waitForTimeout(300)
+      await page.screenshot({ path: join(SHOTS, `files-${mode}-tree-menu-open.png`) })
+      await page.keyboard.press('Escape')
+      await tabs(page).nth(1).click({ button: 'right' })
+      await expect(page.locator('.ctx-menu:not(.leaving)')).toBeVisible()
+      await page.waitForTimeout(300)
+      await page.screenshot({ path: join(SHOTS, `files-${mode}-tab-menu-open.png`) })
+      await page.keyboard.press('Escape')
+      await page.setViewportSize({ width: 1024, height: 728 })
+      await page.screenshot({ path: join(SHOTS, `files-${mode}-ci-size.png`) })
+      await page.setViewportSize({ width: 1440, height: 880 })
+
+      await page.locator('#sessions-button').click()
+      await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
+      const host = page.locator('.term-host.active')
+      const id = (await host.getAttribute('data-term-id'))!
+      await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/>\s*$/m)
+      await feedTerminal(page, id, '\x1b[2J\x1b[H')
+      await feedTerminal(page, id, '  └ Update src/invoices/totals.ts:12  (+18 -3)\r\n')
+      await expect.poll(() => bufferText(page, id)).toContain('Update src/invoices')
+      const screen = (await page.locator('.term-host.active .xterm-screen').boundingBox())!
+      const at = { x: screen.x + 180, y: screen.y + 4 }
+      await page.mouse.move(at.x + 300, at.y + 300)
+      await page.mouse.move(at.x + 300, at.y + 310)
+      await page.mouse.move(at.x, at.y)
+      await page.mouse.move(at.x + 1, at.y)
+      await expect(page.locator('.term-host.active .xterm-cursor-pointer')).toHaveCount(1)
+      await page.mouse.click(at.x, at.y, { button: 'right' })
+      await expect(page.getByRole('menu', { name: 'Path actions' })).toBeVisible()
+      await page.waitForTimeout(300)
+      await page.screenshot({ path: join(SHOTS, `terminal-${mode}-path-menu-open.png`) })
+    } finally {
+      await closeApp(app)
+    }
+  })
+}
