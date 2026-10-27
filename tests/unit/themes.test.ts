@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contrastRatio } from '../../src/shared/contrast'
+import { contrastRatio, luminance } from '../../src/shared/contrast'
 import { CODEX_MARK, GEMINI_MARK } from '../../src/shared/agents'
 import { DEFAULT_THEME_ID, THEMES, findTheme, hasLightTerminal, resolveThemeId } from '../../src/shared/themes'
 
@@ -43,13 +43,32 @@ describe.each(THEMES)('theme $name', (theme) => {
     expect(contrastRatio(term.foreground, term.background)).toBeGreaterThanOrEqual(MIN)
   })
 
-  it('terminal background matches the pane surface, or sits in a visible well for card themes', () => {
-    if (theme.style === 'cards') {
-      expect(term.background.toLowerCase()).not.toBe(app.surface.toLowerCase())
-      expect(contrastRatio(term.background, app.surface)).toBeGreaterThan(1.05)
-    } else {
-      expect(term.background.toLowerCase()).toBe(app.surface.toLowerCase())
+  it('terminal background is the well when the terminal matches the app kind, and the well is told apart from the pane', () => {
+    if (hasLightTerminal(theme) === (theme.kind === 'light')) expect(term.background.toLowerCase()).toBe(app.well.toLowerCase())
+    expect(contrastRatio(app.well, app.surface)).toBeGreaterThan(1.02)
+  })
+
+  it('secondary text reads at 4.5:1 on every plane of the ladder', () => {
+    for (const bg of [app.background, app.sidebar, app.surface, app.raised, app.overlay, app.well]) {
+      expect(contrastRatio(app.muted, bg), bg).toBeGreaterThanOrEqual(MIN)
     }
+  })
+
+  it('has the surface ladder: canvas, chrome and pane step apart, the overlay lifts above the pane', () => {
+    const lum = (hex: string): number => luminance(hex)
+    if (theme.kind === 'dark') {
+      expect(lum(app.background)).toBeLessThan(lum(app.sidebar))
+      expect(lum(app.sidebar)).toBeLessThan(lum(app.surface))
+      expect(lum(app.surface)).toBeLessThan(lum(app.raised))
+      expect(lum(app.raised)).toBeLessThan(lum(app.overlay))
+      expect(lum(app.well)).toBeLessThan(lum(app.surface))
+    } else {
+      expect(lum(app.background)).toBeLessThan(lum(app.sidebar))
+      expect(lum(app.sidebar)).toBeLessThan(lum(app.surface))
+      expect(lum(app.well)).toBeGreaterThan(lum(app.sidebar))
+    }
+    expect(contrastRatio(app.background, app.sidebar)).toBeGreaterThan(1.03)
+    expect(contrastRatio(app.sidebar, app.surface)).toBeGreaterThan(1.03)
   })
 })
 
@@ -80,11 +99,20 @@ describe('theme set', () => {
     expect(findTheme('solarized-light').id).toBe('dawsha-daylight')
   })
 
-  it('treats Daylight as a light app with a dark terminal', () => {
+  it('gives Daylight a light terminal by default and keeps a dark terminal as its own theme', () => {
     expect(findTheme('dawsha-daylight').kind).toBe('light')
-    expect(hasLightTerminal(findTheme('dawsha-daylight'))).toBe(false)
+    expect(hasLightTerminal(findTheme('dawsha-daylight'))).toBe(true)
+    expect(hasLightTerminal(findTheme('dawsha-daylight-dark'))).toBe(false)
+    expect(findTheme('dawsha-daylight-dark').kind).toBe('light')
     expect(hasLightTerminal(findTheme('github-light'))).toBe(true)
     expect(hasLightTerminal(findTheme('grid-dark'))).toBe(false)
+  })
+
+  it('uses the approved plane colours for Dawsha dark and Daylight', () => {
+    const dark = findTheme('grid-dark').app
+    expect([dark.background, dark.sidebar, dark.surface, dark.raised, dark.overlay, dark.well]).toEqual(['#07090c', '#0f1217', '#161a22', '#1d222c', '#252b37', '#0d1015'])
+    const light = findTheme('dawsha-daylight').app
+    expect([light.background, light.sidebar, light.surface, light.raised, light.well]).toEqual(['#e2e6e4', '#edf0ee', '#ffffff', '#ffffff', '#f6f8f7'])
   })
 
   it('defines all 16 ansi colours for every theme', () => {

@@ -7,11 +7,11 @@
 }
 
 :root[data-kind='light'] {
-  --tag-bug: #86573a;
-  --tag-feature: #38765a;
-  --tag-review: #665a9b;
-  --tag-research: #3a6a99;
-  --tag-docs: #67634a;
+  --tag-bug: #7d4f33;
+  --tag-feature: #2f6a50;
+  --tag-review: #5d5190;
+  --tag-research: #33608f;
+  --tag-docs: #5d5942;
 }
 
 [data-tag='bug'] { --tag: var(--tag-bug); }

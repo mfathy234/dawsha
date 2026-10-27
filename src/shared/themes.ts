@@ -1,10 +1,14 @@
 import { luminance } from './contrast'
+import { ladderFor, type ThemeKind } from './themeLadder'
 
 export interface AppColors {
+  // The surface ladder, darkest to lightest in dark themes: canvas, chrome, pane, raised, overlay, plus the recessed well.
   background: string
   sidebar: string
   surface: string
   raised: string
+  overlay: string
+  well: string
   border: string
   text: string
   muted: string
@@ -44,25 +48,28 @@ export interface TermColors {
 export interface Theme {
   id: string
   name: string
-  kind: 'dark' | 'light'
-  // 'cards' draws each pane as a rounded card with its terminal inset in a darker well.
-  style?: 'cards'
+  kind: ThemeKind
   app: AppColors
   term: TermColors
 }
 
 export const DEFAULT_THEME_ID = 'grid-dark'
 
-export const THEMES: Theme[] = [
+// A theme that names its own overlay and well keeps its surfaces exactly; any other gets the ladder derived from its pane colour.
+type RawTheme = Omit<Theme, 'app'> & { app: Omit<AppColors, 'overlay' | 'well'> & Partial<Pick<AppColors, 'overlay' | 'well'>> }
+
+const RAW_THEMES: RawTheme[] = [
   {
     id: 'grid-dark',
     name: 'Dawsha',
     kind: 'dark',
     app: {
-      background: '#0c0e12',
-      sidebar: '#0e1116',
-      surface: '#11141a',
-      raised: '#161b23',
+      background: '#07090c',
+      sidebar: '#0f1217',
+      surface: '#161a22',
+      raised: '#1d222c',
+      overlay: '#252b37',
+      well: '#0d1015',
       border: '#232833',
       text: '#d6dae3',
       muted: '#8a93a6',
@@ -75,10 +82,10 @@ export const THEMES: Theme[] = [
       onDanger: '#2a0b0b'
     },
     term: {
-      background: '#11141a',
+      background: '#0d1015',
       foreground: '#d6dae3',
       cursor: '#34d399',
-      cursorAccent: '#11141a',
+      cursorAccent: '#0d1015',
       selectionBackground: '#2b3a4f',
       black: '#232833',
       red: '#f87171',
@@ -102,7 +109,6 @@ export const THEMES: Theme[] = [
     id: 'dawsha-cards',
     name: 'Dawsha Cards',
     kind: 'dark',
-    style: 'cards',
     app: {
       background: '#0a0c10',
       sidebar: '#0d1015',
@@ -147,7 +153,6 @@ export const THEMES: Theme[] = [
     id: 'graphite-cards',
     name: 'Graphite Cards',
     kind: 'dark',
-    style: 'cards',
     app: {
       background: '#0f0f0f',
       sidebar: '#131313',
@@ -192,18 +197,65 @@ export const THEMES: Theme[] = [
     id: 'dawsha-daylight',
     name: 'Dawsha Daylight',
     kind: 'light',
-    style: 'cards',
     app: {
-      background: '#eef1f0',
-      sidebar: '#e8ecea',
-      surface: '#fafbfb',
+      background: '#e2e6e4',
+      sidebar: '#edf0ee',
+      surface: '#ffffff',
       raised: '#ffffff',
-      border: '#d8dedb',
+      overlay: '#ffffff',
+      well: '#f6f8f7',
+      border: '#d3d9d6',
       text: '#16201b',
       muted: '#56625c',
       accent: '#087049',
       onAccent: '#ffffff',
-      busy: '#975800',
+      busy: '#8a5a00',
+      idle: '#56625c',
+      exited: '#b42323',
+      danger: '#b42323',
+      onDanger: '#ffffff'
+    },
+    term: {
+      background: '#f6f8f7',
+      foreground: '#1b2027',
+      cursor: '#0a8f62',
+      cursorAccent: '#f6f8f7',
+      selectionBackground: '#bfe3d3',
+      black: '#1b2027',
+      red: '#c4262e',
+      green: '#116329',
+      yellow: '#6b4300',
+      blue: '#0a58c2',
+      magenta: '#7a3fc4',
+      cyan: '#17707a',
+      white: '#5f6875',
+      brightBlack: '#4f5864',
+      brightRed: '#a40e26',
+      brightGreen: '#0f6b3a',
+      brightYellow: '#7a4d00',
+      brightBlue: '#1a6fd6',
+      brightMagenta: '#8f4fe0',
+      brightCyan: '#1b7c83',
+      brightWhite: '#6e7781'
+    }
+  },
+  {
+    id: 'dawsha-daylight-dark',
+    name: 'Dawsha Daylight, dark terminal',
+    kind: 'light',
+    app: {
+      background: '#e2e6e4',
+      sidebar: '#edf0ee',
+      surface: '#ffffff',
+      raised: '#ffffff',
+      overlay: '#ffffff',
+      well: '#f6f8f7',
+      border: '#d3d9d6',
+      text: '#16201b',
+      muted: '#56625c',
+      accent: '#087049',
+      onAccent: '#ffffff',
+      busy: '#8a5a00',
       idle: '#56625c',
       exited: '#b42323',
       danger: '#b42323',
@@ -244,11 +296,11 @@ export const THEMES: Theme[] = [
       raised: '#3b4252',
       border: '#434c5e',
       text: '#d8dee9',
-      muted: '#9ca6ba',
+      muted: '#adb6c8',
       accent: '#88c0d0',
       onAccent: '#1d2430',
       busy: '#ebcb8b',
-      idle: '#9ca6ba',
+      idle: '#adb6c8',
       exited: '#d98a93',
       danger: '#e0808a',
       onDanger: '#1d2430'
@@ -337,7 +389,7 @@ export const THEMES: Theme[] = [
       onAccent: '#ffffff',
       busy: '#8a5a00',
       idle: '#57606a',
-      exited: '#cf222e',
+      exited: '#c41f2b',
       danger: '#cf222e',
       onDanger: '#ffffff'
     },
@@ -367,6 +419,22 @@ export const THEMES: Theme[] = [
   }
 ]
 
+const matchesKind = (raw: RawTheme): boolean => (luminance(raw.term.background) > 0.4) === (raw.kind === 'light')
+
+function withLadder(raw: RawTheme): Theme {
+  const { app, term } = raw
+  const ladder = ladderFor(raw.kind, app.surface, app.sidebar)
+  const fixed = app.well !== undefined
+  const surfaces = fixed
+    ? { background: app.background, sidebar: app.sidebar, surface: app.surface, raised: app.raised, overlay: app.overlay ?? ladder.overlay, well: app.well ?? ladder.well }
+    : { background: ladder.canvas, sidebar: ladder.chrome, surface: ladder.pane, raised: ladder.raised, overlay: ladder.overlay, well: ladder.well }
+  // A terminal of the app's own kind is the well itself, so text and ground stay one surface; a deliberate dark terminal in a light app keeps its colour.
+  const terminal = matchesKind(raw) ? { ...term, background: surfaces.well, cursorAccent: surfaces.well } : term
+  return { ...raw, app: { ...app, ...surfaces }, term: terminal }
+}
+
+export const THEMES: Theme[] = RAW_THEMES.map(withLadder)
+
 // Themes removed in 0.5 and the closest current theme for anyone who had picked one.
 const RETIRED_THEMES: Record<string, string> = {
   'tokyo-night': 'dawsha-cards',
@@ -380,7 +448,7 @@ export function resolveThemeId(id: string): string {
   return THEMES.some((t) => t.id === current) ? current : DEFAULT_THEME_ID
 }
 
-// Daylight is a light app with a dark terminal, so terminal behaviour follows the terminal's own background.
+// The terminal's own background decides: Daylight, dark terminal is a light app around a dark terminal.
 export const hasLightTerminal = (theme: Theme): boolean => luminance(theme.term.background) > 0.4
 
 export const findTheme = (id: string): Theme => THEMES.find((t) => t.id === resolveThemeId(id)) ?? THEMES[0]
