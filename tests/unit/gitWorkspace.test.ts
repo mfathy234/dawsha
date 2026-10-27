@@ -208,7 +208,7 @@ describe('a project that is a sub folder of its repository', () => {
     expect(await writeProjectFile(sub, 'README.md', 'pwn', mtime)).toMatchObject({ ok: false })
     expect(readFileSync(join(repo, 'README.md'), 'utf8')).toBe('hello\n')
     expect(await writeProjectFile(sub, 'src/a.ts', 'two\n', mtime)).toMatchObject({ ok: true })
-    expect(await resolveProjectPath(sub, 'src/a.ts')).toBe(join(realpathSync(repo), 'src', 'a.ts'))
+    expect(await resolveProjectPath(sub, 'src/a.ts')).toBe(join(realpathSync.native(repo), 'src', 'a.ts'))
     expect(await resolveProjectPath(sub, 'README.md')).toBeNull()
   })
 })
