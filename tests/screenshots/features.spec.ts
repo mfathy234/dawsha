@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { activeTermId, bufferText, closeApp, createSandbox, launchApp, type Sandbox } from '../e2e/helpers'
+import { activeTermId, bufferText, closeApp, createSandbox, launchApp, type Sandbox, openMore } from '../e2e/helpers'
 import {
   DEMO_ROOT,
   OUT,
@@ -110,7 +110,7 @@ test('generates the palette, layouts, handoff and usage screenshots from fake pr
     await page.getByRole('button', { name: 'Cancel' }).click()
     await expect(page.locator('.handoff-dialog')).toHaveCount(0)
 
-    await page.locator('#usage-button').click()
+    await openMore(page, 'usage')
     await expect(page.locator('.usage-col')).toHaveCount(7)
     await expect(page.locator('#usage-by-project tbody tr')).toHaveCount(4)
     await settle(page, 1200)

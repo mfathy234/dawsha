@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox, openMore } from './helpers'
 
 // Real Claude Code (and Codex) agents on paths the feature test does not cover; costs real tokens. Run with:
 //   ORCH_REAL=1 npx playwright test orchestratorRealPaths -g "<name>"
@@ -70,7 +70,7 @@ async function driveToFinish(page: Page, label: string, minutes: number): Promis
       console.log(`[${label} ${Math.round((Date.now() - started) / 1000)}s] ${now}`)
     }
     if (run?.stage === 'merge') {
-      if (!(await page.locator('.orch-view').isVisible())) await page.locator('#orchestrator-button').click()
+      if (!(await page.locator('.orch-view').isVisible())) await openMore(page, 'orchestrator')
       await page.waitForTimeout(400)
       await page.screenshot({ path: join(SHOTS, `${label}-finished.png`) })
       return run
@@ -82,7 +82,7 @@ async function driveToFinish(page: Page, label: string, minutes: number): Promis
 
 async function startFeature(page: Page, story: string): Promise<void> {
   await page.setViewportSize({ width: 1600, height: 1000 })
-  await page.locator('#orchestrator-button').click()
+  await openMore(page, 'orchestrator')
   await page.locator('#orch-tab-new').click()
   await page.locator('#orch-nr-story').fill(story)
   await page.locator('#orch-nr-start').click()
@@ -140,7 +140,7 @@ test.describe('real orchestrator paths', () => {
     const { app, page } = await launchApp(sandbox, { DAWSHA_CLAUDE_COMMAND: '', DAWSHA_CODEX_COMMAND: '' })
     try {
       await page.setViewportSize({ width: 1600, height: 1000 })
-      await page.locator('#orchestrator-button').click()
+      await openMore(page, 'orchestrator')
       await page.locator('#orch-tab-new').click()
       await page.locator('#orch-nr-kind').getByText('Bug', { exact: true }).click()
       await page.locator('#orch-nr-fixer-claude').click()

@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import type { OrchRunDetail } from '../../src/shared/orch/api'
-import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, openMore } from './helpers'
 
 const FAKE_ORCH = resolve(__dirname, '../support/fakeOrchAgent.cjs')
 const SCREENS = 'test-results/screens'
@@ -41,7 +41,7 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
     }
     try {
       await publish('bug', 'build')
-      await page.locator('#orchestrator-button').click()
+      await openMore(page, 'orchestrator')
       await page.getByRole('button', { name: 'Open', exact: true }).click()
       const track = page.getByRole('list', { name: 'Stages', exact: true })
       const items = track.locator('li:not(.cancelled)')
@@ -129,7 +129,7 @@ test('Settings → Orchestrator edits plans and profiles, and the view works in 
   }))
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     await page.locator('#orch-tab-new').click()
     await expect(page.locator('#orch-nr-plans')).toContainText('Budget')
     await shot(page, 'light-new-run-feature')
@@ -164,7 +164,7 @@ test('fix a bug from the Orchestrator view and finish it in Human review', async
   })
   try {
     // The top bar has an Orchestrator button; the view starts empty.
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     await expect(page.locator('.orch-view')).toBeVisible()
     await expect(page.locator('.orch-view')).toContainText('Start a run')
     await shot(page, 'empty')
@@ -180,10 +180,10 @@ test('fix a bug from the Orchestrator view and finish it in Human review', async
     // The fixer opens as a pane; the run finishes building and asks the human to mark it done.
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
     // Starting a run already shows its dashboard; the top bar button toggles the view, so only open it if hidden.
-    if (!(await page.locator('.orch-view').isVisible())) await page.locator('#orchestrator-button').click()
+    if (!(await page.locator('.orch-view').isVisible())) await openMore(page, 'orchestrator')
     await expect(page.locator('.orch-view')).toBeVisible()
     await expect(page.locator('.orch-view')).toContainText('Export crashes on an empty range')
-    await expect(page.locator('#orchestrator-button .orch-badge')).toHaveText('1', { timeout: 60_000 })
+    await expect(page.locator('#more-button .orch-badge')).toHaveText('1', { timeout: 60_000 })
     const story = page.locator('.orch-story')
     await expect(story.locator('summary')).toContainText('The export button crashes when the range is empty.')
     await expect(story).not.toHaveAttribute('open', '')
@@ -218,7 +218,7 @@ test('fix a bug from the Orchestrator view and finish it in Human review', async
     await expect(page.locator('.orch-view')).toContainText('is finished on branch orch/')
     await shot(page, 'review')
     await page.getByRole('button', { name: 'Send' }).click()
-    await expect(page.locator('#orchestrator-button .orch-badge')).toBeHidden({ timeout: 15_000 })
+    await expect(page.locator('#more-button .orch-badge')).toBeHidden({ timeout: 15_000 })
     await expect(page.locator('.orch-view')).toContainText('Nothing needs you right now')
   } finally {
     await closeApp(app)
@@ -234,7 +234,7 @@ test('orchestrator gives text room and respects motion preferences in both theme
   const { app, page } = await launchApp(sandbox)
   try {
     await page.setViewportSize({ width: 1800, height: 1000 })
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     for (const theme of ['grid-dark', 'dawsha-daylight']) {
       await page.locator('#theme-button').click()
       await page.locator(`#theme-${theme}`).click()
@@ -305,7 +305,7 @@ test('empty stories are hidden and long stories have a collapsed preview', async
   }
   try {
     await publish('   ')
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     // With no active run, Finished runs is already open.
     await expect(page.locator('.runs-finished')).toHaveAttribute('open', '')
     await page.getByRole('button', { name: 'Open', exact: true }).click()
@@ -340,7 +340,7 @@ for (const solo of [true, false]) {
       DAWSHA_CLAUDE_COMMAND: process.execPath, DAWSHA_CLAUDE_ARGS: JSON.stringify([FAKE_ORCH])
     })
     try {
-      await page.locator('#orchestrator-button').click()
+      await openMore(page, 'orchestrator')
       await page.locator('#orch-tab-new').click()
       await page.setViewportSize({ width: 1440, height: 1400 })
       await expect(page.locator('#orch-nr-lead')).toHaveValue('')
@@ -425,7 +425,7 @@ test('a lead between tasks shows as coordinating and waiting tasks say why', asy
       ipcMain.handle('orch:snapshot', () => ({ status: { enabled: true, running: true, error: null }, runs: [value], decisions: [] }))
       for (const contents of webContents.getAllWebContents()) contents.send('orch:changed')
     }, run)
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     await page.getByRole('button', { name: 'Open', exact: true }).first().click()
     await expect(page.locator('.orch-run-title')).toHaveText('Lead live')
     const progress = page.locator('.orch-col', { hasText: 'In progress' })

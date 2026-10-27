@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, openMore } from './helpers'
 
 for (const theme of ['dawsha-night', 'dawsha-daylight']) {
   test(`spec review supports feedback, versions and approval in ${theme}`, async () => {
@@ -25,7 +25,7 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
     })
     try {
       await page.setViewportSize({ width: 1440, height: 1200 })
-      await page.locator('#orchestrator-button').click()
+      await openMore(page, 'orchestrator')
       await page.locator('#orch-tab-new').click()
       await page.locator('#orch-nr-story').fill('Export usage as CSV')
       await page.locator('#orch-nr-title').fill('CSV spec')

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { createFakeTools } from '../support/fakeTools'
-import { closeApp, createSandbox, launchApp, runCli } from '../e2e/helpers'
+import { closeApp, createSandbox, launchApp, runCli, openMore } from '../e2e/helpers'
 import { composeCliImage, writeHistory, type CliRun } from './resumeFixtures'
 import {
   OUT,
@@ -106,11 +106,11 @@ test('generates the README screenshots from fake projects only', async () => {
     await page.screenshot({ path: join(OUT, 'agents-drawer.png') })
     await page.locator('.agents-toggle').first().evaluate((button) => (button as HTMLButtonElement).click())
 
-    await page.locator('#projects-button').click()
+    await openMore(page, 'projects')
     await expect(page.locator('.projects-view')).toBeVisible()
     await settle(page, 800)
     await page.screenshot({ path: join(OUT, 'projects.png') })
-    await page.locator('#projects-button').click()
+    await openMore(page, 'projects')
 
     await page.keyboard.press('Control+Shift+R')
     await page.getByLabel('Search all projects').check()

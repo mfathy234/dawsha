@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import type { OrchRunDetail } from '../../src/shared/orch/api'
-import { closeApp, createSandbox, launchApp } from '../e2e/helpers'
+import { closeApp, createSandbox, launchApp, openMore } from '../e2e/helpers'
 import { DEMO_ROOT, folder, resize, seed, settle } from './harness'
 import { demoTicketNotes, exportDecision, exportRun, invoiceBugRun, offlineRun, writeWorkHistory } from './v15Fixtures'
 import { shrinkTo } from './v1Fixtures'
@@ -31,7 +31,7 @@ test('generates the orchestrator and work dashboard screenshots from fake projec
       for (const contents of webContents.getAllWebContents()) contents.send('orch:changed')
     }, { runs, decision: exportDecision() })
 
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     await page.locator('#orch-tab-runs').click()
     await page.locator('.orch-view').getByRole('button', { name: 'Open', exact: true }).first().click()
     await expect(page.locator('.orch-run')).toContainText('Add CSV export to the usage report')
@@ -55,7 +55,7 @@ test('generates the orchestrator and work dashboard screenshots from fake projec
     await settle(page, 1500)
     writeFileSync(join(OUT, 'orch-new-run.png'), await page.screenshot())
 
-    await page.locator('#work-button').click()
+    await openMore(page, 'work')
     const view = page.getByRole('main', { name: 'Work dashboard' })
     await expect(view).toBeVisible()
     await view.getByRole('tab', { name: 'This week', exact: true }).click()

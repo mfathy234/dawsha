@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import type { OrchRunDetail } from '../../src/shared/orch/api'
-import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, openMore } from './helpers'
 
 test('Orchestrator dropdown picks a project and keeps the native select in sync', async () => {
   const sandbox = createSandbox()
@@ -15,7 +15,7 @@ test('Orchestrator dropdown picks a project and keeps the native select in sync'
   }))
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     await page.locator('#orch-tab-new').click()
     const trigger = page.getByRole('button', { name: 'Project', exact: true })
     const native = page.locator('#orch-nr-project')
@@ -73,7 +73,7 @@ test('live run updates keep an unchanged board filter open and focused', async (
   }
   try {
     await publish('build')
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     await page.locator('#orch-tab-boards').click()
     await expect(page.getByRole('button', { name: 'Run', exact: true })).toContainText('All')
     const tab = await page.locator('.orch-projtab').first().elementHandle()

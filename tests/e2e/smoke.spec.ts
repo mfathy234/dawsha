@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { QUIT_BUDGET_MS, activeTermId, bufferText, closeApp, closeBounded, createSandbox, fontSize, lastInput, launchApp } from './helpers'
+import { QUIT_BUDGET_MS, activeTermId, bufferText, closeApp, closeBounded, createSandbox, fontSize, lastInput, launchApp, openMore } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -68,17 +68,21 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await page.getByRole('button', { name: 'Theme' }).click()
     await page.getByRole('radio', { name: /Nord/ }).click()
     await expect.poll(() => host.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before)
-    await expect(host).toHaveAttribute('data-term-background', '#2e3440')
+    await expect(host).toHaveAttribute('data-term-background', '#1b1f26')
     await expect(page.locator('.note')).toHaveCount(0)
     await page.getByRole('radio', { name: /GitHub Light/ }).click()
     await expect(page.locator('.note')).toContainText('run /theme and pick light')
     await page.screenshot({ path: join(SCREENS, '4-light-theme.png') })
-    // Daylight is a light app around dark terminals, so the light-terminal hint stays hidden.
-    await page.getByRole('radio', { name: /Dawsha Daylight/ }).click()
-    await expect(page.locator('html')).toHaveAttribute('data-pane-style', 'cards')
+    // Daylight has a light terminal by default, so the light-terminal hint shows; its dark-terminal twin hides it.
+    await page.locator('#theme-dawsha-daylight').click()
+    await expect(page.locator('html')).toHaveAttribute('data-kind', 'light')
+    await expect(host).toHaveAttribute('data-term-background', '#f6f8f7')
+    await expect(page.locator('.note')).toContainText('run /theme and pick light')
+    await page.locator('#theme-dawsha-daylight-dark').click()
+    await expect(host).toHaveAttribute('data-term-background', '#16191f')
     await expect(page.locator('.note')).toHaveCount(0)
     await page.locator('#theme-grid-dark').click()
-    await expect(page.locator('html')).toHaveAttribute('data-pane-style', 'flat')
+    await expect(page.locator('html')).toHaveAttribute('data-kind', 'dark')
     await page.keyboard.press('Escape')
     await expect(page.locator('.theme-picker')).toHaveCount(0)
 
@@ -134,7 +138,7 @@ test('projects view validates folders and confirms removal by name', async () =>
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Projects', exact: true }).click()
+    await openMore(page, 'projects')
     await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible()
     await expect(page.locator('[data-project-id="gone"] .field-error')).toHaveText('This folder does not exist.')
     await page.screenshot({ path: join(SCREENS, '8-projects.png') })
@@ -354,7 +358,7 @@ test('project default agent is set in the Projects view and used by the sidebar'
   const sandbox = createSandbox()
   const first = await launchApp(sandbox)
   try {
-    await first.page.getByRole('button', { name: 'Projects', exact: true }).click()
+    await openMore(first.page, 'projects')
     const more = first.page.getByRole('button', { name: 'More for Smoke' })
     await more.click()
     const menu = first.page.getByRole('menu', { name: 'More for Smoke' })
@@ -367,7 +371,7 @@ test('project default agent is set in the Projects view and used by the sidebar'
     await first.page.keyboard.press('Escape')
     await first.page.screenshot({ path: join(SCREENS, '11-default-agent.png') })
 
-    await first.page.getByRole('button', { name: 'Projects', exact: true }).click()
+    await openMore(first.page, 'projects')
     await first.page.getByRole('button', { name: 'New Codex session in Smoke' }).click()
     await expect(first.page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)
     await first.page.getByRole('button', { name: 'Choose agent for Smoke' }).click()

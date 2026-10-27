@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { expect, test } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, openMore } from './helpers'
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=Test User', '-c', 'user.email=test@example.invalid', ...args], { cwd })
 
@@ -20,7 +20,7 @@ test('History exports a finished bug run and imports it as a read-only run', asy
     DAWSHA_CLAUDE_ARGS: JSON.stringify([resolve(__dirname, '../support/fakeOrchAgent.cjs')]),
     DAWSHA_SAVE_PATH: path, DAWSHA_OPEN_PATHS: JSON.stringify([path]) })
   try {
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     await page.locator('#orch-tab-history').click({ timeout: 5000 })
     await expect(page.locator('.orch-history')).toContainText('No history yet')
     await page.locator('#orch-tab-new').click()
@@ -28,7 +28,7 @@ test('History exports a finished bug run and imports it as a read-only run', asy
     await page.locator('#orch-nr-story').fill('The export button crashes on an empty range.')
     await page.locator('#orch-nr-title').fill('History export crash')
     await page.locator('#orch-nr-start').click()
-    await expect(page.locator('#orchestrator-button .orch-badge')).toHaveText('1', { timeout: 60_000 })
+    await expect(page.locator('#more-button .orch-badge')).toHaveText('1', { timeout: 60_000 })
     await page.locator('#orch-tab-review').click()
     await page.getByRole('button', { name: 'Send', exact: true }).click()
     await page.locator('#orch-tab-history').click()

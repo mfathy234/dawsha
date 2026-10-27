@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { closeApp, createSandbox, launchApp, type Sandbox, openMore } from './helpers'
 import { OrchStore } from '../../src/main/orch/store'
 
 const SHOTS = resolve(__dirname, '../../test-results/work-dashboard-shots')
@@ -72,7 +72,7 @@ test('work dashboard counts agent sessions, filters projects, resumes and suppor
   git('commit', '--allow-empty', '-qm', 'docs: explain architecture')
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Work', exact: true }).click()
+    await openMore(page, 'work')
     const view = page.getByRole('main', { name: 'Work dashboard' })
     await expect(view).toBeVisible()
     await expect(page.locator('#work-total .count-value')).toHaveText('6')
@@ -120,7 +120,7 @@ test('counts each orchestrator run once, excludes child sessions of all agents, 
   seedRuns(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.locator('#work-button').click()
+    await openMore(page, 'work')
     await expect(page.locator('#work-total .count-value')).toHaveText('5')
     await expect(page.locator('#work-feature .count-value')).toHaveText('1')
     await expect(page.locator('#work-bug .count-value')).toHaveText('2')
@@ -136,7 +136,7 @@ test('counts each orchestrator run once, excludes child sessions of all agents, 
 test('work dashboard explains an empty period and can return to sessions', async () => {
   const { app, page } = await launchApp(createSandbox())
   try {
-    await page.getByRole('button', { name: 'Work', exact: true }).click()
+    await openMore(page, 'work')
     await expect(page.locator('.work-view')).toContainText('No work in this period')
     await expect(page.locator('#work-total .count-value')).toHaveText('0')
     await page.locator('#sessions-button').click()
@@ -149,7 +149,7 @@ test('the Tickets tab counts a branch once and keeps the name and link the user 
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Work', exact: true }).click()
+    await openMore(page, 'work')
     await page.getByRole('tab', { name: 'Tickets', exact: true }).click()
     const row = page.locator('.work-ticket-row', { hasText: '#18550' })
     await expect(row).toBeVisible()
@@ -190,7 +190,7 @@ test('steps back and forward through days, weeks and months', async () => {
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Work', exact: true }).click()
+    await openMore(page, 'work')
     const label = page.locator('#work-period-label')
     const total = page.locator('#work-total .count-value')
     await expect(label).toHaveText('Today')
@@ -223,7 +223,7 @@ test('copies the shown summary with ticket notes, search, project and period fil
   const { app, page } = await launchApp(sandbox)
   const clipboard = () => app.evaluate(({ clipboard }) => clipboard.readText())
   try {
-    await page.locator('#work-button').click()
+    await openMore(page, 'work')
     const view = page.getByRole('main', { name: 'Work dashboard' })
     const copy = view.getByRole('button', { name: 'Copy summary', exact: true })
     await expect(view).toHaveAttribute('aria-busy', 'false')
@@ -259,7 +259,7 @@ test('searches work, synchronizes project filters, preserves them across tabs an
   writeFileSync(otherFile, lines(...readFileSync(otherFile, 'utf8').trim().split('\n').map(line => ({ ...JSON.parse(line), gitBranch: 'feature/99-roadmap' }))))
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.locator('#work-button').click()
+    await openMore(page, 'work')
     const view = page.getByRole('main', { name: 'Work dashboard' })
     const search = view.getByRole('searchbox', { name: 'Search work' })
     const project = page.locator('#work-project-filter-trigger')

@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, openMore } from './helpers'
 
 // Real Claude Code CLIs on the default plan; costs real tokens. Run with:
 //   ORCH_REAL=1 npx playwright test orchestratorRealFeature
@@ -58,7 +58,7 @@ test('real feature run: the lead reads the full story and uses a small team', as
   }
   try {
     await page.setViewportSize({ width: 1600, height: 1000 })
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     await page.locator('#orch-tab-new').click()
     await page.locator('#orch-nr-story').fill(STORY)
     await capture('new-run')
@@ -78,7 +78,7 @@ test('real feature run: the lead reads the full story and uses a small team', as
       if (now !== last) {
         last = now
         console.log(`[${Math.round((Date.now() - started) / 1000)}s] ${now} | agents ${run?.agents.map((a) => `${a.role}/${a.model}`).join(',')}`)
-        if (!(await page.locator('.orch-view').isVisible())) await page.locator('#orchestrator-button').click()
+        if (!(await page.locator('.orch-view').isVisible())) await openMore(page, 'orchestrator')
         await capture(run?.stage ?? 'none')
       }
       if (run?.stage === 'merge') { finalState = state; break }
