@@ -44,6 +44,7 @@ import { installNeedsNotices } from './needsNotice'
 import { installReplayCommands } from './commands/replay'
 import { installSettingsTransferCommands } from './commands/settingsTransfer'
 import { installKeyboard } from './keyboard'
+import { installInputMode } from './inputMode'
 import { store } from './state'
 import { confirmQuitWithUnsavedFiles } from './files/filesActions'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
@@ -57,6 +58,7 @@ function paneOfTerm(termId: string): string | undefined {
 }
 
 async function boot(): Promise<void> {
+  installInputMode()
   const [loaded, info, sessions, codexSessions, geminiSessions, statusInfos, update] = await Promise.all([
     api.getSettings(),
     api.appInfo(),
