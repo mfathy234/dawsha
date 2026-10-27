@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mkdir, mkdtemp, writeFile, symlink } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile, symlink, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
@@ -26,11 +26,12 @@ describe('Files workspaces', () => {
   })
   it('lists configured non-Git folders and refuses unknown folders', async () => {
     const folder = await mkdtemp(join(tmpdir(), 'files-workspaces-'))
-    expect(await listFilesWorkspaces([{ id: 'p', folder }], 'p')).toMatchObject({ ok: true, git: false, checkouts: [{ folder, branch: '' }] })
+    const canonical = await realpath(folder)
+    expect(await listFilesWorkspaces([{ id: 'p', folder }], 'p')).toMatchObject({ ok: true, git: false, checkouts: [{ folder: canonical, branch: '' }] })
     expect(await listFilesWorkspaces([], 'p')).toMatchObject({ ok: false })
     const alias = `${folder}-alias`
     await symlink(folder, alias, process.platform === 'win32' ? 'junction' : 'dir')
-    expect(await listFilesWorkspaces([{ id: 'p', folder: alias }], 'p', alias)).toMatchObject({ ok: true, folder })
+    expect(await listFilesWorkspaces([{ id: 'p', folder: alias }], 'p', alias)).toMatchObject({ ok: true, folder: canonical })
     const outside = await mkdtemp(join(tmpdir(), 'files-unknown-'))
     expect(await listFilesWorkspaces([{ id: 'p', folder }], 'p', outside)).toMatchObject({ ok: false })
   })
@@ -59,7 +60,7 @@ describe('Trash boundaries', () => {
     await writeFile(join(folder, 'a.txt'), 'a')
     const trashed: string[] = []
     expect(await trashProjectPath([{ folder }], folder, 'a.txt', async p => { trashed.push(p) })).toEqual({ ok: true })
-    expect(trashed).toEqual([join(folder, 'a.txt')])
+    expect(trashed).toEqual([await realpath(join(folder, 'a.txt'))])
   })
   it('rejects root, traversal, Git metadata, missing paths and unknown folders', async () => {
     const folder = await mkdtemp(join(tmpdir(), 'files-trash-'))

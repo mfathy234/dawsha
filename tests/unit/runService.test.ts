@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { mkdtemp, mkdir, writeFile, rm, symlink } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, rm, symlink, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { RunCommandService } from '../../src/main/runCommands/service'
@@ -72,7 +72,7 @@ describe('server-side command selection', () => {
       executable: 'npm',
       args: ['run', 'dev']
     })
-    expect(runner.start.mock.calls[0][2]).toBe(target.folder)
+    expect(runner.start.mock.calls[0][2]).toBe(await realpath(target.folder))
     service.dispose()
     await expect(
       service.start({

@@ -1,4 +1,4 @@
-import { open, opendir } from 'node:fs/promises'
+import { open, opendir, realpath } from 'node:fs/promises'
 import { dirname, extname, relative, resolve } from 'node:path'
 import { createHash } from 'node:crypto'
 import type { RunCommand, RunManager } from '../../shared/runCommands'
@@ -93,9 +93,10 @@ export function parseRunJson(text: string): unknown {
 }
 
 export async function discoverRunCommands(
-  root: string,
+  requestedRoot: string,
   options: DiscoveryOptions = {}
 ): Promise<DetectedRuns> {
+  const root = await realpath(requestedRoot)
   const commands: RunCommand[] = [],
     warnings: string[] = [],
     files: string[] = []

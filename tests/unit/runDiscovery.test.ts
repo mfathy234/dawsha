@@ -21,6 +21,21 @@ afterEach(async () => {
   )
 })
 describe('read-only run discovery', () => {
+  it('uses one canonical checkout root when an alias selects a nested config', async () => {
+    const outer = await fixture({
+      'checkout/package.json': '{"packageManager":"pnpm@9.0.0"}',
+      'checkout/apps/web/package.json': '{"scripts":{"dev":"web dev"}}'
+    })
+    const checkout = join(outer, 'checkout')
+    const alias = join(outer, 'checkout-alias')
+    await symlink(checkout, alias, process.platform === 'win32' ? 'junction' : 'dir')
+    const result = await discoverRunCommands(alias, { config: 'apps/web/package.json' })
+    expect(result.commands).toMatchObject([
+      { source: 'apps/web/package.json', cwd: 'apps/web', executable: 'pnpm' }
+    ])
+    expect(result.warnings).toEqual([])
+  })
+
   it('offers solution build/test and distinct runnable projects, excluding libraries/tests/expressions', async () => {
     const root = await fixture({
       'App.sln': '',
