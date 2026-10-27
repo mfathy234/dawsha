@@ -176,6 +176,7 @@ test('continues a session in another agent with an editable summary and a from c
     await expect(page.getByRole('menuitem', { name: /Continue in/ })).toHaveText(['Continue in Claude', 'Continue in Gemini'])
     await page.keyboard.press('Escape')
 
+    await expect(page.locator('.pane').nth(1).getByRole('button', { name: 'Pane actions' })).toBeFocused()
     await page.keyboard.press('Control+k')
     await expect(page.locator('#palette-input')).toBeFocused()
     await page.keyboard.type('continue in gem')

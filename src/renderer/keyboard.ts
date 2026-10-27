@@ -79,7 +79,7 @@ function handleDictationKey(event: KeyboardEvent): boolean {
 
 function onKeyDown(event: KeyboardEvent): void {
   if (event.isComposing) return
-  if (contextMenuOpen() || (event.target as HTMLElement | null)?.closest?.('[role="menu"]')) return
+  if (contextMenuOpen() || (event.target as HTMLElement | null)?.closest?.('[role="menu"]:not(.leaving)')) return
   if (handleDictationKey(event)) return
   if (overlayOpen() || inFindBar(event)) return
   const state = store.state

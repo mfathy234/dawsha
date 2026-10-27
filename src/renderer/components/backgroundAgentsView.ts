@@ -2,11 +2,11 @@ import {
   BG_RANGES, BG_STATUSES, DEFAULT_BG_FILTERS, STATUS_LABELS, applyFilters, barLabel, compactTokens, costLabel, filtersActive, groupBySession,
   projectOptions, spanLabel, statusCounts, toggleIn, totalsOf, type BackgroundAgent, type BgFilters, type BgKind, type BgRange, type BgSessionGroup, type BgStatus
 } from '../../shared/backgroundAgents'
-import { allFolded, allOpen, groupSummary, isGroupOpen, parseFolds, setAllFolds, setFold, type FoldMap } from '../../shared/agentFolds'
+import { allFolded, allOpen, groupSummary, isGroupOpen, setAllFolds, setFold, type FoldMap } from '../../shared/agentFolds'
 import { modelLabel } from '../../shared/sessionDetail'
 import { AGENT_NAMES } from '../../shared/agents'
 import { agentsFailed, agentsFilters, agentsReport, onAgentsChange, refreshAgents, setAgentFilters } from '../backgroundAgents'
-import { findOpenSession, focusOpenSession, resumeInNewPane } from '../actions'
+import { findOpenSession, focusOpenSession, resumeInNewPane, saveSettings } from '../actions'
 import { api } from '../api'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
@@ -20,24 +20,6 @@ import './backgroundAgentsFold.css'
 
 const REFRESH_MS = 5000
 const KIND_CHIPS: { kind: BgKind; label: string }[] = [{ kind: 'claude', label: 'Claude Code' }, { kind: 'codex', label: 'Codex' }]
-
-const FOLDS_KEY = 'dawsha.agentFolds'
-
-function loadFolds(): FoldMap {
-  try {
-    return parseFolds(window.localStorage.getItem(FOLDS_KEY))
-  } catch {
-    return {}
-  }
-}
-
-function saveFolds(folds: FoldMap): void {
-  try {
-    window.localStorage.setItem(FOLDS_KEY, JSON.stringify(folds))
-  } catch {
-    // Folds are a convenience; without storage they start from their defaults again.
-  }
-}
 
 const stamp = (at: number): string => new Date(at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 const statusGlyph = (status: BgStatus): Node => (status === 'running' ? stateIcon('working') : document.createTextNode(status === 'done' ? '✓' : '✕'))
@@ -69,7 +51,7 @@ export class BackgroundAgentsViewComponent {
   private readonly rangeSelect = makeSelect('bg-range', 'Time range', (value) => this.change({ range: value as BgRange }))
   private readonly automatic = h('input', { type: 'checkbox', id: 'bg-automatic', onChange: (event: Event) => this.change({ showAutomatic: (event.target as HTMLInputElement).checked }) })
   private readonly clear = h('button', { class: 'btn ghost small', type: 'button', id: 'bg-clear', onClick: () => this.clearFilters() }, 'Clear filters')
-  private folds: FoldMap = loadFolds()
+  private folds: FoldMap = {}
   private shownGroups: readonly BgSessionGroup[] = []
   private readonly expandAll = h('button', { class: 'btn ghost small', type: 'button', id: 'bg-expand-all', onClick: () => this.foldAll(true) }, 'Expand all')
   private readonly collapseAll = h('button', { class: 'btn ghost small', type: 'button', id: 'bg-collapse-all', onClick: () => this.foldAll(false) }, 'Collapse all')
@@ -103,6 +85,7 @@ export class BackgroundAgentsViewComponent {
 
   update(state: AppState): void {
     this.projects = state.settings.projects
+    this.folds = state.settings.agentFolds
     const visible = state.view === 'background'
     if (visible === this.visible) return
     this.visible = visible
@@ -197,7 +180,8 @@ export class BackgroundAgentsViewComponent {
 
   private setFolds(folds: FoldMap): void {
     this.folds = folds
-    saveFolds(folds)
+    store.set((state) => ({ ...state, settings: { ...state.settings, agentFolds: folds } }))
+    void saveSettings({ agentFolds: folds })
     this.render()
   }
 

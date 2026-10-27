@@ -24,6 +24,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Settings, the board, Files and the Agents tab follow the same layers. The orchestrator board no longer uses a coloured side stripe.
 - Built-in themes without their own well (Dawsha Cards, Graphite Cards, Nord, GitHub and others) now use the shared layer ladder, so their backgrounds shift slightly.
 
+### Fixed
+
+- Closing the pane actions menu with Escape returns focus to its button, so the command palette shortcut works immediately.
+- Agents group fold choices are saved with the app settings and survive a quick quit and relaunch.
+
 ## [1.7.0] - 2026-10-27
 
 ### Added

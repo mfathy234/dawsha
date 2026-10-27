@@ -43,9 +43,8 @@ export function setAllFolds(folds: FoldMap, groups: readonly FoldFacts[], open: 
 }
 
 export function parseFolds(raw: unknown): FoldMap {
-  if (typeof raw !== 'string') return {}
   try {
-    const value: unknown = JSON.parse(raw)
+    const value: unknown = typeof raw === 'string' ? JSON.parse(raw) : raw
     if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
     return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean').slice(-MAX_FOLDS))
   } catch {

@@ -1,4 +1,5 @@
 import { sanitizeTicketNotes } from './ticketNotes'
+import { parseFolds } from './agentFolds'
 import { defaultOrchSettings, sanitizeOrchSettings } from './orch/profiles'
 import { isAgent } from './agents'
 import { isSessionsLayout } from './board'
@@ -82,6 +83,7 @@ export const defaultSettings = (): Settings => ({
   keptSessions: [],
   foldedProjects: [],
   foldedClosedSessions: [],
+  agentFolds: {},
   filesTabs: {},
   ticketNotes: {},
   tasks: [],
@@ -373,6 +375,7 @@ export function migrateSettings(raw: unknown): Settings {
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
     foldedProjects: sanitizeProjectIds(raw.foldedProjects, projects),
     foldedClosedSessions: sanitizeProjectIds(raw.foldedClosedSessions, projects),
+    agentFolds: parseFolds(raw.agentFolds),
     filesTabs: sanitizeFilesTabs(raw.filesTabs, projects),
     ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),

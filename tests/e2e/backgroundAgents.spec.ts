@@ -1,9 +1,10 @@
-import { mkdirSync, utimesSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
 
 const SHOTS = process.env.DAWSHA_SHOTS ?? ''
+const readSettings = (userData: string) => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 const NOW = Date.now()
 const slug = (folder: string): string => folder.replace(/[^A-Za-z0-9]/g, '-')
 const lines = (...records: unknown[]): string => records.map((r) => JSON.stringify(r)).join('\n')
@@ -268,6 +269,7 @@ test('groups with running or failed agents open, finished-only groups fold to on
     await expect(page.locator('#bg-expand-all')).toBeDisabled()
     await toggle('Release polish').click()
     await expect(toggle('Release polish')).toHaveAttribute('aria-expanded', 'false')
+    await expect.poll(() => readSettings(sandbox.userData).agentFolds?.[`claude:${PARENT}`]).toBe(false)
   } finally {
     await closeApp(first.app)
   }
