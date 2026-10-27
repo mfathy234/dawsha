@@ -167,7 +167,9 @@ for (const [mode, themeId] of THEMES) {
       expect(body.margin).toBe('6px')
       expect(body.radius).toBe('7px')
       expect(body.bg).toBe(rgb(mode === 'dark' ? '#0d1015' : '#f6f8f7'))
-      expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el).filter)).toContain('brightness')
+      expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el, '::after').backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+      expect(await focused.locator('.pane-body').evaluate((el) => getComputedStyle(el, '::after').backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+      expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el).filter)).toBe('none')
       expect(await focused.locator('.pane-body').evaluate((el) => getComputedStyle(el).filter)).toBe('none')
       expect(await idle.evaluate((el) => getComputedStyle(el).boxShadow)).toContain('inset')
 

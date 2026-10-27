@@ -13,7 +13,7 @@
 .pane-recap[hidden] { display: none; }
 
 /* Darkened rather than faded: opacity lets the page show through a dark terminal and greys it out in light themes. */
-/* Every unfocused well dims about 6% (styles.css); "Dim others" darkens the quiet ones further. */
+/* Every unfocused well gets a light tint overlay (styles.css); "Dim others" darkens the quiet ones with a filter. */
 .pane .pane-body { transition: filter var(--t-feedback); }
 .pane.calm:not(:hover):not(:focus-within) .pane-body { filter: brightness(0.72) saturate(0.8); transition-delay: 60ms; }
 @media (prefers-reduced-motion: reduce) {
