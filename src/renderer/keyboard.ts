@@ -10,6 +10,7 @@ import { boardShowing } from './sessionsLayout'
 import { DICTATION_SHORTCUT } from '../shared/dictation'
 import { cancelDictation, toggleDictation } from './dictation/dictationActions'
 import { dictationStatus } from './dictation/dictationState'
+import { contextMenuOpen } from './components/contextMenu'
 
 const overlayOpen = (): boolean => document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)') !== null
 
@@ -78,6 +79,7 @@ function handleDictationKey(event: KeyboardEvent): boolean {
 
 function onKeyDown(event: KeyboardEvent): void {
   if (event.isComposing) return
+  if (contextMenuOpen() || (event.target as HTMLElement | null)?.closest?.('[role="menu"]:not(.leaving)')) return
   if (handleDictationKey(event)) return
   if (overlayOpen() || inFindBar(event)) return
   const state = store.state

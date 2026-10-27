@@ -199,3 +199,11 @@ export async function closeSettings(page: Page): Promise<void> {
   if ((await button.getAttribute('aria-pressed')) === 'true') await button.click()
   await expect(page.locator('.settings-view')).toBeHidden()
 }
+
+export type MoreMenuView = 'projects' | 'usage' | 'work' | 'orchestrator' | 'agents' | 'skills' | 'layouts'
+
+/** Opens a view that lives under the top bar's More menu (Projects, Usage, Work, Orchestrator, Agent tools, Skills, Layouts). */
+export async function openMore(page: Page, view: MoreMenuView): Promise<void> {
+  await page.locator('#more-button').click()
+  await page.locator(`#${view}-menu-item`).click()
+}

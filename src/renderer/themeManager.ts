@@ -1,6 +1,8 @@
 import type { ITheme } from '@xterm/xterm'
 import { shadowRgb, withAlpha } from '../shared/contrast'
 import { findTheme, hasLightTerminal, type Theme } from '../shared/themes'
+import { EDITOR_COLORS } from '../shared/syntaxPalette'
+import { needsColours } from '../shared/themeLadder'
 import type { ThemeSettings } from '../shared/types'
 
 export interface ThemeBundle {
@@ -19,9 +21,15 @@ let imageVersion = 0
 
 const VARIABLES: Record<string, keyof Theme['app']> = {
   '--bg': 'background',
+  '--canvas': 'background',
   '--sidebar': 'sidebar',
+  '--chrome': 'sidebar',
   '--surface': 'surface',
+  '--pane': 'surface',
   '--raised': 'raised',
+  '--surface-pop': 'overlay',
+  '--overlay': 'overlay',
+  '--well': 'well',
   '--border': 'border',
   '--text': 'text',
   '--muted': 'muted',
@@ -59,9 +67,14 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
   root.style.setProperty('--fam-haiku', term.blue)
   root.style.setProperty('--fam-fable', bundle.theme.kind === 'dark' ? term.brightWhite : term.foreground)
   root.style.setProperty('--shadow-rgb', shadowRgb(bundle.theme.app.background, bundle.theme.app.text, bundle.theme.kind))
+  const needs = needsColours(bundle.theme.kind)
+  root.style.setProperty('--needs-ring', needs.fill)
+  root.style.setProperty('--needs', needs.text)
+  root.style.setProperty('--needs-ink', needs.text)
+  root.style.setProperty('--editor-bg', EDITOR_COLORS[bundle.theme.kind].background)
   root.dataset.theme = bundle.theme.id
   root.dataset.kind = bundle.theme.kind
-  root.dataset.paneStyle = bundle.theme.style ?? 'flat'
+  root.style.setProperty('--term-bg', term.background)
   root.classList.toggle('has-image', bundle.imageActive)
   root.style.setProperty('--image-blur', `${settings.image.blur}px`)
   const url = bundle.imageActive ? `url("dawsha-image://current/?v=${imageVersion}")` : 'none'

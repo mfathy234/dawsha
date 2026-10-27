@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, openMore } from './helpers'
 
 const FAKE_ORCH = resolve(__dirname, '../support/fakeOrchAgent.cjs')
 
@@ -26,7 +26,7 @@ test('the lead asks while planning, the human replies in Human review, and the r
   }))
   const { app, page } = await launchApp(sandbox, { DAWSHA_CLAUDE_COMMAND: process.execPath, DAWSHA_CLAUDE_ARGS: JSON.stringify([FAKE_ORCH]) })
   try {
-    await page.locator('#orchestrator-button').click()
+    await openMore(page, 'orchestrator')
     await page.locator('#orch-tab-new').click()
     await page.locator('#orch-nr-story').fill('ASK: Which config key should provisioning use?')
     // The lead decides whether a spec is needed, so the button does not promise one.
@@ -34,8 +34,8 @@ test('the lead asks while planning, the human replies in Human review, and the r
     await expect(page.locator('.orch-nr-footer')).toContainText('If the lead writes a spec, nothing is built until you approve it.')
     await page.locator('#orch-nr-start').click()
     // The question shows up for the human.
-    await expect(page.locator('#orchestrator-button .orch-badge')).toHaveText('1', { timeout: 30_000 })
-    if (!(await page.locator('.orch-view').isVisible())) await page.locator('#orchestrator-button').click()
+    await expect(page.locator('#more-button .orch-badge')).toHaveText('1', { timeout: 30_000 })
+    if (!(await page.locator('.orch-view').isVisible())) await openMore(page, 'orchestrator')
     await page.locator('#orch-tab-review').click()
     await expect(page.locator('.orch-view')).toContainText('Which config key should provisioning use?')
     await page.getByLabel('Your answer').fill('A new key, defaulting to main')

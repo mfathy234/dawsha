@@ -31,6 +31,7 @@ describe('topbar summary helpers', () => {
 
   it('labels the More button', () => {
     expect(moreLabel('agents')).toBe('More · Agent tools')
+    expect(moreLabel('usage')).toBe('More · Usage')
     expect(moreLabel('grid')).toBe('More')
   })
 

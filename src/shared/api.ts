@@ -130,6 +130,7 @@ export interface GridApi {
   existingFiles(folder: string, candidates: string[]): Promise<(string | null)[]>
   openFile(folder: string, ref: FileRef): Promise<void>
   openFileInVsCode(folder: string, path: string, line?: number): Promise<void>
+  revealProjectPath(folder: string, path: string): Promise<{ ok: true } | { ok: false; error: string }>
   readInstruction(folder: string, name: string): Promise<InstructionRead>
   writeInstruction(request: InstructionWriteRequest): Promise<InstructionWriteResult>
   openInstruction(folder: string, name: string): Promise<void>

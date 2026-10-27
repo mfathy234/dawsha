@@ -16,7 +16,7 @@ import type {
 } from '../shared/types'
 import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
-import { applyAttentionBadge, findSolution, notifyUser, openInVsCode, quickOpen } from './desktop'
+import { applyAttentionBadge, findSolution, notifyUser, openInVsCode, quickOpen, revealInFolder } from './desktop'
 import { existingFiles, openFile, resolveFile } from './fileOpen'
 import { projectFolder, readInstruction, writeInstruction } from './instructionFiles'
 import { isInstructionName, type InstructionWriteRequest } from '../shared/instructions'
@@ -247,6 +247,13 @@ export function registerIpc(
     const root = await known(folder)
     const full = root ? await resolveProjectPath(root, path) : null
     if (full && !full.includes('"')) await openInVsCode(full, Number.isInteger(line) && (line as number) > 0 ? (line as number) : undefined)
+  })
+  ipcMain.handle(IPC.filesReveal, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    const full = root ? await resolveProjectPath(root, path) : null
+    if (!full) return refused
+    revealInFolder(full)
+    return { ok: true as const }
   })
   ipcMain.handle(IPC.filesOpen, (_event, folder: string, ref: FileRef) => openFile(folder, ref))
   ipcMain.handle(IPC.instructionsRead, (_event, folder: unknown, name: unknown) =>

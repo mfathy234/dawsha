@@ -42,7 +42,6 @@
   width: 100%;
   padding: var(--orch-space-3) var(--orch-space-3);
   border: 0;
-  border-left: 3px solid transparent;
   background: none;
   color: var(--text);
   font: inherit;
@@ -51,7 +50,7 @@
 }
 
 .review-item:hover { background: var(--raised); }
-.review-item[aria-current='true'] { background: var(--raised); border-left-color: var(--accent); }
+.review-item[aria-current='true'] { background: var(--raised); box-shadow: var(--sel-ring); font-weight: 600; }
 .review-item:focus-visible { outline-offset: -2px; }
 
 .review-item-top, .review-item-meta { display: flex; align-items: center; gap: var(--orch-space-2); flex-wrap: wrap; font-size: 12px; }
@@ -87,7 +86,7 @@
   padding: var(--orch-space-3) var(--orch-space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--bg);
+  background: var(--well);
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 12px;

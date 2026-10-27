@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS } from './helpers'
+import { closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS, openMore } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const CLAUDE_ID = '11111111-2222-4333-8444-555555555555'
@@ -78,9 +78,9 @@ test('the usage view totals tokens and cost per day, project and agent from loca
   seedHomes(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Usage', exact: true }).click()
+    await openMore(page, 'usage')
     await expect(page.getByRole('heading', { name: 'Usage', level: 1 })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Usage', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('#more-button')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByRole('tab', { name: '7 days' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('.usage-col')).toHaveCount(7)
 
@@ -116,7 +116,7 @@ test('the usage view totals tokens and cost per day, project and agent from loca
     await page.locator('#sessions-button').click()
     await expect(page.locator('.usage-view')).toBeHidden()
     await expect(page.locator('#sessions-button')).toHaveAttribute('aria-pressed', 'true')
-    await page.getByRole('button', { name: 'Usage', exact: true }).click()
+    await openMore(page, 'usage')
     await expect(page.locator('.usage-view')).toBeVisible()
 
     await page.getByRole('radio', { name: 'Cost' }).click()
@@ -131,7 +131,7 @@ test('the usage view totals tokens and cost per day, project and agent from loca
     await page.getByRole('tab', { name: '30 days' }).click()
     await expect(page.locator('.usage-col')).toHaveCount(30)
 
-    await page.getByRole('button', { name: 'Usage', exact: true }).click()
+    await openMore(page, 'usage')
     await expect(page.locator('.usage-view')).toBeHidden()
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
@@ -168,7 +168,7 @@ test('sidebar session returns to its already-focused pane from Usage', async () 
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
-    await page.getByRole('button', { name: 'Usage', exact: true }).click()
+    await openMore(page, 'usage')
     await expect(page.locator('.usage-view')).toBeVisible()
     await page.locator('.sidebar .sess-row').click()
     await expect(page.locator('.usage-view')).toBeHidden()
@@ -197,7 +197,7 @@ test('records limit readings and session cost from the status-line payloads for 
   try {
     const history = join(sandbox.userData, 'usage-history.json')
     await expect.poll(() => existsSync(history) && readFileSync(history, 'utf8'), { timeout: 20_000 }).toContain('sess-live')
-    await page.getByRole('button', { name: 'Usage', exact: true }).click()
+    await openMore(page, 'usage')
     await expect(page.locator('.usage-meter[data-limit="five_hour"]')).toContainText('33% used', { timeout: 20_000 })
     await page.getByRole('tab', { name: '30 days' }).click()
     await expect(page.locator('#usage-by-agent tbody tr[data-agent="claude"] td').last()).toHaveText('$1.75')

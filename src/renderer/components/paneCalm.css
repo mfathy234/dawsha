@@ -13,6 +13,7 @@
 .pane-recap[hidden] { display: none; }
 
 /* Darkened rather than faded: opacity lets the page show through a dark terminal and greys it out in light themes. */
+/* Every unfocused well gets a light tint overlay (styles.css); "Dim others" darkens the quiet ones with a filter. */
 .pane .pane-body { transition: filter var(--t-feedback); }
 .pane.calm:not(:hover):not(:focus-within) .pane-body { filter: brightness(0.72) saturate(0.8); transition-delay: 60ms; }
 @media (prefers-reduced-motion: reduce) {
@@ -34,8 +35,14 @@
 
 /* Pane header: the session name keeps at least 9em; project, tag and "new session" go first on narrow panes and move into the tooltip. */
 .pane-header {
-  container: pane-header / inline-size; height: 40px; flex: none; display: flex; align-items: center; gap: var(--s-2);
-  padding: 0 var(--s-2) 0 var(--s-4); background: var(--surface); cursor: grab;
+  container: pane-header / inline-size; height: 38px; flex: none; display: flex; align-items: center; gap: var(--s-2);
+  padding: 0 var(--s-2) 0 var(--s-4); background: transparent; cursor: grab;
+}
+.pane.focused .pane-header { background: var(--raised); }
+.pane.focused .pane-title { font-weight: 700; }
+.pane.focused .pane-title::before {
+  content: ''; display: inline-block; width: 7px; height: 7px; margin-inline-end: var(--s-2);
+  border-radius: 1.5px; background: var(--accent); vertical-align: 1px;
 }
 .pane-header > .icon-btn { flex: none; }
 .pane-title { flex: 0 1 auto; min-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-body); font-weight: 600; color: var(--text); }

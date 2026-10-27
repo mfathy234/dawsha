@@ -582,6 +582,7 @@ export class PaneComponent {
     document.removeEventListener('pointerdown', this.outsideActions, true)
     document.removeEventListener('keydown', this.escapeActions, true)
     leave(this.actionsMenu)
+    this.actionsAnchor?.focus()
     this.actionsMenu = null
     this.actionsAnchor = null
   }

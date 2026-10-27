@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS } from './helpers'
+import { closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS, openMore } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -354,7 +354,7 @@ test('a project task keeps linked session and timeline entries', async () => {
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Projects', exact: true }).click()
+    await openMore(page, 'projects')
     await page.getByRole('tab', { name: 'Tasks' }).click()
     await page.getByRole('button', { name: 'New task' }).click()
     await page.getByRole('dialog').getByRole('textbox').fill('Theme cleanup')

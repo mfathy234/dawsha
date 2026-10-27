@@ -1,3 +1,4 @@
+import { quickOpenChoice, type QuickOpenChoice } from '../../shared/fileOpenMode'
 import { moveSelection } from '../../shared/quickPick'
 import { quickOpen as rankFiles } from '../../shared/fileTree'
 import { fuzzyMatch } from '../../shared/palette'
@@ -71,7 +72,7 @@ export async function openQuickOpen(): Promise<void> {
     h('div', { class: 'qo', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Quick open' },
       h('div', { class: 'qo-head' }, icon(ICONS.search), input, projectSelect, popupDismissButton(() => closeQuickOpen(true))),
       h('div', { class: 'qo-body' }, list, h('div', { class: 'qo-right' }, previewTitle, preview)),
-      h('div', { class: 'qo-foot' }, hint('Enter', 'open'), hint('Alt+Enter', 'add to prompt'), hint('Ctrl+Enter', 'VS Code'), hint('Up Down', 'move'), hint('Esc', 'close'))))
+      h('div', { class: 'qo-foot' }, hint('Enter', 'open'), hint('Ctrl+Enter', 'new tab'), hint('Alt+Enter', 'add to prompt'), hint('Ctrl+Shift+Enter', 'VS Code'), hint('Up Down', 'move'), hint('Esc', 'close'))))
   const state: Session = {
     overlay, input, list, preview, previewTitle, previous: document.activeElement as HTMLElement | null,
     target: target ?? { projectId: '', folder: '' }, index: { files: [], prefix: '', status: new Map() }, results: [], selected: 0, token: 0, previewToken: 0, previewTimer: undefined
@@ -191,7 +192,7 @@ function showPreview(state: Session): void {
   }, PREVIEW_DELAY_MS)
 }
 
-function choose(state: Session, how: 'open' | 'prompt' | 'code'): void {
+function choose(state: Session, how: QuickOpenChoice): void {
   const path = currentPath(state)
   if (!path) return
   const target = state.target
@@ -202,7 +203,7 @@ function choose(state: Session, how: 'open' | 'prompt' | 'code'): void {
   }
   closeQuickOpen(how === 'code')
   if (how === 'code') openInVsCode(target.folder, path)
-  else openInFiles(target, path, { pin: false })
+  else openInFiles(target, path, { pin: how === 'new-tab' })
 }
 
 function onKey(state: Session, event: KeyboardEvent): void {
@@ -223,6 +224,6 @@ function onKey(state: Session, event: KeyboardEvent): void {
   } else if (event.key === 'Enter') {
     event.preventDefault()
     event.stopPropagation()
-    choose(state, event.altKey ? 'prompt' : ctrl ? 'code' : 'open')
+    choose(state, quickOpenChoice(event))
   }
 }

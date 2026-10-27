@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { activeTermId, bufferText, closeApp, closeBounded, createSandbox, feedTerminal, launchApp, openSettings, closeSettings, QUIT_BUDGET_MS, type Sandbox } from './helpers'
+import { activeTermId, bufferText, closeApp, closeBounded, createSandbox, feedTerminal, launchApp, openSettings, closeSettings, QUIT_BUDGET_MS, type Sandbox, openMore } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -121,7 +121,8 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await expect(page.locator('.pane-info .info-age')).toContainText('ago')
     await expect(page.locator('[data-limit="five_hour"]')).toContainText('5h 9%')
     await expect(page.locator('[data-limit="seven_day"]')).toHaveText('week 54%')
-    await expect(page.locator('.topbar-limits .charge, .topbar-limits [role="meter"]')).toHaveCount(0)
+    await expect(page.locator('.topbar-limits .charge')).toHaveCount(2)
+    await expect(page.locator('[data-limit="five_hour"]')).toHaveClass(/stage-ok/)
     expect(await page.locator('.pane-info').evaluate((el) => el.getBoundingClientRect().height)).toBe(22)
     await page.screenshot({ path: join(SCREENS, '13-info-strip.png') })
 
@@ -205,7 +206,7 @@ test('needs-you: done after busy to idle, permission prompt, notification only w
     const targetPaneId = await first.getAttribute('data-pane-id')
     expect(note.paneId).toBe(targetPaneId)
 
-    await page.getByRole('button', { name: 'Usage', exact: true }).click()
+    await openMore(page, 'usage')
     await expect(page.locator('.usage-view')).toBeVisible()
     await app.evaluate(({ BrowserWindow }, paneId) => {
       BrowserWindow.getAllWindows()[0].webContents.send('app:notify-click', paneId)

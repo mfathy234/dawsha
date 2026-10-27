@@ -21,7 +21,7 @@ function openedTargets(sandbox: Sandbox): { kind: string; path: string; line?: n
 function seedProject(sandbox: Sandbox): void {
   mkdirSync(join(sandbox.projectFolder, 'src', 'invoices'), { recursive: true })
   mkdirSync(join(sandbox.projectFolder, 'tests'), { recursive: true })
-  writeFileSync(join(sandbox.projectFolder, 'src', 'invoices', 'totals.ts'), 'export const total = 1\n', 'utf8')
+  writeFileSync(join(sandbox.projectFolder, 'src', 'invoices', 'totals.ts'), Array.from({ length: 60 }, (_, i) => `export const total${i + 1} = ${i + 1}`).join('\n') + '\n', 'utf8')
   writeFileSync(join(sandbox.projectFolder, 'tests', 'a.test.ts'), 'test\n', 'utf8')
   writeFileSync(join(sandbox.projectFolder, 'README.md'), '# acme-web\n', 'utf8')
   writeFileSync(join(sandbox.projectFolder, 'preview.html'), '<!doctype html><title>Preview</title>', 'utf8')
@@ -52,7 +52,7 @@ async function hover(page: Page, point: { x: number; y: number }): Promise<void>
   await page.mouse.move(point.x + 1, point.y)
 }
 
-test('file paths in terminal output are links when the file exists, and Ctrl+click opens them at the line', async () => {
+test('file paths in terminal output are links when the file exists; Ctrl+click opens text files in Files at the line and the rest with the system', async () => {
   const sandbox = createSandbox()
   seedProject(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -70,15 +70,23 @@ test('file paths in terminal output are links when the file exists, and Ctrl+cli
     await page.keyboard.down('Control')
     await page.mouse.click(first.x, first.y)
     await page.keyboard.up('Control')
-    await expect.poll(() => openedTargets(sandbox)).toEqual([{ kind: 'default', path: totals, line: 42, col: 7 }])
+    await expect(page.locator('#files-view')).toBeVisible()
+    await expect(page.locator('.files-tab.active')).toContainText('totals.ts')
+    await expect(page.locator('.files-tab.active')).not.toHaveClass(/preview/)
+    await expect(page.locator('#files-status')).toContainText('Ln 42')
+    expect(openedTargets(sandbox)).toEqual([])
 
+    await page.locator('#sessions-button').click()
     const windows = await showLine(page, id, 'src\\invoices\\totals.ts:9 broken\r\n')
     await hover(page, windows)
     await expect(pointer).toHaveCount(1)
     await page.keyboard.down('Control')
     await page.mouse.click(windows.x, windows.y)
     await page.keyboard.up('Control')
-    await expect.poll(() => openedTargets(sandbox).at(-1)).toEqual({ kind: 'default', path: totals, line: 9 })
+    await expect(page.locator('#files-view')).toBeVisible()
+    await expect(page.locator('.files-tab')).toHaveCount(1)
+    await expect(page.locator('#files-status')).toContainText('Ln 9')
+    await page.locator('#sessions-button').click()
 
     const absolute = await showLine(page, id, `${join(sandbox.root, 'notes.md')}:3\r\n`)
     await hover(page, absolute)
@@ -94,7 +102,10 @@ test('file paths in terminal output are links when the file exists, and Ctrl+cli
     await page.keyboard.down('Control')
     await page.mouse.click(parens.x, parens.y)
     await page.keyboard.up('Control')
-    await expect.poll(() => openedTargets(sandbox).at(-1)).toEqual({ kind: 'default', path: join(sandbox.projectFolder, 'tests', 'a.test.ts'), line: 12, col: 4 })
+    await expect(page.locator('#files-view')).toBeVisible()
+    await expect(page.locator('.files-tab.active')).toContainText('a.test.ts')
+    await expect(page.locator('.files-tab')).toHaveCount(2)
+    await page.locator('#sessions-button').click()
 
     for (const [file, kind] of [['preview.html', 'html'], ['photo.png', 'image']] as const) {
       const point = await showLine(page, id, `${file} opens here\r\n`)
@@ -105,6 +116,20 @@ test('file paths in terminal output are links when the file exists, and Ctrl+cli
       await page.keyboard.up('Control')
       await expect.poll(() => openedTargets(sandbox).at(-1)).toEqual({ kind, path: join(sandbox.projectFolder, file) })
     }
+    const system = openedTargets(sandbox).length
+
+    const picture = await showLine(page, id, 'photo.png opens here\r\n')
+    await hover(page, picture)
+    await expect(pointer).toHaveCount(1)
+    await page.keyboard.down('Control')
+    await page.keyboard.down('Shift')
+    await page.mouse.click(picture.x, picture.y)
+    await page.keyboard.up('Shift')
+    await page.keyboard.up('Control')
+    await expect(page.locator('#files-view')).toBeVisible()
+    await expect(page.locator('.files-tab.active')).toContainText('photo.png')
+    expect(openedTargets(sandbox)).toHaveLength(system)
+    await page.locator('#sessions-button').click()
 
     const relative = await showLine(page, id, './README.md is the entry\r\n')
     await hover(page, relative)
@@ -125,6 +150,78 @@ test('file paths in terminal output are links when the file exists, and Ctrl+cli
     await hover(page, outside)
     await page.waitForTimeout(800)
     await expect(pointer).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('right-clicking a file path in a terminal opens a path menu that opens it in Files or VS Code and copies it', async () => {
+  test.setTimeout(120_000)
+  const sandbox = createSandbox()
+  seedProject(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const id = await startSession(page)
+    const totals = join(sandbox.projectFolder, 'src', 'invoices', 'totals.ts')
+    const menu = page.getByRole('menu', { name: 'Path actions' })
+    const clipboard = (): Promise<string> => app.evaluate(({ clipboard }) => clipboard.readText())
+    const rightClick = async (point: { x: number; y: number }): Promise<void> => {
+      await hover(page, point)
+      await expect(page.locator('.term-host.active .xterm-cursor-pointer')).toHaveCount(1)
+      await page.mouse.click(point.x, point.y, { button: 'right' })
+      await expect(menu).toBeVisible()
+    }
+
+    const point = await showLine(page, id, 'src/invoices/totals.ts:42:7 type mismatch\r\n')
+    await rightClick(point)
+    await expect(page.locator('.ctx-menu:not(.leaving) .ctx-label')).toHaveText(['Open in Files', 'Open in Files, new tab', 'Open in VS Code', 'Copy path', 'Copy relative path'])
+    await expect(page.locator('.ctx-menu:not(.leaving) .ctx-keys')).toHaveText(['Ctrl+click'])
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.ctx-menu:not(.leaving)')).toHaveCount(0)
+    await expect(page.locator('.term-host.active .xterm-helper-textarea')).toBeFocused()
+
+    await page.locator('.pane.focused .maximize').click()
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    await page.waitForTimeout(600)
+    await rightClick(await showLine(page, id, 'src/invoices/totals.ts:42:7 type mismatch\r\n'))
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.ctx-menu:not(.leaving)')).toHaveCount(0)
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    await page.locator('.pane.maximized .maximize').click()
+    await expect(page.locator('.pane.maximized')).toHaveCount(0)
+    await page.waitForTimeout(600)
+
+    const again = await showLine(page, id, 'src/invoices/totals.ts:42:7 type mismatch\r\n')
+    await rightClick(again)
+    await menu.getByRole('menuitem', { name: /^Copy path/ }).click()
+    await expect.poll(clipboard).toBe(totals)
+    await rightClick(point)
+    await menu.getByRole('menuitem', { name: /^Copy relative path/ }).click()
+    await expect.poll(clipboard).toBe('src/invoices/totals.ts')
+
+    await rightClick(point)
+    await menu.getByRole('menuitem', { name: /^Open in VS Code/ }).click()
+    await expect.poll(() => openedTargets(sandbox).at(-1)).toMatchObject({ kind: 'vscode-file', line: 42 })
+
+    await rightClick(point)
+    await menu.getByRole('menuitem', { name: /^Open in Files$/ }).click()
+    await expect(page.locator('#files-view')).toBeVisible()
+    await expect(page.locator('.files-tab.active')).toContainText('totals.ts')
+    await expect(page.locator('.files-tab.active')).toHaveClass(/preview/)
+    await expect(page.locator('#files-status')).toContainText('Ln 42')
+    await page.locator('#sessions-button').click()
+
+    await rightClick(point)
+    await menu.getByRole('menuitem', { name: /^Open in Files, new tab/ }).click()
+    await expect(page.locator('#files-view')).toBeVisible()
+    await expect(page.locator('.files-tab.active')).not.toHaveClass(/preview/)
+    await page.locator('#sessions-button').click()
+
+    const outside = await showLine(page, id, `${join(sandbox.root, 'notes.md')}:3\r\n`)
+    await rightClick(outside)
+    for (const name of [/^Open in Files$/, /^Open in Files, new tab/, /^Open in VS Code/, /^Copy relative path/]) await expect(menu.getByRole('menuitem', { name })).toBeDisabled()
+    await expect(menu.getByRole('menuitem', { name: /^Copy path/ })).toBeEnabled()
+    await page.keyboard.press('Escape')
   } finally {
     await closeApp(app)
   }

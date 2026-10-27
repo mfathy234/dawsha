@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { activeTermId, bufferText, closeApp, createSandbox, launchApp, lastInput, QUIT_BUDGET_MS, rawBufferText } from './helpers'
+import { activeTermId, bufferText, closeApp, createSandbox, launchApp, lastInput, QUIT_BUDGET_MS, rawBufferText, openMore } from './helpers'
 
 const SLOW = 30_000
 const ECHO = resolve(__dirname, '../support/echoInput.cjs')
@@ -84,7 +84,7 @@ test('dictation goes into the focused text box at the caret, not the terminal', 
   try {
     const id = await startEcho(page)
     await useFakeEngine(page, ARABIC)
-    await page.getByRole('button', { name: 'Projects', exact: true }).click()
+    await openMore(page, 'projects')
     const text = page.getByRole('searchbox', { name: 'Filter projects' })
     await text.fill('before after')
     await text.evaluate((el: HTMLInputElement) => el.setSelectionRange(7, 7))

@@ -32,3 +32,15 @@ export function placeMenu(anchor: Rect, width: number, height: number, viewWidth
     maxHeight: height > room ? room : null
   }
 }
+
+/**
+ * Where a right-click menu of `width` x `height` goes for a pointer at (x, y): its top-left corner on the pointer,
+ * moved left or up when it would leave the window, and shortened to the window (it then scrolls) when it is taller.
+ */
+export function placeAtPoint(x: number, y: number, width: number, height: number, viewWidth: number, viewHeight: number): Placement {
+  const left = Math.max(MARGIN, Math.min(x, viewWidth - width - MARGIN))
+  const room = Math.max(0, viewHeight - 2 * MARGIN)
+  const shown = Math.min(height, room)
+  const top = Math.max(MARGIN, Math.min(y, viewHeight - shown - MARGIN))
+  return { left, top, maxHeight: height > room ? room : null }
+}

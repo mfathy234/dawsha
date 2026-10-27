@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, utimesSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, QUIT_BUDGET_MS } from './helpers'
+import { closeApp, createSandbox, launchApp, QUIT_BUDGET_MS, openMore } from './helpers'
 
 const START = '<!-- dawsha:shared:start -->'
 const END = '<!-- dawsha:shared:end -->'
@@ -16,7 +16,7 @@ function writeExternal(path: string, text: string): void {
 }
 
 async function openTab(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Projects', exact: true }).click()
+  await openMore(page, 'projects')
   await page.getByRole('tab', { name: 'Instructions' }).click()
   await expect(page.getByRole('tab', { name: 'Instructions' })).toHaveAttribute('aria-selected', 'true')
 }

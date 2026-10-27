@@ -8,6 +8,16 @@ import { SettingsStore } from '../../src/main/settingsStore'
 const tempFile = (): string => join(mkdtempSync(join(tmpdir(), 'cg-settings-')), 'settings.json')
 
 describe('migrateSettings', () => {
+  it('persists bounded, boolean agent fold choices through a settings reload', () => {
+    const file = tempFile()
+    const store = new SettingsStore(file)
+    store.update({ agentFolds: { 'claude:busy': false, 'codex:done': true } })
+    expect(new SettingsStore(file).load().settings.agentFolds).toEqual({ 'claude:busy': false, 'codex:done': true })
+    expect(migrateSettings({ agentFolds: { good: false, bad: 'yes' } }).agentFolds).toEqual({ good: false })
+    const many = Object.fromEntries(Array.from({ length: 420 }, (_, i) => [`s${i}`, false]))
+    expect(Object.keys(migrateSettings({ agentFolds: many }).agentFolds)).toHaveLength(400)
+    expect(migrateSettings({ agentFolds: [] }).agentFolds).toEqual({})
+  })
   it('turns the orchestrator on for everyone, including settings that turned it off before 1.5', () => {
     expect(defaultSettings().experimental).toEqual({ orchestrator: true })
     expect(migrateSettings({ experimental: { orchestrator: false } }).experimental).toEqual({ orchestrator: true })

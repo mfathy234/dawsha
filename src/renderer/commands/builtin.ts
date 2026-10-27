@@ -123,9 +123,9 @@ export function installBuiltinCommands(): void {
     },
     {
       id: 'pane.next-attention',
-      title: 'Go to the session that needs you',
+      title: 'Jump to the next pane that needs you',
       group: 'Actions',
-      keywords: 'waiting done permission attention',
+      keywords: 'waiting done permission attention next jump',
       ...withKeys('Ctrl+Shift+J'),
       enabled: (state) => Object.values(state.attention).some((a) => a !== 'none'),
       run: () => void focusNextAttention()

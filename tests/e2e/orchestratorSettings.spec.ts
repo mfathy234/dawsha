@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, openMore } from './helpers'
 
 const shots = resolve(__dirname, '../../test-results/orch-ui-simplify-shots')
 
@@ -19,7 +19,7 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
       await page.screenshot({ path: join(shots, `${name}-${theme}.png`), animations: 'disabled' })
     }
     try {
-      await page.locator('#orchestrator-button').click()
+      await openMore(page, 'orchestrator')
       await page.locator('#orch-tab-new').click()
       await expect(page.locator('#orch-nr-plans')).toContainText('Lead: opus')
       await expect(page.locator('#orch-nr-plans')).toContainText('team picked by the lead')
@@ -76,7 +76,7 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
       await page.locator('#settings-button').click()
       await expect(page.locator('#settings-orchestrator-trust')).not.toBeChecked()
       await page.locator('#settings-button').click()
-      await page.locator('#orchestrator-button').click()
+      await openMore(page, 'orchestrator')
       await page.locator('#orch-tab-boards').click()
       await shot('boards')
       await page.locator('#orch-tab-history').click()
@@ -93,8 +93,10 @@ test('the orchestrator is a normal feature: on for settings that turned it off, 
   }))
   const { app, page } = await launchApp(sandbox)
   try {
-    await expect(page.locator('#orchestrator-button')).toBeVisible()
-    await page.locator('#orchestrator-button').click()
+    await page.locator('#more-button').click()
+    await expect(page.locator('#orchestrator-menu-item')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await openMore(page, 'orchestrator')
     await expect(page.locator('#orch-tab-new')).toBeVisible()
     await page.locator('#settings-button').click()
     const nav = page.locator('.settings-nav')

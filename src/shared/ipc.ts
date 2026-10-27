@@ -71,6 +71,7 @@ export const IPC = {
   filesExist: 'files:exist',
   filesOpen: 'files:open',
   filesOpenVsCode: 'files:open-vscode',
+  filesReveal: 'files:reveal',
   instructionsRead: 'instructions:read',
   instructionsWrite: 'instructions:write',
   instructionsOpen: 'instructions:open',

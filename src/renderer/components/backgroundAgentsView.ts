@@ -2,10 +2,11 @@ import {
   BG_RANGES, BG_STATUSES, DEFAULT_BG_FILTERS, STATUS_LABELS, applyFilters, barLabel, compactTokens, costLabel, filtersActive, groupBySession,
   projectOptions, spanLabel, statusCounts, toggleIn, totalsOf, type BackgroundAgent, type BgFilters, type BgKind, type BgRange, type BgSessionGroup, type BgStatus
 } from '../../shared/backgroundAgents'
+import { allFolded, allOpen, groupSummary, isGroupOpen, setAllFolds, setFold, type FoldMap } from '../../shared/agentFolds'
 import { modelLabel } from '../../shared/sessionDetail'
 import { AGENT_NAMES } from '../../shared/agents'
 import { agentsFailed, agentsFilters, agentsReport, onAgentsChange, refreshAgents, setAgentFilters } from '../backgroundAgents'
-import { findOpenSession, focusOpenSession, resumeInNewPane } from '../actions'
+import { findOpenSession, focusOpenSession, resumeInNewPane, saveSettings } from '../actions'
 import { api } from '../api'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
@@ -15,6 +16,7 @@ import { stateIcon } from './stateIcon'
 import { selectMenu, syncSelectMenu } from './selectMenu'
 import { toast } from './toast'
 import './backgroundAgentsView.css'
+import './backgroundAgentsFold.css'
 
 const REFRESH_MS = 5000
 const KIND_CHIPS: { kind: BgKind; label: string }[] = [{ kind: 'claude', label: 'Claude Code' }, { kind: 'codex', label: 'Codex' }]
@@ -49,6 +51,10 @@ export class BackgroundAgentsViewComponent {
   private readonly rangeSelect = makeSelect('bg-range', 'Time range', (value) => this.change({ range: value as BgRange }))
   private readonly automatic = h('input', { type: 'checkbox', id: 'bg-automatic', onChange: (event: Event) => this.change({ showAutomatic: (event.target as HTMLInputElement).checked }) })
   private readonly clear = h('button', { class: 'btn ghost small', type: 'button', id: 'bg-clear', onClick: () => this.clearFilters() }, 'Clear filters')
+  private folds: FoldMap = {}
+  private shownGroups: readonly BgSessionGroup[] = []
+  private readonly expandAll = h('button', { class: 'btn ghost small', type: 'button', id: 'bg-expand-all', onClick: () => this.foldAll(true) }, 'Expand all')
+  private readonly collapseAll = h('button', { class: 'btn ghost small', type: 'button', id: 'bg-collapse-all', onClick: () => this.foldAll(false) }, 'Collapse all')
   private readonly body = h('div', { class: 'bg-body' })
   private readonly filtersBar: HTMLElement
 
@@ -62,7 +68,7 @@ export class BackgroundAgentsViewComponent {
       h('label', { class: 'bg-check', for: 'bg-automatic' }, this.automatic, 'Show automatic reviews'),
       this.clear)
     this.el.append(
-      h('div', { class: 'bg-head' }, h('h1', {}, 'Background agents'), this.chips, h('span', { class: 'spacer' }), this.totals),
+      h('div', { class: 'bg-head' }, h('h1', {}, 'Background agents'), this.chips, h('span', { class: 'spacer' }), h('div', { class: 'bg-fold-all', role: 'group', 'aria-label': 'Session groups' }, this.expandAll, this.collapseAll), this.totals),
       this.filtersBar,
       this.body)
     this.search.addEventListener('keydown', (event) => {
@@ -79,6 +85,7 @@ export class BackgroundAgentsViewComponent {
 
   update(state: AppState): void {
     this.projects = state.settings.projects
+    this.folds = state.settings.agentFolds
     const visible = state.view === 'background'
     if (visible === this.visible) return
     this.visible = visible
@@ -133,7 +140,7 @@ export class BackgroundAgentsViewComponent {
     const all = report?.agents ?? []
     const signature = JSON.stringify([
       all.map((agent) => [agent.key, agent.status, agent.lastActivityAt, agent.endedAt, agent.tokens, agent.description, agent.lastStep, agent.result, agent.statusNote]),
-      filters, this.selected, agentsFailed(), report === null, this.projects.map((project) => project.id + project.name),
+      filters, this.selected, this.folds, agentsFailed(), report === null, this.projects.map((project) => project.id + project.name),
       Math.floor((report?.generatedAt ?? 0) / 60_000)
     ])
     if (signature === this.signature && this.el.isConnected) return
@@ -148,14 +155,43 @@ export class BackgroundAgentsViewComponent {
     const selected = shown.find((agent) => agent.key === this.selected) ?? null
     if (!selected) this.selected = null
     const content: (HTMLElement | null)[] = []
+    this.shownGroups = []
     if (agentsFailed() && !report) content.push(h('p', { class: 'field-error', role: 'alert' }, 'Could not read the agent transcripts. Try again in a moment.'))
     else if (!report) content.push(h('p', { class: 'bg-empty', role: 'status' }, 'Looking for background agents…'))
     else if (shown.length === 0) content.push(this.empty(all, filters))
     else content.push(this.board(shown, report.generatedAt), selected ? this.details(selected) : null)
     this.body.className = `bg-body${selected ? ' has-details' : ''}`
-    const focusedKey = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.bg-item')?.dataset.key
+    const active = document.activeElement as HTMLElement | null
+    const focusedKey = active?.closest<HTMLElement>('.bg-item')?.dataset.key
+    const focusedGroup = active?.closest<HTMLElement>('.bg-group-toggle')?.dataset.session
     this.body.replaceChildren(...content.filter((node): node is HTMLElement => node !== null))
     if (focusedKey) this.body.querySelector<HTMLElement>(`.bg-item[data-key="${CSS.escape(focusedKey)}"]`)?.focus()
+    else if (focusedGroup) this.body.querySelector<HTMLElement>(`.bg-group-toggle[data-session="${CSS.escape(focusedGroup)}"]`)?.focus()
+    this.syncFoldAll()
+  }
+
+  private syncFoldAll(): void {
+    const any = this.shownGroups.length > 0
+    this.expandAll.hidden = !any
+    this.collapseAll.hidden = !any
+    this.expandAll.disabled = any && allOpen(this.shownGroups, this.folds)
+    this.collapseAll.disabled = any && allFolded(this.shownGroups, this.folds)
+  }
+
+  private setFolds(folds: FoldMap): void {
+    this.folds = folds
+    store.set((state) => ({ ...state, settings: { ...state.settings, agentFolds: folds } }))
+    void saveSettings({ agentFolds: folds })
+    this.render()
+  }
+
+  private foldAll(open: boolean): void {
+    this.setFolds(setAllFolds(this.folds, this.shownGroups, open))
+  }
+
+  private toggleGroup(group: BgSessionGroup, open = !isGroupOpen(group, this.folds)): void {
+    if (open === isGroupOpen(group, this.folds)) return
+    this.setFolds(setFold(this.folds, group.sessionKey, open))
   }
 
   private empty(all: readonly BackgroundAgent[], filters: BgFilters): HTMLElement {
@@ -175,21 +211,33 @@ export class BackgroundAgentsViewComponent {
   }
 
   private board(agents: readonly BackgroundAgent[], now: number): HTMLElement {
-    const groups = groupBySession(agents, now).map((group) => this.group(group, now))
-    const hint = h('p', { class: 'bg-hint' }, 'Select a row for details. Arrow keys move between rows.')
+    this.shownGroups = groupBySession(agents, now)
+    const groups = this.shownGroups.map((group) => this.group(group, now))
+    const hint = h('p', { class: 'bg-hint' }, 'Select a row for details. Up and Down move between rows; Left and Right fold or unfold a session.')
     return h('section', { class: 'bg-board', id: 'bg-board', 'aria-label': 'Agents by session' },
       h('div', { class: 'bg-groups', onKeydown: (event: Event) => this.moveFocus(event as KeyboardEvent) }, ...groups), hint)
   }
 
   private group(group: BgSessionGroup, now: number): HTMLElement {
-        return h('section', { class: 'bg-group', 'aria-label': group.title, 'data-session': group.sessionKey },
-      h('header', { class: 'bg-group-head' },
+    const open = isGroupOpen(group, this.folds)
+    const listId = `bg-items-${group.sessionKey.replace(/[^A-Za-z0-9_-]/g, '_')}`
+    const summary = groupSummary(group).flatMap((part, index) => [
+      ...(index > 0 ? [document.createTextNode(' · ')] : []),
+      h('span', { class: part.tone === 'needs' ? 'bg-needs' : '' }, part.text)
+    ])
+    return h('section', { class: `bg-group${open ? ' open' : ''}`, 'data-session': group.sessionKey },
+      h('h2', { class: 'bg-group-head' },
+        h('button', {
+          class: 'bg-group-toggle', type: 'button', id: `${listId}-toggle`, 'data-session': group.sessionKey, 'aria-expanded': String(open), 'aria-controls': listId,
+          title: group.title, onClick: () => this.toggleGroup(group)
+        },
+        h('span', { class: 'bg-chevron', 'aria-hidden': 'true' }, icon(ICONS.chevronRight)),
         agentMark(group.agentKind),
-        h('div', { class: 'bg-group-who' },
-          h('h2', { class: 'bg-group-title', title: group.title }, group.title),
+        h('span', { class: 'bg-group-who' },
+          h('span', { class: 'bg-group-title' }, group.title),
           h('span', { class: 'bg-group-project' }, group.project)),
-        h('span', { class: 'bg-group-counts' }, count(group.agents.length, 'agent'))),
-      h('div', { class: 'bg-items' }, ...group.agents.map((agent) => this.item(agent, now))))
+        h('span', { class: 'bg-group-counts' }, ...summary))),
+      h('div', { class: 'bg-items', id: listId, role: 'group', 'aria-labelledby': `${listId}-toggle`, hidden: !open }, ...(open ? group.agents.map((agent) => this.item(agent, now)) : [])))
   }
 
   private item(agent: BackgroundAgent, now: number): HTMLElement {
@@ -214,14 +262,23 @@ export class BackgroundAgentsViewComponent {
   }
 
   private moveFocus(event: KeyboardEvent): void {
-    const keys = ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End']
-    if (!keys.includes(event.key)) return
-    const bars = [...this.body.querySelectorAll<HTMLElement>('.bg-item')]
-    const at = bars.indexOf(document.activeElement as HTMLElement)
+    const stops = [...this.body.querySelectorAll<HTMLElement>('.bg-group-toggle, .bg-item')]
+    const at = stops.indexOf(document.activeElement as HTMLElement)
     if (at < 0) return
-    const next = event.key === 'Home' ? 0 : event.key === 'End' ? bars.length - 1 : Math.min(bars.length - 1, Math.max(0, at + (event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : -1)))
+    const current = stops[at]
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      const key = current.closest<HTMLElement>('.bg-group')?.dataset.session
+      const group = this.shownGroups.find((candidate) => candidate.sessionKey === key)
+      if (!group) return
+      event.preventDefault()
+      if (current.classList.contains('bg-group-toggle')) this.toggleGroup(group, event.key === 'ArrowRight')
+      else if (event.key === 'ArrowLeft') this.body.querySelector<HTMLElement>(`.bg-group-toggle[data-session="${CSS.escape(group.sessionKey)}"]`)?.focus()
+      return
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? stops.length - 1 : Math.min(stops.length - 1, Math.max(0, at + (event.key === 'ArrowDown' ? 1 : -1)))
     event.preventDefault()
-    bars[next]?.focus()
+    stops[next]?.focus()
   }
 
   private row(label: string, value: string | null): HTMLElement | null {

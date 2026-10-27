@@ -10,13 +10,13 @@
 :root .dialog,
 :root .popover,
 :root .palette {
-  --field-bg: var(--bg);
+  --field-bg: var(--well);
   border-radius: var(--popup-radius);
   background: var(--surface-pop);
   box-shadow: var(--popup-shadow);
 }
 
-:is(.dialog, .popover, .palette) :is(.text-input, .field-select) { border: 0; background: var(--field-bg); }
+:is(.dialog, .popover, .palette) :is(.text-input, .field-select) { border: 0; background: var(--field-bg); box-shadow: var(--field-shadow); }
 
 :root .dialog h2,
 :root .popup-head .popover-title,

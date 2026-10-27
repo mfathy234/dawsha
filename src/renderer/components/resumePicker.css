@@ -2,4 +2,4 @@
 .rp-facts { margin: var(--s-3) 0 var(--s-1); color: var(--muted); font-size: var(--fs-ui); }
 .rp-field p { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.5; }
 .rp-field + .rp-field { margin-top: var(--s-1); }
-.rp-match p { padding: var(--s-2) var(--s-2); background: var(--bg); border-radius: var(--radius); }
+.rp-match p { padding: var(--s-2) var(--s-2); background: var(--well); border-radius: var(--radius); }
