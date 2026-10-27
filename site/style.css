@@ -146,7 +146,8 @@ section { padding: 88px 0; }
 .download-title { font-size: 1rem; font-weight: 650; line-height: 1.15; }
 .download-meta { font-size: .78rem; font-weight: 500; line-height: 1.2; opacity: .78; }
 .download-meta { display: flex; align-items: center; gap: 6px; }
-.download-tag { padding: 0 5px; border-radius: 4px; background: rgba(6, 40, 28, .14); font-family: var(--font-mono, monospace); font-size: .72rem; font-weight: 600; }
+.download-tag { font: inherit; }
+.download-tag::after { content: " ·"; }
 .download-tag:empty { display: none; }
 .platform-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 36px; align-items: stretch; }
 .platform-card { min-width: 0; padding: 24px; border-radius: var(--radius); background: var(--surface); }
