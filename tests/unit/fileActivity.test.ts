@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blameLines, collectEdits } from '../../src/shared/fileActivity'
+import { ago, blameLines, collectEdits } from '../../src/shared/fileActivity'
 import type { TimelineEvent } from '../../src/shared/timeline'
 
 const ev = (over: Partial<TimelineEvent> & { kind: TimelineEvent['kind'] }): TimelineEvent => ({ id: '0', at: 0, text: '', ...over })
@@ -47,5 +47,15 @@ describe('blameLines', () => {
     expect(blameLines([1], []).size).toBe(0)
     expect(blameLines([], [a]).size).toBe(0)
     expect(blameLines([1, 2], [a, { ...b, edits: [{ at: 1, added: 0, removed: 3, task: '' }] }]).size).toBe(2)
+  })
+})
+
+describe('ago', () => {
+  it('uses minutes, hours and days', () => {
+    const now = 10 * 86_400_000
+    expect(ago(now - 10_000, now)).toBe('just now')
+    expect(ago(now - 5 * 60_000, now)).toBe('5m ago')
+    expect(ago(now - 3 * 3_600_000, now)).toBe('3h ago')
+    expect(ago(now - 4 * 86_400_000, now)).toBe('4d ago')
   })
 })

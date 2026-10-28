@@ -6,3 +6,9 @@
 .ctx-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ctx-keys { flex: none; color: var(--muted); font-size: var(--fs-ui); }
 .ctx-sep { height: 1px; margin: var(--s-1) var(--s-2); background: color-mix(in srgb, var(--text) 12%, transparent); }
+
+.ctx-item:has(.ctx-detail) { height: auto; min-height: 30px; padding-block: var(--s-1); }
+.ctx-main { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+.ctx-detail { color: var(--muted); font-size: var(--fs-status); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctx-check { display: inline-flex; flex: none; color: var(--accent); }
+.ctx-heading { padding: var(--s-2) var(--s-3) var(--s-1); color: var(--muted); font-size: var(--fs-status); }

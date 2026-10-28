@@ -4,6 +4,8 @@ import { toast } from '../components/toast'
 import type { CursorInfo, EditorTheme, FileEditor } from './editor'
 import type { DiffStat } from './diffStat'
 import type { OutlineItem } from './outline'
+import type { Extension } from '@codemirror/state'
+import { previewByDefault, previewKind } from '../../shared/filePreview'
 
 type EditorModule = typeof import('./editor')
 type StatModule = typeof import('./diffStat')
@@ -57,6 +59,8 @@ export class FileDoc {
   /** Not inside a git repository: there is nothing to compare with. */
   noRepo = false
   stat: DiffStat | null = null
+  /** Markdown, HTML and images show rendered; the Source button turns this off. */
+  previewing: boolean
   newFile = false
   private loading: Promise<void> | null = null
   private toggling: Promise<void> = Promise.resolve()
@@ -64,7 +68,36 @@ export class FileDoc {
   private statTimer: number | undefined
   private outlineTimer: number | undefined
 
-  constructor(readonly folder: string, readonly path: string, private readonly hooks: DocHooks) {}
+  constructor(readonly folder: string, readonly path: string, private readonly hooks: DocHooks) {
+    this.previewing = previewByDefault(path)
+  }
+
+  get previewKind(): ReturnType<typeof previewKind> {
+    return previewKind(this.path)
+  }
+
+  get canPreview(): boolean {
+    return this.previewKind !== null && !this.deleted
+  }
+
+  setPreview(on: boolean): void {
+    if (this.previewing === on) return
+    this.previewing = on
+    this.hooks.changed(this)
+  }
+
+  /** The text in the editor (empty before the file loaded). */
+  text(): string {
+    return this.editor?.getText() ?? ''
+  }
+
+  annotate(extension: Extension): void {
+    this.editor?.annotate(extension)
+  }
+
+  addedLines(): number[] {
+    return this.changes ? this.editor?.addedLines() ?? [] : []
+  }
 
   ensureLoaded(): Promise<void> {
     if (this.status !== 'idle') return this.loading ?? Promise.resolve()

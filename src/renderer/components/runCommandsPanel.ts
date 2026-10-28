@@ -49,7 +49,6 @@ export class RunCommandsPanel {
   private busy = false
   private readonly commands = element('select')
   private readonly manager = element('select')
-  private readonly existing = element('select')
   private readonly display = element('code', 'run-display')
   private readonly cwd = element('div', 'run-context')
   private readonly source = element('div', 'run-context')
@@ -62,17 +61,16 @@ export class RunCommandsPanel {
   private readonly cwdInput = element('input')
   private editingId = ''
   private readonly startButton: HTMLButtonElement
+  private readonly restartButton: HTMLButtonElement
   private readonly stopButton: HTMLButtonElement
   private readonly editButton: HTMLButtonElement
   private readonly unsubscribe: () => void
+  private readonly listeners = new Set<(runs: RunSnapshot[], selected: string) => void>()
+  /** Esc or Ctrl+W inside the panel: the host minimises it. */
+  dismiss: (() => void) | null = null
   constructor(private readonly runsApi: RunApi = api.runs) {
     this.el.hidden = true
     this.el.setAttribute('aria-label', 'Run commands')
-    const header = element('div', 'run-header')
-    header.append(
-      element('strong', '', 'Run commands'),
-      button('run-close', 'Close', () => this.hide())
-    )
     this.commands.id = 'run-command'
     this.commands.setAttribute('aria-label', 'Run command')
     this.commands.addEventListener('change', () => this.renderCommand())
@@ -96,6 +94,9 @@ export class RunCommandsPanel {
     this.startButton = button('run-start', 'Run', () => {
       void this.start()
     })
+    this.restartButton = button('run-restart', 'Restart', () => {
+      void this.restart()
+    })
     this.stopButton = button('run-stop', 'Stop', () => {
       void this.stop()
     })
@@ -105,6 +106,7 @@ export class RunCommandsPanel {
     toolbar.append(
       this.commands,
       this.startButton,
+      this.restartButton,
       this.stopButton,
       this.editButton,
       button('run-add', 'Add command', () => this.edit()),
@@ -121,16 +123,10 @@ export class RunCommandsPanel {
     this.source.id = 'run-source'
     this.message.setAttribute('role', 'status')
     this.message.id = 'run-message'
-    this.existing.id = 'run-existing'
-    this.existing.setAttribute('aria-label', 'Existing runs across checkouts')
-    this.existing.addEventListener('change', () => {
-      this.selectedRun = this.existing.value
-      this.renderRuns()
-    })
     this.status.id = 'run-status'
     this.status.setAttribute('aria-live', 'polite')
     const runHeader = element('div', 'run-result-header')
-    runHeader.append(labelled('Existing runs', this.existing), this.status)
+    runHeader.append(this.status)
     this.output.id = 'run-output'
     this.output.tabIndex = 0
     this.output.setAttribute('aria-label', 'Run output')
@@ -169,7 +165,6 @@ export class RunCommandsPanel {
       void this.save()
     })
     this.el.append(
-      header,
       toolbar,
       this.display,
       this.cwd,
@@ -191,13 +186,13 @@ export class RunCommandsPanel {
       }
       if (primary && event.key.toLowerCase() === 'w') {
         event.preventDefault()
-        this.hide()
+        this.dismiss?.()
         return
       }
       if (event.key === 'Escape') {
         event.preventDefault()
         if (!this.editor.hidden) this.editor.hidden = true
-        else this.hide()
+        else this.dismiss?.()
       }
     })
     this.unsubscribe = this.runsApi.onChanged((runs) => {
@@ -238,10 +233,31 @@ export class RunCommandsPanel {
   show(): void {
     this.el.hidden = false
     if (this.target && !this.discovery) void this.refresh()
-    this.commands.focus()
   }
   hide(): void {
     this.el.hidden = true
+  }
+  focusPicker(): void {
+    this.commands.focus()
+  }
+  get runList(): readonly RunSnapshot[] {
+    return this.runs
+  }
+  get selectedRunId(): string {
+    return this.selectedRun
+  }
+  get targetFolder(): string | null {
+    return this.target?.folder ?? null
+  }
+  selectRun(id: string): void {
+    if (!this.runs.some((run) => run.id === id)) return
+    this.selectedRun = id
+    this.renderRuns()
+  }
+  onRuns(listener: (runs: RunSnapshot[], selected: string) => void): () => void {
+    this.listeners.add(listener)
+    listener(this.runs, this.selectedRun)
+    return () => this.listeners.delete(listener)
   }
   dispose(): void {
     this.epoch++
@@ -318,19 +334,10 @@ export class RunCommandsPanel {
     this.commands.disabled = this.busy || !command
   }
   private renderRuns(): void {
-    const old = this.selectedRun
-    this.existing.replaceChildren()
-    for (const run of this.runs) {
-      const option = element(
-        'option',
-        '',
-        `${run.name} · ${run.status} · ${run.folder}`
-      )
-      option.value = run.id
-      this.existing.append(option)
+    if (!this.runs.some((run) => run.id === this.selectedRun)) {
+      const here = [...this.runs].reverse().find((run) => run.folder === this.target?.folder)
+      this.selectedRun = here?.id ?? this.runs[this.runs.length - 1]?.id ?? ''
     }
-    if (this.runs.some((run) => run.id === old)) this.existing.value = old
-    this.selectedRun = this.existing.value
     const run = this.runs.find((r) => r.id === this.selectedRun)
     const stick =
       this.output.scrollHeight -
@@ -345,8 +352,10 @@ export class RunCommandsPanel {
     this.status.dataset.state = run?.status ?? ''
     this.stopButton.disabled =
       !run || !['running', 'stopping'].includes(run.status)
-    this.existing.disabled = !run
-    this.existing.title = run ? `${run.display}\n${run.cwd}` : ''
+    this.restartButton.disabled = !run || this.busy
+    this.output.title = run ? `${run.display}
+${run.cwd}` : ''
+    for (const listener of this.listeners) listener(this.runs, this.selectedRun)
   }
   private async choose(): Promise<void> {
     const target = this.target,
@@ -447,6 +456,30 @@ export class RunCommandsPanel {
       if (this.target === target) this.busy = false
       this.renderCommand()
     }
+  }
+  private async restart(): Promise<void> {
+    const run = this.runs.find((r) => r.id === this.selectedRun)
+    if (!run || this.busy) return
+    if (run.folder !== this.target?.folder || !this.discovery?.commands.some((c) => c.id === run.commandId)) {
+      this.message.textContent = 'Restart works from the checkout the command was started in.'
+      return
+    }
+    this.commands.value = run.commandId
+    this.renderCommand()
+    if (['running', 'stopping'].includes(run.status)) {
+      try {
+        await this.runsApi.stop(run.id)
+      } catch (error) {
+        this.error(error)
+        return
+      }
+      for (let waited = 0; waited < 50; waited += 1) {
+        const now = this.runs.find((r) => r.id === run.id)
+        if (!now || !['running', 'stopping'].includes(now.status)) break
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    }
+    await this.start()
   }
   private async stop(): Promise<void> {
     if (!this.selectedRun) return

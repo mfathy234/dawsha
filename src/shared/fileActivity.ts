@@ -68,3 +68,13 @@ export function blameLines(addedLines: readonly number[], sources: readonly Blam
   }
   return out
 }
+
+/** How long ago, in the plain words a list needs. */
+export function ago(at: number, now = Date.now()): string {
+  const minutes = Math.max(0, Math.round((now - at) / 60_000))
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 48) return `${hours}h ago`
+  return `${Math.round(hours / 24)}d ago`
+}
