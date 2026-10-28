@@ -4,7 +4,7 @@ import {
 } from '../../src/shared/fileSearch'
 
 const request = (over: Partial<SearchRequest> = {}): SearchRequest => ({ query: 'foo', matchCase: false, wholeWord: false, regex: false, include: '', ...over })
-const record = (path: string, line: number, text: string): string => `${path}\0${line}:${text}`
+const record = (path: string, line: number, text: string): string => `${path}\x00${line}\x00${text}`
 
 describe('buildGrepArgs', () => {
   it('searches fixed strings, case-insensitively, with untracked files and without ignored ones', () => {
@@ -34,7 +34,7 @@ describe('validateSearchRequest', () => {
     expect(validateSearchRequest({ query: 'x', include: ' *.ts ' })).toMatchObject({ ok: true, request: { query: 'x', include: '*.ts', matchCase: false } })
   })
   it('refuses empty, huge, NUL and non-object requests', () => {
-    for (const bad of [null, 5, { query: '' }, { query: '   ' }, { query: 'a'.repeat(501) }, { query: 'a\0b' }]) expect(validateSearchRequest(bad).ok).toBe(false)
+    for (const bad of [null, 5, { query: '' }, { query: '   ' }, { query: 'a'.repeat(501) }, { query: 'a\x00b' }]) expect(validateSearchRequest(bad).ok).toBe(false)
   })
   it('refuses include globs that escape the checkout or use pathspec magic', () => {
     for (const include of ['../x', 'a/../../b', '/etc/*', 'C:\\Windows', ':(top)x']) expect(validateSearchRequest({ query: 'x', include }).ok).toBe(false)

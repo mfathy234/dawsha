@@ -52,9 +52,9 @@ export function validateSearchRequest(raw: unknown): SearchValidation {
   if (typeof raw !== 'object' || raw === null) return { ok: false, error: 'Invalid search.' }
   const value = raw as Record<string, unknown>
   if (typeof value.query !== 'string' || value.query.trim() === '') return { ok: false, error: 'Type something to search for.' }
-  if (value.query.length > SEARCH_MAX_QUERY || value.query.includes('\0')) return { ok: false, error: 'That search text is too long.' }
+  if (value.query.length > SEARCH_MAX_QUERY || value.query.includes('\x00')) return { ok: false, error: 'That search text is too long.' }
   const include = typeof value.include === 'string' ? value.include.trim() : ''
-  if (include.length > SEARCH_MAX_INCLUDE || include.includes('\0')) return { ok: false, error: 'That file filter is too long.' }
+  if (include.length > SEARCH_MAX_INCLUDE || include.includes('\x00')) return { ok: false, error: 'That file filter is too long.' }
   for (const pattern of splitInclude(include)) {
     if (/^([a-zA-Z]:)?[\\/]/.test(pattern) || pattern.split('/').includes('..') || pattern.startsWith(':')) return { ok: false, error: 'The file filter must stay inside this checkout.' }
   }
@@ -127,16 +127,16 @@ const snippet = (text: string): string => {
   return trimmed.length > SEARCH_SNIPPET_CHARS ? `${trimmed.slice(0, SEARCH_SNIPPET_CHARS)}…` : trimmed
 }
 
-/** Reads `git grep -n --null` output (`path NUL line:text`), grouped by file and capped; the total counts what was dropped too. */
+/** Reads `git grep -n --null` output (`path NUL line NUL text`), grouped by file and capped; the total counts what was dropped too. */
 export function parseGrepOutput(stdout: string, cap = SEARCH_MAX_MATCHES): ParsedSearch {
   const byPath = new Map<string, SearchFile>()
   let total = 0
   let kept = 0
   for (const record of stdout.split('\n')) {
-    const nul = record.indexOf('\0')
+    const nul = record.indexOf('\x00')
     if (nul <= 0) continue
     const path = record.slice(0, nul)
-    const rest = /^(\d+):([\s\S]*)$/.exec(record.slice(nul + 1))
+    const rest = /^(\d+)\x00([\s\S]*)$/.exec(record.slice(nul + 1))
     if (!rest) continue
     total += 1
     if (kept >= cap) continue

@@ -30,6 +30,8 @@ import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveP
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
+import { fileLog, linkedRepos, readImage, searchFiles } from './filesExtra'
+import { isHtmlPath } from '../shared/filePreview'
 import { trashProjectPath } from './filesTrash'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
@@ -259,6 +261,26 @@ export function registerIpc(
     revealInFolder(full)
     return { ok: true as const }
   })
+  ipcMain.handle(IPC.filesSearch, async (_event, folder: unknown, request: unknown) => {
+    const root = await known(folder)
+    return root ? searchFiles(root, request) : refused
+  })
+  ipcMain.handle(IPC.filesLog, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    return root ? fileLog(root, path) : refused
+  })
+  ipcMain.handle(IPC.filesImage, async (_event, folder: unknown, path: unknown, base: unknown) => {
+    const root = await known(folder)
+    return root ? readImage(root, path, base === true) : refused
+  })
+  ipcMain.handle(IPC.filesOpenBrowser, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    const full = root && typeof path === 'string' && isHtmlPath(path) ? await resolveProjectPath(root, path) : null
+    if (!full) return refused
+    const failed = await shell.openPath(full)
+    return failed ? { ok: false as const, error: failed } : { ok: true as const }
+  })
+  ipcMain.handle(IPC.filesLinked, (_event, projectId: unknown, folders: unknown) => linkedRepos(settings.get().projects, projectId, folders))
   ipcMain.handle(IPC.filesOpen, (_event, folder: string, ref: FileRef) => openFile(folder, ref))
   ipcMain.handle(IPC.instructionsRead, (_event, folder: unknown, name: unknown) =>
     readInstruction(settings.get().projects, folder, name)

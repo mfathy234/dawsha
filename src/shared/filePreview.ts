@@ -30,3 +30,15 @@ export function htmlPreviewDocument(source: string): string {
 }
 
 export const HTML_PREVIEW_SANDBOX = 'allow-scripts'
+
+export type FileImageResult = { ok: true; dataUrl: string; size: number } | { ok: false; error: string }
+
+export interface FileCommit {
+  hash: string
+  short: string
+  author: string
+  at: number
+  subject: string
+}
+
+export type FileLogResult = { ok: true; commits: FileCommit[] } | { ok: false; error: string }
