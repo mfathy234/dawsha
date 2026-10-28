@@ -102,8 +102,8 @@ export function openContextMenu(options: ContextMenuOptions): HTMLElement {
   el.addEventListener('contextmenu', (event) => event.preventDefault())
 
   document.body.appendChild(el)
-  const box = el.getBoundingClientRect()
-  const placed = placeAtPoint(options.x, options.y, box.width, box.height, window.innerWidth, window.innerHeight)
+  // Layout size, not the drawn box, which is still scaled down by the opening animation.
+  const placed = placeAtPoint(options.x, options.y, el.offsetWidth, el.offsetHeight, window.innerWidth, window.innerHeight)
   el.style.left = `${placed.left}px`
   el.style.top = `${placed.top}px`
   el.style.right = 'auto'

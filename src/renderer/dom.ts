@@ -61,8 +61,8 @@ export function placeNearAnchor(menu: HTMLElement, anchor: Element | null, gap =
   const a = anchor.getBoundingClientRect()
   menu.classList.add('floating')
   menu.style.maxHeight = ''
-  const m = menu.getBoundingClientRect()
-  const placed = placeMenu(a, m.width, m.height, window.innerWidth, window.innerHeight, gap)
+  // Layout size, not the drawn box: an opening scale animation would make the menu look smaller than it ends up.
+  const placed = placeMenu(a, menu.offsetWidth, menu.offsetHeight, window.innerWidth, window.innerHeight, gap)
   menu.style.left = `${placed.left}px`
   menu.style.top = `${placed.top}px`
   menu.style.right = 'auto'
