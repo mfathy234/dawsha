@@ -148,6 +148,8 @@ export interface Settings {
   foldedClosedSessions: string[]
   /** Explicit open/folded choices for background agent session groups. */
   agentFolds: import('./agentFolds').FoldMap
+  /** Folded Files sections, the inspector and the bottom panel. */
+  filesLayout: import('./filesLayout').FilesLayout
   /** Open files of the Files view, by project id (at most FILES_TABS_MAX each). */
   filesTabs: Record<string, string[]>
   /** Locally saved run commands, kept separate from portable preferences. */

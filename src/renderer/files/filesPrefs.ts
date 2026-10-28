@@ -1,26 +1,15 @@
-import { defaultLayout, parseLayout, type FilesLayout } from '../../shared/filesLayout'
+import type { FilesLayout } from '../../shared/filesLayout'
+import { saveSettings } from '../actions'
+import { store } from '../state'
 
-const KEY = 'dawsha.files.layout'
-
-let layout: FilesLayout | null = null
-
-/** The remembered Files layout (folded sections, inspector, bottom panel). Storage can be blocked, so it falls back to the default. */
+/** The remembered Files layout (folded sections, inspector, bottom panel), kept in the app settings so a quick quit keeps it. */
 export function filesLayout(): FilesLayout {
-  if (layout) return layout
-  try {
-    layout = parseLayout(JSON.parse(localStorage.getItem(KEY) ?? 'null'))
-  } catch {
-    layout = defaultLayout()
-  }
-  return layout
+  return store.state.settings.filesLayout
 }
 
 export function updateLayout(change: (current: FilesLayout) => FilesLayout): FilesLayout {
-  layout = change(filesLayout())
-  try {
-    localStorage.setItem(KEY, JSON.stringify(layout))
-  } catch {
-    // remembered for this run only
-  }
+  const layout = change(filesLayout())
+  store.set((state) => ({ ...state, settings: { ...state.settings, filesLayout: layout } }))
+  void saveSettings({ filesLayout: layout })
   return layout
 }

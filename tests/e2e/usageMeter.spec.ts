@@ -36,6 +36,8 @@ test('the usage meter names the focused agent, never borrows another agent numbe
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
+    // The top bar hides the meter below 1220px, and the CI window is about 1024 wide.
+    await page.setViewportSize({ width: 1440, height: 900 })
     const meter = page.locator('#topbar-limits')
     await page.getByRole('button', { name: 'New Claude session in Smoke' }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
