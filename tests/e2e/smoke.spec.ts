@@ -68,7 +68,7 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await page.getByRole('button', { name: 'Theme' }).click()
     await page.getByRole('radio', { name: /Nord/ }).click()
     await expect.poll(() => host.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before)
-    await expect(host).toHaveAttribute('data-term-background', '#1b1f26')
+    await expect(host).toHaveAttribute('data-term-background', '#262b35')
     await expect(page.locator('.note')).toHaveCount(0)
     await page.getByRole('radio', { name: /GitHub Light/ }).click()
     await expect(page.locator('.note')).toContainText('run /theme and pick light')
