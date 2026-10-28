@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountLimits, cardSummary, formatResetIn, lastLines, sortByUrgency, limitText, moreLabel, stateWord } from '../../src/shared/topbarSummary'
+import { cardSummary, formatResetIn, lastLines, sortByUrgency, limitText, moreLabel, stateWord } from '../../src/shared/topbarSummary'
 import type { RateLimitWindow } from '../../src/shared/types'
 
 const win = (key: string, percent: number, resetsAt: number | null = null): RateLimitWindow => ({ key, label: key, percent, resetsAt })
@@ -19,14 +19,6 @@ describe('topbar summary helpers', () => {
     expect(limitText(win('five_hour', 62, 99 * 60_000), now)).toBe('62% · 1h 39m')
     expect(limitText(win('seven_day', 30, 99 * 60_000), now)).toBe('30%')
     expect(limitText(win('five_hour', 62), now)).toBe('62%')
-  })
-
-  it('prefers the focused pane limits, else any pane with limits', () => {
-    const a = [win('five_hour', 10), win('seven_day_opus', 5)]
-    const b = [win('five_hour', 20), win('seven_day', 40)]
-    expect(accountLimits([a, b], 1).map((w) => w.percent)).toEqual([20, 40])
-    expect(accountLimits([[], b], 0).map((w) => w.percent)).toEqual([20, 40])
-    expect(accountLimits([[], []], 0)).toEqual([])
   })
 
   it('labels the More button', () => {

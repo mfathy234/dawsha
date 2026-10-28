@@ -37,13 +37,6 @@ export function limitText(window: RateLimitWindow, now: number): string {
   return reset ? `${formatPercent(window.percent)} · ${reset}` : formatPercent(window.percent)
 }
 
-/** Limit windows from the focused pane when it has any, otherwise from any pane that does (limits are account-wide). */
-export function accountLimits(perPane: readonly RateLimitWindow[][], focusedIndex: number): RateLimitWindow[] {
-  const focused = perPane[focusedIndex]
-  if (focused && focused.length > 0) return focused
-  return perPane.find((windows) => windows.length > 0) ?? []
-}
-
 /** "needs you · 2m": the lowercase state word plus how long since the last activity when known. */
 /** "needs you · 2m"; the suffix is time in that state (see formatTimeInState), empty to omit. */
 export function stateWord(state: SessionState, inState: string): string {

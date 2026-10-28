@@ -102,6 +102,7 @@ test('Claude rows, already in visual order, keep their layout and get their Arab
 test('Arabic typed into a text box reads right-to-left with the bundled Arabic font', async () => {
   const { app, page } = await launchApp(createSandbox())
   try {
+    await page.getByRole('button', { name: 'Filter projects and sessions' }).click()
     const filter = page.getByRole('textbox', { name: 'Filter projects' })
     await filter.fill('مشروع الفواتير')
     const style = await filter.evaluate((el) => {

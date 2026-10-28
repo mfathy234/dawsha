@@ -28,6 +28,8 @@ export interface PaneInfo {
   model: { label: string; family: ModelFamily } | null
   contextPercent: number | null
   limits: RateLimitWindow[]
+  /** When the limit windows above were reported; null with no windows. */
+  limitsAt: number | null
   costUsd: number | null
   elapsed: string | null
   tokens: number | null
@@ -39,14 +41,17 @@ export interface PaneInfo {
 
 const LIMIT_FRESH_MS = 30 * 60_000
 
-export function paneLimits(tab: TermState, live: StatusInfo | null, snapshot: OpsSnapshot | null, now: number): RateLimitWindow[] {
-  if (tab.agent !== 'claude' || tab.status === 'exited') return []
+export function paneLimitReading(tab: TermState, live: StatusInfo | null, snapshot: OpsSnapshot | null, now: number): { at: number; windows: RateLimitWindow[] } | null {
+  if (tab.agent !== 'claude' || tab.status === 'exited') return null
   const sources = [
     live && now - live.receivedAt <= LIMIT_FRESH_MS ? { at: live.receivedAt, windows: live.rateLimits } : null,
     snapshot && !snapshot.ended && now - snapshot.updatedAt <= LIMIT_FRESH_MS ? { at: snapshot.updatedAt, windows: snapshot.limits } : null
   ].filter((source): source is { at: number; windows: RateLimitWindow[] } => source !== null && source.windows.length > 0)
-  return sources.sort((a, b) => b.at - a.at)[0]?.windows ?? []
+  return sources.sort((a, b) => b.at - a.at)[0] ?? null
 }
+
+export const paneLimits = (tab: TermState, live: StatusInfo | null, snapshot: OpsSnapshot | null, now: number): RateLimitWindow[] =>
+  paneLimitReading(tab, live, snapshot, now)?.windows ?? []
 
 export interface PaneOpsInfo {
   plan: { done: number; total: number } | null
@@ -240,6 +245,7 @@ function claudeInfo(
     model: opsModel ?? liveModel,
     contextPercent: snapshot?.context?.percent ?? live?.contextPercent ?? null,
     limits: paneLimits(tab, live, snapshot, state.now),
+    limitsAt: paneLimitReading(tab, live, snapshot, state.now)?.at ?? null,
     costUsd: live?.costUsd ?? null,
     ageMs: known ? ageSince(state.now, live?.receivedAt, snapshot?.updatedAt, session?.updatedAt) : null,
     ops: opsInfoFor(snapshot, opsLive, tab.agentsOpen === true)
@@ -279,7 +285,7 @@ function baseInfoFor(
   opsLive: boolean
 ): PaneInfo {
   const changes = folder ? (state.gitChanges[folder] ?? null) : null
-  const empty: PaneInfo = { agent: tab.agent, agentsOpen: tab.agentsOpen === true, model: null, contextPercent: null, limits: [], costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [] }
+  const empty: PaneInfo = { agent: tab.agent, agentsOpen: tab.agentsOpen === true, model: null, contextPercent: null, limits: [], limitsAt: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [] }
   if (tab.agent === 'claude') return claudeInfo(state, tab, matches, empty, snapshot, opsLive)
   if (tab.agent === 'codex') {
     const session = matches.codex.get(tab.id)

@@ -49,6 +49,7 @@ import { toggleQuickOpen } from '../components/quickOpen'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setSessionsLayout } from '../sessionsLayout'
+import { SIDEBAR_FILTER_EVENT } from '../../shared/sidebarModel'
 import { registerCommands, registerProvider, type Command } from './registry'
 
 const hasPane = (state: AppState): boolean => paneById(state, state.focusedId) !== undefined
@@ -256,6 +257,14 @@ export function installBuiltinCommands(): void {
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),
     focusedAction('pane.close', 'Close the pane', closePane, 'stop session'),
     { id: 'view.sidebar', title: 'Toggle the sidebar', group: 'Actions', run: () => toggleSidebar() },
+    {
+      id: 'sidebar.filter',
+      title: 'Filter projects and sessions',
+      group: 'Actions',
+      keywords: 'sidebar search find projects',
+      ...withKeys('Ctrl+Shift+O'),
+      run: () => void window.dispatchEvent(new CustomEvent(SIDEBAR_FILTER_EVENT))
+    },
     { id: 'view.toggleTagColors', title: 'Toggle tag colours', group: 'Actions', keywords: 'session tag bug feature colour color chip', run: () => setColorSessionsByTag(!store.state.settings.colorSessionsByTag) },
     { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'folders', run: () => showView('projects') },
     { id: 'view.background', title: 'Open background agents', group: 'Actions', keywords: 'agents subagents sub-agents timeline running tasks codex claude', ...withKeys('Ctrl+Shift+L'), run: () => showView('background') },

@@ -1,3 +1,4 @@
+import type { SidebarSort } from '../shared/sidebarModel'
 import { canDropProject, canMoveProject, moveProject, moveProjectTo, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
 import {
   DEFAULT_FONT_SIZE,
@@ -919,6 +920,16 @@ export function setSidebarCollapsed(sidebarCollapsed: boolean): void {
   void saveSettings({ sidebarCollapsed })
 }
 
+export function setSidebarSort(sidebarSort: SidebarSort): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, sidebarSort } }))
+  void saveSettings({ sidebarSort })
+}
+
+export function setSidebarHideEmpty(sidebarHideEmpty: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, sidebarHideEmpty } }))
+  void saveSettings({ sidebarHideEmpty })
+}
+
 export function openDataFolder(): void {
   const folder = store.state.info.userData
   if (folder) void api.quickOpen('explorer', folder)
@@ -1088,7 +1099,8 @@ export async function refreshBranches(): Promise<void> {
     const folder = workFolderOfPane(state, pane, matches)
     if (folder) folders.add(folder)
   }
-  const entries = await Promise.all([...folders].map(async (f) => [f, await api.gitBranch(f)] as const))
+  const branchFolders = new Set([...folders, ...state.settings.projects.map((project) => project.folder)])
+  const entries = await Promise.all([...branchFolders].map(async (f) => [f, await api.gitBranch(f)] as const))
   const changed = entries.some(([folder, branch]) => store.state.branches[folder] !== branch)
   if (changed) store.set((s) => ({ ...s, branches: { ...s.branches, ...Object.fromEntries(entries) } }))
   const syncs = await Promise.all([...folders].map(async (f) => [f, await api.gitSync(f)] as const))

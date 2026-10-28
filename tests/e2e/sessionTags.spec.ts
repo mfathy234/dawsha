@@ -10,7 +10,7 @@ const writeSettings = (sandbox: Sandbox, patch: Record<string, unknown>): void =
   writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({ ...readSettings(sandbox.userData), ...patch }), 'utf8')
 
 async function startGemini(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+  await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
   await page.getByRole('menuitem', { name: 'Gemini session' }).click()
 }
 const openRow = (page: Page) => page.locator('.kept-session-row:not(.closed)').first()
@@ -39,8 +39,8 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     await expect(page.locator('.pane-tag')).toBeHidden()
 
     await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Bug')
-    await expect(openRow(page)).toHaveAttribute('data-tag', 'bug')
-    await expect(openRow(page).locator('.tag-word')).toHaveText('bug')
+    await expect(openRow(page).locator('.sess-row')).toHaveAttribute('title', /Tag: Bug/)
+    await expect(openRow(page).locator('.tag-word')).toHaveCount(0)
     await expect(page.locator('.pane-tag .tag-word')).toHaveText('bug')
     expect(await focusedNav(page)).toMatch(/^s:/)
 
@@ -49,7 +49,7 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     await expect(page.getByRole('menuitemradio', { name: 'Tag as Bug' })).toHaveAttribute('aria-checked', 'true')
     await page.getByRole('menuitemradio', { name: 'Tag as Review' }).click()
     await expect(page.locator('.pane-tag .tag-word')).toHaveText('review')
-    await expect(openRow(page)).toHaveAttribute('data-tag', 'review')
+    await expect(openRow(page).locator('.sess-row')).toHaveAttribute('title', /Tag: Review/)
     await expect.poll(() => readSettings(sandbox.userData).workspace.panes[0].tabs[0].tag).toBe('review')
     mkdirSync(SCREENS, { recursive: true })
     await page.locator('.pane-header').first().screenshot({ path: join(SCREENS, '162-sidebar-pane-header-tag.png') })
@@ -63,8 +63,8 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     await expect(page.locator('.pane')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).keptSessions[0]?.tag).toBe('review')
     const closed = page.locator('.kept-session-row.closed')
-    await expect(closed).toHaveAttribute('data-tag', 'review')
-    await expect(closed.locator('.tag-word')).toHaveText('review')
+    await expect(closed.locator('.sess-row')).toHaveAttribute('title', /Tag: Review/)
+    await expect(closed.locator('.tag-word')).toHaveCount(0)
 
     await closed.locator('.sess-row').click()
     await expect(page.locator('.pane')).toHaveCount(1)
@@ -77,11 +77,11 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     const { page } = session
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.pane-tag .tag-word')).toHaveText('review')
-    await expect(openRow(page)).toHaveAttribute('data-tag', 'review')
+    await expect(openRow(page).locator('.sess-row')).toHaveAttribute('title', /Tag: Review/)
 
     await pickTag(page, 'Actions for Smoke in Smoke', 'Remove tag', 'menuitem')
     await expect(page.locator('.pane-tag')).toBeHidden()
-    await expect(openRow(page)).not.toHaveAttribute('data-tag', /.+/)
+    await expect(openRow(page).locator('.sess-row')).not.toHaveAttribute('title', /Tag:/)
     await expect.poll(() => readSettings(sandbox.userData).workspace.panes[0].tabs[0].tag).toBeUndefined()
   } finally {
     await closeApp(session.app)
@@ -99,13 +99,13 @@ test('closed sessions take a tag from their menu and a right click opens it', as
     const menu = page.getByRole('menu', { name: 'Actions for Plan the release' })
     await expect(menu).toBeVisible()
     await menu.getByRole('menuitemradio', { name: 'Tag as Docs' }).click()
-    await expect(row).toHaveAttribute('data-tag', 'docs')
+    await expect(row.locator('.sess-row')).toHaveAttribute('title', /Tag: Docs/)
     await expect.poll(() => readSettings(sandbox.userData).keptSessions[0].tag).toBe('docs')
     expect(await focusedNav(page)).toBe(`c:claude:${id}`)
     await row.hover()
     await page.getByRole('button', { name: 'Actions for Plan the release in Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Remove tag' }).click()
-    await expect(row).not.toHaveAttribute('data-tag', /.+/)
+    await expect(row.locator('.sess-row')).not.toHaveAttribute('title', /Tag:/)
     await expect.poll(() => readSettings(sandbox.userData).keptSessions[0].tag).toBeUndefined()
   } finally {
     await closeApp(app)
@@ -125,8 +125,8 @@ test('a session takes its tag from the branch, a manual tag wins, and the settin
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.pane-tag .tag-word')).toHaveText('feature')
     await expect(page.locator('.pane-tag .tag-word')).toHaveAttribute('title', 'Tag: Feature (from the branch)')
-    await expect(openRow(page)).toHaveAttribute('data-tag', 'feature')
-    await expect(openRow(page).locator('.tag-word')).toHaveText('feature')
+    await expect(openRow(page).locator('.sess-row')).toHaveAttribute('title', /Tag: Feature/)
+    await expect(openRow(page).locator('.tag-word')).toHaveCount(0)
 
     await openRow(page).hover()
     await page.getByRole('button', { name: 'Actions for Smoke in Smoke' }).click()
@@ -142,7 +142,7 @@ test('a session takes its tag from the branch, a manual tag wins, and the settin
     await page.keyboard.type('Toggle tag colours')
     await page.keyboard.press('Enter')
     await expect(page.locator('html')).toHaveAttribute('data-tag-colors', 'off')
-    const word = openRow(page).locator('.tag-word')
+    const word = page.locator('.pane-tag .tag-word')
     await expect(word).toBeVisible()
     const muted = await page.locator('.pane-project').first().evaluate((el) => getComputedStyle(el).color)
     await expect.poll(() => word.evaluate((el) => getComputedStyle(el).color)).toBe(muted)

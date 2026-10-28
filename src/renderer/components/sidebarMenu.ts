@@ -28,12 +28,12 @@ export class SidebarMenu {
     if (returnFocus && key) this.anchorFor(key)?.focus()
   }
 
-  open(key: string, children: (HTMLElement | null)[], label: string): void {
+  open(key: string, children: (HTMLElement | null)[], label: string, extraClass = ''): void {
     const anchor = this.anchorFor(key)
     this.close()
     if (!anchor) return
     this.key = key
-    const el = h('div', { class: 'popover menu floating', role: 'menu', 'aria-label': label }, ...children)
+    const el = h('div', { class: `popover menu floating${extraClass ? ` ${extraClass}` : ''}`, role: 'menu', 'aria-label': label }, ...children)
     el.addEventListener('keydown', (event) => this.onKey(event, el))
     this.el = el
     document.body.appendChild(el)

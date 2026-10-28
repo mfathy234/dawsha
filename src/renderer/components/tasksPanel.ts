@@ -4,6 +4,7 @@ import { resumeInNewPane, saveSettings } from '../actions'
 import { api } from '../api'
 import { clear, h } from '../dom'
 import { store, type AppState } from '../state'
+import { selectMenu } from './selectMenu'
 import { confirmDialog, promptDialog } from './dialogs'
 
 const sessionKey = (session: ResumeSession): string => `${session.agent}:${session.id}`
@@ -94,7 +95,7 @@ export class TasksPanelComponent {
       this.update(store.state)
       void this.loadSessions()
     })
-    this.el.append(h('div', { class: 'tasks-head' }, h('p', { class: 'lede' }, 'Keep related sessions, notes and commits together across days.'), select,
+    this.el.append(h('div', { class: 'tasks-head' }, h('p', { class: 'lede' }, 'Keep related sessions, notes and commits together across days.'), selectMenu(select),
       h('button', { class: 'btn primary', type: 'button', disabled: !project, onClick: () => void this.add() }, 'New task')))
     if (!project) {
       this.el.append(h('p', { class: 'proj-empty' }, 'Add a project to create tasks.'))
@@ -145,7 +146,7 @@ export class TasksPanelComponent {
         if (title) this.edit(task, { title })
       } }, 'Rename'), h('button', { class: 'btn ghost small', type: 'button', onClick: () => void this.remove(task) }, 'Delete')),
       h('label', {}, 'Goal', note),
-      h('div', { class: 'tasks-link' }, picker, link),
+      h('div', { class: 'tasks-link' }, selectMenu(picker), link),
       h('div', { class: 'tasks-head' }, h('h3', {}, 'History'), h('button', { class: 'btn ghost small', type: 'button', onClick: () => void this.addEvent(task, 'note') }, 'Add note'), h('button', { class: 'btn ghost small', type: 'button', onClick: () => void this.addEvent(task, 'commit') }, 'Link commit')),
       history)
   }

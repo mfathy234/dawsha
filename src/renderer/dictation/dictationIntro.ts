@@ -3,6 +3,7 @@ import { saveSettings } from '../actions'
 import { nextDialogId, present } from '../components/dialogs'
 import { h } from '../dom'
 import { store } from '../state'
+import { selectMenu } from '../components/selectMenu'
 
 export function setDictation(change: Partial<DictationSettings>): void {
   const dictation = sanitizeDictation({ ...store.state.settings.dictation, ...change })
@@ -32,7 +33,7 @@ export async function confirmDictationIntro(): Promise<boolean> {
       `Speech becomes text on this computer, so your voice never leaves it. The first time, Dawsha downloads the speech model (${model.label}, ${model.size}) and keeps it for offline use. Text is typed where you were, and nothing is sent until you press Enter.`
     ),
     h('label', { class: 'field-label', for: 'dictation-intro-language' }, 'Spoken language'),
-    language,
+    selectMenu(language),
     h('p', { class: 'hint' }, 'Change the language, model or microphone later in Settings > Voice dictation.'),
     h('div', { class: 'dialog-actions' }, cancel, start)
   )
