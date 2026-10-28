@@ -27,6 +27,16 @@ export const SEARCH_MAX_INCLUDE = 200
 export const SEARCH_SNIPPET_CHARS = 240
 export const WALK_MAX_FILES = 5_000
 export const WALK_MAX_BYTES = 1024 * 1024
+export const SEARCH_BUDGET_MS = 3_000
+const BUDGET_CHECK_LINES = 200
+
+const NESTED_QUANTIFIER = /\((?:\?:)?(?:[^()\\]|\\.)*(?:[+*]|\{\d+,\d*\})(?:[^()\\]|\\.)*\)(?:[+*]|\{\d+,\d*\})/
+
+/** A cheap check for the classic exponential shapes, a quantified group that holds a quantifier: (a+)+, (a*)*, (.*)*. */
+export const isCatastrophicRegex = (source: string): boolean => NESTED_QUANTIFIER.test(source)
+
+/** True when git reports that this build cannot run `grep -P`. */
+export const pcreUnsupported = (stderr: string): boolean => /perl-compatible|libpcre|\bpcre\b/i.test(stderr)
 
 const SKIPPED_DIRS = new Set([
   '.git', 'node_modules', 'dist', 'build', 'out', '.next', '.nuxt', '.svelte-kit', 'target', 'bin', 'obj', 'coverage', '.turbo', '.vite', '.cache', '__pycache__', '.venv', 'release'
@@ -60,6 +70,7 @@ export function validateSearchRequest(raw: unknown): SearchValidation {
   }
   const request: SearchRequest = { query: value.query, matchCase: value.matchCase === true, wholeWord: value.wholeWord === true, regex: value.regex === true, include }
   if (request.regex) {
+    if (isCatastrophicRegex(request.query)) return { ok: false, error: 'That regular expression can take far too long to run (a repeated group that repeats inside). Simplify it.' }
     try {
       new RegExp(request.query)
     } catch (error) {
@@ -102,15 +113,15 @@ export function matchesInclude(path: string, include: string, scope = ''): boole
   return patterns.length === 0 || patterns.some((pattern) => globToRegExp(pattern).test(path))
 }
 
-/** The git grep arguments for a request, run from the repository root. Untracked files are included; ignored ones are not. */
-export function buildGrepArgs(request: SearchRequest, scope = ''): string[] {
+/** The git grep arguments for a request, run from the repository root. A regular expression uses PCRE (-P) when asked, to match what the walker's JavaScript expressions mean. Untracked files are included; ignored ones are not. */
+export function buildGrepArgs(request: SearchRequest, scope = '', pcre = false): string[] {
   const patterns = includePatterns(request.include, scope)
   const pathspec = patterns.length > 0 ? patterns.map((pattern) => `:(glob)${pattern}`) : scope === '' ? ['.'] : [`:(glob)${scope}/**`]
   return [
     '--no-pager', 'grep', '-I', '-n', '--null', '--untracked', '--exclude-standard',
     ...(request.matchCase ? [] : ['-i']),
     ...(request.wholeWord ? ['-w'] : []),
-    request.regex ? '-E' : '-F',
+    request.regex ? (pcre ? '-P' : '-E') : '-F',
     '-e', request.query,
     '--', ...pathspec
   ]
@@ -181,12 +192,16 @@ export function matchRanges(text: string, matcher: RegExp | null): Range[] {
   return ranges
 }
 
-/** Searches one file's text the way the walker does, in line order. */
-export function searchText(text: string, matcher: RegExp, room: number): SearchMatch[] {
+/** Searches one file's text the way the walker does, in line order; stops early, flagged, once the deadline has passed. */
+export function searchTextUntil(text: string, matcher: RegExp, room: number, deadline = Infinity): { matches: SearchMatch[]; expired: boolean } {
   const out: SearchMatch[] = []
   const lines = text.split('\n')
   for (let i = 0; i < lines.length && out.length < room; i += 1) {
+    if (i % BUDGET_CHECK_LINES === 0 && Date.now() > deadline) return { matches: out, expired: true }
     if (matchRanges(lines[i], matcher).length > 0) out.push({ line: i + 1, text: snippet(lines[i]) })
   }
-  return out
+  return { matches: out, expired: false }
 }
+
+/** Searches one file's text the way the walker does, in line order. */
+export const searchText = (text: string, matcher: RegExp, room: number): SearchMatch[] => searchTextUntil(text, matcher, room).matches

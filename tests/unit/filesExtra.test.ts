@@ -42,6 +42,12 @@ describe('walkSearch (folders that are not repositories)', () => {
     const ts = await walkSearch(root, request({ include: '*.ts', matchCase: true, wholeWord: true }))
     expect(ts.ok && ts.files).toEqual([{ path: 'a.ts', matches: [{ line: 1, text: 'needle' }] }])
   })
+  it('returns what it has, flagged truncated, when the time budget is spent', async () => {
+    put('a.txt', 'needle')
+    put('b.txt', 'needle')
+    const result = await walkSearch(root, request(), -1)
+    expect(result).toMatchObject({ ok: true, files: [], truncated: true, engine: 'walk' })
+  })
   it('refuses an invalid regular expression', async () => {
     expect((await walkSearch(root, request({ query: '(', regex: true }))).ok).toBe(false)
   })

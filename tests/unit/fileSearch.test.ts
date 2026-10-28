@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildGrepArgs, globToRegExp, includePatterns, matchesInclude, matcherFor, matchRanges, parseGrepOutput, searchText, shouldSkipDir, shouldSkipFile, validateSearchRequest, SEARCH_MAX_PER_FILE, type SearchRequest
+  buildGrepArgs, globToRegExp, isCatastrophicRegex, pcreUnsupported, searchTextUntil, includePatterns, matchesInclude, matcherFor, matchRanges, parseGrepOutput, searchText, shouldSkipDir, shouldSkipFile, validateSearchRequest, SEARCH_MAX_PER_FILE, type SearchRequest
 } from '../../src/shared/fileSearch'
 
 const request = (over: Partial<SearchRequest> = {}): SearchRequest => ({ query: 'foo', matchCase: false, wholeWord: false, regex: false, include: '', ...over })
@@ -18,6 +18,11 @@ describe('buildGrepArgs', () => {
     expect(args).toContain('-w')
     expect(args).toContain('-E')
     expect(args).not.toContain('-F')
+  })
+  it('uses PCRE for a regular expression only when asked', () => {
+    expect(buildGrepArgs(request({ regex: true }), '', true)).toContain('-P')
+    expect(buildGrepArgs(request({ regex: true }), '', true)).not.toContain('-E')
+    expect(buildGrepArgs(request({ regex: false }), '', true)).toContain('-F')
   })
   it('keeps a query that looks like a flag after -e', () => {
     const args = buildGrepArgs(request({ query: '--exec=evil' }))
@@ -123,5 +128,33 @@ describe('matcherFor and ranges', () => {
   it('searchText finds lines up to the room left', () => {
     const matcher = matcherFor(request())
     expect(searchText('foo\nbar\nFOO\nfoo', matcher as RegExp, 2).map((m) => m.line)).toEqual([1, 3])
+  })
+})
+
+describe('catastrophic regular expressions', () => {
+  it('flags a repeated group that repeats inside', () => {
+    for (const bad of ['(a+)+', '(a*)*', '(.*)*', '(?:a+)+$', '(x+x+)+y', '(a|b*)+']) expect(isCatastrophicRegex(bad), bad).toBe(true)
+    expect(validateSearchRequest({ query: '(a+)+', regex: true })).toMatchObject({ ok: false, error: expect.stringContaining('too long') })
+  })
+  it('leaves ordinary expressions alone', () => {
+    for (const fine of ['a+', '(ab)+', '(a|b)c*', 'foo(\\d+)bar', '^\\s*import .*from', '[(+]+']) expect(isCatastrophicRegex(fine), fine).toBe(false)
+  })
+  it('does not apply the guard to a literal query', () => {
+    expect(validateSearchRequest({ query: '(a+)+', regex: false }).ok).toBe(true)
+  })
+})
+
+describe('git grep without PCRE', () => {
+  it('recognises the message git prints', () => {
+    expect(pcreUnsupported('fatal: cannot use Perl-compatible regexes when not compiled with USE_LIBPCRE')).toBe(true)
+    expect(pcreUnsupported('fatal: command line: unmatched parenthesis')).toBe(false)
+  })
+})
+
+describe('searchTextUntil', () => {
+  it('stops and says so once the deadline has passed', () => {
+    const text = Array.from({ length: 1000 }, () => 'needle').join('\n')
+    expect(searchTextUntil(text, /needle/g, 5000, Date.now() - 1)).toEqual({ matches: [], expired: true })
+    expect(searchTextUntil(text, /needle/g, 3).matches).toHaveLength(3)
   })
 })

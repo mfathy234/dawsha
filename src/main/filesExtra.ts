@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import {
-  SEARCH_MAX_MATCHES, SEARCH_MAX_PER_FILE, WALK_MAX_BYTES, WALK_MAX_FILES, buildGrepArgs, matchesInclude, matcherFor, parseGrepOutput, searchText, shouldSkipDir, shouldSkipFile, validateSearchRequest,
+  SEARCH_BUDGET_MS, SEARCH_MAX_MATCHES, SEARCH_MAX_PER_FILE, WALK_MAX_BYTES, WALK_MAX_FILES, buildGrepArgs, matchesInclude, matcherFor, parseGrepOutput, pcreUnsupported, searchTextUntil, shouldSkipDir, shouldSkipFile, validateSearchRequest,
   type SearchFile, type SearchRequest, type SearchResult
 } from '../shared/fileSearch'
 import { IMAGE_MAX_BYTES, imageMime, type FileCommit, type FileImageResult, type FileLogResult } from '../shared/filePreview'
@@ -29,10 +29,12 @@ function run(root: string, args: string[], timeout: number): Promise<Run> {
   })
 }
 
-async function gitSearch(root: string, folder: string, request: SearchRequest): Promise<SearchResult> {
+/** Null when git cannot run the regular expression engine this request needs, so the caller can walk instead. */
+async function gitSearch(root: string, folder: string, request: SearchRequest): Promise<SearchResult | null> {
   const prefix = await git(folder, ['rev-parse', '--show-prefix'])
   const scope = prefix.ok ? prefix.stdout.trim().replace(/\/$/, '') : ''
-  const out = await run(root, buildGrepArgs(request, scope), GREP_MS)
+  const out = await run(root, buildGrepArgs(request, scope, request.regex), GREP_MS)
+  if (request.regex && out.code !== 0 && out.code !== 1 && pcreUnsupported(out.stderr)) return null
   // Exit 1 is "no match"; a full buffer still leaves usable output.
   if (out.code !== 0 && out.code !== 1 && out.code !== 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' && out.stdout === '') {
     return { ok: false, error: out.stderr.trim().split('\n')[0] || 'The search failed.' }
@@ -42,7 +44,8 @@ async function gitSearch(root: string, folder: string, request: SearchRequest): 
 }
 
 /** A bounded walk for folders that are not git repositories: skips dependency and build folders, binaries, links and big files. */
-export async function walkSearch(folder: string, request: SearchRequest): Promise<SearchResult> {
+export async function walkSearch(folder: string, request: SearchRequest, budgetMs = SEARCH_BUDGET_MS): Promise<SearchResult> {
+  const deadline = Date.now() + budgetMs
   const matcher = matcherFor(request)
   if (!matcher) return { ok: false, error: 'Not a valid regular expression.' }
   const files: SearchFile[] = []
@@ -51,6 +54,10 @@ export async function walkSearch(folder: string, request: SearchRequest): Promis
   let truncated = false
   const pending = ['']
   while (pending.length > 0 && !truncated) {
+    if (Date.now() > deadline) {
+      truncated = true
+      break
+    }
     const dir = pending.shift() as string
     let entries
     try {
@@ -67,10 +74,11 @@ export async function walkSearch(folder: string, request: SearchRequest): Promis
       }
       if (!entry.isFile() || shouldSkipFile(entry.name) || !matchesInclude(path, request.include)) continue
       visited += 1
-      if (visited > WALK_MAX_FILES) {
+      if (visited > WALK_MAX_FILES || Date.now() > deadline) {
         truncated = true
         break
       }
+      await new Promise<void>((resolve) => setImmediate(resolve))
       let bytes: Buffer
       try {
         if ((await stat(join(folder, path))).size > WALK_MAX_BYTES) continue
@@ -79,12 +87,16 @@ export async function walkSearch(folder: string, request: SearchRequest): Promis
         continue
       }
       if (bytes.includes(0)) continue
-      const found = searchText(bytes.toString('utf8'), matcher, SEARCH_MAX_PER_FILE)
-      if (found.length === 0) continue
+      const { matches: found, expired } = searchTextUntil(bytes.toString('utf8'), matcher, SEARCH_MAX_PER_FILE, deadline)
+      if (expired) truncated = true
+      if (found.length === 0) {
+        if (expired) break
+        continue
+      }
       const room = SEARCH_MAX_MATCHES - total
       total += found.length
       files.push({ path, matches: found.slice(0, Math.max(room, 0)) })
-      if (total >= SEARCH_MAX_MATCHES) {
+      if (total >= SEARCH_MAX_MATCHES || expired) {
         truncated = true
         break
       }
@@ -98,7 +110,8 @@ export async function searchFiles(folder: string, raw: unknown): Promise<SearchR
   const checked = validateSearchRequest(raw)
   if (!checked.ok) return checked
   const root = await repoRoot(folder)
-  return root ? gitSearch(root, folder, checked.request) : walkSearch(folder, checked.request)
+  const viaGit = root ? await gitSearch(root, folder, checked.request) : null
+  return viaGit ?? walkSearch(folder, checked.request)
 }
 
 /** The real path of an HTML file to hand to the OS: both the requested and the resolved path must be HTML, and it must be a regular file. */
