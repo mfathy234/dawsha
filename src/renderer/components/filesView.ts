@@ -12,12 +12,14 @@ import type { LinkedRepo } from '../../shared/linkedRepos'
 import type { GitFileEntry } from '../../shared/gitStatus'
 import { languageLabel } from '../files/languageInfo'
 import { api } from '../api'
-import { focusPane, saveSettings, startSession } from '../actions'
+import { focusPane, saveSettings, startSessionIn } from '../actions'
 import { derivePanes } from '../derive'
 import { h, icon } from '../dom'
 import { currentBundle, onThemeChange } from '../themeManager'
 import { projectById, store, type AppState } from '../state'
 import { paneTerminal } from '../terminalActions'
+import { lastOutputAt } from '../ptyActivity'
+import { waitForSessionOutput, waitUntil } from '../files/sessionWait'
 import { FileDoc, type DocHooks } from '../files/fileDoc'
 import { noteOpened } from '../files/fileIndex'
 import { filesTarget, insertIntoSession, onFilesRequest, onFilesSearchRequest, openInVsCode, promptReference, setCurrentTarget, setDirtyProvider, takeFilesRequest, addToPrompt, type FilesTarget } from '../files/filesActions'
@@ -47,7 +49,8 @@ const TOUCH_REFRESH_MS = 8000
 const WATCH_DEBOUNCE_MS = 150
 const FLASH_MS = 1600
 const SESSION_START_WAIT_MS = 15_000
-const SESSION_SETTLE_MS = 1500
+const SESSION_SETTLE_MS = 3000
+const SESSION_QUIET_MS = 600
 
 interface ReviewState {
   viewed: Set<string>
@@ -415,16 +418,16 @@ export class FilesViewComponent {
   }
 
   private async newSessionWith(reference: string): Promise<void> {
-    const projectId = this.target?.projectId
-    if (!projectId) return
-    const before = new Set(store.state.panes.map((pane) => pane.id))
+    const target = this.target
+    if (!target?.projectId) return
     toast('Starting a session…', 'info')
-    await startSession(projectId)
-    const pane = store.state.panes.find((candidate) => !before.has(candidate.id))
-    if (!pane) return
-    for (let waited = 0; waited < SESSION_START_WAIT_MS && !paneTerminal(pane.id); waited += 200) await wait(200)
-    await wait(SESSION_SETTLE_MS)
-    insertIntoSession(pane.id, reference)
+    const paneId = await startSessionIn(target.projectId, target.folder)
+    if (!paneId) return
+    const tabId = (): string | undefined => store.state.panes.find((pane) => pane.id === paneId)?.activeTabId
+    const options = { timeoutMs: SESSION_START_WAIT_MS, stepMs: 200, sleep: wait }
+    await waitUntil(() => paneTerminal(paneId) !== undefined, options)
+    await waitForSessionOutput(() => lastOutputAt(tabId() ?? ''), Date.now, options, SESSION_QUIET_MS, SESSION_SETTLE_MS)
+    insertIntoSession(paneId, reference)
   }
 
   private openMoreMenu(anchor: HTMLElement): void {
