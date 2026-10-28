@@ -867,7 +867,7 @@ button {
 }
 
 .pane.needs-you.focused {
-  box-shadow: 0 0 0 1px var(--needs-ring), var(--shadow-lift);
+  box-shadow: 0 0 0 1px var(--needs-ring), 0 0 0 3px var(--focus-ring), var(--shadow-lift);
 }
 
 /* Selected row: raised surface plus a 1px ring. Add .is-selected (or aria-selected="true") to a row; --sel-ring is the ring on its own. */
