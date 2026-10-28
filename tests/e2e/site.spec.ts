@@ -237,12 +237,7 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
   for (const toggle of await page.locator('.demo-toggle').all()) await expect(toggle).toBeHidden()
 })
 
-const releaseRows = [
-  { id: 'files-view', width: 1000, height: 580 },
-  { id: 'quick-open', width: 940, height: 557 },
-  { id: 'calm-panes', width: 1345, height: 470 },
-  { id: 'tag-colours', width: 640, height: 500 }
-]
+const releaseRows = ['files-review', 'agents-details', 'dawsha-cards', 'projects-sidebar']
 
 test('the hero is three text elements with a readable crop of the app and no pill or platform row', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -270,31 +265,36 @@ test('the page has no em or en dashes, no uppercase labels and no decorative bad
   }
 })
 
-test('New in 1.7 leads the page with four sized lazy cropped screenshots and no run of three splits', async ({ page }) => {
+test('New in 1.7.4 leads the page with sized lazy screenshots and no run of three splits', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
-  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.7')
-  await expect(page.locator('#new-h')).toHaveText('New in 1.7')
-  await expect(page.locator('#new #files-view h3')).toHaveText('The Files view')
-  await expect(page.locator('#new #quick-open')).toContainText('Alt+Enter adds it to the prompt')
-  await expect(page.locator('#new #tag-colours')).toContainText('A tag you set always wins')
-  await expect(page.locator('#new #calm-panes')).toContainText('the focused pane lifts with a soft shadow')
+  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.7.4')
+  await expect(page.locator('#new-h')).toHaveText('New in 1.7.4')
+  await expect(page.locator('#new #files-review h3')).toHaveText('Search and review in Files')
+  await expect(page.locator('#new #files-review')).toContainText('Send to agent types every comment')
+  await expect(page.locator('#new #agents-details')).toContainText('Timeline shows which agents ran side by side')
+  await expect(page.locator('#new #dawsha-cards')).toContainText('solid orange ring')
+  await expect(page.locator('#new #projects-sidebar')).toContainText('Waiting on you')
   const order = await page.locator('#new .wrap > div').evaluateAll((nodes) => nodes.map((n) => n.id))
-  expect(order).toEqual(['files-view', 'quick-open', 'calm-panes', 'tag-colours'])
+  expect(order).toEqual(releaseRows)
   const splits = await page.locator('#new .wrap > div').evaluateAll((nodes) => nodes.map((n) => n.classList.contains('feat-row')))
   for (let i = 0; i + 2 < splits.length; i += 1) expect(splits.slice(i, i + 3).every(Boolean)).toBe(false)
   await expect(page.locator('#new li')).not.toHaveCount(0)
   expect(await page.locator('#new li').first().evaluate((el) => getComputedStyle(el).borderInlineStartWidth)).toBe('0px')
-  for (const { id, width, height } of releaseRows) {
-    const image = page.locator(`#new #${id} img`)
-    await expect(image).toHaveAttribute('loading', 'lazy')
-    await expect(image).toHaveAttribute('width', String(width))
-    await expect(image).toHaveAttribute('height', String(height))
-    expect(((await image.getAttribute('alt')) ?? '').length).toBeGreaterThan(20)
-    await image.scrollIntoViewIfNeeded()
-    await expect(image).toHaveJSProperty('complete', true)
-    expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(width)
-    expect(await image.evaluate((el) => getComputedStyle(el.closest('figure') as Element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+  for (const id of releaseRows) {
+    const images = await page.locator(`#new #${id} img`).all()
+    expect(images.length).toBeGreaterThan(0)
+    for (const image of images) {
+      await expect(image).toHaveAttribute('loading', 'lazy')
+      const width = Number(await image.getAttribute('width'))
+      expect(width).toBeGreaterThan(0)
+      expect(Number(await image.getAttribute('height'))).toBeGreaterThan(0)
+      expect(((await image.getAttribute('alt')) ?? '').length).toBeGreaterThan(20)
+      await image.scrollIntoViewIfNeeded()
+      await expect(image).toHaveJSProperty('complete', true)
+      expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(width)
+      expect(await image.evaluate((el) => getComputedStyle(el.closest('figure') as Element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+    }
   }
   expect(await page.locator('#new').evaluate((el) => el.compareDocumentPosition(document.getElementById('earlier') as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy()
 })
@@ -302,15 +302,17 @@ test('New in 1.7 leads the page with four sized lazy cropped screenshots and no 
 test('Earlier releases is one compact section that keeps the old release anchors and links to the changelog', async ({ page }) => {
   await page.goto(url)
   await expect(page.locator('#earlier-h')).toHaveText('Earlier releases')
-  await expect(page.locator('#earlier #new-1-6, #earlier #new-1-5, #earlier #new-1-0')).toHaveCount(3)
+  await expect(page.locator('#earlier #new-1-7, #earlier #new-1-6, #earlier #new-1-5, #earlier #new-1-0')).toHaveCount(4)
+  await expect(page.locator('#earlier #new-1-7')).toContainText('Files view')
+  await expect(page.locator('#earlier #new-1-7 a')).toHaveAttribute('href', 'https://github.com/mfathy234/dawsha/releases/tag/v1.7.3')
   await expect(page.locator('#earlier #new-1-6')).toContainText('Arabic in every session')
   await expect(page.locator('#earlier #new-1-5')).toContainText('Orchestrator')
   await expect(page.locator('#earlier #new-1-0')).toContainText('sessions board')
   await expect(page.locator('#earlier a[href$="/releases"]')).toHaveCount(1)
-  await expect(page.locator('#earlier a[href*="/releases/tag/"]')).toHaveCount(3)
+  await expect(page.locator('#earlier a[href*="/releases/tag/"]')).toHaveCount(4)
   await expect(page.locator('#earlier img, #earlier video')).toHaveCount(0)
   await expect(page.locator('section[id^="new-1"]')).toHaveCount(0)
-  expect(await page.locator('#earlier').evaluate((el) => el.textContent?.length ?? 0)).toBeLessThan(1100)
+  expect(await page.locator('#earlier').evaluate((el) => el.textContent?.length ?? 0)).toBeLessThan(1500)
   await expect(page.locator('body')).not.toContainText(/snippet/i)
   await expect(page.locator('#features')).toContainText('Voice dictation')
 })
@@ -332,16 +334,17 @@ test('the remote section keeps its phone screenshots and says Remote Control is 
   }
 })
 
-test('the Arabic page translates the 1.7 section, the earlier releases and the demo, and neither page scrolls sideways at 375px', async ({ page }) => {
+test('the Arabic page translates the 1.7.4 section, the earlier releases and the demo, and neither page scrolls sideways at 375px', async ({ page }) => {
   await page.goto(arabicUrl)
-  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.7')
-  await expect(page.locator('#files-view h3')).toHaveText('عرض الملفات')
-  await expect(page.locator('#quick-open h3')).toContainText('الفتح السريع')
-  await expect(page.locator('#tag-colours h3')).toHaveText('وسوم تتلوّن من تلقاء نفسها')
-  await expect(page.locator('#calm-panes h3')).toHaveText('شبكة أهدأ')
-  await expect(page.locator('#files-view img')).toHaveAttribute('alt', /شجرة ملفات/)
+  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.7.4')
+  await expect(page.locator('#files-review h3')).toHaveText('البحث والمراجعة في الملفات')
+  await expect(page.locator('#agents-details h3')).toHaveText('تفاصيل الوكيل وخط زمني')
+  await expect(page.locator('#dawsha-cards h3')).toContainText('الصقل')
+  await expect(page.locator('#projects-sidebar h3')).toHaveText('شريط جانبي مبني حولك')
+  await expect(page.locator('#files-review img').first()).toHaveAttribute('alt', /وضع المراجعة/)
   await expect(page.locator('#earlier-h')).toHaveText('الإصدارات السابقة')
   await expect(page.locator('#earlier')).toContainText('الخط الزمني للجلسة')
+  await expect(page.locator('#earlier #new-1-7 a')).toContainText('ملاحظات الإصدار 1.7')
   await expect(page.locator('#earlier #new-1-6 a')).toContainText('ملاحظات الإصدار 1.6')
   await expect(page.locator('#remote')).toContainText('وافق من هاتفك')
   await expect(page.locator('#remote')).toContainText('في مرحلة بيتا')
