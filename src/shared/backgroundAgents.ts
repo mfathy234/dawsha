@@ -1,3 +1,5 @@
+import type { BgFileTouch, BgToolCall } from './agentActivity'
+
 export type BgKind = 'claude' | 'codex'
 export type BgStatus = 'running' | 'done' | 'failed'
 export type BgRange = '1h' | '2h' | '24h' | '7d'
@@ -44,6 +46,14 @@ export interface BackgroundAgent {
   costUsd: number | null
   lastStep: string
   result: string
+  cwd: string | null
+  /** The prompt the agent was given; empty when the transcript sample does not include it. */
+  prompt: string
+  /** Newest first. */
+  tools: BgToolCall[]
+  files: BgFileTouch[]
+  tokensIn: number
+  tokensOut: number
 }
 
 export interface BackgroundAgentsReport {
@@ -72,18 +82,20 @@ export const toggleIn = <T>(items: readonly T[], item: T): T[] => (items.include
 export const filtersActive = (filters: BgFilters): boolean =>
   filters.statuses.length > 0 || filters.kinds.length > 0 || filters.project !== null || filters.query.trim() !== '' || filters.showAutomatic || filters.range !== DEFAULT_BG_RANGE
 
+const slashed = (text: string): string => text.split(String.fromCharCode(92)).join('/')
 const projectKey = (agent: BackgroundAgent): string => agent.projectId ?? OTHER_PROJECT
 
 /** Filters in the view's order; `skip: 'status'` keeps the status chips' own counts steady. */
 export function applyFilters(agents: readonly BackgroundAgent[], filters: BgFilters, skip?: 'status'): BackgroundAgent[] {
   const query = filters.query.trim().toLocaleLowerCase()
+  const pathQuery = slashed(query)
   return agents.filter((agent) => {
     if (agent.automatic && !filters.showAutomatic) return false
     if (skip !== 'status' && filters.statuses.length > 0 && !filters.statuses.includes(agent.status)) return false
     if (filters.kinds.length > 0 && !filters.kinds.includes(agent.kind)) return false
     if (filters.project !== null && projectKey(agent) !== filters.project) return false
     if (!query) return true
-    return [agent.description, agent.parentTitle, agent.type].some((text) => text.toLocaleLowerCase().includes(query))
+    return [agent.description, agent.parentTitle, agent.type].some((text) => text.toLocaleLowerCase().includes(query)) || agent.files.some((file) => slashed(file.path).toLocaleLowerCase().includes(pathQuery))
   })
 }
 

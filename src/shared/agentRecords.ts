@@ -1,4 +1,5 @@
 import { RUNNING_WINDOW_MS, type BgKind, type BgStatus } from './backgroundAgents'
+import { briefInput, claudeActivity, codexActivity, type BgFileTouch, type BgToolCall } from './agentActivity'
 import { clipWords, flattenText, realPrompt } from './sessionText'
 
 type Rec = Record<string, unknown>
@@ -31,6 +32,9 @@ export interface ParsedAgent {
   usageApprox: boolean
   lastStep: string
   result: string
+  prompt: string
+  tools: BgToolCall[]
+  files: BgFileTouch[]
 }
 
 export interface Sampled {
@@ -70,18 +74,6 @@ function records(text: string): Rec[] {
 }
 
 const emptyUsage = (): AgentUsage => ({ input: 0, output: 0, cacheWrite: 0, cacheRead: 0 })
-
-/** One tool call as a short line: its name and the most telling argument. */
-export function briefInput(input: unknown): string {
-  if (typeof input === 'string') return input
-  if (!isRec(input)) return ''
-  for (const key of ['command', 'cmd', 'file_path', 'path', 'pattern', 'query', 'url', 'description', 'prompt', 'message']) {
-    const value = input[key]
-    if (typeof value === 'string' && value.trim()) return value
-    if (Array.isArray(value) && value.every((part) => typeof part === 'string')) return value.join(' ')
-  }
-  return Object.values(input).find((value): value is string => typeof value === 'string') ?? ''
-}
 
 function stepLine(name: string, input: unknown): string {
   const brief = flattenText(briefInput(input))
@@ -218,7 +210,8 @@ export function parseClaudeAgent(input: ClaudeAgentInput): ParsedAgent {
     usage,
     usageApprox: approx,
     lastStep: status === 'running' || status === 'failed' ? lastStepOf(assistants) : '',
-    result: status === 'running' ? '' : claudeResult(assistants)
+    result: status === 'running' ? '' : claudeResult(assistants),
+    ...claudeActivity(all)
   }
 }
 
@@ -401,6 +394,7 @@ export function parseCodexAgent(input: CodexAgentInput): ParsedAgent | null {
     usage: codexUsage(tailRecords),
     usageApprox: false,
     lastStep: source.guardian ? '' : status === 'done' ? '' : codexStep(tailRecords),
-    result: status === 'running' ? '' : guardian ? guardian.text : message ? shortText(message, RESULT_MAX) : ''
+    result: status === 'running' ? '' : guardian ? guardian.text : message ? shortText(message, RESULT_MAX) : '',
+    ...(source.guardian ? { prompt: '', tools: [], files: [] } : codexActivity(input.whole ? headRecords : [...headRecords, ...tailRecords]))
   }
 }

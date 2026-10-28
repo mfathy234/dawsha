@@ -115,7 +115,7 @@ describe('parseCodexAgent', () => {
 const agent = (over: Partial<BackgroundAgent>): BackgroundAgent => ({
   key: `claude:${over.id ?? 'a'}`, id: 'a', kind: 'claude', parentId: 'p1', parentTitle: 'Release polish', projectId: 'dawsha', projectLabel: 'Dawsha', description: 'Grid pass', type: 'general-purpose',
   automatic: false, model: null, depth: 1, parentAgentId: null, startedAt: NOW - 30 * 60_000, endedAt: NOW - 10 * 60_000, lastActivityAt: NOW - 10 * 60_000, status: 'done', statusNote: null,
-  tokens: 1000, tokensApprox: false, costUsd: null, lastStep: '', result: '', ...over
+  tokens: 1000, tokensApprox: false, costUsd: null, lastStep: '', result: '', cwd: null, prompt: '', tools: [], files: [], tokensIn: 0, tokensOut: 0, ...over
 })
 
 describe('filters and groups', () => {
