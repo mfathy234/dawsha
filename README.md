@@ -25,7 +25,9 @@
 - **Voice dictation.** Press the mic in a pane header or **Ctrl+Shift+Space**, speak Arabic or English, and press it again; the text is typed into the session or the text box you were in, without sending it. Speech becomes text on your computer with Whisper large-v3-turbo (a one-time download of about 570 MB, then offline), with a live microphone level and a microphone picker in Settings.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Activity per pane.** Native child-process activity works for Claude, Codex and Gemini without a mod. An optional Claude ops feed adds plan progress and sub-agent details. Context and any available 5-hour/weekly limits stay with their own pane.
-- **Files view.** A light editor beside your sessions (Ctrl+Shift+E): a file tree per project and worktree with git badges, read-only files with a Changes toggle, small edits saved with Ctrl+S, and the sessions that touched each file. Add a file to the prompt as `@path`, open it in VS Code or copy its path.
+- **Files view.** A light editor beside your sessions (Ctrl+Shift+E). One button at the top shows the project, branch and worktree. The explorer has Files, Search and Review modes with foldable Changes and Open in sessions sections, read-only files with a Changes toggle, small edits saved with Ctrl+S, and an inspector with the outline and the agents and commits that touched the file. Added lines carry a mark for the session that wrote them. **Send to agent** lists the project's live sessions, or starts a new one with the file, or copies an `@mention`. Markdown and HTML open as previews, images get Compare with main.
+- **Search in Files.** Ctrl+Shift+F searches the selected checkout, skips files Git ignores, and supports match case, whole word, regular expression and an include pattern. Results are grouped by file and open at the line.
+- **Review agent changes.** Step through the changed files, click a `+` line to comment, and **Send to agent** types every comment, with file and line, into that session's prompt without sending it. Commit… drafts a message with file selection, and Discard file… asks first.
 - **Browse worktrees.** Choose a branch and checkout from the Files dropdown. Each checkout keeps its own open files and unsaved edits. Delete files or folders through the system Recycle Bin or Trash with confirmation.
 - **Run your project.** Files detects .NET solutions, startup projects and launch profiles, and Node scripts. Review and start a command in the selected checkout, follow its own output, stop it, or save a custom command when detection needs help.
 - **Quick open.** Ctrl+P finds a file from anywhere, terminals included, with a preview: Enter opens it in Files, Alt+Enter adds it to the prompt, Ctrl+Enter opens it in VS Code.
@@ -36,6 +38,7 @@
 - **Orchestrator.** Describe a feature or a bug and a lead agent sizes it, does small work itself and starts only the agents bigger work needs, each in its own pane and git worktree, on Claude Code and Codex. Approve specs, answer questions in Human review, follow cost per agent, then mark a run done or push it and open a PR.
 - **Work dashboard.** See the tickets and sessions you worked on today, this week or this month, per project, typed Feature, Bug, Other or Conversation, with exact active time, your own ticket names and links, and a Copy summary for standups.
 - **Remote Control (Beta).** Enable Remote Access in Settings to pair your own browser with this running Dawsha installation. The app creates a temporary Cloudflare Quick Tunnel; remote input and session control are separate opt-in permissions, and paired browsers can be revoked at any time.
+- **A sidebar built around you.** A Waiting on you section lists sessions blocked on you across projects. Projects show their branch and a quiet "2 live" or "needs you", with sort, a search filter (Ctrl+Shift+O), and a narrow rail with a flyout. The usage meter names its agent, and a click shows Claude, Codex and Gemini limits.
 - **Resize the Projects panel.** Drag its edge or focus the divider and use the arrow keys; Dawsha remembers the width between launches.
 - **Task history.** The Projects > Tasks tab groups related sessions, a task goal, notes and commit references in a dated history that remains after sessions close.
 - **Gemini tool activity.** Gemini panes show the latest tool from the agent's saved chat, with recent tool calls in the activity drawer when available.
@@ -60,6 +63,7 @@
 - **A `dawsha` command.** Run `dawsha .` in any folder to add it as a project and start its agent, `dawsha resume --last` to pick up the newest session, `dawsha open <layout>` to bring a saved layout back, or `dawsha ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
 - **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab. Choose per agent whether sessions start with full access, on by default for Claude Code and Codex.
+- **Agents view.** One All, Running, Failed and Done filter, a details pane with the agent's task, live tool calls or result, files touched (click to open in Files), tokens, cost and model, a Timeline of which agents ran side by side, and Export as Markdown.
 - **Skills and agents inventory.** The **Skills** tab separates installed skills from agent definitions across user, plugin and project locations. Filter by AI provider, then open, copy a path or export an item to a folder you choose.
 - **Sessions board.** Switch the Sessions view from Grid to Board (Ctrl+Shift+B) for four columns: Needs you, Working, Done to review and Reviewed. Cards move by themselves as sessions change. Allow or Deny a permission prompt on the card, drag a finished session to Reviewed, click a card to peek at its live terminal and send a reply, and filter by project and agent.
 - **Session timeline.** Ctrl+Shift+T lists every prompt, edit, command, test run and approval of a session, with filters, search, insights (files touched most, commands run, test runs) and a Markdown export. **Ctrl+Alt+F** searches the timelines of all your sessions, including closed ones, and opens a match read only at the exact point.
@@ -68,7 +72,7 @@
 - **Back up and move.** Settings > Back up and move exports your settings to one JSON file, without remote-access secrets, and imports it on another computer with Merge or Replace.
 - **Paneon settings import.** If Paneon settings are found, Settings > General offers an import. Dawsha backs up its current settings and applies Paneon projects, layouts and preferences the next time you open Dawsha; Paneon remains untouched.
 - **Settings in one place.** A Settings view (Ctrl+,) for the palette shortcut, notifications and live session info, full access per agent, updates, the full changelog and where your data lives.
-- **Themes.** Seven themes (Dawsha, Dawsha Cards, Graphite Cards, Dawsha Daylight, Nord, Catppuccin Mocha, GitHub Light) with contrast checks, plus an optional background image. The Cards and Daylight themes draw each pane as a card with its terminal inset.
+- **Themes.** Seven themes (Dawsha, Dawsha Cards, Graphite Cards, Dawsha Daylight, Nord, Catppuccin Mocha, GitHub Light) with contrast checks, plus an optional background image. The Cards and Daylight themes draw each pane as a card. In Dawsha Cards the terminal sits flush, the focused session has a soft neutral ring and a session that needs you an orange one.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
 
 | Arabic in a Claude Code pane | Voice dictation |
@@ -95,9 +99,21 @@
 |---|---|
 | ![The projects view](docs/screenshots/projects.png) | ![The agents view with install and update buttons](docs/screenshots/agents.png) |
 
-| Background agent groups | Files and run commands |
+| Files with agent marks | Review with a comment |
 |---|---|
-| ![Compact session groups with visible agent summaries and status colours](docs/screenshots/agents-tab.png) | ![Files showing a checkout selector, C# file, and a detected startup command](docs/screenshots/run-commands.png) |
+| ![Files in Changes mode with agent marks on added lines and the inspector on the right](docs/screenshots/files.png) | ![Review mode with a comment on an added line](docs/screenshots/files-review.png) |
+
+| Search in Files | Agents with details |
+|---|---|
+| ![Search mode with results grouped by file](docs/screenshots/files-search.png) | ![The Agents view with an agent selected and its details pane open](docs/screenshots/agents-tab.png) |
+
+| Projects sidebar |
+|---|
+| ![The grid with the Projects sidebar showing Waiting on you](docs/screenshots/projects-sidebar.png) |
+
+| Files and run commands |
+|---|
+| ![Files showing a checkout selector, C# file, and a detected startup command](docs/screenshots/run-commands.png) |
 
 In **Files**, choose the checkout, then select **Run commands**. Review the detected command and working directory before selecting **Run**. Use **Edit command** to save a local correction, **Add command** when nothing is detected, or **Choose solution/project** to point discovery at a nested app. **Stop** affects the selected run; its output stays available. Detection does not start applications or install missing tools.
 
