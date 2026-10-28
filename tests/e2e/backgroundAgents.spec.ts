@@ -19,14 +19,22 @@ const CODEX_SPAWN = '01a171f2-4dfd-7003-bf0f-a0a036758b6f'
 const CODEX_GUARD = '01a171f3-1111-7003-bf0f-a0a036758b6f'
 const RESULT = 'Rebased the branch and all 14 tests pass.'
 
-function claudeAgent(dir: string, id: string, meta: Record<string, unknown>, ageMinutes: number, durationMinutes: number, cwd: string, final: string | null): void {
+interface AgentExtra {
+  prompt?: string
+  edit?: string
+}
+
+function claudeAgent(dir: string, id: string, meta: Record<string, unknown>, ageMinutes: number, durationMinutes: number, cwd: string, final: string | null, extra: AgentExtra = {}): void {
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', spawnDepth: 1, requestShape: 'background', model: 'sonnet', ...meta }))
-  const first = { type: 'user', timestamp: iso(ageMinutes + durationMinutes), cwd, isSidechain: true, message: { role: 'user', content: 'Go' } }
+  const first = { type: 'user', timestamp: iso(ageMinutes + durationMinutes), cwd, isSidechain: true, message: { role: 'user', content: extra.prompt ?? 'Go' } }
+  const edit = extra.edit
+    ? [{ type: 'assistant', timestamp: iso(ageMinutes + 1), message: { id: `e-${id}`, model: 'claude-sonnet-5-5', stop_reason: 'tool_use', usage: usage(10, 20), content: [{ type: 'tool_use', name: 'Edit', input: { file_path: join(cwd, extra.edit), old_string: 'a', new_string: 'a\nb' } }] } }]
+    : []
   const last = final
     ? { type: 'assistant', timestamp: iso(ageMinutes), message: { id: `m-${id}`, model: 'claude-sonnet-5-5', stop_reason: 'end_turn', usage: usage(100, 400), content: [{ type: 'text', text: final }] } }
     : { type: 'assistant', timestamp: iso(ageMinutes), message: { id: `m-${id}`, model: 'claude-sonnet-5-5', stop_reason: 'tool_use', usage: usage(100, 400), content: [{ type: 'tool_use', name: 'Bash', input: { command: 'npm test' } }] } }
-  writeFileSync(join(dir, `agent-${id}.jsonl`), lines(first, last))
+  writeFileSync(join(dir, `agent-${id}.jsonl`), lines(first, ...edit, last))
   touch(join(dir, `agent-${id}.jsonl`), ageMinutes)
 }
 
@@ -47,7 +55,9 @@ function seed(sandbox: Sandbox): void {
   writeFileSync(join(dir, `${PARENT}.jsonl`), lines({ type: 'user', timestamp: iso(90), cwd: folder, message: { content: 'Polish the release' } }, { type: 'ai-title', aiTitle: 'Release polish' }))
   const sub = join(dir, PARENT, 'subagents')
   claudeAgent(sub, 'run1', { description: 'Option A grid pass' }, 0.3, 25, folder, null)
-  claudeAgent(sub, 'done1', { description: 'Sidebar session features', finished: true }, 20, 30, folder, RESULT)
+  mkdirSync(join(folder, 'src'), { recursive: true })
+  writeFileSync(join(folder, 'src', 'sidebar.ts'), 'a\n')
+  claudeAgent(sub, 'done1', { description: 'Sidebar session features', finished: true }, 20, 30, folder, RESULT, { prompt: 'Port the sidebar session features', edit: 'src/sidebar.ts' })
   claudeAgent(sub, 'done2', { description: 'Handoff export', agentType: 'Explore', finished: true }, 75, 12, folder, 'Found the export code in handoff.ts.')
   claudeAgent(sub, 'old1', { description: 'Ancient cleanup', finished: true }, 180, 10, folder, 'Cleaned up.')
   const elsewhere = join(sandbox.root, 'elsewhere', 'Trial')
@@ -76,11 +86,16 @@ const openAgents = async (page: Page): Promise<void> => {
   await page.locator('#background-button').click()
   await expect(page.locator('.bg-view')).toBeVisible()
 }
+const menuItem = (page: Page, name: string) => page.getByRole('menuitem', { name, exact: true })
+const moreMenu = async (page: Page, name: string): Promise<void> => {
+  await page.locator('#bg-more').click()
+  await menuItem(page, name).click()
+}
 // A group with only finished agents starts folded, so tests that count every row open them all first.
 const openAgentsExpanded = async (page: Page): Promise<void> => {
   await openAgents(page)
   await expect(page.locator('.bg-group')).not.toHaveCount(0)
-  if (await page.locator('#bg-expand-all').isEnabled()) await page.locator('#bg-expand-all').click()
+  if (await page.locator('.bg-group-toggle[aria-expanded="false"]').count()) await moreMenu(page, 'Expand all')
   await expect(page.locator('.bg-group-toggle[aria-expanded="false"]')).toHaveCount(0)
 }
 
@@ -100,26 +115,30 @@ test('Agents tab sits after Sessions, shows the running count and agents grouped
     await expect(page.locator('#background-button')).toHaveAccessibleName('Agents, 1 running')
     await openAgentsExpanded(page)
     await expect(page.locator('#background-button')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.bg-head h1')).toHaveText('Agents')
     await expect(page.locator('.bg-group')).toHaveCount(3)
     await expect(bars(page)).toHaveCount(6)
     const first = page.locator('.bg-group').first()
     await expect(first.locator('.bg-group-title')).toHaveText('Release polish')
-    await expect(first.locator('.bg-group-project')).toHaveText('Smoke')
-    await expect(first.locator('.bg-group-counts')).toHaveText('4 agents · 1 running · 3 done')
+    await expect(first.locator('.bg-group-meta')).toHaveText('Smoke · 4 agents')
+    await expect(first.locator('.bg-group-counts')).toHaveText('1 running · 3 done')
     await expect(first.locator('.bg-item').first()).toHaveAttribute('data-status', 'running')
-    await expect(page.locator('.bg-track, .bg-fill, .bg-dot')).toHaveCount(0)
     await expect(first.locator('.bg-item').first().locator('.bg-item-time')).toHaveText(/^[0-9]+[smh]/)
-    const radius = await page.locator('#bg-status-running').evaluate((node) => getComputedStyle(node).borderRadius)
-    expect(parseFloat(radius)).toBeLessThanOrEqual(6)
-    await expect(page.locator('#bg-status-running')).toHaveCSS('border-top-width', '0px')
+    await expect(first.locator('.bg-item').first().locator('.bg-item-note')).toHaveText('Bash npm test')
+    await expect(page.locator('.bg-item', { hasText: 'Sidebar session features' }).locator('.bg-item-note')).toHaveText(RESULT)
+    await expect(page.locator('.bg-item', { hasText: 'Write the migration test' }).locator('.bg-item-note')).toHaveText('Interrupted')
+    await expect(page.locator('.bg-track, .bg-fill, .bg-dot, .bg-chips')).toHaveCount(0)
     await page.setViewportSize({ width: 1024, height: 728 })
     await expect(first.locator('.bg-item-name').first()).toBeVisible()
-    await expect(page.locator('#bg-status-running')).toHaveText('1 running')
-    await expect(page.locator('#bg-status-done')).toHaveText('4 done')
-    await expect(page.locator('#bg-status-failed')).toHaveText('1 failed')
+    await expect(page.locator('#bg-status-all')).toHaveText('All 6')
+    await expect(page.locator('#bg-status-running')).toHaveText('Running 1')
+    await expect(page.locator('#bg-status-failed')).toHaveText('Failed 1')
+    await expect(page.locator('#bg-status-done')).toHaveText('Done 4')
+    await expect(page.locator('#bg-status-all')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('#bg-status-running')).toHaveCSS('border-top-width', '0px')
     await expect(page.locator('.bg-item.st-running')).toHaveAccessibleName(/Option A grid pass, general-purpose, running/)
     await expect(page.locator('#bg-totals')).toContainText('tokens')
-    await expect(page.locator('.bg-axis, .bg-now, .bg-grid')).toHaveCount(0)
+    await expect(page.locator('#bg-details-hint')).toBeVisible()
     await page.keyboard.press('Control+Shift+L')
     await expect(page.locator('.bg-view')).toBeVisible()
   } finally {
@@ -139,15 +158,15 @@ test('every filter narrows the list and Clear filters resets them', async () => 
     await page.locator('#bg-status-failed').click()
     await expect(bars(page)).toHaveCount(1)
     await expect(bars(page).first()).toHaveAccessibleName(/Write the migration test, spawn_agent, failed/)
-    await page.locator('#bg-status-failed').click()
+    await expect(page.locator('#bg-status-failed')).toHaveAttribute('aria-pressed', 'true')
+    await page.locator('#bg-status-all').click()
     await expect(bars(page)).toHaveCount(6)
 
-    await page.locator('#bg-kind-codex').click()
+    await pick(page, '#bg-kind-trigger', 'Codex')
     await expect(bars(page)).toHaveCount(1)
-    await page.locator('#bg-kind-codex').click()
-    await page.locator('#bg-kind-claude').click()
+    await pick(page, '#bg-kind-trigger', 'Claude Code')
     await expect(bars(page)).toHaveCount(5)
-    await page.locator('#bg-kind-claude').click()
+    await pick(page, '#bg-kind-trigger', 'All agents')
 
     await pick(page, '#bg-project-filter-trigger', 'Other folders')
     await expect(bars(page)).toHaveCount(1)
@@ -169,26 +188,28 @@ test('every filter narrows the list and Clear filters resets them', async () => 
     await expect(bars(page)).toHaveCount(1)
     await page.locator('#bg-search').fill('explore')
     await expect(bars(page)).toHaveCount(2)
-    await page.locator('#bg-search').fill('sidebar')
+    await page.locator('#bg-search').fill('sidebar session')
     await expect(bars(page)).toHaveCount(1)
+    await page.locator('#bg-search').fill('src/sidebar.ts')
+    await expect(bars(page)).toHaveCount(1)
+    await expect(bars(page).first()).toHaveAccessibleName(/Sidebar session features/)
     await page.locator('#bg-search').fill('')
 
     await expect(bars(page)).toHaveCount(6)
-    await page.locator('#bg-automatic').check()
+    await moreMenu(page, 'Show automatic reviews')
     await expect(bars(page)).toHaveCount(7)
     await expect(page.locator('.bg-item.auto')).toHaveCount(1)
     await expect(page.locator('.bg-item.auto')).toHaveAccessibleName(/Safety review · allow, automatic review, done/)
     await expect(page.locator('#bg-clear')).toBeVisible()
     await page.locator('#bg-clear').click()
     await expect(bars(page)).toHaveCount(6)
-    await expect(page.locator('#bg-automatic')).not.toBeChecked()
     await expect(page.locator('#bg-clear')).toBeHidden()
   } finally {
     await closeApp(app)
   }
 })
 
-test('details panel shows the agent and Copy result, Show file and Go to session work', async () => {
+test('the detail pane shows task, files and usage, and its actions work', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -198,18 +219,27 @@ test('details panel shows the agent and Copy result, Show file and Go to session
     await page.keyboard.press('Enter')
     const details = page.locator('#bg-details')
     await expect(details).toBeVisible()
-    await expect(details).toContainText('Sidebar session features')
-    await expect(details).toContainText('Release polish')
+    await expect(page.locator('#bg-detail-title')).toHaveText('Sidebar session features')
+    await expect(page.locator('#bg-go-link')).toHaveText('Release polish')
     await expect(details).toContainText('Sonnet')
     await expect(details).toContainText('general-purpose')
     await expect(page.locator('#bg-detail-status')).toHaveText(/done$/)
     await expect(page.locator('#bg-detail-result')).toHaveText(RESULT)
+    await expect(page.locator('#bg-prompt')).toHaveText('Port the sidebar session features')
+    await expect(page.locator('#bg-files')).toContainText('src/sidebar.ts')
+    await expect(page.locator('#bg-files .bg-file-change')).toHaveText('M')
+    await expect(page.locator('#bg-files .bg-file-delta')).toHaveText('+2 −1')
+    await expect(page.locator('#bg-usage')).toContainText('Tokens')
+    await expect(page.locator('#bg-usage')).toContainText('Started')
+    await expect(page.getByRole('button', { name: /^Stop/ })).toHaveCount(0)
+    await expect(page.locator('#bg-retry')).toHaveCount(0)
 
     const before = await page.locator('.bg-item:focus').getAttribute('data-key')
     await page.keyboard.press('ArrowDown')
     await expect(page.locator('.bg-item:focus')).toHaveCount(1)
     expect(await page.locator('.bg-item:focus').getAttribute('data-key')).not.toBe(before)
 
+    await page.locator('.bg-item', { hasText: 'Sidebar session features' }).click()
     await page.locator('#bg-copy').click()
     await expect(page.locator('.toast.info')).toContainText('Result copied')
     expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(RESULT)
@@ -217,6 +247,11 @@ test('details panel shows the agent and Copy result, Show file and Go to session
     await page.locator('#bg-show-file').click()
     await expect(page.locator('.toast.error')).toHaveCount(0)
 
+    await page.locator('#bg-files .bg-file').click()
+    await expect(page.locator('#files-button')).toHaveAttribute('aria-pressed', 'true')
+
+    await openAgentsExpanded(page)
+    await page.locator('.bg-item', { hasText: 'Sidebar session features' }).click()
     await page.locator('#bg-go').click()
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 15_000 })
     await expect(page.locator('#sessions-button')).toHaveAttribute('aria-pressed', 'true')
@@ -224,8 +259,98 @@ test('details panel shows the agent and Copy result, Show file and Go to session
     await openAgentsExpanded(page)
     await page.locator('.bg-item', { hasText: 'Copy tenant settings' }).click()
     await expect(page.locator('#bg-go')).toBeDisabled()
+    await expect(page.locator('#bg-go-link')).toBeDisabled()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('a running agent shows live activity and a failed one offers a retry; Stop is not offered', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await openAgentsExpanded(page)
+    await page.locator('.bg-item', { hasText: 'Option A grid pass' }).click()
+    await expect(page.locator('#bg-detail-status')).toHaveText(/running$/)
+    await expect(page.locator('#bg-feed')).toContainText('Bash')
+    await expect(page.locator('#bg-feed')).toContainText('npm test')
+    await expect(page.locator('#bg-detail-result')).toHaveCount(0)
+    await expect(page.locator('#bg-copy')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^Stop/ })).toHaveCount(0)
+
+    await page.locator('.bg-item', { hasText: 'Write the migration test' }).click()
+    await expect(page.locator('#bg-detail-status')).toHaveText(/failed$/)
+    await expect(page.locator('#bg-detail-note')).toHaveText('Interrupted')
+    await expect(page.locator('#bg-prompt')).toHaveText('Write the migration test')
+    await expect(page.locator('#bg-retry')).toBeDisabled()
+    await expect(page.locator('#bg-copy')).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('the detail pane becomes a drawer below 900px', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.setViewportSize({ width: 1024, height: 728 })
+    await openAgentsExpanded(page)
+    await expect(page.locator('#bg-details')).toBeVisible()
+    await page.setViewportSize({ width: 860, height: 700 })
+    await expect(page.locator('#bg-details')).toBeHidden()
+    await page.locator('.bg-item', { hasText: 'Sidebar session features' }).click()
+    await expect(page.locator('#bg-details')).toBeVisible()
+    await expect(page.locator('#bg-details-close')).toBeVisible()
     await page.locator('#bg-details-close').click()
-    await expect(page.locator('#bg-details')).toHaveCount(0)
+    await expect(page.locator('#bg-details')).toBeHidden()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('the timeline has a lane per session and per agent, and clicking a bar selects the agent', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await openAgents(page)
+    await page.locator('#bg-layout-timeline').click()
+    await expect(page.locator('#bg-layout-timeline')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('#bg-timeline')).toBeVisible()
+    await expect(page.locator('.bg-tl-row.session')).toHaveCount(3)
+    await expect(page.locator('.bg-tl-bar')).toHaveCount(6)
+    await expect(page.locator('.bg-tl-tick').first()).toBeVisible()
+    const running = page.locator('.bg-tl-bar[data-status="running"]')
+    await expect(running).toHaveAttribute('title', /Option A grid pass · running · /)
+    await expect(running).toHaveAccessibleName(/Option A grid pass, general-purpose, running/)
+    await page.locator('#bg-status-failed').click()
+    await expect(page.locator('.bg-tl-bar')).toHaveCount(1)
+    await page.locator('#bg-status-all').click()
+    await running.click()
+    await expect(page.locator('#bg-detail-title')).toHaveText('Option A grid pass')
+    await page.locator('#bg-layout-list').click()
+    await expect(page.locator('#bg-board')).toBeVisible()
+    await expect(page.locator('.bg-item.selected')).toHaveCount(1)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('the more menu exports what is visible as Markdown', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await openAgentsExpanded(page)
+    await page.locator('#bg-status-failed').click()
+    await moreMenu(page, 'Export visible as Markdown')
+    await expect(page.locator('.toast.info')).toContainText('Markdown copied')
+    const text = await app.evaluate(({ clipboard }) => clipboard.readText())
+    expect(text).toContain('## Trial server import')
+    expect(text).toContain('**Write the migration test** · failed')
+    expect(text).not.toContain('Option A grid pass')
   } finally {
     await closeApp(app)
   }
@@ -245,14 +370,13 @@ test('groups with running or failed agents open, finished-only groups fold to on
     await expect(page.locator('.bg-group-toggle[aria-expanded="false"]')).toHaveCount(1)
     await expect(bars(page)).toHaveCount(5)
     const folded = page.locator('.bg-group', { has: page.locator('.bg-group-toggle[aria-expanded="false"]') })
-    await expect(folded.locator('.bg-group-counts')).toHaveText('1 agent · 1 done')
+    await expect(folded.locator('.bg-group-meta')).toContainText('1 agent')
+    await expect(folded.locator('.bg-group-counts')).toHaveText('1 done')
     await expect(folded.locator('.bg-item')).toHaveCount(0)
-    await expect(page.locator('.bg-group', { hasText: 'Trial server import' }).locator('.bg-group-counts .bg-needs')).toHaveText('1 failed')
+    await expect(page.locator('.bg-group', { hasText: 'Trial server import' }).locator('.bg-group-counts')).toHaveText('1 failed')
     const chevron = await toggle('Release polish').locator('.bg-chevron').boundingBox()
     expect(chevron?.width).toBe(24)
     expect(chevron?.height).toBe(24)
-    await expect(page.locator('#bg-expand-all')).toBeEnabled()
-    await expect(page.locator('#bg-collapse-all')).toBeEnabled()
 
     await folded.locator('.bg-group-toggle').click()
     await expect(page.locator('.bg-group-toggle[aria-expanded="false"]')).toHaveCount(0)
@@ -261,13 +385,16 @@ test('groups with running or failed agents open, finished-only groups fold to on
     await expect(toggle('Release polish')).toHaveAttribute('aria-expanded', 'false')
     await expect(bars(page)).toHaveCount(2)
 
-    await page.locator('#bg-collapse-all').click()
+    await moreMenu(page, 'Collapse all')
     await expect(page.locator('.bg-group-toggle[aria-expanded="true"]')).toHaveCount(0)
-    await expect(page.locator('#bg-collapse-all')).toBeDisabled()
-    await page.locator('#bg-expand-all').click()
+    await page.locator('#bg-more').click()
+    await expect(menuItem(page, 'Collapse all')).toBeDisabled()
+    await menuItem(page, 'Expand all').click()
     await expect(page.locator('.bg-group-toggle[aria-expanded="false"]')).toHaveCount(0)
     await expect(bars(page)).toHaveCount(6)
-    await expect(page.locator('#bg-expand-all')).toBeDisabled()
+    await page.locator('#bg-more').click()
+    await expect(menuItem(page, 'Expand all')).toBeDisabled()
+    await page.keyboard.press('Escape')
     await toggle('Release polish').click()
     await expect(toggle('Release polish')).toHaveAttribute('aria-expanded', 'false')
     await expect.poll(() => readSettings(sandbox.userData).agentFolds?.[`claude:${PARENT}`]).toBe(false)
@@ -314,7 +441,7 @@ test('Left and Right fold a focused group, Up and Down walk headers and rows, an
     const row = page.locator('.bg-item', { hasText: 'Handoff export' })
     await row.focus()
     await page.locator('#bg-status-done').click()
-    await page.locator('#bg-status-done').click()
+    await page.locator('#bg-status-all').click()
     await row.focus()
     await expect(row).toBeFocused()
     await page.keyboard.press('ArrowLeft')
@@ -356,7 +483,7 @@ test('empty states follow the range and the filters', async () => {
 })
 
 for (const [mode, themeId] of [['dark', undefined], ['light', 'dawsha-daylight']] as const) {
-  test(`compact groups keep summaries and controls visible, with distinct readable status colours (${mode})`, async () => {
+  test(`compact groups keep summaries and controls visible, with distinct readable status words (${mode})`, async () => {
     const sandbox = createSandbox()
     seed(sandbox)
     const settings = JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8'))
@@ -366,25 +493,29 @@ for (const [mode, themeId] of [['dark', undefined], ['light', 'dawsha-daylight']
     try {
       await page.setViewportSize({ width: 1024, height: 728 })
       await openAgentsExpanded(page)
-      await page.locator('#bg-collapse-all').click()
+      await moreMenu(page, 'Collapse all')
       for (const group of await page.locator('.bg-group-toggle').all()) {
         const title = await group.locator('.bg-group-title').boundingBox()
         const summary = await group.locator('.bg-group-counts').boundingBox()
         expect(title).not.toBeNull()
         expect(summary).not.toBeNull()
-        expect(Math.abs(summary!.x - title!.x)).toBeLessThan(200)
         expect((await group.boundingBox())!.height).toBeLessThanOrEqual(64)
       }
-      await expect(page.locator('#bg-expand-all')).toBeVisible()
-      await expect(page.locator('#bg-collapse-all')).toBeVisible()
+      await expect(page.locator('#bg-more')).toBeVisible()
+      await expect(page.locator('#bg-layout')).toBeVisible()
+      await moreMenu(page, 'Expand all')
       const colours = await page.evaluate(() => {
         const hex = (value: string): string => '#' + (value.match(/[\d.]+/g) ?? []).slice(0, 3).map((part) => Math.round(Number(part)).toString(16).padStart(2, '0')).join('')
         const read = (selector: string): string => hex(getComputedStyle(document.querySelector(selector)!).color)
-        return { running: read('#bg-status-running'), done: read('#bg-status-done'), failed: read('#bg-status-failed'), background: hex(getComputedStyle(document.querySelector('.bg-view')!).backgroundColor) }
+        return {
+          running: read('.bg-item[data-status="running"] .bg-item-status'), done: read('.bg-item[data-status="done"] .bg-item-status'), failed: read('.bg-item[data-status="failed"] .bg-item-status'),
+          background: hex(getComputedStyle(document.querySelector('.bg-view')!).backgroundColor)
+        }
       })
       expect(new Set([colours.running, colours.done, colours.failed]).size).toBe(3)
       for (const foreground of [colours.running, colours.done, colours.failed]) expect(contrastRatio(foreground, colours.background)).toBeGreaterThanOrEqual(4.5)
-      await page.screenshot({ path: join('test-results/screens', `173-agents-${mode}-compact.png`) })
+      await page.locator('.bg-item', { hasText: 'Sidebar session features' }).click()
+      await page.screenshot({ path: join('test-results/screens', `174-agents-${mode}-compact.png`) })
     } finally {
       await closeApp(app)
     }
@@ -399,22 +530,16 @@ for (const [mode, themeId] of [['dark', undefined], ['light', 'dawsha-daylight']
     try {
       await page.setViewportSize({ width: 1440, height: 880 })
       mkdirSync(SHOTS, { recursive: true })
-      await openAgents(page)
-      await page.screenshot({ path: join(SHOTS, `agents-${mode}-collapsed.png`) })
-      await page.locator('#bg-expand-all').click()
-      await expect(bars(page)).toHaveCount(6)
+      await openAgentsExpanded(page)
       await page.screenshot({ path: join(SHOTS, `agents-${mode}-overview.png`) })
+      await page.locator('.bg-item', { hasText: 'Sidebar session features' }).click()
+      await page.screenshot({ path: join(SHOTS, `agents-${mode}-details.png`) })
+      await page.locator('.bg-item', { hasText: 'Option A grid pass' }).click()
+      await page.screenshot({ path: join(SHOTS, `agents-${mode}-running.png`) })
+      await page.locator('#bg-layout-timeline').click()
+      await page.screenshot({ path: join(SHOTS, `agents-${mode}-timeline.png`) })
       await page.setViewportSize({ width: 1024, height: 728 })
       await page.screenshot({ path: join(SHOTS, `agents-${mode}-ci-size.png`) })
-      await page.setViewportSize({ width: 1440, height: 880 })
-      await page.locator('.bg-item', { hasText: 'Sidebar session features' }).click()
-      await page.locator('#bg-automatic').check()
-      await page.locator('#bg-project-filter-trigger').click()
-      await expect(page.getByRole('listbox')).toBeVisible()
-      await page.screenshot({ path: join(SHOTS, `agents-${mode}-filters-open.png`) })
-      await page.keyboard.press('Escape')
-      await page.locator('#bg-status-done').click()
-      await page.screenshot({ path: join(SHOTS, `agents-${mode}-filtered-details.png`) })
     } finally {
       await closeApp(app)
     }
