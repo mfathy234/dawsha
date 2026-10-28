@@ -481,7 +481,9 @@ export class TopBarComponent {
     placeNearAnchor(popover, this.limits, 6)
     this.limits.setAttribute('aria-expanded', 'true')
     popover.querySelector<HTMLElement>('.limits-usage-link')?.focus()
-    setTimeout(() => document.addEventListener('pointerdown', this.limitsOutside, true), 0)
+    setTimeout(() => {
+      if (this.limitsPopover === popover) document.addEventListener('pointerdown', this.limitsOutside, true)
+    }, 0)
   }
 
   private closeLimitsPopover(returnFocus = false): void {
