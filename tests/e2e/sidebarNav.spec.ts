@@ -405,6 +405,7 @@ test('arrow keys walk the sidebar list, fold projects and remove closed sessions
     await page.keyboard.press('ArrowDown')
     expect(await focusedNav(page)).toBe(key(1))
     await page.keyboard.press('Delete')
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove Second', exact: true }).click()
     await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Third', 'First'])
     expect(await focusedNav(page)).toBe(key(0))
     const toast = page.locator('.toast', { hasText: 'Removed Second' })
@@ -417,6 +418,7 @@ test('arrow keys walk the sidebar list, fold projects and remove closed sessions
     await page.keyboard.press('ArrowUp')
     expect(await focusedNav(page)).toBe(key(0))
     await page.keyboard.press('Backspace')
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove First', exact: true }).click()
     await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Third', 'Second'])
     expect(await focusedNav(page)).toBe(key(1))
   } finally {

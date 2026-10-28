@@ -171,6 +171,7 @@ test('closed sessions stay under their project until removed there', async () =>
     await expect(closedToast).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).keptSessions?.length).toBe(1)
     await page.getByRole('button', { name: 'Remove Add dark mode toggle from Smoke' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove Add dark mode toggle', exact: true }).click()
     await expect(page.locator('.kept-session-row')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).keptSessions?.length).toBe(0)
   } finally {
@@ -280,6 +281,7 @@ test('removing a closed session offers an undo that restores its place', async (
     const names = page.locator('.kept-session-row.closed .sess-name')
     await expect(names).toHaveText(['Third', 'Second', 'First'])
     await page.getByRole('button', { name: 'Remove Second from Smoke' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove Second', exact: true }).click()
     await expect(names).toHaveText(['Third', 'First'])
     await expect.poll(() => readSettings(sandbox.userData).keptSessions.map((k: any) => k.title)).toEqual(['First', 'Third'])
     const removed = page.locator('.toast', { hasText: 'Removed Second' })

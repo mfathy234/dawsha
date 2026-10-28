@@ -17,7 +17,7 @@ import { openFolderInFiles } from '../files/filesActions'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
 import { tagMenuItems, tagTooltip } from './sessionTagUi'
-import { promptDialog } from './dialogs'
+import { confirmDialog, promptDialog } from './dialogs'
 import { lastOutputAt } from '../ptyActivity'
 import './sidebar.css'
 import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
@@ -169,8 +169,25 @@ export class SidebarComponent {
     event.preventDefault()
     const sibling = items[index + 1]
     const next = sibling?.closest('.kept-session-row.closed') ? sibling : (items[index - 1] ?? sibling)
-    this.restore = next?.dataset.nav ? { key: next.dataset.nav, index: Math.max(0, index - 1) } : null
-    removeKeptSession(agent as AgentKind, sessionId)
+    const restore = next?.dataset.nav ? { key: next.dataset.nav, index: Math.max(0, index - 1) } : null
+    void this.confirmRemoveClosed(agent as AgentKind, sessionId, () => {
+      this.restore = restore
+    })
+  }
+
+  private async confirmRemoveClosed(agent: AgentKind, sessionId: string, beforeRemove?: () => void): Promise<void> {
+    const state = this.lastState
+    const kept = state?.settings.keptSessions.find((item) => item.agent === agent && item.sessionId === sessionId)
+    if (!state || !kept) return
+    const projectName = state.settings.projects.find((project) => project.id === kept.projectId)?.name ?? 'this project'
+    const confirmed = await confirmDialog({
+      title: `Remove ${kept.title} from ${projectName}?`,
+      body: `This removes ${kept.title} from the closed list in the sidebar. The session stays on disk and can still be found with Resume. You can undo it right after.`,
+      confirmLabel: `Remove ${kept.title}`
+    })
+    if (!confirmed) return
+    beforeRemove?.()
+    removeKeptSession(agent, sessionId)
   }
 
   private lastState: AppState | null = null
@@ -546,8 +563,8 @@ export class SidebarComponent {
               used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))
     return h('div', { class: 'kept-session-row closed' },
       main,
-      this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag), 'Remove', () => removeKeptSession(session.agent, session.sessionId)),
-      iconButton(`Remove ${session.title} from ${project.name}`, ICONS.close, () => removeKeptSession(session.agent, session.sessionId), 'small sess-close')
+      this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag), 'Remove', () => void this.confirmRemoveClosed(session.agent, session.sessionId)),
+      iconButton(`Remove ${session.title} from ${project.name}`, ICONS.close, () => void this.confirmRemoveClosed(session.agent, session.sessionId), 'small sess-close')
     )
   }
 
