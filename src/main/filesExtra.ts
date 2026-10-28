@@ -141,9 +141,12 @@ export async function fileLog(folder: string, path: unknown): Promise<FileLogRes
   return { ok: true, commits }
 }
 
-function showBytes(root: string, spec: string): Promise<Buffer | null> {
+function showBytes(root: string, spec: string): Promise<Buffer | 'large' | null> {
   return new Promise((resolve) => {
-    execFile('git', ['show', spec], { cwd: root, maxBuffer: IMAGE_MAX_BYTES + 1024, encoding: 'buffer', windowsHide: true, timeout: 15_000 }, (error, stdout) => resolve(error ? null : (stdout as unknown as Buffer)))
+    execFile('git', ['show', spec], { cwd: root, maxBuffer: IMAGE_MAX_BYTES + 1024, encoding: 'buffer', windowsHide: true, timeout: 15_000 }, (error, stdout) => {
+      if (!error) resolve(stdout as unknown as Buffer)
+      else resolve((error as NodeJS.ErrnoException).code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' ? 'large' : null)
+    })
   })
 }
 
@@ -157,6 +160,7 @@ export async function readImage(folder: string, path: unknown, base: boolean): P
     const root = await repoRoot(folder)
     const at = root ? await mergeBase(root) : null
     const bytes = root && at && rel ? await showBytes(root, `${at}:${rel}`) : null
+    if (bytes === 'large') return { ok: false, error: 'The main version is larger than 8 MB, so it is not shown here.' }
     if (!bytes) return { ok: false, error: 'There is no version of this image on main.' }
     return { ok: true, dataUrl: `data:${mime};base64,${bytes.toString('base64')}`, size: bytes.length }
   }

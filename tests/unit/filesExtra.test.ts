@@ -117,6 +117,14 @@ describe('fileLog and readImage', () => {
     const base = await readImage(root, 'p.png', true)
     expect(base.ok && base.size).toBe(3)
   })
+  it('says when the version on main is too large, not that it is missing', async () => {
+    git(root, 'init', '-q', '-b', 'main')
+    put('big.png', Buffer.alloc(9 * 1024 * 1024, 1))
+    git(root, 'add', '.')
+    git(root, 'commit', '-q', '-m', 'big')
+    expect(await readImage(root, 'big.png', true)).toEqual({ ok: false, error: expect.stringContaining('larger than 8 MB') })
+    expect(await readImage(root, 'none.png', true)).toEqual({ ok: false, error: expect.stringContaining('no version') })
+  })
 })
 
 describe('linkedRepos', () => {
