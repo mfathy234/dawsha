@@ -33,6 +33,7 @@ for (const [mode, themeId] of THEMES) {
     const { app, page } = await launchApp(sandbox)
     try {
       await shot(page, `${mode}-empty-grid`)
+      await page.getByRole('button', { name: 'Filter projects and sessions' }).click()
       await page.locator('#sidebar-project-filter').fill('zzz')
       await expect(page.getByText('No project or session matches.')).toBeVisible()
       await shot(page, `${mode}-empty-sidebar-filter`)

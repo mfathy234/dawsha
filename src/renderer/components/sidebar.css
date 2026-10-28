@@ -20,7 +20,7 @@
 }
 
 .kept-session-row .sess-name {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -158,3 +158,156 @@
 .sidebar-empty .proj-empty { margin: 0; color: var(--text); font-weight: 500; }
 .sidebar-empty-hint { margin: 0; color: var(--muted); font-size: var(--fs-ui); line-height: 1.45; }
 .sidebar-empty .btn { margin-top: var(--s-1); }
+
+/* 1.7.4 sidebar: waiting section, quiet project rows, session rows with age and status, rail with monograms. */
+.sidebar-head .icon-btn { flex: none; }
+
+.side-sec {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 28px;
+  margin-top: var(--s-3);
+  padding: 0 2px 0 var(--s-2);
+  color: var(--muted);
+  font-size: var(--fs-status);
+}
+
+.side-sec-label { flex: 1; min-width: 0; }
+.side-sec.needs { margin-top: var(--s-1); color: var(--state-needs); font-weight: 600; }
+.side-sec-count { font-variant-numeric: tabular-nums; }
+
+.needs-group { padding-bottom: var(--s-1); }
+.needs-group .sess-group-label { display: none; }
+
+.kept-session-row .sess-line { justify-content: space-between; }
+.sess-age { flex: none; margin-inline-start: auto; color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
+
+.kept-session-row.waiting-row { padding-inline-end: 0; }
+.kept-session-row.waiting-row:hover .sess-row,
+.kept-session-row.waiting-row:focus-within .sess-row { padding-inline-end: var(--s-2); }
+.needs-row { width: 100%; }
+.waiting-row .needs-project { max-width: 55%; }
+
+.proj-list .proj-row {
+  height: auto;
+  min-height: 40px;
+  gap: 2px;
+  margin-top: var(--s-2);
+  padding: 0 2px;
+  border-radius: var(--radius);
+  font-weight: 400;
+}
+
+.proj-list .proj-row:first-child { margin-top: var(--s-1); }
+.proj-list .proj-row:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+
+.proj-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-1);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.proj-toggle:focus-visible,
+.sess-row:focus-visible,
+.foot-btn:focus-visible,
+.rail-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.proj-toggle > .icon { flex: none; color: var(--muted); }
+.proj-toggle > .icon svg { width: 12px; height: 12px; }
+.proj-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+
+.proj-list .proj-text .proj-name {
+  flex: none;
+  display: block;
+  height: auto;
+  font-size: var(--fs-body);
+  font-weight: 650;
+  cursor: inherit;
+}
+
+.proj-sub { display: flex; align-items: center; gap: var(--s-2); min-width: 0; font-size: var(--fs-status); color: var(--muted); }
+.proj-branch { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--fs-status); }
+.proj-sub .proj-today { margin: 0; flex: none; }
+
+.proj-count { flex: none; padding: 0 var(--s-2); color: var(--muted); font-size: var(--fs-status); font-weight: 400; white-space: nowrap; }
+.proj-count.tone-needs { color: var(--state-needs); font-weight: 600; }
+
+/* The buttons stay in the layout, only transparent, so keyboard focus finds them; hover or focus shows them in place of the count. */
+.proj-list .proj-row { position: relative; }
+.proj-acts { position: absolute; inset-inline-end: 2px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; opacity: 0; }
+.proj-row:hover .proj-acts,
+.proj-row:focus-within .proj-acts,
+.proj-acts:has(.proj-agent-menu[aria-expanded='true']) { opacity: 1; }
+.proj-row:hover .proj-count,
+.proj-row:focus-within .proj-count { opacity: 0; }
+.proj-row:hover .proj-toggle,
+.proj-row:focus-within .proj-toggle { padding-inline-end: 52px; }
+
+.proj-list .proj-hidden { padding: 0 var(--s-2) var(--s-1) var(--s-5); }
+.proj-hidden .link { font-size: inherit; }
+.sidebar-note { align-self: flex-start; margin: var(--s-3) var(--s-2) 0; font-size: var(--fs-status); }
+
+.sidebar-foot { display: flex; gap: var(--s-2); padding: var(--s-2) var(--s-3); }
+.foot-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  height: 30px;
+  padding: 0 var(--s-2);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-ui);
+  cursor: pointer;
+}
+.foot-btn:hover { background: var(--hover); color: var(--text); }
+.foot-btn:active { background: var(--press); }
+.foot-btn[aria-current='page'] { color: var(--text); background: var(--raised); }
+
+aside.sidebar.rail { width: 56px; }
+.rail-btn.rail-mono {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-ui);
+  font-weight: 700;
+  cursor: pointer;
+}
+.rail-btn.rail-mono:hover { background: var(--hover); }
+.rail-btn.rail-mono.selected { background: color-mix(in srgb, var(--accent) 22%, var(--raised)); }
+.rail-btn .rail-badge { top: -4px; right: -4px; color: var(--muted); font-size: var(--fs-status); font-weight: 700; }
+.rail-btn .rail-badge.needs { color: var(--state-needs); }
+.rail-spacer { flex: 1; }
+
+.popover.menu.rail-flyout { width: 280px; max-width: calc(100vw - 24px); padding: var(--s-2); }
+.fly-head { display: flex; flex-direction: column; gap: 1px; padding: var(--s-2) var(--s-3); }
+.fly-project { font-weight: 650; }
+.fly-empty { padding: var(--s-2) var(--s-3); color: var(--muted); }
+.menu-item.fly-session { height: auto; min-height: 40px; align-items: flex-start; padding: var(--s-2) var(--s-3); white-space: normal; text-align: start; }
+.fly-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fly-title { overflow-wrap: anywhere; }
+.menu-check { display: inline-block; width: 14px; flex: none; }
+.menu-item.danger { color: var(--danger); }
+
+@media (prefers-reduced-motion: reduce) {
+  .proj-toggle, .foot-btn, .rail-btn { transition: none; }
+}

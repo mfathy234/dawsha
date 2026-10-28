@@ -17,6 +17,7 @@ import { primaryModifierPressed } from '../../shared/shortcuts'
 import { confirmDialog } from './dialogs'
 import { InstructionsSharedComponent, type FileSnap } from './instructionsShared'
 import { toast } from './toast'
+import { selectMenu } from './selectMenu'
 
 interface OpenFile {
   name: InstructionFileName
@@ -87,7 +88,7 @@ export class InstructionsPanelComponent {
     )
     this.el.append(
       h('p', { class: 'lede' }, 'The instruction files your agents read from the project folder: CLAUDE.md, AGENTS.md and GEMINI.md.'),
-      h('div', { class: 'instr-bar' }, h('label', { for: 'instr-project' }, 'Project'), this.select),
+      h('div', { class: 'instr-bar' }, h('label', { for: 'instr-project' }, 'Project'), selectMenu(this.select)),
       this.rows,
       this.editor,
       this.shared.el

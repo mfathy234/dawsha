@@ -5,6 +5,7 @@ import { sanitizeRunOverrides } from './runCommands'
 import { defaultOrchSettings, sanitizeOrchSettings } from './orch/profiles'
 import { isAgent } from './agents'
 import { isSessionsLayout } from './board'
+import { isSidebarSort } from './sidebarModel'
 import { sanitizeBaseline } from './gitStatus'
 import { DEFAULT_THEME_ID, resolveThemeId } from './themes'
 import { formatShortcut, parseShortcut } from './shortcuts'
@@ -72,6 +73,8 @@ export const defaultSettings = (): Settings => ({
   projects: [],
   theme: { id: DEFAULT_THEME_ID, image: defaultImage() },
   sidebarCollapsed: false,
+  sidebarSort: 'recent',
+  sidebarHideEmpty: false,
   dimOtherPanes: false,
   showRecap: true,
   colorSessionsByTag: true,
@@ -364,6 +367,8 @@ export function migrateSettings(raw: unknown): Settings {
     projects,
     theme: { id: resolveThemeId(asString(theme.id) ?? defaults.theme.id), image: sanitizeImage(theme.image) },
     sidebarCollapsed: raw.sidebarCollapsed === true,
+    sidebarSort: isSidebarSort(raw.sidebarSort) ? raw.sidebarSort : 'recent',
+    sidebarHideEmpty: raw.sidebarHideEmpty === true,
     dimOtherPanes: raw.dimOtherPanes === true,
     showRecap: raw.showRecap !== false,
     colorSessionsByTag: raw.colorSessionsByTag !== false,

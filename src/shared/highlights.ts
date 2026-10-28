@@ -125,3 +125,30 @@ export function describeRules(rules: HighlightRule[], limit = 6): string {
   const more = rules.length - names.length
   return more > 0 ? `${names.join(', ')} and ${more} more` : names.join(', ')
 }
+
+export interface PreviewLine {
+  text: string
+  color: HighlightColor | null
+  draft: boolean
+}
+
+export const PREVIEW_SAMPLE_LINES: readonly string[] = [
+  'error: cannot find module "./config"',
+  'warning: 2 unused variables',
+  'FAIL src/auth.test.ts',
+  '✓ 14 tests passed',
+  'Build finished in 3.2s'
+]
+
+/** The sample terminal lines coloured by the rules as the terminal would, plus a line of the rule being typed when it is valid. */
+export function highlightPreview(rules: HighlightRule[], draft: HighlightRule | null): PreviewLine[] {
+  const compiled = compileRules(rules)
+  const lines: PreviewLine[] = PREVIEW_SAMPLE_LINES.map((text) => ({ text, color: compiled.test(text), draft: false }))
+  const pattern = draft?.pattern.trim() ?? ''
+  if (draft && pattern !== '' && validateRule(pattern, draft.regex === true) === null && compileRule(draft)) {
+    const sample = draft.regex === true ? `matches /${pattern}/` : `a line with ${pattern} in it`
+    const matches = compileRule(draft)?.test(sample) === true
+    lines.push({ text: matches ? sample : `a line with ${pattern.slice(0, 40)} in it`, color: matches ? draft.color : null, draft: true })
+  }
+  return lines
+}

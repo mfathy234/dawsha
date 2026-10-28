@@ -127,6 +127,10 @@ export interface Settings {
   projects: Project[]
   theme: ThemeSettings
   sidebarCollapsed: boolean
+  /** How the sidebar orders projects: by recent activity, by name, or the stored (manual) order. */
+  sidebarSort: import('./sidebarModel').SidebarSort
+  /** Hides projects that have no sessions from the sidebar. */
+  sidebarHideEmpty: boolean
   dimOtherPanes: boolean
   showRecap: boolean
   colorSessionsByTag: boolean

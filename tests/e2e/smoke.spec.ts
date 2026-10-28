@@ -374,7 +374,7 @@ test('project default agent is set in the Projects view and used by the sidebar'
     await openMore(first.page, 'projects')
     await first.page.getByRole('button', { name: 'New Codex session in Smoke' }).click()
     await expect(first.page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)
-    await first.page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    await first.page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await first.page.getByRole('menuitem', { name: 'Claude session' }).click()
     await expect(first.page.locator('.pane')).toHaveCount(2)
     await expect(first.page.locator('.pane-header .agent-mark.claude')).toHaveCount(1)
