@@ -73,7 +73,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.pane-info .info-changes')).toContainText('+1 −0 · 1 file', { timeout: 15_000 })
     await expect(page.locator('.pane-info .info-model')).toHaveCount(0)
-    await expect(page.locator('.topbar-limits')).toBeHidden()
+    await expect(page.locator('.topbar-limits')).toContainText('no limits reported')
 
     await openSettings(page, 'notifications')
     await page.locator('#bridge-toggle').click()
@@ -133,7 +133,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await closeSettings(page)
     await expect(page.locator('.pane-info .info-model')).toHaveCount(0)
     await expect(page.locator('.pane-info .info-changes')).toHaveCount(1)
-    await expect(page.locator('.topbar-limits')).toBeHidden()
+    await expect(page.locator('.topbar-limits')).toContainText('no limits reported')
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
