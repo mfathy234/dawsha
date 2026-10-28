@@ -22,7 +22,7 @@ test('run editor shortcuts save the command and close the panel without closing 
     await expect(page.locator('.files-tab')).toHaveCount(1)
     await page.locator('#run-output').focus()
     await page.keyboard.press('e')
-    await expect(page.locator('#files-edit')).toHaveText('Edit')
+    await expect(page.locator('#files-edit')).toBeHidden()
     await page.keyboard.press('Control+w')
     await expect(page.locator('#files-run-panel')).toBeHidden()
     await expect(page.locator('.files-tab')).toHaveCount(1)

@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { closeApp, createSandbox, launchApp } from './helpers'
 
@@ -22,7 +22,9 @@ test('pending Trash blocks edits and new tabs across Files hide/show and unlocks
     await page.locator('#files-button').click()
     await page.locator('.files-row[data-path="src"]').click()
     await page.locator('.files-row[data-path="src/a.txt"]').click()
-    await page.locator('#files-edit').click()
+    await expect(editor).toHaveText('original')
+    await page.locator('#files-more').click()
+    await page.getByRole('menuitem', { name: /^Edit/ }).click()
     await editor.click()
     await page.keyboard.press('Control+End')
     await page.keyboard.type(' consented')
@@ -70,18 +72,22 @@ test('checkout selection keeps dirty documents separate; Delete cancels safely a
   const { app, page } = await launchApp(sandbox)
   const editor = page.locator('.files-editor:not([hidden]) .cm-content')
   const row = (path: string) => page.locator(`.files-row[data-path="${path}"]`)
-  const select = async (folder: string) => page.locator('#files-checkout').evaluate((element, value) => {
-    const select = element as HTMLSelectElement
-    select.value = value
-    select.dispatchEvent(new Event('change', { bubbles: true }))
-  }, folder)
+  const select = async (folder: string) => {
+    await expect(page.locator('#files-location .files-loc-project')).toHaveText('Smoke')
+    await page.locator('#files-location').click()
+    await page.locator('.ctx-item', { has: page.locator('.ctx-detail', { hasText: new RegExp(`^${basename(folder)}$`) }) }).click()
+  }
   try {
     await page.locator('#files-button').click()
-    await expect(page.locator('#files-checkout option')).toHaveCount(2)
+    await expect(page.locator('#files-location .files-loc-project')).toHaveText('Smoke')
+    await page.locator('#files-location').click()
+    await expect(page.locator('.ctx-item', { has: page.locator('.ctx-detail', { hasText: /^(Smoke Project|linked)$/ }) })).toHaveCount(2)
+    await page.keyboard.press('Escape')
     await row('src').click()
     await row('src/a.txt').click()
     await expect(editor).toHaveText('main checkout')
-    await page.locator('#files-edit').click()
+    await page.locator('#files-more').click()
+    await page.getByRole('menuitem', { name: /^Edit/ }).click()
     await editor.click()
     await page.keyboard.press('Control+End')
     await page.keyboard.type(' unsaved')
