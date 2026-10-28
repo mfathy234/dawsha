@@ -495,9 +495,17 @@ export class FilesViewComponent {
   private async refreshLinked(target: FilesTarget, folders: string[]): Promise<void> {
     const key = `${target.projectId}|${folders.join('|')}`
     if (key === this.linkedKey) return
+    let linked: LinkedRepo[] = []
+    if (folders.length > 0) {
+      try {
+        linked = await api.linkedRepos(target.projectId, folders)
+      } catch {
+        return
+      }
+    }
+    if (this.target !== target) return
     this.linkedKey = key
-    const linked = folders.length === 0 ? [] : await api.linkedRepos(target.projectId, folders).catch(() => [] as LinkedRepo[])
-    if (this.target === target) this.linked = linked
+    this.linked = linked
   }
 
   private onDiskChange(key: string, paths: string[]): void {
