@@ -76,7 +76,10 @@ const wait = (ms: number): Promise<void> => new Promise((resolve) => window.setT
 export class FilesViewComponent {
   readonly el = h('main', { class: 'files-view', id: 'files-view', 'aria-label': 'Files' })
   private readonly runPanel = new RunCommandsPanel()
-  private readonly panel = new BottomPanel(this.runPanel, () => this.renderStatus())
+  private readonly panel = new BottomPanel(this.runPanel, () => {
+    // the panel reports while it is built, before the status bar below exists
+    if (this.status !== undefined) this.renderStatus()
+  })
   private visible = false
   private target: FilesTarget | null = null
   private readonly sets = new Map<string, DocSet>()
@@ -348,9 +351,14 @@ export class FilesViewComponent {
   // Menus
 
   private openLocationMenu(button: HTMLElement): void {
+    void this.showLocationMenu(button)
+  }
+
+  private async showLocationMenu(button: HTMLElement): Promise<void> {
+    if (!this.target) return
+    await this.refreshCheckouts()
     const target = this.target
     if (!target) return
-    void this.refreshCheckouts()
     const project = projectById(store.state, target.projectId)
     const box = button.getBoundingClientRect()
     this.explorer.setLocationOpen(true)
@@ -620,8 +628,11 @@ export class FilesViewComponent {
   }
 
   private setPreview(on: boolean): void {
-    this.active()?.setPreview(on)
-    if (!on) this.active()?.editor?.focus()
+    const doc = this.active()
+    if (!doc) return
+    if (on && doc.changes) void doc.toggleChanges()
+    doc.setPreview(on)
+    if (!on) doc.editor?.focus()
   }
 
   private async toggleEdit(): Promise<void> {
@@ -1153,7 +1164,7 @@ export class FilesViewComponent {
       removed: doc?.stat?.removed ?? null,
       editing: doc?.editing ?? false,
       canPreview: !!doc && doc.canPreview,
-      previewing: doc?.previewing ?? false,
+      previewing: (doc?.previewing ?? false) && !doc?.changes,
       hasSource: ready,
       inspectorOpen: filesLayout().inspector.open,
       inspectorFits: this.fits.matches,
@@ -1167,7 +1178,7 @@ export class FilesViewComponent {
   }
 
   private previewing(doc: FileDoc | null): boolean {
-    if (!doc || !doc.canPreview || !doc.previewing) return false
+    if (!doc || !doc.canPreview || !doc.previewing || doc.changes) return false
     return doc.status === 'ready' || doc.previewKind === 'image'
   }
 

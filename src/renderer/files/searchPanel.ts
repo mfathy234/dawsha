@@ -98,6 +98,7 @@ export class SearchPanel {
     window.clearTimeout(this.timer)
     this.results.replaceChildren()
     this.showHint()
+    if (this.input.value.trim() !== '') void this.run()
   }
 
   private showHint(): void {

@@ -22,7 +22,8 @@ export function commitDialog(options: CommitDialogOptions): Promise<string | nul
   const unchecked = new Set<string>()
   const message = h('textarea', { class: 'commit-message', id: 'commit-message', rows: '4', 'aria-label': 'Commit message', placeholder: 'Commit message' })
   message.value = options.draft
-  const error = h('pre', { class: 'commit-error', id: 'commit-error', role: 'alert', hidden: true })
+  const errorText = h('pre', { class: 'commit-error-text' })
+  const error = h('div', { class: 'commit-error', id: 'commit-error', role: 'alert', hidden: true }, h('strong', {}, 'Not committed.'), errorText)
   const cancel = h('button', { class: 'btn ghost', type: 'button' }, 'Cancel')
   const confirm = h('button', { class: 'btn primary', type: 'button', id: 'commit-confirm' })
   const rows = options.files.map((file) => {
@@ -66,7 +67,7 @@ export function commitDialog(options: CommitDialogOptions): Promise<string | nul
       return
     }
     error.hidden = false
-    error.textContent = result.error
+    errorText.textContent = result.error
     sync()
   })
   sync()
