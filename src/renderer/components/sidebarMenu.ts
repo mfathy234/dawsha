@@ -28,6 +28,14 @@ export class SidebarMenu {
     if (returnFocus && key) this.anchorFor(key)?.focus()
   }
 
+  /** After the sidebar is rebuilt the menu stays open on its new button, and closes only when that button is gone. */
+  reanchor(): void {
+    if (!this.el || this.key === null) return
+    const anchor = this.anchorFor(this.key)
+    if (!anchor) return this.close()
+    placeNearAnchor(this.el, anchor, 2)
+  }
+
   open(key: string, children: (HTMLElement | null)[], label: string, extraClass = ''): void {
     const anchor = this.anchorFor(key)
     this.close()

@@ -107,6 +107,28 @@ test('Waiting on you lists sessions that need input and disappears when none do'
   }
 })
 
+test('an open project menu stays open and usable while the sidebar re-renders', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const add = page.getByRole('button', { name: NEW_IN_SMOKE })
+    await add.click()
+    await add.click()
+    await expect(page.locator('.pane')).toHaveCount(2)
+    await page.locator('.pane').nth(1).locator('.pane-title').click()
+    await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
+    const menu = page.getByRole('menu', { name: 'Actions for Smoke' })
+    await expect(menu).toBeVisible()
+    await makeNeedsYou(page)
+    await expect(page.getByRole('region', { name: 'Waiting on you' })).toBeVisible()
+    await expect(menu).toBeVisible()
+    await menu.getByRole('menuitem', { name: 'Open in Files' }).click()
+    await expect(page.locator('#files-view')).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})
+
 test('sort and hide-empty are remembered, and the filter opens from the keyboard', async () => {
   const sandbox = createSandbox()
   let session = await launchApp(sandbox)

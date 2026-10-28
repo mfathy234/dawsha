@@ -236,10 +236,10 @@ export class SidebarComponent {
     this.el.setAttribute('aria-label', collapsed ? 'Projects (collapsed)' : 'Projects')
     if (collapsed) this.renderRail(projects, views, focusedView?.pane.projectId)
     else this.renderFull(state, entries, views, hiddenEmpty)
+    this.popup.reanchor()
   }
 
   private renderRail(projects: Project[], views: PaneView[], activeProject?: string): void {
-    this.popup.close()
     clear(this.el)
     this.el.append(
       iconButton('Expand sidebar', ICONS.expand, () => toggleSidebar(), 'rail-btn'),
@@ -269,7 +269,6 @@ export class SidebarComponent {
     this.restore = null
     this.pending = null
     this.rebuilding = true
-    this.popup.close()
     clear(this.el)
     clear(this.list)
     this.list.append(...this.waitingGroup(state, views))
