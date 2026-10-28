@@ -215,7 +215,7 @@ export class FilesViewComponent {
       return
     }
     if (!await this.activateTarget(target)) return
-    if (request) void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
+    if (request?.path) void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
     void this.refreshTouches()
     this.touchTimer = window.setInterval(() => void this.refreshTouches(), TOUCH_REFRESH_MS)
   }
@@ -241,7 +241,7 @@ export class FilesViewComponent {
     if (!this.target || normalizeFolder(this.target.folder) !== normalizeFolder(request.folder) || this.target.projectId !== request.projectId) {
       if (!await this.activateTarget(request)) return
     }
-    void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
+    if (request.path) void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
   }
 
   private async activateTarget(requested: FilesTarget): Promise<boolean> {

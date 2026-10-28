@@ -13,6 +13,7 @@ import { clear, h, icon, iconButton } from '../dom'
 import { enableDrag } from '../drag'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
+import { openFolderInFiles } from '../files/filesActions'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
 import { tagMenuItems, tagTooltip } from './sessionTagUi'
@@ -716,6 +717,7 @@ export class SidebarComponent {
       agentItem('codex'),
       agentItem('gemini'),
       item(`Resume in ${project.name}…`, () => openResumePicker(projectId)),
+      item('Open in Files', () => openFolderInFiles({ projectId, folder: project.folder })),
       item('Open terminal here', () => void startSession(projectId, 'shell')),
       h('div', { class: 'pv-menu-sep', role: 'separator' }),
       arrange(project.pinned === true ? 'Unpin' : 'Pin to top', () => pinProject(projectId, project.pinned !== true)),

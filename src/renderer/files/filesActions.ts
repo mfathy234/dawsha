@@ -68,6 +68,11 @@ export function takeFilesRequest(): FilesRequest | null {
   return request
 }
 
+/** Shows a project folder in the Files view without opening a file. */
+export function openFolderInFiles(target: FilesTarget): void {
+  openInFiles(target, '')
+}
+
 /** Opens a file in the Files view (loading its editor on first use). */
 export function openInFiles(target: FilesTarget, path: string, options: { pin?: boolean; line?: number } = {}): void {
   pending = { ...target, path, pin: options.pin === true, line: options.line }
