@@ -40,10 +40,6 @@
 }
 .pane.focused .pane-header { background: var(--raised); }
 .pane.focused .pane-title { font-weight: 700; }
-.pane.focused .pane-title::before {
-  content: ''; display: inline-block; width: 7px; height: 7px; margin-inline-end: var(--s-2);
-  border-radius: 1.5px; background: var(--accent); vertical-align: 1px;
-}
 .pane-header > .icon-btn { flex: none; }
 .pane-title { flex: 0 1 auto; min-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-body); font-weight: 600; color: var(--text); }
 .pane-project { flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-ui); color: var(--muted); }

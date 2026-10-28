@@ -19,7 +19,7 @@ const listeners = new Set<Listener>()
 let current: ThemeBundle = buildBundle({ id: 'grid-dark', image: { enabled: false, path: null, dim: 60, blur: 0 } })
 let imageVersion = 0
 
-const VARIABLES: Record<string, keyof Theme['app']> = {
+const VARIABLES: Record<string, Exclude<keyof Theme['app'], 'faint' | 'done'>> = {
   '--bg': 'background',
   '--canvas': 'background',
   '--sidebar': 'sidebar',
@@ -60,6 +60,10 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
   const root = document.documentElement
   for (const [variable, key] of Object.entries(VARIABLES)) {
     root.style.setProperty(variable, bundle.theme.app[key])
+  }
+  for (const [variable, value] of [['--faint', bundle.theme.app.faint], ['--done', bundle.theme.app.done]] as const) {
+    if (value !== undefined) root.style.setProperty(variable, value)
+    else root.style.removeProperty(variable)
   }
   const term = bundle.theme.term
   root.style.setProperty('--fam-opus', term.magenta)

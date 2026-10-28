@@ -58,6 +58,7 @@ export class TerminalView {
       fontSize,
       lineHeight: 1.2,
       cursorBlink: true,
+      cursorInactiveStyle: 'outline',
       scrollback: 10000,
       allowTransparency: true,
       allowProposedApi: true,

@@ -57,9 +57,13 @@
   --needs-ring: #f08a3c;
   --needs-ink: #f08a3c;
   --row-hover: color-mix(in srgb, var(--raised) 40%, transparent);
-  --sel-ring: 0 0 0 0 transparent;
+  --sel-ring: 0 0 0 1px rgb(255 255 255 / .12);
+  --pane-focus-ring: 0 0 0 1px rgb(255 255 255 / .24);
+  --pane-unfocused-term: .86;
   --text: #d6dae3;
   --muted: #8a93a6;
+  --faint: var(--muted);
+  --done: var(--accent);
   --accent: #34d399;
   --on-accent: #06281c;
   --busy: #f5b54a;
@@ -116,6 +120,8 @@
   --needs-ink: #9a4a00;
   --row-hover: color-mix(in srgb, var(--text) 5%, transparent);
   --sel-ring: 0 0 0 1px rgb(24 28 40 / .10);
+  --pane-focus-ring: 0 0 0 1px rgb(24 28 40 / .32);
+  --pane-unfocused-term: .9;
   --shadow-rgb: 24 28 40;
   --shadow-hairline: 0 1px 2px rgb(var(--shadow-rgb) / .1);
   --shadow-lift: 0 6px 20px rgb(var(--shadow-rgb) / .14);
@@ -850,15 +856,25 @@ button {
   overflow: hidden;
 }
 
-/* Focus: a 2px ring in the accent. Needs you: a dashed outline in the needs colour, which wins when both apply. */
+/* Focus: a 1px neutral ring and a soft lift. Needs you: a solid 1px ring in the needs colour, which wins when both apply. */
 .pane.focused {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: -2px;
+  box-shadow: var(--pane-focus-ring), var(--shadow-lift);
 }
 
-.pane.needs-you {
-  outline: 2px dashed var(--needs-ring);
-  outline-offset: -2px;
+.pane.needs-you,
+.pane.needs-you.focused {
+  box-shadow: 0 0 0 1px var(--needs-ring);
+}
+
+.pane.needs-you.focused {
+  box-shadow: 0 0 0 1px var(--needs-ring), var(--shadow-lift);
+}
+
+/* Selected row: raised surface plus a 1px ring. Add .is-selected (or aria-selected="true") to a row; --sel-ring is the ring on its own. */
+.is-selected,
+[aria-selected='true'].sel-row {
+  background: var(--raised);
+  box-shadow: var(--sel-ring);
 }
 
 .has-image .pane {
@@ -1008,28 +1024,15 @@ button {
   position: relative;
   flex: 1;
   min-height: 0;
-  margin: 0 6px 6px;
-  border-radius: 7px;
   background: var(--term-bg);
+  border-top: 1px solid var(--seam);
   overflow: hidden;
 }
 
-/* The inner shadow sits over the terminal, which is opaque and would hide it underneath. */
-.pane-body::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  border-radius: inherit;
-  box-shadow: var(--well-shadow);
-  pointer-events: none;
-}
-
-.pane:not(.focused) .pane-body::after {
-  background: rgb(0 0 0 / .06);
-}
-:root[data-kind='light'] .pane:not(.focused) .pane-body::after {
-  background: rgb(24 28 40 / .04);
+/* Unfocused panes read a little quieter: the terminal canvas dims by --pane-unfocused-term (1 turns it off) without touching xterm's colours. */
+.pane:not(.focused) .term-host .xterm-screen {
+  opacity: var(--pane-unfocused-term);
+  transition: opacity var(--t-feedback);
 }
 
 .term-host {
@@ -5889,14 +5892,19 @@ body.dragging-ui {
 
 /* Panes: one quiet header row, status bar at the bottom */
 
-.pane:not(.focused) .pane-header > .icon-btn,
-.pane:not(.focused) .pane-header > .pane-maximize-slot {
-  opacity: 0.45;
+.pane .pane-header > .icon-btn,
+.pane .pane-header > .pane-maximize-slot {
+  opacity: 0;
   transition: opacity var(--t-feedback) var(--ease-out);
 }
 
-.pane:not(.focused):hover .pane-header > .icon-btn,
-.pane:not(.focused):hover .pane-header > .pane-maximize-slot {
+.pane:hover .pane-header > .icon-btn,
+.pane:hover .pane-header > .pane-maximize-slot,
+.pane:focus-within .pane-header > .icon-btn,
+.pane:focus-within .pane-header > .pane-maximize-slot,
+.pane.focused .pane-header > .icon-btn,
+.pane.focused .pane-header > .pane-maximize-slot,
+.pane .pane-header > .icon-btn:focus-visible {
   opacity: 1;
 }
 
@@ -6099,7 +6107,7 @@ body.dragging-ui {
 :root {
   --state-needs: var(--needs-ink);
   --state-working: #60a5fa;
-  --state-done: var(--accent);
+  --state-done: var(--done);
   --state-idle: var(--idle);
   --state-exited: var(--exited);
 }
