@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dawsha 1.7.4 — design preview</title>
+<style>
+:root{color-scheme:dark;--canvas:#0c0e13;--chrome:#11141a;--pane:#181c24;--raised:#222731;--overlay:#2b313d;--well:#14171e;--seam:rgb(255 255 255/.085);--ring:inset 0 0 0 1px rgb(255 255 255/.10);--text:#d4d9e2;--muted:#9ba4b6;--faint:#6e778a;--accent:#3ad6a0;--on-accent:#04261a;--run:#8fb4ff;--done:#86c5a8;--fail:#ff8b82;--needs:#f0954c;--focus:rgb(255 255 255/.24);--add:rgb(58 214 160/.11);--del:rgb(255 139 130/.11);--hover:color-mix(in srgb,var(--text) 6%,transparent);--field:inset 0 1px 2px rgb(0 0 0/.35),0 0 0 1px rgb(255 255 255/.14);--pop:0 0 0 1px rgb(255 255 255/.09),0 18px 44px rgb(0 0 0/.55);--claude:#e5866a;--codex:#c9ced8;--gemini:#ad95fb;--kw:#c4a2f0;--str:#a8d4a0;--fn:#8fb4ff;--ty:#e9c77b;--cm:#6e778a;--t-dim:#aab2c1;--mono:'JetBrains Mono','Cascadia Mono',Consolas,monospace}
+:root.today{--canvas:#0a0c10;--chrome:#0d1015;--pane:#151922;--raised:#1e222b;--overlay:#282b34;--well:#0b0d12;--seam:rgb(255 255 255/.07);--ring:inset 0 0 0 1px rgb(255 255 255/.06);--text:#d9dee8;--muted:#8a93a6;--faint:#5d6576;--accent:#34d399;--run:#9cbdff;--done:#34d399;--fail:#f87171;--needs:#f08a3c;--focus:#34d399;--kw:#c792ea;--str:#a5d6a7;--fn:#82aaff;--ty:#ffcb6b;--cm:#5d6576;--t-dim:var(--text)}
+:root.light{color-scheme:light;--focus:rgb(24 28 40/.35);--ring:inset 0 0 0 1px rgb(24 28 40/.12);--t-dim:#33415a;--canvas:#dce1e8;--chrome:#edf0f4;--pane:#fff;--raised:#e8edf3;--overlay:#fff;--well:#f6f8fa;--seam:rgb(24 28 40/.12);--text:#172336;--muted:#4e6077;--faint:#8a96a8;--accent:#087c58;--on-accent:#fff;--run:#255aa6;--done:#28614d;--fail:#a83229;--needs:#9a4a00;--add:rgb(8 124 88/.12);--del:rgb(168 50 41/.10);--field:inset 0 1px 2px rgb(24 28 40/.12),0 0 0 1px rgb(24 28 40/.32);--pop:0 0 0 1px rgb(24 28 40/.1),0 14px 36px rgb(24 28 40/.22);--codex:#2b3340;--kw:#7c3aed;--str:#2e7d32;--fn:#1d4ed8;--ty:#a16207;--cm:#8a96a8}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--canvas);color:var(--text);font:13px/1.45 'Segoe UI Variable','Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{border:0;background:transparent;border-radius:6px;padding:5px 9px;cursor:pointer}
+button:hover{background:var(--hover)}
+:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 70%,transparent);outline-offset:1px}
+svg{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.muted{color:var(--muted)}.faint{color:var(--faint)}.run{color:var(--run)}.done{color:var(--done)}.fail{color:var(--fail)}.needs{color:var(--needs)}
+.mono{font-family:var(--mono);font-size:12px}
+.field{background:var(--well);box-shadow:var(--field);border:0;border-radius:6px;padding:6px 10px;min-width:0}
+.ghost{color:var(--muted)}.ghost:hover{color:var(--text)}
+.primary{background:var(--accent);color:var(--on-accent);font-weight:600}.primary:hover{background:color-mix(in srgb,var(--accent) 88%,white)}
+.icon-btn{padding:5px;display:inline-grid;place-items:center;color:var(--muted)}.icon-btn:hover{color:var(--text)}
+.spin{animation:spin 1.1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+
+/* preview strip — not part of the product */
+.preview{display:flex;align-items:center;gap:14px;padding:8px 16px;background:#000;color:#cfd5df;font-size:12px;border-bottom:1px solid #222;flex-wrap:wrap}
+:root.light .preview{background:#1a2230}
+.preview strong{color:#fff}.preview .seg{display:inline-flex;gap:2px;background:#151a22;border-radius:7px;padding:2px}
+.preview .seg button{padding:3px 10px;color:#9aa4b5}.preview .seg button[aria-pressed=true]{background:#2a3241;color:#fff}
+.preview .sp{flex:1}
+
+/* app chrome */
+.top{display:flex;align-items:center;gap:6px;height:44px;padding:0 12px;background:var(--chrome);border-bottom:1px solid var(--seam)}
+.top .logo{width:22px;height:22px;border-radius:6px;background:var(--accent);display:grid;place-items:center;color:var(--on-accent);font-weight:800;font-size:12px;margin-right:6px}
+.top nav{display:flex;gap:2px;margin-left:10px}.top nav button{color:var(--muted)}.top nav button[aria-current=page]{color:var(--text);background:var(--raised)}
+.top .sp{flex:1}
+.app{flex:1;display:flex;min-height:0}
+
+/* ========== PROJECTS SIDEBAR ========== */
+.side{width:264px;flex:none;background:var(--chrome);border-right:1px solid var(--seam);display:flex;flex-direction:column;min-height:0;transition:width .2s cubic-bezier(.2,.9,.3,1)}
+.side-head{display:flex;align-items:center;gap:2px;padding:10px 8px 6px 14px}
+.side-head h2{font-size:13px;font-weight:600;margin:0;flex:1}
+.side-search{margin:0 10px 6px;display:none}.side.searching .side-search{display:block}.side-search input{width:100%}
+.side-scroll{flex:1;overflow:auto;padding:0 6px 10px}
+.side-sec{font-size:12px;color:var(--muted);padding:10px 8px 4px;display:flex;gap:6px;align-items:center}
+.proj{border-radius:7px}
+.proj-row{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 4px;border-radius:7px;cursor:pointer;user-select:none}
+.proj-row:hover{background:var(--hover)}
+.proj-row .chev{color:var(--faint);transition:transform .15s}.proj.closed .chev{transform:rotate(-90deg)}
+.proj-name{font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-branch{display:block;font-weight:400;font-size:11.5px;color:var(--muted)}
+.proj-count{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.proj-acts{display:none;gap:0}.proj-row:hover .proj-acts,.proj-row:focus-within .proj-acts{display:flex}.proj-row:hover .proj-count,.proj-row:focus-within .proj-count{display:none}
+.proj.closed .sessions{display:none}
+.sess{display:grid;grid-template-columns:18px 1fr auto;gap:2px 8px;align-items:center;padding:5px 8px 5px 26px;border-radius:7px;cursor:pointer}
+.sess:hover{background:var(--hover)}.sess.sel{background:var(--raised);box-shadow:var(--ring)}
+.sess .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess .s{grid-column:2/4;font-size:11.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.sess .ago{font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.proj-empty{padding:2px 8px 6px 30px;font-size:12px;color:var(--faint)}
+.mark{font-size:14px;line-height:1;text-align:center}.mark.claude{color:var(--claude)}.mark.codex{color:var(--codex)}.mark.gemini{color:var(--gemini)}
+.side-foot{display:flex;gap:4px;padding:8px;border-top:1px solid var(--seam)}
+.side-foot button{flex:1;display:flex;gap:6px;align-items:center;justify-content:center;color:var(--muted)}
+/* rail */
+.side.rail{width:56px}
+.side.rail .side-head h2,.side.rail .side-sec,.side.rail .sessions,.side.rail .proj-name,.side.rail .proj-count,.side.rail .proj-acts,.side.rail .chev,.side.rail .side-foot span,.side.rail .side-search,.side.rail .waiting,.side.rail .search-toggle,.side.rail .add-top{display:none!important}
+.side.rail .side-head{justify-content:center;padding:10px 0 6px}
+.side.rail .proj-row{justify-content:center;padding:6px 0;position:relative}
+.mono-av{display:none}.side.rail .mono-av{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--raised);font-weight:700;font-size:12px}
+.side.rail .proj.cur .mono-av{background:color-mix(in srgb,var(--accent) 22%,var(--raised));color:var(--text)}
+.rail-badge{display:none}.side.rail .rail-badge{display:block;position:absolute;right:6px;top:2px;font-size:10.5px;font-weight:700}
+.side.rail .side-foot{flex-direction:column}
+
+/* ========== VIEWS ========== */
+.view{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--canvas)}
+.view[hidden]{display:none}
+
+/* ========== AGENTS ========== */
+.ag-head{display:flex;align-items:center;gap:10px;padding:16px 20px 10px;flex-wrap:wrap}
+.ag-head h1{font-size:20px;font-weight:600;margin:0 8px 0 0;letter-spacing:-.01em}
+.seg{display:inline-flex;gap:2px;background:var(--chrome);border-radius:8px;padding:2px}
+.seg button{padding:4px 10px;color:var(--muted);font-variant-numeric:tabular-nums}.seg button[aria-pressed=true]{background:var(--raised);color:var(--text)}
+.ag-head .sp{flex:1}
+.ag-head .usage{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ag-tools{display:flex;gap:8px;padding:0 20px 12px;align-items:center;flex-wrap:wrap}
+.ag-tools .field{width:260px}
+.sel-btn{display:inline-flex;gap:6px;align-items:center;color:var(--muted)}
+.ag-body{flex:1;display:grid;grid-template-columns:minmax(380px,1fr) minmax(340px,440px);min-height:0;border-top:1px solid var(--seam)}
+.ag-list{overflow:auto;padding:8px 10px 24px}
+.grp-head{display:grid;grid-template-columns:16px 20px 1fr auto;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;cursor:pointer}
+.grp-head:hover{background:var(--hover)}
+.grp-head .chev{color:var(--faint);transition:transform .15s}.grp.closed .grp-head .chev{transform:rotate(-90deg)}
+.grp-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grp-meta{font-size:12px;color:var(--muted)}
+.grp-right{font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.grp.closed .agents{display:none}
+.grp+.grp{margin-top:4px}
+.agent{display:grid;grid-template-columns:16px 1fr 70px 46px;gap:10px;align-items:center;padding:6px 10px 6px 46px;border-radius:7px;cursor:pointer}
+.agent:hover{background:var(--hover)}.agent.sel{background:var(--raised);box-shadow:var(--ring)}
+.agent .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agent .st{font-size:12px}.agent .du{font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.agent .ln{grid-column:2/5;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:-4px}
+/* timeline */
+.tl{padding:12px 20px 24px;overflow:auto}
+.tl-axis{display:grid;grid-template-columns:220px 1fr;font-size:11.5px;color:var(--faint);margin-bottom:6px}
+.tl-axis div:last-child{display:flex;justify-content:space-between}
+.tl-row{display:grid;grid-template-columns:220px 1fr;align-items:center;min-height:28px;cursor:pointer;border-radius:6px}
+.tl-row:hover{background:var(--hover)}
+.tl-row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px 0 18px}
+.tl-row.session .nm{font-weight:600;padding-left:6px}
+.tl-track{position:relative;height:18px;background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),var(--seam) calc(25% - 1px) 25%)}
+.tl-bar{position:absolute;top:4px;height:10px;border-radius:3px;background:color-mix(in srgb,var(--done) 45%,transparent)}
+.tl-bar.r{background:color-mix(in srgb,var(--run) 60%,transparent)}.tl-bar.f{background:color-mix(in srgb,var(--fail) 55%,transparent)}
+.tl-row.session .tl-bar{height:4px;top:7px;background:var(--faint)}
+/* detail */
+.ag-detail{background:var(--pane);overflow:auto;padding:20px 22px;border-left:1px solid var(--seam)}
+.ag-detail h2{font-size:16px;margin:0 0 4px;font-weight:600}
+.ag-detail .sub{color:var(--muted);font-size:12.5px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.d-acts{display:flex;gap:6px;margin:14px 0 6px;flex-wrap:wrap}
+.d-acts button{background:var(--raised)}
+.d-acts .danger{color:var(--fail)}
+.d-sec{margin-top:18px}
+.d-sec h3{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 6px}
+.prompt{background:var(--well);border-radius:8px;padding:10px 12px;font-size:12.5px;white-space:pre-wrap}
+.feed{display:flex;flex-direction:column;gap:1px}
+.feed div{display:grid;grid-template-columns:44px 64px 1fr;gap:8px;font-size:12px;padding:3px 0}
+.feed .tool{color:var(--muted)}.feed .tm{color:var(--faint);font-variant-numeric:tabular-nums}
+.link{color:var(--accent);cursor:pointer;background:none;padding:0}
+.files-touched button{display:flex;width:100%;gap:8px;padding:4px 6px;text-align:left;font-size:12.5px}
+.files-touched .ch{font-family:var(--mono);font-size:11.5px;width:14px}
+.kv{display:grid;grid-template-columns:90px 1fr;gap:4px 10px;font-size:12.5px}.kv span:nth-child(odd){color:var(--muted)}
+.empty{display:grid;place-items:center;height:100%;color:var(--muted);text-align:center}
+
+/* ========== FILES ========== */
+.fl{flex:1;display:grid;grid-template-columns:272px minmax(0,1fr) 248px;min-height:0}
+.fl.no-insp{grid-template-columns:272px minmax(0,1fr)}
+.fl.no-insp .insp{display:none}
+.exp{background:var(--chrome);border-right:1px solid var(--seam);display:flex;flex-direction:column;min-height:0}
+.loc{margin:10px 10px 8px;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:var(--raised);text-align:left;width:calc(100% - 20px)}
+.loc .lt{flex:1;min-width:0}.loc .lt b{display:block;font-weight:600}.loc .lt span{display:flex;gap:5px;align-items:center;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.exp .field{margin:0 10px 6px}
+.tree{flex:1;overflow:auto;padding:0 6px 12px;font-size:12.5px}
+.tsec{display:flex;align-items:center;gap:6px;padding:8px 6px 4px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
+.tsec .chev{transition:transform .15s}.tsec.closed .chev{transform:rotate(-90deg)}.tsec.closed+.tbody{display:none}
+.tsec .n{margin-left:auto;font-variant-numeric:tabular-nums}
+.tr{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.tr:hover{background:var(--hover)}.tr.sel{background:var(--raised);box-shadow:var(--ring)}
+.tr .gs{margin-left:auto;font-family:var(--mono);font-size:11px}
+.tr .dir{color:var(--faint);font-size:11.5px;overflow:hidden;text-overflow:ellipsis}
+.tr .who{color:var(--faint);font-size:11.5px;margin-left:auto}
+.ft{font-family:var(--mono);font-size:10px;font-weight:700;width:16px;text-align:center}.ft.ts{color:#4a9eff}.ft.js{color:#e6c84a}.ft.cs{color:#9b7bea}.ft.md{color:var(--muted)}.ft.json{color:#e6a04a}
+.ed{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--pane)}
+.tabs{display:flex;background:var(--chrome);border-bottom:1px solid var(--seam);overflow-x:auto}
+.tab{display:flex;align-items:center;gap:7px;padding:8px 10px 8px 12px;border-radius:0;color:var(--muted);white-space:nowrap;border-right:1px solid var(--seam)}
+.tab.on{background:var(--pane);color:var(--text)}.tab.preview .tn{font-style:italic}
+.tab .x{opacity:.0;padding:0 2px}.tab:hover .x,.tab.on .x{opacity:.7}
+.tab .dirty{color:var(--text);font-size:15px;line-height:1}
+.crumb{display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--seam);font-size:12px}
+.crumb .path{color:var(--muted);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.crumb .path b{color:var(--text);font-weight:500}
+.crumb .seg button{padding:2px 9px;font-size:12px}
+.send{display:inline-flex;align-items:center;gap:6px;background:var(--raised)}
+.code{flex:1;overflow:auto;font-family:var(--mono);font-size:12.5px;line-height:1.65;padding:8px 0;background:var(--pane)}
+.code .l{display:grid;grid-template-columns:48px 14px 1fr;white-space:pre}
+.code .n{color:var(--faint);text-align:right;padding-right:8px;user-select:none}
+.code .g{text-align:center;color:var(--faint)}
+.code .l.add{background:var(--add)}.code .l.add .g{color:var(--accent)}.code .l.del{background:var(--del)}.code .l.del .g{color:var(--fail)}
+.code .l.cur{background:color-mix(in srgb,var(--text) 4%,transparent)}
+.kw{color:var(--kw)}.str{color:var(--str)}.fn{color:var(--fn)}.ty{color:var(--ty)}.cm{color:var(--cm)}
+.panel{border-top:1px solid var(--seam);background:var(--chrome);display:flex;flex-direction:column;height:200px;flex:none}
+.panel.min{height:auto}.panel.min .pbody{display:none}
+.phead{display:flex;align-items:center;gap:4px;padding:4px 8px}
+.ptab{color:var(--muted);font-size:12px;display:inline-flex;align-items:center;gap:6px}.ptab[aria-selected=true]{color:var(--text);background:var(--raised)}
+.phead .sp{flex:1}
+.pbody{flex:1;overflow:auto;padding:6px 14px;font-family:var(--mono);font-size:12px;line-height:1.6;background:var(--well);color:var(--muted)}
+.pbody .ok{color:var(--done)}
+.status{display:flex;gap:14px;align-items:center;padding:4px 12px;font-size:11.5px;color:var(--muted);background:var(--chrome);border-top:1px solid var(--seam)}
+.status .sp{flex:1}.status span{display:inline-flex;gap:5px;align-items:center}
+.insp{background:var(--chrome);border-left:1px solid var(--seam);display:flex;flex-direction:column;min-height:0}
+.insp .seg{margin:10px}
+.insp-body{overflow:auto;padding:0 10px 16px;font-size:12.5px}
+.ol{display:flex;justify-content:space-between;padding:4px 8px;border-radius:5px;cursor:pointer}.ol:hover{background:var(--hover)}
+.ol .k{display:inline-block;font-family:var(--mono);font-size:10.5px;color:var(--faint);width:18px}
+.ol span:last-child{color:var(--faint);font-variant-numeric:tabular-nums}
+.act{padding:7px 8px;border-radius:6px;display:grid;grid-template-columns:18px 1fr;gap:2px 8px;cursor:pointer}.act:hover{background:var(--hover)}
+.act small{grid-column:2;color:var(--muted)}
+.insp h4{font-size:12px;color:var(--muted);font-weight:600;margin:14px 8px 4px}
+
+/* popovers & dialogs */
+.pop{position:fixed;z-index:20;background:var(--overlay);box-shadow:var(--pop);border-radius:12px;padding:6px;min-width:240px}
+.pop[hidden]{display:none}
+.pop .ph{font-size:11.5px;color:var(--muted);padding:6px 10px 4px}
+.pop button{display:flex;width:100%;gap:10px;align-items:center;text-align:left;padding:7px 10px}
+.pop button .r{margin-left:auto;font-size:11.5px;color:var(--muted)}
+.pop hr{border:0;border-top:1px solid var(--seam);margin:4px 2px}
+.pop .cur{background:var(--raised)}
+.pop .dim{opacity:.55;cursor:not-allowed}
+.pop .danger{color:var(--fail)}
+dialog{background:var(--overlay);color:var(--text);border:0;border-radius:14px;box-shadow:var(--pop);padding:20px 22px;max-width:420px}
+dialog::backdrop{background:rgb(0 0 0/.45)}
+dialog h2{font-size:15px;margin:0 0 8px}dialog p{margin:0 0 10px;color:var(--muted)}
+.dlg-acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.dlg-acts .danger{background:var(--fail);color:#2a0b0b;font-weight:600}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--overlay);box-shadow:var(--pop);border-radius:10px;padding:8px 14px;font-size:12.5px;z-index:30}
+.toast[hidden]{display:none}
+.note{position:fixed;right:14px;bottom:14px;max-width:320px;background:var(--overlay);box-shadow:var(--pop);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--muted);z-index:15}
+.note b{color:var(--text)}.note ul{margin:6px 0 0;padding-left:16px}.note[hidden]{display:none}
+/* ========== 1.7.4 additions: usage meter ========== */
+.usage-btn{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:4px 10px}
+.usage-btn .who{display:inline-flex;align-items:center;gap:5px;color:var(--text);font-weight:600}
+.cells{display:inline-flex;gap:2px}.cells i{width:5px;height:10px;border-radius:1.5px;background:color-mix(in srgb,var(--text) 16%,transparent)}.cells i.on{background:var(--done)}.cells.warn i.on{background:var(--ty)}
+.usage-btn .num{font-variant-numeric:tabular-nums}
+.usage-pop{width:360px;padding:10px}
+.u-row{display:grid;grid-template-columns:22px 1fr;gap:2px 8px;padding:8px 6px;border-radius:8px}
+.u-row.cur{background:var(--raised)}
+.u-row .nm{font-weight:600;display:flex;justify-content:space-between}
+.u-row .nm small{font-weight:400;color:var(--faint)}
+.u-row .w{grid-column:2;display:grid;grid-template-columns:44px auto 1fr;gap:8px;align-items:center;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.u-row .w span:last-child{text-align:right;color:var(--faint)}
+/* explorer modes */
+.exp-seg{margin:0 10px 8px;display:flex}.exp-seg button{flex:1}
+.mode[hidden]{display:none}
+.srch{padding:0 10px;display:flex;flex-direction:column;gap:6px}
+.srch .opts{display:flex;gap:2px}.srch .opts button{font-family:var(--mono);font-size:11.5px;color:var(--muted);padding:3px 7px}.srch .opts button[aria-pressed=true]{background:var(--raised);color:var(--text)}
+.hits{flex:1;overflow:auto;padding:6px 6px 12px;font-size:12.5px}
+.hit-file{display:flex;gap:6px;align-items:center;padding:6px 6px 2px;font-weight:600}.hit-file .n{margin-left:auto;font-weight:400;color:var(--faint)}
+.hit{display:grid;grid-template-columns:28px 1fr;padding:2px 6px;border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.hit:hover{background:var(--hover)}.hit .ln{color:var(--faint);text-align:right;padding-right:8px}.hit mark{background:color-mix(in srgb,var(--ty) 30%,transparent);color:var(--text);border-radius:2px}
+.rv{flex:1;overflow:auto;padding:0 6px 12px;font-size:12.5px;display:flex;flex-direction:column}
+.rv-step{display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;cursor:pointer}.rv-step:hover{background:var(--hover)}.rv-step.sel{background:var(--raised)}
+.rv-step .ck{width:14px;color:var(--done)}.rv-step .cm{margin-left:auto;color:var(--needs);font-size:11.5px}
+.rv-box{margin-top:auto;padding:10px 6px 0;display:flex;flex-direction:column;gap:6px}
+.rv-box textarea{resize:none;height:54px}
+.rv-box .row{display:flex;gap:6px}.rv-box .row button{flex:1}
+/* code blame + comments */
+.code .l{grid-template-columns:48px 20px 14px 1fr}
+.code .who{text-align:center;font-family:'Segoe UI',sans-serif;font-size:11px;cursor:default}
+.code .l.add:hover .g{cursor:pointer}
+.cmt{margin:4px 14px 8px 82px;background:var(--overlay);box-shadow:var(--pop);border-radius:10px;padding:10px 12px;font-family:'Segoe UI Variable','Segoe UI',sans-serif;font-size:12.5px;white-space:normal}
+.cmt b{font-weight:600}.cmt p{margin:4px 0 0;color:var(--text)}.cmt small{color:var(--muted)}
+/* previews */
+.mdv{flex:1;overflow:auto;padding:28px 40px;background:var(--pane)}
+.mdv article{max-width:720px}
+.mdv h1{font-size:22px;margin:0 0 10px;letter-spacing:-.01em}.mdv h2{font-size:16px;margin:22px 0 8px}.mdv p,.mdv li{color:var(--text);line-height:1.6}
+.mdv code{font-family:var(--mono);font-size:12px;background:var(--well);padding:1px 5px;border-radius:4px}
+.shots{flex:1;display:grid;grid-template-rows:auto 1fr;background:var(--well)}
+.shot-stage{position:relative;margin:16px auto;width:min(760px,90%);aspect-ratio:16/10;border-radius:8px;overflow:hidden;box-shadow:var(--pop)}
+.shot{position:absolute;inset:0;display:grid;grid-template-columns:22% 1fr;background:#161a22}
+.shot .sb{background:#0f1217}.shot .bd{padding:18px;display:flex;flex-direction:column;gap:10px}.shot .bd i{display:block;height:12px;border-radius:3px;background:#2a3140}
+.shot.new{background:#1b2130;clip-path:inset(0 0 0 50%)}.shot.new .bd i{background:#34d39955}.shot.new .bd i:nth-child(2){width:60%}
+.shot-split{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff;cursor:ew-resize}
+/* highlights settings */
+.set{flex:1;overflow:auto;padding:24px 32px;max-width:860px}
+.set h1{font-size:20px;margin:0 0 4px}.set .lede{color:var(--muted);margin:0 0 20px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.cmp h3{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 8px}
+.hl-rule{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 10px;border-radius:8px}
+.hl-rule:hover{background:var(--hover)}
+.hl-rule .pat{font-family:var(--mono);font-size:12.5px;padding:2px 8px;border-radius:4px}
+.native{appearance:auto;background:#fff;color:#000;border:1px solid #767676;border-radius:2px;font:13px Arial;padding:1px 2px}
+.sw{display:inline-flex;gap:4px}
+.sw button{width:22px;height:22px;padding:0;border-radius:6px;display:grid;place-items:center}
+.sw button span{width:14px;height:14px;border-radius:4px}
+.sw button[aria-checked=true]{box-shadow:0 0 0 2px var(--text)}
+.c-red{background:#f8717155}.c-amber{background:#f5b54a55}.c-green{background:#34d39955}.c-blue{background:#60a5fa55}.c-purple{background:#a78bfa55}
+.sw .c-red,.sw .c-amber,.sw .c-green,.sw .c-blue,.sw .c-purple{filter:saturate(1.6) brightness(1.15)}
+.term-demo{margin-top:22px;background:var(--well);border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:12px;line-height:1.7}
+.term-demo div{padding:0 6px;border-radius:3px}
+/* ========== PANES ========== */
+.pgrid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;padding:10px;min-height:0}
+.pn{background:var(--pane);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:var(--ring);transition:box-shadow .2s}
+.pn.focus{box-shadow:inset 0 0 0 1px var(--focus),0 10px 28px rgb(0 0 0/.35)}
+.pn-h{display:flex;gap:8px;align-items:center;padding:9px 12px 0}
+.pn-h b{font-weight:600}.pn-h .sp{flex:1}.pn-h .icon-btn{opacity:0}.pn:hover .pn-h .icon-btn,.pn.focus .pn-h .icon-btn{opacity:1}
+.pn-sum{padding:2px 12px 8px 34px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pn-t{flex:1;min-height:0;overflow:hidden;background:var(--well);border-top:1px solid var(--seam);padding:12px 16px;font-family:var(--mono);font-size:13px;line-height:1.7;color:var(--text);white-space:pre}
+.pn:not(.focus) .pn-t{color:var(--t-dim)}
+.pn-t .dim{color:var(--muted)}.pn-t .ok{color:var(--done)}.pn-t .acc{color:var(--fn)}
+.pn-t .cur{display:inline-block;width:8px;height:16px;vertical-align:-3px;background:var(--accent);opacity:.85}
+.pn:not(.focus) .pn-t .cur{background:none;box-shadow:inset 0 0 0 1px var(--muted)}
+.pn-f{display:flex;gap:12px;align-items:center;padding:5px 12px;font-family:var(--mono);font-size:11.5px;color:var(--muted);border-top:1px solid var(--seam)}
+.pn.needs .pn-h .st{color:var(--needs)}
+.pn.needs{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--needs) 45%,transparent)}
+.ask{margin-top:6px;padding:8px 10px;border-radius:6px;background:color-mix(in srgb,var(--needs) 9%,var(--well));white-space:normal}
+/* today: inset black well, green focus border, always-on buttons */
+.today .pn-t{margin:0 6px;border-top:0;border-radius:6px;box-shadow:inset 0 2px 6px rgb(0 0 0/.45)}
+.today .pn.focus{box-shadow:inset 0 0 0 2px var(--accent)}
+.today .pn-f{border-top:0}
+.today .pn-h .icon-btn{opacity:1}
+.today .pn.needs{box-shadow:var(--ring)}
+@media(max-width:1180px){.fl{grid-template-columns:240px minmax(0,1fr)}.insp{display:none}.ag-body{grid-template-columns:1fr 340px}}
+@media(max-width:900px){.ag-body{grid-template-columns:1fr}.ag-detail{display:none}.side{width:56px}}
+</style>
+
+<div class="preview">
+  <strong>Dawsha 1.7.4</strong><span>design preview · example data · nothing runs or changes</span>
+  <span class="seg" id="v-seg"><button data-v="agents" aria-pressed="true">Agents</button><button data-v="files" aria-pressed="false">Files</button><button data-v="panes" aria-pressed="false">Panes</button><button data-v="hl" aria-pressed="false">Settings · Highlights</button></span>
+  <span class="seg" id="s-seg"><button data-s="full" aria-pressed="true">Sidebar</button><button data-s="rail" aria-pressed="false">Rail</button></span>
+  <span class="sp"></span>
+  <button id="notes-t" style="color:#cfd5df">Design notes</button>
+  <span class="seg" id="t-seg"><button data-th="today" aria-pressed="false">Cards today</button><button data-th="refined" aria-pressed="true">Cards refined</button><button data-th="light" aria-pressed="false">Light</button></span>
+</div>
+
+<header class="top">
+  <span class="logo">D</span>
+  <button class="primary">+ New session</button>
+  <nav><button>Sessions</button><button data-nav="agents" aria-current="page">Agents 1</button><button data-nav="files">Files</button><button>More</button></nav>
+  <span class="sp"></span>
+  <span class="seg" id="pane-seg" title="Preview: pretend this pane is focused"><button aria-pressed="true" data-ag="claude"><span class="mark claude">✳</span> Claude pane</button><button aria-pressed="false" data-ag="codex"><span class="mark codex">◎</span> Codex pane</button><button aria-pressed="false" data-ag="gemini"><span class="mark gemini">✦</span> Gemini pane</button></span>
+  <button class="usage-btn" id="usage" aria-haspopup="dialog" title="Usage limits by agent"></button>
+</header>
+
+<div class="app">
+<!-- ================= PROJECTS SIDEBAR ================= -->
+<aside class="side" id="side" aria-label="Projects">
+  <div class="side-head">
+    <h2>Projects</h2>
+    <button class="icon-btn search-toggle" id="search-t" title="Filter (Ctrl+Shift+F)" aria-label="Filter projects and sessions"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg></button>
+    <button class="icon-btn add-top" title="Add project" aria-label="Add project"><svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg></button>
+    <button class="icon-btn" id="rail-t" title="Collapse to rail" aria-label="Collapse sidebar"><svg viewBox="0 0 16 16"><path d="m9 4-4 4 4 4"/><path d="M12 4v8"/></svg></button>
+  </div>
+  <div class="side-search"><input class="field" id="side-filter" placeholder="Filter projects and sessions" aria-label="Filter projects and sessions"></div>
+  <div class="side-scroll" id="side-scroll">
+    <div class="waiting">
+      <div class="side-sec needs">Waiting on you <span>2</span></div>
+      <div class="sess" data-f="approve migration billing-api"><span class="mark claude">✳</span><span class="t">Approve migration plan</span><span class="ago">now</span><span class="s needs">Needs you · billing-api</span></div>
+      <div class="sess" data-f="fix flaky login mobile-shell"><span class="mark codex">◎</span><span class="t">Fix flaky login test</span><span class="ago">2m</span><span class="s needs">Permission · mobile-shell</span></div>
+    </div>
+    <div class="side-sec">All projects <span class="sp" style="flex:1"></span><button class="icon-btn" id="sort-t" title="Sort" aria-label="Sort projects" style="padding:2px"><svg viewBox="0 0 16 16"><path d="M4 3v10M2 11l2 2 2-2M10 4h4M10 8h3M10 12h2"/></svg></button></div>
+    <div id="projects"></div>
+  </div>
+  <div class="side-foot">
+    <button title="Add project"><svg viewBox="0 0 16 16"><path d="M2 5.5V12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1H8L6.5 4H3a1 1 0 0 0-1 1.5Z"/><path d="M8 7.5v3.5M6.25 9.25h3.5"/></svg><span>Add project</span></button>
+    <button title="Manage projects"><svg viewBox="0 0 16 16"><path d="M3 4h10M3 8h10M3 12h6"/></svg><span>Manage</span></button>
+  </div>
+</aside>
+
+<!-- ================= AGENTS ================= -->
+<main class="view" id="agents">
+  <div class="ag-head">
+    <h1>Agents</h1>
+    <span class="seg" id="state-seg" role="group" aria-label="Filter by state">
+      <button aria-pressed="true" data-st="all">All 7</button>
+      <button aria-pressed="false" data-st="r"><span class="run">Running 2</span></button>
+      <button aria-pressed="false" data-st="f"><span class="fail">Failed 1</span></button>
+      <button aria-pressed="false" data-st="d">Done 4</button>
+    </span>
+    <span class="sp"></span>
+    <span class="usage">38k tokens · $0.24 today</span>
+  </div>
+  <div class="ag-tools">
+    <input class="field" placeholder="Search agents, tasks, files…" aria-label="Search agents">
+    <button class="sel-btn" id="proj-filter">All projects <svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button>
+    <button class="sel-btn">Last 24 hours <svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button>
+    <button class="sel-btn">Claude, Codex <svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button>
+    <span style="flex:1"></span>
+    <span class="seg" id="layout-seg"><button aria-pressed="true" data-l="list">List</button><button aria-pressed="false" data-l="tl">Timeline</button></span>
+    <button class="icon-btn" id="ag-more" aria-label="More agent options"><svg viewBox="0 0 16 16"><circle cx="3.5" cy="8" r=".8"/><circle cx="8" cy="8" r=".8"/><circle cx="12.5" cy="8" r=".8"/></svg></button>
+  </div>
+  <div class="ag-body">
+    <div class="ag-list" id="ag-list" role="tree" aria-label="Agents by session"></div>
+    <div class="tl" id="ag-tl" hidden></div>
+    <aside class="ag-detail" id="ag-detail" aria-live="polite"></aside>
+  </div>
+</main>
+
+<!-- ================= FILES ================= -->
+<main class="view" id="files" hidden>
+  <div class="fl" id="fl">
+    <aside class="exp" aria-label="Explorer">
+      <button class="loc" id="loc" aria-haspopup="menu" aria-label="Project and checkout">
+        <svg viewBox="0 0 16 16" style="width:16px;height:16px;color:var(--muted)"><path d="M2 5.5V12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1H8L6.5 4H3a1 1 0 0 0-1 1.5Z"/></svg>
+        <span class="lt"><b id="loc-proj">acme-web</b><span><svg viewBox="0 0 16 16" style="width:12px;height:12px"><circle cx="5" cy="4" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="6" r="1.5"/><path d="M5 5.5v5M11 7.5c0 2-2 2.5-6 3"/></svg><span id="loc-br">feat/dark-mode · acme-web-dark</span></span></span>
+        <svg viewBox="0 0 16 16" style="color:var(--muted)"><path d="m4 6 4 4 4-4"/></svg>
+      </button>
+      <span class="seg exp-seg" id="exp-seg"><button aria-pressed="true" data-m="files">Files</button><button aria-pressed="false" data-m="search">Search</button><button aria-pressed="false" data-m="review">Review 4</button></span>
+      <div class="mode" id="m-search" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
+        <div class="srch">
+          <input class="field" value="readStoredTheme" aria-label="Find in files (Ctrl+Shift+F)">
+          <div style="display:flex;gap:6px;align-items:center"><input class="field" style="flex:1" placeholder="files to include, e.g. src/**/*.ts" aria-label="Include"><span class="opts"><button aria-pressed="false" title="Match case">Aa</button><button aria-pressed="false" title="Whole word">ab</button><button aria-pressed="false" title="Regex">.*</button></span></div>
+          <span class="faint" style="font-size:11.5px">5 results in 3 files · acme-web-dark · respects .gitignore</span>
+        </div>
+        <div class="hits">
+          <div class="hit-file"><span class="ft ts">TS</span>theme.tsx <span class="dir muted" style="font-weight:400">src/context</span><span class="n">2</span></div>
+          <div class="hit" data-open="theme.tsx"><span class="ln">2</span><span>import { <mark>readStoredTheme</mark>, storeTheme } from…</span></div>
+          <div class="hit" data-open="theme.tsx"><span class="ln">20</span><span>useState&lt;Theme&gt;(() =&gt; <mark>readStoredTheme</mark>() ?? sys…</span></div>
+          <div class="hit-file"><span class="ft ts">TS</span>storage.ts <span class="dir muted" style="font-weight:400">src/lib</span><span class="n">2</span></div>
+          <div class="hit"><span class="ln">4</span><span>export function <mark>readStoredTheme</mark>(): Theme | null {</span></div>
+          <div class="hit"><span class="ln">11</span><span>// <mark>readStoredTheme</mark> ignores unknown values</span></div>
+          <div class="hit-file"><span class="ft ts">TS</span>theme.test.tsx <span class="dir muted" style="font-weight:400">src/context</span><span class="n">1</span></div>
+          <div class="hit"><span class="ln">18</span><span>vi.mocked(<mark>readStoredTheme</mark>).mockReturnValue('dark')</span></div>
+        </div>
+      </div>
+      <div class="mode" id="m-review" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
+        <div class="rv">
+          <div class="side-sec" style="padding-top:0;display:block">Review changes from <span class="mark claude">✳</span> Add dark mode toggle</div>
+          <div class="rv-step sel" data-open="theme.tsx"><span class="ck">✓</span><span class="ft ts">TS</span>theme.tsx<span class="cm" id="rv-count">1 comment</span></div>
+          <div class="rv-step"><span class="ck">✓</span><span class="ft ts">TS</span>ThemeToggle.tsx</div>
+          <div class="rv-step"><span class="ck"></span><span class="ft ts">TS</span>Settings.tsx</div>
+          <div class="rv-step"><span class="ck"></span><span class="ft ts">TS</span><s class="muted">darkPalette.ts</s></div>
+          <span class="faint" style="font-size:11.5px;padding:6px">2 of 4 viewed · N / P next and previous file · click a + line to comment</span>
+          <div class="rv-box">
+            <textarea class="field" placeholder="Overall note for the agent (optional)" aria-label="Overall review note"></textarea>
+            <div class="row"><button class="primary" id="send-review">Send 1 comment to agent</button></div>
+            <div class="row"><button style="background:var(--raised)" id="commit-t">Commit…</button><button style="background:var(--raised)">Discard file…</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="mode" id="m-files" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <input class="field" placeholder="Go to file…  Ctrl+P" aria-label="Filter files">
+      <div class="tree" id="tree">
+        <div class="tsec"><svg class="chev" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg>Changes<span class="n">4</span></div>
+        <div class="tbody">
+          <div class="tr" data-file="Settings.tsx"><span class="ft ts">TS</span>Settings.tsx <span class="dir">src/components</span><span class="gs" style="color:var(--ty)">M</span></div>
+          <div class="tr" data-file="ThemeToggle.tsx"><span class="ft ts">TS</span>ThemeToggle.tsx <span class="dir">src/components</span><span class="gs done">A</span></div>
+          <div class="tr sel" data-file="theme.tsx"><span class="ft ts">TS</span>theme.tsx <span class="dir">src/context</span><span class="gs" style="color:var(--ty)">M</span></div>
+          <div class="tr"><span class="ft ts">TS</span><s class="muted">darkPalette.ts</s> <span class="dir">src/legacy</span><span class="gs fail">D</span></div>
+        </div>
+        <div class="tsec"><svg class="chev" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg>Open in sessions<span class="n">2</span></div>
+        <div class="tbody">
+          <div class="tr"><span class="ft ts">TS</span>theme.tsx<span class="who">✳ Add dark mode</span></div>
+          <div class="tr"><span class="ft ts">TS</span>storage.ts<span class="who">✳ Add dark mode</span></div>
+        </div>
+        <div class="tsec"><svg class="chev" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg>acme-web-dark<span class="n"></span></div>
+        <div class="tbody">
+          <div class="tr" style="padding-left:6px"><svg viewBox="0 0 16 16" style="color:var(--faint)"><path d="m4 6 4 4 4-4"/></svg>src</div>
+          <div class="tr" style="padding-left:20px"><svg viewBox="0 0 16 16" style="color:var(--faint)"><path d="m6 4 4 4-4 4"/></svg>components</div>
+          <div class="tr" style="padding-left:20px"><svg viewBox="0 0 16 16" style="color:var(--faint)"><path d="m4 6 4 4 4-4"/></svg>context</div>
+          <div class="tr" style="padding-left:48px"><span class="ft ts">TS</span>theme.test.tsx</div>
+          <div class="tr sel" style="padding-left:48px" id="tree-theme" tabindex="0"><span class="ft ts">TS</span>theme.tsx<span class="gs" style="color:var(--ty)">M</span></div>
+          <div class="tr" style="padding-left:20px"><svg viewBox="0 0 16 16" style="color:var(--faint)"><path d="m6 4 4 4-4 4"/></svg>lib</div>
+          <div class="tr" style="padding-left:34px"><span class="ft ts">TS</span>App.tsx</div>
+          <div class="tr" style="padding-left:20px"><span class="ft json">{}</span>package.json</div>
+          <div class="tr" style="padding-left:20px"><span class="ft md">M↓</span>README.md</div>
+        </div>
+      </div>
+      </div>
+    </aside>
+    <section class="ed">
+      <div class="tabs" role="tablist" id="tabs">
+        <button class="tab on" role="tab" data-t="code"><span class="ft ts">TS</span><span class="tn">theme.tsx</span><span class="x">×</span></button>
+        <button class="tab" role="tab" data-t="md"><span class="ft md">M↓</span><span class="tn">1.7.4-design.md</span><span class="x">×</span></button>
+        <button class="tab preview" role="tab" data-t="img"><span class="ft md">▣</span><span class="tn">files.png</span><span class="x">×</span></button>
+      </div>
+      <div class="crumb">
+        <span class="path" id="crumb-path">src › context › <b>theme.tsx</b></span>
+        <span class="seg" id="diff-seg"><button aria-pressed="true" data-d="file">File</button><button aria-pressed="false" data-d="diff">Changes +31 −7</button></span>
+        <span class="seg" id="md-seg" hidden><button aria-pressed="true" data-p="preview">Preview</button><button aria-pressed="false" data-p="source">Source</button></span>
+        <span class="seg" id="img-seg" hidden><button aria-pressed="false">Image</button><button aria-pressed="true">Compare with main</button></span>
+        <button class="send" id="send"><svg viewBox="0 0 16 16"><path d="M2.5 8h9M8 4.5 11.5 8 8 11.5"/></svg>Send to agent <svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button>
+        <button class="icon-btn" id="file-more" aria-label="File actions"><svg viewBox="0 0 16 16"><circle cx="3.5" cy="8" r=".8"/><circle cx="8" cy="8" r=".8"/><circle cx="12.5" cy="8" r=".8"/></svg></button>
+        <button class="icon-btn" id="insp-t" aria-label="Toggle inspector" title="Inspector"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M10 3v10"/></svg></button>
+      </div>
+      <div class="code" id="code"></div>
+      <div class="mdv" id="md" hidden><article>
+        <h1>Dawsha 1.7.4: Projects sidebar, Files and Agents revamp</h1>
+        <p class="muted">Status: proposed · rendered preview of <code>docs/plans/2026-10-28-1.7.4-design.md</code></p>
+        <h2>Intent</h2>
+        <p>1.7.3 added capability to Files and tidied Agents. 1.7.4 rebuilds these surfaces so each reads at a glance:</p>
+        <ul><li><b>Projects sidebar:</b> what needs me, and where is work happening?</li><li><b>Agents:</b> what is running, what failed, and what did each agent do?</li><li><b>Files:</b> where am I, what changed, and how do I hand it to an agent?</li></ul>
+        <h2>Mockup</h2>
+        <p>HTML files open as a sandboxed preview with scripts on and network off. Here <code>docs/mockups/1.7.4.html</code> would render live, with <b>Open in browser</b> beside it.</p>
+      </article></div>
+      <div class="shots" id="img" hidden>
+        <div class="crumb" style="border:0"><span class="muted">docs/screenshots/files.png · 1600×1000 · left: main · right: working copy · drag the line</span></div>
+        <div class="shot-stage" id="stage"><div class="shot"><div class="sb"></div><div class="bd"><i></i><i></i><i style="width:70%"></i><i></i></div></div><div class="shot new" id="shot-new"><div class="sb"></div><div class="bd"><i></i><i></i><i style="width:70%"></i><i></i></div></div><div class="shot-split" id="split"></div></div>
+      </div>
+      <div class="panel" id="panel">
+        <div class="phead">
+          <button class="ptab" aria-selected="true"><svg viewBox="0 0 16 16"><path d="M5 3.5v9l7-4.5z"/></svg>Run · dev</button>
+          <button class="ptab" aria-selected="false">Run · test</button>
+          <button class="ptab" aria-selected="false">Problems</button>
+          <span class="sp"></span>
+          <button class="sel-btn" id="cmd">npm run dev <svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button>
+          <button class="icon-btn" title="Restart" aria-label="Restart"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v2.5h-2.5"/></svg></button>
+          <button class="icon-btn" title="Stop" aria-label="Stop"><svg viewBox="0 0 16 16"><rect x="4" y="4" width="8" height="8" rx="1"/></svg></button>
+          <button class="icon-btn" id="panel-t" title="Minimise panel" aria-label="Minimise panel"><svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button>
+        </div>
+        <div class="pbody">
+<div>&gt; acme-web@0.4.0 dev · C:\work\acme-web-dark</div><div>&gt; vite</div><div>&nbsp;</div><div class="ok">  VITE v6.0.3  ready in 412 ms</div><div>  ➜  Local:   http://localhost:5173/</div><div>  ➜  press h + enter to show help</div><div class="faint">12:41:07 [vite] hmr update /src/context/theme.tsx</div>
+        </div>
+      </div>
+      <div class="status">
+        <span><svg viewBox="0 0 16 16" style="width:12px;height:12px"><circle cx="5" cy="4" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="6" r="1.5"/><path d="M5 5.5v5M11 7.5c0 2-2 2.5-6 3"/></svg>feat/dark-mode</span>
+        <span class="done">+31 −7 since main</span>
+        <span class="run">● dev running · :5173</span>
+        <span class="sp"></span>
+        <span>Ln 14, Col 7</span><span>TSX</span><span>Read only · E to edit</span>
+      </div>
+    </section>
+    <aside class="insp" aria-label="Inspector">
+      <span class="seg" id="insp-seg"><button aria-pressed="true" data-i="ol">Outline</button><button aria-pressed="false" data-i="act">Activity</button></span>
+      <div class="insp-body" id="insp-body"></div>
+    </aside>
+  </div>
+</main>
+
+<!-- ================= PANES ================= -->
+<main class="view" id="panes" hidden>
+  <div class="pgrid">
+    <section class="pn focus"><div class="pn-h"><span class="mark claude">✳</span><b>1 · Add dark mode toggle</b><span class="st run" style="display:inline-flex;gap:4px;align-items:center"><svg class="spin" viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"/></svg>Working</span><span class="sp"></span><button class="icon-btn" aria-label="Pane actions">⋯</button><button class="icon-btn" aria-label="Maximise">⤢</button></div>
+      <div class="pn-sum">Adding a ThemeToggle and persisting the choice in localStorage.</div>
+      <div class="pn-t"><div>&gt; Add a dark mode toggle to the settings page</div>
+<div><span class="ok">●</span> Adding a <span class="acc">ThemeToggle</span> and persisting the choice in localStorage.</div><div class="dim">  └ Update src/context/theme.tsx  (+18 −3)</div><div class="dim">  └ Create src/components/ThemeToggle.tsx  (+42)</div>
+<div><span style="color:var(--claude)">✻</span> Running the test suite… <span class="dim">(esc to interrupt)</span></div>
+<span class="cur"></span></div>
+      <div class="pn-f"><span style="color:var(--kw)">Opus 5.5</span><span>ctx 41%</span><span>3/6 · 2 running</span></div></section>
+    <section class="pn"><div class="pn-h"><span class="mark claude">✳</span><b>2 · Refactor invoice export</b><span class="st muted">Idle</span><span class="sp"></span><button class="icon-btn" aria-label="Pane actions">⋯</button><button class="icon-btn" aria-label="Maximise">⤢</button></div>
+      <div class="pn-sum">All 41 tests pass. The export output is byte-for-byte unchanged.</div>
+      <div class="pn-t"><div>&gt; Refactor the invoice export into smaller functions</div>
+<div><span class="ok">●</span> Splitting <span class="acc">exportInvoices</span> into query, format and write steps.</div><div class="dim">  └ Update src/export/invoices.ts  (+37 −61)</div>
+<div><span class="ok">●</span> All 41 tests pass.</div>
+<span class="cur"></span></div>
+      <div class="pn-f"><span>Sonnet 5.5</span><span>ctx 22%</span></div></section>
+    <section class="pn needs"><div class="pn-h"><span class="mark codex">◎</span><b>3 · Fix flaky login test</b><span class="st">Needs you</span><span class="sp"></span><button class="icon-btn" aria-label="Pane actions">⋯</button><button class="icon-btn" aria-label="Maximise">⤢</button></div>
+      <div class="pn-sum">Wants to run npm run e2e -- login.spec.ts</div>
+      <div class="pn-t"><div>› Fix the flaky login test</div>
+<div>• Replacing the sleep with a wait on the "session ready" event.</div><div class="dim">  edit tests/login.spec.ts (+6 −2)</div><div class="ask">Allow command? <b>npm run e2e -- login.spec.ts</b><br><span class="dim">1 yes · 2 always · 3 no</span></div></div>
+      <div class="pn-f"><span>gpt-5.6-sol</span><span>ctx 32%</span></div></section>
+    <section class="pn"><div class="pn-h"><span class="mark gemini">✦</span><b>4 · Rewrite the getting started guide</b><span class="st done">Done</span><span class="sp"></span><button class="icon-btn" aria-label="Pane actions">⋯</button><button class="icon-btn" aria-label="Maximise">⤢</button></div>
+      <div class="pn-sum">The guide now starts with the installer download.</div>
+      <div class="pn-t"><div>&gt; Rewrite the getting started guide for the new installer</div>
+<div><span style="color:var(--gemini)">✦</span> Drafting a three-step guide.</div><div class="dim">  ✓ ReadFile docs/getting-started.md</div><div class="dim">  ✓ WriteFile docs/getting-started.md</div>
+<div>Done.</div></div>
+      <div class="pn-f"><span>gemini-2.5-pro</span></div></section>
+  </div>
+</main>
+
+<!-- ================= SETTINGS · HIGHLIGHTS ================= -->
+<main class="view" id="hl" hidden>
+  <div class="set">
+    <h1>Highlights</h1>
+    <p class="lede">Tint terminal lines that contain the words you care about.</p>
+    <div class="cmp">
+      <div><h3>Today: stock Windows dropdown</h3>
+        <div class="hl-rule"><span class="pat c-red">error</span><select class="native"><option>Red</option><option>Amber</option></select><span></span></div>
+        <div class="hl-rule"><span class="pat c-amber">warn</span><select class="native"><option>Amber</option></select><span></span></div>
+        <p class="faint" style="font-size:12px">A white OS control in a dark app, with no preview of the colour.</p>
+      </div>
+      <div><h3>1.7.4: swatches you can see</h3>
+        <div id="rules"></div>
+        <button class="ghost" style="margin-top:6px">+ Add rule</button>
+      </div>
+    </div>
+    <div class="term-demo" id="term-demo"></div>
+    <p class="faint" style="font-size:12px;margin-top:16px">The same sweep replaces every remaining native &lt;select&gt;: the Instructions project picker, the Orchestrator board, history, new-run and settings pickers, and the 1.7.3 Files project/checkout selects (now the location button). All of them use the existing selectMenu.</p>
+  </div>
+</main>
+</div>
+
+<div class="pop usage-pop" id="pop-usage" role="dialog" aria-label="Usage limits" hidden>
+  <div class="ph">Usage limits · each agent has its own account</div>
+  <div id="usage-rows"></div>
+  <hr><button>Open Usage view</button>
+</div>
+<dialog id="dlg-commit" style="width:440px"><h2>Commit 3 files on feat/dark-mode</h2><p class="mono" style="font-size:11.5px">acme-web-dark · theme.tsx, ThemeToggle.tsx, Settings.tsx</p>
+  <input class="field" style="width:100%;margin-bottom:8px" value="feat: dark mode toggle persisted in localStorage" aria-label="Commit message">
+  <textarea class="field" style="width:100%;height:70px;resize:none" aria-label="Commit body">Drafted from the session summary. Edit before committing.</textarea>
+  <p style="font-size:12px;margin-top:8px">darkPalette.ts (deleted) is not selected. Hooks run as usual.</p>
+  <form method="dialog" class="dlg-acts"><button value="cancel" autofocus>Cancel</button><button value="ok" class="primary">Commit 3 files</button></form></dialog>
+
+<!-- popovers -->
+<div class="pop" id="pop-loc" role="menu" hidden>
+  <div class="ph">Project</div>
+  <button class="cur">acme-web<span class="r">C:\work\acme-web</span></button>
+  <button>billing-api</button><button>mobile-shell</button>
+  <hr>
+  <div class="ph">Checkout of acme-web</div>
+  <button data-br="main · acme-web">main<span class="r">acme-web · main checkout</span></button>
+  <button class="cur" data-br="feat/dark-mode · acme-web-dark">feat/dark-mode<span class="r">acme-web-dark</span></button>
+  <button data-br="fix/storage · acme-web-storage">fix/storage<span class="r">acme-web-storage</span></button>
+  <button class="dim" disabled>exp/old-nav<span class="r">missing · prunable</span></button>
+  <hr>
+  <div class="ph">Linked repos · opened together by your sessions</div>
+  <button data-br="main · acme-shared-ui">acme-shared-ui<span class="r">touched in 3 sessions</span></button>
+  <button data-br="main · acme-infra">acme-infra<span class="r">touched in 1 session</span></button>
+  <hr><button>Copy path</button><button>Reveal in File Explorer</button>
+</div>
+<div class="pop" id="pop-send" role="menu" hidden>
+  <div class="ph">Send theme.tsx to</div>
+  <button><span class="mark claude">✳</span>Add dark mode toggle<span class="r">acme-web · working</span></button>
+  <button><span class="mark claude">✳</span>Review PR 42<span class="r">acme-web · idle</span></button>
+  <hr><button>New session with this file…</button><button>Copy as @mention</button>
+</div>
+<div class="pop" id="pop-file" role="menu" hidden>
+  <button>Edit<span class="r">E</span></button><button>Open in VS Code</button><button>Copy path</button><button>Copy relative path</button><button>Reveal in File Explorer</button>
+  <hr><button class="danger" data-act="delete">Delete theme.tsx…</button>
+</div>
+<div class="pop" id="pop-proj" role="menu" hidden>
+  <button>New session<span class="r">Ctrl+N</span></button><button>Open in Files</button><button>Open terminal here</button><button>Pin to top</button><button>Rename…</button>
+  <hr><button class="danger" data-act="remove">Remove acme-web from Dawsha…</button>
+</div>
+<div class="pop" id="pop-sort" role="menu" hidden>
+  <div class="ph">Sort projects</div>
+  <button class="cur">Recent activity</button><button>Name</button><button>Manual (drag)</button>
+  <hr><button>Hide projects without sessions</button>
+</div>
+<div class="pop" id="pop-ag" role="menu" hidden>
+  <button>Expand all</button><button>Collapse all</button><hr><button>Show automatic reviews</button><button>Export visible as Markdown</button>
+</div>
+
+<dialog id="dlg-stop"><h2>Stop "Unit tests for ThemeToggle"?</h2><p>The agent stops mid-task. Its transcript and any files it already changed are kept.</p><form method="dialog" class="dlg-acts"><button value="cancel" autofocus>Keep running</button><button value="ok" class="danger">Stop Unit tests for ThemeToggle</button></form></dialog>
+<dialog id="dlg-del"><h2>Move theme.tsx to Recycle Bin?</h2><p class="mono">src/context/theme.tsx · acme-web-dark</p><p>It is open in 1 tab and touched by 1 session.</p><form method="dialog" class="dlg-acts"><button value="cancel" autofocus>Cancel</button><button value="ok" class="danger">Move theme.tsx to Recycle Bin</button></form></dialog>
+<dialog id="dlg-remove"><h2>Remove acme-web from Dawsha?</h2><p>The folder and its files stay on disk. Its 2 sessions close and can be resumed later.</p><form method="dialog" class="dlg-acts"><button value="cancel" autofocus>Cancel</button><button value="ok" class="danger">Remove acme-web</button></form></dialog>
+
+<div class="note" id="note" hidden>
+  <b id="note-title"></b>
+  <ul id="note-list"></ul>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let tt;function toast(t){$('toast').textContent=t;$('toast').hidden=false;clearTimeout(tt);tt=setTimeout(()=>$('toast').hidden=true,2400)}
+const spin='<svg class="spin" viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"/></svg>';
+const ok='<svg viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7"/></svg>';
+const bad='<svg viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg>';
+const idle='<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="4.5"/></svg>';
+const chev='<svg class="chev" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg>';
+const more='<svg viewBox="0 0 16 16"><circle cx="3.5" cy="8" r=".8"/><circle cx="8" cy="8" r=".8"/><circle cx="12.5" cy="8" r=".8"/></svg>';
+const plus='<svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>';
+
+/* ---------- sidebar ---------- */
+const projects=[
+ {n:'acme-web',br:'feat/dark-mode',cur:true,live:'2',sessions:[
+   {m:'claude',t:'Add dark mode toggle',s:spin+'<span class="run">Working</span> · 3 agents',a:'4m',sel:true},
+   {m:'claude',t:'Review PR 42',s:idle+'Idle',a:'1h'}]},
+ {n:'billing-api',br:'main',live:'1',needs:true,sessions:[
+   {m:'claude',t:'Approve migration plan',s:'<span class="needs">Needs you</span>',a:'now'},
+   {m:'claude',t:'Refactor invoice export',s:idle+'Idle',a:'3h'}]},
+ {n:'mobile-shell',br:'fix/login',live:'1',needs:true,sessions:[
+   {m:'codex',t:'Fix flaky login test',s:'<span class="needs">Permission</span>',a:'2m'}]},
+ {n:'docs-site',br:'main',live:'',closed:true,sessions:[
+   {m:'gemini',t:'Rewrite the getting started guide',s:ok+'<span class="done">Done</span>',a:'yesterday'}]},
+ {n:'Platforms',br:'feature/26412-service-stock',live:'',closed:true,sessions:[]},
+];
+function renderSide(){
+ $('projects').innerHTML=projects.map((p,i)=>`
+ <div class="proj ${p.closed?'closed':''} ${p.cur?'cur':''}" data-f="${p.n} ${p.sessions.map(s=>s.t).join(' ')}">
+  <div class="proj-row" data-i="${i}" tabindex="0" role="treeitem" aria-expanded="${!p.closed}" title="${p.n} · ${p.br}">
+   ${chev}<span class="mono-av">${p.n.slice(0,2).toUpperCase()}</span>
+   ${p.needs?`<span class="rail-badge needs">!</span>`:p.live?`<span class="rail-badge run">${p.live}</span>`:''}
+   <span class="proj-name">${p.n}<span class="proj-branch">${p.br}</span></span>
+   <span class="proj-count">${p.needs?'<span class="needs">needs you</span>':p.live?p.live+' live':p.sessions.length?'':'—'}</span>
+   <span class="proj-acts"><button class="icon-btn" title="New session in ${p.n}" aria-label="New session in ${p.n}">${plus}</button><button class="icon-btn pm" aria-label="${p.n} actions">${more}</button></span>
+  </div>
+  <div class="sessions">${p.sessions.length?p.sessions.map(s=>`
+   <div class="sess ${s.sel?'sel':''}" tabindex="0"><span class="mark ${s.m}">${{claude:'✳',codex:'◎',gemini:'✦'}[s.m]}</span><span class="t">${s.t}</span><span class="ago">${s.a}</span><span class="s">${s.s}</span></div>`).join(''):'<div class="proj-empty">No sessions · <button class="link">Start one</button></div>'}
+  </div>
+ </div>`).join('');
+}
+renderSide();
+$('projects').addEventListener('click',e=>{
+ const pm=e.target.closest('.pm');if(pm){openPop('pop-proj',pm);e.stopPropagation();return}
+ if(e.target.closest('.proj-acts'))return toast('Preview: new session');
+ const row=e.target.closest('.proj-row');if(!row)return;
+ if($('side').classList.contains('rail'))return toast('Rail: click a project to open its sessions in a flyout');
+ row.parentElement.classList.toggle('closed');row.setAttribute('aria-expanded',!row.parentElement.classList.contains('closed'));
+});
+$('side-scroll').addEventListener('click',e=>{const s=e.target.closest('.sess');if(!s)return;document.querySelectorAll('.sess.sel').forEach(x=>x.classList.remove('sel'));s.classList.add('sel')});
+$('search-t').onclick=()=>{$('side').classList.toggle('searching');if($('side').classList.contains('searching'))$('side-filter').focus()};
+$('side-filter').oninput=e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#projects .proj').forEach(p=>{p.hidden=q&&!p.dataset.f.toLowerCase().includes(q);if(q)p.classList.remove('closed')})};
+function setRail(r){$('side').classList.toggle('rail',r);document.querySelectorAll('#s-seg button').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.s==='rail')===r)))}
+$('rail-t').onclick=()=>setRail(!$('side').classList.contains('rail'));
+$('s-seg').onclick=e=>{const b=e.target.closest('button');if(b)setRail(b.dataset.s==='rail')};
+$('sort-t').onclick=e=>{openPop('pop-sort',e.currentTarget);e.stopPropagation()};
+
+/* ---------- agents ---------- */
+const sessions=[
+ {id:'s1',m:'claude',t:'Add dark mode toggle',p:'acme-web',start:5,end:100,agents:[
+  {id:'a1',t:'Unit tests for ThemeToggle',st:'r',d:'14m',ln:'Bash  npm test -- ThemeToggle',s:62,e:100},
+  {id:'a2',t:'Persist the choice in localStorage',st:'d',d:'22m',ln:'Added readStoredTheme and storeTheme; survives a reload.',s:12,e:58},
+  {id:'a3',t:'Read the settings components',st:'d',d:'4m',ln:'Settings.tsx renders the page; the theme lives in context/theme.tsx.',s:5,e:16}]},
+ {id:'s2',m:'claude',t:'Refactor invoice export',p:'billing-api',start:20,end:88,agents:[
+  {id:'a4',t:'Map the CSV columns',st:'d',d:'9m',ln:'12 columns mapped; VAT column was missing a format.',s:20,e:42},
+  {id:'a5',t:'Run export integration tests',st:'f',d:'6m',ln:'Exit 1 · 2 of 31 tests failed (InvoiceExportTests).',s:70,e:88}]},
+ {id:'s3',m:'codex',t:'Fix flaky login test',p:'mobile-shell',start:40,end:100,agents:[
+  {id:'a6',t:'Reproduce with retries',st:'r',d:'8m',ln:'Read  e2e/login.spec.ts',s:78,e:100},
+  {id:'a7',t:'Collect CI logs',st:'d',d:'3m',ln:'Timeout on the OTP field in 3 of the last 20 runs.',s:40,e:52}]},
+];
+const stName={r:'Running',d:'Done',f:'Failed'};const stIcon={r:spin,d:ok,f:bad};const stCls={r:'run',d:'done',f:'fail'};
+let filt='all',selected='a1';
+function renderList(){
+ $('ag-list').innerHTML=sessions.map(s=>{
+  const ag=s.agents.filter(a=>filt==='all'||a.st===filt);if(!ag.length)return'';
+  const c={r:0,d:0,f:0};s.agents.forEach(a=>c[a.st]++);
+  const right=[c.r&&`<span class="run">${c.r} running</span>`,c.f&&`<span class="fail">${c.f} failed</span>`,c.d&&`<span class="muted">${c.d} done</span>`].filter(Boolean).join(' · ');
+  return `<div class="grp" role="group"><div class="grp-head" tabindex="0" role="treeitem" aria-expanded="true">${chev}<span class="mark ${s.m}">${{claude:'✳',codex:'◎'}[s.m]}</span><span><span class="grp-title">${s.t}</span><br><span class="grp-meta">${s.p} · ${s.agents.length} agents</span></span><span class="grp-right">${right}</span></div>
+  <div class="agents">${ag.map(a=>`<div class="agent ${a.id===selected?'sel':''}" data-a="${a.id}" tabindex="0" role="treeitem"><span class="${stCls[a.st]}">${stIcon[a.st]}</span><span class="nm">${a.t}</span><span class="st ${stCls[a.st]}">${stName[a.st]}</span><span class="du">${a.d}</span><span class="ln">${a.ln}</span></div>`).join('')}</div></div>`}).join('')||'<div class="empty" style="height:200px">No agents match this filter.</div>';
+ renderTl();
+}
+function renderTl(){
+ $('ag-tl').innerHTML=`<div class="tl-axis"><div></div><div><span>09:00</span><span>10:00</span><span>11:00</span><span>12:00</span><span>now</span></div></div>`+sessions.map(s=>`
+  <div class="tl-row session"><span class="nm"><span class="mark ${s.m}">${{claude:'✳',codex:'◎'}[s.m]}</span> ${s.t}</span><div class="tl-track"><div class="tl-bar" style="left:${s.start}%;width:${s.end-s.start}%"></div></div></div>`+
+  s.agents.filter(a=>filt==='all'||a.st===filt).map(a=>`<div class="tl-row" data-a="${a.id}"><span class="nm ${a.id===selected?'':''}">${a.t}</span><div class="tl-track"><div class="tl-bar ${a.st==='r'?'r':a.st==='f'?'f':''}" style="left:${a.s}%;width:${a.e-a.s}%" title="${a.t} · ${stName[a.st]} · ${a.d}"></div></div></div>`).join('')).join('');
+}
+function renderDetail(){
+ let a,s;sessions.forEach(x=>x.agents.forEach(y=>{if(y.id===selected){a=y;s=x}}));
+ if(!a){$('ag-detail').innerHTML='<div class="empty">Select an agent to see its task, live activity and the files it touched.</div>';return}
+ const running=a.st==='r';
+ $('ag-detail').innerHTML=`
+  <h2>${a.t}</h2>
+  <div class="sub"><span class="${stCls[a.st]}" style="display:inline-flex;gap:5px;align-items:center">${stIcon[a.st]}${stName[a.st]}</span>· ${a.d} · ${s.m==='claude'?'Claude Code':'Codex'} · in <button class="link">${s.t}</button></div>
+  <div class="d-acts"><button>Open transcript</button><button>Go to session</button>${running?'<button class="danger" id="stop">Stop…</button>':a.st==='f'?'<button>Ask session to retry</button>':'<button>Copy result</button>'}</div>
+  <div class="d-sec"><h3>Task</h3><div class="prompt">${a.st==='f'?'Run InvoiceExportTests against the new mapper and report failures with the first assertion message.':'Write unit tests for ThemeToggle: it renders the current theme, toggles on click, and persists the choice. Use the existing test helpers in src/test.'}</div></div>
+  <div class="d-sec"><h3>${running?'Live activity':'Result'}</h3>${running?`<div class="feed">
+    <div><span class="tm">12:41</span><span class="tool">Bash</span><span>npm test -- ThemeToggle</span></div>
+    <div><span class="tm">12:40</span><span class="tool">Edit</span><span>src/components/ThemeToggle.test.tsx</span></div>
+    <div><span class="tm">12:38</span><span class="tool">Read</span><span>src/test/render.tsx</span></div>
+    <div><span class="tm">12:37</span><span class="tool">Read</span><span>src/components/ThemeToggle.tsx</span></div></div>`:`<div class="prompt">${a.ln}</div>`}</div>
+  <div class="d-sec files-touched"><h3>Files touched</h3>
+    <button data-go="files"><span class="ch done">A</span>src/components/ThemeToggle.test.tsx<span class="muted" style="margin-left:auto">+48</span></button>
+    <button data-go="files"><span class="ch" style="color:var(--ty)">M</span>src/context/theme.tsx<span class="muted" style="margin-left:auto">+3 −1</span></button></div>
+  <div class="d-sec"><h3>Usage</h3><div class="kv"><span>Tokens</span><span>21.4k in · 3.1k out</span><span>Cost</span><span>$0.14</span><span>Model</span><span>Sonnet</span><span>Started</span><span>12:27 · ${a.d} ago</span></div></div>`;
+ const st=$('stop');if(st)st.onclick=()=>$('dlg-stop').showModal();
+ $('ag-detail').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>view('files'));
+}
+$('ag-list').addEventListener('click',e=>{
+ const h=e.target.closest('.grp-head');if(h){h.parentElement.classList.toggle('closed');return}
+ const r=e.target.closest('.agent');if(r){selected=r.dataset.a;renderList();renderDetail()}});
+$('ag-tl').addEventListener('click',e=>{const r=e.target.closest('[data-a]');if(r){selected=r.dataset.a;renderDetail()}});
+$('state-seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;filt=b.dataset.st;$('state-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderList()};
+$('layout-seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;const tl=b.dataset.l==='tl';$('ag-list').hidden=tl;$('ag-tl').hidden=!tl;$('layout-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))};
+$('ag-more').onclick=e=>{openPop('pop-ag',e.currentTarget);e.stopPropagation()};
+$('dlg-stop').onclose=()=>{if($('dlg-stop').returnValue==='ok')toast('Preview only. No agent was stopped.')};
+renderList();renderDetail();
+
+/* ---------- files ---------- */
+const src=[
+['','<span class="kw">import</span> { createContext, useCallback, useContext, useEffect, useState } <span class="kw">from</span> <span class="str">\'react\'</span>'],
+['','<span class="kw">import</span> { readStoredTheme, storeTheme } <span class="kw">from</span> <span class="str">\'../lib/storage\'</span>'],
+['',''],
+['','<span class="kw">export type</span> <span class="ty">Theme</span> = <span class="str">\'light\'</span> | <span class="str">\'dark\'</span>'],
+['',''],
+['del','<span class="kw">const</span> DEFAULT_THEME: <span class="ty">Theme</span> = <span class="str">\'light\'</span>'],
+['add','<span class="kw">export const</span> THEME_ATTRIBUTE = <span class="str">\'data-theme\'</span>'],
+['',''],
+['','<span class="kw">interface</span> <span class="ty">ThemeValue</span> {'],
+['','  theme: <span class="ty">Theme</span>'],
+['','  setTheme: (theme: <span class="ty">Theme</span>) =&gt; <span class="kw">void</span>'],
+['add','  toggleTheme: () =&gt; <span class="kw">void</span>'],
+['','}'],
+['','<span class="kw">export function</span> <span class="fn">systemTheme</span>(): <span class="ty">Theme</span> {'],
+['','  <span class="kw">return</span> window.<span class="fn">matchMedia</span>(<span class="str">\'(prefers-color-scheme: dark)\'</span>).matches ? <span class="str">\'dark\'</span> : <span class="str">\'light\'</span>'],
+['','}'],
+['',''],
+['','<span class="kw">export function</span> <span class="fn">ThemeProvider</span>({ children }) {'],
+['del','  <span class="kw">const</span> [theme, setTheme] = <span class="fn">useState</span>(DEFAULT_THEME)'],
+['add','  <span class="kw">const</span> [theme, setThemeState] = <span class="fn">useState</span>&lt;<span class="ty">Theme</span>&gt;(() =&gt; <span class="fn">readStoredTheme</span>() ?? <span class="fn">systemTheme</span>())'],
+['add','  <span class="fn">useEffect</span>(() =&gt; { document.documentElement.<span class="fn">setAttribute</span>(THEME_ATTRIBUTE, theme) }, [theme])'],
+['','  <span class="cm">// …</span>'],
+['','}'],
+];
+let diff=false;
+const blame={6:['claude','Persist the choice in localStorage · 22m ago'],11:['claude','Persist the choice in localStorage · 22m ago'],19:['codex','Codex · Fix flaky login test · 1h ago'],20:['claude','Unit tests for ThemeToggle · 3m ago']};
+const comments={11:'Fall back to systemTheme() only when the stored value is invalid, not just missing.'};
+function renderCode(){let n=0;$('code').innerHTML=src.map((x,i)=>[x,i]).filter(([[k]])=>diff||k!=='del').map(([[k,c],i])=>{const show=diff?k:'';if(k!=='del')n++;const b=diff&&k==='add'&&blame[i];const cm=diff&&comments[i]?`<div class="cmt"><b>You</b> <small>· comment on line ${n}</small><p>${comments[i]}</p></div>`:'';return `<div class="l ${show} ${!diff&&n===14?'cur':''}" data-i="${i}"><span class="n">${k==='del'&&diff?'':n}</span><span class="who mark ${b?b[0]:''}" title="${b?b[1]:''}">${b?{claude:'✳',codex:'◎'}[b[0]]:''}</span><span class="g" title="${show==='add'?'Comment on this line':''}">${show==='add'?'+':show==='del'?'−':''}</span><span>${c||' '}</span></div>${cm}`}).join('')}
+renderCode();
+$('code').addEventListener('click',e=>{const g=e.target.closest('.l.add .g');if(!g)return;const i=+g.parentElement.dataset.i;if(comments[i])delete comments[i];else comments[i]='Draft comment. Type here; it is sent with the review.';renderCode();const c=Object.keys(comments).length;$('rv-count').textContent=c?c+' comment'+(c>1?'s':''):'';$('send-review').textContent=`Send ${c} comment${c===1?'':'s'} to agent`});
+const tabMeta={code:['src › context › <b>theme.tsx</b>','diff-seg'],md:['docs › plans › <b>2026-10-28-1.7.4-design.md</b>','md-seg'],img:['docs › screenshots › <b>files.png</b>','img-seg']};
+function openTab(t){document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));$('crumb-path').innerHTML=tabMeta[t][0];['diff-seg','md-seg','img-seg'].forEach(id=>$(id).hidden=id!==tabMeta[t][1]);$('code').hidden=t!=='code';$('md').hidden=t!=='md';$('img').hidden=t!=='img'}
+$('tabs').onclick=e=>{const t=e.target.closest('.tab');if(t)openTab(t.dataset.t)};
+$('md-seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('md-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));toast(b.dataset.p==='source'?'Preview: Source shows the Markdown in the editor':'Rendered preview')};
+(()=>{let drag=false;const move=e=>{if(!drag)return;const r=$('stage').getBoundingClientRect();const p=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100));$('split').style.left=p+'%';$('shot-new').style.clipPath=`inset(0 0 0 ${p}%)`};$('stage').onpointerdown=e=>{drag=true;move(e)};addEventListener('pointermove',move);addEventListener('pointerup',()=>drag=false)})();
+$('exp-seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('exp-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));['files','search','review'].forEach(m=>$('m-'+m).hidden=m!==b.dataset.m);if(b.dataset.m==='review'){openTab('code');diff=true;$('diff-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.d==='diff')));renderCode()}};
+document.querySelectorAll('[data-open]').forEach(h=>h.addEventListener('click',()=>openTab('code')));
+$('send-review').onclick=()=>toast('Preview: comments go to "Add dark mode toggle" as one message with file:line references');
+$('commit-t').onclick=()=>$('dlg-commit').showModal();
+$('dlg-commit').onclose=()=>{if($('dlg-commit').returnValue==='ok')toast('Preview only. Nothing was committed.')};
+
+/* ---------- usage meter ---------- */
+const usage={claude:{name:'Claude',w:[['5h',62,'resets 14:20'],['week',18,'resets Mon 09:00']],age:'updated 1m ago'},codex:{name:'Codex',w:[['5h',1,'resets 17:01'],['week',0,'resets Sun 22:00']],age:'updated 4m ago'},gemini:{name:'Gemini',w:null,age:'Gemini CLI does not report limits'}};
+const markOf={claude:'✳',codex:'◎',gemini:'✦'};
+const cells=p=>`<span class="cells ${p>=80?'warn':''}">${[0,1,2,3,4].map(i=>`<i class="${p>i*20?'on':''}"></i>`).join('')}</span>`;
+let focusedAg='claude';
+function renderUsage(){const u=usage[focusedAg];$('usage').innerHTML=`<span class="who"><span class="mark ${focusedAg}">${markOf[focusedAg]}</span>${u.name}</span>`+(u.w?u.w.map(([l,p])=>`<span>${l}</span>${cells(p)}<span class="num">${p}%</span>`).join(''):'<span class="faint">no limits reported</span>');
+ $('usage-rows').innerHTML=Object.entries(usage).map(([k,v])=>`<div class="u-row ${k===focusedAg?'cur':''}"><span class="mark ${k}">${markOf[k]}</span><span class="nm">${v.name}${k===focusedAg?' · focused pane':''}<small>${v.age}</small></span>${v.w?v.w.map(([l,p,r])=>`<span class="w"><span>${l}</span><span>${cells(p)} ${p}%</span><span>${r}</span></span>`).join(''):''}</div>`).join('')}
+renderUsage();
+$('pane-seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;focusedAg=b.dataset.ag;$('pane-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderUsage()};
+$('usage').onclick=e=>{const p=$('pop-usage');closePops();p.hidden=false;const r=e.currentTarget.getBoundingClientRect();p.style.left=Math.min(r.left,innerWidth-370)+'px';p.style.top=r.bottom+4+'px';e.stopPropagation()};
+
+/* ---------- highlights ---------- */
+const hlRules=[['error','red'],['warn','amber'],['passed','green'],['localhost','blue']];
+const colors=['red','amber','green','blue','purple'];
+function renderHl(){$('rules').innerHTML=hlRules.map(([w,c],i)=>`<div class="hl-rule"><span class="pat c-${c}">${w}</span><span class="sw" role="radiogroup" aria-label="Colour for ${w}">${colors.map(k=>`<button role="radio" aria-checked="${k===c}" title="${k[0].toUpperCase()+k.slice(1)}" aria-label="${k}" data-r="${i}" data-c="${k}"><span class="c-${k}"></span></button>`).join('')}</span><button class="icon-btn" aria-label="Remove rule ${w}" title="Remove">${'<svg viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg>'}</button></div>`).join('');
+ $('term-demo').innerHTML=['> npm test',' ✓ theme.test.tsx (6 tests) passed','   warn  React act() wrapping recommended','   error  InvoiceExportTests › VAT column format',' ➜ Local: http://localhost:5173/'].map(l=>{const r=hlRules.find(([w])=>l.includes(w));return `<div class="${r?'c-'+r[1]:''}">${l}</div>`}).join('')}
+renderHl();
+$('rules').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;hlRules[+b.dataset.r][1]=b.dataset.c;renderHl()};
+$('diff-seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;diff=b.dataset.d==='diff';$('diff-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderCode()};
+const insp={ol:`<div class="ol"><span><span class="k">T</span>Theme</span><span>4</span></div><div class="ol"><span><span class="k">C</span>THEME_ATTRIBUTE</span><span>7</span></div><div class="ol"><span><span class="k">I</span>ThemeValue</span><span>9</span></div><div class="ol"><span><span class="k">ƒ</span>systemTheme</span><span>14</span></div><div class="ol"><span><span class="k">ƒ</span>ThemeProvider</span><span>18</span></div><div class="ol"><span><span class="k">ƒ</span>useTheme</span><span>37</span></div>`,
+act:`<h4>Agents</h4><div class="act"><span class="mark claude">✳</span><span>Persist the choice in localStorage</span><small>Add dark mode toggle · 2 edits · 22m ago</small></div><div class="act"><span class="run">${spin}</span><span>Unit tests for ThemeToggle</span><small>reading now · running</small></div><h4>Commits</h4><div class="act"><span class="faint">◦</span><span>feat: theme context</span><small>a91c3e2 · Mohamed · yesterday</small></div><div class="act"><span class="faint">◦</span><span>chore: move storage helpers</span><small>77be0f1 · 3 days ago</small></div>`};
+$('insp-body').innerHTML=insp.ol;
+$('insp-seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('insp-body').innerHTML=insp[b.dataset.i];$('insp-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))};
+$('insp-t').onclick=()=>$('fl').classList.toggle('no-insp');
+$('panel-t').onclick=()=>$('panel').classList.toggle('min');
+$('tree').addEventListener('click',e=>{const s=e.target.closest('.tsec');if(s){s.classList.toggle('closed');return}const r=e.target.closest('.tr');if(r){document.querySelectorAll('.tr.sel').forEach(x=>x.classList.remove('sel'));r.classList.add('sel')}});
+$('tree-theme').oncontextmenu=e=>{e.preventDefault();openPopAt('pop-file',e.clientX,e.clientY)};
+$('loc').onclick=e=>{openPop('pop-loc',e.currentTarget);e.stopPropagation()};
+$('send').onclick=e=>{openPop('pop-send',e.currentTarget);e.stopPropagation()};
+$('file-more').onclick=e=>{openPop('pop-file',e.currentTarget);e.stopPropagation()};
+$('cmd').onclick=()=>toast('Preview: detected commands from package.json — dev, build, test, plus Add command…');
+$('pop-loc').onclick=e=>{const b=e.target.closest('[data-br]');if(!b)return;$('loc-br').textContent=b.dataset.br;closePops();toast('Switched view to '+b.dataset.br+'. No git checkout ran.')};
+document.querySelectorAll('.pop').forEach(p=>p.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a)return;closePops();$(a.dataset.act==='delete'?'dlg-del':'dlg-remove').showModal()}));
+$('dlg-del').onclose=()=>{if($('dlg-del').returnValue==='ok')toast('Preview only. No file was deleted.')};
+$('dlg-remove').onclose=()=>{if($('dlg-remove').returnValue==='ok')toast('Preview only. Nothing was removed.')};
+
+/* ---------- shared ---------- */
+function closePops(){document.querySelectorAll('.pop').forEach(p=>p.hidden=true)}
+function openPopAt(id,x,y){closePops();const p=$(id);p.hidden=false;const r=p.getBoundingClientRect();p.style.left=Math.max(8,Math.min(x,innerWidth-r.width-8))+'px';p.style.top=Math.max(8,Math.min(y,innerHeight-r.height-8))+'px';p.querySelector('button:not([disabled])')?.focus()}
+function openPop(id,anchor){const r=anchor.getBoundingClientRect();openPopAt(id,r.left,r.bottom+4)}
+document.addEventListener('click',e=>{if(!e.target.closest('.pop'))closePops()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePops()});
+const notes={
+ agents:['Agents','<li>One state filter with counts replaces three loose numbers + a separate filter row.</li><li>Master–detail: the right pane is always there, showing task, live tool activity, files touched (jump to Files) and usage.</li><li>Rows carry the last tool call or the result line, so the list reads without opening anything.</li><li>Timeline shows which agents ran in parallel and how long each took.</li><li>Stop asks first and names the agent.</li>'],
+ panes:['Panes in Cards refined','<li>The terminal sits flush in the card: no inset black well, no double frame. The well is one shade below the pane.</li><li>Focus is a neutral light ring plus a soft shadow, not a 2px green border. Unfocused panes dim their text slightly and show a hollow cursor.</li><li>Green is kept for actions and the live cursor. Done is sage, running is blue, needs-you is orange, also on the pane edge.</li><li>Pane buttons appear on hover or focus. Use Cards today / Cards refined in the strip to compare.</li>'],
+ hl:['Highlights + usage meter','<li>Rule colour becomes a row of swatches (radio group, keyboard arrows), with a live terminal preview under the rules.</li><li>All remaining native selects move to selectMenu.</li><li><b>Usage meter</b> (top right): it always names the agent it belongs to. Switch the focused pane with the Claude/Codex/Gemini buttons.</li><li>A pane with no limits says so; it never falls back to another agent\'s numbers. Click the meter for every agent at once, with reset times and data age.</li>'],
+ files:['Files','<li><b>New:</b> Search (find in files), Review (comment on agent diffs, send to the agent, commit), agent blame in Changes, Markdown/HTML preview, screenshot compare, linked repos in the location menu.</li><li>One location button: project + branch/worktree (from 1.7.3) in two lines; the dropdown holds both.</li><li>Changes and Open-in-sessions become foldable sections above the tree, not filter tabs.</li><li>Toolbar down to File/Changes, Send to agent ▾ and ⋯. Edit, VS Code, Copy and Delete live in ⋯ and the right-click menu.</li><li>Run moves to a bottom panel with a tab per running command, like a VS Code terminal.</li><li>Inspector: Outline | Activity (agents + commits that touched this file). Hide with the panel button.</li>'],
+ side:['Projects sidebar','<li>"Waiting on you" floats sessions that need you to the top, across projects.</li><li>Project rows show branch and a quiet live count; + and ⋯ appear only on hover/focus.</li><li>Sessions show status as a word and age on the right; no tag chips.</li><li>Filter is behind the search icon (Ctrl+Shift+F). Sort: activity / name / manual.</li><li>Rail mode: 56px monograms with a run count or ! for needs-you.</li>']};
+let curView='agents';
+function showNote(){const [t,l]=notes[curView];$('note-title').textContent=t;$('note-list').innerHTML=l+'<li style="list-style:none;margin:8px 0 0 -16px"><b>Sidebar:</b> '+notes.side[1].replace(/<\/?li>/g,' ').slice(0,150)+'…</li>'}
+$('notes-t').onclick=()=>{$('note').hidden=!$('note').hidden;showNote()};
+function view(v){curView=v;$('agents').hidden=v!=='agents';$('files').hidden=v!=='files';$('hl').hidden=v!=='hl';$('panes').hidden=v!=='panes';document.querySelectorAll('#v-seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===v)));document.querySelectorAll('.top nav [data-nav]').forEach(b=>b.toggleAttribute('aria-current',b.dataset.nav===v));if(b=document.querySelector('.top nav [aria-current]'))b.setAttribute('aria-current','page');showNote()}
+var b;
+$('v-seg').onclick=e=>{const x=e.target.closest('button');if(x)view(x.dataset.v)};
+document.querySelector('.top nav').onclick=e=>{const x=e.target.closest('[data-nav]');if(x)view(x.dataset.nav)};
+$('t-seg').onclick=e=>{const x=e.target.closest('button');if(!x)return;const c=document.documentElement.classList;c.toggle('today',x.dataset.th==='today');c.toggle('light',x.dataset.th==='light');$('t-seg').querySelectorAll('button').forEach(y=>y.setAttribute('aria-pressed',String(y===x)))};
+if(location.hash==='#files')view('files');
+if(location.hash==='#hl')view('hl');
+if(location.hash==='#panes')view('panes');
+</script>
+</html>
