@@ -11,6 +11,7 @@ import { DICTATION_SHORTCUT } from '../shared/dictation'
 import { cancelDictation, toggleDictation } from './dictation/dictationActions'
 import { dictationStatus } from './dictation/dictationState'
 import { contextMenuOpen } from './components/contextMenu'
+import { requestFilesSearch } from './files/filesActions'
 
 const overlayOpen = (): boolean => document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)') !== null
 
@@ -83,6 +84,12 @@ function onKeyDown(event: KeyboardEvent): void {
   if (handleDictationKey(event)) return
   if (overlayOpen() || inFindBar(event)) return
   const state = store.state
+  // Find in files: only while Files is showing, so Ctrl+Shift+F keeps searching the terminal everywhere else.
+  if (state.view === 'files' && event.shiftKey && !event.altKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+    consume(event)
+    requestFilesSearch()
+    return
+  }
   if (isPaletteShortcut(event, state)) {
     consume(event)
     openPalette()

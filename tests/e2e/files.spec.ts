@@ -209,7 +209,8 @@ test('Ctrl+P opens quick open from a terminal, opens files in Files and adds the
     // Add to prompt types @path#Lx-y for a selection into the focused session and shows the grid
     await editor(page).click()
     await page.keyboard.press('Control+a')
-    await page.locator('#files-add-prompt').click()
+    await page.locator('#files-send').click()
+    await page.getByRole('menuitem').first().click()
     await expect(page.locator('.pane')).toBeVisible()
     await expect.poll(() => lastInput(page, id)).toBe('@src/a.ts#L1-4 ')
 
@@ -227,11 +228,11 @@ test('Ctrl+P opens quick open from a terminal, opens files in Files and adds the
     await page.keyboard.press('Escape')
     await expect(page.locator('#quick-open-input')).toHaveCount(0)
 
-    // the Changed filter shows only the modified and new files
+    // the Changes section lists only the modified and new files, as a flat list
     await page.locator('#files-button').click()
-    await page.locator('#files-mode-changed').click()
-    await expect(page.locator('.files-row.file')).toHaveCount(2)
-    await expect(page.locator('.files-row.file .files-name')).toHaveText(['new.ts', 'README.md'])
+    await expect(page.locator('#files-changes-list .files-flat')).toHaveCount(2)
+    await expect(page.locator('#files-changes-list .files-flat .files-flat-name')).toHaveText(['README.md', 'new.ts'])
+    await expect(page.locator('#files-changes-list .files-flat[data-path="src/new.ts"] .files-flat-dir')).toHaveText('src')
     await page.screenshot({ path: join(SCREENS, '64-files-changed-filter.png') })
   } finally {
     await closeApp(app)

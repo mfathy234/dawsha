@@ -1,4 +1,4 @@
-import { buildTree, filterTree, type StatusLetter, type TreeMode, type TreeNode } from '../../shared/fileTree'
+import { buildTree, type StatusLetter, type TreeNode } from '../../shared/fileTree'
 import { treeClickPins } from '../../shared/fileOpenMode'
 import { treeShortcut, type FileActionId } from '../../shared/fileMenus'
 import { h, icon } from '../dom'
@@ -7,12 +7,6 @@ import { fileIcon, folderIcon } from './fileIcon'
 import { ancestorsOf, flattenTree, treeKey, type TreeRow } from './filesState'
 
 const MAX_ROWS = 2000
-
-const MODES: { mode: TreeMode; label: string; id: string }[] = [
-  { mode: 'all', label: 'All', id: 'files-mode-all' },
-  { mode: 'changed', label: 'Changed', id: 'files-mode-changed' },
-  { mode: 'sessions', label: 'Open in sessions', id: 'files-mode-sessions' }
-]
 
 const BADGE_TITLES: Record<string, string> = { M: 'Modified', A: 'Added', D: 'Deleted', U: 'New (untracked)', R: 'Renamed', C: 'Copied', T: 'Type changed', '!': 'Conflict' }
 
@@ -31,35 +25,24 @@ export interface TreeTarget {
   open: boolean
 }
 
-/** The left column: filter box, All / Changed / Open in sessions chips and the folder tree with M / A / D badges. */
+/** The folder tree with M / A / D badges; the explorer puts it under the Changes and Open in sessions sections. */
 export class FilesTree {
   readonly el: HTMLElement
-  private readonly filter = h('input', {
-    class: 'files-filter', id: 'files-filter', type: 'search', placeholder: 'Filter files…', 'aria-label': 'Filter files',
-    onInput: (event: Event) => {
-      if (!(event as InputEvent).isComposing) this.setQuery((event.target as HTMLInputElement).value)
-    }
-  })
-  private readonly chips = MODES.map(({ mode, label, id }) => h('button', { class: 'files-chip', type: 'button', id, 'aria-pressed': 'false', onClick: () => this.setMode(mode) }, label))
   private readonly list = h('div', { class: 'files-tree', id: 'files-tree', role: 'tree', tabindex: '0', 'aria-label': 'Project files' })
   private nodes: TreeNode[] = []
   private status = new Map<string, StatusLetter>()
-  private touched = new Set<string>()
-  private mode: TreeMode = 'all'
-  private query = ''
   private openFolders = new Set<string>()
   private rows: TreeRow[] = []
   private cursor: string | null = null
   private active: string | null = null
   private note = ''
 
-  constructor(private readonly hooks: TreeHooks, head: HTMLElement) {
-    this.el = h('div', { class: 'files-tree-col' }, head, h('div', { class: 'files-filter-row' }, this.filter), h('div', { class: 'files-chips', role: 'group', 'aria-label': 'Show' }, ...this.chips), this.list)
+  constructor(private readonly hooks: TreeHooks) {
+    this.el = this.list
     this.list.addEventListener('keydown', (event) => this.onKey(event))
     this.list.addEventListener('click', (event) => this.onClick(event))
     this.list.addEventListener('contextmenu', (event) => this.onContext(event))
     this.list.addEventListener('dblclick', (event) => this.onClick(event, true))
-    this.syncChips()
   }
 
   setData(files: string[], status: Map<string, StatusLetter>, note = ''): void {
@@ -72,12 +55,6 @@ export class FilesTree {
   setLoading(loading: boolean): void {
     this.list.inert = loading
     this.list.setAttribute('aria-busy', String(loading))
-  }
-
-  setTouched(paths: Iterable<string>): void {
-    this.touched = new Set(paths)
-    if (this.mode === 'sessions') this.render()
-    else this.syncChips()
   }
 
   /** Returns the saved fold state of this project's tree, so switching projects keeps each tree as it was. */
@@ -103,40 +80,13 @@ export class FilesTree {
     this.list.focus()
   }
 
-  focusFilter(): void {
-    this.filter.focus()
-    this.filter.select()
-  }
-
-  private setMode(mode: TreeMode): void {
-    this.mode = mode
-    this.syncChips()
-    this.render()
-  }
-
-  private setQuery(query: string): void {
-    this.query = query
-    this.render()
-  }
-
-  private syncChips(): void {
-    MODES.forEach(({ mode }, index) => {
-      const count = mode === 'changed' ? this.status.size : mode === 'sessions' ? this.touched.size : null
-      const chip = this.chips[index]
-      chip.setAttribute('aria-pressed', String(this.mode === mode))
-      chip.textContent = `${MODES[index].label}${count ? ` ${count}` : ''}`
-    })
-  }
-
-  private isOpen = (path: string): boolean => this.mode !== 'all' || this.query.trim() !== '' || this.openFolders.has(path)
+  private isOpen = (path: string): boolean => this.openFolders.has(path)
 
   private render(): void {
-    this.syncChips()
-    const visible = filterTree(this.nodes, this.mode, this.touched, this.query)
-    this.rows = flattenTree(visible, this.isOpen)
+    this.rows = flattenTree(this.nodes, this.isOpen)
     const shown = this.rows.slice(0, MAX_ROWS)
     const children = shown.map((row) => this.rowEl(row))
-    if (this.rows.length > MAX_ROWS) children.push(h('div', { class: 'files-empty' }, `${this.rows.length - MAX_ROWS} more. Type in the filter to narrow it down.`))
+    if (this.rows.length > MAX_ROWS) children.push(h('div', { class: 'files-empty' }, `${this.rows.length - MAX_ROWS} more. Use Go to file to find the rest.`))
     else if (shown.length === 0) children.push(h('div', { class: 'files-empty' }, this.emptyText()))
     this.list.replaceChildren(...children)
     this.list.removeAttribute('aria-activedescendant')
@@ -145,10 +95,7 @@ export class FilesTree {
   }
 
   private emptyText(): string {
-    if (this.note) return this.note
-    if (this.mode === 'changed') return 'Nothing has changed yet.'
-    if (this.mode === 'sessions') return 'No open session has edited a file yet.'
-    return this.query ? 'No file matches.' : 'This project has no files.'
+    return this.note || 'This project has no files.'
   }
 
   private idOf(path: string): string {

@@ -78,19 +78,40 @@ export function openInFiles(target: FilesTarget, path: string, options: { pin?: 
 export const promptReference = (path: string, range?: LineRange): string =>
   `@${path}${range ? `#L${range.start}${range.end > range.start ? `-${range.end}` : ''}` : ''} `
 
-/** Types `@path` (and `#Lx-y` for a selection) into the focused session and shows it; says so when there is none. */
-export function addToPrompt(path: string, range?: LineRange, prefix = ''): boolean {
-  const state = store.state
-  const paneId = state.focusedId ?? state.panes[0]?.id ?? null
-  const view = paneId ? paneTerminal(paneId) : undefined
-  if (!paneId || !view) {
-    toast('Open a session to add files to its prompt', 'info')
+/** Inserts text into a session's prompt without submitting it, and puts that pane in front. False (with a note) when it is gone. */
+export function insertIntoSession(paneId: string, text: string): boolean {
+  const view = paneTerminal(paneId)
+  if (!view || !paneById(store.state, paneId)) {
+    toast('That session is not open any more.', 'info')
     return false
   }
   focusPane(paneId)
   view.focus()
-  view.insertText(promptReference(toProjectPath(prefix, path), range))
+  view.insertText(text)
   return true
+}
+
+/** Types `@path` (and `#Lx-y` for a selection) into the focused session and shows it; says so when there is none. */
+export function addToPrompt(path: string, range?: LineRange, prefix = ''): boolean {
+  const state = store.state
+  const paneId = state.focusedId ?? state.panes[0]?.id ?? null
+  if (!paneId || !paneTerminal(paneId)) {
+    toast('Open a session to add files to its prompt', 'info')
+    return false
+  }
+  return insertIntoSession(paneId, promptReference(toProjectPath(prefix, path), range))
+}
+
+const searchListeners = new Set<() => void>()
+
+/** Ctrl+Shift+F while Files is showing: the view opens its Search mode. */
+export function requestFilesSearch(): void {
+  for (const listener of searchListeners) listener()
+}
+
+export function onFilesSearchRequest(listener: () => void): () => void {
+  searchListeners.add(listener)
+  return () => searchListeners.delete(listener)
 }
 
 export function openInVsCode(folder: string, path: string, line?: number): void {

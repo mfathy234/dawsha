@@ -134,6 +134,11 @@ export interface GridApi {
   revealProjectPath(folder: string, path: string): Promise<{ ok: true } | { ok: false; error: string }>
   filesWorkspaces(projectId: string, folder?: string): Promise<import('./filesWorkspace').FilesWorkspacesResult>
   trashProjectPath(folder: string, path: string): Promise<import('./filesWorkspace').FilesTrashResult>
+  searchFiles(folder: string, request: import('./fileSearch').SearchRequest): Promise<import('./fileSearch').SearchResult>
+  fileLog(folder: string, path: string): Promise<import('./filePreview').FileLogResult>
+  fileImage(folder: string, path: string, base: boolean): Promise<import('./filePreview').FileImageResult>
+  openFileInBrowser(folder: string, path: string): Promise<{ ok: true } | { ok: false; error: string }>
+  linkedRepos(projectId: string, folders: string[]): Promise<import('./linkedRepos').LinkedRepo[]>
   readInstruction(folder: string, name: string): Promise<InstructionRead>
   writeInstruction(request: InstructionWriteRequest): Promise<InstructionWriteResult>
   openInstruction(folder: string, name: string): Promise<void>
