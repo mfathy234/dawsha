@@ -39,6 +39,12 @@ describe('blameLines', () => {
     expect(map.get(2)?.label).toBe('Auth session')
     expect(map.get(7)?.label).toBe('Docs session')
   })
+  it('carries the agent kind so the gutter can show its mark', () => {
+    expect(blameLines([3], [{ ...a, agent: 'codex' }]).get(3)?.agent).toBe('codex')
+    const map = blameLines([7, 1, 2], [{ ...b, agent: 'gemini' }, { ...a, agent: 'claude' }])
+    expect(map.get(1)?.agent).toBe('claude')
+    expect(map.get(7)?.agent).toBe('gemini')
+  })
   it('leaves lines nothing accounts for unmarked', () => {
     const map = blameLines([1, 2, 3, 4], [a, b])
     expect(map.has(4)).toBe(false)

@@ -10,6 +10,7 @@ import { externalFolders, isAbsolutePath } from '../../shared/linkedRepos'
 export interface TouchingSession {
   paneId: string
   title: string
+  agent: string
   /** Edit events this session made to the file. */
   edits: number
   /** Read events (the file was opened by the agent but not changed). */
@@ -62,7 +63,7 @@ export async function loadSessionData(projectId: string, folder: string, prefix 
       for (const path of new Set([...edits.keys(), ...reads.keys()])) {
         if (isAbsolutePath(path)) continue
         const records = edits.get(path) ?? []
-        touches.set(path, [...(touches.get(path) ?? []), { paneId: view.pane.id, title: view.title, edits: records.length, reads: reads.get(path) ?? 0, records, live }])
+        touches.set(path, [...(touches.get(path) ?? []), { paneId: view.pane.id, title: view.title, agent: view.agent, edits: records.length, reads: reads.get(path) ?? 0, records, live }])
       }
     })
   )

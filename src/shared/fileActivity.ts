@@ -12,12 +12,15 @@ export interface EditRecord {
 export interface BlameSource {
   key: string
   label: string
+  /** The agent kind (claude, codex, gemini) when known, for its mark in the gutter. */
+  agent?: string
   edits: readonly EditRecord[]
 }
 
 export interface LineBlame {
   key: string
   label: string
+  agent?: string
   task: string
   at: number
 }
@@ -55,7 +58,7 @@ export function blameLines(addedLines: readonly number[], sources: readonly Blam
   if (active.length === 1) {
     const [only] = active
     const last = only.edits.reduce((latest, edit) => (edit.at >= latest.at ? edit : latest))
-    for (const line of lines) out.set(line, { key: only.key, label: only.label, task: last.task, at: last.at })
+    for (const line of lines) out.set(line, { key: only.key, label: only.label, agent: only.agent, task: last.task, at: last.at })
     return out
   }
   const ordered = active
@@ -64,7 +67,7 @@ export function blameLines(addedLines: readonly number[], sources: readonly Blam
     .sort((a, b) => a.edit.at - b.edit.at)
   let next = 0
   for (const { source, edit } of ordered) {
-    for (let i = 0; i < edit.added && next < lines.length; i += 1, next += 1) out.set(lines[next], { key: source.key, label: source.label, task: edit.task, at: edit.at })
+    for (let i = 0; i < edit.added && next < lines.length; i += 1, next += 1) out.set(lines[next], { key: source.key, label: source.label, agent: source.agent, task: edit.task, at: edit.at })
   }
   return out
 }

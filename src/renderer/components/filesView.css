@@ -279,6 +279,8 @@
 .cm-review-add:hover { background: var(--hover); color: var(--accent); }
 .cm-blame-gutter { width: 18px; }
 .cm-blame-mark { display: inline-block; width: 16px; text-align: center; color: var(--muted); font-size: 10px; font-weight: 700; cursor: help; }
+.cm-blame-mark .agent-mark { display: inline-grid; place-items: center; width: 12px; height: 12px; font-size: 11px; vertical-align: -2px; }
+.cm-blame-mark .agent-mark svg { width: 11px; height: 11px; }
 .cm-review-comment { margin: 4px 16px 6px 48px; padding: var(--s-2) var(--s-3); border-radius: var(--radius); background: var(--raised); color: var(--text); font-family: var(--font-sans, inherit); font-size: var(--fs-ui); line-height: 1.5; white-space: normal; }
 .cm-review-text { white-space: pre-wrap; margin-bottom: var(--s-2); }
 .cm-review-input { width: 100%; box-sizing: border-box; padding: var(--s-2); border: 0; border-radius: var(--r-control); background: var(--well); box-shadow: var(--field-shadow); color: var(--text); font: inherit; resize: vertical; }

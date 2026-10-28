@@ -3,6 +3,7 @@ import { getChunks } from '@codemirror/merge'
 import { Decoration, EditorView, GutterMarker, WidgetType, gutter, type DecorationSet } from '@codemirror/view'
 import { formatClock } from '../../shared/timeline'
 import type { LineBlame } from '../../shared/fileActivity'
+import { agentMark } from '../components/agentMark'
 import type { ReviewComment } from '../../shared/review'
 import { addedLinesOf } from './editor'
 
@@ -67,7 +68,10 @@ class BlameMarker extends GutterMarker {
   override toDOM(): HTMLElement {
     const mark = document.createElement('span')
     mark.className = 'cm-blame-mark'
-    mark.textContent = this.blame.label.trim().slice(0, 1).toUpperCase() || '?'
+    const agent = this.blame.agent
+    const logo = agent === 'claude' || agent === 'codex' || agent === 'gemini' ? agentMark(agent) : null
+    if (logo) mark.append(logo)
+    else mark.textContent = this.blame.label.trim().slice(0, 1).toUpperCase() || '?'
     const when = this.blame.at > 0 ? ` at ${formatClock(this.blame.at)}` : ''
     const text = `${this.blame.label}${this.blame.task ? `: ${this.blame.task}` : ''}${when}`
     mark.title = text

@@ -882,7 +882,7 @@ export class FilesViewComponent {
   }
 
   private blameFor(doc: FileDoc): ReadonlyMap<number, ReturnType<typeof blameLines> extends Map<number, infer V> ? V : never> {
-    const sources: BlameSource[] = (this.touches.get(doc.path) ?? []).map((session) => ({ key: session.paneId, label: session.title, edits: session.records }))
+    const sources: BlameSource[] = (this.touches.get(doc.path) ?? []).map((session) => ({ key: session.paneId, label: session.title, agent: session.agent, edits: session.records }))
     return blameLines(doc.addedLines(), sources)
   }
 
