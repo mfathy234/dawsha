@@ -28,7 +28,7 @@ import type { GitQuickRequest } from '../shared/gitBranches'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
 import { createWatchRegistry } from './fileWatch'
-import { knownProjectFolder } from './knownFolder'
+import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
 import { fileLog, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { isHtmlPath } from '../shared/filePreview'
@@ -186,14 +186,17 @@ export function registerIpc(
   })
   ipcMain.handle(IPC.gitChanges, (_event, folder: string) => gitChanges(folder))
   ipcMain.handle(IPC.gitFiles, (_event, folder: string) => changedFiles(folder))
-  ipcMain.handle(IPC.gitStatus, (_event, folder: string) => repoStatus(folder))
-  ipcMain.handle(IPC.gitCommit, (_event, request: CommitRequest) => commitFiles(request))
-  ipcMain.handle(IPC.gitPush, (_event, folder: string) => pushBranch(folder))
-  ipcMain.handle(IPC.gitDiscard, (_event, request: DiscardRequest) => discardFiles(request))
-  ipcMain.handle(IPC.gitDiff, (_event, folder: string, path: string) => fileDiff(folder, path))
-  ipcMain.handle(IPC.gitDiffSince, (_event, folder: unknown, path: unknown, baseline: unknown) => fileDiffSince(folder, path, baseline))
-  ipcMain.handle(IPC.gitBaseline, (_event, folder: unknown) => sessionBaseline(folder))
-  ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => sessionStatus(folder, baseline))
+  const refusedGit = { ok: false as const, error: 'Not a project folder.' }
+  const gated = <T>(folder: unknown, run: (folder: string) => Promise<T> | T): Promise<T | typeof refusedGit> =>
+    whenKnown<T | typeof refusedGit>(settings.get().projects, folder, run, refusedGit)
+  ipcMain.handle(IPC.gitStatus, (_event, folder: unknown) => gated(folder, repoStatus))
+  ipcMain.handle(IPC.gitCommit, (_event, request: CommitRequest) => gated(request?.folder, () => commitFiles(request)))
+  ipcMain.handle(IPC.gitPush, (_event, folder: unknown) => gated(folder, pushBranch))
+  ipcMain.handle(IPC.gitDiscard, (_event, request: DiscardRequest) => gated(request?.folder, () => discardFiles(request)))
+  ipcMain.handle(IPC.gitDiff, (_event, folder: unknown, path: unknown) => gated(folder, (root) => fileDiff(root, path)))
+  ipcMain.handle(IPC.gitDiffSince, (_event, folder: unknown, path: unknown, baseline: unknown) => gated(folder, (root) => fileDiffSince(root, path, baseline)))
+  ipcMain.handle(IPC.gitBaseline, (_event, folder: unknown) => gated(folder, sessionBaseline))
+  ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => gated(folder, (root) => sessionStatus(root, baseline)))
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
   const refused = { ok: false as const, error: 'Not a project folder.' }
   ipcMain.handle(IPC.filesWorkspaces, (_event, projectId: unknown, folder: unknown) => listFilesWorkspaces(settings.get().projects, projectId, folder))
@@ -240,8 +243,8 @@ export function registerIpc(
     if (typeof folder === 'string') watchers.unwatch(folder)
   })
   ipcMain.handle(IPC.gitSync, (_event, folder: string) => gitSync(folder))
-  ipcMain.handle(IPC.gitBranches, (_event, folder: string) => listBranches(folder))
-  ipcMain.handle(IPC.gitQuick, (_event, request: GitQuickRequest) => runGitQuick(request))
+  ipcMain.handle(IPC.gitBranches, (_event, folder: unknown) => gated(folder, listBranches))
+  ipcMain.handle(IPC.gitQuick, (_event, request: GitQuickRequest) => gated(request?.folder, () => runGitQuick(request)))
   ipcMain.handle(IPC.resumeList, (_event, agent: AgentKind, folder: string) =>
     agent === 'codex' ? listCodexSessions(folder) : agent === 'gemini' ? listGeminiSessions(folder) : listClaudeSessions(folder)
   )
