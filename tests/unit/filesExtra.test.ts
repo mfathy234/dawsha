@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, symlinkSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { fileLog, linkedRepos, readImage, searchFiles, walkSearch } from '../../src/main/filesExtra'
+import { fileLog, htmlToOpen, linkedRepos, readImage, searchFiles, walkSearch } from '../../src/main/filesExtra'
 import type { SearchRequest } from '../../src/shared/fileSearch'
 
 const request = (over: Partial<SearchRequest> = {}): SearchRequest => ({ query: 'needle', matchCase: false, wholeWord: false, regex: false, include: '', ...over })
@@ -129,5 +129,28 @@ describe('linkedRepos', () => {
   })
   it('returns nothing for bad input', async () => {
     expect(await linkedRepos([], 'x', 'nope')).toEqual([])
+  })
+})
+
+describe('htmlToOpen', () => {
+  it('opens a plain html file and refuses other types, folders and missing files', async () => {
+    put('page.html', '<p>x</p>')
+    put('run.cmd', 'echo x')
+    mkdirSync(join(root, 'dir.html'))
+    expect(await htmlToOpen(root, 'page.html')).toBe(join(root, 'page.html'))
+    expect(await htmlToOpen(root, 'run.cmd')).toBeNull()
+    expect(await htmlToOpen(root, 'dir.html')).toBeNull()
+    expect(await htmlToOpen(root, 'missing.html')).toBeNull()
+    expect(await htmlToOpen(root, 5)).toBeNull()
+  })
+
+  it('refuses an html name that is a link to a program', async () => {
+    put('run.cmd', 'echo x')
+    try {
+      symlinkSync(join(root, 'run.cmd'), join(root, 'page.html'))
+    } catch {
+      return
+    }
+    expect(await htmlToOpen(root, 'page.html')).toBeNull()
   })
 })

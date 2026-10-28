@@ -30,8 +30,7 @@ import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveP
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
-import { fileLog, linkedRepos, readImage, searchFiles } from './filesExtra'
-import { isHtmlPath } from '../shared/filePreview'
+import { fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { trashProjectPath } from './filesTrash'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
@@ -278,7 +277,7 @@ export function registerIpc(
   })
   ipcMain.handle(IPC.filesOpenBrowser, async (_event, folder: unknown, path: unknown) => {
     const root = await known(folder)
-    const full = root && typeof path === 'string' && isHtmlPath(path) ? await resolveProjectPath(root, path) : null
+    const full = root ? await htmlToOpen(root, path) : null
     if (!full) return refused
     const failed = await shell.openPath(full)
     return failed ? { ok: false as const, error: failed } : { ok: true as const }

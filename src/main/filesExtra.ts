@@ -6,9 +6,10 @@ import {
   type SearchFile, type SearchRequest, type SearchResult
 } from '../shared/fileSearch'
 import { IMAGE_MAX_BYTES, imageMime, type FileCommit, type FileImageResult, type FileLogResult } from '../shared/filePreview'
+import { isHtmlPath } from '../shared/filePreview'
 import { dedupeRoots, folderName, isAbsolutePath, type LinkedRepo } from '../shared/linkedRepos'
 import { git, repoRoot } from './gitCommit'
-import { mergeBase, resolveProjectFile } from './gitWorkspace'
+import { mergeBase, resolveProjectFile, resolveProjectPath } from './gitWorkspace'
 import { knownProjectFolder } from './knownFolder'
 
 const GREP_MS = 20_000
@@ -98,6 +99,18 @@ export async function searchFiles(folder: string, raw: unknown): Promise<SearchR
   if (!checked.ok) return checked
   const root = await repoRoot(folder)
   return root ? gitSearch(root, folder, checked.request) : walkSearch(folder, checked.request)
+}
+
+/** The real path of an HTML file to hand to the OS: both the requested and the resolved path must be HTML, and it must be a regular file. */
+export async function htmlToOpen(folder: string, path: unknown): Promise<string | null> {
+  if (typeof path !== 'string' || !isHtmlPath(path)) return null
+  const full = await resolveProjectPath(folder, path)
+  if (!full || !isHtmlPath(full)) return null
+  try {
+    return (await stat(full)).isFile() ? full : null
+  } catch {
+    return null
+  }
 }
 
 /** The last commits that touched a file. */
