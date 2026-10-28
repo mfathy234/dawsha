@@ -187,16 +187,17 @@ export function makeRepo(root: string, name: string, branch: string, files: Reco
 
 const MINUTE = 60_000
 
-function subagent(dir: string, id: string, description: string, ageMinutes: number, durationMinutes: number, cwd: string, final: string | null, agentType = 'general-purpose'): void {
+function subagent(dir: string, id: string, description: string, ageMinutes: number, durationMinutes: number, cwd: string, final: string | null, agentType = 'general-purpose', edited: string[] = []): void {
   mkdirSync(dir, { recursive: true })
   const iso = (minutes: number): string => new Date(Date.now() - minutes * MINUTE).toISOString()
   const usage = { input_tokens: 1800, output_tokens: 2400, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
   writeFileSync(join(dir, `agent-${id}.meta.json`), JSON.stringify({ agentType, spawnDepth: 1, requestShape: 'background', model: 'sonnet', description, ...(final ? { finished: true } : {}) }))
-  const first = { type: 'user', timestamp: iso(ageMinutes + durationMinutes), cwd, isSidechain: true, message: { role: 'user', content: 'Go' } }
+  const first = { type: 'user', timestamp: iso(ageMinutes + durationMinutes), cwd, isSidechain: true, message: { role: 'user', content: description } }
   const content = final ? [{ type: 'text', text: final }] : [{ type: 'tool_use', name: 'Bash', input: { command: 'npm test -- ThemeToggle' } }]
   const last = { type: 'assistant', timestamp: iso(ageMinutes), message: { id: `m-${id}`, model: 'claude-sonnet-5-5', stop_reason: final ? 'end_turn' : 'tool_use', usage, content } }
+  const edits = edited.map((file, index) => ({ type: 'assistant', timestamp: iso(ageMinutes + durationMinutes / 2), message: { id: `e-${id}-${index}`, model: 'claude-sonnet-5-5', stop_reason: 'tool_use', usage, content: [{ type: 'tool_use', id: `t-${id}-${index}`, name: 'Edit', input: { file_path: join(cwd, file), old_string: 'const a = 1', new_string: 'const a = 1\nconst b = 2\nconst c = 3' } }] } }))
   const path = join(dir, `agent-${id}.jsonl`)
-  writeFileSync(path, [first, last].map((record) => JSON.stringify(record)).join('\n'))
+  writeFileSync(path, [first, ...edits, last].map((record) => JSON.stringify(record)).join('\n'))
   const when = new Date(Date.now() - ageMinutes * MINUTE)
   utimesSync(path, when, when)
 }
@@ -206,7 +207,7 @@ export function writeSubagents(sandbox: Sandbox, folderOf: (name: string) => str
   const slug = (folder: string): string => folder.replace(/[^A-Za-z0-9]/g, '-')
   const web = join(sandbox.claudeHome, 'projects', slug(folderOf('acme-web')), CLAUDE_IDS['acme-web'], 'subagents')
   subagent(web, 'w1', 'Read the settings components', 36, 4, folderOf('acme-web'), 'Settings.tsx renders the page; the theme lives in context/theme.tsx.', 'Explore')
-  subagent(web, 'w2', 'Persist the choice in localStorage', 8, 22, folderOf('acme-web'), 'Added readStoredTheme and storeTheme; the choice survives a reload.')
+  subagent(web, 'w2', 'Persist the choice in localStorage', 8, 22, folderOf('acme-web'), 'Added readStoredTheme and storeTheme; the choice survives a reload.', 'general-purpose', ['src/lib/storage.ts', 'src/context/theme.tsx'])
   subagent(web, 'w3', 'Unit tests for ThemeToggle', 0.3, 14, folderOf('acme-web'), null)
   const apiProject = join(sandbox.claudeHome, 'projects', slug(folderOf('billing-api')))
   mkdirSync(apiProject, { recursive: true })

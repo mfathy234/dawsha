@@ -57,8 +57,9 @@
   font: inherit;
   color: var(--text);
   background: var(--well);
-  border: 1px solid var(--seam);
+  border: 0;
   border-radius: var(--r-control);
+  box-shadow: var(--field-shadow);
 }
 .run-panel :focus-visible {
   outline: 2px solid var(--accent);
@@ -143,4 +144,9 @@
   .run-button {
     padding: 5px 7px;
   }
+}
+
+.files-panel-body .run-output {
+  flex: 1 1 80px;
+  max-height: none;
 }

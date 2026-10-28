@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.7</a>
+      <a href="#new">New in 1.7.4</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,46 +97,56 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.7</h2>
-      <p class="section-lead">1.7 adds a light Files view and Ctrl+P quick open, colours your session tags for you and calms the grid down.</p>
-      <div class="feat-row" id="files-view">
+      <h2 id="new-h">New in 1.7.4</h2>
+      <p class="section-lead">1.7.4 turns Files into a place to review what agents changed, adds a details pane and a timeline to Agents, rebuilds the Projects sidebar around what needs you, and refines the Dawsha Cards look.</p>
+      <div class="feat-row" id="files-review">
         <div class="feat-copy">
-          <h3>The Files view</h3>
-          <p>A light editor beside your sessions. Open it from the Files tab, right after Agents, or with Ctrl+Shift+E.</p>
-          <ul><li>A file tree for each project and worktree, with git badges M, A and D and the filters All, Changed and Open in sessions.</li><li>A file opens read-only, so you can select and copy freely. The Changes toggle shows what changed since main, and back.</li><li>Press E or Edit for a small edit and Ctrl+S to save. If an agent changes the file meanwhile, a bar offers Reload theirs or Keep mine.</li><li>The right panel lists the sessions that touched the file and an outline of it.</li><li>Add to prompt types @path, with the selected lines, into the focused session. Open in VS Code and Copy path are there too.</li><li>Only files inside your projects can be read or saved.</li></ul>
+          <h3>Search and review in Files</h3>
+          <p>Check an agent's work without leaving Dawsha. The explorer now has Files, Search and Review modes.</p>
+          <ul><li>Ctrl+Shift+F searches the selected checkout, skips files Git ignores, and groups results by file. Match case, whole word, regular expression and an include pattern are there.</li><li>Review steps through the changed files. Click a + line to leave a comment.</li><li>Send to agent types every comment, with file and line, into that session's prompt without sending it, so you press Enter.</li><li>Commit… drafts a message and lets you pick files. Discard file… asks first.</li><li>Added lines carry a mark for the session that wrote them, with the task and time on hover.</li><li>Markdown opens as a preview, HTML as a static preview, and a changed image can be compared with main.</li></ul>
+        </div>
+        <div class="shot-stack">
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/files-review.png" width="1600" height="952" alt="Review mode in Files with the changed files listed on the left and a comment on an added line of theme.tsx">
+          </figure>
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/files-search.png" width="1600" height="952" alt="Search mode in Files with results for the word theme, grouped by file with the matches highlighted">
+          </figure>
+        </div>
+      </div>
+      <div class="feat-row flip" id="agents-details">
+        <div class="feat-copy">
+          <h3>Agent details and a timeline</h3>
+          <p>Select an agent in the Agents view and a details pane opens on the right.</p>
+          <ul><li>It shows the agent's task, its live tool calls or its result, and the files it touched. Click a file to open it in Files.</li><li>Tokens, cost and model are listed underneath.</li><li>Timeline shows which agents ran side by side and for how long.</li><li>One All, Running, Failed and Done filter with counts replaces the old chips, and Export as Markdown is in the ⋯ menu.</li></ul>
+        </div>
+        <div class="shot-stack">
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/agents-detail.png" width="1600" height="1000" alt="The Agents view with agents grouped by session and a details pane on the right showing the selected agent's task, result, files and usage">
+          </figure>
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/agents-timeline.png" width="1600" height="1000" alt="The Agents timeline with a lane for each session and a bar for each agent showing when it ran">
+          </figure>
+        </div>
+      </div>
+      <div class="feat-wide" id="dawsha-cards">
+        <div class="feat-copy">
+          <h3>A refined Dawsha Cards look</h3>
+          <p>Lighter, clearer layers, and terminals that sit flush in their cards.</p>
         </div>
         <figure class="shot framed">
-          <img loading="lazy" src="assets/files-view-crop.png" width="1000" height="580" alt="The Files view with a file tree and git badges on the left and a file open beside it">
+          <img loading="lazy" src="assets/cards-grid.png" width="1600" height="1000" alt="Four sessions in the Dawsha Cards theme, one with a soft neutral ring because it is focused and one with a solid orange ring because it needs you">
         </figure>
+        <ul class="feat-cols"><li>The terminal fills its card instead of sitting in a dark well.</li><li>The focused session has a soft neutral ring instead of a green outline. Other sessions are a little dimmer.</li><li>A session that needs you has a solid orange ring. Done is sage green, so bright green is kept for buttons and the cursor.</li></ul>
       </div>
-      <div class="feat-row flip" id="quick-open">
+      <div class="feat-row" id="projects-sidebar">
         <div class="feat-copy">
-          <h3>Quick open with Ctrl+P</h3>
-          <p>Jump to any file in your projects from anywhere, terminals included, with a preview beside the list.</p>
-          <ul><li>Enter opens the file in Files.</li><li>Alt+Enter adds it to the prompt.</li><li>Ctrl+Enter opens it in VS Code.</li></ul>
-        </div>
-        <figure class="shot framed">
-          <img loading="lazy" src="assets/quick-open-crop.png" width="940" height="557" alt="The Ctrl+P quick open list over a session, with a file name typed in the search box and a preview of the selected file beside the results">
-        </figure>
-      </div>
-      <div class="feat-wide" id="calm-panes">
-        <div class="feat-copy">
-          <h3>A calmer grid</h3>
-          <p>Fewer outlines and more room for the terminal.</p>
-        </div>
-        <figure class="shot framed">
-          <img loading="lazy" src="assets/calm-grid-crop.png" width="1345" height="470" alt="Two sessions without coloured top bars, where the focused pane is lifted by a soft shadow and a waiting approval sits at the bottom of the pane">
-        </figure>
-        <ul class="feat-cols"><li>Panes have no coloured top bar. State is an icon and a word, the recap is plain text, and the focused pane lifts with a soft shadow.</li><li>Popups, dialogs, menus, the resume picker, settings, the board and the main views use fills and soft shadows instead of borders. Focus rings stay clear for keyboard users.</li><li>Sidebar rows show time and cost on their own line. The × and ⋯ buttons appear on hover or focus and never cover text.</li><li>Dim others is a switch in the top bar and is off by default. The one-line recap can be hidden in settings.</li><li>The Agents tab groups background agents by session, running first, each with a small bar scaled to its session, instead of a 24-hour timeline.</li><li>Right-click gives Copy, Cut and Paste in text fields and the editor.</li></ul>
-      </div>
-      <div class="feat-row" id="tag-colours">
-        <div class="feat-copy">
-          <h3>Tags that colour themselves</h3>
-          <p>Sessions get a tag colour without you doing anything.</p>
-          <ul><li>From the branch: feature/ is Feature, fix/, bug/ and hotfix/ are Bug, and docs/, review/ and research/ match their tags.</li><li>Without a branch, from the conversation title, in English and Arabic words.</li><li>A tag you set always wins, and closed sessions keep their branch.</li><li>Turn colours off with the Tag colours setting or the palette command.</li></ul>
+          <h3>A sidebar built around you</h3>
+          <p>A Waiting on you section at the top lists sessions blocked on you, across all projects.</p>
+          <ul><li>Each project shows its branch and a quiet "2 live" or "needs you". The + and ⋯ buttons appear on hover or focus.</li><li>Sessions show their full name, their age and a status word.</li><li>Sort by recent activity, name or your own order, and hide projects without sessions.</li><li>The narrow rail shows each project's initials and opens its sessions in a flyout.</li><li>The usage meter now names its agent. Click it for Claude, Codex and Gemini limits with reset times.</li></ul>
         </div>
         <figure class="shot framed narrow">
-          <img loading="lazy" src="assets/tag-colours-crop.png" width="640" height="500" alt="The sidebar with coloured Feature, Bug, Docs and Review tags on sessions whose branches start with feature, fix and docs, beside a card on the sessions board">
+          <img loading="lazy" src="assets/sidebar.png" width="248" height="620" alt="The Projects sidebar with a Waiting on you section on top, then projects that show their branch and how many sessions are live">
         </figure>
       </div>
     </div>
@@ -146,6 +156,11 @@
     <div class="wrap">
       <h2 id="earlier-h">Earlier releases</h2>
       <div class="earlier">
+        <div id="new-1-7">
+          <h3>1.7</h3>
+          <p>The Files view with Ctrl+P quick open, session tags that colour themselves, and a calmer grid. Later 1.7 releases added worktree browsing in Files, a Delete that asks first and uses the Recycle Bin, and run commands for .NET and Node projects.</p>
+          <a href="https://github.com/mfathy234/dawsha/releases/tag/v1.7.3" target="_blank" rel="noopener noreferrer">Notes for 1.7</a>
+        </div>
         <div id="new-1-6">
           <h3>1.6</h3>
           <p>Arabic in every session, voice dictation, a calmer grid, the Agents tab and a handoff that carries the whole conversation. Installing Claude Code from Dawsha no longer breaks an existing install.</p>

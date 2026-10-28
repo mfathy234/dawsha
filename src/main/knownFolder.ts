@@ -53,3 +53,14 @@ export async function knownProjectFolder(projects: ReadonlyArray<{ folder: strin
   }
   return null
 }
+
+// Runs a handler only for a folder the gate accepts; anything else gets the handler's own refusal value and never reaches git.
+export async function whenKnown<T>(
+  projects: ReadonlyArray<{ folder: string }>,
+  folder: unknown,
+  run: (folder: string) => Promise<T> | T,
+  refusal: T
+): Promise<T> {
+  const accepted = await knownProjectFolder(projects, folder)
+  return accepted === null ? refusal : run(accepted)
+}

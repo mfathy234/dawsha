@@ -3,7 +3,7 @@ import { EditorView, drawSelection, highlightActiveLine, keymap, lineNumbers } f
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { bracketMatching, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
-import { unifiedMergeView } from '@codemirror/merge'
+import { getChunks, unifiedMergeView } from '@codemirror/merge'
 import { EDITOR_COLORS } from '../../shared/syntaxPalette'
 import { highlightStyleFor } from './syntaxTheme'
 import { loadLanguage } from './languages'
@@ -34,6 +34,12 @@ export interface FileEditor {
   setTheme(theme: EditorTheme): void
   showChanges(baseText: string | null): void
   showFile(): void
+  /** Extra gutters and widgets (review comments, blame) for the Changes view. */
+  annotate(extension: Extension): void
+  /** Line numbers (1-based) the Changes view shows as added. */
+  addedLines(): number[]
+  /** The line, 1-based, that a document position is on. */
+  lineAt(pos: number): number
   onDirty(cb: () => void): void
   onCursor(cb: (info: CursorInfo) => void): void
   onLanguage(cb: () => void): void
@@ -93,6 +99,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
   const eol = new Compartment()
   const access = new Compartment()
   const merge = new Compartment()
+  const annotations = new Compartment()
   const dirtyListeners: Array<() => void> = []
   const cursorListeners: Array<(info: CursorInfo) => void> = []
   const languageListeners: Array<() => void> = []
@@ -129,6 +136,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
         language.of([]),
         access.of(accessFor(readOnly)),
         merge.of([]),
+        annotations.of([]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !suppress) for (const cb of dirtyListeners) cb()
           if (update.selectionSet || update.docChanged) for (const cb of cursorListeners) cb(cursorOf(update.state))
@@ -181,6 +189,13 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
       showingChanges = false
       view.dispatch({ effects: [merge.reconfigure([]), access.reconfigure(accessFor(readOnly))] })
     },
+    annotate(extension) {
+      view.dispatch({ effects: annotations.reconfigure(extension) })
+    },
+    addedLines() {
+      return addedLinesOf(view.state)
+    },
+    lineAt: (pos) => view.state.doc.lineAt(pos).number,
     onDirty(cb) {
       dirtyListeners.push(cb)
     },
@@ -202,4 +217,17 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
       view.destroy()
     }
   }
+}
+
+/** The lines the unified merge view marks as added: the new side of every chunk that has text. */
+export function addedLinesOf(state: EditorState): number[] {
+  const chunks = getChunks(state)?.chunks ?? []
+  const lines: number[] = []
+  for (const chunk of chunks) {
+    if (chunk.toB <= chunk.fromB) continue
+    const first = state.doc.lineAt(chunk.fromB).number
+    const last = state.doc.lineAt(Math.max(chunk.fromB, chunk.toB - 1)).number
+    for (let line = first; line <= last; line += 1) lines.push(line)
+  }
+  return lines
 }

@@ -8,6 +8,14 @@ import { SettingsStore } from '../../src/main/settingsStore'
 const tempFile = (): string => join(mkdtempSync(join(tmpdir(), 'cg-settings-')), 'settings.json')
 
 describe('migrateSettings', () => {
+  it('persists the Files layout through a settings reload and repairs a bad one', () => {
+    const file = tempFile()
+    const store = new SettingsStore(file)
+    const layout = { sections: { changes: false, open: true, tree: true }, inspector: { open: false, tab: 'activity' as const }, panel: { minimised: false, height: 260 } }
+    store.update({ filesLayout: layout })
+    expect(new SettingsStore(file).load().settings.filesLayout).toEqual(layout)
+    expect(migrateSettings({ filesLayout: 'nope' }).filesLayout.panel.minimised).toBe(true)
+  })
   it('persists bounded, boolean agent fold choices through a settings reload', () => {
     const file = tempFile()
     const store = new SettingsStore(file)

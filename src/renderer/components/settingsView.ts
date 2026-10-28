@@ -26,6 +26,8 @@ import {
   HIGHLIGHT_COLORS,
   MAX_HIGHLIGHT_RULES,
   defaultHighlightRules,
+  highlightBackground,
+  highlightPreview,
   highlightTint,
   sameRules,
   validateRule,
@@ -34,6 +36,8 @@ import {
   type HighlightSettings
 } from '../../shared/highlights'
 import { compareVersions } from '../../shared/version'
+import { swatchGroup } from './swatchGroup'
+import { currentBundle } from '../themeManager'
 import { entriesUpTo } from '../../shared/changelog'
 import { DEFAULT_PALETTE_SHORTCUT } from '../../shared/settingsSchema'
 import { isRemoteControlBuild } from '../../shared/remoteBuild'
@@ -117,6 +121,7 @@ export class SettingsViewComponent {
   private editIndex: number | null = null
   private editDraft: RuleDraft = emptyDraft()
   private editError: string | null = null
+  private readonly highlightPreviewEl = h('div', { class: 'hl-preview', id: 'highlight-preview', role: 'group', 'aria-label': 'Preview of highlighted terminal lines' })
   private paneonImport: PaneonImportPreview | null = null
   private remoteAccess: RemoteAccessState | null = null
   private remoteError: string | null = null
@@ -718,6 +723,7 @@ export class SettingsViewComponent {
       ),
       h('div', { class: 'hl-rules', id: 'highlight-rules' }, ...rules),
       ...(current.rules.length === 0 ? [h('p', { class: 'tool-empty', id: 'highlight-empty' }, 'No rules yet. Add one below or reset to the defaults.')] : []),
+      this.renderPreview(current),
       this.ruleForm({
         draft: this.addDraft,
         idPrefix: 'hl-add',
@@ -750,6 +756,26 @@ export class SettingsViewComponent {
         h('p', { class: 'hint' }, 'Replaces your rules with the built-in error, warning and success words.')
       )
     ]
+  }
+
+  private renderPreview(current: HighlightSettings): HTMLElement {
+    const draft = this.editIndex !== null ? this.editDraft : this.addDraft
+    const typed = draft.pattern.trim() === '' ? null : this.toRule(draft)
+    const kind = currentBundle().theme.kind === 'light' ? 'light' : 'dark'
+    const lines = highlightPreview(current.rules, typed).map((line) => {
+      const el = h('div', { class: `hl-preview-line${line.draft ? ' draft' : ''}`, 'data-hl': line.color ?? undefined }, line.text)
+      if (line.color && current.enabled) {
+        el.style.background = highlightBackground(line.color, kind)
+        el.style.boxShadow = `inset 3px 0 0 ${highlightTint(line.color)}`
+      }
+      return el
+    })
+    this.highlightPreviewEl.replaceChildren(...lines)
+    return this.highlightPreviewEl
+  }
+
+  private updatePreview(): void {
+    if (this.highlightPreviewEl.isConnected) this.renderPreview(store.state.settings.highlights)
   }
 
   private ruleRow(rule: HighlightRule, index: number, current: HighlightSettings): HTMLElement {
@@ -848,6 +874,7 @@ export class SettingsViewComponent {
     pattern.addEventListener('input', () => {
       draft.pattern = pattern.value
       options.onChange()
+      this.updatePreview()
     })
     pattern.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
@@ -858,16 +885,22 @@ export class SettingsViewComponent {
         options.onCancel()
       }
     })
-    const color = h('select', { class: 'field-select', id: `${idPrefix}-color`, 'aria-label': 'Rule color', 'data-hl-field': '', disabled: options.disabled })
-    for (const name of HIGHLIGHT_COLORS) color.append(h('option', { value: name }, COLOR_LABELS[name]))
-    color.value = draft.color
-    color.addEventListener('change', () => {
-      draft.color = color.value as HighlightColor
+    const color = swatchGroup({
+      id: `${idPrefix}-color`,
+      label: 'Rule color',
+      options: HIGHLIGHT_COLORS.map((value) => ({ value, label: COLOR_LABELS[value] })),
+      value: draft.color,
+      disabled: options.disabled,
+      onChange: (value) => {
+        draft.color = value
+        this.updatePreview()
+      }
     })
     const regex = checkbox(`${idPrefix}-regex`, 'Regex', draft.regex, options.disabled, (value) => {
       draft.regex = value
       pattern.setAttribute('placeholder', value ? 'Regular expression' : 'Word or phrase')
       options.onChange()
+      this.updatePreview()
     })
     regex.querySelector('input')?.setAttribute('data-hl-field', '')
     const buttons = [

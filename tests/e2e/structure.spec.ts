@@ -133,7 +133,7 @@ test('focus rings follow the keyboard: none on the nav after a mouse click, visi
 })
 
 for (const [mode, themeId] of THEMES) {
-  test(`${mode}: focused pane ring, needs-you dashed outline with the word, dimmed unfocused well`, async () => {
+  test(`${mode}: focused pane ring, needs-you solid ring with the word, dimmed unfocused well`, async () => {
     test.setTimeout(120_000)
     const sandbox = createSandbox()
     withTheme(sandbox, themeId)
@@ -148,30 +148,32 @@ for (const [mode, themeId] of THEMES) {
       const idle = page.locator('.pane').nth(1)
       await expect(focused).toHaveClass(/focused/)
 
-      const ring = await focused.evaluate((el) => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth, offset: getComputedStyle(el).outlineOffset }))
-      expect(ring).toEqual({ style: 'solid', width: '2px', offset: '-2px' })
-      const dashed = await needs.evaluate((el) => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth, color: getComputedStyle(el).outlineColor }))
-      expect(dashed.style).toBe('dashed')
-      expect(dashed.width).toBe('2px')
-      expect(dashed.color).toBe(rgb(mode === 'dark' ? '#f08a3c' : '#c2620a'))
+      const ring = await focused.evaluate((el) => ({ shadow: getComputedStyle(el).boxShadow, outline: getComputedStyle(el).outlineStyle }))
+      expect(ring.outline).toBe('none')
+      expect(ring.shadow).toContain(mode === 'dark' ? 'rgba(255, 255, 255, 0.24) 0px 0px 0px 1px' : 'rgba(24, 28, 40, 0.32) 0px 0px 0px 1px')
+      const needsRing = await needs.evaluate((el) => ({ shadow: getComputedStyle(el).boxShadow, outline: getComputedStyle(el).outlineStyle }))
+      expect(needsRing.outline).toBe('none')
+      expect(needsRing.shadow).toContain(`${rgb(mode === 'dark' ? '#f08a3c' : '#c2620a')} 0px 0px 0px 1px`)
       await expect(needs.locator('.pane-header .state-pill-text')).toHaveText('Needs you')
       expect(await idle.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none')
+      expect(await idle.evaluate((el) => getComputedStyle(el).boxShadow)).not.toContain('0.24')
 
       const header = await focused.locator('.pane-header').evaluate((el) => getComputedStyle(el).backgroundColor)
       expect(header).toBe(rgb(mode === 'dark' ? '#1d222c' : '#ffffff'))
       expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('700')
       expect(await idle.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600')
-      expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el, '::before').content)).toBe('""')
+      expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el, '::before').content)).toBe('none')
 
-      const body = await focused.locator('.pane-body').evaluate((el) => ({ margin: getComputedStyle(el).marginLeft, radius: getComputedStyle(el).borderTopLeftRadius, bg: getComputedStyle(el).backgroundColor }))
-      expect(body.margin).toBe('6px')
-      expect(body.radius).toBe('7px')
+      const body = await focused.locator('.pane-body').evaluate((el) => ({ margin: getComputedStyle(el).marginLeft, radius: getComputedStyle(el).borderTopLeftRadius, bg: getComputedStyle(el).backgroundColor, seam: getComputedStyle(el).borderTopWidth }))
+      expect(body.margin).toBe('0px')
+      expect(body.radius).toBe('0px')
+      expect(body.seam).toBe('1px')
       expect(body.bg).toBe(rgb(mode === 'dark' ? '#0d1015' : '#f6f8f7'))
-      expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el, '::after').backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
-      expect(await focused.locator('.pane-body').evaluate((el) => getComputedStyle(el, '::after').backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+      expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el, '::after').content)).toBe('none')
+      expect(await idle.locator('.xterm-screen').first().evaluate((el) => getComputedStyle(el).opacity)).toBe(mode === 'dark' ? '0.86' : '0.9')
+      expect(await focused.locator('.xterm-screen').first().evaluate((el) => getComputedStyle(el).opacity)).toBe('1')
       expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el).filter)).toBe('none')
       expect(await focused.locator('.pane-body').evaluate((el) => getComputedStyle(el).filter)).toBe('none')
-      expect(await idle.evaluate((el) => getComputedStyle(el).boxShadow)).toContain('inset')
 
       await shot(page, `${mode}-grid`)
     } finally {

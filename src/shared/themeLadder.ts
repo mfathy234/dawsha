@@ -23,8 +23,10 @@ export interface Ladder {
 
 /**
  * Dark ladder from the pane colour: chrome and canvas step down toward black, raised and overlay step up,
- * and the well sits between the pane and the canvas. The Dawsha dark theme lands on #0f1217, #07090c,
- * #1d222c, #252b37 and #0d1015 from the pane #161a22.
+ * and the well sits one shade below the pane (a quarter of the way to the canvas) so the terminal reads
+ * as part of the card. Raised is about +7% white and overlay about +12%, wide enough that selected and hover rows
+ * stay visible. The Dawsha dark theme names its own values; from the pane #161a22 this derives #0f1217 and #07090c
+ * for chrome and canvas.
  */
 export function darkLadder(pane: string): Ladder {
   const canvas = mix(pane, '#000000', 0.68)
@@ -32,9 +34,9 @@ export function darkLadder(pane: string): Ladder {
     canvas,
     chrome: mix(pane, '#000000', 0.33),
     pane,
-    raised: mix(pane, '#ffffff', 0.04),
-    overlay: mix(pane, '#ffffff', 0.08),
-    well: mix(pane, canvas, 0.6)
+    raised: mix(pane, '#ffffff', 0.07),
+    overlay: mix(pane, '#ffffff', 0.12),
+    well: mix(pane, canvas, 0.25)
   }
 }
 

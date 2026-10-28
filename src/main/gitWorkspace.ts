@@ -68,14 +68,14 @@ export async function projectFiles(folder: unknown): Promise<ProjectFilesResult>
   return { ok: true, files: all.slice(0, MAX_LISTED), truncated: all.length > MAX_LISTED, repo: true, prefix: scope }
 }
 
-interface Missing {
+export interface Missing {
   root: string
   realRoot: string
   scope: string
   rel: string
 }
 
-type Resolved = { ok: true; root: string; rel: string; full: string; realRel: string } | { ok: false; error: string; missing?: Missing }
+export type Resolved = { ok: true; root: string; rel: string; full: string; realRel: string } | { ok: false; error: string; missing?: Missing }
 
 const lower = (text: string): string => (process.platform === 'win32' ? text.toLowerCase() : text)
 
@@ -91,7 +91,7 @@ export async function resolveProjectPath(folder: unknown, path: unknown): Promis
 // The one validator for a project file: relative path checks, then the real location (symlinks resolved)
 // must still be inside the project's real root. realRel is that location relative to the real root, in its
 // on-disk casing, for git.
-async function resolveProjectFile(folder: unknown, path: unknown): Promise<Resolved> {
+export async function resolveProjectFile(folder: unknown, path: unknown): Promise<Resolved> {
   if (typeof folder !== 'string' || folder === '') return { ok: false, error: 'No project folder.' }
   const checked = validateRepoPaths([path])
   if (!checked.ok) return { ok: false, error: checked.error }
@@ -201,7 +201,7 @@ const MERGE_BASE_TTL_MS = 5000
 const mergeBases = new Map<string, { at: number; base: Promise<string | null> }>()
 
 // The merge base is the same for every file of a root, so a burst of watcher refreshes asks git once.
-function mergeBase(root: string): Promise<string | null> {
+export function mergeBase(root: string): Promise<string | null> {
   const hit = mergeBases.get(root)
   if (hit && Date.now() - hit.at < MERGE_BASE_TTL_MS) return hit.base
   const base = findMergeBase(root)

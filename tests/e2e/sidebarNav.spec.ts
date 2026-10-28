@@ -15,11 +15,11 @@ function seedThreeProjects(sandbox: Sandbox): void {
   const other = join(sandbox.root, 'Other Project')
   mkdirSync(other, { recursive: true })
   const { projects } = readSettings(sandbox.userData)
-  writeSettings(sandbox, { projects: [...projects, { id: 'other', name: 'Other', folder: other }] })
+  writeSettings(sandbox, { sidebarSort: 'manual', projects: [...projects, { id: 'other', name: 'Other', folder: other }] })
 }
 
 async function openMenu(page: Page, name: string) {
-  await page.getByRole('button', { name: `Choose agent for ${name}` }).click()
+  await page.getByRole('button', { name: `Project actions for ${name}` }).click()
   return page.getByRole('menu')
 }
 
@@ -90,7 +90,7 @@ test('the collapsed rail marks projects whose sessions need you', async () => {
     const rail = page.locator('.sidebar.rail')
     const smoke = rail.getByRole('button', { name: 'Smoke, 1 needs you' })
     await expect(smoke).toBeVisible()
-    await expect(smoke.locator('.rail-badge')).toHaveText('1')
+    await expect(smoke.locator('.rail-badge')).toHaveText('!')
     await expect(rail.getByRole('button', { name: 'Missing', exact: true })).toBeVisible()
     await expect(rail.locator('.rail-badge')).toHaveCount(1)
     await rail.screenshot({ path: join(SCREENS, 'sidebar-rail-badge.png') })
@@ -105,9 +105,10 @@ test('the collapsed rail marks projects whose sessions need you', async () => {
 
 test('the project menu works from the keyboard and focus returns to the project after a move', async () => {
   const sandbox = createSandbox()
+  writeSettings(sandbox, { sidebarSort: 'manual' })
   const { app, page } = await launchApp(sandbox)
   try {
-    const button = page.getByRole('button', { name: 'Choose agent for Smoke' })
+    const button = page.getByRole('button', { name: 'Project actions for Smoke' })
     await button.focus()
     await page.keyboard.press('Enter')
     const menu = page.getByRole('menu')
@@ -118,11 +119,11 @@ test('the project menu works from the keyboard and focus returns to the project 
     expect(await focusedItem()).toContain('Codex session')
     await page.keyboard.press('ArrowUp')
     await page.keyboard.press('ArrowUp')
-    expect(await focusedItem()).toBe('Move down')
+    expect(await focusedItem()).toBe('Remove Smoke from Dawsha…')
     await page.keyboard.press('Home')
     expect(await focusedItem()).toContain('Claude session')
     await page.keyboard.press('End')
-    expect(await focusedItem()).toBe('Move down')
+    expect(await focusedItem()).toBe('Remove Smoke from Dawsha…')
 
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
@@ -135,11 +136,13 @@ test('the project menu works from the keyboard and focus returns to the project 
 
     await page.keyboard.press('Enter')
     await page.keyboard.press('End')
+    await page.keyboard.press('ArrowUp')
+    await page.keyboard.press('ArrowUp')
     await page.keyboard.press('Space')
     await expect(projectNames(page)).toHaveText(['Missing', 'Smoke'])
     expect(await focusedNav(page)).toBe('p:smoke')
 
-    await page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Pin to top' }).press('Enter')
     await expect(projectNames(page)).toHaveText(['Smoke', 'Missing'])
     expect(await focusedNav(page)).toBe('p:smoke')
@@ -243,10 +246,10 @@ test('F2 and double click rename closed and open sessions; Enter and blur save, 
 
     await page.keyboard.press('F2')
     await page.getByRole('textbox', { name: 'Rename Alpha' }).fill('عنوان الجلسة')
-    await page.getByRole('textbox', { name: 'Filter projects and sessions' }).focus()
+    await page.locator('.sidebar-head').click()
     await expect(names).toHaveText(['Beta renamed', 'عنوان الجلسة'])
 
-    await page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Gemini session' }).click()
     const open = page.locator('.kept-session-row:not(.closed) .sess-row')
     await expect(open.locator('.sess-name')).toHaveText('Smoke')
@@ -375,9 +378,7 @@ test('arrow keys walk the sidebar list, fold projects and remove closed sessions
   const { app, page } = await launchApp(sandbox)
   try {
     const key = (i: number): string => `c:claude:00000000-0000-4000-8000-00000000020${i}`
-    const filter = page.getByRole('textbox', { name: 'Filter projects and sessions' })
-    await filter.focus()
-    await filter.fill('')
+    await page.getByRole('button', { name: 'Filter projects and sessions' }).click()
     await page.keyboard.press('ArrowDown')
     expect(await focusedNav(page)).toBe('p:smoke')
     await page.keyboard.press('ArrowDown')
@@ -404,6 +405,7 @@ test('arrow keys walk the sidebar list, fold projects and remove closed sessions
     await page.keyboard.press('ArrowDown')
     expect(await focusedNav(page)).toBe(key(1))
     await page.keyboard.press('Delete')
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove Second', exact: true }).click()
     await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Third', 'First'])
     expect(await focusedNav(page)).toBe(key(0))
     const toast = page.locator('.toast', { hasText: 'Removed Second' })
@@ -416,6 +418,7 @@ test('arrow keys walk the sidebar list, fold projects and remove closed sessions
     await page.keyboard.press('ArrowUp')
     expect(await focusedNav(page)).toBe(key(0))
     await page.keyboard.press('Backspace')
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove First', exact: true }).click()
     await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Third', 'Second'])
     expect(await focusedNav(page)).toBe(key(1))
   } finally {

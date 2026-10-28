@@ -3,6 +3,49 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.4] - 2026-10-29
+
+### Added
+
+- **Files Search:** press Ctrl+Shift+F in Files to search the selected checkout. Files you ignore in Git are skipped. Search can match case, whole words or a regular expression, and limit to an include pattern. Results are grouped by file; click one to jump to that line.
+- **Files Review:** step through an agent's changed files and click a `+` line to leave a comment. Send to agent types every comment, with file and line, into that session's prompt without sending it, so you press Enter. Review also has Commit… with a drafted message and file selection, and Discard file…, which asks first.
+- **Agent marks in Changes:** added lines show which session or agent wrote them, with the task and time when you hover.
+- **Previews:** Markdown opens as a readable preview with a Source switch, and HTML shows as a static preview with Open in browser. Images show a preview, and changed images get a drag-to-split Compare with main.
+- **Send to agent** in Files lists the project's live sessions by name, then New session with this file and Copy as @mention.
+- **Files bottom panel:** run commands moved to a bottom panel, with a tab for each run, Restart, Stop and a Problems tab. The status bar shows what is running and on which port.
+- **Linked repos:** the Files location menu lists other repos your sessions edited alongside this project.
+- **Agents details:** the Agents view has a details pane on the right. It shows the agent's task, its live tool calls or result, the files it touched (click one to open it in Files), and tokens, cost and model.
+- **Agents timeline:** a Timeline view shows which agents ran side by side and for how long.
+- **Usage limits for every agent:** click the usage meter to see Claude, Codex and Gemini limits with reset times and how old each reading is.
+- **Sidebar:** a Waiting on you section at the top lists sessions blocked on you, across all projects.
+
+### Changed
+
+- **Projects sidebar:**
+  - Projects show their branch and a quiet "2 live" or "needs you". The + and ⋯ buttons appear on hover or keyboard focus, and a click on a project folds it.
+  - Sessions show their full name, their age and a status word.
+  - The filter sits behind the search icon (Ctrl+Shift+O).
+  - Sort by recent activity, name or your own order, and hide projects without sessions.
+  - The narrow rail shows each project's initials and opens its sessions in a flyout.
+  - The project menu has Open in Files, Rename and Remove from Dawsha. Remove asks first and says the folder stays on disk.
+- **Agents:** one All · Running · Failed · Done filter with counts, flat rows whose second line shows the latest tool call or the result, and Export as Markdown in the ⋯ menu.
+- **Files layout:**
+  - One button at the top shows the project, branch and worktree.
+  - The explorer has Files, Search and Review modes, with foldable Changes and Open in sessions sections.
+  - The toolbar is down to File/Changes, Send to agent and ⋯.
+  - An inspector shows the outline and the agents and commits that touched the file.
+- **Dawsha Cards:**
+  - Slightly lighter, clearer layers.
+  - Terminals sit flush in their cards instead of a dark inset well.
+  - The focused session has a soft neutral ring instead of a green outline, other sessions are a little dimmer with a hollow cursor, and a session that needs you has a solid orange ring.
+  - Done is sage green, so the bright green is only for buttons and the cursor.
+- Other derived dark themes get the same clearer layers. Graphite Cards and Nord have slightly brighter secondary text so it stays readable.
+- **Highlights:** rule colours are swatches you can see, with a live preview, instead of a plain dropdown. The remaining plain dropdowns use Dawsha's own menus.
+
+### Fixed
+
+- The usage meter showed another agent's limits when the focused session had none. It switched between Claude and Codex numbers without saying whose they were. It now names the agent, and says "no limits reported" rather than borrowing numbers.
+
 ## [1.7.3] - 2026-10-27
 
 ### Added

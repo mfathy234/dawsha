@@ -100,7 +100,7 @@ test('a Codex pane shows tokens without cost and the sidebar total has no cost p
   try {
     await expect(page.locator('.proj-today')).toHaveText('1.3K', { timeout: 20_000 })
     await expect(page.locator('.proj-today')).toHaveAttribute('aria-label', 'today 1.3K')
-    await page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Codex session' }).click()
     await expect(page.locator('.pane-info .info-tokens')).toHaveText('1.3K tokens', { timeout: 20_000 })
     await expect(page.locator('.pane-info .info-elapsed')).toHaveCount(1)

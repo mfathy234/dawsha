@@ -1,3 +1,4 @@
+import type { SidebarSort } from '../shared/sidebarModel'
 import { canDropProject, canMoveProject, moveProject, moveProjectTo, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
 import {
   DEFAULT_FONT_SIZE,
@@ -230,8 +231,25 @@ export async function startSession(
   titleHint?: string,
   kept?: Pick<KeptSession, 'tag' | 'renamed'>
 ): Promise<number> {
+  return (await openSession(projectId, agent, resumeId, chip, titleHint, kept))?.number ?? 0
+}
+
+/** Starts a session in a given checkout of the project (its own folder when none) and returns the new pane's id. */
+export async function startSessionIn(projectId: string, folder?: string): Promise<string | null> {
+  return (await openSession(projectId, undefined, undefined, false, undefined, undefined, folder))?.paneId ?? null
+}
+
+async function openSession(
+  projectId: string,
+  agent?: TabAgent,
+  resumeId?: string,
+  chip = false,
+  titleHint?: string,
+  kept?: Pick<KeptSession, 'tag' | 'renamed'>,
+  folder?: string
+): Promise<{ number: number; paneId: string } | null> {
   const project = projectById(store.state, projectId)
-  if (!project) return 0
+  if (!project) return null
   const tab: TermState = {
     ...makeTerm(agent ?? agentOf(project), [], resumeId),
     titleHint,
@@ -244,6 +262,7 @@ export async function startSession(
     projectId,
     tabs: [tab],
     activeTabId: tab.id,
+    ...(folder ? { folder } : {}),
     fontSize: clampFontSize(project.fontSize ?? DEFAULT_FONT_SIZE)
   }
   store.set((s) => ({
@@ -260,7 +279,7 @@ export async function startSession(
   void refreshGitChanges()
   const number = store.state.panes.findIndex((p) => p.id === pane.id) + 1
   void launch(pane.id, tab.id, resumeId !== undefined)
-  return number
+  return { number, paneId: pane.id }
 }
 
 export function attachRemoteSession(session: RemoteSessionStarted): void {
@@ -919,6 +938,16 @@ export function setSidebarCollapsed(sidebarCollapsed: boolean): void {
   void saveSettings({ sidebarCollapsed })
 }
 
+export function setSidebarSort(sidebarSort: SidebarSort): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, sidebarSort } }))
+  void saveSettings({ sidebarSort })
+}
+
+export function setSidebarHideEmpty(sidebarHideEmpty: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, sidebarHideEmpty } }))
+  void saveSettings({ sidebarHideEmpty })
+}
+
 export function openDataFolder(): void {
   const folder = store.state.info.userData
   if (folder) void api.quickOpen('explorer', folder)
@@ -1088,7 +1117,8 @@ export async function refreshBranches(): Promise<void> {
     const folder = workFolderOfPane(state, pane, matches)
     if (folder) folders.add(folder)
   }
-  const entries = await Promise.all([...folders].map(async (f) => [f, await api.gitBranch(f)] as const))
+  const branchFolders = new Set([...folders, ...state.settings.projects.map((project) => project.folder)])
+  const entries = await Promise.all([...branchFolders].map(async (f) => [f, await api.gitBranch(f)] as const))
   const changed = entries.some(([folder, branch]) => store.state.branches[folder] !== branch)
   if (changed) store.set((s) => ({ ...s, branches: { ...s.branches, ...Object.fromEntries(entries) } }))
   const syncs = await Promise.all([...folders].map(async (f) => [f, await api.gitSync(f)] as const))

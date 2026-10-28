@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { knownProjectFolder } from '../../src/main/knownFolder'
+import { knownProjectFolder, whenKnown } from '../../src/main/knownFolder'
 import { normalizeFolder } from '../../src/shared/folderKey'
 
 const IDENTITY = ['-c', 'user.name=Test User', '-c', 'user.email=test@example.invalid']
@@ -53,5 +53,22 @@ describe('normalizeFolder', () => {
     expect(normalizeFolder('C:\\Work\\App\\')).toBe(normalizeFolder('c:/work/app'))
     expect(normalizeFolder('/home/Me/App/')).toBe('/home/Me/App')
     expect(normalizeFolder('/home/Me/App')).not.toBe(normalizeFolder('/home/me/app'))
+  })
+})
+
+describe('whenKnown', () => {
+  it('runs the handler for a known folder and refuses anything else without running it', async () => {
+    const repo = makeRepo()
+    const other = mkdtempSync(join(tmpdir(), 'dawsha-other-'))
+    const refusal: { ok: boolean; folder?: string; error?: string } = { ok: false, error: 'Not a project folder.' }
+    let calls = 0
+    const run = async (folder: string): Promise<{ ok: boolean; folder?: string; error?: string }> => {
+      calls += 1
+      return { ok: true, folder }
+    }
+    expect(await whenKnown([{ folder: repo }], repo, run, refusal)).toEqual({ ok: true, folder: repo })
+    expect(await whenKnown([{ folder: repo }], other, run, refusal)).toBe(refusal)
+    expect(await whenKnown([{ folder: repo }], undefined, run, refusal)).toBe(refusal)
+    expect(calls).toBe(1)
   })
 })

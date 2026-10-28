@@ -12,6 +12,9 @@ export interface AppColors {
   border: string
   text: string
   muted: string
+  // Optional roles: tertiary text, and the colour of a finished state (falls back to the accent).
+  faint?: string
+  done?: string
   accent: string
   onAccent: string
   busy: string
@@ -110,13 +113,17 @@ const RAW_THEMES: RawTheme[] = [
     name: 'Dawsha Cards',
     kind: 'dark',
     app: {
-      background: '#0a0c10',
-      sidebar: '#0d1015',
-      surface: '#151922',
-      raised: '#1b202b',
+      background: '#0c0e13',
+      sidebar: '#11141a',
+      surface: '#181c24',
+      raised: '#222731',
+      overlay: '#2b313d',
+      well: '#14171e',
       border: '#232a36',
-      text: '#d9dee8',
-      muted: '#8a93a6',
+      text: '#d4d9e2',
+      muted: '#9ba4b6',
+      faint: '#6e778a',
+      done: '#86c5a8',
       accent: '#34d399',
       onAccent: '#06281c',
       busy: '#f5b54a',
@@ -126,10 +133,10 @@ const RAW_THEMES: RawTheme[] = [
       onDanger: '#2a0b0b'
     },
     term: {
-      background: '#0b0d12',
-      foreground: '#d9dee8',
+      background: '#14171e',
+      foreground: '#d4d9e2',
       cursor: '#34d399',
-      cursorAccent: '#0b0d12',
+      cursorAccent: '#14171e',
       selectionBackground: '#2b3a4f',
       black: '#232833',
       red: '#f87171',
@@ -160,11 +167,11 @@ const RAW_THEMES: RawTheme[] = [
       raised: '#222222',
       border: '#2d2d2d',
       text: '#e6e6e6',
-      muted: '#9b9b9b',
+      muted: '#a3a3a3',
       accent: '#3ddc97',
       onAccent: '#062a1b',
       busy: '#f2b44c',
-      idle: '#9b9b9b',
+      idle: '#a3a3a3',
       exited: '#f47272',
       danger: '#f47272',
       onDanger: '#2a0b0b'
@@ -296,11 +303,11 @@ const RAW_THEMES: RawTheme[] = [
       raised: '#3b4252',
       border: '#434c5e',
       text: '#d8dee9',
-      muted: '#adb6c8',
+      muted: '#b8c0d0',
       accent: '#88c0d0',
       onAccent: '#1d2430',
       busy: '#ebcb8b',
-      idle: '#adb6c8',
+      idle: '#b8c0d0',
       exited: '#d98a93',
       danger: '#e0808a',
       onDanger: '#1d2430'

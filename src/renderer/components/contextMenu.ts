@@ -1,5 +1,6 @@
 import { placeAtPoint } from '../../shared/menuPlacement'
-import { h, leave } from '../dom'
+import { h, icon, leave } from '../dom'
+import { ICONS } from '../icons'
 import './contextMenu.css'
 
 export interface ContextItem {
@@ -7,9 +8,17 @@ export interface ContextItem {
   run: () => void
   keys?: string
   disabled?: boolean
+  /** Quiet second line: why an item is disabled, or what it is. */
+  detail?: string
+  /** The item that is already chosen: it shows a check and is announced as current. */
+  current?: boolean
 }
 
-export type ContextEntry = ContextItem | 'separator'
+export interface ContextHeading {
+  heading: string
+}
+
+export type ContextEntry = ContextItem | ContextHeading | 'separator'
 
 export interface ContextMenuOptions {
   /** Where the pointer was (or where the keyboard-opened row is). */
@@ -37,13 +46,14 @@ export function openContextMenu(options: ContextMenuOptions): HTMLElement {
   current?.close(false)
   const items = options.entries.map((entry) => {
     if (entry === 'separator') return h('div', { class: 'ctx-sep', role: 'separator' })
+    if ('heading' in entry) return h('div', { class: 'ctx-heading', role: 'presentation' }, entry.heading)
     return h('button', {
-      class: 'menu-item ctx-item', type: 'button', role: 'menuitem', disabled: entry.disabled === true, 'aria-disabled': entry.disabled ? 'true' : undefined,
+      class: 'menu-item ctx-item', type: 'button', role: 'menuitem', disabled: entry.disabled === true, 'aria-disabled': entry.disabled ? 'true' : undefined, 'aria-current': entry.current ? 'true' : undefined,
       onClick: () => {
         close(true)
         entry.run()
       }
-    }, h('span', { class: 'ctx-label' }, entry.label), entry.keys ? h('span', { class: 'ctx-keys', 'aria-hidden': 'true' }, entry.keys) : null)
+    }, h('span', { class: 'ctx-main' }, h('span', { class: 'ctx-label' }, entry.label), entry.detail ? h('span', { class: 'ctx-detail' }, entry.detail) : null), entry.current ? h('span', { class: 'ctx-check', 'aria-label': 'Current' }, icon(ICONS.check)) : null, entry.keys ? h('span', { class: 'ctx-keys', 'aria-hidden': 'true' }, entry.keys) : null)
   })
   const el = h('div', { class: 'popover menu floating ctx-menu', role: 'menu', 'aria-label': options.label }, ...items)
 
@@ -92,8 +102,8 @@ export function openContextMenu(options: ContextMenuOptions): HTMLElement {
   el.addEventListener('contextmenu', (event) => event.preventDefault())
 
   document.body.appendChild(el)
-  const box = el.getBoundingClientRect()
-  const placed = placeAtPoint(options.x, options.y, box.width, box.height, window.innerWidth, window.innerHeight)
+  // Layout size, not the drawn box, which is still scaled down by the opening animation.
+  const placed = placeAtPoint(options.x, options.y, el.offsetWidth, el.offsetHeight, window.innerWidth, window.innerHeight)
   el.style.left = `${placed.left}px`
   el.style.top = `${placed.top}px`
   el.style.right = 'auto'

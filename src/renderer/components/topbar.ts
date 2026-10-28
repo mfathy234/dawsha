@@ -11,7 +11,7 @@ import {
   zoomAll
 } from '../actions'
 import { pillLabel, showUpdatePill } from '../../shared/updates'
-import { AGENTS, AGENT_NAMES } from '../../shared/agents'
+import { AGENTS, AGENT_NAMES, agentLabel } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
 import { openCompareDialog } from '../compareActions'
 import { ICONS } from '../icons'
@@ -19,13 +19,14 @@ import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
 import type { PaneView } from '../derive'
 import { countSessionStates, sessionState } from '../../shared/sessionState'
-import { MORE_VIEWS, accountLimits, limitText, moreLabel, type MoreView } from '../../shared/topbarSummary'
+import { MORE_VIEWS, formatResetIn, limitText, moreLabel, type MoreView } from '../../shared/topbarSummary'
+import { allAgentLimits, dataAge, focusedLimits, recordLimits, type AgentLimitStore, type AgentLimits } from '../../shared/agentLimits'
 import { stateIcon } from './stateIcon'
 import { toolState } from '../../shared/agentTools'
 import { formatPercent, gaugeStage } from '../../shared/statusLine'
 import { chargeBar } from './chargeBar'
 import type { RateLimitWindow } from '../../shared/types'
-import { h, icon, leave } from '../dom'
+import { h, icon, leave, placeNearAnchor } from '../dom'
 import { store, type AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import { setSessionsLayout } from '../sessionsLayout'
@@ -122,8 +123,16 @@ export class TopBarComponent {
   })
   private readonly pillText = h('span', { class: 'pill-text' })
   private readonly pillLine = h('span', { class: 'pill-line' })
-  private readonly limits = h('span', { class: 'topbar-limits', hidden: true })
+  private readonly limits = h('button', { class: 'topbar-limits', type: 'button', id: 'topbar-limits', hidden: true, 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onClick: () => this.toggleLimitsPopover() })
   private limitsSignature = ''
+  private limitStore: AgentLimitStore = {}
+  private limitsFocused: AgentLimits | null = null
+  private limitsNow = 0
+  private limitsPopover: HTMLElement | null = null
+  private readonly limitsOutside = (event: Event): void => {
+    const target = event.target as Node
+    if (this.limitsPopover && !this.limitsPopover.contains(target) && !this.limits.contains(target)) this.closeLimitsPopover()
+  }
 
   constructor() {
     this.settings.addEventListener('click', () => {
@@ -421,14 +430,78 @@ export class TopBarComponent {
   }
 
   private updateLimits(state: AppState, views: PaneView[]): void {
-    const focusedIndex = views.findIndex((view) => view.pane.id === state.focusedId)
-    const windows = accountLimits(views.map((view) => view.info.limits), focusedIndex)
-    const items = windows.map((window) => ({ window, text: limitText(window, state.now), title: resetText(window) }))
-    const signature = JSON.stringify(items)
-    if (signature === this.limitsSignature) return
-    this.limitsSignature = signature
-    this.limits.hidden = items.length === 0
-    this.limits.replaceChildren(...items.map((item) => limitItem(item.window, item.text, item.title)))
+    this.limitStore = recordLimits(
+      this.limitStore,
+      views.map((view) => ({ agent: view.agent, windows: view.info.limits, at: view.info.limitsAt ?? state.now }))
+    )
+    const focusedView = views.find((view) => view.pane.id === state.focusedId)
+    const focused = focusedLimits(this.limitStore, focusedView?.agent ?? null, state.now)
+    this.limitsFocused = focused
+    this.limitsNow = state.now
+    const items = (focused?.windows ?? []).map((window) => ({ window, text: limitText(window, state.now), title: resetText(window) }))
+    const signature = JSON.stringify([focused?.agent, focused?.state, focused?.at, items])
+    if (signature !== this.limitsSignature) {
+      this.limitsSignature = signature
+      this.renderLimits(focused, items)
+    }
+    if (this.limitsPopover) this.fillLimitsPopover(this.limitsPopover)
+  }
+
+  private renderLimits(focused: AgentLimits | null, items: { window: RateLimitWindow; text: string; title: string }[]): void {
+    this.limits.hidden = focused === null
+    this.limits.classList.toggle('stale', focused?.state === 'stale')
+    if (!focused) return
+    const name = agentLabel(focused.agent)
+    const summary = items.map((item) => item.title).join('; ')
+    this.limits.setAttribute('aria-label', focused.state === 'none' ? `${name}: no limits reported. Show limits for every agent` : `${name} limits${focused.state === 'stale' ? ' (stale)' : ''}: ${summary}. Show limits for every agent`)
+    this.limits.title = 'Limits by agent'
+    this.limits.replaceChildren(
+      h('span', { class: 'limits-agent' }, agentMark(focused.agent), h('span', { class: 'limits-agent-name' }, name)),
+      focused.state === 'none'
+        ? h('span', { class: 'limits-none' }, 'no limits reported')
+        : h('span', { class: 'limits-windows' }, ...items.map((item) => limitItem(item.window, item.text, item.title))),
+      ...(focused.state === 'stale' ? [h('span', { class: 'limits-note' }, 'stale')] : [])
+    )
+  }
+
+  private toggleLimitsPopover(): void {
+    if (this.limitsPopover) {
+      this.closeLimitsPopover(true)
+      return
+    }
+    const popover = h('div', { class: 'popover limits-popover floating', role: 'dialog', 'aria-label': 'Limits by agent', id: 'limits-popover' })
+    popover.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return
+      event.stopPropagation()
+      this.closeLimitsPopover(true)
+    })
+    this.limitsPopover = popover
+    this.fillLimitsPopover(popover)
+    document.body.appendChild(popover)
+    placeNearAnchor(popover, this.limits, 6)
+    this.limits.setAttribute('aria-expanded', 'true')
+    popover.querySelector<HTMLElement>('.limits-usage-link')?.focus()
+    setTimeout(() => {
+      if (this.limitsPopover === popover) document.addEventListener('pointerdown', this.limitsOutside, true)
+    }, 0)
+  }
+
+  private closeLimitsPopover(returnFocus = false): void {
+    document.removeEventListener('pointerdown', this.limitsOutside, true)
+    leave(this.limitsPopover)
+    this.limitsPopover = null
+    this.limits.setAttribute('aria-expanded', 'false')
+    if (returnFocus) this.limits.focus()
+  }
+
+  private fillLimitsPopover(popover: HTMLElement): void {
+    const focused = this.limitsFocused?.agent
+    const now = this.limitsNow
+    const sections = allAgentLimits(this.limitStore, now).map((entry) => limitsSection(entry, entry.agent === focused, now))
+    const link = h('button', { class: 'link limits-usage-link', type: 'button', onClick: () => { this.closeLimitsPopover(); showView('usage') } }, 'Open Usage')
+    const keep = popover.contains(document.activeElement) && document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('limits-usage-link')
+    popover.replaceChildren(h('div', { class: 'popover-title' }, 'Limits by agent'), ...sections, h('div', { class: 'popover-foot' }, link))
+    if (keep) link.focus()
   }
 
   private updateOrchestrator(state: AppState): void {
@@ -445,6 +518,33 @@ function resetText(window: RateLimitWindow): string {
   if (window.resetsAt === null) return `${window.label}: ${formatPercent(window.percent)} used`
   const when = new Date(window.resetsAt).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })
   return `${window.label}: ${formatPercent(window.percent)} used, resets ${when}`
+}
+
+function limitsSection(entry: AgentLimits, focused: boolean, now: number): HTMLElement {
+  const name = agentLabel(entry.agent)
+  const status = entry.state === 'none' ? 'no limits reported' : `updated ${dataAge(entry.at as number, now)}${entry.state === 'stale' ? ' · stale' : ''}`
+  const windows = entry.windows.map((window) =>
+    h('div', { class: 'limits-row', 'data-limit': window.key },
+      h('span', { class: 'limits-row-label' }, window.label),
+      chargeBar(window.percent, LIMIT_CELLS),
+      h('span', { class: 'limits-row-value' }, formatPercent(window.percent)),
+      h('span', { class: 'limits-row-reset' }, window.resetsAt === null ? '' : resetLine(window.resetsAt, now))
+    )
+  )
+  return h('section', { class: `limits-agent-block${entry.state === 'stale' ? ' stale' : ''}`, 'data-agent': entry.agent, 'aria-label': name },
+    h('div', { class: 'limits-agent-head' },
+      agentMark(entry.agent),
+      h('span', { class: 'limits-agent-title' }, name),
+      focused ? h('span', { class: 'limits-focused' }, 'focused') : null,
+      h('span', { class: 'limits-agent-age' }, status)
+    ),
+    ...windows
+  )
+}
+
+function resetLine(resetsAt: number, now: number): string {
+  const left = formatResetIn(resetsAt, now)
+  return left ? `resets in ${left}` : 'reset'
 }
 
 function limitItem(window: RateLimitWindow, text: string, title: string): HTMLElement {

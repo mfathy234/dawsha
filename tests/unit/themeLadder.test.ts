@@ -10,12 +10,15 @@ describe('mix', () => {
 })
 
 describe('surface ladder', () => {
-  it('derives close to the approved dark values from the Dawsha pane colour', () => {
+  it('derives the dark ladder from the pane colour: raised +7%, overlay +12%, well a quarter of the way to the canvas', () => {
     const ladder = darkLadder('#161a22')
     expect(contrastRatio(ladder.chrome, '#0f1217')).toBeLessThan(1.02)
     expect(contrastRatio(ladder.canvas, '#07090c')).toBeLessThan(1.02)
-    expect(contrastRatio(ladder.well, '#0d1015')).toBeLessThan(1.02)
-    expect(contrastRatio(ladder.well, ladder.pane)).toBeGreaterThan(1.08)
+    expect(ladder.raised).toBe(mix('#161a22', '#ffffff', 0.07))
+    expect(ladder.overlay).toBe(mix('#161a22', '#ffffff', 0.12))
+    expect(ladder.well).toBe(mix('#161a22', ladder.canvas, 0.25))
+    expect(contrastRatio(ladder.well, ladder.pane)).toBeGreaterThan(1.03)
+    expect(contrastRatio(ladder.well, ladder.pane)).toBeLessThan(1.15)
     expect(contrastRatio(ladder.pane, ladder.canvas)).toBeGreaterThan(1.1)
   })
 

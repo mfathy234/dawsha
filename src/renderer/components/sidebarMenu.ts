@@ -28,12 +28,20 @@ export class SidebarMenu {
     if (returnFocus && key) this.anchorFor(key)?.focus()
   }
 
-  open(key: string, children: (HTMLElement | null)[], label: string): void {
+  /** After the sidebar is rebuilt the menu stays open on its new button, and closes only when that button is gone. */
+  reanchor(): void {
+    if (!this.el || this.key === null) return
+    const anchor = this.anchorFor(this.key)
+    if (!anchor) return this.close()
+    placeNearAnchor(this.el, anchor, 2)
+  }
+
+  open(key: string, children: (HTMLElement | null)[], label: string, extraClass = ''): void {
     const anchor = this.anchorFor(key)
     this.close()
     if (!anchor) return
     this.key = key
-    const el = h('div', { class: 'popover menu floating', role: 'menu', 'aria-label': label }, ...children)
+    const el = h('div', { class: `popover menu floating${extraClass ? ` ${extraClass}` : ''}`, role: 'menu', 'aria-label': label }, ...children)
     el.addEventListener('keydown', (event) => this.onKey(event, el))
     this.el = el
     document.body.appendChild(el)

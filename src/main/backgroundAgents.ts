@@ -130,7 +130,13 @@ export class BackgroundAgentScanner {
         tokensApprox: raw.agent.usageApprox,
         costUsd: price && price !== 'free' ? estimateCost({ inputTokens: usage.input, outputTokens: usage.output, cacheReadTokens: usage.cacheRead, cacheWriteTokens: usage.cacheWrite, reportedCostUsd: null }, price) : null,
         lastStep: raw.agent.lastStep,
-        result: raw.agent.result
+        result: raw.agent.result,
+        cwd: raw.agent.cwd,
+        prompt: raw.agent.prompt,
+        tools: raw.agent.tools,
+        files: raw.agent.files,
+        tokensIn: usage.input + usage.cacheWrite,
+        tokensOut: usage.output
       }
     })
     return { generatedAt: now, range, agents: agents.filter((agent) => agent.lastActivityAt >= since || agent.status === 'running') }

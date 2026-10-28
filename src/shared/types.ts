@@ -127,6 +127,10 @@ export interface Settings {
   projects: Project[]
   theme: ThemeSettings
   sidebarCollapsed: boolean
+  /** How the sidebar orders projects: by recent activity, by name, or the stored (manual) order. */
+  sidebarSort: import('./sidebarModel').SidebarSort
+  /** Hides projects that have no sessions from the sidebar. */
+  sidebarHideEmpty: boolean
   dimOtherPanes: boolean
   showRecap: boolean
   colorSessionsByTag: boolean
@@ -144,6 +148,8 @@ export interface Settings {
   foldedClosedSessions: string[]
   /** Explicit open/folded choices for background agent session groups. */
   agentFolds: import('./agentFolds').FoldMap
+  /** Folded Files sections, the inspector and the bottom panel. */
+  filesLayout: import('./filesLayout').FilesLayout
   /** Open files of the Files view, by project id (at most FILES_TABS_MAX each). */
   filesTabs: Record<string, string[]>
   /** Locally saved run commands, kept separate from portable preferences. */

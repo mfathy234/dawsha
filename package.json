@@ -1,7 +1,7 @@
 {
   "name": "dawsha",
   "productName": "Dawsha",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "One window for all your AI coding agents: a grid of readable terminals for Claude Code, Codex CLI and Gemini CLI",
   "homepage": "https://dawsha.pages.dev/",
   "repository": {

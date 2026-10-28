@@ -73,7 +73,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.pane-info .info-changes')).toContainText('+1 −0 · 1 file', { timeout: 15_000 })
     await expect(page.locator('.pane-info .info-model')).toHaveCount(0)
-    await expect(page.locator('.topbar-limits')).toBeHidden()
+    await expect(page.locator('.topbar-limits')).toContainText('no limits reported')
 
     await openSettings(page, 'notifications')
     await page.locator('#bridge-toggle').click()
@@ -133,7 +133,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await closeSettings(page)
     await expect(page.locator('.pane-info .info-model')).toHaveCount(0)
     await expect(page.locator('.pane-info .info-changes')).toHaveCount(1)
-    await expect(page.locator('.topbar-limits')).toBeHidden()
+    await expect(page.locator('.topbar-limits')).toContainText('Claude')
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
@@ -273,7 +273,7 @@ test('pane actions menu and resume menu', async () => {
   const { app, page } = await launchApp(sandbox)
   try {
     // The ⋯ button toggles its menu, and the menu stays inside the window.
-    const agentMenu = page.getByRole('button', { name: 'Choose agent for Smoke' })
+    const agentMenu = page.getByRole('button', { name: 'Project actions for Smoke' })
     await agentMenu.click()
     await expect(page.getByRole('menu')).toBeVisible()
     await agentMenu.click()
@@ -321,7 +321,7 @@ test('Codex panes show the model and context from the rollout and no cost', asyn
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Codex session' }).click()
     await expect(page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)
     const id = '019aaaaa-0000-7000-8000-0000000000cc'
@@ -355,7 +355,7 @@ test('Gemini panes take title and model from the chat file of their own session 
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Gemini session' }).click()
     await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveCount(1)
     await expect(page.locator('.pane-title')).toHaveText('1 · Smoke')
@@ -377,7 +377,7 @@ test('Gemini panes take title and model from the chat file of their own session 
     await expect(page.locator('.pane-info .info-model')).toHaveClass(/fam-gemini/)
     await page.screenshot({ path: join(SCREENS, '18-gemini-info.png') })
 
-    await page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Resume in Smoke…' }).click()
     const row = page.locator('.rp-row', { hasText: 'Plan the release notes' })
     await expect(row.locator('.agent-mark.gemini')).toHaveCount(1)
