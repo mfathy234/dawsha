@@ -193,7 +193,7 @@ export function installBuiltinCommands(): void {
       run: () => void (store.state.focusedId && movePane(store.state.focusedId, store.state.panes.length - 1))
     },
     {
-      ...focusedAction('pane.find', 'Find in the terminal', findInPane, 'search text output'),
+      ...focusedAction('pane.find', 'Find in the terminal (in Files: search files)', findInPane, 'search text output find in files'),
       ...withKeys('Ctrl+Shift+F')
     },
     {
