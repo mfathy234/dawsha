@@ -66,10 +66,23 @@ export function scanSources(locations: SkillLocations, ids?: readonly string[]):
 
 const same = (a: string, b: string): boolean => (process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b)
 
+const SCAN_CACHE_MS = 5_000
+let scanCache: { key: string; at: number; files: CrewSourceFile[] } | null = null
+
+/** Linked reads come in bursts from the crew dialogs, so one scan serves them for a few seconds. */
+function cachedScan(locations: SkillLocations): CrewSourceFile[] {
+  const key = JSON.stringify(locations)
+  const now = Date.now()
+  if (scanCache && scanCache.key === key && now - scanCache.at < SCAN_CACHE_MS) return scanCache.files
+  const files = scanSources(locations)
+  scanCache = { key, at: now, files }
+  return files
+}
+
 /** The text of a linked source, only when the path is one the scan lists, so a settings file cannot point this at anything else. */
 export function readLinked(locations: SkillLocations, path: unknown): string | null {
   if (typeof path !== 'string' || path === '' || path.includes('\0')) return null
   const target = resolve(path)
-  const hit = scanSources(locations).find((source) => same(resolve(source.path), target))
+  const hit = cachedScan(locations).find((source) => same(resolve(source.path), target))
   return hit ? hit.text : null
 }
