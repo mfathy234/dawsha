@@ -1,3 +1,4 @@
+import { changeFromEdit, changeFromPatch, type EditChange } from './editChange'
 import { isTestCommand, parseTestCounts, testSummary } from './testRun'
 import { readText, type TimelineEvent, type TimelineKind } from './timeline'
 import {
@@ -126,6 +127,19 @@ function patchBody(input: unknown): string {
   return str(input.input ?? input.patch ?? input.diff)
 }
 
+/** The text each edit of a tool call wrote, in the order classifyTool lists its files. */
+export function toolChanges(rawName: unknown, input: unknown): Array<EditChange | undefined> {
+  const name = (typeof rawName === 'string' ? rawName : '').toLowerCase()
+  const fields = isRecord(input) ? input : {}
+  if (PATCH_TOOLS.has(name)) return changeFromPatch(patchBody(input))
+  if (EDIT_TOOLS.has(name)) return [changeFromEdit(name, fields)]
+  if (COMMAND_TOOLS.has(name)) {
+    const command = commandText(input)
+    return command.includes('*** Begin Patch') ? changeFromPatch(command) : []
+  }
+  return []
+}
+
 /** What a tool call does to the timeline: reads, edits, a command, or nothing worth showing. */
 export function classifyTool(rawName: unknown, input: unknown): Tool | null {
   const name = (typeof rawName === 'string' ? rawName : '').toLowerCase()
@@ -192,9 +206,11 @@ class Builder {
     if (tool.kind === 'read') {
       this.push({ at, kind: 'read', text: readText(tool.paths), paths: tool.paths })
     } else if (tool.kind === 'edit') {
-      for (const part of tool.edits) {
-        this.push({ at, kind: 'edit', text: part.path, path: part.path, added: part.added, removed: part.removed })
-      }
+      const changes = toolChanges(name, input)
+      tool.edits.forEach((part, index) => {
+        const change = changes[index]
+        this.push({ at, kind: 'edit', text: part.path, path: part.path, added: part.added, removed: part.removed, ...(change ? { change } : {}) })
+      })
     } else if (isTestCommand(tool.command)) {
       this.push({ at, kind: 'test', text: 'ran', command: flat(tool.command, 160) })
     } else {

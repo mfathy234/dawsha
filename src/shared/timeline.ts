@@ -1,3 +1,4 @@
+import type { EditChange } from './editChange'
 import type { SessionState } from './sessionState'
 
 export type TimelineKind = 'prompt' | 'reply' | 'read' | 'edit' | 'command' | 'test' | 'error' | 'state' | 'approval'
@@ -12,6 +13,8 @@ export interface TimelineEvent {
   paths?: string[]
   added?: number
   removed?: number
+  /** The text an edit wrote, for finding its lines again. */
+  change?: EditChange
   command?: string
   passed?: number
   failed?: number

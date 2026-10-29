@@ -95,6 +95,7 @@ const api: GridApi = {
   trashProjectPath: (folder, path) => ipcRenderer.invoke(IPC.filesTrash, folder, path),
   searchFiles: (folder, request) => ipcRenderer.invoke(IPC.filesSearch, folder, request),
   fileLog: (folder, path) => ipcRenderer.invoke(IPC.filesLog, folder, path),
+  filePreviewUrl: (folder, path, text) => ipcRenderer.invoke(IPC.filesPreviewUrl, folder, path, text),
   fileImage: (folder, path, base) => ipcRenderer.invoke(IPC.filesImage, folder, path, base),
   openFileInBrowser: (folder, path) => ipcRenderer.invoke(IPC.filesOpenBrowser, folder, path),
   linkedRepos: (projectId, folders) => ipcRenderer.invoke(IPC.filesLinked, projectId, folders),

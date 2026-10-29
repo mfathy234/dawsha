@@ -5,6 +5,7 @@ import { IPC } from '../shared/ipc'
 import { CodexWatcher } from './codexWatcher'
 import { GeminiWatcher } from './geminiWatcher'
 import { registerIpc } from './ipc'
+import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
 import { PtyManager } from './ptyManager'
 import { Recorder } from './recorder'
@@ -38,7 +39,8 @@ if (process.platform === 'win32') app.setAppUserModelId('io.github.mfathy234.daw
 if (process.env.DAWSHA_USER_DATA) app.setPath('userData', process.env.DAWSHA_USER_DATA)
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } }
+  { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+  { scheme: PREVIEW_SCHEME, privileges: { standard: true, secure: true } }
 ])
 
 let mainWindow: BrowserWindow | null = null

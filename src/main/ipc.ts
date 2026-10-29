@@ -30,6 +30,8 @@ import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveP
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
+import { PreviewServer } from './filePreviewServer'
+import { registerPreviewProtocol } from './previewProtocol'
 import { fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { trashProjectPath } from './filesTrash'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
@@ -271,6 +273,9 @@ export function registerIpc(
     const root = await known(folder)
     return root ? fileLog(root, path) : refused
   })
+  const previews = new PreviewServer(known)
+  registerPreviewProtocol(previews)
+  ipcMain.handle(IPC.filesPreviewUrl, (_event, folder: unknown, path: unknown, text: unknown) => previews.register(folder, path, typeof text === 'string' ? text : null))
   ipcMain.handle(IPC.filesImage, async (_event, folder: unknown, path: unknown, base: unknown) => {
     const root = await known(folder)
     return root ? readImage(root, path, base === true) : refused

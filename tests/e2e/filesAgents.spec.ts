@@ -137,7 +137,8 @@ test('Changes marks the added lines with the session that wrote them, and the in
     await expect(page.locator('#files-changes')).toContainText('+1')
     const mark = page.locator('.files-editor:not([hidden]) .cm-blame-mark')
     await expect(mark.first()).toBeVisible({ timeout: 20_000 })
-    await expect(mark.first()).toHaveAttribute('title', /Smoke: Add retry to the webhook sender/)
+    await expect(mark.first()).toHaveAttribute('title', /^Smoke: Add retry to the webhook sender/)
+    await expect(mark.first()).not.toHaveClass(/estimated/)
     await expect(page.locator('.files-editor:not([hidden]) .cm-review-add').first()).toBeVisible()
 
     await expect(page.locator('#files-side')).toBeVisible()
@@ -157,6 +158,51 @@ test('Changes marks the added lines with the session that wrote them, and the in
     await page.setViewportSize({ width: 1024, height: 728 })
     await expect(page.locator('#files-side')).toBeHidden()
     await expect(page.locator('#files-inspector-toggle')).toBeHidden()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Changes places each edit on the lines it wrote and flags guessed lines as about', async () => {
+  test.setTimeout(150_000)
+  const sandbox = createSandbox()
+  const root = sandbox.projectFolder
+  const dir = join(sandbox.claudeHome, 'projects', root.replace(/[^A-Za-z0-9]/g, '-'))
+  mkdirSync(dir, { recursive: true })
+  const edit = (id: string, minute: number, from: string, to: string) => [
+    { type: 'assistant', timestamp: stamp(minute), message: { content: [{ type: 'tool_use', id, name: 'Edit', input: { file_path: join(root, 'b.txt'), old_string: from, new_string: to } }] } },
+    { type: 'user', timestamp: stamp(minute + 1), message: { content: [{ type: 'tool_result', tool_use_id: id, content: 'ok' }] } }
+  ]
+  const records = [
+    { type: 'user', timestamp: stamp(0), message: { content: 'Shape the b file' } },
+    ...edit('b1', 2, 'start', 'start\nalpha'),
+    ...edit('b2', 4, 'x', 'dup'),
+    ...edit('b3', 6, 'y', 'beta'),
+    ...edit('b4', 8, 'z', 'dup'),
+    { type: 'ai-title', aiTitle: 'Shape the b file' }
+  ]
+  writeFileSync(join(dir, `${SESSION_ID}.jsonl`), records.map((record) => JSON.stringify(record)).join('\n') + '\n')
+  git(root, 'init', '-q', '-b', 'main')
+  writeFileSync(join(root, 'b.txt'), 'start\n')
+  git(root, 'add', '.')
+  git(root, 'commit', '-q', '-m', 'add b.txt')
+  writeFileSync(join(root, 'b.txt'), 'start\nalpha\ndup\nbeta\ndup\n')
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.setViewportSize({ width: 1400, height: 900 })
+    await resumeSeeded(page)
+    await page.locator('#files-button').click()
+    await expect(page.locator('#files-open-list .files-flat[data-path="b.txt"]')).toBeVisible({ timeout: 20_000 })
+    await page.locator('#files-open-list .files-flat[data-path="b.txt"]').click()
+    await page.locator('#files-changes').click()
+    await expect(page.locator('#files-changes')).toContainText('+4')
+    const marks = page.locator('.files-editor:not([hidden]) .cm-blame-mark')
+    await expect(marks).toHaveCount(4, { timeout: 20_000 })
+    await expect(page.locator('.files-editor:not([hidden]) .cm-blame-mark:not(.estimated)')).toHaveCount(2)
+    await expect(page.locator('.files-editor:not([hidden]) .cm-blame-mark.estimated')).toHaveCount(2)
+    await expect(page.locator('.files-editor:not([hidden]) .cm-blame-mark.estimated').first()).toHaveAttribute('title', /^About: Smoke: Shape the b file/)
+    await expect(page.locator('.files-editor:not([hidden]) .cm-blame-mark:not(.estimated)').first()).toHaveAttribute('title', /^Smoke: Shape the b file/)
+    await page.screenshot({ path: 'test-results/screens/175-files-blame.png' })
   } finally {
     await closeApp(app)
   }

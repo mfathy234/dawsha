@@ -1,4 +1,4 @@
-import { HTML_PREVIEW_SANDBOX, htmlPreviewDocument, type PreviewKind } from '../../shared/filePreview'
+import { HTML_PREVIEW_SANDBOX, type PreviewKind } from '../../shared/filePreview'
 import { renderDocMarkdown } from '../../shared/docMarkdown'
 import { api } from '../api'
 import { h } from '../dom'
@@ -45,7 +45,7 @@ export class PreviewPane {
     this.last = next
     const token = ++this.token
     if (spec.kind === 'markdown') this.markdown(spec)
-    else if (spec.kind === 'html') this.html(spec)
+    else if (spec.kind === 'html') void this.html(spec, token)
     else void this.image(spec, token)
   }
 
@@ -55,14 +55,19 @@ export class PreviewPane {
     this.el.replaceChildren(page)
   }
 
-  private html(spec: PreviewSpec): void {
+  private async html(spec: PreviewSpec, token: number): Promise<void> {
+    const made = await api.filePreviewUrl(spec.folder, spec.path, spec.text).catch((error: Error) => ({ ok: false as const, error: error.message }))
+    if (token !== this.token) return
+    const bar = h('div', { class: 'files-preview-bar' },
+      h('span', { class: 'files-preview-note' }, 'Runs in a sandbox with no network.'),
+      h('button', { class: 'btn small', type: 'button', id: 'files-open-browser', onClick: () => this.hooks.openBrowser() }, 'Open in browser'))
+    if (!made.ok) {
+      this.el.replaceChildren(bar, h('p', { class: 'files-side-empty', role: 'status' }, made.error))
+      return
+    }
     const frame = h('iframe', { class: 'files-html', id: 'files-html', title: `Preview of ${spec.path}`, sandbox: HTML_PREVIEW_SANDBOX, referrerpolicy: 'no-referrer' })
-    frame.srcdoc = htmlPreviewDocument(spec.text)
-    this.el.replaceChildren(
-      h('div', { class: 'files-preview-bar' },
-        h('span', { class: 'files-preview-note' }, 'Runs in a sandbox with no network.'),
-        h('button', { class: 'btn small', type: 'button', id: 'files-open-browser', onClick: () => this.hooks.openBrowser() }, 'Open in browser')),
-      frame)
+    frame.src = made.url
+    this.el.replaceChildren(bar, frame)
   }
 
   private async image(spec: PreviewSpec, token: number): Promise<void> {

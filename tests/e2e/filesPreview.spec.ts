@@ -71,28 +71,42 @@ test('Markdown opens rendered with HTML escaped, and Source shows the file', asy
   }
 })
 
-test('HTML renders in a sandboxed iframe with no network, no same-origin and an Open in browser action', async () => {
+test('HTML runs its scripts in a sandboxed frame served from its own scheme: assets load, the network and the app stay out of reach', async () => {
   test.setTimeout(120_000)
   const sandbox = createSandbox()
   const repo = sandbox.projectFolder
-  writeFileSync(join(repo, 'page.html'), '<!doctype html><title>t</title><h1 id="hello">Hello page</h1><script>document.getElementById("hello").dataset.ran = "yes"</script>')
+  mkdirSync(join(repo, 'mock'), { recursive: true })
+  writeFileSync(join(repo, 'secret.css'), 'h1 { color: rgb(1, 2, 3); }')
+  writeFileSync(join(repo, 'mock', 'style.css'), 'h1 { color: rgb(10, 20, 30); }')
+  writeFileSync(join(repo, 'mock', 'app.js'), 'document.getElementById("ext").textContent = "external script ran"')
+  writeFileSync(join(repo, 'mock', 'page.html'), [
+    '<!doctype html><title>t</title><link rel="stylesheet" href="style.css">',
+    '<h1 id="hello">Hello page</h1><p id="ext"></p><p id="net"></p><p id="up"></p>',
+    '<script>document.getElementById("hello").textContent = "Script ran"</script>',
+    '<script src="app.js"></script>',
+    '<script>fetch("http://example.com/").then(() => { document.getElementById("net").textContent = "network allowed" }, () => { document.getElementById("net").textContent = "network blocked" })</script>',
+    '<script>try { window.top.location.href = "https://example.com/" ; document.getElementById("up").textContent = "navigated" } catch (error) { document.getElementById("up").textContent = "top blocked" }</script>'
+  ].join('\n'))
   const { app, page } = await launchApp(sandbox)
   try {
+    await page.setViewportSize({ width: 1024, height: 728 })
     await page.locator('#files-button').click()
-    await page.locator('.files-row[data-path="page.html"]').click()
+    await page.locator('.files-row[data-path="mock"]').click()
+    await page.locator('.files-row[data-path="mock/page.html"]').click()
     await expect(page.locator('.files-editor:not([hidden]) .cm-content')).toContainText('Hello page')
     await expect(page.locator('#files-html')).toHaveCount(0)
     await page.locator('#files-view-preview').click()
     const frame = page.locator('#files-html')
     await expect(frame).toBeVisible()
     await expect(frame).toHaveAttribute('sandbox', 'allow-scripts')
+    await expect(frame).toHaveAttribute('src', /^dawsha-preview:\/\/[0-9a-f]+\/page\.html/)
     await expect(page.locator('#files-open-browser')).toBeVisible()
     const inner = page.frameLocator('#files-html')
-    await expect(inner.locator('#hello')).toHaveText('Hello page')
-    // the app's own policy (script-src 'self') is inherited by the frame, so the page's inline script does not run
-    await expect(inner.locator('#hello')).not.toHaveAttribute('data-ran', 'yes')
-    const csp = await frame.evaluate((element) => (element as HTMLIFrameElement).srcdoc.slice(0, 220))
-    expect(csp).toContain("default-src 'none'")
+    await expect(inner.locator('#hello')).toHaveText('Script ran')
+    await expect(inner.locator('#ext')).toHaveText('external script ran')
+    await expect(inner.locator('#net')).toHaveText('network blocked')
+    await expect(inner.locator('#up')).toHaveText('top blocked')
+    await expect(inner.locator('#hello')).toHaveCSS('color', 'rgb(10, 20, 30)')
     const probe = page.frames().find((candidate) => candidate !== page.mainFrame() && candidate.parentFrame() === page.mainFrame())
     expect(probe).toBeTruthy()
     const outcome = await probe!.evaluate(async () => {
@@ -103,17 +117,19 @@ test('HTML renders in a sandboxed iframe with no network, no same-origin and an 
       } catch {
         storage = 'blocked'
       }
-      const network = await fetch('https://example.com/').then(() => 'allowed', () => 'blocked')
+      const network = await fetch('http://example.com/').then(() => 'allowed', () => 'blocked')
       let parentAccess = 'blocked'
       try {
         parentAccess = window.parent.document.title === undefined ? 'blocked' : 'allowed'
       } catch {
         parentAccess = 'blocked'
       }
-      return { storage, network, parentAccess }
+      const outside = await fetch('dawsha-preview://other/secret.css').then(() => 'allowed', () => 'blocked')
+      return { storage, network, parentAccess, outside }
     })
-    expect(outcome).toEqual({ storage: 'blocked', network: 'blocked', parentAccess: 'blocked' })
-    await page.screenshot({ path: 'test-results/screens/174-files-html.png' })
+    expect(outcome).toEqual({ storage: 'blocked', network: 'blocked', parentAccess: 'blocked', outside: 'blocked' })
+    await expect(page.locator('#files-view-preview')).toHaveAttribute('aria-pressed', 'true')
+    await page.screenshot({ path: 'test-results/screens/175-files-html.png' })
   } finally {
     await closeApp(app)
   }

@@ -279,6 +279,7 @@
 .cm-review-add:hover { background: var(--hover); color: var(--accent); }
 .cm-blame-gutter { width: 18px; }
 .cm-blame-mark { display: inline-block; width: 16px; text-align: center; color: var(--muted); font-size: 10px; font-weight: 700; cursor: help; }
+.cm-blame-mark.estimated { opacity: .55; }
 .cm-blame-mark .agent-mark { display: inline-grid; place-items: center; width: 12px; height: 12px; font-size: 11px; vertical-align: -2px; }
 .cm-blame-mark .agent-mark svg { width: 11px; height: 11px; }
 .cm-review-comment { margin: 4px 16px 6px 48px; padding: var(--s-2) var(--s-3); border-radius: var(--radius); background: var(--raised); color: var(--text); font-family: var(--font-sans, inherit); font-size: var(--fs-ui); line-height: 1.5; white-space: normal; }
@@ -344,3 +345,31 @@
 @media (prefers-reduced-motion: reduce) {
   .files-twist, .files-sec-head .icon { transition: none; }
 }
+
+/* Problems */
+.files-problems { display: flex; flex-direction: column; flex: 1; padding: 0; min-height: 0; }
+.files-problems > .files-side-empty { padding: var(--s-3); }
+.files-problems-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); padding: var(--s-1) var(--s-3); flex: none; }
+.files-problems-summary { color: var(--muted); font-size: var(--fs-ui); }
+.files-problems-list { display: flex; flex-direction: column; overflow: auto; min-height: 0; padding-bottom: var(--s-2); }
+.files-problems-file { display: flex; align-items: baseline; gap: var(--s-2); padding: var(--s-2) var(--s-3) 2px; color: var(--text); font-size: var(--fs-ui); font-weight: 600; }
+.files-problems-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-problems-count { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.files-problem { display: flex; align-items: center; gap: var(--s-2); padding-right: var(--s-2); }
+.files-problem:hover, .files-problem:focus-within { background: var(--hover); }
+.files-problem-open { display: flex; align-items: baseline; gap: var(--s-3); flex: 1; min-width: 0; min-height: 26px; padding: 3px var(--s-3) 3px var(--s-4); border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--fs-ui); text-align: left; cursor: pointer; }
+.files-problem-open.plain { cursor: default; color: var(--muted); }
+.files-problem-open:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.files-problem-label { display: inline-flex; align-items: center; gap: var(--s-1); flex: none; width: 76px; }
+.files-problem-label .icon { display: inline-flex; align-self: center; }
+.files-problem.sev-error .files-problem-label { color: var(--danger); }
+.files-problem.sev-warning .files-problem-label { color: var(--busy); }
+.files-problem.sev-info .files-problem-label { color: var(--muted); }
+.files-problem-where { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+.files-problem-message { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-problem-source { flex: none; color: var(--muted); font-size: var(--fs-status); }
+.files-problem-send { flex: none; height: 22px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--muted); font: inherit; font-size: var(--fs-status); cursor: pointer; opacity: 0; }
+.files-problem:hover .files-problem-send, .files-problem:focus-within .files-problem-send { opacity: 1; }
+.files-problem-send:hover { color: var(--text); background: var(--raised); }
+.files-problem-send:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; opacity: 1; }
+@media (hover: none) { .files-problem-send { opacity: 1; } }

@@ -77,6 +77,7 @@ export const IPC = {
   filesSearch: 'files:search',
   filesLog: 'files:log',
   filesImage: 'files:image',
+  filesPreviewUrl: 'files:preview-url',
   filesOpenBrowser: 'files:open-browser',
   filesLinked: 'files:linked',
   instructionsRead: 'instructions:read',
