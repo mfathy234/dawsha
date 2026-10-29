@@ -1,4 +1,6 @@
-export type RemoteActivityAction = 'paired' | 'approved' | 'denied' | 'message' | 'interrupt' | 'session-started' | 'session-stopped' | 'crew-run' | 'blocked'
+import { maskSecrets } from './maskSecrets'
+
+export type RemoteActivityAction ='paired' | 'approved' | 'denied' | 'message' | 'interrupt' | 'session-started' | 'session-stopped' | 'crew-run' | 'blocked'
 
 export interface RemoteActivityEntry {
   id: string
@@ -23,8 +25,9 @@ export function createActivityLog(now: () => number = Date.now, max = MAX_REMOTE
   let entries: RemoteActivityEntry[] = []
   let counter = 0
   return {
-    record(input) {
+    record(raw) {
       const time = now()
+      const input = { ...raw, detail: maskSecrets(raw.detail) }
       const latest = entries[0]
       if (latest && latest.device === input.device && latest.action === input.action && latest.session === input.session &&
           latest.detail === input.detail && time - latest.time < COALESCE_MS) return

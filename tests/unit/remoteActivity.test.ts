@@ -35,6 +35,15 @@ describe('phone activity log', () => {
     expect(log.list()).toHaveLength(3)
   })
 
+  it('masks secrets and truncates the detail it keeps', () => {
+    const log = createActivityLog(() => 0)
+    log.record({ device: 'Pixel 9', action: 'approved', session: 'api', detail: 'curl -H "token=abc123" https://x' })
+    log.record({ device: 'Pixel 9', action: 'approved', session: 'api', detail: `run ${'word '.repeat(40)}` })
+    const [long, masked] = log.list()
+    expect(masked!.detail).toBe('curl -H "token=[masked]" https://x')
+    expect(long!.detail.length).toBeLessThanOrEqual(120)
+  })
+
   it('describes each action as a plain sentence naming the phone', () => {
     const entry = { id: '1', time: 0, device: 'Pixel 9', session: 'billing-api', detail: 'npm test' }
     expect(describeActivity({ ...entry, action: 'approved' })).toBe('Pixel 9 allowed npm test in billing-api')
