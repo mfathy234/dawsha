@@ -67,6 +67,7 @@ export interface PtyObserver {
 
 export class PtyManager {
   private readonly entries = new Map<string, Entry>()
+  private closing = false
   private readonly observers: PtyObserver[] = []
   private readonly remoteTerminals: RemoteTerminalStateLike | null
 
@@ -108,6 +109,7 @@ export class PtyManager {
   }
 
   spawn(request: SpawnRequest, extras: SpawnExtras = {}): SpawnResult {
+    if (this.closing) return { ok: false, error: 'Dawsha is shutting down' }
     const problem = folderProblem(request.cwd)
     if (problem) return { ok: false, error: problem }
     const spec = launchSpec(request, process.platform, extras.args ?? [])
@@ -179,6 +181,7 @@ export class PtyManager {
   }
 
   async terminateAll(timeoutMs: number, log: QuitLog = () => undefined): Promise<void> {
+    this.closing = true
     const entries = [...this.entries.entries()]
     this.entries.clear()
     const trees = entries.map(([id, entry]) => {
@@ -190,6 +193,15 @@ export class PtyManager {
       killPosixTree(entry.process.pid)
       return Promise.resolve()
     })
+    if (process.platform === 'win32') {
+      // Killing the shell tree does not release ConPTY's native handles/output
+      // worker. Dispose every PTY while taskkill runs, before Electron tears Node down.
+      for (const [, entry] of entries) {
+        try { entry.process.kill() } catch (error) {
+          log(`pty dispose failed pid=${entry.process.pid}: ${(error as Error).message}`)
+        }
+      }
+    }
     let timer: NodeJS.Timeout | undefined
     const deadline = new Promise<void>((resolve) => {
       timer = setTimeout(resolve, timeoutMs)

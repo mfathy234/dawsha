@@ -9,6 +9,33 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 
+test('cleans up safely after the app has already quit', async () => {
+  const { app } = await launchApp(createSandbox())
+  try {
+    const exited = app.waitForEvent('close')
+    await app.evaluate(({ app }) => app.quit())
+    await exited
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
+  } finally {
+    await closeBounded(app)
+  }
+})
+
+test('starts the default quick-pick choice when Enter arrives before the next render', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    await page.evaluate(() => {
+      const target = document.activeElement ?? document.body
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', ctrlKey: true, bubbles: true }))
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    })
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await expect(page.locator('.pane-header .agent-mark.claude')).toHaveCount(1)
+  } finally {
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
+  }
+})
+
 test('starts a session from the sidebar without any prompt and drives the grid', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)

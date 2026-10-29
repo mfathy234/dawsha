@@ -8,6 +8,46 @@ const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
 const fixture = readFileSync(join(__dirname, '../unit/fixtures/statusline-payload.json'), 'utf8')
 
+test('quits within budget when the renderer cannot acknowledge the close check', async () => {
+  const sandbox = createSandbox()
+  const { app } = await launchApp(sandbox)
+  try {
+    await app.evaluate(({ BrowserWindow }) => {
+      const contents = BrowserWindow.getAllWindows()[0].webContents
+      const send = contents.send.bind(contents)
+      // Simulate a renderer that no longer handles the close-check IPC.
+      contents.send = (channel, ...args) => {
+        if (channel !== 'app:close-check') send(channel, ...args)
+      }
+    })
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
+    expect(readFileSync(sandbox.quitLog, 'utf8')).toContain('terminating the process')
+  } finally {
+    await closeBounded(app)
+  }
+})
+
+test('quits when the renderer crashes after acknowledging the close check', async () => {
+  const sandbox = createSandbox()
+  const { app } = await launchApp(sandbox)
+  try {
+    await app.evaluate(({ BrowserWindow, ipcMain }) => {
+      const contents = BrowserWindow.getAllWindows()[0].webContents
+      const send = contents.send.bind(contents)
+      contents.send = (channel, ...args) => {
+        if (channel !== 'app:close-check') return send(channel, ...args)
+        ipcMain.emit('app:close-check-ack', { sender: contents })
+        setTimeout(() => contents.forcefullyCrashRenderer(), 10)
+      }
+    })
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
+    expect(readFileSync(sandbox.quitLog, 'utf8')).toContain('close check acknowledged')
+    expect(readFileSync(sandbox.quitLog, 'utf8')).not.toContain('acknowledgement timed out')
+  } finally {
+    await closeBounded(app)
+  }
+})
+
 const readJson = (path: string): any => JSON.parse(readFileSync(path, 'utf8'))
 const readLines = (path: string): any[] =>
   existsSync(path)

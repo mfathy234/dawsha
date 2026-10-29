@@ -82,36 +82,43 @@ function flushRenderer(): Promise<void> {
 // Asks the page whether the app may close (unsaved Files tabs ask the user); a page that is not there answers yes.
 // The page acknowledges at once, so a dialog can stay open as long as the user needs; a page that never
 // acknowledges (hung or gone) must not make the app unclosable, so no acknowledgement within CLOSE_ACK_MS means yes.
-const CLOSE_ACK_MS = 10_000
+const CLOSE_ACK_MS = FLUSH_TIMEOUT_MS
 
 function askMayClose(): Promise<boolean> {
   const window = mainWindow
   if (!window || window.isDestroyed() || !rendererReady) return Promise.resolve(true)
+  quitLog('close check requested')
   return new Promise((resolve) => {
     const finish = (_event?: unknown, ok?: unknown): void => {
       clearTimeout(ackTimer)
       ipcMain.removeListener(IPC.closeCheckAck, acknowledged)
       ipcMain.removeListener(IPC.closeCheckDone, finish)
       window.webContents.removeListener('destroyed', onGone)
+      window.webContents.removeListener('render-process-gone', onGone)
+      quitLog(`close check ${ok === false ? 'cancelled' : 'approved'}`)
       resolve(ok !== false)
     }
-    const acknowledged = (): void => clearTimeout(ackTimer)
+    const acknowledged = (): void => {
+      clearTimeout(ackTimer)
+      quitLog('close check acknowledged')
+    }
     const onGone = (): void => finish(undefined, true)
-    const ackTimer = setTimeout(() => finish(undefined, true), CLOSE_ACK_MS)
+    const ackTimer = setTimeout(() => {
+      quitLog('close check acknowledgement timed out')
+      finish(undefined, true)
+    }, CLOSE_ACK_MS)
     ipcMain.once(IPC.closeCheckAck, acknowledged)
     ipcMain.once(IPC.closeCheckDone, finish)
     window.webContents.once('destroyed', onGone)
+    window.webContents.once('render-process-gone', onGone)
     window.webContents.send(IPC.closeCheck)
   })
 }
 
 function terminateProcess(code: number): void {
   quitLog(`terminating the process (code ${code})`)
-  try {
-    process.kill(process.pid, 'SIGKILL')
-  } catch (error) {
-    quitLog(`self kill failed: ${(error as Error).message}`)
-  }
+  // Let Electron shut down Chromium's children. Self-SIGKILL strands processes
+  // holding the launcher's pipes; the independent watchdog handles a stuck exit.
   app.exit(code)
 }
 
@@ -157,6 +164,9 @@ function createWindow(): BrowserWindow {
   })
   if (offscreen) window.showInactive()
   window.webContents.on('did-start-loading', () => {
+    if (mainWindow === window) rendererReady = false
+  })
+  window.webContents.on('render-process-gone', () => {
     if (mainWindow === window) rendererReady = false
   })
   let flushedOnClose = false

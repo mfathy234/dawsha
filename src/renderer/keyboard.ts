@@ -1,7 +1,8 @@
 import { DEFAULT_FONT_SIZE } from '../shared/types'
 import { DEFAULT_PALETTE_SHORTCUT } from '../shared/settingsSchema'
 import { bind, formatShortcut, matchesBinding, parseShortcut, type KeyBinding, type KeyEventLike } from '../shared/shortcuts'
-import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, zoomPane } from './actions'
+import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, startSession, zoomPane } from './actions'
+import { pickedAgent } from '../shared/quickPick'
 import { commandForEvent } from './commands/registry'
 import { store, type AppState } from './state'
 import { closeTimeline } from './timelineActions'
@@ -84,6 +85,14 @@ function onKeyDown(event: KeyboardEvent): void {
   if (handleDictationKey(event)) return
   if (overlayOpen() || inFindBar(event)) return
   const state = store.state
+  // State changes immediately; the picker mounts on the next animation frame. A fast Enter
+  // in that gap still starts its default choice instead of reaching the old terminal.
+  if (state.quickPickOpen && state.quickPickMode === 'new' && event.key === 'Enter' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+    consume(event)
+    const project = state.settings.projects[0]
+    if (project) void startSession(project.id, pickedAgent(project, {}, state.quickPickPreset))
+    return
+  }
   // Find in files: only while Files is showing, so Ctrl+Shift+F keeps searching the terminal everywhere else.
   if (state.view === 'files' && event.shiftKey && !event.altKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
     consume(event)
