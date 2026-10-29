@@ -9,6 +9,7 @@ import { addToPrompt, filesTarget, openInFiles, openInVsCode, type FilesTarget }
 import { fileIndex, recentFiles, type FileIndex } from '../files/fileIndex'
 import { store } from '../state'
 import { popupDismissButton } from './popupDismiss'
+import { selectMenu, syncSelectMenu } from './selectMenu'
 import './quickOpen.css'
 
 const PREVIEW_LINES = 200
@@ -70,7 +71,7 @@ export async function openQuickOpen(): Promise<void> {
   const projectSelect = h('select', { class: 'qo-project', id: 'quick-open-project', 'aria-label': 'Project' }, ...projects.map((project) => h('option', { value: project.id }, project.name)))
   const overlay = h('div', { class: 'overlay qo-overlay' },
     h('div', { class: 'qo', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Quick open' },
-      h('div', { class: 'qo-head' }, icon(ICONS.search), input, projectSelect, popupDismissButton(() => closeQuickOpen(true))),
+      h('div', { class: 'qo-head' }, icon(ICONS.search), input, selectMenu(projectSelect), popupDismissButton(() => closeQuickOpen(true))),
       h('div', { class: 'qo-body' }, list, h('div', { class: 'qo-right' }, previewTitle, preview)),
       h('div', { class: 'qo-foot' }, hint('Enter', 'open'), hint('Ctrl+Enter', 'new tab'), hint('Alt+Enter', 'add to prompt'), hint('Ctrl+Shift+Enter', 'VS Code'), hint('Up Down', 'move'), hint('Esc', 'close'))))
   const state: Session = {
@@ -79,6 +80,7 @@ export async function openQuickOpen(): Promise<void> {
   }
   session = state
   if (target) projectSelect.value = target.projectId
+  syncSelectMenu(projectSelect)
   overlay.addEventListener('mousedown', (event) => {
     if (event.target === overlay) closeQuickOpen(true)
   })

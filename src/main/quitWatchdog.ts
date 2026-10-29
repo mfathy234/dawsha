@@ -48,7 +48,8 @@ try {
           ' watchdog: pid ' + $env:DAWSHA_WATCHDOG_PID + ' still alive after ' + $env:DAWSHA_WATCHDOG_MS + 'ms, killing it' + [char]10)
       } catch {}
     }
-    $watchTarget.Kill()
+    & taskkill.exe /PID $env:DAWSHA_WATCHDOG_PID /T /F *> $null
+    if (-not $watchTarget.HasExited) { $watchTarget.Kill() }
   }
 } catch {} finally {
   if ($watchTarget) { $watchTarget.Dispose() }

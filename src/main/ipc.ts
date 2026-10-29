@@ -41,8 +41,6 @@ import { createAgentAccountsReader } from './agentAccounts'
 import { createCodexLimitsReader } from './codexLimits'
 import { readLinked, scanSources } from './crewSources'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
-  import { previewPaneonImport, queuePaneonImport } from './paneonImport'
-  import { paneonUserDataDir } from './paths'
 import { listAllSessions } from './sessionIndex'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
 import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type BridgeLocations } from './statusBridge'
@@ -145,8 +143,6 @@ export function registerIpc(
     ipcMain.handle(IPC.remoteApprovalAnswered, (_event, terminalId: string, allowed: boolean, tail?: string) => remoteAccess.recordDesktopApproval(terminalId, allowed, tail))
     ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteResult(() => remoteAccess.revoke(id)))
   }
-  ipcMain.handle(IPC.paneonImportPreview, () => previewPaneonImport(paneonUserDataDir(), app.getPath('userData')))
-  ipcMain.handle(IPC.paneonImportQueue, () => queuePaneonImport(paneonUserDataDir(), app.getPath('userData')))
   ipcMain.handle(IPC.checkFolder, (_event, path: string) => checkFolder(path))
   ipcMain.handle(IPC.gitBranch, (_event, folder: string) => currentBranch(folder))
   ipcMain.handle(IPC.sessionsList, () => readSessions())

@@ -4,6 +4,7 @@ import { BrowserWindow, app, dialog } from 'electron'
 import {
   TRANSFER_MAX_BYTES,
   buildEnvelope,
+  importDialogOptions,
   parseTransfer,
   transferFileName,
   type SettingsExportResult,
@@ -27,11 +28,7 @@ async function chooseSavePath(window: BrowserWindow | null, name: string): Promi
 async function chooseOpenPath(window: BrowserWindow | null): Promise<string | null> {
   const override = process.env.DAWSHA_OPEN_PATH
   if (override) return override
-  const options = {
-    title: 'Import settings',
-    properties: ['openFile' as const],
-    filters: [{ name: 'Dawsha settings', extensions: ['json'] }]
-  }
+  const options = importDialogOptions(app.getPath('desktop'))
   const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
   return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
 }

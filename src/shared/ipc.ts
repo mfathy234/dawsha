@@ -17,8 +17,6 @@ export const IPC = {
   remoteCrewSnapshot: 'remote-crew:snapshot',
   remoteCrewRun: 'remote-crew:run',
   remoteCrewRunResult: 'remote-crew:run-result',
-  paneonImportPreview: 'paneon-import:preview',
-  paneonImportQueue: 'paneon-import:queue',
   pickFolder: 'dialog:pick-folder',
   pickImage: 'dialog:pick-image',
   checkFolder: 'fs:check-folder',

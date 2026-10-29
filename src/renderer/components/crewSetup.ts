@@ -18,6 +18,7 @@ import type { AgentKind } from '../../shared/types'
 import { AGENT_NAMES } from '../../shared/agents'
 import { clear, h } from '../dom'
 import { agentMark } from './agentMark'
+import { selectMenu } from './selectMenu'
 
 const PERMISSION_HINTS: Record<CrewPermissions, string> = {
   read: 'Claude uses plan mode. Codex and Gemini are told in words.',
@@ -177,7 +178,7 @@ function pasteEditor(member: CrewMember, readOnly: boolean, handlers: SetupHandl
       handlers.change({ paste: [...handlers.current().paste.filter((p) => !(p.kind === pick && p.field === field.value)), { kind: pick, field: field.value }].slice(0, 8) })
       handlers.rebuild()
     })
-    wrap.append(h('div', { class: 'crew-paste-add' }, kind, field, add))
+    wrap.append(h('div', { class: 'crew-paste-add' }, selectMenu(kind), selectMenu(field), add))
   }
   return wrap
 }
@@ -221,8 +222,8 @@ export function buildSetup(member: CrewMember, handlers: SetupHandlers): HTMLEle
       h(
         'div',
         { class: 'crew-idrow' },
-        selectOf('Model', modelChoices(member.runner).map((value) => ({ value, label: modelLabel(member.runner, value) })), member.model, locked, (value) => { handlers.change({ model: value }); handlers.rebuild() }),
-        selectOf('Effort', EFFORTS.filter((e) => member.runner !== 'gemini' || e.value === '').map((e) => ({ value: e.value, label: e.label })), member.runner === 'gemini' ? '' : member.effort, locked || member.runner === 'gemini', (value) => { handlers.change({ effort: value as CrewEffort }); handlers.rebuild() })
+        selectMenu(selectOf('Model', modelChoices(member.runner).map((value) => ({ value, label: modelLabel(member.runner, value) })), member.model, locked, (value) => { handlers.change({ model: value }); handlers.rebuild() })),
+        selectMenu(selectOf('Effort', EFFORTS.filter((e) => member.runner !== 'gemini' || e.value === '').map((e) => ({ value: e.value, label: e.label })), member.runner === 'gemini' ? '' : member.effort, locked || member.runner === 'gemini', (value) => { handlers.change({ effort: value as CrewEffort }); handlers.rebuild() }))
       ),
       member.runner === 'gemini' ? 'Gemini has no effort setting.' : undefined
     ),

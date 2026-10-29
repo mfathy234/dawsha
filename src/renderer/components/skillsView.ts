@@ -161,8 +161,8 @@ export class SkillsViewComponent {
       h('span', { class: 'skill-pick' }, pick),
       h('div', { class: 'skill-details' },
         h('strong', {}, entry.name),
-        h('span', { class: 'skill-meta' }, `${entry.agent} · ${entry.scope}${entry.project ? ` · ${entry.project}` : ''}`),
-        h('span', { class: 'skill-path', title: entry.path }, entry.path)
+        h('span', { class: 'skill-meta' }, `${entry.agent} · ${entry.scope}${entry.project ? ` · ${entry.project}` : ''}${entry.linked ? ' · Linked' : ''}`),
+        h('span', { class: 'skill-path', title: entry.linkTarget ? `${entry.path} → ${entry.linkTarget}` : entry.path }, entry.path)
       ),
       h('div', { class: 'skill-actions' },
         make,
