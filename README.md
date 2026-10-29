@@ -21,6 +21,10 @@
 
 - **A grid of real terminals.** 1 to 6+ panes laid out automatically, each a full terminal (xterm.js on `node-pty`) with tabs for more agent sessions or a shell. Maximize any pane, zoom text per project.
 - **Three agents, one workflow.** Pick a project and its default agent starts in that folder without a prompt. Switch agent per session with the split **New session** button (Claude / Codex / Gemini) or Tab in the quick-pick.
+- **Agents you keep.** The **Agents** tab is your crew. Each agent has a name, a role, a colour, its own instructions, prompt fields, a model, permissions and the projects it may work in. Eight ship built in (Maya the Lead, Sami, Tarek, Omar, Hana, Lina, Nour and Yara); duplicate one to change it or make your own. Run an agent in any project and pick the model for that run (Claude Fable, Opus, Sonnet or Haiku, Codex or Gemini). Each run opens as a normal session titled with the agent's name, like "Sami · PR 8841", and starts lean, without your MCP servers, which was about 40% cheaper in our tests than the same instructions as a skill.
+- **Live state on every agent.** An agent's avatar breathes while it works, flashes when it needs you, flashes once when it is done and shows ✕ when it fails, always with a word too. The top bar shows who is on a job, and sessions, the sidebar, Waiting on you and notifications carry the agent's name and avatar.
+- **Maya, the Lead.** Give Maya a goal and a project. She proposes a plan (who does what, on which model, at what estimated cost), you approve it, and she runs the agents as normal sessions shown as lanes on a board. She asks you before pushing, merging, posting comments or deleting. Dawsha itself enforces her limits: how many agents run at once (2 by default), a budget per goal ($3 by default) and which agents she may use.
+- **Import, convert, hand over.** Import `~/.claude/agents`, your skills and your Codex prompts. In Skills, **Make an agent** turns a skill into an agent and says why for every choice. From **New session**, paste a correlation id with "on dev", a pull request link or a build link, and Dawsha suggests the agent with its fields filled in.
 - **Arabic in every session.** Replies and prompts in Arabic show joined letters in right-to-left order in Claude Code, Codex, Gemini and shell sessions and in Replay, with numbers and English words kept in place. Copy, transcripts and find use normal reading order, and the terminal text itself is never changed. A bundled Arabic font and right-to-left text boxes make Arabic look the same on every computer.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Activity per pane.** Native child-process activity works for Claude, Codex and Gemini without a mod. An optional Claude ops feed adds plan progress, files and checks. Context and any available 5-hour/weekly limits stay with their own pane.
@@ -29,14 +33,18 @@
 - **Review agent changes.** Step through the changed files, click a `+` line to comment, and **Send to agent** types every comment, with file and line, into that session's prompt without sending it. Commit… drafts a message with file selection, and Discard file… asks first.
 - **Browse worktrees.** Choose a branch and checkout from the Files dropdown. Each checkout keeps its own open files and unsaved edits. Delete files or folders through the system Recycle Bin or Trash with confirmation.
 - **Run your project.** Files detects .NET solutions, startup projects and launch profiles, and Node scripts. Review and start a command in the selected checkout, follow its own output, stop it, or save a custom command when detection needs help.
+- **Problems tab.** Errors and warnings from your runs (TypeScript, ESLint, `dotnet build`, Vitest and Jest) show as clickable `file:line` rows grouped by file. Send one, or all of them, to an agent's prompt without sending it.
 - **Quick open.** Ctrl+P finds a file from anywhere, terminals included, with a preview: Enter opens it in Files, Alt+Enter adds it to the prompt, Ctrl+Enter opens it in VS Code.
 - **Arrange panes your way.** Drag the borders between panes to resize them, drag a pane by its header or a tab along its strip to reorder, or use the **Move pane** button and the keyboard. Pin a pane so it stays beside whichever pane you maximize. Switch panes with **Ctrl+Tab**, jump to one with **Ctrl+1** to **Ctrl+9**, or to the next one waiting on you with **Ctrl+Shift+J**.
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
 - **Find work across sessions.** Search prompts and replies in the Resume picker. Leave **Search all projects** unchecked to search one project, or check it to search every project.
 - **Keep closed sessions in Projects.** Closing a pane keeps its resumable sessions under that project in the left sidebar. Resume one there or use its Remove button to clear it from Dawsha's list; the agent transcript stays on disk. Open sessions also have a Close button in the sidebar.
 - **Work dashboard.** See the tickets and sessions you worked on today, this week or this month, per project, typed Feature, Bug, Other or Conversation, with exact active time, your own ticket names and links, and a Copy summary for standups.
-- **Remote Control (Beta).** Enable Remote Access in Settings to pair your own browser with this running Dawsha installation. The app creates a temporary Cloudflare Quick Tunnel; remote input and session control are separate opt-in permissions, and paired browsers can be revoked at any time.
-- **A sidebar built around you.** A Waiting on you section lists sessions blocked on you across projects. Projects show their branch and a quiet "2 live" or "needs you", with sort, a search filter (Ctrl+Shift+O), and a narrow rail with a flyout. The usage meter names its agent, and a click shows Claude, Codex and Gemini limits.
+- **Remote Control (Beta).** Enable Remote Access in Settings to pair your own browser with this running Dawsha installation. The app creates a temporary Cloudflare Quick Tunnel; what a phone can do is a set of separate opt-in permissions, enforced on the PC, and paired phones can be removed at any time (the page asks first and names the phone).
+- **Remote Access you can read.** The page says plainly whether your phone can reach this PC, notices a dropped tunnel in about ten seconds, offers **Reconnect** and can reconnect on its own and tell you when the link changes. It also shows how to connect a phone, your phones, what a phone can do and a log of recent activity.
+- **Agents on your phone.** The phone app has an Agents tab: run one of your agents on your PC, and follow who is on a job and the goal Maya is working on. It sits behind a **Run agents** permission that is off by default. The phone app has real agent logos, filled cards, big buttons and a light theme.
+- **A sidebar in zones.** A Waiting on you section lists sessions blocked on you across projects. Projects with open sessions sit on their own cards, pinned projects come next, and projects without sessions fold into a quiet "No sessions · N" list with their branch. Drag a project to reorder, sort, filter (Ctrl+Shift+O), or use the narrow rail with its flyout.
+- **Limits and accounts.** The usage meter names its agent. Its popover lists Claude, Codex and Gemini limits with how old each reading is, including Codex's 5-hour and weekly limits, and the signed-in email and plan under each agent (read from local files, never your login tokens).
 - **Resize the Projects panel.** Drag its edge or focus the divider and use the arrow keys; Dawsha remembers the width between launches.
 - **Task history.** The Projects > Tasks tab groups related sessions, a task goal, notes and commit references in a dated history that remains after sessions close.
 - **Gemini tool activity.** Gemini panes show the latest tool from the agent's saved chat.
@@ -60,7 +68,7 @@
 - **Usage.** Tokens per day by agent, tokens and Claude Code cost by project and agent, and a history of your 5 hour and weekly limits, read from the agents' own folders.
 - **A `dawsha` command.** Run `dawsha .` in any folder to add it as a project and start its agent, `dawsha resume --last` to pick up the newest session, `dawsha open <layout>` to bring a saved layout back, or `dawsha ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
-- **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab. Choose per agent whether sessions start with full access, on by default for Claude Code and Codex.
+- **Install and update the agents.** **Agent tools** (under **More**) shows the installed and latest version of each CLI and runs the install or update in a visible shell tab. Choose per agent whether sessions start with full access, on by default for Claude Code and Codex.
 - **Skills and agents inventory.** The **Skills** tab separates installed skills from agent definitions across user, plugin and project locations. Filter by AI provider, then open, copy a path or export an item to a folder you choose.
 - **Sessions board.** Switch the Sessions view from Grid to Board (Ctrl+Shift+B) for four columns: Needs you, Working, Done to review and Reviewed. Cards move by themselves as sessions change. Allow or Deny a permission prompt on the card, drag a finished session to Reviewed, click a card to peek at its live terminal and send a reply, and filter by project and agent.
 - **Session timeline.** Ctrl+Shift+T lists every prompt, edit, command, test run and approval of a session, with filters, search, insights (files touched most, commands run, test runs) and a Markdown export. **Ctrl+Alt+F** searches the timelines of all your sessions, including closed ones, and opens a match read only at the exact point.
@@ -92,9 +100,25 @@
 |---|
 | ![A maximized pane with the details panel open](docs/screenshots/focus-details.png) |
 
-| Projects | Agents |
+| Agents | Maya's board |
 |---|---|
-| ![The projects view](docs/screenshots/projects.png) | ![The agents view with install and update buttons](docs/screenshots/agents.png) |
+| ![The Agents tab with the built-in agents, one of your own and a setup form](docs/screenshots/agents.png) | ![Maya's board with three lanes in different states and a question waiting for your answer](docs/screenshots/lead-board.png) |
+
+| Agents in the grid |
+|---|
+| ![Four sessions titled with agent names, each with its avatar, and a strip in the top bar showing who is working](docs/screenshots/agent-panes.png) |
+
+| Remote Access | Agents on the phone |
+|---|---|
+| ![The Remote Access page, connected, with a pairing code and the phones that can reach this PC](docs/screenshots/remote-access.png) | ![The Agents tab on a phone with eight agents and the jobs running now](docs/screenshots/phone-agents.png) |
+
+| The projects view |
+|---|
+| ![The projects view](docs/screenshots/projects.png) |
+
+| Sidebar zones | Problems in Files |
+|---|---|
+| ![The sidebar with active project cards and a quiet No sessions list](docs/screenshots/sidebar-zones.png) | ![Files with the Problems tab listing TypeScript errors by file](docs/screenshots/files-problems.png) |
 
 | Files with agent marks | Review with a comment |
 |---|---|
@@ -350,6 +374,9 @@ The chart stacks the three agents and switches between **Tokens** and **Cost**. 
 | `dawsha ls` | List projects with their default agent, folder and open session count |
 | `dawsha sessions [project]` | List earlier sessions: agent, title, last activity, short id |
 | `dawsha add <path> [--name <name>]` | Add a project |
+| `dawsha crew list` | List your agents and the fields each one asks for |
+| `dawsha crew run <agent> --project <name\|path> [--model <model>] [--field key=value]` | Run an agent in a new pane and print the run id (`--background` keeps the focus where it is) |
+| `dawsha crew status [run]` and `dawsha crew result <run>` | Print a run's state, and what it last said |
 | `dawsha update-agents` | Update the installed agents in a visible shell tab |
 | `dawsha --help`, `dawsha --version` | Usage and version |
 
@@ -364,9 +391,9 @@ Resumed 'Add dark mode toggle' (Claude Code) in pane 4
 
 Removing a project always asks for confirmation. Closing a pane asks only while its session is working; idle, done and exited sessions close straight away. Both name the session or project, then stop the whole process tree. Quitting stops all terminals but remembers which panes were open.
 
-### The Agents view
+### Agent tools
 
-Open **Agents** in the top bar. Each row shows the installed version (`<cli> --version`), the latest version (`npm view`, cached for 30 minutes, checked in the background at start) and a state: not installed, update available or up to date. **Install** and **Update** run the exact command, shown by **Show command**, in a new visible shell tab named like `update codex`, in the focused pane (or a new pane titled Agents). When the tab's process exits the versions are re-checked and a toast reports the result. **Update all** runs the updates one after another in one tab.
+Open **Agent tools** from the **More** menu in the top bar. Each row shows the installed version (`<cli> --version`), the latest version (`npm view`, cached for 30 minutes, checked in the background at start) and a state: not installed, update available or up to date. **Install** and **Update** run the exact command, shown by **Show command**, in a new visible shell tab named like `update codex`, in the focused pane (or a new pane titled Agents). When the tab's process exits the versions are re-checked and a toast reports the result. **Update all** runs the updates one after another in one tab.
 
 | Agent | Install | Update |
 |---|---|---|
