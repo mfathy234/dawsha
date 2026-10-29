@@ -346,7 +346,7 @@ export function derivePanes(state: AppState): PaneView[] {
       live: liveStatusFor(state, primary, matches),
       now: state.now,
       crew: identity ? { identity, state: state.crewStates[pane.id] ?? 'idle' } : null,
-      detailsOpen: state.detailsPaneId === pane.id && state.maximizedId === pane.id,
+      detailsOpen: state.detailsPaneId === pane.id,
       timelineOpen: state.timelinePaneId === pane.id && state.maximizedId === pane.id,
       branch,
       sync: folder ? (state.gitSync[folder] ?? null) : null,

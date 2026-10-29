@@ -4,6 +4,8 @@ import { toggleLayouts } from '../actions'
 import { deleteLayout, openLayoutFromUi, renameLayout, saveCurrentLayout } from '../layoutActions'
 import { h, leave } from '../dom'
 import { projectById, type AppState } from '../state'
+import { setGridStyle } from '../sessionsLayout'
+import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
 import { agentMark } from './agentMark'
 import { popupDismissButton } from './popupDismiss'
 
@@ -58,7 +60,7 @@ export class LayoutsPopoverComponent {
   private render(state: AppState): void {
     if (!this.root) return
     const { layouts } = state.settings
-    const signature = JSON.stringify([layouts, state.settings.projects.map((p) => [p.id, p.name]), state.panes.length])
+    const signature = JSON.stringify([layouts, state.settings.projects.map((p) => [p.id, p.name]), state.panes.length, state.settings.gridStyle])
     if (signature === this.signature) return
     this.signature = signature
     const hadFocus = this.root.contains(document.activeElement)
@@ -105,7 +107,30 @@ export class LayoutsPopoverComponent {
       save,
       h('span', { class: 'muted' }, 'From a terminal: ', h('code', {}, `dawsha open ${example}`))
     )
-    return [head, list, foot]
+    return [head, this.gridStyleRow(state.settings.gridStyle), list, foot]
+  }
+
+  private gridStyleRow(current: GridStyle): HTMLElement {
+    const option = (style: GridStyle): HTMLElement => {
+      const selected = current === style
+      return h(
+        'button',
+        {
+          class: `btn small${selected ? ' primary' : ''}`,
+          type: 'button',
+          'aria-pressed': selected ? 'true' : 'false',
+          onClick: () => setGridStyle(style)
+        },
+        GRID_STYLE_LABELS[style]
+      )
+    }
+    return h(
+      'div',
+      { class: 'layouts-grid-style', role: 'group', 'aria-label': 'Sessions grid' },
+      h('span', { class: 'muted' }, 'Sessions grid'),
+      option('focus'),
+      option('tiles')
+    )
   }
 
   private row(state: AppState, layout: SavedLayout): HTMLElement {

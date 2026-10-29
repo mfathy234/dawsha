@@ -48,7 +48,7 @@ import { toggleQuickOpen } from '../components/quickOpen'
 import { requestFilesCommand } from '../files/filesActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
-import { setSessionsLayout } from '../sessionsLayout'
+import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
 import { SIDEBAR_FILTER_EVENT } from '../../shared/sidebarModel'
 import { registerCommands, registerProvider, type Command } from './registry'
 
@@ -321,6 +321,8 @@ export function installBuiltinCommands(): void {
       run: () => setSessionsLayout('grid')
     },
     { id: 'view.toggleDim', title: 'Toggle dimming of other sessions', group: 'Actions', keywords: 'dim others focus calm idle sessions', run: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
+    { id: 'view.gridFocus', title: 'Sessions grid: calm focus', group: 'Actions', keywords: 'grid layout focus one large pane siblings calm sessions', run: () => setGridStyle('focus') },
+    { id: 'view.gridTiles', title: 'Sessions grid: mission control', group: 'Actions', keywords: 'grid layout tiles equal mission control sessions', run: () => setGridStyle('tiles') },
     { id: 'view.grid', title: 'Back to the grid', group: 'Actions', searchOnly: true, run: () => showView('grid') },
     {
       id: 'app.shortcuts',

@@ -1,4 +1,5 @@
 import { migrateSettings, MAX_LAYOUTS } from './settingsSchema'
+import { isGridStyle } from './gridStyle'
 import type { CrewMember, CrewSettings } from './crew'
 import type { Project, SavedLayout, Settings } from './types'
 
@@ -14,6 +15,7 @@ export const INCLUDED_KEYS = [
   'theme',
   'paletteShortcut',
   'sessionsLayout',
+  'gridStyle',
   'recordings',
   'crew',
   'sessionInfo',
@@ -135,6 +137,7 @@ function checkShapes(data: Raw): string | null {
   if (data.sessionsLayout !== undefined && data.sessionsLayout !== 'grid' && data.sessionsLayout !== 'board') {
     return '"sessionsLayout" must be grid or board.'
   }
+  if (data.gridStyle !== undefined && !isGridStyle(data.gridStyle)) return '"gridStyle" must be focus or tiles.'
   if (data.sidebarWidth !== undefined && (typeof data.sidebarWidth !== 'number' || !Number.isFinite(data.sidebarWidth))) {
     return '"sidebarWidth" must be a number.'
   }
@@ -222,6 +225,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['highlights', 'Highlight rules'],
   ['paletteShortcut', 'Palette shortcut'],
   ['sessionsLayout', 'Sessions view'],
+  ['gridStyle', 'Sessions grid'],
   ['recordings', 'Recording settings'],
   ['crew', 'Crew members'],
   ['sessionInfo', 'Notifications'],

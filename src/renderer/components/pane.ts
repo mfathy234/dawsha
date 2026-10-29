@@ -52,26 +52,23 @@ import { canCompact, contextHintText, showContextHint } from '../../shared/conte
 import { dismissContextHint, typeCompact } from '../contextActions'
 import { dropFiles, hasFiles } from '../fileDrop'
 import { sessionState, type SessionState } from '../../shared/sessionState'
-import { permissionPromptText } from '../../shared/permissionPrompt'
-import { setStatePillSuffix, statePill } from './stateIcon'
+import { parsePermissionDetail, permissionPromptText, type PermissionDetail, type PermissionOption } from '../../shared/permissionPrompt'
+import { setStatePillSuffix, stateIcon, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
 import './paneCalm.css'
+import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
 
 const RESUMED_CHIP_MS = 60_000
 const RECAP_REFRESH_MS = 2_500
 const RECAP_SCREEN_ROWS = 60
 
-function approvalDetail(prompt: string): { tool: string; target: string } | null {
-  if (!prompt) return null
-  const tool = prompt.match(/\b(Bash|Read|Edit|Write|Glob|Grep|NotebookEdit|WebFetch|WebSearch)\b/i)?.[1]
-  const target = prompt.match(/(?:command|file|path|url)\s*[:=]\s*["']?(.+?)["']?$/i)?.[1]?.trim()
-    ?? prompt.match(/\b(?:Bash|Read|Edit|Write|Glob|Grep)\s*\((.+)\)/i)?.[1]?.trim()
-    ?? ''
-  return tool ? { tool, target } : { tool: 'Requested action', target: prompt }
+/** The header's panel button: a slide-over over the terminal, without maximizing the pane. */
+function toggleDetailsPanel(paneId: string): void {
+  store.set((state) => ({ ...state, focusedId: paneId, detailsPaneId: state.detailsPaneId === paneId ? null : paneId }))
 }
 
 export class PaneComponent {
@@ -79,7 +76,6 @@ export class PaneComponent {
   private readonly mark = h('span', { class: 'slot' })
   private readonly index = h('span', { class: 'pane-title' })
   private titleText = ''
-  private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly projectName = h('span', { class: 'pane-project', hidden: true })
   private readonly tagHost = h('span', { class: 'pane-tag', hidden: true })
   private tagShown = ''
@@ -105,8 +101,8 @@ export class PaneComponent {
   private recapAt = 0
   private readonly permission = h('div', { class: 'pane-permission', role: 'alert', hidden: true })
   private permissionSignature = ''
-  private permissionCommand = ''
-  private readonly tabAdd = h('span', { class: 'pane-tab-add-slot', hidden: true })
+  private permissionDetail: PermissionDetail | null = null
+  private permissionPrompt = ''
   private readonly info = h('div', { class: 'pane-info', hidden: true })
   private readonly foot = h('div', { class: 'pane-foot', hidden: true })
   private infoSignature = ''
@@ -135,23 +131,18 @@ export class PaneComponent {
       'div',
       { class: 'pane-header' },
       this.mark,
+      h('div', { class: 'pane-titles' }, this.index, this.projectName),
       this.pin,
-      this.index,
-      this.projectName,
       this.tagHost,
-      this.stateHost,
       this.fresh,
       this.resumed,
       this.compareChip,
       this.fromChip,
+      this.stateHost,
       this.restart,
-      h('span', { class: 'spacer' }),
-      this.tabAdd,
-      iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
-      iconButton('Previous pane', ICONS.prev, () => focusRelative(-1), 'pane-prev'),
-      iconButton('Next pane', ICONS.next, () => focusRelative(1), 'pane-next'),
+      iconButton('Details panel', ICONS.info, () => toggleDetailsPanel(paneId), 'pane-panel'),
       this.maxButton,
-      this.closeButton
+      iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions')
     )
     header.addEventListener('dblclick', (event) => {
       if ((event.target as HTMLElement).closest('button')) return
@@ -181,16 +172,21 @@ export class PaneComponent {
     this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, content, this.permission, this.foot)
     this.watchFileDrops()
     this.el.addEventListener('pointerdown', () => focusPane(paneId, true), true)
+    this.el.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || store.state.detailsPaneId !== paneId) return
+      event.stopPropagation()
+      closeDetails()
+    })
   }
 
-  update(view: PaneView, focused: boolean, maximized: boolean): void {
+  update(view: PaneView, focused: boolean, maximized: boolean, quiet = false): void {
     this.current = view
     const title = view.title
     this.updateTitle(view.index + 1, title)
     this.updateMark(view)
     const projectName = view.named ? (view.project?.name ?? '') : ''
-    this.projectName.hidden = projectName === ''
-    this.projectName.textContent = projectName
+    this.projectName.hidden = false
+    this.projectName.textContent = [projectName, AGENT_NAMES[view.agent]].filter((part) => part !== '').join(' · ')
     this.fresh.hidden = view.named
     this.updateTag(view.tag, view.tagAuto)
     this.index.title = [title, projectName, view.tag ? SESSION_TAG_LABELS[view.tag] : ''].filter((part) => part !== '').join(' · ')
@@ -206,6 +202,7 @@ export class PaneComponent {
     this.el.setAttribute('aria-label', `Task ${view.index + 1} ${title.toUpperCase()}${maximized ? ', maximized' : ''}`)
     this.el.classList.toggle('focused', focused)
     this.el.classList.toggle('calm', !focused && store.state.settings.dimOtherPanes)
+    this.el.classList.toggle('quiet', quiet && !focused)
     this.el.classList.toggle('maximized', maximized)
     this.pin.hidden = view.pane.pinned !== true
     this.el.classList.toggle('pinned', view.pane.pinned === true)
@@ -218,7 +215,7 @@ export class PaneComponent {
     this.branch.title = view.sync ? `Git actions. ${describeSync(view.sync)} of ${view.branch ?? 'the upstream'}` : 'Git actions'
     const state = sessionState({ status: view.status, attention: view.attention })
     this.updateState(view, state)
-    this.updateInfo(view, maximized, focused)
+    this.updateInfo(view, maximized)
     this.foot.hidden = this.info.hidden && this.branch.hidden
     this.updateRecap(view)
     this.recap.hidden = !store.state.settings.showRecap || this.recapText === ''
@@ -229,7 +226,6 @@ export class PaneComponent {
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
     this.restart.hidden = !view.activeExited
     this.updateMaximizeButton(maximized)
-    this.placeCloseButton(maximized)
     this.updateTabs(view)
     this.updateTerminals(view)
     if (focused && this.lastActiveTab && this.lastActiveTab !== view.pane.activeTabId) {
@@ -244,17 +240,6 @@ export class PaneComponent {
     if (signature === this.titleText) return
     this.titleText = signature
     this.index.replaceChildren(`${number} · `, h('bdi', { dir: 'auto' }, title))
-  }
-
-  // In full mode the X sits right after the name, like the strip tabs; in the grid it stays at the far right.
-  private placeCloseButton(maximized: boolean): void {
-    const header = this.closeButton.parentElement
-    if (!header) return
-    if (maximized) {
-      if (this.index.nextElementSibling !== this.closeButton) this.index.after(this.closeButton)
-    } else if (header.lastElementChild !== this.closeButton) {
-      header.append(this.closeButton)
-    }
   }
 
   private updateState(view: PaneView, state: SessionState): void {
@@ -273,42 +258,83 @@ export class PaneComponent {
     this.el.dataset.state = state
   }
 
+  /** The approval card: what the agent wants to run or write, then Allow, Allow always (only when offered) and Deny. */
   private updatePermission(view: PaneView, state: SessionState): void {
-    const needs = state === 'needs'
-    const command = needs ? permissionPromptText(permissionTail(this.paneId)) : ''
-    if (command) this.permissionCommand = command
-    const detailCommand = needs ? this.permissionCommand : ''
-    const signature = needs ? JSON.stringify([view.agent, detailCommand]) : ''
+    if (state !== 'needs') {
+      if (this.permissionSignature === '') return
+      this.permissionSignature = ''
+      this.permissionDetail = null
+      this.permissionPrompt = ''
+      this.permission.hidden = true
+      this.permission.replaceChildren()
+      return
+    }
+    const tail = permissionTail(this.paneId)
+    const detail = parsePermissionDetail(tail)
+    const prompt = permissionPromptText(tail)
+    if (detail.target !== '' || detail.options.length > 0) this.permissionDetail = detail
+    if (prompt !== '') this.permissionPrompt = prompt
+    const shown = this.permissionDetail ?? detail
+    const project = view.project?.name ?? ''
+    const signature = JSON.stringify([view.agent, project, shown, this.permissionPrompt])
     if (signature === this.permissionSignature) return
     this.permissionSignature = signature
-    this.permission.hidden = !needs
-    if (!needs) {
-      this.permissionCommand = ''
-      return this.permission.replaceChildren()
-    }
+    this.permission.hidden = false
+    this.permission.replaceChildren(...this.approvalChildren(view, shown, this.permissionPrompt, project))
+  }
+
+  private approvalChildren(view: PaneView, detail: PermissionDetail, prompt: string, project: string): HTMLElement[] {
     const name = AGENT_NAMES[view.agent]
-    const detail = approvalDetail(detailCommand)
+    const always = detail.options.find((option) => option.kind === 'always')
+    const subject = detail.target || prompt
     const key = (label: string): HTMLElement => h('kbd', { class: 'pane-permission-key' }, label)
-    this.permission.replaceChildren(
-      h(
-        'div',
-        { class: 'pane-permission-text' },
-        h('span', { class: 'pane-permission-title' }, `${name} is asking to proceed`),
-        detail ? h('span', { class: 'pane-permission-detail' }, detail.tool) : null,
-        detail?.target ? h('code', { class: 'pane-permission-command', title: detailCommand }, detail.target) : detailCommand ? h('code', { class: 'pane-permission-command', title: detailCommand }, detailCommand) : null
-      ),
+    const head = h(
+      'div',
+      { class: 'pane-permission-head' },
+      stateIcon('needs'),
+      h('span', { class: 'pane-permission-title' }, `${name} is asking to proceed`),
+      h('span', { class: 'chip pane-permission-tool' }, detail.tool)
+    )
+    const command = subject
+      ? h(
+          'code',
+          { class: 'pane-permission-command', title: subject, dir: 'ltr' },
+          detail.tool === 'Bash' ? h('span', { class: 'pane-permission-prompt', 'aria-hidden': 'true' }, '$ ') : null,
+          subject
+        )
+      : null
+    const where = project ? h('div', { class: 'pane-permission-meta' }, 'in ', h('span', { class: 'pane-permission-project' }, project)) : null
+    const actions = h(
+      'div',
+      { class: 'pane-permission-actions' },
       h(
         'button',
         { class: 'btn small primary', type: 'button', 'aria-label': `Allow ${name} to continue`, onClick: () => answerPermission(this.paneId, true) },
         'Allow',
         key('Enter')
       ),
+      always ? this.alwaysButton(name, always) : null,
       h(
         'button',
-        { class: 'btn small', type: 'button', 'aria-label': `Deny ${name}`, onClick: () => answerPermission(this.paneId, false) },
+        { class: 'btn small ghost', type: 'button', 'aria-label': `Deny ${name}`, onClick: () => answerPermission(this.paneId, false) },
         'Deny',
         key('Esc')
       )
+    )
+    return [head, command, where, actions].filter((child): child is HTMLElement => child !== null)
+  }
+
+  private alwaysButton(name: string, option: PermissionOption): HTMLElement {
+    return h(
+      'button',
+      {
+        class: 'btn small',
+        type: 'button',
+        'aria-label': `Allow ${name} always`,
+        title: option.label,
+        onClick: () => answerPermission(this.paneId, option.number)
+      },
+      'Allow always'
     )
   }
 
@@ -318,10 +344,10 @@ export class PaneComponent {
     if (pane && folder) openReviewInFiles({ projectId: pane.projectId, folder })
   }
 
-  private updateInfo(view: PaneView, maximized: boolean, focused: boolean): void {
+  private updateInfo(view: PaneView, maximized: boolean): void {
     this.info.classList.toggle('clickable', maximized)
     const bridgeInstalled = store.state.bridge.installed
-    const signature = JSON.stringify([view.info, view.title, view.now, bridgeInstalled, focused])
+    const signature = JSON.stringify([view.info, view.title, view.now, bridgeInstalled])
     if (signature === this.infoSignature) return
     this.infoSignature = signature
     const items = paneInfoStrip(view.info, {
@@ -329,11 +355,12 @@ export class PaneComponent {
       now: view.now,
       onOpenChanges: () => void openChanges(this.paneId),
       bridgeInstalled,
-      showLiveInfo: focused && !bridgeInstalled,
+      showLiveInfo: false,
       onEnableBridge: () => void enableBridge(),
       onReviewFiles: () => this.reviewInFiles()
     })
-    this.info.hidden = items.length === 0
+    // Session time alone is not worth a footer: it shows only next to model, changes, review or the others.
+    this.info.hidden = !items.some((item) => !item.classList.contains('info-elapsed'))
     this.info.replaceChildren(...items)
   }
 
@@ -398,7 +425,7 @@ export class PaneComponent {
   }
 
   private updateDetails(view: PaneView, maximized: boolean): void {
-    const open = maximized && view.detailsOpen
+    const open = view.detailsOpen
     this.details.hidden = !open
     this.el.classList.toggle('with-details', open)
     if (!open) {
@@ -492,15 +519,7 @@ export class PaneComponent {
         shortcut ? h('kbd', { class: 'menu-kbd' }, shortcut) : null
       )
     }
-    const first = item('Open in VS Code', () => openPaneFolder(this.paneId, 'vscode'), ICONS.code)
-    const studioItem = item('Open in Visual Studio', () => openPaneFolder(this.paneId, 'visualstudio'), ICONS.solution)
-    studioItem.setAttribute('disabled', '')
-    studioItem.title = 'No .sln solution in this folder'
-    void paneSolution(this.paneId).then((solution) => {
-      if (!solution) return
-      studioItem.removeAttribute('disabled')
-      studioItem.title = solution
-    })
+    const first = item('Move pane…', () => this.openMove(), ICONS.layout)
     const changesItem = item('Changes…', () => openChanges(this.paneId), ICONS.commit, 'pane.changes')
     if (!paneHasRepo(this.paneId)) {
       changesItem.setAttribute('disabled', '')
@@ -519,16 +538,13 @@ export class PaneComponent {
         if (label) label.textContent = paused ? 'Resume recording' : 'Pause recording'
       }, () => undefined)
     }
-    const showDetails = item('Details', () => openDetails(this.paneId), ICONS.info)
+    const closeItem = item('Close pane', () => closePane(this.paneId), ICONS.close)
+    closeItem.classList.add('danger')
+    const liveInfo = this.current?.agent === 'claude' && !store.state.bridge.installed
+      ? [item('Turn on live info', () => enableBridge(), ICONS.info)]
+      : []
     const pinned = this.current?.pane.pinned === true
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
-    const maximized = store.state.maximizedId === this.paneId
-    const maximizeItem = item(
-      maximized ? 'Restore pane to grid' : 'Maximize pane',
-      () => maximized ? restoreGrid() : toggleMaximize(this.paneId),
-      maximized ? ICONS.restore : ICONS.maximize,
-      'pane.maximize'
-    )
     const source = this.current?.agent ?? 'shell'
     const handoffs =
       source === 'shell'
@@ -539,38 +555,33 @@ export class PaneComponent {
             if (mark) entry.querySelector('.menu-icon')?.append(mark)
             return entry
           })
+    const showDetails = item('Details', () => openDetails(this.paneId), ICONS.info)
+    const restartItems = this.current?.activeExited
+      ? [item('Restart', () => restartTab(this.paneId, this.current?.pane.activeTabId ?? ''), ICONS.refresh)]
+      : []
     this.actionsMenu = h(
       'div',
       { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Pane actions' },
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Pane'),
-      maximizeItem,
-      item('Previous pane', () => focusRelative(-1), ICONS.prev),
-      item('Next pane', () => focusRelative(1), ICONS.next),
-      item('Close pane', () => closePane(this.paneId), ICONS.close),
-      h('div', { class: 'menu-separator', role: 'separator' }),
-      h('div', { class: 'menu-heading', role: 'presentation' }, 'Open and review'),
-      item('New terminal', () => this.openTerminalPicker(), ICONS.plus),
       first,
-      studioItem,
-      item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),
-      item('Open terminal here', () => addTab(this.paneId, 'shell'), ICONS.terminal),
-      item('Move pane…', () => this.openMove(), ICONS.layout),
-      item('Tag…', () => this.openTag(), ICONS.pin),
-      item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
-      item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
-      changesItem,
-      h('div', { class: 'menu-separator', role: 'separator' }),
-      h('div', { class: 'menu-heading', role: 'presentation' }, 'Session tools'),
-      item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
-      item('Replay session', () => replayPane(this.paneId), ICONS.replay, 'pane.replay'),
-      pauseItem,
-      item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
-      item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
-      item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),
-      item('Clear scrollback', () => clearScrollback(this.paneId), ICONS.eraser),
       showDetails,
       pinItem,
-      ...handoffs
+      item('Tag…', () => this.openTag(), ICONS.pin),
+      h('div', { class: 'menu-separator', role: 'separator' }),
+      h('div', { class: 'menu-heading', role: 'presentation' }, 'Session'),
+      item('New terminal', () => this.openTerminalPicker(), ICONS.plus),
+      item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
+      item('Replay session', () => replayPane(this.paneId), ICONS.replay, 'pane.replay'),
+      item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
+      pauseItem,
+      ...restartItems,
+      h('div', { class: 'menu-separator', role: 'separator' }),
+      h('div', { class: 'menu-heading', role: 'presentation' }, 'Open and review'),
+      item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
+      changesItem,
+      ...liveInfo,
+      h('div', { class: 'menu-separator', role: 'separator' }),
+      closeItem
     )
     this.actionsMenu.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return
@@ -649,13 +660,9 @@ export class PaneComponent {
   private updateTabs(view: PaneView): void {
     const single = view.tabs.length === 1
     this.tabs.hidden = single
-    this.tabAdd.hidden = !single
     const signature = JSON.stringify([view.tabs, single])
     if (signature === this.tabSignature) return
     this.tabSignature = signature
-    const headerAdd = iconButton(`New terminal in ${view.title.toUpperCase()}`, ICONS.plus, () => this.toggleMenu(headerAdd), 'pane-tab-add')
-    headerAdd.setAttribute('aria-haspopup', 'menu')
-    this.tabAdd.replaceChildren(headerAdd)
     this.closeMenu()
     this.tabs.setAttribute('aria-label', `Terminals in ${view.title.toUpperCase()}`)
     clear(this.tabs)
