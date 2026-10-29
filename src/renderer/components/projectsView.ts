@@ -185,7 +185,7 @@ export class ProjectsViewComponent {
     more.setAttribute('aria-haspopup', 'menu')
     return h(
       'div',
-      { class: 'pv-row', 'data-project-id': project.id },
+      { class: `pv-row${this.errors.has(project.id) ? ' missing' : ''}`, 'data-project-id': project.id },
       h(
         'div',
         { class: 'pv-main' },
@@ -201,6 +201,7 @@ export class ProjectsViewComponent {
           { class: 'btn small', type: 'button', 'aria-label': `New session in ${project.name}`, onClick: () => void startSession(project.id) },
           'New session'
         ),
+        h('button', { class: 'btn small pv-locate', type: 'button', hidden: !this.errors.has(project.id), 'aria-label': `Locate the folder for ${project.name}`, onClick: () => void this.changeFolder(project) }, 'Locate…'),
         more
       ),
       error
@@ -255,6 +256,11 @@ export class ProjectsViewComponent {
     error.textContent = message ?? ''
     error.hidden = message === null
     row.querySelector(field === 'folder' ? '.pv-folder' : '.pv-rename')?.classList.toggle('invalid', message !== null)
+    if (field === 'folder') {
+      row.classList.toggle('missing', message !== null)
+      const locate = row.querySelector<HTMLButtonElement>('.pv-locate')
+      if (locate) locate.hidden = message === null
+    }
   }
 
   private toggleMenu(project: Project, anchor: HTMLElement): void {

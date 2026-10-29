@@ -1,0 +1,270 @@
+/* Agents page, Direction A: the roster (goal box on top, then the cards) and, when an agent is opened, its full page. */
+.crew-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.crew-roster {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.crew-roster > .crew-goals {
+  padding: var(--s-3) var(--s-5) 0;
+}
+
+.crew-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-5) var(--s-5);
+  background: var(--canvas);
+}
+
+.crew-sec,
+.crew-empty-note {
+  grid-column: 1 / -1;
+}
+
+.crew-sec {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--s-3) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-ui);
+}
+
+.crew-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  background: var(--pane);
+  box-shadow: var(--ring);
+  cursor: pointer;
+}
+
+.crew-item:hover {
+  background: color-mix(in srgb, var(--text) 4%, var(--pane));
+}
+
+.crew-item.sel {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.crew-item.lead-item {
+  background: color-mix(in srgb, var(--id-purple) 7%, var(--pane));
+}
+
+.crew-item.is-hidden {
+  opacity: .7;
+}
+
+.crew-item.is-running {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--busy) 55%, transparent);
+}
+
+.crew-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.crew-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+
+.crew-id {
+  flex: 1;
+  min-width: 0;
+}
+
+.crew-nm {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crew-nm b {
+  font-weight: 600;
+}
+
+.crew-role,
+.crew-muted {
+  color: var(--muted);
+}
+
+.crew-badge {
+  flex: none;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-round);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: var(--fs-1);
+  line-height: 18px;
+}
+
+.crew-purpose {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--text-2, var(--muted));
+  font-size: var(--fs-ui);
+  line-height: 1.4;
+}
+
+.crew-card-model {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--muted);
+  font-size: var(--fs-ui);
+}
+
+.crew-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--seam);
+}
+
+.crew-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-ui);
+  color: var(--muted);
+}
+
+.crew-viewbtn,
+.crew-runbtn {
+  flex: none;
+}
+
+.crew-card-new {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  min-height: 150px;
+  border: 1px dashed var(--seam);
+  border-radius: var(--r-card);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.crew-card-new:hover {
+  background: var(--hover);
+}
+
+.crew-card-plus {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.crew-crumb {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 0 var(--s-3);
+  color: var(--muted);
+  font-size: var(--fs-ui);
+}
+
+.crew-crumb-link {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.crew-crumb-link:hover {
+  color: var(--text);
+}
+
+.crew-detail {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  box-shadow: 0 -1px 0 var(--seam);
+}
+
+.crew-live {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4) 0;
+}
+
+.crew-live-line {
+  margin: 0;
+  font-weight: 600;
+}
+
+.crew-live-line::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-inline-end: var(--s-2);
+  border-radius: 50%;
+  background: var(--busy);
+  animation: crew-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes crew-pulse {
+  50% { opacity: .35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crew-live-line::before { animation: none; }
+}
+
+.crew-roster > .crew-goals .crew-goalbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  background: var(--pane);
+  box-shadow: var(--ring);
+}
+
+.crew-goal-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-3);
+}
+
+.crew-goal-title {
+  margin: 0;
+  font-size: var(--fs-3);
+  line-height: var(--lh-3);
+  font-weight: 600;
+}
+
+.crew-roster > .crew-goals,
+.crew-roster > .crew-goals .crew-goalbox {
+  max-width: none;
+  width: auto;
+}

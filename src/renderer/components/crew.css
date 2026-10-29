@@ -5,25 +5,6 @@
 .crew-count { color: var(--muted); font-size: var(--fs-ui); }
 .crew-spacer { flex: 1; }
 .crew-search { width: 240px; }
-.crew-body { flex: 1; display: grid; grid-template-columns: minmax(300px, 340px) minmax(0, 1fr); min-height: 0; box-shadow: 0 -1px 0 var(--seam); }
-.crew-list { overflow: auto; padding: var(--s-2) var(--s-3) var(--s-5); background: var(--canvas); }
-.crew-sec { display: flex; justify-content: space-between; padding: var(--s-4) var(--s-3) var(--s-1); color: var(--muted); font-size: var(--fs-ui); }
-.crew-empty-note { margin: var(--s-1) var(--s-3); color: var(--muted); font-size: var(--fs-ui); line-height: 1.5; }
-.crew-item { display: grid; grid-template-columns: auto 1fr auto; gap: 1px var(--s-3); align-items: center; padding: var(--s-2) var(--s-3); border-radius: var(--r-card); cursor: pointer; }
-.crew-item:hover { background: var(--hover); }
-.crew-item.sel { background: var(--raised); box-shadow: var(--sel-ring); }
-.crew-item.lead-item { background: color-mix(in srgb, var(--id-purple) 7%, transparent); }
-.crew-item.lead-item.sel { background: color-mix(in srgb, var(--id-purple) 14%, var(--raised)); }
-.crew-item.is-hidden { opacity: .7; }
-.crew-item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
-.crew-item .crew-av { grid-row: 1 / 3; }
-.crew-nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.crew-nm b { font-weight: 600; }
-.crew-role { color: var(--muted); }
-.crew-meta { grid-column: 2 / 4; font-size: var(--fs-ui); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.crew-muted { color: var(--muted); }
-.crew-runbtn { opacity: 0; }
-.crew-item:hover .crew-runbtn, .crew-item.sel .crew-runbtn, .crew-item:focus-within .crew-runbtn { opacity: 1; }
 .crew-state { font-weight: 600; }
 .crew-detail { overflow: auto; background: var(--pane); padding: var(--s-5) var(--s-6) var(--s-6); min-width: 0; container: crewdetail / inline-size; }
 .crew-dh { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }

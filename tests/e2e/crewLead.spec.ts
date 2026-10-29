@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, runCli, type Sandbox } from './helpers'
+import { backToAgents, closeApp, createSandbox, launchApp, runCli, type Sandbox } from './helpers'
 
 const FAKE = resolve(__dirname, '../support/fakeAgent.cjs')
 const SHOTS = process.env.LEAD_SHOTS ?? join(tmpdir(), 'dawsha-176-lead-shots')
@@ -73,7 +73,7 @@ test('a goal launches Maya titled with the goal, with her instructions and the g
   try {
     await openAgents(page)
     await expect(page.locator('.crew-item[data-member="maya"]')).toContainText('Give her a goal')
-    await expect(page.locator('.crew-tab[data-tab="goals"]')).toHaveText('Goals')
+    await expect(page.locator('.crew-goalbox')).toBeVisible()
     await expect(page.locator('#crew-goal-plan-first')).toBeChecked()
     await expect(page.locator('.crew-goal-model option')).toHaveText(['Lead on Claude · Opus', 'Lead on Claude · Fable', 'Lead on Claude · Sonnet', 'Lead on Codex'])
     await handOver(page)
@@ -279,6 +279,7 @@ test('How she leads: rules, at once, budget and members are saved and enforced',
   const { app, page } = await launchApp(sandbox, fakeEnv(sandbox))
   try {
     await openAgents(page)
+    await page.locator('.crew-item[data-member="maya"]').click()
     await page.locator('.crew-tab[data-tab="setup"]').click()
     await expect(page.locator('.crew-tab[data-tab="setup"]')).toHaveText('How she leads')
     for (const rule of ['fewBig', 'oneReview', 'planFirst', 'askFirst']) await expect(page.locator(`[data-rule="${rule}"]`)).toBeChecked()
@@ -303,7 +304,7 @@ test('How she leads: rules, at once, budget and members are saved and enforced',
       excluded: ['yara']
     })
 
-    await page.locator('.crew-tab[data-tab="goals"]').click()
+    await backToAgents(page)
     await expect(page.locator('#crew-goal-plan-first')).not.toBeChecked()
     await handOver(page, GOAL, false)
     await expect(page.locator('.pane')).toHaveCount(1)
@@ -343,15 +344,22 @@ test('the Agents Setup form is readable at 1024 and 1440 wide', async () => {
   const { app, page } = await launchApp(sandbox, fakeEnv(sandbox))
   try {
     await openAgents(page)
+    await page.locator('.crew-body').evaluate((node) => (node.scrollTop = 200))
+    const rosterScroll = await page.locator('.crew-body').evaluate((node) => node.scrollTop)
     await page.locator('.crew-item[data-member="sami"]').click()
-    const list = await page.locator('.crew-list').boundingBox()
-    expect(list!.width).toBeLessThanOrEqual(305)
+    await expect(page.locator('.crew-roster')).toBeHidden()
+    await expect(page.locator('.crew-crumb')).toBeVisible()
     const detail = await page.locator('.crew-detail').boundingBox()
     expect(detail!.width).toBeGreaterThan(440)
+    await backToAgents(page)
+    await expect(page.locator('.crew-detail')).toBeHidden()
+    await expect.poll(() => page.locator('.crew-body').evaluate((node) => node.scrollTop)).toBeGreaterThanOrEqual(rosterScroll)
+    await page.locator('.crew-item[data-member="sami"]').click()
     const stackedLabel = await page.locator('.crew-form .crew-label').first().boundingBox()
     const stackedControl = await page.locator('.crew-form .crew-control').first().boundingBox()
-    expect(stackedControl!.y).toBeGreaterThanOrEqual(stackedLabel!.y + stackedLabel!.height - 1)
-    expect(stackedControl!.x).toBeLessThanOrEqual(stackedLabel!.x + 1)
+    const stacked = stackedControl!.y >= stackedLabel!.y + stackedLabel!.height - 1 && stackedControl!.x <= stackedLabel!.x + 1
+    const beside = stackedControl!.x > stackedLabel!.x + stackedLabel!.width - 1
+    expect(stacked || beside).toBe(true)
     const instructions = await page.locator('.crew-form textarea[aria-label="Instructions"]').boundingBox()
     expect(instructions!.height).toBeGreaterThanOrEqual(150)
     const prompt = await page.locator('.crew-form textarea[aria-label="Prompt"]').boundingBox()

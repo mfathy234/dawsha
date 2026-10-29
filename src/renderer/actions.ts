@@ -1140,6 +1140,11 @@ export function initWhatsNew(): void {
   }
 }
 
+async function findMissingProjects(projects: Project[]): Promise<string[]> {
+  const checks = await Promise.all(projects.map(async (project) => ((await api.checkFolder(project.folder)).ok ? null : project.id)))
+  return checks.filter((id): id is string => id !== null)
+}
+
 export async function refreshBranches(): Promise<void> {
   const state = store.state
   const folders = new Set<string>()
@@ -1152,6 +1157,8 @@ export async function refreshBranches(): Promise<void> {
   const entries = await Promise.all([...branchFolders].map(async (f) => [f, await api.gitBranch(f)] as const))
   const changed = entries.some(([folder, branch]) => store.state.branches[folder] !== branch)
   if (changed) store.set((s) => ({ ...s, branches: { ...s.branches, ...Object.fromEntries(entries) } }))
+  const missing = await findMissingProjects(store.state.settings.projects)
+  if (missing.join('\n') !== store.state.missingProjects.join('\n')) store.set((s) => ({ ...s, missingProjects: missing }))
   const syncs = await Promise.all([...folders].map(async (f) => [f, await api.gitSync(f)] as const))
   const known = store.state.gitSync
   if (syncs.some(([folder, value]) => JSON.stringify(known[folder] ?? null) !== JSON.stringify(value))) {
@@ -1193,6 +1200,13 @@ export function updateProject(
   const projects = store.state.settings.projects.map((p) => (p.id === projectId ? { ...p, ...change } : p))
   store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
   saveProjects()
+}
+
+export async function locateProject(projectId: string): Promise<void> {
+  const folder = await api.pickFolder()
+  if (!folder) return
+  updateProject(projectId, { folder })
+  await refreshBranches()
 }
 
 export function pinProject(projectId: string, pinned: boolean): void {
