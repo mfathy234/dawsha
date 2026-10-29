@@ -4,7 +4,7 @@ import { normalizeFolder } from '../../shared/folderKey'
 import { branchLine, checkoutLabel, checkoutTabsKey, type FilesCheckout } from '../../shared/filesWorkspace'
 import { INSPECTOR_MIN_WIDTH, type InspectorTab } from '../../shared/filesLayout'
 import { blameLines, type BlameSource } from '../../shared/fileActivity'
-import { toProjectPath } from '../../shared/projectPaths'
+import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
 import { buildReviewMessage, draftCommitMessage, stepReview } from '../../shared/review'
 import { runningSummary, runningText } from '../../shared/runStatus'
 import type { FileCommit } from '../../shared/filePreview'
@@ -82,6 +82,9 @@ export class FilesViewComponent {
   private readonly panel = new BottomPanel(this.runPanel, () => {
     // the panel reports while it is built, before the status bar below exists
     if (this.status !== undefined) this.renderStatus()
+  }, {
+    open: (path, line) => void this.openFile(toRepoPath(this.set?.prefix ?? '', path), { pin: true, focus: true, line }),
+    send: (text, anchor) => this.sendProblems(text, anchor)
   })
   private visible = false
   private target: FilesTarget | null = null
@@ -227,6 +230,7 @@ export class FilesViewComponent {
     this.visible = false
     this.explorer.tree.setLoading(false)
     this.runPanel.setTarget(null)
+    this.panel.refresh()
     window.clearInterval(this.touchTimer)
     window.clearTimeout(this.watchTimer)
     ++this.checkoutToken
@@ -265,6 +269,7 @@ export class FilesViewComponent {
     this.target = target
     this.isGit = metadata.git
     this.runPanel.setTarget(target)
+    this.panel.refresh()
     setCurrentTarget(target)
     const key = checkoutTabsKey(target.projectId, target.folder)
     let set = this.sets.get(key)
@@ -792,6 +797,26 @@ export class FilesViewComponent {
     const box = anchor.getBoundingClientRect()
     openContextMenu({
       x: box.left, y: box.top, label: 'Send comments to', returnFocus: anchor,
+      entries: [{ heading: 'Send to session' }, ...sessions.map((session) => ({ label: session.title, run: () => send(session.paneId, session.title) }))]
+    })
+  }
+
+  private sendProblems(text: string, anchor: HTMLElement): void {
+    const sessions = this.liveSessions()
+    const send = (paneId: string, title: string): void => {
+      if (insertIntoSession(paneId, text)) toast(`Added to ${title}. Press Enter there to send it.`, 'info')
+    }
+    if (sessions.length === 0) {
+      toast('Open a session to send problems to.', 'info')
+      return
+    }
+    if (sessions.length === 1) {
+      send(sessions[0].paneId, sessions[0].title)
+      return
+    }
+    const box = anchor.getBoundingClientRect()
+    openContextMenu({
+      x: box.left, y: box.top, label: 'Send problems to', returnFocus: anchor,
       entries: [{ heading: 'Send to session' }, ...sessions.map((session) => ({ label: session.title, run: () => send(session.paneId, session.title) }))]
     })
   }
