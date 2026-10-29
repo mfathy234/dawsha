@@ -237,7 +237,7 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
   for (const toggle of await page.locator('.demo-toggle').all()) await expect(toggle).toBeHidden()
 })
 
-const releaseRows = ['files-review', 'dawsha-cards', 'projects-sidebar']
+const releaseRows = ['agents-crew', 'agent-states', 'lead-maya', 'phone-agents', 'from-1-7-5']
 
 test('the hero is three text elements with a readable crop of the app and no pill or platform row', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -265,16 +265,21 @@ test('the page has no em or en dashes, no uppercase labels and no decorative bad
   }
 })
 
-test('New in 1.7.4 leads the page with sized lazy screenshots and no run of three splits', async ({ page }) => {
+test('New in 1.7.6 leads the page with sized lazy screenshots and no run of three splits', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
-  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.7.4')
-  await expect(page.locator('#new-h')).toHaveText('New in 1.7.4')
-  await expect(page.locator('#new #files-review h3')).toHaveText('Search and review in Files')
-  await expect(page.locator('#new #files-review')).toContainText('Send to agent types every comment')
-  await expect(page.locator('#new #agents-details, #features img[src*="agents-drawer"]')).toHaveCount(0)
-  await expect(page.locator('#new #dawsha-cards')).toContainText('solid orange ring')
-  await expect(page.locator('#new #projects-sidebar')).toContainText('Waiting on you')
+  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.7.6')
+  await expect(page.locator('#new-h')).toHaveText('New in 1.7.6')
+  await expect(page.locator('#new #agents-crew h3')).toHaveText('Agents you keep')
+  await expect(page.locator('#new #agents-crew')).toContainText('about 40% cheaper')
+  await expect(page.locator('#new #agent-states')).toContainText('flashes when it needs you')
+  await expect(page.locator('#new #lead-maya h3')).toHaveText('Maya, the Lead')
+  await expect(page.locator('#new #lead-maya')).toContainText('Dawsha enforces her limits')
+  await expect(page.locator('#new #phone-agents')).toContainText('Run agents permission')
+  await expect(page.locator('#new #from-1-7-5')).toContainText('199 MB to 114 MB')
+  await expect(page.locator('#new #from-1-7-5')).toContainText('A Problems tab.')
+  await expect(page.locator('#new')).not.toContainText(/orchestrator|dictat/i)
+  await expect(page.locator('#new img[src*="agents-drawer"], #features img[src*="agents-drawer"]')).toHaveCount(0)
   const order = await page.locator('#new .wrap > div').evaluateAll((nodes) => nodes.map((n) => n.id))
   expect(order).toEqual(releaseRows)
   const splits = await page.locator('#new .wrap > div').evaluateAll((nodes) => nodes.map((n) => n.classList.contains('feat-row')))
@@ -302,17 +307,19 @@ test('New in 1.7.4 leads the page with sized lazy screenshots and no run of thre
 test('Earlier releases is one compact section that keeps the old release anchors and links to the changelog', async ({ page }) => {
   await page.goto(url)
   await expect(page.locator('#earlier-h')).toHaveText('Earlier releases')
-  await expect(page.locator('#earlier #new-1-7, #earlier #new-1-6, #earlier #new-1-5, #earlier #new-1-0')).toHaveCount(4)
+  await expect(page.locator('#earlier #new-1-7-4, #earlier #new-1-7, #earlier #new-1-6, #earlier #new-1-5, #earlier #new-1-0')).toHaveCount(5)
+  await expect(page.locator('#earlier #new-1-7-4')).toContainText('Search and Review in Files')
+  await expect(page.locator('#earlier #new-1-7-4 a')).toHaveAttribute('href', 'https://github.com/mfathy234/dawsha/releases/tag/v1.7.4')
   await expect(page.locator('#earlier #new-1-7')).toContainText('Files view')
   await expect(page.locator('#earlier #new-1-7 a')).toHaveAttribute('href', 'https://github.com/mfathy234/dawsha/releases/tag/v1.7.3')
   await expect(page.locator('#earlier #new-1-6')).toContainText('Arabic in every session')
   await expect(page.locator('#earlier #new-1-5')).toContainText('Orchestrator')
   await expect(page.locator('#earlier #new-1-0')).toContainText('sessions board')
   await expect(page.locator('#earlier a[href$="/releases"]')).toHaveCount(1)
-  await expect(page.locator('#earlier a[href*="/releases/tag/"]')).toHaveCount(4)
+  await expect(page.locator('#earlier a[href*="/releases/tag/"]')).toHaveCount(5)
   await expect(page.locator('#earlier img, #earlier video')).toHaveCount(0)
   await expect(page.locator('section[id^="new-1"]')).toHaveCount(0)
-  expect(await page.locator('#earlier').evaluate((el) => el.textContent?.length ?? 0)).toBeLessThan(1500)
+  expect(await page.locator('#earlier').evaluate((el) => el.textContent?.length ?? 0)).toBeLessThan(1800)
   await expect(page.locator('body')).not.toContainText(/snippet/i)
   await expect(page.locator('#features')).not.toContainText(/dictat/i)
 })
@@ -334,13 +341,17 @@ test('the remote section keeps its phone screenshots and says Remote Control is 
   }
 })
 
-test('the Arabic page translates the 1.7.4 section, the earlier releases and the demo, and neither page scrolls sideways at 375px', async ({ page }) => {
+test('the Arabic page translates the 1.7.6 section, the earlier releases and the demo, and neither page scrolls sideways at 375px', async ({ page }) => {
   await page.goto(arabicUrl)
-  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.7.4')
-  await expect(page.locator('#files-review h3')).toHaveText('البحث والمراجعة في الملفات')
-  await expect(page.locator('#dawsha-cards h3')).toContainText('الصقل')
-  await expect(page.locator('#projects-sidebar h3')).toHaveText('شريط جانبي مبني حولك')
-  await expect(page.locator('#files-review img').first()).toHaveAttribute('alt', /وضع المراجعة/)
+  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.7.6')
+  await expect(page.locator('#agents-crew h3')).toHaveText('وكلاء تحتفظ بهم')
+  await expect(page.locator('#agent-states h3')).toHaveText('اعرف من يعمل')
+  await expect(page.locator('#lead-maya h3')).toContainText('القائدة')
+  await expect(page.locator('#lead-maya h3 bdi')).toHaveText('Maya')
+  await expect(page.locator('#phone-agents h3')).toHaveText('الوكلاء والوصول عن بُعد على هاتفك')
+  await expect(page.locator('#from-1-7-5 h3')).toHaveText('من 1.7.5')
+  await expect(page.locator('#agents-crew img').first()).toHaveAttribute('alt', /تبويب الوكلاء/)
+  await expect(page.locator('#earlier #new-1-7-4 a')).toContainText('ملاحظات الإصدار 1.7.4')
   await expect(page.locator('#earlier-h')).toHaveText('الإصدارات السابقة')
   await expect(page.locator('#earlier')).toContainText('الخط الزمني للجلسة')
   await expect(page.locator('#earlier #new-1-7 a')).toContainText('ملاحظات الإصدار 1.7')
