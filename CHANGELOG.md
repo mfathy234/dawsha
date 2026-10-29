@@ -14,6 +14,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **A clearer projects sidebar.** Projects with open sessions sit on their own cards at the top, then pinned projects. Projects without sessions are listed below as compact rows with their branch. Session names wrap to two lines instead of being cut off, and the age moves to the status line. Project costs read "· $74.57 today", and closed sessions collapse to a small "N closed" row.
+- **A much smaller app.** With voice dictation gone, the app no longer ships the speech engine. The interface code shrank from 28 MB to 3.7 MB, and the installers are smaller.
 - **HTML previews run their scripts**, so interactive mockups work inside Files. They load from a private local address with no network access, and can't reach your other files or the app.
 - **Exact line authorship.** Marks on changed lines show exactly which session wrote each line, where the session's edits allow it. Estimated marks are dimmed and say "About".
 - **Compact usage meter on narrow windows.** It now shows the agent and its busiest window (for example "62%") instead of disappearing below 1220 pixels. The popover lists model-specific windows, such as Opus week, by name.
@@ -24,6 +26,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ### Removed
 
 - **Orchestrator.** The lead-agent runs, Boards, History and Settings > Orchestrator are gone, and the Work dashboard counts only sessions. Settings and layouts from older versions still load. Run archives already on disk are left alone, and Dawsha no longer reads them.
+- **Voice dictation.** The microphone button, its settings and the speech model are gone. On first start Dawsha deletes the downloaded speech model, and nothing else. Dawsha no longer asks for microphone access.
 
 ### Fixed
 
