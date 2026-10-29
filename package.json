@@ -29,7 +29,8 @@
     "test:e2e:private-remote": "node scripts/private-remote.mjs e2e",
     "icons": "node scripts/make-icons.mjs",
     "screenshots": "electron-vite build && playwright test -c playwright.screenshots.config.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "release:check": "node scripts/release-check.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.1",

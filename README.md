@@ -444,6 +444,8 @@ npm run test:e2e
 
 The end-to-end tests launch the built app with a temporary user-data folder and fake agent commands, so they never touch your real settings or agent folders.
 
+After publishing, run `npm run release:check -- 1.7.5` (or omit the version to use `package.json`). With an authenticated `gh` CLI, it checks version agreement, origin's tag and main ancestry, the published release and its nine required assets, the latest release workflow, and the website's status and New in heading. It reports each check and exits non-zero on failure; it does not update local refs or change the release.
+
 | Variable | Effect |
 |---|---|
 | `DAWSHA_CLAUDE_COMMAND`, `DAWSHA_CODEX_COMMAND`, `DAWSHA_GEMINI_COMMAND` | Replace an agent's command. Resume arguments are not added when set. |
