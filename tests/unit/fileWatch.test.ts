@@ -92,9 +92,9 @@ describe('watchProject', () => {
       writeFileSync(join(dir, '.git', 'HEAD'), '1')
       writeFileSync(join(dir, 'a.txt'), '1')
       writeFileSync(join(dir, 'b.txt'), '1')
-      await vi.waitFor(() => expect(batches.length).toBeGreaterThan(0), { timeout: 3000 })
+      // macOS FSEvents may split the writes over two debounced batches, so wait until both files have been reported.
+      await vi.waitFor(() => expect(batches.flat()).toEqual(expect.arrayContaining(['a.txt', 'b.txt'])), { timeout: 3000 })
       const seen = batches.flat()
-      expect(seen).toContain('a.txt')
       expect(seen.some((p) => p.startsWith('node_modules') || p.startsWith('.git'))).toBe(false)
     } finally {
       stop()
