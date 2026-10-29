@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dawsha crew — design preview</title>
+<style>
+:root{color-scheme:dark;--canvas:#0c0e13;--chrome:#11141a;--pane:#181c24;--raised:#222731;--overlay:#2b313d;--well:#14171e;--seam:rgb(255 255 255/.085);--ring:inset 0 0 0 1px rgb(255 255 255/.10);--text:#d4d9e2;--muted:#9ba4b6;--faint:#6e778a;--accent:#3ad6a0;--on-accent:#04261a;--run:#8fb4ff;--done:#86c5a8;--fail:#ff8b82;--needs:#f0954c;--hover:color-mix(in srgb,var(--text) 6%,transparent);--field:inset 0 1px 2px rgb(0 0 0/.35),0 0 0 1px rgb(255 255 255/.14);--pop:0 0 0 1px rgb(255 255 255/.09),0 18px 44px rgb(0 0 0/.55);--claude:#e5866a;--codex:#c9ced8;--gemini:#ad95fb;--kw:#c4a2f0;--mono:'JetBrains Mono','Cascadia Mono',Consolas,monospace;
+ --id-red:#f2777a;--id-orange:#f0a35e;--id-yellow:#e5c76b;--id-green:#7fcf9a;--id-cyan:#6cc9d6;--id-blue:#7fa7f5;--id-purple:#b19af5;--id-pink:#ec8fc4}
+:root.light{color-scheme:light;--canvas:#dce1e8;--chrome:#edf0f4;--pane:#fff;--raised:#e8edf3;--overlay:#fff;--well:#f6f8fa;--seam:rgb(24 28 40/.12);--ring:inset 0 0 0 1px rgb(24 28 40/.12);--text:#172336;--muted:#4e6077;--faint:#8a96a8;--accent:#087c58;--on-accent:#fff;--run:#255aa6;--done:#28614d;--fail:#a83229;--needs:#9a4a00;--field:inset 0 1px 2px rgb(24 28 40/.12),0 0 0 1px rgb(24 28 40/.32);--pop:0 0 0 1px rgb(24 28 40/.1),0 14px 36px rgb(24 28 40/.22);--codex:#2b3340;--kw:#7c3aed;
+ --id-red:#c0392b;--id-orange:#b9620f;--id-yellow:#8a6d00;--id-green:#237a4b;--id-cyan:#0d7b8a;--id-blue:#2f5fc4;--id-purple:#6b4fc4;--id-pink:#b23b82}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--canvas);color:var(--text);font:13px/1.45 'Segoe UI Variable','Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:0;background:transparent;border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover{background:var(--hover)}
+:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 70%,transparent);outline-offset:1px}
+.muted{color:var(--muted)}.faint{color:var(--faint)}.run{color:var(--run)}.done{color:var(--done)}.fail{color:var(--fail)}.needs{color:var(--needs)}
+.mono{font-family:var(--mono);font-size:12px}
+.field{background:var(--well);box-shadow:var(--field);border:0;border-radius:6px;padding:7px 10px;width:100%}
+textarea.field{resize:vertical;font-family:var(--mono);font-size:12px;line-height:1.6}
+textarea.goal{font-family:inherit;font-size:14px;line-height:1.5}
+.primary{background:var(--accent);color:var(--on-accent);font-weight:600}.primary:hover{background:color-mix(in srgb,var(--accent) 88%,white)}
+.soft{background:var(--raised)}
+.mark{font-size:13px;line-height:1}.mark.claude{color:var(--claude)}.mark.codex{color:var(--codex)}.mark.gemini{color:var(--gemini)}
+.seg{display:inline-flex;gap:2px;background:var(--chrome);border-radius:8px;padding:2px}
+.seg button{padding:4px 11px;color:var(--muted)}.seg button[aria-pressed=true]{background:var(--raised);color:var(--text)}
+
+/* identity avatar + live state */
+.av{--c:var(--id-blue);--size:32px;position:relative;flex:none;width:var(--size);height:var(--size);border-radius:30%;display:grid;place-items:center;font-weight:700;font-size:calc(var(--size)*.38);letter-spacing:.02em;
+ color:var(--c);background:color-mix(in srgb,var(--c) 16%,var(--raised));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 30%,transparent)}
+.av.lead{border-radius:50%}
+.av::after{content:'';position:absolute;inset:-4px;border-radius:inherit;pointer-events:none;opacity:0}
+.av .badge{position:absolute;right:-5px;bottom:-5px;width:16px;height:16px;border-radius:50%;display:none;place-items:center;background:var(--pane);font-size:10px;font-weight:800;box-shadow:0 0 0 2px var(--pane)}
+.av[data-state=working]::after{opacity:1;box-shadow:0 0 0 2px var(--run);animation:breathe 1.8s ease-in-out infinite}
+.av[data-state=working] .badge{display:grid;color:var(--run)}
+.av[data-state=needs]::after{opacity:1;box-shadow:0 0 0 2px var(--needs),0 0 14px 2px color-mix(in srgb,var(--needs) 45%,transparent);animation:flash .5s ease-in-out 3}
+.av[data-state=needs] .badge{display:grid;color:var(--needs)}
+.av[data-state=done]::after{box-shadow:0 0 0 2px var(--done),0 0 16px 3px color-mix(in srgb,var(--done) 45%,transparent);animation:once 1.4s ease-out 1}
+.av[data-state=done] .badge{display:grid;color:var(--done)}
+.av[data-state=failed]::after{opacity:1;box-shadow:0 0 0 2px var(--fail)}
+.av[data-state=failed] .badge{display:grid;color:var(--fail)}
+.av[data-state=waiting] .badge{display:grid;color:var(--faint)}
+@keyframes breathe{0%,100%{opacity:.35;transform:scale(.97)}50%{opacity:1;transform:scale(1.03)}}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.15}}
+@keyframes once{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.av::after{animation:none!important;opacity:1!important}.av[data-state=done]::after{opacity:0!important}}
+.state-word{font-size:12px}
+
+.preview{display:flex;align-items:center;gap:12px;padding:8px 16px;background:#000;color:#cfd5df;font-size:12px;border-bottom:1px solid #222;flex-wrap:wrap}
+.preview strong{color:#fff}.preview .seg{background:#151a22}.preview .seg button{color:#9aa4b5}.preview .seg button[aria-pressed=true]{background:#2a3241;color:#fff}
+.top{display:flex;align-items:center;gap:6px;height:44px;padding:0 12px;background:var(--chrome);border-bottom:1px solid var(--seam)}
+.top .logo{width:22px;height:22px;border-radius:6px;background:var(--accent);display:grid;place-items:center;color:var(--on-accent);font-weight:800;font-size:12px;margin-right:6px}
+.top nav{display:flex;gap:2px;margin-left:10px}.top nav button{color:var(--muted)}.top nav button[aria-current=page]{color:var(--text);background:var(--raised)}
+.top .sp{flex:1}
+.split{display:inline-flex}.split .primary:first-child{border-radius:6px 0 0 6px}.split .primary:last-child{border-radius:0 6px 6px 0;padding:5px 7px;margin-left:1px}
+.crewbar{display:flex;align-items:center;gap:8px;padding:2px 6px}
+.crewbar .av{--size:24px;cursor:pointer}
+.crewbar-label{font-size:12px;color:var(--muted);margin-right:2px}
+.app{flex:1;display:flex;min-height:0}
+.head{display:flex;align-items:center;gap:12px;padding:16px 20px 12px;flex-wrap:wrap}
+.head h1{font-size:20px;font-weight:600;margin:0}
+.head .sp{flex:1}
+.body{flex:1;display:grid;grid-template-columns:minmax(330px,400px) minmax(0,1fr);min-height:0;border-top:1px solid var(--seam)}
+.list{overflow:auto;padding:6px 10px 20px;background:var(--canvas)}
+.sec{font-size:12px;color:var(--muted);padding:14px 10px 4px;display:flex;justify-content:space-between}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:1px 12px;align-items:center;padding:9px 10px;border-radius:8px;cursor:pointer}
+.item:hover{background:var(--hover)}.item.sel{background:var(--raised);box-shadow:var(--ring)}
+.item .av{grid-row:1/3}
+.item .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.item .nm b{font-weight:600}.item .nm span{color:var(--muted)}
+.item .meta{grid-column:2/4;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .runbtn{opacity:0;padding:3px 9px}.item:hover .runbtn,.item.sel .runbtn,.item:focus-within .runbtn{opacity:1}
+.item.lead-item{background:color-mix(in srgb,var(--id-purple) 7%,transparent)}
+.item.lead-item.sel{background:color-mix(in srgb,var(--id-purple) 14%,var(--raised))}
+.detail{overflow:auto;background:var(--pane);padding:22px 28px 40px}
+.dh{display:flex;align-items:center;gap:14px}
+.dh .av{--size:48px}
+.dh h2{font-size:18px;margin:0;font-weight:600}
+.dh .sp{flex:1}
+.src{font-size:12px;color:var(--muted);margin-top:10px}
+.tabs{display:flex;gap:2px;margin:16px 0 14px;border-bottom:1px solid var(--seam)}
+.tabs button{border-radius:6px 6px 0 0;color:var(--muted);padding:7px 12px}.tabs button[aria-selected=true]{color:var(--text);box-shadow:inset 0 -2px 0 var(--text)}
+.form{display:grid;grid-template-columns:160px minmax(0,1fr);gap:14px 18px;max-width:900px}
+.form>label{color:var(--muted);padding-top:7px}
+.form .hint{font-size:12px;color:var(--faint);margin-top:4px}
+.group-title{grid-column:1/3;font-size:12px;color:var(--muted);font-weight:600;margin-top:8px;padding-top:12px;border-top:1px solid var(--seam)}
+.group-title:first-child{border-top:0;padding-top:0;margin-top:0}
+.idrow{display:flex;gap:10px;align-items:center}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.swatches button{width:26px;height:26px;padding:0;border-radius:8px;display:grid;place-items:center}
+.swatches button span{width:16px;height:16px;border-radius:5px;background:var(--c)}
+.swatches button[aria-checked=true]{box-shadow:0 0 0 2px var(--text)}
+.vars{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.vars code{font-family:var(--mono);font-size:11.5px;background:var(--well);padding:2px 7px;border-radius:5px;color:var(--kw)}
+.models{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.model{display:grid;grid-template-columns:18px 1fr;gap:2px 8px;align-items:center;padding:9px 10px;border-radius:8px;background:var(--well);text-align:left}
+.model small{grid-column:2;color:var(--muted)}
+.model[aria-checked=true]{box-shadow:inset 0 0 0 1px rgb(255 255 255/.32);background:var(--raised)}
+.radios{display:flex;gap:6px;flex-wrap:wrap}
+.radios button{background:var(--well);text-align:left;padding:7px 10px}
+.radios button[aria-checked=true]{background:var(--raised);box-shadow:inset 0 0 0 1px rgb(255 255 255/.28)}
+.radios small{display:block;color:var(--muted);font-size:11.5px}
+.checks{display:flex;flex-direction:column;gap:8px}
+.checks label{display:flex;gap:10px;align-items:flex-start;color:var(--text)}
+.checks small{display:block;color:var(--muted);font-size:12px}
+.cmd{background:var(--well);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:pre-wrap;word-break:break-all}
+.cmd b{color:var(--text);font-weight:500}
+.runs{max-width:900px}
+.runrow{display:grid;grid-template-columns:18px minmax(0,1fr) 150px 70px 60px;gap:10px;align-items:center;padding:8px 6px;border-radius:6px;cursor:pointer}
+.runrow:hover{background:var(--hover)}
+.runrow .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.runrow span:nth-child(n+3){font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+/* lead */
+.goalbox{max-width:900px;margin-top:16px;background:var(--well);border-radius:12px;padding:14px;box-shadow:var(--ring)}
+.goalbox .row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.goalbox .row .sp{flex:1}
+.plan{max-width:900px;margin-top:18px}
+.plan h3,.board h3{font-size:13px;margin:0 0 8px;font-weight:600}
+.step{display:grid;grid-template-columns:22px auto 1fr auto;gap:2px 12px;align-items:center;padding:10px 8px;border-radius:8px}
+.step:hover{background:var(--hover)}
+.step .n{color:var(--faint);font-variant-numeric:tabular-nums;text-align:right}
+.step .av{--size:30px;grid-row:1/3;grid-column:2}
+.step b{font-weight:600}
+.step small{grid-column:3/5;color:var(--muted)}
+.step .mdl{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center}
+.step.after{border-top:1px solid var(--seam);margin-top:4px;padding-top:12px}
+.plan-foot{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.plan-foot .sp{flex:1}
+.board{max-width:900px;margin-top:22px}
+.lane{display:grid;grid-template-columns:auto 1fr auto;gap:2px 12px;align-items:center;padding:10px;border-radius:10px;background:var(--well);margin-bottom:8px}
+.lane .av{--size:30px;grid-row:1/3}
+.lane small{grid-column:2/4;color:var(--muted)}
+.lane.is-needs{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--needs) 55%,transparent)}
+.lead-note{max-width:900px;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;margin-top:14px;padding:12px;border-radius:10px;background:color-mix(in srgb,var(--id-purple) 8%,var(--well))}
+.lead-note .av{--size:30px}
+.lead-note p{margin:0 0 8px}
+.lead-note .acts{display:flex;gap:8px}
+dialog{background:var(--overlay);color:var(--text);border:0;border-radius:14px;box-shadow:var(--pop);padding:20px 22px;width:min(580px,92vw)}
+dialog::backdrop{background:rgb(0 0 0/.5)}
+dialog h2{font-size:16px;margin:0}dialog p{margin:0 0 12px;color:var(--muted)}
+.dlg-head{display:flex;gap:12px;align-items:center;margin-bottom:6px}.dlg-head .av{--size:36px}
+.dlg-grid{display:grid;grid-template-columns:110px 1fr;gap:10px 14px;align-items:center;margin:14px 0}
+.dlg-grid label{color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;gap:6px;align-items:center;background:var(--well);padding:6px 10px;border-radius:7px;cursor:pointer}
+.chip[aria-checked=true]{background:var(--raised);box-shadow:inset 0 0 0 1px rgb(255 255 255/.28)}
+.dlg-acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;align-items:center}
+.dlg-acts .sp{flex:1}
+.toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:30;align-items:flex-end}
+.toast{display:flex;gap:10px;align-items:center;background:var(--overlay);box-shadow:var(--pop);border-radius:12px;padding:10px 14px;font-size:12.5px;max-width:420px}
+.toast .av{--size:28px}
+.toast b{font-weight:600}
+.note{position:fixed;left:16px;bottom:16px;max-width:400px;background:var(--overlay);box-shadow:var(--pop);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--muted);z-index:15;max-height:72vh;overflow:auto}
+.note b{color:var(--text)}.note ul{margin:6px 0 10px;padding-left:16px}.note li{margin-bottom:3px}
+.empty{color:var(--muted);padding:40px;text-align:center}
+.tag{font-size:11.5px;color:var(--faint)}
+@media(max-width:980px){.body{grid-template-columns:1fr}.detail{display:none}.models{grid-template-columns:1fr}}
+</style>
+
+<div class="preview">
+  <strong>Dawsha · <span data-t="Crew">Crew</span></strong><span>design preview · example data · nothing runs</span>
+  <span style="flex:1"></span>
+  <span>Name it:</span>
+  <span class="seg" id="namer"><button aria-pressed="true" data-n="Crew|crew member|crew members">Crew</button><button aria-pressed="false" data-n="Squad|squad member|squad members">Squad</button><button aria-pressed="false" data-n="Team|teammate|teammates">Team</button><button aria-pressed="false" data-n="Bench|specialist|specialists">Bench</button></span>
+  <button id="notes-t" style="color:#cfd5df">Design notes</button>
+  <span class="seg" id="t-seg"><button data-th="dark" aria-pressed="true">Dark</button><button data-th="light" aria-pressed="false">Light</button></span>
+</div>
+
+<header class="top">
+  <span class="logo">D</span>
+  <span class="split"><button class="primary">+ New session</button><button class="primary" id="new-menu" aria-label="Hand a job to the crew">▾</button></span>
+  <nav><button>Sessions</button><button>Agents</button><button aria-current="page" data-t="Crew">Crew</button><button>Files</button><button>More</button></nav>
+  <span class="sp"></span>
+  <div class="crewbar" id="crewbar" aria-label="Who is on a job"></div>
+</header>
+
+<div class="app">
+<main style="flex:1;display:flex;flex-direction:column;min-width:0">
+  <div class="head">
+    <h1 data-t="Crew">Crew</h1>
+    <span class="muted" id="head-count"></span>
+    <span class="sp"></span>
+    <input class="field" style="width:240px" placeholder="Search by name, role or job…" aria-label="Search">
+    <button class="soft" id="import-t">Import…</button>
+    <button class="primary" id="new-agent">+ New <span data-t="member">crew member</span></button>
+  </div>
+  <div class="body">
+    <div class="list" id="list" role="listbox" aria-label="Crew"></div>
+    <section class="detail" id="detail"></section>
+  </div>
+</main>
+</div>
+
+<dialog id="dlg-run">
+  <div class="dlg-head"><span id="run-av-slot"></span><div><h2 id="run-title">Run Sami</h2><div class="muted" id="run-role"></div></div></div>
+  <div class="dlg-grid" id="run-fields"></div>
+  <div class="dlg-grid" style="margin-top:0">
+    <label>Project</label><select class="field"><option>Platforms · feature/26412-service-stock</option><option>dawsha · main</option></select>
+    <label>Model</label>
+    <div class="chips" id="run-models" role="radiogroup" aria-label="Model for this run">
+      <span class="chip" role="radio" aria-checked="false" data-r="fable" tabindex="0"><span class="mark claude">✳</span>Claude · Fable</span>
+      <span class="chip" role="radio" aria-checked="true" data-r="claude" tabindex="0"><span class="mark claude">✳</span>Claude · Opus</span>
+      <span class="chip" role="radio" aria-checked="false" data-r="codex" tabindex="0"><span class="mark codex">◎</span>Codex · gpt-5.6</span>
+      <span class="chip" role="radio" aria-checked="false" data-r="gemini" tabindex="0"><span class="mark gemini">✦</span>Gemini · 2.5 Pro</span>
+    </div>
+  </div>
+  <div class="cmd" id="run-cmd"></div>
+  <form method="dialog" class="dlg-acts"><span class="sp faint" style="font-size:12px">Runs in a new pane in the project above · Ctrl+Enter</span><button value="cancel">Cancel</button><button value="run" class="primary" id="run-go">Run</button></form>
+</dialog>
+
+<dialog id="dlg-del"><h2 id="del-title">Delete Rami?</h2><p style="margin-top:6px">Removed from Dawsha with its run history. The file in ~/.claude/agents stays on disk.</p><form method="dialog" class="dlg-acts"><button value="cancel" autofocus>Cancel</button><button value="ok" id="del-go" style="background:var(--fail);color:#2a0b0b;font-weight:600">Delete Rami</button></form></dialog>
+
+<div class="note" id="note" hidden>
+  <b>What changes</b>
+  <ul>
+    <li>The <b>Orchestrator is removed</b>: its boards, runs, history, settings and MCP server. The <b>Lead</b> replaces it: one agent you give a goal to, which hands parts to <span data-t="members">crew members</span> only when it needs them.</li>
+    <li><b>Agents</b> stays as the live view of background sub-agents. <b data-t="Crew">Crew</b> is the people you keep.</li>
+  </ul>
+  <b>Built in</b>
+  <ul><li>Eight ready members, each with a sensible model, permissions and instructions you can copy and change: Maya (Lead), Sami (code reviewer), Tarek (debugger), Omar (builder), Hana (tester), Lina (UI polisher), Nour (docs and releases) and Yara (explainer). Built-ins can be hidden but not deleted. Duplicate one to change it.</li></ul>
+  <b>The Lead</b>
+  <ul>
+    <li>You give Maya a goal and a project. She writes a short plan saying who does what, on which model and at what estimated cost, and waits for you to approve it (you can switch that off).</li>
+    <li>Your defaults are built in: a few big jobs instead of many small ones, one review at the end, and at most two members working at once.</li>
+    <li>She runs the members as normal panes through the <span class="mono">dawsha crew</span> command, so each job shows in the grid, Agents, the timeline and usage.</li>
+    <li>She asks you before pushing, merging, posting to Azure DevOps, or going over the budget, and only you can answer.</li>
+    <li>"If needed": every member can still be run directly without the Lead.</li>
+  </ul>
+  <b>Live state</b>
+  <ul><li>Working: the ring breathes. Needs you: three flashes, then steady. Done: one flash, then ✓. Failed: ✕. Each always comes with a word, and the flashes stop with reduced motion.</li></ul>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const M={claude:'✳',codex:'◎',gemini:'✦'};
+const COLORS=['red','orange','yellow','green','cyan','blue','purple','pink'];
+const STATE={idle:['Idle','muted',''],waiting:['Waiting','faint','…'],working:['Working','run','⟳'],needs:['Needs you','needs','!'],done:['Done','done','✓'],failed:['Failed','fail','✕']};
+const m=(o)=>({state:'idle',now:'',runs:[],last:'never',vars:[],perm:'read',effort:'medium',...o});
+const crew=[
+ m({id:'lead',lead:true,name:'Maya',role:'Lead',ini:'MA',color:'purple',runner:'claude',model:'opus',effort:'high',perm:'ask',desc:'Takes a goal, plans who does what, runs the members she needs, checks their work and asks you before anything leaves your machine.',instr:'You lead a small crew. Plan first, then hand out a few big jobs, never many small ones. Run at most 2 members at once. Have one review at the end, not one per job. Ask the human before pushing, merging, posting comments or going over budget.',builtin:true,last:'1h'}),
+ m({id:'sami',name:'Sami',role:'Code reviewer',ini:'SA',color:'red',runner:'claude',model:'sonnet',desc:'Reviews a diff, branch or PR for bugs, security and readability, and reports findings most severe first.',vars:['target'],prompt:'Review {{target}}. Report findings most severe first, with file:line.',instr:'Read only. Verify each finding in the code before reporting it. No style nitpicks unless asked.',builtin:true,runs:[['done','feat/1.7.4 diff','Claude · Sonnet','6m','$0.22']],last:'2h'}),
+ m({id:'tarek',name:'Tarek',role:'Debugger',ini:'TA',color:'blue',runner:'codex',model:'gpt-5.6',effort:'high',desc:'Reproduces a bug, failing test or error id and finds the root cause before proposing a fix.',vars:['problem'],prompt:'Find the root cause of: {{problem}}. Reproduce it first.',instr:'Reproduce before theorising. Show the evidence for the root cause. Propose the smallest fix.',builtin:true,last:'1d'}),
+ m({id:'omar',name:'Omar',role:'Builder',ini:'OM',color:'green',runner:'claude',model:'sonnet',perm:'full',desc:'Implements a planned change in its own worktree, with tests, and commits on a branch. Never pushes.',vars:['task'],prompt:'Implement: {{task}}. Work in a new worktree, add tests, commit on a branch.',instr:'Work in a fresh git worktree. Write the failing test first. Commit with conventional messages. Never push.',builtin:true,last:'3d'}),
+ m({id:'hana',name:'Hana',role:'Tester',ini:'HA',color:'yellow',runner:'claude',model:'sonnet',perm:'ask',desc:'Writes or fixes tests for a change and runs the suite, and reports flaky tests separately.',vars:['scope'],prompt:'Cover {{scope}} with tests and run them.',instr:'Prefer behaviour tests. Run the narrowest suite first. Flag flaky tests instead of retrying blindly.',builtin:true}),
+ m({id:'lina',name:'Lina',role:'UI polisher',ini:'LI',color:'pink',runner:'claude',model:'opus',perm:'ask',desc:'Polishes a screen against your design rules: no coloured edge bars, pills, decorative dots or caps labels.',vars:['screen'],prompt:'Polish {{screen}} against the design rules, then show before and after screenshots.',instr:'Follow PRODUCT.md and the taste rules. Use the existing tokens. Check dark, light and 1024 wide.',builtin:true}),
+ m({id:'nour',name:'Nour',role:'Docs and releases',ini:'NO',color:'cyan',runner:'gemini',model:'2.5-pro',desc:'Writes changelog entries, README updates and release notes in plain language.',vars:['version'],prompt:'Draft the CHANGELOG entry for {{version}} from the commits since the last tag.',instr:'Plain, concrete sentences. Added, Changed, Fixed. No marketing words.',builtin:true}),
+ m({id:'yara',name:'Yara',role:'Explainer',ini:'YA',color:'orange',runner:'claude',model:'haiku',desc:'Explains how a part of the code works, with a short map of the files and the flow.',vars:['topic'],prompt:'Explain how {{topic}} works in this repo, with the files and the flow.',instr:'Read only. Short answers with file:line references. Diagrams only when they help.',builtin:true}),
+ m({id:'rami',name:'Rami',role:'Microtec PR review',ini:'RA',color:'orange',runner:'claude',model:'opus',effort:'high',src:'~/.claude/agents/pr-review.md',desc:'Your pr-review agent: Azure DevOps PRs against the Microtec standards and linked work items.',vars:['pr','mode'],prompt:'Review PR {{pr}}. Mode: {{mode}}.',instr:'Read ~/.claude/skills/microtec-pr-review/SKILL.md and follow it. Never edit, commit or push.',runs:[['done','PR 8829 · Service stock movements','Claude · Opus','14m','$0.62']],last:'2h'}),
+ m({id:'zaid',name:'Zaid',role:'Incident investigator',ini:'ZA',color:'blue',runner:'codex',model:'gpt-5.6',src:'skill · correlation-id',desc:'Your correlation-id skill: every log line for an id on dev, stage or uat, explained from the code.',vars:['id','env'],prompt:'Correlation id {{id}} on {{env}}.',instr:'Use the correlation-id skill. Read only.',last:'4m'})
+];
+let sel='lead',tab='lead',leadPhase='goal',T={Crew:'Crew',member:'crew member',members:'crew members'};
+const byId=id=>crew.find(a=>a.id===id);
+function av(a){return `<span class="av ${a.lead?'lead':''}" style="--c:var(--id-${a.color})" data-state="${a.state}" data-agent="${a.id}" title="${a.name} · ${a.role} · ${STATE[a.state][0]}" aria-label="${a.name}, ${STATE[a.state][0]}">${a.ini}<span class="badge" aria-hidden="true">${STATE[a.state][2]}</span></span>`}
+function stateLine(a){const [w,c]=STATE[a.state];if(a.state==='idle')return `<span class="muted">${a.last==='never'?'Never run':'Last job '+a.last+' ago'}</span>`;return `<span class="${c}">${w}</span>${a.now?' <span class="muted">· '+a.now+'</span>':''}`}
+function relabel(){document.querySelectorAll('[data-t]').forEach(e=>{const k=e.dataset.t;e.textContent=T[k]||T.Crew})}
+function renderBar(){const rank={needs:0,failed:1,working:2,waiting:3,done:4};const on=crew.filter(a=>a.state!=='idle').sort((x,y)=>rank[x.state]-rank[y.state]);const n=s=>on.filter(a=>a.state===s).length;
+ $('crewbar').hidden=!on.length;$('crewbar').innerHTML=`<span class="crewbar-label">${[n('needs')?`<span class="needs">${n('needs')} needs you</span>`:'',n('working')?`${n('working')} working`:''].filter(Boolean).join(' · ')}</span>`+on.map(av).join('');
+ $('head-count').textContent=`${crew.length} · ${crew.filter(a=>a.builtin).length} built in`}
+function row(a){return `<div class="item ${a.lead?'lead-item':''} ${a.id===sel?'sel':''}" role="option" aria-selected="${a.id===sel}" tabindex="0" data-id="${a.id}">${av(a)}<span class="nm"><b>${a.name}</b> <span>· ${a.role}</span></span>${a.lead?'':`<button class="soft runbtn" data-run="${a.id}">Run</button>`}<span class="meta state-word">${a.lead&&a.state==='idle'?'<span class="muted">Give her a goal; she picks who works on it</span>':stateLine(a)}</span></div>`}
+function renderList(){
+ const lead=crew.filter(a=>a.lead),built=crew.filter(a=>a.builtin&&!a.lead),yours=crew.filter(a=>!a.builtin);
+ $('list').innerHTML=`<div class="sec"><span>Lead</span></div>${lead.map(row).join('')}<div class="sec"><span>Built in</span><span>${built.length}</span></div>${built.map(row).join('')}<div class="sec"><span>Yours</span><span>${yours.length}</span></div>${yours.map(row).join('')}`}
+function cmdFor(a,runner){if(runner==='fable')return cmdFor({...a,model:'fable'},'claude');const model={claude:a.runner==='claude'?a.model:'opus',codex:a.runner==='codex'?a.model:'gpt-5.6',gemini:a.runner==='gemini'?a.model:'2.5-pro'}[runner];
+ if(runner==='claude')return `claude --model <b>${model}</b> --strict-mcp-config --append-system-prompt "&lt;${a.name}, ${a.role}&gt;" "…"`;
+ if(runner==='codex')return `codex -m <b>${model}</b> --dangerously-bypass-approvals-and-sandbox "&lt;instructions&gt;…"`;return `gemini -m <b>gemini-${model}</b> --yolo -i "&lt;instructions&gt;…"`}
+/* ---------- lead page ---------- */
+const plan=[['tarek','Find why the login test is flaky','Reproduces it 20 times, reads the CI logs, names the root cause','codex','Codex · gpt-5.6','~$0.00 · plan'],['omar','Fix it in a new worktree with a test','Branch fix/login-flaky, failing test first, commits but never pushes','claude','Claude · Sonnet','~$0.40'],['sami','Review the whole change once at the end','One review of the full diff, not one per job','claude','Claude · Sonnet','~$0.20']];
+function leadPage(a){
+ const goal=`<div class="goalbox"><textarea class="field goal" id="goal" rows="3" aria-label="Goal for ${a.name}">The login e2e test fails about 1 in 7 CI runs. Find out why, fix it, and get it ready for a PR.</textarea>
+  <div class="row"><select class="field" style="width:260px"><option>mobile-shell · review/login-tests</option><option>Platforms · develop</option></select><select class="field" style="width:170px"><option>Lead on Claude · Opus</option><option>Lead on Codex · gpt-5.6</option></select><span class="sp"></span><label class="muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" checked> Show me the plan first</label><button class="primary" id="plan-go">Hand it to ${a.name}</button></div></div>`;
+ if(leadPhase==='goal')return goal+`<div class="board"><h3>Recent goals</h3><div class="runrow"><span class="done">✓</span><span class="t">Release 1.7.4 checks: tag, assets, website</span><span>3 members</span><span>41m</span><span>$1.12</span></div><div class="runrow"><span class="done">✓</span><span class="t">Why does the usage meter switch between agents</span><span>1 member</span><span>9m</span><span>$0.18</span></div></div>`;
+ const steps=plan.map((p,i)=>{const b=byId(p[0]);return `<div class="step ${i===2?'after':''}"><span class="n">${i+1}</span>${av(b)}<span><b>${b.name}</b> <span class="muted">· ${p[1]}</span></span><span class="mdl"><span class="mark ${p[3]}">${M[p[3]]}</span>${p[4]} · ${p[5]}</span><small>${p[2]}</small></div>`}).join('');
+ if(leadPhase==='plan')return goal.replace('Hand it to','Re-plan with')+`<div class="plan"><h3>${a.name}'s plan · 3 jobs, 1 review at the end, at most 2 at once</h3>${steps}
+  <div class="plan-foot"><span class="faint" style="font-size:12px">Estimated $0.60 on Claude plus Codex plan usage · stops and asks before any push or PR</span><span class="sp"></span><button class="soft" id="plan-edit">Change the plan…</button><button class="primary" id="plan-ok">Approve and start</button></div></div>`;
+ const lanes=plan.map(p=>{const b=byId(p[0]);return `<div class="lane ${b.state==='needs'?'is-needs':''}">${av(b)}<span><b>${b.name}</b> <span class="muted">· ${p[1]}</span></span><span class="state-word ${STATE[b.state][1]}">${STATE[b.state][0]}</span><small>${b.now||p[2]}</small></div>`}).join('');
+ const note=leadPhase==='ask'?`<div class="lead-note">${av(a)}<div><p><b>${a.name}:</b> Omar's fix and test are ready on <span class="mono">fix/login-flaky</span>, and Sami found no blocking issues. Should I push the branch and open a PR to <span class="mono">main</span>?</p><div class="acts"><button class="primary" id="ask-yes">Push and open the PR</button><button class="soft" id="ask-no">Keep it local</button><button class="soft">Open the diff</button></div></div></div>`:
+  `<div class="lead-note">${av(a)}<div><p><b>${a.name}:</b> ${leadPhase==='run'?'Tarek is on the root cause. Omar starts as soon as Tarek is done. I will only ask you before pushing.':'Done. The PR is open and the test passed 20 of 20 runs.'}</p></div></div>`;
+ return `<div class="board"><h3>Goal · fix the flaky login test · mobile-shell</h3>${lanes}</div>${note}`;
+}
+function leadSetup(a){return `<div class="form">
+   <div class="group-title">Identity</div>
+   <label>Name · role</label><div class="idrow"><input class="field" value="${a.name}" style="width:180px" aria-label="Name"><input class="field" value="${a.role}" style="width:200px" aria-label="Role"></div>
+   <div class="group-title">How ${a.name} leads</div>
+   <label>Rules</label><div class="checks">
+     <label><input type="checkbox" checked><span>Few big jobs instead of many small ones<small>Each member gets a whole piece of the work.</small></span></label>
+     <label><input type="checkbox" checked><span>One review at the end<small>Not a review after every job.</small></span></label>
+     <label><input type="checkbox" checked><span>Show me the plan before starting</span></label>
+     <label><input type="checkbox" checked><span>Ask me before pushing, merging, posting comments or deleting anything</span></label></div>
+   <label>At once</label><div class="radios" role="radiogroup" aria-label="Members at once"><button role="radio" aria-checked="false">1</button><button role="radio" aria-checked="true">2</button><button role="radio" aria-checked="false">3</button></div>
+   <label>Budget per goal</label><div class="idrow"><input class="field" value="$3.00" style="width:120px" aria-label="Budget"><span class="faint" style="font-size:12px">She stops and asks when a goal would go over it.</span></div>
+   <label>Members she can use</label><div class="chips">${crew.filter(x=>!x.lead).map(x=>`<span class="chip" role="checkbox" aria-checked="${['sami','tarek','omar','hana','lina','nour'].includes(x.id)}" tabindex="0">${av({...x,state:'idle'})}${x.name}</span>`).join('')}</div>
+   <label>Instructions</label><div><textarea class="field" rows="5">${a.instr}</textarea></div>
+   <label>How she runs them</label><div class="cmd">Each member runs as its own pane: <b>dawsha crew run tarek --project mobile-shell --problem "…"</b>
+She follows them with <b>dawsha crew status</b> and reads results with <b>dawsha crew result &lt;run&gt;</b>.</div>
+ </div>`}
+function memberSetup(a){const model=r=>`<button class="model" role="radio" aria-checked="${a.runner===r}" data-runner="${r}"><span class="mark ${r}">${M[r]}</span><b>${{claude:'Claude Code',codex:'Codex',gemini:'Gemini'}[r]}</b><small>${{claude:'fable · opus · sonnet · haiku',codex:'gpt-5.6 · gpt-5.6-sol',gemini:'2.5 pro · 2.5 flash'}[r]}</small></button>`;
+ return `<div class="form">
+   <div class="group-title">Identity</div>
+   <label>Name · role</label><div class="idrow"><input class="field" id="f-name" value="${a.name}" style="width:180px" aria-label="Name" ${a.builtin?'readonly':''}><input class="field" value="${a.role}" style="width:240px" aria-label="Role" ${a.builtin?'readonly':''}><input class="field" value="${a.ini}" aria-label="Initials" style="width:64px;text-align:center" ${a.builtin?'readonly':''}></div>
+   <label>Colour</label><div class="swatches" role="radiogroup" aria-label="Colour">${COLORS.map(c=>`<button role="radio" aria-checked="${c===a.color}" aria-label="${c}" title="${c}" data-color="${c}" style="--c:var(--id-${c})"><span></span></button>`).join('')}</div>
+   <div class="group-title">Job</div>
+   <label>Instructions</label><div><textarea class="field" rows="4" ${a.builtin?'readonly':''}>${a.instr}</textarea>${a.builtin?'<div class="hint">Built in. Duplicate to change the instructions.</div>':''}</div>
+   <label>Prompt</label><div><textarea class="field" rows="2">${a.prompt||''}</textarea><div class="vars">${a.vars.map(v=>`<code>{{${v}}}</code>`).join('')}</div></div>
+   <div class="group-title">How it runs</div>
+   <label>Default model</label><div class="models" role="radiogroup" aria-label="Default model">${model('claude')}${model('codex')}${model('gemini')}</div>
+   <label>Permissions</label><div class="radios" role="radiogroup" aria-label="Permissions"><button role="radio" aria-checked="${a.perm==='read'}">Read only</button><button role="radio" aria-checked="${a.perm==='ask'}">Ask before changes</button><button role="radio" aria-checked="${a.perm==='full'}">Full access</button></div>
+   <label>Command preview</label><div class="cmd">${cmdFor(a,a.runner)}</div></div>`}
+function renderDetail(){
+ const a=byId(sel);
+ const tabs=a.lead?[['lead','Goals'],['setup','How she leads']]:[['setup','Setup'],['runs','Runs '+a.runs.length]];
+ if(!tabs.some(t=>t[0]===tab))tab=tabs[0][0];
+ $('detail').innerHTML=`<div class="dh">${av(a)}<div><h2>${a.name}</h2><div class="muted">${a.role}${a.builtin?' · built in':''}</div><div class="state-word" style="margin-top:2px">${a.lead&&a.state==='idle'?'':stateLine(a)}</div></div><span class="sp"></span>
+   ${a.builtin?'<button class="soft" id="dup">Duplicate to customise</button>':'<button class="soft" id="dup">Duplicate</button><button class="soft" id="del">Delete…</button>'}${a.lead?'':'<button class="primary" id="run-main">Run ▸</button>'}</div>
+  <p class="muted" style="max-width:760px;margin:12px 0 0">${a.desc}</p>${a.src?`<div class="src">Linked to ${a.src} · edits stay in sync</div>`:''}
+  <div class="tabs" role="tablist">${tabs.map(t=>`<button role="tab" aria-selected="${tab===t[0]}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>
+  ${tab==='lead'?leadPage(a):tab==='setup'?(a.lead?leadSetup(a):memberSetup(a)):`<div class="runs">${a.runs.length?a.runs.map(r=>`<div class="runrow"><span class="done">✓</span><span class="t">${r[1]}</span><span>${r[2]}</span><span>${r[3]}</span><span>${r[4]}</span></div>`).join(''):'<div class="empty">No runs yet.</div>'}</div>`}`;
+ const on=(id,f)=>{const e=$(id);if(e)e.onclick=f};
+ on('run-main',()=>openRun(a));
+ on('del',()=>{$('del-title').textContent=`Delete ${a.name}?`;$('del-go').textContent=`Delete ${a.name}`;$('dlg-del').showModal()});
+ on('dup',()=>toast(a,`was copied as "${a.name} 2". The copy can be edited.`));
+ on('plan-go',()=>{leadPhase='plan';setState(a,'working','Writing a plan for the flaky login test',true)});
+ on('plan-edit',()=>toast(a,'Drag to reorder, swap a member, or change a model. She re-checks the estimate.'));
+ on('plan-ok',()=>startGoal(a));
+ on('ask-yes',()=>{leadPhase='done';setState(a,'done','PR 47 is open: fix the flaky login test');['tarek','omar','sami'].forEach(id=>setState(byId(id),'idle','',true))});
+ on('ask-no',()=>{leadPhase='done';setState(a,'done','Kept on fix/login-flaky, not pushed')});
+ $('detail').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;renderDetail()});
+ $('detail').querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>{a.color=b.dataset.color;renderAll()});
+ $('detail').querySelectorAll('[data-runner]').forEach(b=>b.onclick=()=>{a.runner=b.dataset.runner;a.model={claude:'sonnet',codex:'gpt-5.6',gemini:'2.5-pro'}[a.runner];renderAll()});
+ $('detail').querySelectorAll('.radios button').forEach(b=>b.onclick=()=>b.parentElement.querySelectorAll('button').forEach(x=>x.setAttribute('aria-checked',String(x===b))));
+ $('detail').querySelectorAll('.chips .chip[role=checkbox]').forEach(c=>c.onclick=()=>c.setAttribute('aria-checked',String(c.getAttribute('aria-checked')!=='true')));
+ relabel();
+}
+function startGoal(a){leadPhase='run';const [t,o,s]=['tarek','omar','sami'].map(byId);
+ setState(a,'working','Running the plan · 1 of 3',true);setState(t,'working','Reproducing the login test, run 7 of 20',true);setState(o,'waiting','Starts after Tarek',true);setState(s,'waiting','Reviews once at the end',true);
+ setTimeout(()=>{setState(t,'done','Root cause: the OTP field renders 300 ms after the session-ready event');setState(o,'working','Writing the failing test in a new worktree',true);setState(a,'working','Running the plan · 2 of 3',true)},2600);
+ setTimeout(()=>{setState(o,'done','Fixed on fix/login-flaky with 1 new test',true);setState(s,'working','Reviewing the full diff',true);setState(a,'working','Running the plan · 3 of 3',true)},5200);
+ setTimeout(()=>{setState(s,'done','No blocking issues',true);leadPhase='ask';setState(a,'needs','Wants to push fix/login-flaky and open a PR')},7600)}
+function renderAll(){renderBar();renderList();renderDetail();relabel()}
+function toast(a,text,action){const t=document.createElement('div');t.className='toast';t.innerHTML=`${av(a)}<span><b>${a.name}</b> ${text}</span>${action?`<button class="soft">${action}</button>`:''}`;$('toasts').append(t);setTimeout(()=>t.remove(),4800)}
+function setState(a,s,now,quiet){a.state=s;if(now!==undefined)a.now=now;renderAll();if(quiet)return;
+ if(s==='needs')toast(a,'needs you: '+a.now.charAt(0).toLowerCase()+a.now.slice(1),'Answer');
+ if(s==='done')toast(a,'is done: '+a.now,'Open');}
+let runAgent=null,runRunner='claude';
+function openRun(a){runAgent=a;runRunner=a.runner;$('run-av-slot').innerHTML=av(a);$('run-title').textContent='Run '+a.name;$('run-role').textContent=a.role;$('run-go').textContent='Run '+a.name;
+ $('run-fields').innerHTML=a.vars.map(v=>`<label for="v-${v}">${v}</label><input class="field" id="v-${v}" placeholder="${v}">`).join('');
+ $('run-models').querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-checked',String(c.dataset.r===runRunner)));$('run-cmd').innerHTML=cmdFor(a,runRunner);$('dlg-run').showModal()}
+$('run-models').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;runRunner=c.dataset.r;$('run-models').querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-checked',String(x===c)));$('run-cmd').innerHTML=cmdFor(runAgent,runRunner)};
+$('dlg-run').onclose=()=>{if($('dlg-run').returnValue!=='run')return;const a=runAgent;setState(a,'working','Starting in the project',true);setTimeout(()=>setState(a,'done','Finished. The result is in its pane.'),3500)};
+$('list').addEventListener('click',e=>{const r=e.target.closest('[data-run]');if(r){e.stopPropagation();openRun(byId(r.dataset.run));return}const i=e.target.closest('.item');if(i){sel=i.dataset.id;tab=byId(sel).lead?'lead':'setup';renderAll()}});
+$('crewbar').onclick=e=>{const v=e.target.closest('.av');if(!v)return;sel=v.dataset.agent;tab=byId(sel).lead?'lead':'setup';renderAll()};
+$('new-menu').onclick=()=>{sel='lead';tab='lead';leadPhase='goal';renderAll();$('goal').focus()};
+$('import-t').onclick=()=>toast(byId('rami'),'and Zaid came from ~/.claude/agents and your skills. Import finds the rest.');
+$('new-agent').onclick=()=>toast({...byId('yara'),name:'New member',ini:'+',color:'yellow',state:'idle'},'opens in Setup with a name and colour picked for you');
+$('namer').onclick=e=>{const b=e.target.closest('button');if(!b)return;const [C,mem,mems]=b.dataset.n.split('|');T={Crew:C,member:mem,members:mems};$('namer').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));relabel()};
+$('notes-t').onclick=()=>$('note').hidden=!$('note').hidden;
+$('t-seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;document.documentElement.classList.toggle('light',b.dataset.th==='light');$('t-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))};
+renderAll();
+</script>
+</html>
