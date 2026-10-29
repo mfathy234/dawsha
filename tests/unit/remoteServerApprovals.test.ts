@@ -5,9 +5,10 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
 import { createRemoteAuth, type DeviceStore, type StoredDevice } from '../../src/main/remoteAuth'
-import type { RemoteApprovals } from '../../src/main/remoteApprovals'
+import { KIND_OFF_MESSAGE, type RemoteApprovals } from '../../src/main/remoteApprovals'
 import { startRemoteServer } from '../../src/main/remoteServer'
 import type { ApprovalsPayload } from '../../src/shared/approvals'
+import type { RemoteActivityInput } from '../../src/shared/remoteActivity'
 
 function createStore(): DeviceStore {
   let devices: StoredDevice[] = []
@@ -47,6 +48,7 @@ async function setup(assetDirectory?: string, heartbeatIntervalMs?: number) {
     stop: vi.fn()
   }
   const write = vi.fn()
+  const activity: RemoteActivityInput[] = []
   const server = await startRemoteServer({
     getHostName: () => 'device.trycloudflare.com',
     auth,
@@ -56,6 +58,7 @@ async function setup(assetDirectory?: string, heartbeatIntervalMs?: number) {
     startSession: async () => ({ ok: true }),
     stopSession: () => true,
     approvals,
+    onActivity: (entry) => activity.push(entry),
     assetDirectory,
     heartbeatIntervalMs
   })
@@ -63,13 +66,13 @@ async function setup(assetDirectory?: string, heartbeatIntervalMs?: number) {
   const headers = { Host: 'device.trycloudflare.com', Origin: 'https://device.trycloudflare.com', Cookie: `dawsha_remote=${paired.token}` }
   const json = { ...headers, 'Content-Type': 'application/json' }
   const answerBody = { id: 't1', fingerprint: '0123456789abcdef', allow: true }
-  return { server, base, headers, json, auth, approvals, write, listeners, answerBody, paired }
+  return { server, base, headers, json, auth, approvals, activity, write, listeners, answerBody, paired }
 }
 
 describe('approval endpoints', () => {
   it('refuse every approval route while the permission is off, even with terminal input on', async () => {
     const context = await setup()
-    context.auth.setPermissions({ terminalInput: true, sessionControl: true })
+    context.auth.setPermissions({ messages: true, sessions: true })
     try {
       const list = await request(`${context.base}/approvals`, { headers: context.headers })
       const answer = await request(`${context.base}/approvals/answer`, { method: 'POST', headers: context.json, body: JSON.stringify(context.answerBody) })
@@ -86,7 +89,7 @@ describe('approval endpoints', () => {
 
   it('require a paired device, a same-origin request and a JSON body', async () => {
     const context = await setup()
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     try {
       const anonymous = await request(`${context.base}/approvals`, { headers: { Host: 'device.trycloudflare.com' } })
       expect(anonymous.statusCode).toBe(401)
@@ -102,7 +105,7 @@ describe('approval endpoints', () => {
 
   it('list and answer when the permission is on, naming the paired device', async () => {
     const context = await setup()
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     try {
       const state = await bodyJson(await request(`${context.base}/state`, { headers: context.headers }))
       expect(state.permissions).toMatchObject({ approvals: true, terminalInput: false })
@@ -112,14 +115,14 @@ describe('approval endpoints', () => {
       const answer = await request(`${context.base}/approvals/answer`, { method: 'POST', headers: context.json, body: JSON.stringify({ ...context.answerBody, allow: false, reason: 'Use pnpm' }) })
       expect(answer.statusCode).toBe(200)
       expect(await bodyJson(answer)).toEqual({ ok: true, reasonSent: true })
-      expect(context.approvals.answer).toHaveBeenCalledWith({ id: 't1', fingerprint: '0123456789abcdef', allow: false, reason: 'Use pnpm', device: 'Pixel 8' })
+      expect(context.approvals.answer).toHaveBeenCalledWith(expect.objectContaining({ id: 't1', fingerprint: '0123456789abcdef', allow: false, reason: 'Use pnpm', device: 'Pixel 8' }))
       expect(context.write).not.toHaveBeenCalled()
     } finally { await context.server.stop() }
   })
 
   it('reject malformed answers before reaching the service', async () => {
     const context = await setup()
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     try {
       const bad = [
         { ...context.answerBody, fingerprint: 'nope' },
@@ -139,7 +142,7 @@ describe('approval endpoints', () => {
 
   it('pass through a stale-prompt refusal with its status and message', async () => {
     const context = await setup()
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     vi.mocked(context.approvals.answer).mockResolvedValueOnce({ ok: false, status: 409, error: 'That prompt changed.' })
     try {
       const response = await request(`${context.base}/approvals/answer`, { method: 'POST', headers: context.json, body: JSON.stringify(context.answerBody) })
@@ -150,7 +153,7 @@ describe('approval endpoints', () => {
 
   it('tells the phone why a deny reason was not sent', async () => {
     const context = await setup()
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     vi.mocked(context.approvals.answer).mockResolvedValueOnce({ ok: true, reasonSent: false, reasonFailure: 'new-prompt' })
     try {
       const response = await request(`${context.base}/approvals/answer`, { method: 'POST', headers: context.json, body: JSON.stringify({ ...context.answerBody, allow: false, reason: 'x' }) })
@@ -160,7 +163,7 @@ describe('approval endpoints', () => {
 
   it('rate-limit answers per device', async () => {
     const context = await setup()
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     try {
       let last = 0
       for (let index = 0; index < 61; index += 1) {
@@ -172,10 +175,10 @@ describe('approval endpoints', () => {
 
   it('stop working as soon as the permission is turned off again', async () => {
     const context = await setup()
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     try {
       expect((await request(`${context.base}/approvals`, { headers: context.headers })).statusCode).toBe(200)
-      context.auth.setPermissions({ approvals: false })
+      context.auth.setPermissions({ commands: false, answers: false })
       expect((await request(`${context.base}/approvals`, { headers: context.headers })).statusCode).toBe(403)
       expect((await request(`${context.base}/approvals/answer`, { method: 'POST', headers: context.json, body: JSON.stringify(context.answerBody) })).statusCode).toBe(403)
     } finally { await context.server.stop() }
@@ -190,7 +193,7 @@ describe('approval stream', () => {
     try {
       const refused = open(context.server.port, context.headers)
       await expect(new Promise((resolve, reject) => { refused.once('open', resolve); refused.once('error', reject) })).rejects.toBeTruthy()
-      context.auth.setPermissions({ approvals: true })
+      context.auth.setPermissions({ commands: true, answers: true })
       const foreign = open(context.server.port, { ...context.headers, Origin: 'https://attacker.example' })
       await expect(new Promise((resolve, reject) => { foreign.once('open', resolve); foreign.once('error', reject) })).rejects.toBeTruthy()
       expect(context.approvals.subscribe).not.toHaveBeenCalled()
@@ -199,7 +202,7 @@ describe('approval stream', () => {
 
   it('sends the current prompts, pushes changes, and unsubscribes on disconnect', async () => {
     const context = await setup()
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     let socket: WebSocket | undefined
     try {
       socket = open(context.server.port, context.headers)
@@ -218,7 +221,7 @@ describe('approval stream', () => {
 
   it('has its own small cap, separate from terminal streams', async () => {
     const context = await setup()
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     const sockets: WebSocket[] = []
     try {
       for (let index = 0; index < 4; index += 1) {
@@ -234,7 +237,7 @@ describe('approval stream', () => {
 
   it('closes when the permission is turned off', async () => {
     const context = await setup(undefined, 10)
-    context.auth.setPermissions({ approvals: true })
+    context.auth.setPermissions({ commands: true, answers: true })
     let socket: WebSocket | undefined
     try {
       socket = open(context.server.port, context.headers)
@@ -242,7 +245,7 @@ describe('approval stream', () => {
       socket.on('message', (value) => frames.push(value.toString()))
       await new Promise<void>((resolve, reject) => { socket!.once('open', resolve); socket!.once('error', reject) })
       await vi.waitFor(() => expect(frames).toHaveLength(1))
-      context.auth.setPermissions({ approvals: false })
+      context.auth.setPermissions({ commands: false, answers: false })
       await vi.waitFor(() => expect(frames.some((frame) => frame.includes('"event":"denied"'))).toBe(true))
       await vi.waitFor(() => expect(context.listeners.size).toBe(0))
     } finally { socket?.terminate(); await context.server.stop() }
@@ -267,5 +270,62 @@ describe('service worker file', () => {
       await context.server.stop()
       rmSync(assetDirectory, { recursive: true, force: true })
     }
+  })
+})
+
+describe('approval capabilities', () => {
+  const question = { ...payload.items[0]!, id: 't2', kind: 'other' as const, summary: 'Which database?', allowBlock: 'kind' as const, canAllow: false }
+  const mixed: ApprovalsPayload = { ...payload, items: [payload.items[0]!, question] }
+
+  it('shows only commands and edits when only commands is on, and only questions when only answers is on', async () => {
+    const context = await setup()
+    vi.mocked(context.approvals.snapshot).mockResolvedValue(mixed)
+    try {
+      context.auth.setPermissions({ commands: true })
+      expect((await bodyJson(await request(`${context.base}/approvals`, { headers: context.headers }))).items.map((item: { id: string }) => item.id)).toEqual(['t1'])
+      context.auth.setPermissions({ commands: false, answers: true })
+      expect((await bodyJson(await request(`${context.base}/approvals`, { headers: context.headers }))).items.map((item: { id: string }) => item.id)).toEqual(['t2'])
+      const state = await bodyJson(await request(`${context.base}/state`, { headers: context.headers }))
+      expect(state.permissions).toMatchObject({ approvals: true, commands: false, answers: true })
+    } finally { await context.server.stop() }
+  })
+
+  it('hands the answer step a rule that matches the capabilities, so a denied kind is refused', async () => {
+    const context = await setup()
+    context.auth.setPermissions({ commands: true })
+    try {
+      await request(`${context.base}/approvals/answer`, { method: 'POST', headers: context.json, body: JSON.stringify(context.answerBody) })
+      const given = vi.mocked(context.approvals.answer).mock.calls[0]![0]
+      expect(given.canAnswer!('command')).toBe(true)
+      expect(given.canAnswer!('edit')).toBe(true)
+      expect(given.canAnswer!('other')).toBe(false)
+      context.auth.setPermissions({ commands: false, answers: true })
+      expect(given.canAnswer!('command')).toBe(false)
+      expect(given.canAnswer!('other')).toBe(true)
+    } finally { await context.server.stop() }
+  })
+
+  it('logs an allowed or denied answer with the phone, project and command', async () => {
+    const context = await setup()
+    context.auth.setPermissions({ commands: true })
+    vi.mocked(context.approvals.answer).mockImplementationOnce(async (request) => {
+      request.onAnswered?.({ summary: 'npm test', kind: 'command', agent: 'codex', projectName: 'billing-api' })
+      return { ok: true as const, reasonSent: false }
+    })
+    try {
+      await request(`${context.base}/approvals/answer`, { method: 'POST', headers: context.json, body: JSON.stringify(context.answerBody) })
+      expect(context.activity).toEqual([{ device: 'Pixel 8', action: 'approved', session: 'billing-api', detail: 'npm test' }])
+    } finally { await context.server.stop() }
+  })
+
+  it('logs a blocked attempt when the kind of prompt is turned off', async () => {
+    const context = await setup()
+    context.auth.setPermissions({ commands: true })
+    vi.mocked(context.approvals.answer).mockResolvedValueOnce({ ok: false, status: 403, error: KIND_OFF_MESSAGE })
+    try {
+      const response = await request(`${context.base}/approvals/answer`, { method: 'POST', headers: context.json, body: JSON.stringify(context.answerBody) })
+      expect(response.statusCode).toBe(403)
+      expect(context.activity).toEqual([{ device: 'Pixel 8', action: 'blocked', session: null, detail: 'answering a prompt' }])
+    } finally { await context.server.stop() }
   })
 })

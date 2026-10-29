@@ -14,6 +14,7 @@ import { sanitizeSplits } from './splits'
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './sidebarWidth'
 import { defaultHighlights, sanitizeHighlights } from './highlights'
 import { defaultRecordings, sanitizeRecordings } from './recordings'
+import { defaultCapabilities, sanitizeCapabilities } from './remoteCapabilities'
 import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from './sessionTags'
 import {
   DEFAULT_FONT_SIZE,
@@ -56,9 +57,9 @@ export const DEFAULT_PALETTE_SHORTCUT = 'Ctrl+K'
 export const defaultFullAccess = (): FullAccess => ({ claude: true, codex: true, gemini: false })
 export const defaultRemoteAccess = (): RemoteAccessSettings => ({
   allowedEmail: '',
-  terminalInput: false,
-  sessionControl: false,
-  approvals: false,
+  capabilities: defaultCapabilities(),
+  autoReconnect: true,
+  notifyLinkChange: true,
   approvalsNotify: true,
   approvalsOnlyWhenAway: false,
   approvalsAwayMinutes: 3,
@@ -269,9 +270,9 @@ function sanitizeRemoteAccess(value: unknown): RemoteAccessSettings {
   if (!isRecord(value)) return defaults
   return {
     allowedEmail: typeof value.allowedEmail === 'string' && value.allowedEmail.length <= 254 ? value.allowedEmail : '',
-    terminalInput: value.terminalInput === true,
-    sessionControl: value.sessionControl === true,
-    approvals: value.approvals === true,
+    capabilities: sanitizeCapabilities(value.capabilities, value),
+    autoReconnect: typeof value.autoReconnect === 'boolean' ? value.autoReconnect : defaults.autoReconnect,
+    notifyLinkChange: typeof value.notifyLinkChange === 'boolean' ? value.notifyLinkChange : defaults.notifyLinkChange,
     approvalsNotify: typeof value.approvalsNotify === 'boolean' ? value.approvalsNotify : defaults.approvalsNotify,
     approvalsOnlyWhenAway: value.approvalsOnlyWhenAway === true,
     approvalsAwayMinutes: clampAwayMinutes(value.approvalsAwayMinutes, defaults.approvalsAwayMinutes),

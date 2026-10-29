@@ -36,7 +36,7 @@ function rich(): Settings {
     sessionsLayout: 'board',
     paletteShortcut: 'Alt+Space',
     recordings: { enabled: true, keepDays: 30, maxMegabytes: 500 },
-    remoteAccess: { ...defaultSettings().remoteAccess, allowedEmail: 'me@example.com', terminalInput: true },
+    remoteAccess: { ...defaultSettings().remoteAccess, allowedEmail: 'me@example.com' },
     onboardingDismissed: true,
     lastSeenVersion: '0.5.3',
     keptSessions: [{ projectId: 'a', agent: 'claude', sessionId: 'sess-1', title: 'Old', closedAt: 5 }],

@@ -124,10 +124,17 @@ describe('migrateSettings', () => {
   })
 
   it('defaults private remote permissions off and sanitizes them independently', () => {
-    const off = { allowedEmail: '', terminalInput: false, sessionControl: false, approvals: false, approvalsNotify: true, approvalsOnlyWhenAway: false, approvalsAwayMinutes: 3, approvalsAllowConfigEdits: false }
+    const none = { commands: false, answers: false, messages: false, sessions: false, fullOutput: false }
+    const off = { allowedEmail: '', capabilities: none, autoReconnect: true, notifyLinkChange: true, approvalsNotify: true, approvalsOnlyWhenAway: false, approvalsAwayMinutes: 3, approvalsAllowConfigEdits: false }
     expect(defaultSettings().remoteAccess).toEqual(off)
-    expect(migrateSettings({ remoteAccess: { terminalInput: true, sessionControl: 'yes' } }).remoteAccess).toEqual({ ...off, terminalInput: true })
-    expect(migrateSettings({ remoteAccess: { approvals: true, approvalsAwayMinutes: 500, approvalsNotify: 'no' } }).remoteAccess).toMatchObject({ approvals: true, approvalsAwayMinutes: 60, approvalsNotify: true })
+    expect(migrateSettings({ remoteAccess: { capabilities: { messages: true, sessions: 'yes', fullOutput: true } } }).remoteAccess).toEqual({ ...off, capabilities: { ...none, messages: true, fullOutput: true } })
+    expect(migrateSettings({ remoteAccess: { approvalsAwayMinutes: 500, approvalsNotify: 'no', autoReconnect: false } }).remoteAccess).toMatchObject({ approvalsAwayMinutes: 60, approvalsNotify: true, autoReconnect: false, notifyLinkChange: true })
+  })
+
+  it('moves the old phone permissions into capabilities and never turns on full output', () => {
+    const migrated = migrateSettings({ remoteAccess: { terminalInput: true, sessionControl: false, approvals: true } }).remoteAccess
+    expect(migrated.capabilities).toEqual({ commands: true, answers: true, messages: true, sessions: false, fullOutput: false })
+    expect(migrated).not.toHaveProperty('approvals')
   })
 
   it('returns defaults for junk input', () => {

@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
 import { createRemoteAuth, REMOTE_TOKEN_TTL_MS, type DeviceStore, type StoredDevice } from '../../src/main/remoteAuth'
+import type { RemoteActivityInput } from '../../src/shared/remoteActivity'
 import { startRemoteServer, type RemoteServerOptions } from '../../src/main/remoteServer'
 import type { RemoteTerminalFrame, RemoteTerminalSnapshot } from '../../src/main/remoteTerminalState'
 import type { Project } from '../../src/shared/types'
@@ -43,6 +44,7 @@ async function setup(
   const auth = createRemoteAuth(createStore(), now)
   const pairing = auth.createPairingCode()
   const paired = auth.pair(pairing.code, 'Test browser')!
+  auth.setPermissions({ fullOutput: true })
   const terminal: RemoteTerminalSnapshot = { id: 'term-1', startedAt: 1, cols: 80, rows: 24, projectId: 'p1', agent: terminalAgent }
   const outputListeners = new Set<(frame: RemoteTerminalFrame) => void>()
   let screenOutput = 'hello'
@@ -50,6 +52,7 @@ async function setup(
   const getProjects = vi.fn(() => [project])
   const write = vi.fn()
   const stopSession = vi.fn(() => true)
+  const activity: RemoteActivityInput[] = []
   const startSession = vi.fn(async () => ({ ok: true as const, pid: 123, id: 'new-term' }))
   const server = await startRemoteServer({
     getHostName: () => 'device.trycloudflare.com',
@@ -69,13 +72,14 @@ async function setup(
     startSession,
     stopSession,
     assetDirectory,
+    onActivity: (entry) => activity.push(entry),
     onRequestError,
     onRequestComplete,
     heartbeatIntervalMs
   })
   const base = `http://127.0.0.1:${server.port}/dawsha/api`
   const headers = { Host: 'device.trycloudflare.com', Origin: 'https://device.trycloudflare.com', Cookie: `dawsha_remote=${paired.token}` }
-  return { server, base, headers, auth, pairing, paired, getProjects, write, startSession, stopSession, outputListeners, terminal, setScreenOutput }
+  return { server, base, headers, auth, pairing, paired, activity, getProjects, write, startSession, stopSession, outputListeners, terminal, setScreenOutput }
 }
 
 describe('private remote HTTP API', () => {
@@ -209,7 +213,7 @@ describe('private remote HTTP API', () => {
   it('redacts unknown route paths in failure diagnostics', async () => {
     const onRequestError = vi.fn()
     const context = await setup(undefined, onRequestError)
-    context.auth.setPermissions({ sessionControl: true })
+    context.auth.setPermissions({ sessions: true })
     context.startSession.mockRejectedValue(new Error('session startup failed'))
     try {
       const response = await request(`${context.base}/session?token=private`, {
@@ -226,7 +230,7 @@ describe('private remote HTTP API', () => {
 
   it('routes permitted terminal input and session starts', async () => {
     const context = await setup()
-    context.auth.setPermissions({ terminalInput: true, sessionControl: true })
+    context.auth.setPermissions({ messages: true, sessions: true })
     try {
       const input = await request(`${context.base}/terminal/input`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 'term-1', data: 'hello' }) })
       const sessionRequest = { projectId: 'p1', agent: 'claude', cols: 80, rows: 24 }
@@ -243,11 +247,11 @@ describe('private remote HTTP API', () => {
     const context = await setup(undefined, undefined, onRequestComplete)
     const body = JSON.stringify({ id: 'term-1', cols: 40, rows: 30 })
     try {
-      context.auth.setPermissions({ terminalInput: false })
+      context.auth.setPermissions({ messages: false })
       const refused = await request(`${context.base}/terminal/resize`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body })
       expect(refused.statusCode).toBe(403)
       expect(onRequestComplete).toHaveBeenCalledWith('POST', '/dawsha/api/terminal/resize', 403)
-      context.auth.setPermissions({ terminalInput: true })
+      context.auth.setPermissions({ messages: true })
       const ignored = await request(`${context.base}/terminal/resize`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body })
       expect(ignored.statusCode).toBe(200)
     } finally { await context.server.stop() }
@@ -259,7 +263,7 @@ describe('private remote HTTP API', () => {
       const denied = await request(`${context.base}/session/stop`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 'new-term' }) })
       expect(denied.statusCode).toBe(403)
       expect(context.stopSession).not.toHaveBeenCalled()
-      context.auth.setPermissions({ sessionControl: true })
+      context.auth.setPermissions({ sessions: true })
       const stopped = await request(`${context.base}/session/stop`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 'new-term' }) })
       expect(stopped.statusCode).toBe(200)
       expect(context.stopSession).toHaveBeenCalledWith('new-term')
@@ -279,7 +283,7 @@ describe('private remote HTTP API', () => {
 
   it('keeps local shell terminals out of browser state and rejects their input', async () => {
     const context = await setup(undefined, undefined, undefined, Date.now, undefined, undefined, 'shell')
-    context.auth.setPermissions({ terminalInput: true })
+    context.auth.setPermissions({ messages: true })
     try {
       const state = await request(`${context.base}/state`, { headers: context.headers })
       const data = await bodyJson(state)
@@ -306,7 +310,7 @@ describe('private remote HTTP API', () => {
 
   it('rechecks permissions after a control body finishes streaming', async () => {
     const context = await setup()
-    context.auth.setPermissions({ terminalInput: true, sessionControl: true })
+    context.auth.setPermissions({ messages: true, sessions: true })
     const body = JSON.stringify({ id: 'term-1', data: 'x' })
     try {
       const delayedRequest = (path: string): Promise<IncomingMessage> => new Promise((resolve, reject) => {
@@ -318,7 +322,7 @@ describe('private remote HTTP API', () => {
         outgoing.on('error', reject)
         outgoing.write(body.slice(0, -2))
         setTimeout(() => {
-          context.auth.setPermissions({ terminalInput: false, sessionControl: false })
+          context.auth.setPermissions({ messages: false, sessions: false })
           outgoing.end(body.slice(-2))
         }, 20)
       })
@@ -327,7 +331,7 @@ describe('private remote HTTP API', () => {
       await bodyJson(input)
       expect(context.write).not.toHaveBeenCalled()
 
-      context.auth.setPermissions({ terminalInput: true, sessionControl: true })
+      context.auth.setPermissions({ messages: true, sessions: true })
       const sessionBody = JSON.stringify({ projectId: 'p1', cols: 80, rows: 24 })
       const target = new URL(`${context.base}/session`)
       const pendingSession = new Promise<IncomingMessage>((resolve, reject) => {
@@ -403,7 +407,7 @@ describe('private remote HTTP API', () => {
 
   it('rejects malformed or oversized control requests before invoking a terminal', async () => {
     const context = await setup()
-    context.auth.setPermissions({ terminalInput: true })
+    context.auth.setPermissions({ messages: true })
     try {
       const nullBody = await request(`${context.base}/terminal/input`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body: 'null' })
       const malformed = await request(`${context.base}/terminal/input`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: '../other', data: 'x' }) })
@@ -518,5 +522,74 @@ describe('private remote HTTP API', () => {
     await context.server.stop()
     await expect(request(address)).rejects.toThrow()
     await context.server.stop()
+  })
+})
+
+describe('phone capabilities are enforced by the server', () => {
+  const post = (context: Awaited<ReturnType<typeof setup>>, path: string, body: unknown) =>
+    request(`${context.base}${path}`, { method: 'POST', headers: { ...context.headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+
+  it('refuses a message to a session while that capability is off, and says so in the activity log', async () => {
+    const context = await setup()
+    try {
+      const denied = await post(context, '/terminal/input', { id: 'term-1', data: 'hello\r' })
+      expect(denied.statusCode).toBe(403)
+      expect((await bodyJson(denied)).error).toMatch(/turned off/)
+      expect(context.write).not.toHaveBeenCalled()
+      expect(context.activity).toEqual([{ device: 'Test browser', action: 'blocked', session: 'Codex · Sample', detail: 'sending a message' }])
+    } finally { await context.server.stop() }
+  })
+
+  it('sends the message and logs it once the capability is on, and logs a Ctrl+C as an interrupt', async () => {
+    const context = await setup()
+    context.auth.setPermissions({ messages: true })
+    try {
+      expect((await post(context, '/terminal/input', { id: 'term-1', data: 'run the tests' })).statusCode).toBe(200)
+      expect(context.activity).toEqual([])
+      expect((await post(context, '/terminal/input', { id: 'term-1', data: '\r' })).statusCode).toBe(200)
+      expect((await post(context, '/terminal/input', { id: 'term-1', data: '\u0003' })).statusCode).toBe(200)
+      expect(context.write).toHaveBeenCalledTimes(3)
+      expect(context.activity.map((entry) => entry.action)).toEqual(['message', 'interrupt'])
+    } finally { await context.server.stop() }
+  })
+
+  it('refuses to start a session without the sessions capability and logs the attempt', async () => {
+    const context = await setup()
+    try {
+      const denied = await post(context, '/session', { projectId: 'p1', cols: 80, rows: 24 })
+      expect(denied.statusCode).toBe(403)
+      expect(context.startSession).not.toHaveBeenCalled()
+      expect(context.activity.map((entry) => [entry.action, entry.detail])).toEqual([['blocked', 'starting a session']])
+      context.auth.setPermissions({ sessions: true })
+      expect((await post(context, '/session', { projectId: 'p1', cols: 80, rows: 24 })).statusCode).toBe(200)
+      expect(context.activity.at(-1)).toMatchObject({ action: 'session-started' })
+    } finally { await context.server.stop() }
+  })
+
+  it('refuses the output stream while full terminal output is off, and allows it when on', async () => {
+    const context = await setup()
+    context.auth.setPermissions({ fullOutput: false })
+    const connect = (): Promise<{ status: number; socket: WebSocket }> => new Promise((resolve) => {
+      const socket = new WebSocket(`ws://127.0.0.1:${context.server.port}/dawsha/api/terminal/output?id=term-1`, { headers: { ...context.headers, host: 'device.trycloudflare.com' } })
+      socket.once('unexpected-response', (_request, response) => resolve({ status: response.statusCode ?? 0, socket }))
+      socket.once('open', () => resolve({ status: 101, socket }))
+    })
+    try {
+      const refused = await connect()
+      expect(refused.status).toBe(403)
+      context.auth.setPermissions({ fullOutput: true })
+      const accepted = await connect()
+      expect(accepted.status).toBe(101)
+      accepted.socket.close()
+    } finally { await context.server.stop() }
+  })
+
+  it('reports each capability to the phone so it can show or hide its controls', async () => {
+    const context = await setup()
+    context.auth.setPermissions({ fullOutput: false, messages: true })
+    try {
+      const state = await bodyJson(await request(`${context.base}/state`, { headers: context.headers }))
+      expect(state.permissions).toEqual({ read: true, terminalInput: true, sessionControl: false, approvals: false, commands: false, answers: false, fullOutput: false })
+    } finally { await context.server.stop() }
   })
 })

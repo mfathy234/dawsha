@@ -1,8 +1,9 @@
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { defaultCapabilities, REMOTE_CAPABILITIES, type RemoteCapabilities, type RemoteCapability } from '../shared/remoteCapabilities'
 
-export type RemotePermission = 'read' | 'terminalInput' | 'sessionControl' | 'approvals'
+export type RemotePermission = 'read' | 'approvals' | RemoteCapability
 
 export interface StoredDevice {
   id: string
@@ -86,7 +87,7 @@ function isStoredDevice(value: unknown): value is StoredDevice {
 export function createRemoteAuth(store: DeviceStore, now: () => number = Date.now) {
   let devices = store.load()
   const lastPersistedSeen = new Map(devices.map((device) => [device.id, device.lastSeenAt]))
-  let permissions = { terminalInput: false, sessionControl: false, approvals: false }
+  let permissions: RemoteCapabilities = defaultCapabilities()
   let pairing: { code: string; expiresAt: number; attempts: number } | null = null
   const revocationListeners = new Set<(deviceId: string) => void>()
 
@@ -158,22 +159,24 @@ export function createRemoteAuth(store: DeviceStore, now: () => number = Date.no
 
   function can(token: string, permission: RemotePermission): boolean {
     if (!authorize(token)) return false
-    return permission === 'read' || permissions[permission]
+    if (permission === 'read') return true
+    if (permission === 'approvals') return permissions.commands || permissions.answers
+    return permissions[permission]
   }
 
-  function setPermissions(next: Partial<typeof permissions>): void {
-    permissions = {
-      terminalInput: next.terminalInput ?? permissions.terminalInput,
-      sessionControl: next.sessionControl ?? permissions.sessionControl,
-      approvals: next.approvals ?? permissions.approvals
-    }
+  function setPermissions(next: Partial<RemoteCapabilities>): void {
+    permissions = Object.fromEntries(REMOTE_CAPABILITIES.map((capability) => [capability, next[capability] ?? permissions[capability]])) as RemoteCapabilities
+  }
+
+  function capabilities(): RemoteCapabilities {
+    return { ...permissions }
   }
 
   function listDevices(): PairedDevice[] {
     return devices.map(deviceView)
   }
 
-  return { createPairingCode, pair, authorize, revoke, can, setPermissions, listDevices, onRevoke }
+  return { createPairingCode, pair, authorize, revoke, can, setPermissions, capabilities, listDevices, onRevoke }
 }
 
 export type RemoteAuth = ReturnType<typeof createRemoteAuth>

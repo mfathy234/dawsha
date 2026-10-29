@@ -313,3 +313,24 @@ describe('remote approvals safety', () => {
     expect((await approvals.snapshot()).history[0]).toMatchObject({ allowed: true, summary: 'npm run build', source: 'desktop' })
   })
 })
+
+describe('remote approvals respect the capability of the prompt kind', () => {
+  it('refuses to answer a kind the phone may not answer, writes nothing and reports nothing', async () => {
+    const context = setup()
+    const [item] = (await context.approvals.snapshot()).items
+    const onAnswered = vi.fn()
+    const result = await context.approvals.answer({ id: 't1', fingerprint: item.fingerprint, allow: false, device: 'Pixel', canAnswer: (kind) => kind !== 'command', onAnswered })
+    expect(result).toMatchObject({ ok: false, status: 403 })
+    expect(context.write).not.toHaveBeenCalled()
+    expect(onAnswered).not.toHaveBeenCalled()
+  })
+
+  it('answers a permitted kind and reports what was answered', async () => {
+    const context = setup()
+    const [item] = (await context.approvals.snapshot()).items
+    const onAnswered = vi.fn()
+    const result = await context.approvals.answer({ id: 't1', fingerprint: item.fingerprint, allow: true, device: 'Pixel', canAnswer: (kind) => kind === 'command', onAnswered })
+    expect(result).toEqual({ ok: true, reasonSent: false })
+    expect(onAnswered).toHaveBeenCalledWith({ summary: 'npm test', kind: 'command', agent: 'codex', projectName: 'billing-api' })
+  })
+})

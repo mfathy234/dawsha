@@ -1,11 +1,14 @@
 import { appendFileSync, existsSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { AgentKind, RemoteAccessSettings, RemoteAccessState, Settings, Project, SpawnRequest, SpawnResult } from '../shared/types'
+import type { AgentKind, RemoteAccessPatch, RemoteAccessState, Settings, Project, SpawnRequest, SpawnResult } from '../shared/types'
 import { IPC } from '../shared/ipc'
 import { createFileDeviceStore, createRemoteAuth, type DeviceStore, type RemoteAuth } from './remoteAuth'
 import { createCloudflareQuickTunnel, type QuickTunnelHandle } from './cloudflareQuickTunnel'
 import { createCloudflaredInstaller } from './cloudflaredInstaller'
 import { waitForTunnelHostname, type ReachabilityOptions } from './tunnelReachability'
+import { createLinkMachine, reconnectDelay, RECONNECT_DELAYS_MS } from './remoteLink'
+import { createActivityLog, type RemoteActivityLog } from '../shared/remoteActivity'
+import { isCapabilityPatch } from '../shared/remoteCapabilities'
 import { createTunnelHealthMonitor, probeTunnel, type HealthReason } from './tunnelHealth'
 import { startRemoteServer, type RemoteServerHandle, type RemoteServerOptions } from './remoteServer'
 import { startRemoteSession } from './remoteSessions'
@@ -56,11 +59,13 @@ const SECOND_REACHABLE_WINDOW_MS = 90_000
 const READY_GRACE_MS = 4_000
 const RECONNECTING_MESSAGE = 'The connection dropped. Reconnecting…'
 const ADDRESS_CHANGED_NOTICE = 'The address changed. Scan the new code on your phone.'
-const RECONNECT_LIMIT = 3
-const RECONNECT_WINDOW_MS = 10 * 60_000
+const RECHECK_AFTER_FAILURE_MS = 5_000
+const ACTIVITY_ON_PAGE = 10
+const LINK_CHANGED_TITLE = 'Remote Access has a new link'
+const LINK_CHANGED_BODY = 'Your phone cannot use the old link. Open Remote Access and scan the new code.'
 const UNREACHABLE_MESSAGE = 'Cloudflare created a tunnel, but its public address is still not reachable after about two minutes. This is usually a temporary Cloudflare or DNS problem. Start Remote Access again to retry.'
 
-const PERMISSION_KEYS = new Set(['terminalInput', 'sessionControl', 'approvals', 'approvalsNotify', 'approvalsOnlyWhenAway', 'approvalsAwayMinutes', 'approvalsAllowConfigEdits'])
+const PERMISSION_KEYS = new Set(['capabilities', 'autoReconnect', 'notifyLinkChange', 'approvalsNotify', 'approvalsOnlyWhenAway', 'approvalsAwayMinutes', 'approvalsAllowConfigEdits'])
 
 function appendRemoteDiagnostic(userDataDir: string, record: Record<string, unknown>): void {
   const filePath = join(userDataDir, 'remote-access.log')
@@ -89,6 +94,9 @@ export interface RemoteAccessControllerOptions {
   readyGraceMs?: number
   probe?: (hostname: string) => Promise<boolean>
   healthIntervalMs?: number
+  recheckMs?: number
+  reconnectDelaysMs?: readonly number[]
+  notify?(title: string, body: string): void
 }
 
 export function createRemoteAccessController(options: RemoteAccessControllerOptions) {
@@ -105,7 +113,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   const installer = options.tunnel ? null : createCloudflaredInstaller({ userDataDir: options.userDataDir, log: (event, detail) => log(`installer-${event}`, detail) })
   const tunnelFactory = options.tunnel ?? createCloudflareQuickTunnel(undefined, () => installer!.ensureExecutable())
   const createServer = options.createServer ?? startRemoteServer
-  auth.setPermissions(options.settings.get().remoteAccess)
+  auth.setPermissions(options.settings.get().remoteAccess.capabilities)
   let server: RemoteServerHandle | null = null
   let url: string | null = null
   let hostname: string | null = null
@@ -115,7 +123,12 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   let reconnecting = false
   let notice: string | null = null
   let lastHealthy = true
-  const reconnectTimes: number[] = []
+  const link = createLinkMachine()
+  const activity: RemoteActivityLog = createActivityLog()
+  let roundTripMs: number | null = null
+  let checkedAt: number | null = null
+  let recovering: Promise<void> | null = null
+  let wakeRecovery: (() => void) | null = null
   let generation = 0
   const waitForHostname = options.waitForHostname ?? waitForTunnelHostname
   const log = (event: string, detail: Record<string, unknown> = {}): void => appendRemoteDiagnostic(options.userDataDir, { time: new Date().toISOString(), event, ...detail })
@@ -161,11 +174,15 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
 
   async function getState(): Promise<RemoteAccessState> {
     const enabled = server !== null && url !== null
-    if (ready && pairing && pairing.expiresAt <= Date.now()) pairing = auth.createPairingCode()
+    const snapshot = link.snapshot()
+    const reachable = snapshot.phase === 'on'
+    if (ready && reachable && pairing && pairing.expiresAt <= Date.now()) pairing = auth.createPairingCode()
     const status: RemoteAccessState['status'] = enabled
-      ? (reconnecting ? 'reconnecting' : ready ? 'available' : 'connecting')
+      ? (snapshot.phase === 'reconnecting' ? 'reconnecting' : snapshot.phase === 'dropped' ? 'dropped' : reachable && ready ? 'available' : 'connecting')
       : setupError ? 'setup-required' : 'off'
-    const message = status === 'reconnecting'
+    const message = status === 'dropped'
+      ? 'The tunnel dropped. Your phone cannot reach this PC.'
+      : status === 'reconnecting'
       ? RECONNECTING_MESSAGE
       : status === 'connecting'
       ? 'Cloudflare is publishing your tunnel address. This can take up to a minute; this page updates on its own.'
@@ -177,12 +194,17 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     return {
       status,
       enabled,
-      url: ready ? url : null,
+      url: ready && reachable ? url : null,
       message,
-      notice: ready ? notice : null,
+      notice: ready && reachable ? notice : null,
       devices: auth.listDevices(),
-      pairing: ready && pairing && pairing.expiresAt > Date.now() ? pairing : null,
-      permissions: options.settings.get().remoteAccess
+      pairing: ready && reachable && pairing && pairing.expiresAt > Date.now() ? pairing : null,
+      permissions: options.settings.get().remoteAccess,
+      droppedAt: snapshot.droppedAt,
+      linkChangedAt: snapshot.changedAt,
+      roundTripMs: enabled ? roundTripMs : null,
+      checkedAt: enabled ? checkedAt : null,
+      activity: activity.list(ACTIVITY_ON_PAGE)
     }
   }
 
@@ -195,13 +217,24 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     removeTunnelExit?.()
     removeTunnelExit = active.onExit((error) => {
       log('tunnel-exit', { message: error.message })
+      if (server && link.snapshot().phase === 'on') {
+        tunnel = null
+        removeTunnelExit = null
+        drop('exit')
+        return
+      }
       setupError = `Cloudflare Quick Tunnel stopped: ${error.message}`
       void deactivate().catch(() => undefined)
     })
   }
 
-  async function connect(email: string | undefined): Promise<boolean> {
+  async function connect(email: string | undefined, deactivateOnFailure = true): Promise<boolean> {
     const mine = ++generation
+    const giveUp = (message: string): Promise<false> | false => {
+      if (deactivateOnFailure) return fail(message, mine)
+      log('connect-gave-up', { message })
+      return false
+    }
     const cancelled = (): boolean => mine !== generation || !server
     for (const window of [FIRST_REACHABLE_WINDOW_MS, SECOND_REACHABLE_WINDOW_MS]) {
       const host = hostname
@@ -214,6 +247,9 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
       if (cancelled()) return false
       if (reachable) {
         ready = true
+        link.up()
+        roundTripMs = null
+        checkedAt = null
         pairing = auth.createPairingCode()
         log('hostname-ready', { host })
         health.start()
@@ -233,32 +269,89 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
         adopt(next)
       } catch (error) {
         log('hostname-restart-failed', { message: (error as Error).message })
-        return fail((error as Error).message || UNREACHABLE_MESSAGE, mine)
+        return giveUp((error as Error).message || UNREACHABLE_MESSAGE)
       }
     }
     log('hostname-unreachable', { host: hostname })
-    return fail(UNREACHABLE_MESSAGE, mine)
+    return giveUp(UNREACHABLE_MESSAGE)
   }
 
   const health = createTunnelHealthMonitor({
-    probe: () => hostname ? (options.probe ?? probeTunnel)(hostname) : Promise.resolve(true),
+    probe: async () => {
+      if (!hostname) return true
+      const started = Date.now()
+      const healthy = await (options.probe ?? probeTunnel)(hostname)
+      checkedAt = Date.now()
+      if (healthy) roundTripMs = checkedAt - started
+      return healthy
+    },
     intervalMs: options.healthIntervalMs,
     onResult: (healthy, failures) => {
-      if (!healthy) log('tunnel-health-failed', { host: hostname, consecutiveFailures: failures })
-      else if (!lastHealthy) log('tunnel-health-recovered', { host: hostname })
+      if (!healthy) {
+        log('tunnel-health-failed', { host: hostname, consecutiveFailures: failures })
+        if (failures === 1) {
+          const recheck = setTimeout(() => { void health.check() }, options.recheckMs ?? RECHECK_AFTER_FAILURE_MS)
+          recheck.unref?.()
+        }
+      } else if (!lastHealthy) log('tunnel-health-recovered', { host: hostname })
+      if (healthy && !reconnecting && link.recovered()) log('tunnel-recovered', { host: hostname })
       lastHealthy = healthy
     },
-    onUnhealthy: (reason) => { void reconnect(reason).catch(() => undefined) }
+    onUnhealthy: (reason) => drop(reason)
   })
 
-  // The tunnel can die while cloudflared stays alive (sleep, network change, Cloudflare drop): start a fresh Quick Tunnel.
-  async function reconnect(reason: HealthReason): Promise<void> {
+  // The tunnel can die while cloudflared stays alive (sleep, network change, Cloudflare drop): say so at once, then replace it.
+  function drop(reason: HealthReason): void {
     if (!server || !ready || reconnecting || enabling || disabling || stopping) return
-    const now = Date.now()
-    while (reconnectTimes.length && now - reconnectTimes[0]! > RECONNECT_WINDOW_MS) reconnectTimes.shift()
-    reconnectTimes.push(now)
+    if (!link.drop()) return
+    log('tunnel-dropped', { reason, host: hostname })
+    if (options.settings.get().remoteAccess.autoReconnect) void startRecovery(reason, false)
+  }
+
+  function pause(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(finish, ms)
+      function finish(): void {
+        clearTimeout(timer)
+        if (wakeRecovery === finish) wakeRecovery = null
+        resolve()
+      }
+      wakeRecovery = finish
+    })
+  }
+
+  function startRecovery(reason: HealthReason | 'manual', manual: boolean): Promise<void> {
+    if (recovering) {
+      if (manual) wakeRecovery?.()
+      return recovering
+    }
+    const operation = recoverLoop(reason, manual).catch((error: unknown) => {
+      log('tunnel-recovery-failed', { message: (error as Error).message })
+    }).finally(() => { if (recovering === operation) recovering = null })
+    recovering = operation
+    return operation
+  }
+
+  async function recoverLoop(reason: HealthReason | 'manual', manual: boolean): Promise<void> {
+    const delays = manual ? [0] : options.reconnectDelaysMs ?? RECONNECT_DELAYS_MS
+    for (let attempt = 0; ; attempt++) {
+      const delay = reconnectDelay(attempt, delays)
+      if (delay === null) { log('reconnect-gave-up', { attempts: attempt, host: hostname }); return }
+      if (delay > 0) {
+        log('reconnect-wait', { attempt: attempt + 1, delayMs: delay })
+        await pause(delay)
+      }
+      if (!server || stopping || disabling) return
+      if (link.snapshot().phase === 'on') return
+      if (await reconnectOnce(reason, attempt + 1)) return
+      if (!server) return
+    }
+  }
+
+  async function reconnectOnce(reason: HealthReason | 'manual', attempt: number): Promise<boolean> {
+    if (!server || reconnecting || enabling || disabling || stopping || !link.reconnecting()) return false
     const email = options.settings.get().remoteAccess.allowedEmail.trim() || undefined
-    log('tunnel-reconnect', { reason, host: hostname })
+    log('tunnel-reconnect', { reason, attempt, host: hostname })
     health.stop()
     reconnecting = true
     ready = false
@@ -266,27 +359,36 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     notice = null
     const mine = ++generation
     try {
-      if (reconnectTimes.length > RECONNECT_LIMIT) { await fail(UNREACHABLE_MESSAGE, mine); return }
       const old = tunnel
       removeTunnelExit?.()
       removeTunnelExit = null
       tunnel = null
       if (old) await old.stop().catch(() => undefined)
       const next = await tunnelFactory.start(localPort, email)
-      if (mine !== generation || !server) { await next.stop().catch(() => undefined); return }
+      if (mine !== generation || !server) { await next.stop().catch(() => undefined); return false }
       tunnel = next
       adopt(next)
-      if (await connect(email)) {
+      if (await connect(email, false)) {
         notice = ADDRESS_CHANGED_NOTICE
         lastHealthy = true
         log('tunnel-reconnected', { host: hostname })
+        if (options.settings.get().remoteAccess.notifyLinkChange) options.notify?.(LINK_CHANGED_TITLE, LINK_CHANGED_BODY)
+        return true
       }
     } catch (error) {
       log('tunnel-reconnect-failed', { message: (error as Error).message })
-      await fail((error as Error).message || UNREACHABLE_MESSAGE, mine)
     } finally {
       reconnecting = false
     }
+    if (server) link.attemptFailed()
+    return false
+  }
+
+  async function reconnect(): Promise<RemoteAccessState> {
+    if (!server) throw new Error('Turn on Remote Access before reconnecting.')
+    void startRecovery('manual', true)
+    await Promise.resolve()
+    return getState()
   }
 
   // Called before the link or QR is shown, and on window focus. One retry avoids reconnecting on a single blip.
@@ -350,6 +452,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
           return true
         },
         approvals,
+        onActivity: (entry) => activity.record(entry),
         assetDirectory: options.assetDirectory,
         onRequestError: (error, method, pathname) => {
           const record = {
@@ -378,6 +481,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
       adopt(activeTunnel)
       server = localServer
       ready = false
+      link.start()
       setupError = null
       const connection = connect(email || undefined)
       const grace = options.readyGraceMs ?? READY_GRACE_MS
@@ -393,6 +497,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
       server = null
       url = null
       ready = false
+      link.stop()
       generation += 1
       log('enable-failed', { message: (error as Error).message })
       setupError = (error as Error).message || 'Cloudflare Quick Tunnel could not be started.'
@@ -423,6 +528,10 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     ready = false
     notice = null
     lastHealthy = true
+    roundTripMs = null
+    checkedAt = null
+    link.stop()
+    wakeRecovery?.()
     health.stop()
     generation += 1
     approvals.stop()
@@ -489,13 +598,18 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     return getState()
   }
 
-  async function setPermissions(next: Partial<RemoteAccessSettings>): Promise<RemoteAccessState> {
-    if (!next || typeof next !== 'object' || Object.keys(next).some((key) => !PERMISSION_KEYS.has(key)) ||
-        Object.entries(next).some(([key, value]) => key === 'approvalsAwayMinutes' ? typeof value !== 'number' || !Number.isFinite(value) : typeof value !== 'boolean')) throw new Error('Invalid Remote Access permissions.')
-    const remoteAccess = { ...options.settings.get().remoteAccess, ...next }
+  async function setPermissions(next: RemoteAccessPatch): Promise<RemoteAccessState> {
+    const invalidValue = ([key, value]: [string, unknown]): boolean =>
+      key === 'approvalsAwayMinutes' ? typeof value !== 'number' || !Number.isFinite(value)
+      : key === 'capabilities' ? !isCapabilityPatch(value)
+      : typeof value !== 'boolean'
+    if (!next || typeof next !== 'object' || Object.keys(next).some((key) => !PERMISSION_KEYS.has(key)) || Object.entries(next).some(invalidValue)) throw new Error('Invalid Remote Access permissions.')
+    const current = options.settings.get().remoteAccess
+    const remoteAccess = { ...current, ...next, capabilities: { ...current.capabilities, ...next.capabilities } }
     remoteAccess.approvalsAwayMinutes = clampAwayMinutes(remoteAccess.approvalsAwayMinutes, 3)
     options.settings.update({ remoteAccess })
-    auth.setPermissions(remoteAccess)
+    auth.setPermissions(remoteAccess.capabilities)
+    if (remoteAccess.autoReconnect && !current.autoReconnect && link.snapshot().phase === 'dropped') void startRecovery('manual', false)
     return getState()
   }
 
@@ -518,5 +632,5 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     await approvals.recordDesktopAnswer(terminalId, allowed, typeof tail === 'string' ? tail : undefined)
   }
 
-  return { getState, recordDesktopApproval, enable, disable, verify, onSystemResume, refreshPairing, setPermissions, setAllowedEmail, revoke, stop }
+  return { getState, recordDesktopApproval, enable, disable, verify, reconnect, onSystemResume, refreshPairing, setPermissions, setAllowedEmail, revoke, stop }
 }

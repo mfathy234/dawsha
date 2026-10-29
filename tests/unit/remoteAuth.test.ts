@@ -44,11 +44,25 @@ describe('private remote authentication', () => {
     const { code } = auth.createPairingCode()
     const paired = auth.pair(code, 'Phone')!
     expect(auth.can(paired.token, 'read')).toBe(true)
-    expect(auth.can(paired.token, 'terminalInput')).toBe(false)
-    expect(auth.can(paired.token, 'sessionControl')).toBe(false)
-    auth.setPermissions({ terminalInput: true })
-    expect(auth.can(paired.token, 'terminalInput')).toBe(true)
-    expect(auth.can(paired.token, 'sessionControl')).toBe(false)
+    expect(auth.can(paired.token, 'messages')).toBe(false)
+    expect(auth.can(paired.token, 'sessions')).toBe(false)
+    auth.setPermissions({ messages: true })
+    expect(auth.can(paired.token, 'messages')).toBe(true)
+    expect(auth.can(paired.token, 'sessions')).toBe(false)
+  })
+
+  it('gates each capability on its own and treats approvals as commands or answers', () => {
+    const auth = createRemoteAuth(store(), () => 1000)
+    const paired = auth.pair(auth.createPairingCode().code, 'Phone')!
+    for (const capability of ['commands', 'answers', 'messages', 'sessions', 'fullOutput'] as const) expect(auth.can(paired.token, capability)).toBe(false)
+    expect(auth.can(paired.token, 'approvals')).toBe(false)
+    auth.setPermissions({ answers: true })
+    expect(auth.can(paired.token, 'approvals')).toBe(true)
+    expect(auth.can(paired.token, 'commands')).toBe(false)
+    expect(auth.can(paired.token, 'fullOutput')).toBe(false)
+    auth.setPermissions({ answers: false, fullOutput: true })
+    expect(auth.can(paired.token, 'approvals')).toBe(false)
+    expect(auth.can(paired.token, 'fullOutput')).toBe(true)
   })
 
   it('persists last-seen metadata at most once per minute', () => {

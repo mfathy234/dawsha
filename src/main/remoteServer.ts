@@ -3,11 +3,14 @@ import type { Duplex } from 'node:stream'
 import { readFile } from 'node:fs/promises'
 import { basename, resolve } from 'node:path'
 import { WebSocket, WebSocketServer } from 'ws'
-import { AGENTS } from '../shared/agents'
+import { AGENTS, AGENT_NAMES } from '../shared/agents'
 import type { AgentKind, Project, ResumeEntry } from '../shared/types'
 import type { RemoteAuth } from './remoteAuth'
 import { REMOTE_TOKEN_TTL_MS } from './remoteAuth'
 import type { RemoteApprovals } from './remoteApprovals'
+import { KIND_OFF_MESSAGE } from './remoteApprovals'
+import type { ApprovalsPayload } from '../shared/approvals'
+import type { RemoteActivityInput } from '../shared/remoteActivity'
 import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
 
 const REMOTE_PREFIX = '/dawsha'
@@ -30,6 +33,8 @@ const MAX_TERMINAL_INPUT = 4096
 const MAX_REASON_INPUT = 600
 const MAX_APPROVAL_CLIENTS = 4
 const APPROVALS_DISABLED = 'Answering permission prompts is turned off in Dawsha settings.'
+const MESSAGES_DISABLED = 'Sending messages is turned off for phones in Dawsha settings.'
+const SESSIONS_DISABLED = 'Remote session control is disabled in Dawsha settings.'
 const MAX_OUTPUT_CLIENTS = 8
 const MAX_REMOTE_SESSIONS_PER_PROJECT = 15
 const RATE_WINDOW_MS = 60_000
@@ -42,6 +47,7 @@ export interface RemoteServerHandle {
 export interface RemoteServerOptions {
   getHostName(): string | null
   auth: Pick<RemoteAuth, 'pair' | 'authorize' | 'can' | 'revoke' | 'onRevoke'>
+  onActivity?(input: RemoteActivityInput): void
   getProjects(): Project[]
   listSessions(project: Project, agent: AgentKind): Promise<ResumeEntry[]>
   terminals: {
@@ -76,6 +82,10 @@ function cookieToken(request: IncomingMessage): string | null {
     if (name === COOKIE_NAME) return value.join('=') || null
   }
   return null
+}
+
+function filterApprovals(payload: ApprovalsPayload, can: (permission: 'commands' | 'answers') => boolean): ApprovalsPayload {
+  return { ...payload, items: payload.items.filter((item) => can(item.kind === 'other' ? 'answers' : 'commands')) }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -182,6 +192,18 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
   const rateLimits = new Map<string, Map<string, { windowStarted: number; count: number }>>()
   let stopped = false
 
+  function sessionLabel(id: string): string | null {
+    const terminal = options.terminals.snapshot(id)[0]
+    if (!terminal) return null
+    const project = options.getProjects().find((candidate) => candidate.id === terminal.projectId)
+    const agent = terminal.agent && terminal.agent !== 'shell' ? AGENT_NAMES[terminal.agent] : null
+    return [agent, project?.name].filter(Boolean).join(' · ') || null
+  }
+
+  function record(input: RemoteActivityInput): void {
+    try { options.onActivity?.(input) } catch { /* the activity log must never fail a request */ }
+  }
+
   function withinRateLimit(deviceId: string, operation: string, max: number): boolean {
     const now = Date.now()
     const operations = rateLimits.get(deviceId) ?? new Map<string, { windowStarted: number; count: number }>()
@@ -252,6 +274,7 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         sendJson(response, 401, { error: 'That pairing code is invalid or expired.' })
         return
       }
+      record({ device: options.auth.authorize(paired.token)?.name ?? 'A phone', action: 'paired', session: null, detail: '' })
       response.writeHead(200, {
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store',
@@ -295,9 +318,12 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         terminals: options.terminals.snapshot().filter((terminal) => terminal.agent !== null && terminal.agent !== 'shell'),
         permissions: {
           read: true,
-          terminalInput: options.auth.can(token, 'terminalInput'),
-          sessionControl: options.auth.can(token, 'sessionControl'),
-          approvals: Boolean(options.approvals) && options.auth.can(token, 'approvals')
+          terminalInput: options.auth.can(token, 'messages'),
+          sessionControl: options.auth.can(token, 'sessions'),
+          approvals: Boolean(options.approvals) && options.auth.can(token, 'approvals'),
+          commands: Boolean(options.approvals) && options.auth.can(token, 'commands'),
+          answers: Boolean(options.approvals) && options.auth.can(token, 'answers'),
+          fullOutput: options.auth.can(token, 'fullOutput')
         }
       })
       return
@@ -333,11 +359,14 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
           sendJson(response, 401, { error: 'Pair this browser again.' })
           return
         }
-        if (!options.auth.can(token, 'terminalInput')) {
-          sendJson(response, 403, { error: 'Terminal control is disabled in Dawsha settings.' })
+        if (!options.auth.can(token, 'messages')) {
+          record({ device: device.name, action: 'blocked', session: sessionLabel(body.id), detail: 'sending a message' })
+          sendJson(response, 403, { error: MESSAGES_DISABLED })
           return
         }
         options.terminals.write(body.id, body.data)
+        if (/[\r\n]/.test(body.data)) record({ device: device.name, action: 'message', session: sessionLabel(body.id), detail: '' })
+        else if (body.data === '\u0003') record({ device: device.name, action: 'interrupt', session: sessionLabel(body.id), detail: '' })
         sendJson(response, 200, { ok: true })
         return
       }
@@ -346,8 +375,8 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
           sendJson(response, 401, { error: 'Pair this browser again.' })
           return
         }
-        if (!options.auth.can(token, 'terminalInput')) {
-          sendJson(response, 403, { error: 'Terminal control is disabled in Dawsha settings.' })
+        if (!options.auth.can(token, 'messages')) {
+          sendJson(response, 403, { error: MESSAGES_DISABLED })
           return
         }
         // Browsers mirror the desktop size and no longer resize the PTY: an agent redrawn for a
@@ -368,7 +397,7 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         sendJson(response, 429, { error: 'Too many requests. Try again shortly.' })
         return
       }
-      sendJson(response, 200, await options.approvals.snapshot())
+      sendJson(response, 200, filterApprovals(await options.approvals.snapshot(), (permission) => options.auth.can(token, permission)))
       return
     }
 
@@ -393,8 +422,17 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         sendJson(response, 403, { error: APPROVALS_DISABLED })
         return
       }
-      const result = await options.approvals.answer({ id: body.id, fingerprint: body.fingerprint, allow: body.allow, reason: body.reason, device: device.name })
+      const result = await options.approvals.answer({
+        id: body.id,
+        fingerprint: body.fingerprint,
+        allow: body.allow,
+        reason: body.reason,
+        device: device.name,
+        canAnswer: (kind) => options.auth.can(token, kind === 'other' ? 'answers' : 'commands'),
+        onAnswered: (item) => record({ device: device.name, action: body.allow ? 'approved' : 'denied', session: item.projectName, detail: item.summary })
+      })
       if (!result.ok) {
+        if (result.error === KIND_OFF_MESSAGE) record({ device: device.name, action: 'blocked', session: null, detail: 'answering a prompt' })
         sendJson(response, result.status, { error: result.error })
         return
       }
@@ -403,8 +441,9 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
     }
 
     if (request.method === 'POST' && path === '/api/session') {
-      if (!options.auth.can(token, 'sessionControl')) {
-        sendJson(response, 403, { error: 'Remote session control is disabled in Dawsha settings.' })
+      if (!options.auth.can(token, 'sessions')) {
+        record({ device: device.name, action: 'blocked', session: null, detail: 'starting a session' })
+        sendJson(response, 403, { error: SESSIONS_DISABLED })
         return
       }
       if (!withinRateLimit(device.id, 'session-control', 5)) {
@@ -417,22 +456,23 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         sendJson(response, 401, { error: 'Pair this browser again.' })
         return
       }
-      if (!options.auth.can(token, 'sessionControl')) {
-        sendJson(response, 403, { error: 'Remote session control is disabled in Dawsha settings.' })
+      if (!options.auth.can(token, 'sessions')) {
+        sendJson(response, 403, { error: SESSIONS_DISABLED })
         return
       }
-      const result = await options.startSession(body, () => Boolean(options.auth.authorize(token)) && options.auth.can(token, 'sessionControl'))
+      const result = await options.startSession(body, () => Boolean(options.auth.authorize(token)) && options.auth.can(token, 'sessions'))
       if (!result.ok) {
         sendJson(response, 400, { error: result.error ?? 'Could not start the session.' })
         return
       }
+      record({ device: device.name, action: 'session-started', session: result.id ? sessionLabel(result.id) : null, detail: '' })
       sendJson(response, 200, { id: result.id })
       return
     }
 
     if (request.method === 'POST' && path === '/api/session/stop') {
-      if (!options.auth.can(token, 'sessionControl')) {
-        sendJson(response, 403, { error: 'Remote session control is disabled in Dawsha settings.' })
+      if (!options.auth.can(token, 'sessions')) {
+        sendJson(response, 403, { error: SESSIONS_DISABLED })
         return
       }
       if (!withinRateLimit(device.id, 'session-control', 5)) {
@@ -445,14 +485,16 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         sendJson(response, 400, { error: 'Invalid session request.' })
         return
       }
-      if (!options.auth.authorize(token) || !options.auth.can(token, 'sessionControl')) {
+      if (!options.auth.authorize(token) || !options.auth.can(token, 'sessions')) {
         sendJson(response, 401, { error: 'Pair this browser again.' })
         return
       }
+      const label = sessionLabel(body.id)
       if (!options.stopSession(body.id)) {
         sendJson(response, 404, { error: 'That remote session is no longer active.' })
         return
       }
+      record({ device: device.name, action: 'session-stopped', session: label, detail: '' })
       sendJson(response, 200, { ok: true })
       return
     }
@@ -521,7 +563,7 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
     const valid = !stopped && safeHost(hostname) && hostname.endsWith('.trycloudflare.com') &&
       expectedHosts.has(request.headers.host?.toLowerCase() ?? '') && request.headers.origin === origin &&
       request.method === 'GET' && url.pathname === `${REMOTE_PREFIX}/api/terminal/output` &&
-      Boolean(token && device && options.auth.can(token, 'read')) &&
+      Boolean(token && device && options.auth.can(token, 'fullOutput')) &&
       Boolean(device && withinRateLimit(device.id, 'stream', 30)) &&
       typeof id === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(id) && Boolean(id && options.terminals.snapshot(id).some((terminal) => terminal.agent !== null && terminal.agent !== 'shell')) &&
       streams.size < MAX_OUTPUT_CLIENTS
@@ -558,6 +600,7 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
       const heartbeat = setInterval(() => {
         try {
           if (!options.auth.authorize(token)) { send('revoked', {}); ws.close(1008, 'Device authorization expired') }
+          else if (!options.auth.can(token, 'fullOutput')) { send('denied', {}); ws.close(1008, 'Full output is turned off') }
           else if (!options.terminals.snapshot(id).length) { send('closed', {}); ws.close(1000, 'Terminal ended') }
           else if (ws.readyState === WebSocket.OPEN) {
             if (!alive) { ws.terminate(); return }
@@ -602,11 +645,11 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
       const stillAllowed = (): boolean => Boolean(options.auth.authorize(token)) && options.auth.can(token, 'approvals')
       const removeSubscription = approvals.subscribe((payload) => {
         try {
-          if (stillAllowed()) send('approvals', payload)
+          if (stillAllowed()) send('approvals', filterApprovals(payload, (permission) => options.auth.can(token, permission)))
           else { send('denied', {}); ws.close(1008, 'Approvals are turned off') }
         } catch { ws.close(1011, 'Authorization check failed') }
       })
-      void approvals.snapshot().then((payload) => send('approvals', payload), () => ws.close(1011, 'Approvals could not be read'))
+      void approvals.snapshot().then((payload) => send('approvals', filterApprovals(payload, (permission) => options.auth.can(token, permission))), () => ws.close(1011, 'Approvals could not be read'))
       const removeRevoke = options.auth.onRevoke((revokedId) => {
         if (revokedId === device.id) { send('revoked', {}); ws.close(1008, 'Device revoked') }
       })
