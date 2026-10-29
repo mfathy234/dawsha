@@ -1,3 +1,5 @@
+import type { AgentAccounts } from './agentAccounts'
+import type { KnownLimits } from './agentLimits'
 import type { WorkPeriod, WorkReport } from './workDashboard'
 import type { BackgroundAgentsReport, BgKind, BgRange } from './backgroundAgents'
 import type { ClipboardContent } from './clipboard'
@@ -179,6 +181,8 @@ export interface GridApi {
   openUpdateLink(url: string): Promise<void>
   usageReport(range: UsageRange): Promise<UsageReport>
   usageSnapshot(): Promise<UsageSnapshot>
+  agentAccounts(): Promise<AgentAccounts>
+  knownLimits(): Promise<KnownLimits>
   /** `offset`: periods back from now (0 now, -1 the one before). */
   workReport(period: WorkPeriod, offset?: number): Promise<WorkReport>
   backgroundAgents(range: BgRange): Promise<BackgroundAgentsReport>

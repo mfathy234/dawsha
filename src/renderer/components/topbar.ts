@@ -20,12 +20,14 @@ import { agentMark } from './agentMark'
 import type { PaneView } from '../derive'
 import { countSessionStates, sessionState } from '../../shared/sessionState'
 import { MORE_VIEWS, formatResetIn, limitRowLabel, limitText, moreLabel, urgentWindow, type MoreView } from '../../shared/topbarSummary'
-import { allAgentLimits, dataAge, focusedLimits, recordLimits, type AgentLimitStore, type AgentLimits } from '../../shared/agentLimits'
+import { api } from '../api'
+import type { AgentAccount, AgentAccounts } from '../../shared/agentAccounts'
+import { allAgentLimits, dataAge, meterLimits, recordLimits, type AgentLimitStore, type AgentLimits } from '../../shared/agentLimits'
 import { stateIcon } from './stateIcon'
 import { toolState } from '../../shared/agentTools'
 import { formatPercent, gaugeStage } from '../../shared/statusLine'
 import { chargeBar } from './chargeBar'
-import type { RateLimitWindow } from '../../shared/types'
+import type { RateLimitWindow, TabAgent } from '../../shared/types'
 import { h, icon, leave, placeNearAnchor } from '../dom'
 import { store, type AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
@@ -35,6 +37,7 @@ import { onAgentsChange, runningAgents } from '../backgroundAgents'
 import './topbar.css'
 
 const LIMIT_CELLS = 5
+const KNOWN_LIMITS_MS = 15_000
 const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
 
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
@@ -123,8 +126,12 @@ export class TopBarComponent {
   private limitsSignature = ''
   private limitStore: AgentLimitStore = {}
   private limitsFocused: AgentLimits | null = null
+  private focusedAgent: TabAgent | null = null
+  private lastLimitsArgs: { state: AppState; views: PaneView[] } | null = null
+  private knownLimitsAt = 0
   private limitsNow = 0
   private limitsPopover: HTMLElement | null = null
+  private accounts: AgentAccounts | null = null
   private readonly limitsOutside = (event: Event): void => {
     const target = event.target as Node
     if (this.limitsPopover && !this.limitsPopover.contains(target) && !this.limits.contains(target)) this.closeLimitsPopover()
@@ -423,13 +430,31 @@ export class TopBarComponent {
     }
   }
 
+  private refreshKnownLimits(force: boolean): void {
+    const now = Date.now()
+    if (!force && now - this.knownLimitsAt < KNOWN_LIMITS_MS) return
+    this.knownLimitsAt = now
+    void api.knownLimits().then((known) => {
+      const next = recordLimits(this.limitStore, [
+        ...(known.claude ? [{ agent: 'claude' as const, windows: known.claude.windows, at: known.claude.at }] : []),
+        ...(known.codex ? [{ agent: 'codex' as const, windows: known.codex.windows, at: known.codex.at }] : [])
+      ])
+      if (next === this.limitStore || !this.lastLimitsArgs) return
+      this.limitStore = next
+      this.updateLimits(this.lastLimitsArgs.state, this.lastLimitsArgs.views)
+    }, () => undefined)
+  }
+
   private updateLimits(state: AppState, views: PaneView[]): void {
+    this.lastLimitsArgs = { state, views }
+    this.refreshKnownLimits(false)
     this.limitStore = recordLimits(
       this.limitStore,
       views.map((view) => ({ agent: view.agent, windows: view.info.limits, at: view.info.limitsAt ?? state.now }))
     )
     const focusedView = views.find((view) => view.pane.id === state.focusedId)
-    const focused = focusedLimits(this.limitStore, focusedView?.agent ?? null, state.now)
+    this.focusedAgent = focusedView?.agent ?? null
+    const focused = meterLimits(this.limitStore, this.focusedAgent, state.now)
     this.limitsFocused = focused
     this.limitsNow = state.now
     const items = (focused?.windows ?? []).map((window) => ({ window, text: limitText(window, state.now), title: resetText(window) }))
@@ -472,7 +497,12 @@ export class TopBarComponent {
       this.closeLimitsPopover(true)
     })
     this.limitsPopover = popover
+    this.refreshKnownLimits(true)
     this.fillLimitsPopover(popover)
+    void api.agentAccounts().then((accounts) => {
+      this.accounts = accounts
+      if (this.limitsPopover === popover) this.fillLimitsPopover(popover)
+    }, () => undefined)
     document.body.appendChild(popover)
     placeNearAnchor(popover, this.limits, 6)
     this.limits.setAttribute('aria-expanded', 'true')
@@ -491,9 +521,9 @@ export class TopBarComponent {
   }
 
   private fillLimitsPopover(popover: HTMLElement): void {
-    const focused = this.limitsFocused?.agent
+    const focused = this.focusedAgent
     const now = this.limitsNow
-    const sections = allAgentLimits(this.limitStore, now).map((entry) => limitsSection(entry, entry.agent === focused, now))
+    const sections = allAgentLimits(this.limitStore, now).map((entry) => limitsSection(entry, entry.agent === focused, now, this.accounts))
     const link = h('button', { class: 'link limits-usage-link', type: 'button', onClick: () => { this.closeLimitsPopover(); showView('usage') } }, 'Open Usage')
     const keep = popover.contains(document.activeElement) && document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('limits-usage-link')
     popover.replaceChildren(h('div', { class: 'popover-title' }, 'Limits by agent'), ...sections, h('div', { class: 'popover-foot' }, link))
@@ -508,11 +538,18 @@ function resetText(window: RateLimitWindow): string {
   return `${window.label}: ${formatPercent(window.percent)} used, resets ${when}`
 }
 
-function limitsSection(entry: AgentLimits, focused: boolean, now: number): HTMLElement {
+function accountLine(account: AgentAccount | null): HTMLElement | null {
+  if (!account) return null
+  if (account.kind === 'none') return h('div', { class: 'limits-account none' }, 'Not signed in')
+  const text = account.kind === 'apiKey' ? 'API key' : [account.email, account.plan].filter(Boolean).join(' · ')
+  return h('div', { class: 'limits-account', title: text }, text)
+}
+
+function limitsSection(entry: AgentLimits, focused: boolean, now: number, accounts: AgentAccounts | null): HTMLElement {
   const name = agentLabel(entry.agent)
   const status = entry.state === 'none' ? 'no limits reported' : `updated ${dataAge(entry.at as number, now)}${entry.state === 'stale' ? ' · stale' : ''}`
   const windows = entry.windows.map((window) =>
-    h('div', { class: 'limits-row', 'data-limit': window.key },
+    h('div', { class: `limits-row${window.resetsAt !== null && window.resetsAt <= now ? ' reset' : ''}`, 'data-limit': window.key },
       h('span', { class: 'limits-row-label' }, limitRowLabel(window)),
       chargeBar(window.percent, LIMIT_CELLS),
       h('span', { class: 'limits-row-value' }, formatPercent(window.percent)),
@@ -526,6 +563,7 @@ function limitsSection(entry: AgentLimits, focused: boolean, now: number): HTMLE
       focused ? h('span', { class: 'limits-focused' }, 'focused') : null,
       h('span', { class: 'limits-agent-age' }, status)
     ),
+    entry.agent === 'claude' || entry.agent === 'codex' || entry.agent === 'gemini' ? accountLine(accounts?.[entry.agent] ?? null) : null,
     ...windows
   )
 }

@@ -25,6 +25,9 @@
 .limits-agent-title { font-weight: 600; }
 .limits-focused { color: var(--accent); font-size: var(--fs-status); }
 .limits-agent-age { margin-inline-start: auto; color: var(--muted); font-size: var(--fs-status); white-space: nowrap; }
+.limits-account { padding-inline-start: var(--s-5); color: var(--muted); font-size: var(--fs-status); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.limits-account.none { color: color-mix(in srgb, var(--muted) 70%, transparent); }
+.limits-row.reset { opacity: 0.5; }
 .limits-agent-block.stale .limits-row { opacity: 0.65; }
 .limits-row { display: grid; grid-template-columns: 84px auto 44px 1fr; align-items: center; gap: var(--s-2); padding-inline-start: var(--s-5); color: var(--muted); }
 .limits-row .charge { height: auto; margin: 0; padding: 1.5px; gap: 2px; }

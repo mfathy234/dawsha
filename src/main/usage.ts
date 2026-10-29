@@ -10,6 +10,7 @@ import {
   emptyHistory,
   parserFor,
   rangeWindow,
+  lastClaudeLimits,
   recordReadings,
   sanitizeHistory,
   serializeHistory,
@@ -20,6 +21,7 @@ import {
   type UsageReport,
   type UsageSource
 } from '../shared/usage'
+import type { AgentLimitEntry } from '../shared/agentLimits'
 import { buildUsageSnapshot, type UsageSnapshot } from '../shared/sessionCost'
 import { codexHome, geminiHome } from './agentLaunch'
 import { listGeminiChatFiles } from './geminiWatcher'
@@ -180,7 +182,7 @@ const toReading = (info: StatusInfo): StatusReading => ({
   cwd: info.cwd,
   costUsd: info.costUsd,
   receivedAt: info.receivedAt,
-  windows: info.rateLimits.map((limit) => ({ key: limit.key, percent: limit.percent }))
+  windows: info.rateLimits.map((limit) => ({ key: limit.key, percent: limit.percent, resetsAt: limit.resetsAt }))
 })
 
 export class UsageService {
@@ -200,6 +202,10 @@ export class UsageService {
     if (next === this.history) return
     this.history = next
     if (!this.timer) this.timer = setTimeout(() => this.flush(), SAVE_DELAY_MS)
+  }
+
+  lastClaudeLimits(): AgentLimitEntry | null {
+    return lastClaudeLimits(this.history)
   }
 
   flush(): void {

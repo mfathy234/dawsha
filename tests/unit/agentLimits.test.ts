@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allAgentLimits, dataAge, focusedLimits, limitsStale, recordLimits, type AgentLimitStore } from '../../src/shared/agentLimits'
+import { allAgentLimits, dataAge, focusedLimits, limitsStale, meterLimits, mostUrgentLimits, recordLimits, type AgentLimitStore } from '../../src/shared/agentLimits'
 import type { RateLimitWindow } from '../../src/shared/types'
 
 const NOW = 1_791_451_700_000
@@ -71,5 +71,31 @@ describe('staleness', () => {
     expect(dataAge(NOW - 5000, NOW)).toBe('just now')
     expect(dataAge(NOW - 4 * 60_000, NOW)).toBe('4m ago')
     expect(dataAge(NOW - 3 * 3_600_000, NOW)).toBe('3h ago')
+  })
+})
+
+describe('meterLimits with no agent focused', () => {
+  const entry = (percent: number, resetsAt: number | null, at = NOW) => ({ windows: [win(percent, resetsAt)], at })
+
+  it('keeps the focused agent, even with nothing known', () => {
+    expect(meterLimits({ claude: entry(10, NOW + 1000) }, 'codex', NOW)?.state).toBe('none')
+  })
+
+  it('picks the agent with the highest window that has not reset, for no pane or a shell', () => {
+    const store: AgentLimitStore = { claude: entry(62, NOW + 3_600_000), codex: entry(99, NOW + 3_600_000) }
+    expect(meterLimits(store, null, NOW)?.agent).toBe('codex')
+    expect(meterLimits(store, 'shell', NOW)?.agent).toBe('codex')
+  })
+
+  it('ignores windows that already reset', () => {
+    const store: AgentLimitStore = { claude: entry(40, NOW + 3_600_000), codex: entry(99, NOW - 1000) }
+    expect(mostUrgentLimits(store, NOW)?.agent).toBe('claude')
+    expect(mostUrgentLimits({ codex: entry(99, NOW - 1000) }, NOW)).toBeNull()
+  })
+
+  it('marks an old last-known reading stale and is null when nothing is known', () => {
+    const old = entry(50, NOW + 86_400_000, NOW - 2 * 3_600_000)
+    expect(meterLimits({ claude: old }, null, NOW)).toMatchObject({ agent: 'claude', state: 'stale' })
+    expect(meterLimits({}, null, NOW)).toBeNull()
   })
 })

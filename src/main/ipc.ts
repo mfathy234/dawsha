@@ -38,6 +38,8 @@ import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
 import { bridgeDirs, claudeHome, claudeProjectsDir, claudeSettingsPath } from './paths'
 import { codexHome } from './agentLaunch'
+import { createAgentAccountsReader } from './agentAccounts'
+import { createCodexLimitsReader } from './codexLimits'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
   import { previewPaneonImport, queuePaneonImport } from './paneonImport'
   import { paneonUserDataDir } from './paths'
@@ -344,6 +346,14 @@ export function registerIpc(
     const known = USAGE_RANGES.some((entry) => entry.value === range)
     return usage.report(known ? range : '7d', settings.get().projects)
   })
+  const readAccounts = createAgentAccountsReader()
+  const readCodexLimitsCached = createCodexLimitsReader()
+  ipcMain.handle(IPC.agentAccounts, async () => {
+    const accounts = await readAccounts()
+    if (accounts.codex.kind !== 'account' || accounts.codex.plan) return accounts
+    return { ...accounts, codex: { ...accounts.codex, plan: (await readCodexLimitsCached()).plan } }
+  })
+  ipcMain.handle(IPC.knownLimits, async () => ({ claude: usage.lastClaudeLimits(), codex: (await readCodexLimitsCached()).entry }))
   ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
   const work = new WorkService()
   ipcMain.handle(IPC.workGet, async (_event, period: unknown, offset: unknown) => {
