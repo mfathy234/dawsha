@@ -43,3 +43,7 @@ export function statusCopy(input: { status: RemoteAccessState['status']; dropped
       return { kind: 'off', title: 'Remote Access is off', detail: 'Turn it on to answer your agents from your phone.' }
   }
 }
+
+export function isValidPinEmail(value: string): boolean {
+  return value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}

@@ -75,3 +75,11 @@ describe('Remote Access status copy', () => {
     expect(lastSeenLabel(120_000, 130_000)).toBe('Active now')
   })
 })
+
+describe('PIN email validation', () => {
+  it('accepts a plain address and rejects blanks, spaces and missing parts', async () => {
+    const { isValidPinEmail } = await import('../../src/shared/remoteStatus')
+    expect(isValidPinEmail('me@example.com')).toBe(true)
+    for (const bad of ['', 'me', 'me@example', '@example.com', 'me @example.com', `${'a'.repeat(250)}@x.co`]) expect(isValidPinEmail(bad)).toBe(false)
+  })
+})

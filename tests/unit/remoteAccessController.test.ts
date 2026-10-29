@@ -72,7 +72,7 @@ describe('Remote Access controller', () => {
     await context.controller.enable()
     const options = context.createServer.mock.calls[0]![0]
     options.onActivity!({ device: 'Pixel 9', action: 'approved', session: 'billing-api', detail: 'npm test' })
-    options.onActivity!({ device: 'Pixel 9', action: 'message', session: 'Claude · billing-api', detail: '' })
+    options.onActivity!({ device: 'Pixel 9', action: 'message', session: 'Claude Â· billing-api', detail: '' })
     const { activity } = await context.controller.getState()
     expect(activity.map((entry) => entry.action)).toEqual(['message', 'approved'])
     expect(activity[1]).toMatchObject({ device: 'Pixel 9', session: 'billing-api', detail: 'npm test' })

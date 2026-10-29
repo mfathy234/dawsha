@@ -107,7 +107,7 @@ async function mockApi(page: Page): Promise<void> {
         device: { id: 'device-1', name: 'Pixel 9' },
         projects: [{ id: 'billing-api', name: 'billing-api', defaultAgent: 'claude', sessions: [] }],
         terminals: [],
-        permissions: { read: true, terminalInput: false, sessionControl: false, approvals: true }
+        permissions: { read: true, terminalInput: false, sessionControl: false, approvals: true, commands: true, answers: true, fullOutput: true }
       }
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(state) })
       return

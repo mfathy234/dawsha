@@ -3,28 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0c0e12" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0c0e12" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)" />
     <title>Dawsha Remote</title>
   </head>
   <body>
     <div id="remote-app">
-      <header class="remote-header">
-        <div class="remote-brand"><span class="brand-mark">D</span><span class="brand-name">Dawsha</span><span id="remote-beta-badge" class="beta-badge">BETA</span></div>
-        <nav id="remote-nav" class="remote-nav" aria-label="Main views">
-          <button id="remote-nav-sessions" class="nav-button selected" type="button" aria-pressed="true">Sessions</button>
-          <button id="remote-nav-projects" class="nav-button" type="button" aria-pressed="false">Projects</button>
-          <button id="remote-nav-approvals" class="nav-button" type="button" aria-pressed="false">Approvals<span id="approvals-badge" class="nav-badge" hidden aria-live="polite"></span></button>
-        </nav>
-        <button id="remote-new-session" class="new-session-button" type="button" aria-label="New session" hidden><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg><span class="new-session-label">New session</span></button>
-        <div class="remote-header-status" role="status" aria-live="polite"><span id="connection-dot" class="status-dot" aria-hidden="true"></span><span id="connection-label">Connecting</span></div>
-        <button id="remote-logout" class="icon-button" type="button" aria-label="Disconnect browser" title="Disconnect this browser" hidden><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 2.5v5M4.6 4.4a5 5 0 1 0 6.8 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg><span class="logout-label">Disconnect</span></button>
+      <header class="remote-header" id="remote-header">
+        <div class="remote-top">
+          <span class="brand-mark" aria-hidden="true">D</span>
+          <div class="remote-header-status" id="connection" role="status" aria-live="polite" data-state="idle"><span id="connection-icon" class="connection-icon" aria-hidden="true"></span><span id="connection-label">Connecting</span></div>
+          <button id="remote-new-session" class="new-session-button" type="button" aria-label="New session" hidden><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg><span class="new-session-label">New session</span></button>
+          <button id="remote-logout" class="icon-button" type="button" aria-label="Disconnect browser" title="Disconnect this browser" hidden><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 2.5v5M4.6 4.4a5 5 0 1 0 6.8 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg><span class="logout-label">Disconnect</span></button>
+        </div>
+        <nav id="remote-nav" class="remote-nav" role="tablist" aria-label="Main views" hidden></nav>
       </header>
 
       <main>
         <section id="pair-view" class="pair-view" hidden>
           <div class="pair-card">
-            <p class="eyebrow">PRIVATE DEVICE PAIRING</p>
+            <p class="eyebrow">Private device pairing</p>
             <h1>Connect to your Dawsha</h1>
             <p class="pair-description">Scan the QR code in Dawsha's Remote Access settings, or enter its short-lived code to pair this browser.</p>
             <form id="pair-form">
@@ -35,13 +34,13 @@
               <button id="pair-submit" class="primary-button" type="submit">Pair browser <span aria-hidden="true">→</span></button>
               <p id="pair-error" class="form-error" role="alert" hidden></p>
             </form>
-            <p class="pair-footnote"><span class="lock-mark" aria-hidden="true">●</span> Paired browsers can be revoked any time from Dawsha.</p>
+            <p class="pair-footnote">Paired browsers can be revoked any time from Dawsha.</p>
           </div>
         </section>
 
         <section id="disconnected-view" class="disconnected-view" hidden>
           <div class="disconnected-card">
-            <p class="eyebrow">CONNECTION INTERRUPTED</p>
+            <p class="eyebrow">Connection interrupted</p>
             <h1 id="disconnect-title">Dawsha is unavailable</h1>
             <p id="disconnect-message">Check that Dawsha is open and Remote Access is enabled.</p>
             <button id="remote-retry" class="primary-button" type="button">Try again</button>
@@ -51,24 +50,24 @@
         <section id="workspace-view" class="workspace-view" hidden>
           <section id="sessions-view" class="browser-view" aria-label="Sessions">
             <div class="view-heading">
-              <div><p class="eyebrow">YOUR WORKSPACE</p><h1>Sessions</h1><p class="view-description">Pick up where you left off or start something new.</p></div>
+              <div><p class="eyebrow">Your workspace</p><h1>Sessions</h1><p class="view-description">Pick up where you left off or start something new.</p></div>
               <div class="view-heading-tools"><select id="session-project-filter" class="project-filter" aria-label="Filter sessions by project"><option value="">All projects</option></select><span id="session-count" class="view-count"></span></div>
             </div>
-            <div id="sessions-empty" class="empty-state" hidden><p class="eyebrow">READY WHEN YOU ARE</p><h2>No active sessions</h2><p>Your configured projects are ready. Start a session to begin working.</p><button id="empty-new-session" class="primary-button" type="button" hidden>New session <span aria-hidden="true">→</span></button></div>
+            <div id="sessions-empty" class="empty-state" hidden><p class="eyebrow">Ready when you are</p><h2>No active sessions</h2><p>Your configured projects are ready. Start a session to begin working.</p><button id="empty-new-session" class="primary-button" type="button" hidden>New session <span aria-hidden="true">→</span></button></div>
             <section id="active-sessions-section" class="session-section"><div class="section-heading"><h2>Running now</h2><span id="active-session-count"></span></div><div id="active-sessions" class="session-list"></div></section>
             <section id="recent-sessions-section" class="session-section"><div class="section-heading"><h2>Recent sessions</h2><span id="recent-session-count"></span></div><div id="recent-sessions" class="session-list"></div><p id="recent-sessions-empty" class="quiet-empty" hidden>No recent sessions yet.</p></section>
             <div id="remote-notice" class="remote-notice" role="status" hidden></div>
           </section>
 
           <section id="projects-view" class="browser-view" aria-label="Projects" hidden>
-            <div class="view-heading"><div><p class="eyebrow">CONFIGURED ON THIS DEVICE</p><h1>Projects</h1><p class="view-description">Start an agent in one of your Dawsha workspaces.</p></div><span id="project-count" class="view-count"></span></div>
-            <div id="projects-empty" class="empty-state" hidden><p class="eyebrow">NO WORKSPACES</p><h2>No projects configured</h2><p>Add a project in Dawsha on your computer, then refresh this page.</p></div>
+            <div class="view-heading"><div><p class="eyebrow">Configured on this device</p><h1>Projects</h1><p class="view-description">Start an agent in one of your Dawsha workspaces.</p></div><span id="project-count" class="view-count"></span></div>
+            <div id="projects-empty" class="empty-state" hidden><p class="eyebrow">No workspaces</p><h2>No projects configured</h2><p>Add a project in Dawsha on your computer, then refresh this page.</p></div>
             <div id="project-grid" class="project-grid"></div>
             <div id="project-notice" class="remote-notice" role="status" hidden></div>
           </section>
 
           <section id="approvals-view" class="browser-view" aria-label="Approvals" hidden>
-            <div class="view-heading"><div><p class="eyebrow">NEEDS YOU</p><h1>Approvals</h1><p class="view-description">Answer permission prompts from your agents.</p></div></div>
+            <div class="view-heading"><div><h1>Needs you</h1><p class="view-description">Oldest first. Answering here is the same as answering on the PC.</p></div></div>
             <div id="approvals-root"></div>
           </section>
 
@@ -84,7 +83,7 @@
               <button id="terminal-back" class="back-button" type="button"><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M10 3.5 5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg><span class="back-label">Sessions</span></button>
               <div class="terminal-heading"><p id="active-project-name" class="terminal-project-name">Choose a project</p><h1 id="terminal-title">No active terminal</h1></div>
               <div class="terminal-toolbar-status">
-                <div id="terminal-stream-status" class="stream-status connecting" role="status" aria-live="polite" aria-atomic="true"><span class="stream-status-dot" aria-hidden="true"></span><span id="terminal-stream-label">Connecting</span></div>
+                <div id="terminal-stream-status" class="stream-status connecting" role="status" aria-live="polite" aria-atomic="true"><span id="terminal-stream-label">Connecting</span></div>
                 <div id="terminal-connection" class="terminal-connection" role="status" aria-live="polite">Read only</div>
                 <button id="terminal-stop-session" class="quiet-button stop-button" type="button" hidden>Stop</button>
               </div>
@@ -97,7 +96,7 @@
             <div id="terminal" class="terminal-frame" aria-label="Terminal output"></div>
             <div id="terminal-empty" class="terminal-empty" hidden></div>
             <div id="terminal-compose-host" class="terminal-compose-host"></div>
-              <div id="terminal-readonly" class="terminal-readonly" hidden><span class="readonly-lock" aria-hidden="true">&#9679;</span><span>Read only</span><span class="readonly-separator">·</span><span>Enable terminal input in Dawsha&rsquo;s Remote Access settings.</span></div>
+              <div id="terminal-readonly" class="terminal-readonly" hidden><span>Read only</span><span class="readonly-separator">·</span><span>Sending messages is turned off in Dawsha&rsquo;s Remote Access settings.</span></div>
             </section>
             <div id="terminal-notice" class="remote-notice" role="status" hidden></div>
               </div>
@@ -108,7 +107,7 @@
 
       <dialog id="new-session-dialog" class="session-dialog" aria-labelledby="new-session-title">
         <form id="new-session-form">
-          <div class="dialog-heading"><div><p class="eyebrow">START WORK</p><h2 id="new-session-title">New session</h2><p>Choose where to work and which agent to start.</p></div><button id="new-session-close" class="dialog-close" type="button" aria-label="Close">×</button></div>
+          <div class="dialog-heading"><div><p class="eyebrow">Start work</p><h2 id="new-session-title">New session</h2><p>Choose where to work and which agent to start.</p></div><button id="new-session-close" class="dialog-close" type="button" aria-label="Close">×</button></div>
           <label for="new-session-project">Project</label><select id="new-session-project" required></select>
           <label for="new-session-agent">Agent</label><select id="new-session-agent" required></select>
           <div class="dialog-actions"><button id="new-session-cancel" class="secondary-button" type="button">Cancel</button><button id="new-session-submit" class="primary-button" type="submit">Start session <span aria-hidden="true">→</span></button></div>
