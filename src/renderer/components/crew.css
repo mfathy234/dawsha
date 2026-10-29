@@ -5,7 +5,7 @@
 .crew-count { color: var(--muted); font-size: var(--fs-ui); }
 .crew-spacer { flex: 1; }
 .crew-search { width: 240px; }
-.crew-body { flex: 1; display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); min-height: 0; box-shadow: 0 -1px 0 var(--seam); }
+.crew-body { flex: 1; display: grid; grid-template-columns: minmax(300px, 340px) minmax(0, 1fr); min-height: 0; box-shadow: 0 -1px 0 var(--seam); }
 .crew-list { overflow: auto; padding: var(--s-2) var(--s-3) var(--s-5); background: var(--canvas); }
 .crew-sec { display: flex; justify-content: space-between; padding: var(--s-4) var(--s-3) var(--s-1); color: var(--muted); font-size: var(--fs-ui); }
 .crew-empty-note { margin: var(--s-1) var(--s-3); color: var(--muted); font-size: var(--fs-ui); line-height: 1.5; }
@@ -46,6 +46,7 @@
 .crew-idrow { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
 .crew-initials { text-align: center; text-transform: uppercase; }
 .crew-area { width: 100%; resize: vertical; line-height: 1.55; min-height: 96px; }
+.crew-area[rows='8'] { min-height: calc(8lh + 18px); }
 .crew-in-name { width: 170px; }
 .crew-in-role { width: 220px; }
 .crew-in-initials { width: 64px; }
@@ -141,6 +142,8 @@
 
 .crew-goals { max-width: 900px; display: grid; gap: var(--s-5); }
 .crew-goals h3 { margin: 0 0 var(--s-2); font-size: var(--fs-ui); font-weight: 600; }
+.crew-goal-live { display: grid; gap: var(--s-5); }
+.crew-goal-live:empty { display: none; }
 .crew-goalbox { padding: var(--s-3); border-radius: var(--r-card); background: var(--well); display: grid; gap: var(--s-3); }
 .crew-goal-text { width: 100%; resize: vertical; min-height: 84px; line-height: 1.5; font-family: inherit; }
 .crew-goal-row { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
@@ -156,7 +159,7 @@
 .crew-lead-dup { margin-top: var(--s-2); }
 .crew-budget { width: 110px; }
 .crew-plan { display: grid; gap: var(--s-2); }
-.crew-plan-summary { margin: 0 0 var(--s-1); color: var(--muted); line-height: 1.5; }
+.crew-plan-summary { margin: 0 0 var(--s-2); color: var(--muted); line-height: 1.5; }
 .crew-step { display: grid; grid-template-columns: 18px auto minmax(0, 1fr) auto; gap: 2px var(--s-3); align-items: center; padding: var(--s-2) var(--s-3); border-radius: var(--r-card); background: var(--well); }
 .crew-step-n { color: var(--muted); font-variant-numeric: tabular-nums; }
 .crew-step-model { font-size: var(--fs-ui); color: var(--muted); white-space: nowrap; }
