@@ -14,6 +14,8 @@ import { sanitizeSplits } from './splits'
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './sidebarWidth'
 import { defaultHighlights, sanitizeHighlights } from './highlights'
 import { defaultRecordings, sanitizeRecordings } from './recordings'
+import { BUILTIN_IDS } from './crewBuiltins'
+import { defaultCrew, sanitizeCrew, sanitizeCrewRuns, sanitizeIdentity } from './crew'
 import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from './sessionTags'
 import {
   DEFAULT_FONT_SIZE,
@@ -100,6 +102,8 @@ export const defaultSettings = (): Settings => ({
   remoteAccess: defaultRemoteAccess(),
   highlights: defaultHighlights(),
   recordings: defaultRecordings(),
+  crew: defaultCrew(),
+  crewRuns: [],
   legacyModelCacheCleared: false
 })
 
@@ -155,6 +159,8 @@ function sanitizeTab(value: unknown): SavedTab | null {
   const name = typeof value.name === 'string' ? cleanSessionName(value.name) : null
   if (name && agent !== 'shell') tab.name = name
   if (isSessionTag(value.tag) && agent !== 'shell') tab.tag = value.tag
+  const crew = sanitizeIdentity(value.crew)
+  if (crew && agent !== 'shell') tab.crew = crew
   return tab
 }
 
@@ -393,6 +399,8 @@ export function migrateSettings(raw: unknown): Settings {
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
     highlights: sanitizeHighlights(raw.highlights),
     recordings: sanitizeRecordings(raw.recordings),
+    crew: sanitizeCrew(raw.crew, BUILTIN_IDS),
+    crewRuns: sanitizeCrewRuns(raw.crewRuns),
     legacyModelCacheCleared: raw.legacyModelCacheCleared === true
   }
 }

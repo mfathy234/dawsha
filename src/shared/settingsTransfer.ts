@@ -1,4 +1,5 @@
 import { migrateSettings, MAX_LAYOUTS } from './settingsSchema'
+import type { CrewSettings } from './crew'
 import type { Project, SavedLayout, Settings } from './types'
 
 export const TRANSFER_APP = 'dawsha'
@@ -14,6 +15,7 @@ export const INCLUDED_KEYS = [
   'paletteShortcut',
   'sessionsLayout',
   'recordings',
+  'crew',
   'sessionInfo',
   'autoUpdateCheck',
   'sidebarCollapsed',
@@ -38,6 +40,8 @@ export const EXCLUDED_KEYS = [
   'filesLayout',
   'filesTabs',
   'runCommands',
+  // Run history points at this PC's panes and projects.
+  'crewRuns',
   // Keyed by this PC's project ids and branches, like closed sessions.
   'ticketNotes',
   'tasks',
@@ -103,7 +107,7 @@ export type ParseResult = { ok: true; transfer: ParsedTransfer } | { ok: false; 
 const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
-const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo'] as const
+const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew'] as const
 const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'colorSessionsByTag', 'othersCollapsed'] as const
 
 function checkShapes(data: Raw): string | null {
@@ -207,6 +211,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['paletteShortcut', 'Palette shortcut'],
   ['sessionsLayout', 'Sessions view'],
   ['recordings', 'Recording settings'],
+  ['crew', 'Crew members'],
   ['sessionInfo', 'Notifications'],
   ['autoUpdateCheck', 'Update checks'],
   ['sidebarCollapsed', 'Sidebar'],
@@ -224,11 +229,20 @@ export function preferenceLabels(data: Partial<TransferData>): string[] {
   return [...new Set(labels)]
 }
 
-function preferencePatch(current: Settings, data: Partial<TransferData>): Partial<Settings> {
+function mergeCrew(current: CrewSettings, incoming: CrewSettings, mode: TransferMode): CrewSettings {
+  if (mode === 'replace') return incoming
+  const names = new Set(current.members.map((member) => member.name.trim().toLowerCase()))
+  const ids = new Set(current.members.map((member) => member.id))
+  const added = incoming.members.filter((member) => !names.has(member.name.trim().toLowerCase()) && !ids.has(member.id))
+  return { members: [...current.members, ...added], hidden: [...new Set([...current.hidden, ...incoming.hidden])] }
+}
+
+function preferencePatch(current: Settings, data: Partial<TransferData>, mode: TransferMode): Partial<Settings> {
   const patch: Partial<Settings> = {}
   for (const key of INCLUDED_KEYS) {
     if (key === 'projects' || key === 'layouts' || data[key] === undefined) continue
     if (key === 'theme') patch.theme = { ...current.theme, id: data.theme!.id }
+    else if (key === 'crew') patch.crew = mergeCrew(current.crew, data.crew!, mode)
     else Object.assign(patch, { [key]: data[key] })
   }
   return patch
@@ -311,7 +325,7 @@ function planLayouts(input: PlanInput, idMap: Map<string, string>): { layouts: S
 
 export function planImport(input: PlanInput): ImportPlan {
   const { current, data, mode } = input
-  const patch = preferencePatch(current, data)
+  const patch = preferencePatch(current, data, mode)
   const outcome = planProjects(input)
   const layouts = planLayouts(input, outcome.idMap)
   const touchesProjects = data.projects !== undefined
