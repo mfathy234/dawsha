@@ -127,6 +127,20 @@ export function onFilesSearchRequest(listener: () => void): () => void {
   return () => searchListeners.delete(listener)
 }
 
+export type FilesCommand = 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree'
+
+const commandListeners = new Set<(command: FilesCommand) => void>()
+
+/** A Files shortcut or palette command (hide the inspector or explorer, switch worktree): the open view runs it. */
+export function requestFilesCommand(command: FilesCommand): void {
+  for (const listener of commandListeners) listener(command)
+}
+
+export function onFilesCommand(listener: (command: FilesCommand) => void): () => void {
+  commandListeners.add(listener)
+  return () => commandListeners.delete(listener)
+}
+
 export function openInVsCode(folder: string, path: string, line?: number): void {
   void api.openFileInVsCode(folder, path, line)
 }

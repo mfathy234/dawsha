@@ -27,3 +27,11 @@ describe('clampPanelHeight', () => {
     expect(clampPanelHeight(300, 50)).toBe(PANEL_MIN_HEIGHT)
   })
 })
+
+describe('explorer visibility', () => {
+  it('is open by default and remembers a hidden explorer', () => {
+    expect(defaultLayout().explorer.open).toBe(true)
+    expect(parseLayout({ explorer: { open: false } }).explorer.open).toBe(false)
+    expect(parseLayout({ explorer: { open: 'no' } }).explorer.open).toBe(true)
+  })
+})

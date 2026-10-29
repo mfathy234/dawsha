@@ -1,7 +1,7 @@
 import { pathForms, tabMenu, treeMenu, type FileActionId, type FileMenuEntry } from '../../shared/fileMenus'
 import { statusLetter } from '../../shared/gitStatus'
 import { normalizeFolder } from '../../shared/folderKey'
-import { branchLine, checkoutLabel, checkoutTabsKey, type FilesCheckout } from '../../shared/filesWorkspace'
+import { branchName, checkoutLabel, checkoutTabsKey, worktreeCountText, type FilesCheckout } from '../../shared/filesWorkspace'
 import { INSPECTOR_MIN_WIDTH, type InspectorTab } from '../../shared/filesLayout'
 import { blameLines, type BlameSource } from '../../shared/fileActivity'
 import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
@@ -22,14 +22,16 @@ import { lastOutputAt } from '../ptyActivity'
 import { waitForSessionOutput, waitUntil } from '../files/sessionWait'
 import { FileDoc, type DocHooks } from '../files/fileDoc'
 import { noteOpened } from '../files/fileIndex'
-import { filesTarget, insertIntoSession, onFilesRequest, onFilesSearchRequest, openInVsCode, promptReference, setCurrentTarget, setDirtyProvider, takeFilesRequest, addToPrompt, type FilesTarget } from '../files/filesActions'
+import { filesTarget, insertIntoSession, onFilesCommand, onFilesRequest, onFilesSearchRequest, openInVsCode, promptReference, setCurrentTarget, setDirtyProvider, takeFilesRequest, addToPrompt, type FilesTarget } from '../files/filesActions'
 import { closeTab, openTab, pinTab, type TabRef } from '../files/filesState'
 import { fileIcon } from '../files/fileIcon'
 import { loadSessionData, orderSessions, type TouchMap } from '../files/sessionTouch'
 import type { EditorTheme } from '../files/editor'
 import { Explorer } from '../files/explorer'
 import { FilesBar } from '../files/filesBar'
-import { Inspector } from '../files/inspector'
+import { Inspector, type CommitsState } from '../files/inspector'
+import { InFlight, LatestGate } from '../files/asyncGuard'
+import { errorNote, loadingNote } from '../files/loadNote'
 import { BottomPanel } from '../files/bottomPanel'
 import { PreviewPane } from '../files/previewPane'
 import { commitDialog } from '../files/commitDialog'
@@ -51,6 +53,10 @@ const FLASH_MS = 1600
 const SESSION_START_WAIT_MS = 15_000
 const SESSION_SETTLE_MS = 3000
 const SESSION_QUIET_MS = 600
+const MENU_WAIT_MS = 150
+const FILE_LIMITS = 'Text files up to 1 MB open here. Images, Markdown and HTML also show as a preview.'
+
+type CheckoutsRefresh = 'ok' | 'failed' | 'stale'
 
 interface ReviewState {
   viewed: Set<string>
@@ -92,30 +98,37 @@ export class FilesViewComponent {
   private set: DocSet | null = null
   private touches: TouchMap = new Map()
   private touchTimer: number | undefined
-  private treeToken = 0
+  private readonly treeGate = new LatestGate()
+  private readonly touchGate = new LatestGate()
+  private readonly commitFlight = new InFlight<string>()
+  private readonly commitErrors = new Set<string>()
+  private touchesLoaded = false
+  private loadedKey = ''
+  /** The checkout a switch is still opening: the menu marks it as the choice, so picking the old one again cancels the switch. */
+  private pending: FilesTarget | null = null
   private watchTimer: number | undefined
   private flashTimer: number | undefined
   private flash = ''
   private readonly lastSignature = new WeakMap<FileDoc, string>()
   private readonly annotationSignature = new WeakMap<FileDoc, string>()
   private watchFailed = false
-  private checkoutToken = 0
-  private activationToken = 0
+  private readonly checkoutGate = new LatestGate()
+  private readonly activationGate = new LatestGate()
   private deletionPending = false
   private checkouts: FilesCheckout[] = []
   private isGit = true
   private statusFiles: GitFileEntry[] = []
   private linked: LinkedRepo[] = []
   private linkedKey = ''
-  private commits = new Map<string, FileCommit[]>()
-  private commitsKey = ''
+  private readonly commits = new Map<string, FileCommit[]>()
   private readonly fits = window.matchMedia(`(min-width: ${INSPECTOR_MIN_WIDTH}px)`)
   private readonly worktreeNote = h('div', { class: 'files-worktree', id: 'files-live-note', role: 'status', hidden: true }, 'Live updates are off for this folder')
   private readonly explorer = new Explorer({
     tree: {
       open: (path, pin, focus) => void this.openFile(path, { pin, focus }),
       action: (id, target) => void this.runFileAction(id, target.path, target.kind),
-      menu: (target, x, y, returnFocus) => this.openMenu(treeMenu(target.kind, target.open), target, x, y, returnFocus)
+      menu: (target, x, y, returnFocus) => this.openMenu(treeMenu(target.kind, target.open), target, x, y, returnFocus),
+      retry: () => void this.retryTree()
     },
     search: {
       folder: () => this.target?.folder ?? null,
@@ -135,7 +148,10 @@ export class FilesViewComponent {
       discard: (path) => void this.discardFile(path)
     },
     goToFile: () => toggleQuickOpen(),
-    openLocation: (button) => this.openLocationMenu(button),
+    openLocation: (button, worktreesFirst) => this.openLocationMenu(button, worktreesFirst),
+    hide: () => this.toggleExplorer(),
+    retryChanges: () => void this.retryTree(),
+    retryOpen: () => void this.refreshTouches(),
     rowMenu: (path, x, y, returnFocus) => openContextMenu({ x, y, label: 'File actions', entries: this.entriesFor(treeMenu('file', false), path, 'file'), returnFocus }),
     openRow: (path, pin) => void this.openFile(path, { pin, focus: false })
   })
@@ -147,7 +163,8 @@ export class FilesViewComponent {
     done: () => this.toggleEdit(),
     send: (anchor) => this.openSendMenu(anchor),
     more: (anchor) => this.openMoreMenu(anchor),
-    toggleInspector: () => this.toggleInspector()
+    toggleInspector: () => this.toggleInspector(),
+    toggleExplorer: () => this.toggleExplorer()
   })
   private readonly conflictText = h('span', { class: 'files-conflict-text' }, 'This file changed on disk.')
   private readonly reloadButton = h('button', { class: 'btn small', type: 'button', id: 'files-reload-theirs', onClick: () => void this.active()?.reload() }, 'Reload theirs')
@@ -163,7 +180,9 @@ export class FilesViewComponent {
   private readonly inspector = new Inspector({
     tab: (tab) => this.setInspectorTab(tab),
     jump: (item) => this.active()?.editor?.reveal(item.from),
-    focusSession: (paneId) => focusPane(paneId)
+    focusSession: (paneId) => focusPane(paneId),
+    hide: () => this.toggleInspector(),
+    retryCommits: () => this.retryCommits()
   })
 
   constructor() {
@@ -184,6 +203,7 @@ export class FilesViewComponent {
     onFilesSearchRequest(() => {
       if (this.visible) this.explorer.setMode('search')
     })
+    onFilesCommand((command) => this.runCommand(command))
     this.fits.addEventListener('change', () => this.applyInspector())
     setDirtyProvider(() => [...this.sets.values()].flatMap((set) => [...set.docs.values()].filter((doc) => doc.dirty).map((doc) => doc.path)))
     this.inspector.setTab(filesLayout().inspector.tab)
@@ -234,9 +254,11 @@ export class FilesViewComponent {
     this.panel.refresh()
     window.clearInterval(this.touchTimer)
     window.clearTimeout(this.watchTimer)
-    ++this.checkoutToken
-    ++this.activationToken
-    ++this.treeToken
+    this.checkoutGate.cancel()
+    this.activationGate.cancel()
+    this.treeGate.cancel()
+    this.touchGate.cancel()
+    this.pending = null
     if (this.target) void api.unwatchFiles(this.target.folder)
     this.target = null
     setCurrentTarget(null)
@@ -255,12 +277,25 @@ export class FilesViewComponent {
 
   private async activateTarget(requested: FilesTarget): Promise<boolean> {
     if (this.deletionPending) return false
-    const token = ++this.activationToken
-    this.explorer.tree.setLoading(true)
+    const ticket = this.activationGate.begin()
+    this.pending = requested
+    const requestedKey = checkoutTabsKey(requested.projectId, requested.folder)
+    const replace = this.loadedKey !== requestedKey
+    this.explorer.tree.setLoading(true, replace)
+    if (replace) {
+      this.explorer.setChanges([])
+      this.explorer.setOpenInSessions([])
+      this.explorer.setChangesStatus('loading')
+      this.explorer.setOpenStatus('loading')
+      this.touchesLoaded = false
+    }
     const metadata = await api.filesWorkspaces(requested.projectId, requested.folder).catch(() => ({ ok: false as const, error: 'Could not open this checkout.' }))
-    if (token !== this.activationToken || !this.visible || this.deletionPending) return false
+    if (!ticket.current() || !this.visible || this.deletionPending) return false
     if (!metadata.ok) {
+      this.pending = null
       this.explorer.tree.setLoading(false)
+      this.explorer.setChangesStatus('ready')
+      this.explorer.setOpenStatus('ready')
       toast(metadata.error)
       void this.refreshCheckouts()
       return false
@@ -300,7 +335,9 @@ export class FilesViewComponent {
     const active = this.active()
     if (active) void this.loadActive(active)
     await treeReady
-    if (token !== this.activationToken || !this.visible) return false
+    if (!ticket.current() || !this.visible) return false
+    this.loadedKey = requestedKey
+    this.pending = null
     this.explorer.tree.setLoading(false)
     void this.checkOpenDocs()
     return true
@@ -329,13 +366,13 @@ export class FilesViewComponent {
     })
   }
 
-  private async refreshCheckouts(): Promise<void> {
+  private async refreshCheckouts(): Promise<CheckoutsRefresh> {
     const target = this.target
-    if (!target) return
-    const token = ++this.checkoutToken
+    if (!target) return 'stale'
+    const ticket = this.checkoutGate.begin()
     const result = await api.filesWorkspaces(target.projectId).catch(() => ({ ok: false as const, error: 'Could not refresh checkouts.' }))
-    if (token !== this.checkoutToken || this.target !== target) return
-    if (!result.ok) return
+    if (!ticket.current() || this.target !== target) return 'stale'
+    if (!result.ok) return 'failed'
     this.checkouts = result.checkouts
     this.isGit = result.git
     if (!this.checkouts.some((entry) => normalizeFolder(entry.folder) === normalizeFolder(target.folder))) {
@@ -343,6 +380,7 @@ export class FilesViewComponent {
     }
     this.renderLocation()
     this.renderStatus()
+    return 'ok'
   }
 
   private currentCheckout(): FilesCheckout | undefined {
@@ -354,28 +392,28 @@ export class FilesViewComponent {
     const target = this.target
     const project = target ? projectById(store.state, target.projectId) : undefined
     const checkout = this.currentCheckout()
-    this.explorer.setLocation(project?.name ?? '', branchLine(checkout, this.isGit), target ? `${project?.name ?? ''}\n${target.folder}` : '')
+    this.explorer.setLocation(project?.name ?? '', branchName(checkout, this.isGit), this.isGit ? worktreeCountText(this.checkouts.length) : '', target ? `${project?.name ?? ''}\n${target.folder}` : '')
     this.explorer.setTreeTitle(target ? folderTail(target.folder) : '')
   }
 
   // Menus
 
-  private openLocationMenu(button: HTMLElement): void {
-    void this.showLocationMenu(button)
+  private openLocationMenu(button: HTMLElement, worktreesFirst = false): void {
+    void this.showLocationMenu(button, worktreesFirst)
   }
 
-  private async showLocationMenu(button: HTMLElement): Promise<void> {
-    if (!this.target) return
-    await this.refreshCheckouts()
+  private locationMenu(button: HTMLElement, worktreesFirst: boolean, worktrees: 'loading' | 'failed' | 'ready'): HTMLElement | null {
     const target = this.target
-    if (!target) return
+    if (!target) return null
     const project = projectById(store.state, target.projectId)
     const box = button.getBoundingClientRect()
-    this.explorer.setLocationOpen(true)
-    openContextMenu({
-      x: box.left, y: box.bottom + 2, label: 'Project and checkout', returnFocus: () => { this.explorer.setLocationOpen(false); button.focus() },
+    this.explorer.setLocationOpen(true, button)
+    return openContextMenu({
+      x: box.left, y: box.bottom + 2, label: 'Project and worktree', returnFocus: () => { this.explorer.setLocationOpen(false); button.focus() },
       entries: locationEntries({
-        projects: store.state.settings.projects, projectId: target.projectId, projectName: project?.name ?? 'this project', folder: target.folder, checkouts: this.checkouts, linked: this.linked,
+        projects: store.state.settings.projects, projectId: this.pending?.projectId ?? target.projectId, projectName: project?.name ?? 'this project', folder: this.pending?.folder ?? target.folder, checkouts: this.checkouts, linked: this.linked,
+        git: this.isGit, worktrees, worktreesFirst,
+        retryWorktrees: () => void this.showLocationMenu(button, worktreesFirst),
         switchProject: (id) => this.switchProject(id),
         switchCheckout: (folder) => this.switchCheckout(folder),
         openLinked: (repo) => this.openLinked(repo),
@@ -383,8 +421,20 @@ export class FilesViewComponent {
         reveal: () => void api.quickOpen('explorer', target.folder)
       })
     })
-    window.setTimeout(() => this.explorer.setLocationOpen(false), 0)
+  }
+
+  // The worktree list is read again every time the menu opens, so one added or removed outside Dawsha shows up.
+  private async showLocationMenu(button: HTMLElement, worktreesFirst: boolean): Promise<void> {
+    if (!this.target) return
+    const pending = this.refreshCheckouts()
+    const early = await Promise.race([pending, wait(MENU_WAIT_MS).then(() => 'pending' as const)])
+    if (!this.target) return
+    const menu = this.locationMenu(button, worktreesFirst, early === 'pending' ? 'loading' : early === 'failed' ? 'failed' : 'ready')
     this.watchMenuClose(() => this.explorer.setLocationOpen(false))
+    if (early !== 'pending' || !menu) return
+    const late = await pending
+    if (!menu.isConnected || menu.classList.contains('leaving') || !this.target) return
+    this.locationMenu(button, worktreesFirst, late === 'failed' ? 'failed' : 'ready')
   }
 
   private watchMenuClose(done: () => void): void {
@@ -461,14 +511,15 @@ export class FilesViewComponent {
   private async loadTree(): Promise<void> {
     const target = this.target
     if (!target) return
-    const token = ++this.treeToken
+    const ticket = this.treeGate.begin()
     const [listing, git] = await Promise.all([
       api.projectFiles(target.folder).catch((error: Error) => ({ ok: false as const, error: error.message })),
       api.gitStatus(target.folder).catch(() => null)
     ])
-    if (token !== this.treeToken) return
+    if (!ticket.current()) return
     const status = new Map<string, string>()
     this.statusFiles = git?.ok ? git.status.files : []
+    this.explorer.setChangesStatus(git === null || (!git.ok && this.isGit) ? 'error' : 'ready')
     if (git?.ok) for (const file of git.status.files) status.set(file.path, statusLetter(file))
     this.explorer.tree.setData(listing.ok ? listing.files : [], status, listing.ok ? '' : listing.error)
     const set = this.set
@@ -479,6 +530,14 @@ export class FilesViewComponent {
     this.explorer.setChanges(this.statusFiles.map((file) => ({ path: file.path, letter: statusLetter(file) })))
     this.renderReview()
     this.renderStage()
+  }
+
+  private async retryTree(): Promise<void> {
+    if (!this.target) return
+    this.explorer.tree.setLoading(true, true)
+    this.explorer.setChangesStatus('loading')
+    await this.loadTree()
+    this.explorer.tree.setLoading(false)
   }
 
   private checkOpenDocs(paths: readonly string[] = []): void {
@@ -492,8 +551,15 @@ export class FilesViewComponent {
     const target = this.target
     if (!target) return
     const others = this.checkouts.map((entry) => entry.folder)
+    const ticket = this.touchGate.begin()
     const data = await loadSessionData(target.projectId, target.folder, this.set?.prefix ?? '', others).catch(() => null)
-    if (!data || this.target !== target) return
+    if (!ticket.current() || this.target !== target) return
+    if (!data) {
+      if (!this.touchesLoaded) this.explorer.setOpenStatus('error')
+      return
+    }
+    this.touchesLoaded = true
+    this.explorer.setOpenStatus('ready')
     this.touches = data.touches
     this.renderTouches()
     void this.refreshLinked(target, data.external)
@@ -618,7 +684,7 @@ export class FilesViewComponent {
     const doc = this.docFor(path)
     this.explorer.setActive(path)
     this.renderAll()
-    if (doc) void this.loadActive(doc).then(() => (focusEditor ? doc.editor?.focus() : undefined))
+    if (doc) void this.loadActive(doc).then(() => (focusEditor && this.set === set && set.active === path ? doc.editor?.focus() : undefined))
   }
 
   private persistTabs(set: DocSet | null = this.set): void {
@@ -702,12 +768,31 @@ export class FilesViewComponent {
 
   private applyInspector(): void {
     this.el.classList.toggle('no-inspector', !this.inspectorShown())
+    this.el.classList.toggle('no-explorer', !filesLayout().explorer.open)
     this.renderBar()
   }
 
   private toggleInspector(): void {
-    updateLayout((layout) => ({ ...layout, inspector: { ...layout.inspector, open: !layout.inspector.open } }))
+    const layout = updateLayout((current) => ({ ...current, inspector: { ...current.inspector, open: !current.inspector.open } }))
     this.applyInspector()
+    if (!layout.inspector.open) this.bar.focusInspector()
+  }
+
+  private toggleExplorer(): void {
+    const layout = updateLayout((current) => ({ ...current, explorer: { open: !current.explorer.open } }))
+    this.applyInspector()
+    if (layout.explorer.open) this.explorer.focusLocation()
+    else this.bar.focusExplorer()
+  }
+
+  private runCommand(command: 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree'): void {
+    if (!this.visible) return
+    if (command === 'toggle-inspector') this.toggleInspector()
+    else if (command === 'toggle-explorer') this.toggleExplorer()
+    else {
+      if (!filesLayout().explorer.open) this.toggleExplorer()
+      this.openLocationMenu(this.explorer.branchAnchor(), true)
+    }
   }
 
   private setInspectorTab(tab: InspectorTab): void {
@@ -716,18 +801,29 @@ export class FilesViewComponent {
     if (tab === 'activity') void this.loadCommits()
   }
 
+  private commitsKeyFor(doc: FileDoc | null, set: DocSet | null): string | null {
+    return doc && set ? `${set.folder}|${doc.path}` : null
+  }
+
   private async loadCommits(): Promise<void> {
     const doc = this.active()
     const set = this.set
-    if (!doc || !set) return
-    const key = `${set.folder}|${doc.path}`
-    this.commitsKey = key
-    if (!this.commits.has(key)) {
+    const key = this.commitsKeyFor(doc, set)
+    if (!doc || !set || key === null || this.commits.has(key) || this.commitFlight.has(key)) return
+    this.commitErrors.delete(key)
+    await this.commitFlight.run(key, async () => {
       const result = await api.fileLog(set.folder, doc.path).catch(() => null)
       if (result?.ok) this.commits.set(key, result.commits)
-      else this.commits.set(key, [])
-    }
-    if (this.commitsKey === key) this.renderActivity()
+      else this.commitErrors.add(key)
+    })
+    this.renderActivity()
+  }
+
+  private retryCommits(): void {
+    const key = this.commitsKeyFor(this.active(), this.set)
+    if (key === null) return
+    this.commitErrors.delete(key)
+    this.renderActivity()
   }
 
   // Review
@@ -848,6 +944,7 @@ export class FilesViewComponent {
     })
     if (!hash) return
     toast(`Committed ${hash}`, 'info')
+    this.commits.clear()
     await this.loadTree()
     this.checkOpenDocs()
     for (const doc of set.docs.values()) void doc.refreshStat()
@@ -1011,7 +1108,7 @@ export class FilesViewComponent {
     if (!set || this.deletionPending) return
     // Keep the consent snapshot stable until Trash resolves, including across view changes.
     this.deletionPending = true
-    ++this.activationToken
+    this.activationGate.cancel()
     this.el.inert = true
     this.el.setAttribute('aria-busy', 'true')
     try {
@@ -1206,6 +1303,7 @@ export class FilesViewComponent {
       hasSource: ready,
       inspectorOpen: filesLayout().inspector.open,
       inspectorFits: this.fits.matches,
+      explorerOpen: filesLayout().explorer.open,
       deletedName: doc?.deleted ? doc.path : null
     })
     if (!doc) return
@@ -1247,15 +1345,38 @@ export class FilesViewComponent {
       return
     }
     if (doc.status === 'idle' || doc.status === 'loading') {
-      this.showPlaceholder('Opening…')
+      this.showLoading(`Opening ${baseName(doc.path)}…`)
       return
     }
-    this.showPlaceholder(doc.message, doc.status !== 'missing')
+    if (doc.status === 'missing') {
+      this.showProblem(doc)
+      return
+    }
+    this.showPlaceholder(doc.message, true, FILE_LIMITS)
   }
 
-  private showPlaceholder(text: string, withCode = false): void {
+  private showLoading(text: string): void {
+    if (!this.empty.hidden && this.empty.dataset.loading === text) return
     this.empty.hidden = false
-    this.empty.replaceChildren(h('p', {}, text), ...(withCode ? [h('button', { class: 'btn small', type: 'button', onClick: () => this.openActiveInCode() }, 'Open in VS Code')] : []))
+    this.empty.dataset.loading = text
+    this.empty.replaceChildren(loadingNote(text))
+  }
+
+  private showProblem(doc: FileDoc): void {
+    delete this.empty.dataset.loading
+    this.empty.hidden = false
+    this.empty.replaceChildren(errorNote("Couldn't open this file.", () => void this.retryDoc(doc), doc.message))
+  }
+
+  private async retryDoc(doc: FileDoc): Promise<void> {
+    await doc.retry()
+    this.renderAll()
+  }
+
+  private showPlaceholder(text: string, withCode = false, detail = ''): void {
+    delete this.empty.dataset.loading
+    this.empty.hidden = false
+    this.empty.replaceChildren(h('p', {}, text), ...(detail ? [h('p', { class: 'files-limits' }, detail)] : []), ...(withCode ? [h('button', { class: 'btn small', type: 'button', onClick: () => this.openActiveInCode() }, 'Open in VS Code')] : []))
   }
 
   private renderStatus(): void {
@@ -1287,13 +1408,14 @@ export class FilesViewComponent {
     const doc = this.active()
     const set = this.set
     const sessions = doc ? this.touches.get(doc.path) ?? [] : []
-    const commits = doc && set ? this.commits.get(`${set.folder}|${doc.path}`) ?? null : null
-    this.inspector.renderActivity(!!doc, sessions, commits)
-    if (doc && set && commits === null && filesLayout().inspector.tab === 'activity') void this.loadCommits()
+    const key = this.commitsKeyFor(doc, set)
+    const commits: CommitsState = key === null ? null : this.commits.get(key) ?? (this.commitErrors.has(key) ? 'error' : null)
+    this.inspector.renderActivity(!!doc, sessions, commits, !this.touchesLoaded)
+    if (key !== null && commits === null && filesLayout().inspector.tab === 'activity') void this.loadCommits()
   }
 
   private renderOutline(): void {
     const doc = this.active()
-    this.inspector.renderOutline(doc?.status === 'ready' ? doc.outline() : [], !!doc)
+    this.inspector.renderOutline(doc?.status === 'ready' ? doc.outline() : [], !!doc, doc?.status === 'idle' || doc?.status === 'loading')
   }
 }

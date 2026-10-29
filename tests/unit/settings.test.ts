@@ -23,7 +23,7 @@ describe('migrateSettings', () => {
   it('persists the Files layout through a settings reload and repairs a bad one', () => {
     const file = tempFile()
     const store = new SettingsStore(file)
-    const layout = { sections: { changes: false, open: true, tree: true }, inspector: { open: false, tab: 'activity' as const }, panel: { minimised: false, height: 260 } }
+    const layout = { sections: { changes: false, open: true, tree: true }, inspector: { open: false, tab: 'activity' as const }, explorer: { open: false }, panel: { minimised: false, height: 260 } }
     store.update({ filesLayout: layout })
     expect(new SettingsStore(file).load().settings.filesLayout).toEqual(layout)
     expect(migrateSettings({ filesLayout: 'nope' }).filesLayout.panel.minimised).toBe(true)

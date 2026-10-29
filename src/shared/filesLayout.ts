@@ -10,12 +10,14 @@ export type SectionId = 'changes' | 'open' | 'tree'
 export interface FilesLayout {
   sections: Record<SectionId, boolean>
   inspector: { open: boolean; tab: InspectorTab }
+  explorer: { open: boolean }
   panel: { minimised: boolean; height: number }
 }
 
 export const defaultLayout = (): FilesLayout => ({
   sections: { changes: true, open: true, tree: true },
   inspector: { open: true, tab: 'outline' },
+  explorer: { open: true },
   panel: { minimised: true, height: PANEL_DEFAULT_HEIGHT }
 })
 
@@ -33,6 +35,7 @@ export function parseLayout(raw: unknown): FilesLayout {
   const value = raw as Record<string, unknown>
   const sections = typeof value.sections === 'object' && value.sections !== null ? (value.sections as Record<string, unknown>) : {}
   const inspector = typeof value.inspector === 'object' && value.inspector !== null ? (value.inspector as Record<string, unknown>) : {}
+  const explorer = typeof value.explorer === 'object' && value.explorer !== null ? (value.explorer as Record<string, unknown>) : {}
   const panel = typeof value.panel === 'object' && value.panel !== null ? (value.panel as Record<string, unknown>) : {}
   return {
     sections: {
@@ -44,6 +47,7 @@ export function parseLayout(raw: unknown): FilesLayout {
       open: typeof inspector.open === 'boolean' ? inspector.open : base.inspector.open,
       tab: inspector.tab === 'activity' ? 'activity' : 'outline'
     },
+    explorer: { open: typeof explorer.open === 'boolean' ? explorer.open : base.explorer.open },
     panel: {
       minimised: typeof panel.minimised === 'boolean' ? panel.minimised : base.panel.minimised,
       height: typeof panel.height === 'number' && Number.isFinite(panel.height) ? Math.min(Math.max(Math.round(panel.height), PANEL_MIN_HEIGHT), 2000) : base.panel.height

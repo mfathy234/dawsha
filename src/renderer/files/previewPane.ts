@@ -2,6 +2,8 @@ import { HTML_PREVIEW_SANDBOX, type PreviewKind } from '../../shared/filePreview
 import { renderDocMarkdown } from '../../shared/docMarkdown'
 import { api } from '../api'
 import { h } from '../dom'
+import { LatestGate, type Ticket } from './asyncGuard'
+import { errorNote, loadingNote } from './loadNote'
 
 export interface PreviewSpec {
   kind: PreviewKind
@@ -23,7 +25,8 @@ const key = (spec: PreviewSpec): string => `${spec.kind}|${spec.folder}|${spec.p
 export class PreviewPane {
   readonly el = h('div', { class: 'files-preview', id: 'files-preview', hidden: true })
   private last = ''
-  private token = 0
+  private readonly gate = new LatestGate()
+  private spec: PreviewSpec | null = null
 
   constructor(private readonly hooks: PreviewHooks) {
     this.el.addEventListener('click', (event) => {
@@ -43,10 +46,18 @@ export class PreviewPane {
     const next = key(spec)
     if (next === this.last) return
     this.last = next
-    const token = ++this.token
+    this.spec = spec
+    const ticket = this.gate.begin()
     if (spec.kind === 'markdown') this.markdown(spec)
-    else if (spec.kind === 'html') void this.html(spec, token)
-    else void this.image(spec, token)
+    else if (spec.kind === 'html') void this.html(spec, ticket)
+    else void this.image(spec, ticket)
+  }
+
+  private retry(): void {
+    const spec = this.spec
+    if (!spec) return
+    this.last = ''
+    this.render(spec)
   }
 
   private markdown(spec: PreviewSpec): void {
@@ -55,14 +66,15 @@ export class PreviewPane {
     this.el.replaceChildren(page)
   }
 
-  private async html(spec: PreviewSpec, token: number): Promise<void> {
+  private async html(spec: PreviewSpec, ticket: Ticket): Promise<void> {
+    this.el.replaceChildren(loadingNote('Loading the preview…'))
     const made = await api.filePreviewUrl(spec.folder, spec.path, spec.text).catch((error: Error) => ({ ok: false as const, error: error.message }))
-    if (token !== this.token) return
+    if (!ticket.current()) return
     const bar = h('div', { class: 'files-preview-bar' },
       h('span', { class: 'files-preview-note' }, 'Runs in a sandbox with no network.'),
       h('button', { class: 'btn small', type: 'button', id: 'files-open-browser', onClick: () => this.hooks.openBrowser() }, 'Open in browser'))
     if (!made.ok) {
-      this.el.replaceChildren(bar, h('p', { class: 'files-side-empty', role: 'status' }, made.error))
+      this.el.replaceChildren(bar, errorNote("Couldn't show this page.", () => this.retry(), made.error))
       return
     }
     const frame = h('iframe', { class: 'files-html', id: 'files-html', title: `Preview of ${spec.path}`, sandbox: HTML_PREVIEW_SANDBOX, referrerpolicy: 'no-referrer' })
@@ -70,12 +82,12 @@ export class PreviewPane {
     this.el.replaceChildren(bar, frame)
   }
 
-  private async image(spec: PreviewSpec, token: number): Promise<void> {
-    this.el.replaceChildren(h('p', { class: 'files-side-empty' }, 'Loading…'))
+  private async image(spec: PreviewSpec, ticket: Ticket): Promise<void> {
+    this.el.replaceChildren(loadingNote('Loading the image…'))
     const current = await api.fileImage(spec.folder, spec.path, false).catch((error: Error) => ({ ok: false as const, error: error.message }))
-    if (token !== this.token) return
+    if (!ticket.current()) return
     if (!current.ok) {
-      this.el.replaceChildren(h('p', { class: 'files-side-empty', role: 'status' }, current.error))
+      this.el.replaceChildren(errorNote("Couldn't show this image.", () => this.retry(), current.error))
       return
     }
     const picture = h('img', { class: 'files-image', id: 'files-image', alt: spec.path, src: current.dataUrl })
@@ -83,23 +95,25 @@ export class PreviewPane {
     const bar = h('div', { class: 'files-preview-bar' }, h('span', { class: 'files-preview-note' }, `${spec.path} · ${Math.max(1, Math.round(current.size / 1024))} KB`))
     if (spec.changed) {
       const compare = h('button', { class: 'btn small', type: 'button', id: 'files-compare-main', 'aria-pressed': 'false' }, 'Compare with main')
-      compare.addEventListener('click', () => void this.compare(spec, current.dataUrl, stage, picture, compare, token))
+      compare.addEventListener('click', () => void this.compare(spec, current.dataUrl, stage, picture, compare, ticket))
       bar.append(compare)
     }
     this.el.replaceChildren(bar, stage)
   }
 
-  private async compare(spec: PreviewSpec, now: string, stage: HTMLElement, picture: HTMLElement, button: HTMLElement, token: number): Promise<void> {
+  private async compare(spec: PreviewSpec, now: string, stage: HTMLElement, picture: HTMLElement, button: HTMLElement, ticket: Ticket): Promise<void> {
     if (button.getAttribute('aria-pressed') === 'true') {
       button.setAttribute('aria-pressed', 'false')
       button.textContent = 'Compare with main'
       stage.replaceChildren(picture)
       return
     }
+    button.setAttribute('aria-busy', 'true')
     const base = await api.fileImage(spec.folder, spec.path, true).catch((error: Error) => ({ ok: false as const, error: error.message }))
-    if (token !== this.token) return
+    button.removeAttribute('aria-busy')
+    if (!ticket.current()) return
     if (!base.ok) {
-      stage.replaceChildren(picture, h('p', { class: 'files-side-empty', role: 'status' }, base.error))
+      stage.replaceChildren(picture, errorNote("Couldn't load the version on main.", () => void this.compare(spec, now, stage, picture, button, ticket), base.error))
       return
     }
     button.setAttribute('aria-pressed', 'true')

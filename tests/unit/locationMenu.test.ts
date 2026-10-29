@@ -23,7 +23,7 @@ const context = (over: Partial<LocationContext> = {}): LocationContext => ({
 describe('locationEntries', () => {
   it('lists projects, then checkouts, then Copy path and Reveal', () => {
     const entries = locationEntries(context())
-    expect(headings(entries)).toEqual(['Projects', 'Checkouts of Acme'])
+    expect(headings(entries)).toEqual(['Projects', 'Worktrees'])
     expect(items(entries).map((entry) => entry.label)).toEqual(['Acme', 'Beta', 'main', 'feat/dark', 'old', 'Copy path', 'Reveal in File Explorer'])
     expect(entries[entries.length - 3]).toBe('separator')
   })
@@ -66,5 +66,34 @@ describe('sendEntries', () => {
     const first = items(sendEntries({ sessions: [], sendTo: vi.fn(), newSession: vi.fn(), copyMention: vi.fn() }))[0]
     expect(first.label).toBe('No live session in this project')
     expect(first.disabled).toBe(true)
+  })
+})
+
+describe('Worktrees section', () => {
+  const main = { folder: 'C:\w\acme', branch: 'main', head: '1', detached: false, unavailable: false, main: true }
+  it('shows the only-main message instead of an empty section', () => {
+    const entries = locationEntries(context({ checkouts: [main] }))
+    const note = items(entries).find((entry) => entry.label === 'Only the main checkout.')
+    expect(note?.disabled).toBe(true)
+    expect(note?.detail).toMatch(/git worktree add/)
+  })
+  it('says Current in words on the current checkout', () => {
+    const current = items(locationEntries(context())).find((entry) => entry.label === 'main')
+    expect(current?.current).toBe(true)
+    expect(current?.detail).toBe('Current · acme')
+  })
+  it('puts Worktrees first when asked', () => {
+    expect(headings(locationEntries(context({ worktreesFirst: true })))).toEqual(['Worktrees', 'Projects'])
+  })
+  it('shows loading and a retry row', () => {
+    const retry = vi.fn()
+    expect(items(locationEntries(context({ worktrees: 'loading' }))).some((entry) => entry.label === 'Loading worktrees…' && entry.disabled)).toBe(true)
+    const failed = items(locationEntries(context({ worktrees: 'failed', retryWorktrees: retry }))).find((entry) => entry.label.includes('Retry'))
+    failed?.run()
+    expect(retry).toHaveBeenCalled()
+  })
+  it('explains a folder that is not a repository', () => {
+    const entries = locationEntries(context({ git: false, checkouts: [main] }))
+    expect(items(entries).some((entry) => entry.label === 'Not a Git repository.')).toBe(true)
   })
 })
