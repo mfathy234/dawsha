@@ -1182,10 +1182,23 @@ export function reorderProject(projectId: string, targetId: string): void {
 /** Saves an order made from the displayed list and, outside Manual sort, switches to Manual so the order sticks. */
 function keepDisplayedOrder(projects: Project[], displayed: Project[]): void {
   if (projects.every((project, index) => project.id === displayed[index]?.id)) return
-  const switched = store.state.settings.sidebarSort !== 'manual'
+  const before = store.state.settings
+  const switched = before.sidebarSort !== 'manual'
   store.set((s) => ({ ...s, settings: { ...s.settings, projects, sidebarSort: 'manual' } }))
   void saveSettings({ projects, ...(switched ? { sidebarSort: 'manual' as const } : {}) })
-  if (switched) toast('Switched to your own order. Change it in Sort.', 'info')
+  if (switched) toast('Switched to your own order, starting from this list. Your earlier order was replaced.', 'info', {
+    label: 'Undo',
+    run: () => {
+      const current = new Map(store.state.settings.projects.map((project) => [project.id, project]))
+      const restored = before.projects.flatMap((project) => {
+        const found = current.get(project.id)
+        current.delete(project.id)
+        return found ? [found] : []
+      }).concat([...current.values()])
+      store.set((s) => ({ ...s, settings: { ...s.settings, projects: restored, sidebarSort: before.sidebarSort } }))
+      void saveSettings({ projects: restored, sidebarSort: before.sidebarSort })
+    }
+  })
 }
 
 export function reorderProjectFromDisplay(displayedIds: readonly string[], projectId: string, targetId: string): void {
