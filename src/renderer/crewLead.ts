@@ -22,19 +22,18 @@ import type { LeadGoalInfo, LeadHost, PlanDecision } from '../shared/cli'
 import { saveSettings, startCrewSession } from './actions'
 import { currentMembers, patchRuns } from './crewActions'
 import { crewRunStatuses, paneOfRun } from './crewLive'
+import { createKeyedQueue } from './keyedQueue'
 import { projectById, store } from './state'
 
 const LEAD_ALLOW = 'Bash(dawsha crew:*)'
 
 const planWaiters = new Map<string, (decision: PlanDecision) => void>()
 const askWaiters = new Map<string, { id: string; resolve: (answer: { ok: true; answer: string } | { ok: false; error: string }) => void }>()
-const queues = new Map<string, Promise<unknown>>()
+const goalJobs = createKeyedQueue()
 
 /** Runs one job at a time per goal, so two quick `crew run` calls cannot both pass the at-once check. */
 export function goalQueue<T>(goalId: string, job: () => Promise<T>): Promise<T> {
-  const next = (queues.get(goalId) ?? Promise.resolve()).then(job, job)
-  queues.set(goalId, next.catch(() => undefined))
-  return next
+  return goalJobs.run(goalId, job)
 }
 
 export const leadSettings = (): LeadSettings => store.state.settings.lead
