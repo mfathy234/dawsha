@@ -178,6 +178,7 @@ export async function startGoal(input: GoalInput): Promise<GoalOutcome> {
       effort: runner === maya.runner ? maya.effort : '',
       permissions: maya.permissions,
       startup: maya.startup,
+      goal: goalId,
       ...(runner === 'claude' ? { allow: LEAD_ALLOW } : {})
     },
     fullAccess: crewFullAccess(runner, maya.permissions),

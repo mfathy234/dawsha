@@ -67,7 +67,7 @@ async function answer(request) {
   return { ok: false, exit: 1, out: 'dawsha: Dawsha did not start in time.' }
 }
 
-answer({ args: process.argv.slice(2), cwd: process.cwd() }).then((reply) => {
+answer({ args: process.argv.slice(2), cwd: process.cwd(), leadGoal: process.env.DAWSHA_CREW_GOAL || undefined }).then((reply) => {
   const stream = reply.ok ? process.stdout : process.stderr
   if (reply.out) stream.write(reply.out + '\n')
   process.exitCode = reply.exit

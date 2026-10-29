@@ -104,7 +104,7 @@ export class PtyManager {
         cols,
         rows,
         cwd: request.cwd,
-        env: this.environment()
+        env: this.environment(request.crew?.goal)
       })
       this.attach(request.id, child, request.projectId ?? null, request.agent, request.desktopVisible !== false, request.remoteManaged === true, { cols, rows })
       this.recording?.recorder.start(
@@ -185,13 +185,15 @@ export class PtyManager {
     clearTimeout(timer)
   }
 
-  private environment(): Record<string, string> {
+  private environment(leadGoal?: string): Record<string, string> {
     const env: Record<string, string> = {}
     for (const [key, value] of Object.entries(process.env)) {
       if (value !== undefined && key !== 'ELECTRON_RUN_AS_NODE') env[key] = value
     }
     env.TERM = 'xterm-256color'
     env.COLORTERM = 'truecolor'
+    if (leadGoal) env.DAWSHA_CREW_GOAL = leadGoal
+    else delete env.DAWSHA_CREW_GOAL
     if (process.platform === 'darwin') {
       env.PATH = [...new Set([...(env.PATH ?? '').split(delimiter).filter(Boolean), ...platformExecutableDirs()])].join(delimiter)
     }

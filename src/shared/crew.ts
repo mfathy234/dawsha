@@ -92,6 +92,8 @@ export interface CrewLaunch {
   startup: CrewStartup
   /** Claude tool rules that run without asking, for example Bash(dawsha crew:*). */
   allow?: string
+  /** The goal a Lead pane works for. The pane gets it as DAWSHA_CREW_GOAL, so `dawsha crew run` can hold it to that goal. */
+  goal?: string
 }
 
 export const MAX_CREW_RUNS = 100

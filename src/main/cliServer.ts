@@ -17,7 +17,12 @@ export function pipePath(): string {
 export function isCliRequest(value: unknown): value is CliRequest {
   if (typeof value !== 'object' || value === null) return false
   const request = value as Record<string, unknown>
-  return Array.isArray(request.args) && request.args.every((a) => typeof a === 'string') && typeof request.cwd === 'string'
+  return (
+    Array.isArray(request.args) &&
+    request.args.every((a) => typeof a === 'string') &&
+    typeof request.cwd === 'string' &&
+    (request.leadGoal === undefined || typeof request.leadGoal === 'string')
+  )
 }
 
 export function startCliServer(run: (request: CliRequest) => Promise<CliReply>, path: string = pipePath()): Server {

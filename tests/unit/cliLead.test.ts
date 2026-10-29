@@ -214,3 +214,25 @@ describe('crew run with a goal', () => {
     expect((await run({ kind: 'crew-run', member: 'omar', project: 'acme-web', path: null, choice: 'default', fields: { task: 'x' }, background: false }, h)).ok).toBe(true)
   })
 })
+
+describe('a Lead pane is held to its own goal', () => {
+  const parseAs = (leadGoal: string | undefined, ...args: string[]) => parseCli(args, 'C:\\work\\acme-web', resolvePath, { leadGoal })
+  const RUN = ['crew', 'run', 'omar', '--project', 'acme-web', '--field', 'task=x']
+
+  it('refuses a run without --goal from the Lead', () => {
+    expect(parseAs('g1', ...RUN)).toEqual({ ok: false, error: 'The Lead must run members with --goal g1.' })
+  })
+
+  it('refuses a run for another goal from the Lead', () => {
+    expect(parseAs('g1', ...RUN, '--goal', 'g2')).toEqual({ ok: false, error: 'The Lead must run members with --goal g1.' })
+  })
+
+  it('keeps a run that names its own goal', () => {
+    expect(parseAs('g1', ...RUN, '--goal', 'g1')).toMatchObject({ ok: true, command: { kind: 'crew-run', goal: 'g1' } })
+  })
+
+  it('leaves runs from panes without a goal unrestricted', () => {
+    expect(parseAs(undefined, ...RUN)).toMatchObject({ ok: true, command: { kind: 'crew-run' } })
+    expect(parseAs('', ...RUN)).toMatchObject({ ok: true, command: { kind: 'crew-run' } })
+  })
+})
