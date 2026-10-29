@@ -737,7 +737,7 @@ test('desktop settings: every phone capability is off by default and each settin
   try {
     await page.locator('#settings-button').click()
     await page.locator('#settings-tab-remote').click()
-    for (const id of ['commands', 'answers', 'messages', 'sessions', 'fullOutput']) await expect(page.locator(`#remote-cap-${id}`)).not.toBeChecked()
+    for (const id of ['commands', 'answers', 'messages', 'sessions', 'crew', 'fullOutput']) await expect(page.locator(`#remote-cap-${id}`)).not.toBeChecked()
     await expect(page.locator('#remote-capabilities')).toContainText('Off: the phone sees status lines and questions only.')
     await expect(page.locator('#remote-approvals-notify')).toBeDisabled()
     await expect(page.locator('#remote-approvals-config')).toBeDisabled()
@@ -942,7 +942,7 @@ test('phone refresh: tabs, connection line, filled approval cards with a 1:1.4 b
       await page.goto(url)
       await expect(page.locator('#approvals-view')).toBeVisible()
       await expect(page.locator('#connection-label')).toHaveText('Connected to your PC')
-      await expect(page.getByRole('tab')).toHaveText(['Needs you2', 'Sessions', 'Projects'])
+      await expect(page.getByRole('tab')).toHaveText(['Needs you2', 'Agents', 'Sessions', 'Projects'])
       await expect(page.locator('#remote-nav-approvals')).toHaveAttribute('aria-selected', 'true')
       const first = page.locator('.approval-card').first()
       await expect(first.locator('.approval-head .agent-badge svg')).toHaveCount(1)
