@@ -1,4 +1,5 @@
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
+import { openHandDialog } from '../components/crewDialogs'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import {
   addTab,
@@ -257,10 +258,11 @@ export function installBuiltinCommands(): void {
     },
     { id: 'view.toggleTagColors', title: 'Toggle tag colours', group: 'Actions', keywords: 'session tag bug feature colour color chip', run: () => setColorSessionsByTag(!store.state.settings.colorSessionsByTag) },
     { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'folders', run: () => showView('projects') },
-    { id: 'view.background', title: 'Open background agents', group: 'Actions', keywords: 'agents subagents sub-agents timeline running tasks codex claude', ...withKeys('Ctrl+Shift+L'), run: () => showView('background') },
     { id: 'view.files', title: 'Open Files', group: 'Actions', keywords: 'files tree editor code browse project explorer', ...withKeys('Ctrl+Shift+E'), run: () => showView('files') },
     { id: 'view.quickopen', title: 'Find a file…', group: 'Actions', keywords: 'quick open ctrl p files search project fuzzy', ...withKeys('Ctrl+P'), run: () => toggleQuickOpen() },
     { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },
+    { id: 'view.crew', title: 'Open Agents', group: 'Actions', keywords: 'agents crew members run lead maya', ...withKeys('Ctrl+Shift+L'), run: () => showView('crew') },
+    { id: 'crew.hand', title: 'Hand a job to an agent…', group: 'Actions', keywords: 'crew paste run member job', run: () => openHandDialog() },
     { id: 'view.skills', title: 'Open Skills', group: 'Actions', keywords: 'installed export copy agent', run: () => showView('skills') },
     { id: 'view.usage', title: 'Open Usage', group: 'Actions', keywords: 'tokens cost limits history', run: () => showView('usage') },
     {

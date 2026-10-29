@@ -8,6 +8,8 @@ import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { formatDuration, sessionUsage } from '../shared/sessionCost'
 import { autoTag, autoTagSource, type SessionTag } from '../shared/sessionTags'
 import { pickWorkFolder } from '../shared/workFolder'
+import type { CrewIdentity } from '../shared/crew'
+import type { AvatarState } from '../shared/crewLive'
 import { lastOutputAt } from './ptyActivity'
 import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, RateLimitWindow, SessionFile, StatusInfo, TabAgent } from '../shared/types'
 import { folderOfPane, projectById, type AppState, type PaneState, type TermState } from './state'
@@ -82,6 +84,8 @@ export interface PaneView {
   live: StatusInfo | null
   detailsOpen: boolean
   timelineOpen: boolean
+  /** The crew member this pane runs as, with the live state of its avatar. */
+  crew: { identity: CrewIdentity; state: AvatarState } | null
   now: number
 }
 
@@ -327,6 +331,7 @@ export function derivePanes(state: AppState): PaneView[] {
     const opsLive = snapshot !== null && !snapshot.ended && status !== 'exited'
     const branch = folder ? (state.branches[folder] ?? null) : null
     const tagAuto = primary.tag ? null : autoTagSource(branch, named ? title : '')
+    const identity = (primary.crew ?? pane.tabs.find((t) => t.crew)?.crew) ?? null
     return {
       pane,
       project,
@@ -342,6 +347,7 @@ export function derivePanes(state: AppState): PaneView[] {
       opsLive,
       live: liveStatusFor(state, primary, matches),
       now: state.now,
+      crew: identity ? { identity, state: state.crewStates[pane.id] ?? 'idle' } : null,
       detailsOpen: state.detailsPaneId === pane.id && state.maximizedId === pane.id,
       timelineOpen: state.timelinePaneId === pane.id && state.maximizedId === pane.id,
       branch,

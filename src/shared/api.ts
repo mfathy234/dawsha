@@ -27,6 +27,7 @@ import type { OpsSnapshot } from './opsFeed'
 import type { RecordingStats, RecordingSummary } from './recordings'
 import type { ProcessActivity } from './processActivity'
 import type { BulkSkillExport, SkillEntry } from './skills'
+import type { CrewSourceFile } from './crewSources'
 import type { PaneonImportPreview } from './paneonImport'
 import type { SettingsExportResult, SettingsImportRead } from './settingsTransfer'
 import type { UpdateState } from './updates'
@@ -164,6 +165,10 @@ export interface GridApi {
   exportSkill(id: string): Promise<string | null>
   /** Asks for a folder once, then exports every id. Null when the folder picker is cancelled. */
   exportSkills(ids: string[]): Promise<BulkSkillExport | null>
+  /** Agent files, skills and Codex prompts on this PC, read-only. With ids, only those. */
+  crewSources(ids?: string[]): Promise<CrewSourceFile[]>
+  /** The current text of a linked agent, skill or prompt file, or null when it is gone. */
+  crewReadLinked(path: string): Promise<string | null>
   readClipboard(): Promise<ClipboardContent>
   writeClipboard(text: string): Promise<void>
   openExternal(url: string): Promise<void>

@@ -13,6 +13,7 @@ import type { CompareLink, GridSplits } from '../../shared/types'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
 import { agentMark } from './agentMark'
+import { crewSignature, identityMark } from './crewAvatar'
 import { ComparePairComponent } from './comparePair'
 import { GridGutters } from './gutters'
 import { PaneComponent } from './pane'
@@ -222,7 +223,7 @@ export class GridComponent {
   private updateStrip(views: PaneView[], state: AppState, maximized: boolean): void {
     this.strip.hidden = !maximized
     if (!maximized) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status, v.agent, v.attention]), state.focusedId])
+    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status, v.agent, v.attention, crewSignature(v)]), state.focusedId])
     if (signature === this.stripSignature) return
     this.stripSignature = signature
     clear(this.strip)
@@ -247,7 +248,7 @@ export class GridComponent {
         onClick: () => focusPane(view.pane.id)
       },
       h('span', { class: 'strip-index' }, `${view.index + 1}`),
-      agentMark(view.agent),
+      identityMark(view, 18),
       h('bdi', { class: 'strip-name', dir: 'auto' }, name),
       status
     )

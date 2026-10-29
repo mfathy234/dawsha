@@ -48,6 +48,7 @@ import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
+import { crewSignature, identityMark } from './crewAvatar'
 import { ensureTerminal, getTerminal } from '../terminals'
 import { enableDrag } from '../drag'
 import { canCompact, contextHintText, showContextHint } from '../../shared/contextWarning'
@@ -179,7 +180,7 @@ export class PaneComponent {
     this.current = view
     const title = view.title
     this.updateTitle(view.index + 1, title)
-    this.updateMark(view.agent)
+    this.updateMark(view)
     const projectName = view.named ? (view.project?.name ?? '') : ''
     this.projectName.hidden = projectName === ''
     this.projectName.textContent = projectName
@@ -318,7 +319,7 @@ export class PaneComponent {
       onReviewFiles: () => this.reviewInFiles(),
       onShowAgents: (sessionId) => {
         setAgentFilters({ ...DEFAULT_BG_FILTERS, session: sessionId })
-        showView('background')
+        showView('crew')
       }
     })
     this.info.hidden = items.length === 0
@@ -604,13 +605,14 @@ export class PaneComponent {
     target?.classList.add('drop-target')
   }
 
-  private markAgent = ''
+  private markKey = ''
 
-  private updateMark(agent: TabAgent): void {
-    if (this.markAgent === agent) return
-    this.markAgent = agent
+  private updateMark(view: PaneView): void {
+    const key = `${view.agent}|${crewSignature(view)}`
+    if (this.markKey === key) return
+    this.markKey = key
     clear(this.mark)
-    const mark = agentMark(agent)
+    const mark = identityMark(view, 24)
     if (mark) this.mark.append(mark)
   }
 

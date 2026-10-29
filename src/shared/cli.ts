@@ -2,6 +2,7 @@ import { AGENT_NAMES, isAgent } from './agents'
 import { formatAge } from './statusLine'
 import { normalizePath } from './sessionMatch'
 import { layoutProjectNames, paneCountText } from './layouts'
+import { FIELD_VALUE_MAX, RUN_CHOICES, inScope, isRunChoice, modelLabel, runFields, type CrewMember, type RunChoice } from './crew'
 import type { AgentKind, Project, ResumeQuery, ResumeSession, SavedLayout } from './types'
 
 export type LayoutMode = 'replace' | 'add'
@@ -16,6 +17,18 @@ export type CliCommand =
   | { kind: 'sessions'; project: string | null }
   | { kind: 'add'; path: string; name?: string }
   | { kind: 'update-agents' }
+  | { kind: 'crew-list' }
+  | {
+      kind: 'crew-run'
+      member: string
+      project: string | null
+      path: string | null
+      choice: RunChoice
+      fields: Record<string, string>
+      background: boolean
+    }
+  | { kind: 'crew-status'; run: string | null }
+  | { kind: 'crew-result'; run: string }
   | { kind: 'help' }
   | { kind: 'version' }
 
@@ -32,7 +45,7 @@ export interface CliReply {
   out: string
 }
 
-export const COMMAND_NAMES = ['open', 'start', 'resume', 'ls', 'layouts', 'sessions', 'add', 'update-agents', 'help'] as const
+export const COMMAND_NAMES = ['open', 'start', 'resume', 'ls', 'layouts', 'sessions', 'add', 'update-agents', 'crew', 'help'] as const
 
 export const HELP_TEXT = [
   'Usage: dawsha [command]',
@@ -47,6 +60,11 @@ export const HELP_TEXT = [
   '  sessions [project]                     List earlier sessions',
   '  add <path> [--name]                    Add a project',
   '  update-agents                          Update installed agents',
+  '  crew list                              List crew members and the fields they ask for',
+  '  crew run <member> --project <name|path> [--model fable|opus|sonnet|haiku|codex|gemini]',
+  '      [--field key=value ...] [--background]   Run a member and print the run id',
+  "  crew status [run]                      Print a run's state: working, needs, done, failed, idle or closed",
+  '  crew result <run>                      Print what a run last said',
   '  --version                              Print the version'
 ].join('\n')
 
@@ -60,15 +78,39 @@ interface Flags {
   replace: boolean
   alongside: boolean
   name?: string
+  project?: string
+  model?: RunChoice
+  fields: Record<string, string>
+  background: boolean
   error?: string
 }
 
-function readFlags(args: string[]): Flags {
-  const flags: Flags = { positional: [], here: false, last: false, replace: false, alongside: false }
+function readCrewFlag(flags: Flags, key: string, value: string | undefined, fields: Map<string, string>): void {
+  if (value === undefined || value.startsWith('--')) {
+    flags.error = `${key} needs a value.`
+  } else if (key === '--project') {
+    flags.project = value
+  } else if (key === '--model') {
+    if (isRunChoice(value) && value !== 'default') flags.model = value
+    else flags.error = `Unknown model '${value}'. Use ${RUN_CHOICES.filter((c) => c !== 'default').join(', ')}.`
+  } else {
+    const cut = value.indexOf('=')
+    const name = cut > 0 ? value.slice(0, cut) : ''
+    if (!/^\w+$/.test(name)) flags.error = '--field needs key=value, for example --field target=PR123.'
+    else if (value.length - cut - 1 > FIELD_VALUE_MAX) flags.error = `The value of field '${name}' is too long.`
+    else fields.set(name, value.slice(cut + 1))
+  }
+}
+
+function readFlags(args: string[], crew = false): Flags {
+  const flags: Flags = { positional: [], here: false, last: false, replace: false, alongside: false, fields: {}, background: false }
+  const fields = new Map<string, string>()
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]
     const [key, inline] = arg.startsWith('--') ? arg.split(/=(.*)/s, 2) : [arg, undefined]
-    if (key === '--here') flags.here = true
+    if (crew && key === '--background') flags.background = true
+    else if (crew && (key === '--project' || key === '--model' || key === '--field')) readCrewFlag(flags, key, inline ?? args[(i += 1)], fields)
+    else if (key === '--here') flags.here = true
     else if (key === '--last') flags.last = true
     else if (key === '--replace') flags.replace = true
     else if (key === '--alongside') flags.alongside = true
@@ -81,6 +123,7 @@ function readFlags(args: string[]): Flags {
     } else if (arg.startsWith('--')) flags.error = `Unknown option '${arg}'.`
     else flags.positional.push(arg)
   }
+  flags.fields = Object.fromEntries(fields)
   return flags
 }
 
@@ -93,12 +136,44 @@ function parseOpen(rest: string[]): CliParse {
   return { ok: true, command: { kind: 'open-layout', name: flags.positional.join(' '), mode } }
 }
 
+function parseCrew(rest: string[], resolvePath: (path: string) => string): CliParse {
+  const flags = readFlags(rest, true)
+  if (flags.error) return { ok: false, error: flags.error }
+  const [sub, first, extra] = flags.positional
+  const fail = (error: string): CliParse => ({ ok: false, error })
+  if (sub === undefined) return fail('crew needs list, run, status or result.')
+  if (sub === 'list') return first ? fail(`Unexpected argument '${first}'.`) : { ok: true, command: { kind: 'crew-list' } }
+  if (sub === 'status') return extra ? fail(`Unexpected argument '${extra}'.`) : { ok: true, command: { kind: 'crew-status', run: first ?? null } }
+  if (sub === 'result') {
+    if (!first) return fail('crew result needs a run id.')
+    return extra ? fail(`Unexpected argument '${extra}'.`) : { ok: true, command: { kind: 'crew-result', run: first } }
+  }
+  if (sub !== 'run') return fail(`Unknown crew command '${sub}'. Use list, run, status or result.`)
+  if (!first) return fail('crew run needs a member name.')
+  if (extra) return fail(`Unexpected argument '${extra}'.`)
+  if (!flags.project) return fail('crew run needs --project <name|path>.')
+  const byPath = looksLikePath(flags.project)
+  return {
+    ok: true,
+    command: {
+      kind: 'crew-run',
+      member: first,
+      project: byPath ? null : flags.project,
+      path: byPath ? resolvePath(flags.project) : null,
+      choice: flags.model ?? 'default',
+      fields: flags.fields,
+      background: flags.background
+    }
+  }
+}
+
 export function parseCli(args: string[], cwd: string, resolvePath: (path: string) => string): CliParse {
   const [first, ...rest] = args
   if (first === undefined) return { ok: true, command: { kind: 'open' } }
   if (first === 'open') return parseOpen(rest)
   if (first === '--help' || first === '-h' || first === 'help') return { ok: true, command: { kind: 'help' } }
   if (first === '--version' || first === '-v') return { ok: true, command: { kind: 'version' } }
+  if (first === 'crew') return parseCrew(rest, resolvePath)
   const flags = readFlags(rest)
   if (flags.error) return { ok: false, error: flags.error }
   const fail = (error: string): CliParse => ({ ok: false, error })
@@ -166,6 +241,26 @@ export interface CliHost {
   openResumePicker(projectId?: string): void
   openLayout(name: string, mode?: LayoutMode): Promise<{ ok: boolean; text: string }>
   updateAgents(): Promise<string>
+  crewMembers(): CrewMember[]
+  crewRun(request: CrewRunRequest): Promise<{ ok: true; runId: string } | { ok: false; error: string }>
+  crewRuns(): CrewRunStatus[]
+  crewResult(run: string): Promise<string | null>
+}
+
+export interface CrewRunRequest {
+  member: CrewMember
+  project: Project
+  choice: RunChoice
+  fields: Record<string, string>
+  background: boolean
+}
+
+export interface CrewRunStatus {
+  id: string
+  member: string
+  title: string
+  /** One word: working, needs, done, failed, idle or closed. */
+  state: string
 }
 
 const failure = (out: string): CliReply => ({ ok: false, exit: 1, out })
@@ -245,6 +340,48 @@ function runLayouts(host: CliHost): CliReply {
   return success(table(['NAME', 'PANES', 'PROJECTS'], rows))
 }
 
+function runCrewList(host: CliHost): CliReply {
+  const members = host.crewMembers().filter((member) => !member.hidden)
+  const rows = members.map((member) => [
+    member.name,
+    member.role,
+    `${member.runner} ${modelLabel(member.runner, member.model)}`,
+    member.lead ? 'coming next' : runFields(member).join(', ')
+  ])
+  return success(table(['NAME', 'ROLE', 'MODEL', 'FIELDS'], rows))
+}
+
+async function runCrewRun(command: Extract<CliCommand, { kind: 'crew-run' }>, host: CliHost): Promise<CliReply> {
+  const wanted = command.member.trim().toLowerCase()
+  const member = host.crewMembers().find((m) => m.id.toLowerCase() === wanted || m.name.toLowerCase() === wanted)
+  if (!member) return failure(`No crew member named '${command.member}'. Run dawsha crew list.`)
+  if (member.lead) return failure(`${member.name} the Lead is not available yet. Run a member instead.`)
+  const project = findProject(host.projects, command.project, command.path)
+  if (!project) {
+    return failure(
+      command.project ? `No project named '${command.project}'. Run dawsha ls.` : `${command.path} is not a project. Run dawsha add <path> first.`
+    )
+  }
+  if (!inScope(member, project.name)) return failure(`${member.name} is limited to ${member.projects.join(', ')}, not ${project.name}.`)
+  const fields = runFields(member)
+  const unknown = Object.keys(command.fields).find((key) => !fields.includes(key))
+  if (unknown) return failure(`${member.name} has no field '${unknown}'. Fields: ${fields.join(', ')}.`)
+  const missing = fields.filter((key) => (command.fields[key] ?? '').trim() === '')
+  if (missing.length > 0) return failure(`${member.name} needs ${missing.map((key) => `--field ${key}=...`).join(' ')}.`)
+  const result = await host.crewRun({ member, project, choice: command.choice, fields: command.fields, background: command.background })
+  return result.ok ? success(result.runId) : failure(result.error)
+}
+
+function runCrewStatus(command: Extract<CliCommand, { kind: 'crew-status' }>, host: CliHost): CliReply {
+  const runs = host.crewRuns()
+  if (command.run) {
+    const run = runs.find((r) => r.id === command.run)
+    return run ? success(run.state) : failure(`No run '${command.run}'.`)
+  }
+  if (runs.length === 0) return success('No crew runs yet.')
+  return success(table(['RUN', 'MEMBER', 'STATE', 'TITLE'], runs.map((r) => [r.id, r.member, r.state, r.title])))
+}
+
 export async function runCli(command: CliCommand, host: CliHost): Promise<CliReply> {
   switch (command.kind) {
     case 'open':
@@ -281,6 +418,16 @@ export async function runCli(command: CliCommand, host: CliHost): Promise<CliRep
       return runResume(command, host)
     case 'update-agents':
       return success(await host.updateAgents())
+    case 'crew-list':
+      return runCrewList(host)
+    case 'crew-run':
+      return runCrewRun(command, host)
+    case 'crew-status':
+      return runCrewStatus(command, host)
+    case 'crew-result': {
+      const text = await host.crewResult(command.run)
+      return text === null ? failure(`No run '${command.run}'.`) : success(text)
+    }
   }
 }
 

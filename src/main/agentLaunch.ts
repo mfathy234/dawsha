@@ -1,10 +1,12 @@
-import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { npmClaudeBinary, scanClaudeInstalls } from './claudeInstalls'
 import { claudeFallbackDirs, platformExecutableDirs, resolveExecutable, splitArgs } from './executables'
 import { AGENT_NAMES, FULL_ACCESS_FLAGS } from '../shared/agents'
 import { promptArgs } from '../shared/compare'
+import { isCrewLaunch, INSTRUCTIONS_MAX, type CrewLaunch } from '../shared/crew'
+import { crewArgs, crewPrompt } from '../shared/crewLaunch'
 import type { AgentKind, SpawnRequest } from '../shared/types'
 
 export interface LaunchSpec {
@@ -120,7 +122,34 @@ export function shellArgs(file: string, command?: string, platform = process.pla
   return process.env.DAWSHA_SHELL ? [] : ['-NoLogo']
 }
 
-export function launchSpec(request: SpawnRequest, platform = process.platform): LaunchSpec | string {
+export function emptyMcpConfigPath(): string {
+  const dir = join(tmpdir(), 'dawsha-crew')
+  const path = join(dir, 'empty-mcp.json')
+  if (!existsSync(path)) {
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(path, '{"mcpServers":{}}', 'utf8')
+  }
+  return path
+}
+
+function crewOf(request: Pick<SpawnRequest, 'agent' | 'crew'>): CrewLaunch | null {
+  if (request.agent === 'shell' || !isCrewLaunch(request.crew)) return null
+  return { ...request.crew, instructions: request.crew.instructions.slice(0, INSTRUCTIONS_MAX) }
+}
+
+function crewFlags(request: Pick<SpawnRequest, 'agent' | 'crew' | 'cwd'>, crew: CrewLaunch | null): string[] {
+  if (!crew || request.agent === 'shell') return []
+  const project = join(request.cwd, '.mcp.json')
+  return crewArgs(request.agent, crew, {
+    emptyMcpConfig: crew.startup === 'usual' ? '' : emptyMcpConfigPath(),
+    projectMcpConfig: crew.startup === 'some' && existsSync(project) ? project : null
+  })
+}
+
+export function launchSpec(input: SpawnRequest, platform = process.platform): LaunchSpec | string {
+  const crew = crewOf(input)
+  const request = crew && input.agent !== 'shell' ? { ...input, prompt: crewPrompt(input.agent, crew, input.prompt ?? '') } : input
+  const crewExtra = crewFlags(request, crew)
   if (request.agent === 'shell') {
     const command = shellCommand(platform)
     const file = resolveExecutable(command, [], platform)
@@ -135,7 +164,7 @@ export function launchSpec(request: SpawnRequest, platform = process.platform): 
     const extra = splitArgs(process.env.DAWSHA_CODEX_ARGS)
     const initial = promptFor(base, request)
     if (typeof initial === 'string') return initial
-    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
+    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...crewExtra, ...initial] }
   }
   if (request.agent === 'gemini') {
     const base = resolveGemini(pathDirs, platform)
@@ -144,7 +173,7 @@ export function launchSpec(request: SpawnRequest, platform = process.platform): 
     const extra = splitArgs(process.env.DAWSHA_GEMINI_ARGS)
     const initial = promptFor(base, request)
     if (typeof initial === 'string') return initial
-    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
+    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...crewExtra, ...initial] }
   }
   const command = claudeCommand(platform)
   const file =
@@ -156,6 +185,7 @@ export function launchSpec(request: SpawnRequest, platform = process.platform): 
   const args = [
     ...splitArgs(process.env.DAWSHA_CLAUDE_ARGS),
     ...agentArgs(request, Boolean(process.env.DAWSHA_CLAUDE_COMMAND)),
+    ...crewExtra,
     ...initial
   ]
   return { file, args }

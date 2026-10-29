@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { HELP_TEXT, cliWords, findProject, parseCli, runCli, table, type CliCommand, type CliHost } from '../../src/shared/cli'
+import { defaultCrew } from '../../src/shared/crew'
+import { visibleMembers } from '../../src/shared/crewBuiltins'
 import type { Project, ResumeSession, SavedLayout } from '../../src/shared/types'
 
 const CWD = 'C:\\work\\acme-web'
@@ -63,6 +65,10 @@ function host(over: Partial<CliHost> = {}): CliHost {
     openResumePicker: vi.fn(),
     openLayout: vi.fn(async (name: string) => ({ ok: true, text: `Opened layout '${name}' (3 panes)` })),
     updateAgents: vi.fn(async () => 'Updating the agents in a shell tab.'),
+    crewMembers: () => visibleMembers(defaultCrew()),
+    crewRun: vi.fn(async () => ({ ok: true as const, runId: 'k3m9qz' })),
+    crewRuns: () => [],
+    crewResult: vi.fn(async () => null),
     ...over
   }
 }

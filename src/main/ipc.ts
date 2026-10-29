@@ -40,6 +40,7 @@ import { bridgeDirs, claudeHome, claudeProjectsDir, claudeSettingsPath } from '.
 import { codexHome } from './agentLaunch'
 import { createAgentAccountsReader } from './agentAccounts'
 import { createCodexLimitsReader } from './codexLimits'
+import { readLinked, scanSources } from './crewSources'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
   import { previewPaneonImport, queuePaneonImport } from './paneonImport'
   import { paneonUserDataDir } from './paths'
@@ -182,6 +183,10 @@ export function registerIpc(
     if (selected.canceled || !selected.filePaths[0]) return null
     return exportSkills(skillLocations(), ids, selected.filePaths[0])
   })
+  ipcMain.handle(IPC.crewSources, (_event, ids: unknown) =>
+    scanSources(skillLocations(), Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string').slice(0, 200) : undefined)
+  )
+  ipcMain.handle(IPC.crewReadLinked, (_event, path: unknown) => readLinked(skillLocations(), path))
   ipcMain.on(IPC.opsTrack, (_event, ids: unknown) => {
     ops.track(Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [])
   })

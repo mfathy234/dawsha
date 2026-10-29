@@ -5,6 +5,7 @@ import type { RecordingSettings } from './recordings'
 import type { RemoteActivityEntry } from './remoteActivity'
 import type { RemoteCapabilities } from './remoteCapabilities'
 import type { SessionTag } from './sessionTags'
+import type { CrewIdentity, CrewLaunch, CrewRun, CrewSettings } from './crew'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
 export type SessionStatus = 'busy' | 'idle'
@@ -58,6 +59,7 @@ export interface SavedTab {
   /** The user's own name for this session, shown instead of the one the agent reports. */
   name?: string
   tag?: SessionTag
+  crew?: CrewIdentity
 }
 
 export interface SavedPane {
@@ -162,6 +164,10 @@ export interface Settings {
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
   recordings: RecordingSettings
+  /** Your own crew members and which built-ins are hidden. */
+  crew: CrewSettings
+  /** The latest crew runs, newest first. */
+  crewRuns: CrewRun[]
   legacyModelCacheCleared: boolean
 }
 
@@ -340,6 +346,7 @@ export interface SpawnRequest {
   fullAccess?: boolean
   desktopVisible?: boolean
   remoteManaged?: boolean
+  crew?: CrewLaunch
 }
 
 export interface RemoteSessionStarted {
