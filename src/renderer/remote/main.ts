@@ -7,6 +7,7 @@ import { DEFAULT_THEME_ID, findTheme } from '../../shared/themes'
 import type { AgentKind } from '../../shared/types'
 import { TERMINAL_FONT } from '../terminalFont'
 import { initApprovals, reconnectApprovals, refresh as refreshApprovals, setApprovalsEnabled, setApprovalsVisible } from './approvals'
+import { initCrew, refresh as refreshCrew, setCrewEnabled, setCrewVisible } from './crew'
 import './remote.css'
 
 interface RemoteSession { id: string; title: string; modifiedAt: number; agent: AgentKind }
@@ -16,14 +17,15 @@ interface RemoteState {
   device: { id: string; name: string } | null
   projects: RemoteProject[]
   terminals: RemoteTerminal[]
-  permissions: { read: boolean; terminalInput: boolean; sessionControl: boolean; approvals?: boolean; commands?: boolean; answers?: boolean; fullOutput?: boolean }
+  permissions: { read: boolean; terminalInput: boolean; sessionControl: boolean; approvals?: boolean; crew?: boolean; commands?: boolean; answers?: boolean; fullOutput?: boolean }
 }
-type BrowserView = 'sessions' | 'projects' | 'terminal' | 'approvals'
+type BrowserView = 'sessions' | 'projects' | 'terminal' | 'approvals' | 'crew'
 type TabView = Exclude<BrowserView, 'terminal'>
 
-// To add a tab (Crew, later), add an entry here and a section with the matching id in remote.html.
+// To add a tab, add an entry here and a section with the matching id in remote.html.
 const TABS: ReadonlyArray<{ id: TabView; label: string; badge?: boolean }> = [
   { id: 'approvals', label: 'Needs you', badge: true },
+  { id: 'crew', label: 'Agents' },
   { id: 'sessions', label: 'Sessions' },
   { id: 'projects', label: 'Projects' }
 ]
@@ -49,6 +51,7 @@ const sessionsView = document.querySelector<HTMLElement>('#sessions-view')!
 const projectsView = document.querySelector<HTMLElement>('#projects-view')!
 const terminalView = document.querySelector<HTMLElement>('#terminal-view')!
 const approvalsView = document.querySelector<HTMLElement>('#approvals-view')!
+const crewView = document.querySelector<HTMLElement>('#crew-view')!
 const connection = document.querySelector<HTMLElement>('#connection')!
 const connectionIcon = document.querySelector<HTMLElement>('#connection-icon')!
 const connectionLabel = document.querySelector<HTMLElement>('#connection-label')!
@@ -875,6 +878,9 @@ function render(): void {
   approvalsView.hidden = currentView !== 'approvals'
   setApprovalsEnabled(state.permissions.approvals === true)
   setApprovalsVisible(currentView === 'approvals')
+  crewView.hidden = currentView !== 'crew'
+  setCrewEnabled(state.permissions.crew === true)
+  setCrewVisible(currentView === 'crew')
   sessionsView.hidden = currentView !== 'sessions'
   projectsView.hidden = currentView !== 'projects'
   terminalView.hidden = currentView !== 'terminal'
@@ -941,7 +947,17 @@ initApprovals({
     onUnpaired: () => showPair('This browser was revoked from Dawsha. Pair again to reconnect.')
   }
 })
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { reconnectApprovals(); void refreshApprovals() } })
+initCrew({
+  root: document.querySelector<HTMLElement>('#crew-root')!,
+  host: {
+    request: apiRequest,
+    projects: () => state?.projects.map((project) => ({ id: project.id, name: project.name })) ?? [],
+    fullOutput: () => state?.permissions.fullOutput === true,
+    openTerminal,
+    onUnpaired: () => showPair('This browser was revoked from Dawsha. Pair again to reconnect.')
+  }
+})
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { reconnectApprovals(); void refreshApprovals(); void refreshCrew() } })
 document.querySelector<HTMLButtonElement>('#remote-new-session')!.addEventListener('click', () => showSessionDialog(activeProjectId ?? undefined))
 document.querySelector<HTMLButtonElement>('#empty-new-session')!.addEventListener('click', () => showSessionDialog(activeProjectId ?? undefined))
 document.querySelector<HTMLButtonElement>('#terminal-back')!.addEventListener('click', () => setView('sessions'))

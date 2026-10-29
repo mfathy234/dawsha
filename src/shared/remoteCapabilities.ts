@@ -1,6 +1,6 @@
 import type { ApprovalKind } from './approvals'
 
-export const REMOTE_CAPABILITIES = ['commands', 'answers', 'messages', 'sessions', 'fullOutput'] as const
+export const REMOTE_CAPABILITIES = ['commands', 'answers', 'messages', 'sessions', 'crew', 'fullOutput'] as const
 
 export type RemoteCapability = (typeof REMOTE_CAPABILITIES)[number]
 export type RemoteCapabilities = Record<RemoteCapability, boolean>
@@ -33,6 +33,15 @@ export const REMOTE_CAPABILITY_INFO: Record<RemoteCapability, RemoteCapabilityIn
       title: 'Allow phones to start sessions?',
       body: 'New and resumed agents inherit their existing Dawsha full-access setting. With full access enabled, an agent can read and change files and run commands in the project.',
       confirmLabel: 'Allow starting sessions'
+    }
+  },
+  crew: {
+    label: 'Run agents',
+    hint: "Runs use the agent's own permissions.",
+    confirm: {
+      title: 'Allow phones to run agents?',
+      body: "A paired phone will be able to start a crew agent in any of your projects. The agent runs on this computer with its own permissions, so one with full access can read and change files and run commands there.",
+      confirmLabel: 'Allow running agents'
     }
   },
   fullOutput: {

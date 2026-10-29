@@ -169,7 +169,7 @@ describe('Remote Access controller', () => {
     const context = fixture()
     await context.controller.setAllowedEmail('new@example.com')
     const state = await context.controller.setPermissions({ capabilities: { messages: true } })
-    expect(state.permissions).toMatchObject({ allowedEmail: 'new@example.com', capabilities: { messages: true, sessions: false, commands: false, answers: false, fullOutput: false } })
+    expect(state.permissions).toMatchObject({ allowedEmail: 'new@example.com', capabilities: { messages: true, sessions: false, commands: false, answers: false, crew: false, fullOutput: false } })
     expect(context.settings().remoteAccess).toEqual(state.permissions)
   })
 
@@ -186,7 +186,7 @@ describe('Remote Access controller', () => {
     await expect(context.controller.setPermissions({ capabilities: { commands: 'yes' } } as never)).rejects.toThrow('Invalid Remote Access permissions.')
     await expect(context.controller.setPermissions({ approvalsAwayMinutes: '3' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
     await expect(context.controller.setPermissions({ allowedEmail: 'x@y.com' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
-    await expect(context.controller.setPermissions({ capabilities: { crew: true } } as never)).rejects.toThrow('Invalid Remote Access permissions.')
+    await expect(context.controller.setPermissions({ capabilities: { runAll: true } } as never)).rejects.toThrow('Invalid Remote Access permissions.')
     expect(context.settings().remoteAccess.capabilities.commands).toBe(false)
   })
 

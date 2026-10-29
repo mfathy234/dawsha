@@ -38,6 +38,11 @@ const api: GridApi = {
       setAllowedEmail: (email) => invokeRemote(IPC.remoteAccessEmail, email),
       revokeDevice: (id) => invokeRemote(IPC.remoteAccessRevoke, id),
       recordApproval: (terminalId, allowed, tail) => ipcRenderer.invoke(IPC.remoteApprovalAnswered, terminalId, allowed, tail)
+    },
+    remoteCrew: {
+      publish: (snapshot) => ipcRenderer.send(IPC.remoteCrewSnapshot, snapshot),
+      onRun: (listener) => subscribe<[string, { memberId: string; projectId: string; choice: string; fields: Record<string, string> }]>(IPC.remoteCrewRun, listener),
+      reply: (id, result) => ipcRenderer.send(IPC.remoteCrewRunResult, id, result)
     }
   } : {}),
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
