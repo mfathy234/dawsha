@@ -30,8 +30,8 @@ async function missingFolders(transfer: ParsedTransfer): Promise<Set<string>> {
   return new Set(checks.filter((folder): folder is string => folder !== null))
 }
 
-function planFor(transfer: ParsedTransfer, mode: TransferMode, missing: Set<string>): ImportPlan {
-  return planImport({ current: store.state.settings, data: transfer.data, mode, missingFolders: missing, newId })
+function planFor(transfer: ParsedTransfer, mode: TransferMode, missing: Set<string>, keepFullAccess: boolean): ImportPlan {
+  return planImport({ current: store.state.settings, data: transfer.data, mode, missingFolders: missing, newId, keepFullAccess })
 }
 
 async function applyPlan(plan: ImportPlan): Promise<void> {
@@ -52,11 +52,11 @@ export async function importSettingsFromUi(): Promise<void> {
       return
     }
     const missing = await missingFolders(read.transfer)
-    const mergePlan = planFor(read.transfer, 'merge', missing)
-    const mode = await chooseImportMode(mergePlan.summary, read.transfer)
-    if (!mode) return
-    const plan = mode === 'merge' ? mergePlan : planFor(read.transfer, 'replace', missing)
-    if (mode === 'replace') {
+    const mergePlan = planFor(read.transfer, 'merge', missing, false)
+    const choice = await chooseImportMode(mergePlan.summary, read.transfer)
+    if (!choice) return
+    const plan = planFor(read.transfer, choice.mode, missing, choice.keepFullAccess)
+    if (choice.mode === 'replace') {
       // Counted the way applyPlan closes them: a file without projects keeps the current ones.
       const kept = plan.patch.projects ?? store.state.settings.projects
       const open = store.state.panes.filter((pane) => !kept.some((project) => project.id === pane.projectId)).length

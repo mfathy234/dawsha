@@ -8,6 +8,7 @@ import {
   findMember,
   initialsOf,
   missingFields,
+  modelFits,
   resolveRun,
   runFields,
   runTitle,
@@ -20,6 +21,26 @@ import {
 } from '../../src/shared/crew'
 import { BUILTIN_IDS, BUILTIN_MEMBERS, crewMembers, visibleMembers } from '../../src/shared/crewBuiltins'
 import { defaultSettings, migrateSettings } from '../../src/shared/settingsSchema'
+
+describe('model names', () => {
+  it('accepts the model names each CLI takes', () => {
+    expect(modelFits('codex', 'gpt-5.6-sol')).toBe(true)
+    expect(modelFits('claude', 'opus')).toBe(true)
+    expect(modelFits('claude', 'claude-sonnet-5-5')).toBe(true)
+    expect(modelFits('gemini', 'gemini-2.5-pro')).toBe(true)
+  })
+
+  it('rejects a flag passed as a model, and any other shape', () => {
+    for (const runner of ['claude', 'codex', 'gemini'] as const) {
+      expect(modelFits(runner, '--yolo')).toBe(false)
+      expect(modelFits(runner, '-m')).toBe(false)
+      expect(modelFits(runner, 'a'.repeat(61))).toBe(false)
+      expect(modelFits(runner, 'x & calc')).toBe(false)
+    }
+    expect(modelFits('claude', '')).toBe(false)
+    expect(modelFits('codex', '')).toBe(true)
+  })
+})
 
 describe('crew members', () => {
   it('ships the eight built-ins with a lead, read-only roles and unique identities', () => {
@@ -98,6 +119,8 @@ describe('crew members', () => {
 
   it('makes initials, ids and copies', () => {
     expect(initialsOf('Zaid')).toBe('ZA')
+    expect(initialsOf('zaid')).toBe('ZA')
+    expect(initialsOf('mary ann')).toBe('MA')
     expect(initialsOf('Mary Ann')).toBe('MA')
     expect(initialsOf('  ')).toBe('??')
     expect(uniqueMemberId([{ id: 'rami' }, { id: 'rami-2' }], 'Rami')).toBe('rami-3')

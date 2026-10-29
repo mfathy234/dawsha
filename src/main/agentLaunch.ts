@@ -5,7 +5,7 @@ import { npmClaudeBinary, scanClaudeInstalls } from './claudeInstalls'
 import { claudeFallbackDirs, platformExecutableDirs, resolveExecutable, splitArgs } from './executables'
 import { AGENT_NAMES, FULL_ACCESS_FLAGS } from '../shared/agents'
 import { promptArgs } from '../shared/compare'
-import { isCrewLaunch, INSTRUCTIONS_MAX, type CrewLaunch } from '../shared/crew'
+import { isCrewLaunch, INSTRUCTIONS_MAX, modelFits, type CrewLaunch } from '../shared/crew'
 import { crewArgs, crewPrompt } from '../shared/crewLaunch'
 import type { AgentKind, SpawnRequest } from '../shared/types'
 
@@ -146,8 +146,19 @@ function crewFlags(request: Pick<SpawnRequest, 'agent' | 'crew' | 'cwd'>, crew: 
   })
 }
 
-export function launchSpec(input: SpawnRequest, platform = process.platform): LaunchSpec | string {
+export interface ClaudeLookup {
+  resolve: (command: string, extraDirs: string[], platform: NodeJS.Platform) => string | null
+  npmProgram: (shim: string) => LaunchSpec | null
+}
+
+const CLAUDE_SHIM_REFUSAL =
+  "Claude is installed through an npm .cmd shim; Dawsha can't pass agent instructions safely. Reinstall Claude Code with the native installer."
+
+const systemClaudeLookup: ClaudeLookup = { resolve: resolveExecutable, npmProgram: npmShimProgram }
+
+export function launchSpec(input: SpawnRequest, platform = process.platform, lookup: ClaudeLookup = systemClaudeLookup): LaunchSpec | string {
   const crew = crewOf(input)
+  if (crew && input.agent !== 'shell' && crew.model !== '' && !modelFits(input.agent, crew.model)) return `The crew model is not valid for ${AGENT_NAMES[input.agent]}. Pick one from the list.`
   const request = crew && input.agent !== 'shell' ? { ...input, prompt: crewPrompt(input.agent, crew, input.prompt ?? '') } : input
   const crewExtra = crewFlags(request, crew)
   if (request.agent === 'shell') {
@@ -176,19 +187,50 @@ export function launchSpec(input: SpawnRequest, platform = process.platform): La
     return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...crewExtra, ...initial] }
   }
   const command = claudeCommand(platform)
-  const file =
-    resolveExecutable(command, [...claudeFallbackDirs(), ...platformExecutableDirs(platform)], platform) ??
+  const found =
+    lookup.resolve(command, [...claudeFallbackDirs(), ...platformExecutableDirs(platform)], platform) ??
     (platform === 'win32' && !process.env.DAWSHA_CLAUDE_COMMAND ? npmClaudeProgram(pathDirs) : null)
-  if (!file) return `Could not find ${command}. Install Claude Code or set DAWSHA_CLAUDE_COMMAND.`
-  const initial = promptFor({ file, args: [] }, request)
+  if (!found) return `Could not find ${command}. Install Claude Code or set DAWSHA_CLAUDE_COMMAND.`
+  const base = claudeProgram(found, crewExtra.length > 0 || Boolean(request.prompt), lookup)
+  if (!base) return CLAUDE_SHIM_REFUSAL
+  const initial = promptFor(base, request)
   if (typeof initial === 'string') return initial
+  const file = base.file
   const args = [
+    ...base.args,
     ...splitArgs(process.env.DAWSHA_CLAUDE_ARGS),
     ...agentArgs(request, Boolean(process.env.DAWSHA_CLAUDE_COMMAND)),
     ...crewExtra,
     ...initial
   ]
   return { file, args }
+}
+
+const isCmdFile = (file: string): boolean => /\.(cmd|bat)$/i.test(file)
+
+/**
+ * A .cmd or .bat file re-parses its arguments in cmd.exe, so agent instructions would break out of the argument list.
+ * Such a file is replaced by the program behind it; without one, text is refused and an empty start is left as it was.
+ */
+function claudeProgram(file: string, carriesText: boolean, lookup: ClaudeLookup): LaunchSpec | null {
+  if (!isCmdFile(file)) return { file, args: [] }
+  const program = lookup.npmProgram(file)
+  if (program) return program
+  return carriesText ? null : { file, args: [] }
+}
+
+/** The real Claude program that an npm .cmd shim next to it starts: node with cli.js, or the native binary. */
+export function npmShimProgram(shim: string): LaunchSpec | null {
+  const prefix = dirname(shim)
+  const pkg = join(prefix, 'node_modules', '@anthropic-ai', 'claude-code')
+  const cli = join(pkg, 'cli.js')
+  if (existsSync(cli)) {
+    const bundled = join(prefix, 'node.exe')
+    const node = existsSync(bundled) ? bundled : resolveExecutable('node.exe')
+    if (node) return { file: node, args: [cli] }
+  }
+  const native = join(pkg, 'bin', 'claude.exe')
+  return existsSync(native) ? { file: native, args: [] } : null
 }
 
 /** An npm-installed Claude Code on Windows has no claude.exe on PATH; its program sits inside the npm package. */

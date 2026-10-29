@@ -194,7 +194,11 @@ export function buildSetup(member: CrewMember, handlers: SetupHandlers): HTMLEle
     initialsInput.value = handlers.current().initials
   }, 'name')
   const roleInput = textInput('Role', member.role, locked, 60, (value) => handlers.change({ role: value }), 'role')
-  const initialsInput = textInput('Initials', member.initials, locked, 3, (value) => handlers.change({ initials: value.toUpperCase() }), 'initials')
+  const initialsInput = textInput('Initials', member.initials, locked, 3, (value) => {
+    const next = value.toUpperCase()
+    if (initialsInput.value !== next) initialsInput.value = next
+    handlers.change({ initials: next })
+  }, 'initials')
   initialsInput.classList.add('crew-initials')
   const promptArea = textArea('Prompt', member.prompt, 4, locked, true, (value) => {
     handlers.change({ prompt: value })

@@ -44,7 +44,7 @@
 .crew-hint, .crew-why { margin-top: var(--s-1); font-size: var(--fs-ui); color: var(--muted); line-height: 1.45; }
 .crew-why::before { content: 'Why: '; }
 .crew-idrow { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
-.crew-initials { text-align: center; text-transform: uppercase; }
+.crew-initials { text-align: center; }
 .crew-area { width: 100%; resize: vertical; line-height: 1.55; min-height: 96px; }
 .crew-area[rows='8'] { min-height: calc(8lh + 18px); }
 .crew-in-name { width: 170px; }

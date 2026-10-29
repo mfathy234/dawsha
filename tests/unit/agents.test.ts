@@ -1,9 +1,9 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { agentLabel, agentOf, nextAgent, sessionLabel } from '../../src/shared/agents'
-import { agentArgs, claudeCommand, launchSpec, locateCodexBinary, locateGeminiEntry, shellArgs, shellCommand } from '../../src/main/agentLaunch'
+import { agentArgs, claudeCommand, launchSpec, locateCodexBinary, locateGeminiEntry, npmShimProgram, shellArgs, shellCommand, type ClaudeLookup, type LaunchSpec } from '../../src/main/agentLaunch'
 import type { SpawnRequest } from '../../src/shared/types'
 
 const request = (patch: Partial<SpawnRequest>): SpawnRequest => ({
@@ -209,6 +209,66 @@ describe('launchSpec', () => {
     expect(claudeCommand('darwin')).toBe('claude')
     expect(launchSpec(request({ agent: 'codex' }), 'darwin')).toEqual({ file: join(dir, 'codex'), args: [] })
     expect(launchSpec(request({ agent: 'gemini' }), 'darwin')).toEqual({ file: join(dir, 'gemini'), args: [] })
+  })
+})
+
+describe('claude through an npm .cmd shim', () => {
+  const saved = { ...process.env }
+  const shim = 'C:\\npm\\claude.cmd'
+  const attack = '" & calc & "'
+  const cli = 'C:\\npm\\node_modules\\@anthropic-ai\\claude-code\\cli.js'
+  const crewLaunch = { instructions: attack, model: '', effort: '' as const, permissions: 'ask' as const, startup: 'usual' as const }
+  const lookup = (program: LaunchSpec | null): ClaudeLookup => ({ resolve: () => shim, npmProgram: () => program })
+  const refusal = 'Claude is installed through an npm .cmd shim; Dawsha can\'t pass agent instructions safely. Reinstall Claude Code with the native installer.'
+  beforeEach(() => {
+    delete process.env.DAWSHA_CLAUDE_COMMAND
+    delete process.env.DAWSHA_CLAUDE_ARGS
+  })
+  afterEach(() => {
+    process.env = { ...saved }
+  })
+
+  it('runs the real program with node and cli.js, keeping a prompt with quotes and & as one argument', () => {
+    const spec = launchSpec(request({ agent: 'claude', prompt: attack }), 'win32', lookup({ file: 'C:\\node\\node.exe', args: [cli] }))
+    expect(spec).toEqual({ file: 'C:\\node\\node.exe', args: [cli, attack] })
+  })
+
+  it('keeps crew instructions out of any cmd.exe or .cmd command line', () => {
+    const spec = launchSpec(request({ agent: 'claude', crew: crewLaunch }), 'win32', lookup({ file: 'C:\\node\\node.exe', args: [cli] }))
+    if (typeof spec === 'string') throw new Error(spec)
+    expect(spec.file).not.toMatch(/\.(cmd|bat)$/i)
+    expect(spec.file).not.toMatch(/cmd(\.exe)?$/i)
+    expect(spec.args).toEqual([cli, '--append-system-prompt', attack])
+  })
+
+  it('refuses a prompt or crew instructions when no real program is found behind the shim', () => {
+    expect(launchSpec(request({ agent: 'claude', prompt: attack }), 'win32', lookup(null))).toBe(refusal)
+    expect(launchSpec(request({ agent: 'claude', crew: crewLaunch }), 'win32', lookup(null))).toBe(refusal)
+  })
+
+  it('still starts the shim when nothing is sent to it', () => {
+    expect(launchSpec(request({ agent: 'claude' }), 'win32', lookup(null))).toEqual({ file: shim, args: [] })
+  })
+
+  it('finds cli.js or the native binary inside an npm prefix', () => {
+    const prefix = mkdtempSync(join(tmpdir(), 'dawsha-npm-claude-'))
+    const pkg = join(prefix, 'node_modules', '@anthropic-ai', 'claude-code')
+    mkdirSync(pkg, { recursive: true })
+    writeFileSync(join(prefix, 'claude.cmd'), '', 'utf8')
+    writeFileSync(join(prefix, 'node.exe'), '', 'utf8')
+    writeFileSync(join(pkg, 'cli.js'), '', 'utf8')
+    const resolved = { resolve: () => join(prefix, 'claude.cmd'), npmProgram: npmShimProgram }
+    expect(launchSpec(request({ agent: 'claude', prompt: attack }), 'win32', resolved)).toEqual({
+      file: join(prefix, 'node.exe'),
+      args: [join(pkg, 'cli.js'), attack]
+    })
+    rmSync(join(pkg, 'cli.js'))
+    mkdirSync(join(pkg, 'bin'), { recursive: true })
+    writeFileSync(join(pkg, 'bin', 'claude.exe'), '', 'utf8')
+    expect(launchSpec(request({ agent: 'claude', prompt: attack }), 'win32', resolved)).toEqual({ file: join(pkg, 'bin', 'claude.exe'), args: [attack] })
+    rmSync(join(pkg, 'bin'), { recursive: true, force: true })
+    expect(launchSpec(request({ agent: 'claude', prompt: attack }), 'win32', resolved)).toBe(refusal)
+    rmSync(prefix, { recursive: true, force: true })
   })
 })
 

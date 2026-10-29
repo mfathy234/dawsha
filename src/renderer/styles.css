@@ -6906,6 +6906,7 @@ button.tl-event:hover { background: var(--raised); }
 .import-mode { display: flex; gap: var(--s-3); align-items: flex-start; padding: var(--s-3) var(--s-3); border-radius: var(--r-control); background: var(--bg); cursor: pointer; }
 .import-mode:has(input:checked) { background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
 .import-mode > span { display: grid; gap: 2px; }
+.import-keep { display: flex; gap: var(--s-2); align-items: center; margin-bottom: var(--s-4); cursor: pointer; }
 
 /* Session titles: the name picks its own direction and stays isolated from the number and project beside it. */
 .pane-title bdi,

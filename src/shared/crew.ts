@@ -147,10 +147,13 @@ export function initialsOf(name: string): string {
   return pair.toUpperCase()
 }
 
+const MODEL_NAME = /^[A-Za-z0-9][\w.:-]{0,59}$/
+
 export function modelFits(runner: AgentKind, model: string): boolean {
   if (model === '') return runner !== 'claude'
+  if (!MODEL_NAME.test(model)) return false
   if (runner === 'claude') return (CLAUDE_MODELS as readonly string[]).includes(model) || /^claude-[\w.-]{1,60}$/.test(model)
-  return /^[\w.:-]{1,60}$/.test(model)
+  return true
 }
 
 function sanitizePaste(value: unknown): PastePattern[] {
