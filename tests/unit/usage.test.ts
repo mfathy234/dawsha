@@ -361,3 +361,21 @@ describe('usage history', () => {
     expect(sanitizeHistory('nope')).toEqual(emptyHistory())
   })
 })
+
+describe('lastClaudeLimits', () => {
+  it('returns the newest saved windows with their reset times and survives a round trip', async () => {
+    const { lastClaudeLimits, sanitizeHistory, serializeHistory } = await import('../../src/shared/usage')
+    expect(lastClaudeLimits(emptyHistory())).toBeNull()
+    const history = recordReadings(emptyHistory(), [
+      { sessionId: 's', cwd: null, costUsd: null, receivedAt: 5000, windows: [{ key: 'seven_day', percent: 18, resetsAt: 9_000_000 }, { key: 'five_hour', percent: 62, resetsAt: 8_000_000 }] }
+    ])
+    const loaded = sanitizeHistory(JSON.parse(JSON.stringify(serializeHistory(history))))
+    expect(lastClaudeLimits(loaded)).toEqual({
+      at: 5000,
+      windows: [
+        { key: 'five_hour', label: '5h', family: undefined, percent: 62, resetsAt: 8_000_000 },
+        { key: 'seven_day', label: 'week', family: undefined, percent: 18, resetsAt: 9_000_000 }
+      ]
+    })
+  })
+})

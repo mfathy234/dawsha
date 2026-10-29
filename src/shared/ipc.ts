@@ -111,6 +111,7 @@ export const IPC = {
   backgroundAgentsReveal: 'background-agents:reveal',
   usageSnapshot: 'usage:snapshot',
   agentAccounts: 'agents:accounts',
+  knownLimits: 'agents:known-limits',
   transcriptExport: 'transcript:export',
   handoffTranscript: 'handoff:transcript',
   handoffReveal: 'handoff:reveal',

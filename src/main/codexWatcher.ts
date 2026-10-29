@@ -18,7 +18,7 @@ const TAIL_BYTES = 256 * 1024
 
 const metaCache = new Map<string, RolloutMeta | null>()
 
-async function readRange(path: string, start: number, length: number): Promise<string> {
+export async function readRange(path: string, start: number, length: number): Promise<string> {
   const handle = await open(path, 'r')
   try {
     const buffer = Buffer.alloc(length)
@@ -39,7 +39,7 @@ async function readMeta(path: string, size: number): Promise<RolloutMeta | null>
   return meta
 }
 
-async function listRollouts(root: string): Promise<string[]> {
+export async function listRollouts(root: string): Promise<string[]> {
   const files: string[] = []
   const walk = async (dir: string, depth: number): Promise<void> => {
     let entries

@@ -1,5 +1,7 @@
 import { AGENTS } from './agents'
 import { normalizePath } from './sessionMatch'
+import type { AgentLimitEntry } from './agentLimits'
+import { limitWindow } from './statusLine'
 import type { AgentKind, Project } from './types'
 
 export type UsageRange = 'today' | '7d' | '30d'
@@ -31,6 +33,7 @@ export interface SessionCost {
 export interface LimitReading {
   at: number
   windows: Record<string, number>
+  resets?: Record<string, number>
 }
 
 export interface UsageHistory {
@@ -476,7 +479,11 @@ export function sanitizeHistory(value: unknown): UsageHistory {
     for (const [key, percent] of Object.entries(item.w)) {
       if (typeof percent === 'number' && Number.isFinite(percent)) windows[key] = Math.min(100, Math.max(0, percent))
     }
-    if (Object.keys(windows).length > 0) limits.push({ at: item.at, windows })
+    const resets: Record<string, number> = {}
+    if (isRecord(item.r)) {
+      for (const [key, at] of Object.entries(item.r)) if (typeof at === 'number' && Number.isFinite(at) && key in windows) resets[key] = at
+    }
+    if (Object.keys(windows).length > 0) limits.push(Object.keys(resets).length > 0 ? { at: item.at, windows, resets } : { at: item.at, windows })
   }
   const costs: Record<string, SessionCost> = {}
   if (isRecord(value.costs)) {
@@ -491,7 +498,7 @@ export function sanitizeHistory(value: unknown): UsageHistory {
 export function serializeHistory(history: UsageHistory): unknown {
   return {
     v: 1,
-    limits: history.limits.map((reading) => ({ at: reading.at, w: reading.windows })),
+    limits: history.limits.map((reading) => (reading.resets ? { at: reading.at, w: reading.windows, r: reading.resets } : { at: reading.at, w: reading.windows })),
     costs: history.costs
   }
 }
@@ -501,7 +508,7 @@ export interface StatusReading {
   cwd: string | null
   costUsd: number | null
   receivedAt: number
-  windows: { key: string; percent: number }[]
+  windows: { key: string; percent: number; resetsAt?: number | null }[]
 }
 
 function windowsEqual(a: Record<string, number>, b: Record<string, number>): boolean {
@@ -523,11 +530,13 @@ export function recordReadings(history: UsageHistory, readings: StatusReading[])
     }
     if (reading.windows.length > 0) {
       const windows = Object.fromEntries(reading.windows.map((window) => [window.key, window.percent]))
+      const resetPairs = reading.windows.flatMap((window) => (typeof window.resetsAt === 'number' ? [[window.key, window.resetsAt] as const] : []))
+      const resets = resetPairs.length > 0 ? Object.fromEntries(resetPairs) : undefined
       const last = limits[limits.length - 1]
       const fresh = !last || reading.receivedAt > last.at
       const different = !last || !windowsEqual(last.windows, windows) || reading.receivedAt - last.at >= LIMIT_REREAD_MS
       if (fresh && different) {
-        limits = [...limits, { at: reading.receivedAt, windows }].slice(-MAX_LIMIT_READINGS)
+        limits = [...limits, resets ? { at: reading.receivedAt, windows, resets } : { at: reading.receivedAt, windows }].slice(-MAX_LIMIT_READINGS)
         changed = true
       }
     }
@@ -539,4 +548,15 @@ export function recordReadings(history: UsageHistory, readings: StatusReading[])
     for (const id of oldest) delete costs[id]
   }
   return { limits, costs }
+}
+
+/** The last limit windows a Claude session reported, with their reset times when they were saved; null when none was ever recorded. */
+export function lastClaudeLimits(history: UsageHistory): AgentLimitEntry | null {
+  const reading = history.limits[history.limits.length - 1]
+  if (!reading) return null
+  const rank = (key: string): number => (key === 'five_hour' ? 0 : key === 'seven_day' ? 1 : 2)
+  const windows = Object.entries(reading.windows)
+    .sort(([a], [b]) => rank(a) - rank(b))
+    .map(([key, percent]) => limitWindow(key, percent, reading.resets?.[key] ?? null))
+  return { windows, at: reading.at }
 }

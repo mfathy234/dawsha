@@ -146,6 +146,7 @@ const api: GridApi = {
   revealBackgroundAgent: (kind, id) => ipcRenderer.invoke(IPC.backgroundAgentsReveal, kind, id),
   usageSnapshot: () => ipcRenderer.invoke(IPC.usageSnapshot),
   agentAccounts: () => ipcRenderer.invoke(IPC.agentAccounts),
+  knownLimits: () => ipcRenderer.invoke(IPC.knownLimits),
   exportTranscript: (request) => ipcRenderer.invoke(IPC.transcriptExport, request),
   writeHandoffTranscript: (request) => ipcRenderer.invoke(IPC.handoffTranscript, request),
   revealHandoff: (path) => ipcRenderer.invoke(IPC.handoffReveal, path),

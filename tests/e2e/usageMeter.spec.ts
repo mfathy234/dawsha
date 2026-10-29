@@ -6,6 +6,22 @@ import { closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
 const SCREENS = 'test-results/screens'
 const SESSION = 'sess-meter-1'
 
+function writeCodexRollout(sandbox: Sandbox): void {
+  const now = Date.now()
+  const dir = join(sandbox.codexHome, 'sessions', '2026', '10', '29')
+  mkdirSync(dir, { recursive: true })
+  const meta = { timestamp: new Date(now - 60_000).toISOString(), type: 'session_meta', payload: { id: '019a0000-0000-7000-8000-000000000001', timestamp: new Date(now - 60_000).toISOString(), cwd: sandbox.projectFolder } }
+  const limits = (primary: unknown, secondary: unknown, at: number) =>
+    ({ timestamp: new Date(at).toISOString(), type: 'event_msg', payload: { type: 'token_count', info: null, rate_limits: { primary, secondary, plan_type: 'plus' } } })
+  const lines = [
+    meta,
+    limits({ used_percent: 99, window_minutes: 300, resets_at: Math.floor((now + 90 * 60_000) / 1000) }, { used_percent: 15, window_minutes: 10080, resets_at: Math.floor((now + 3 * 86_400_000) / 1000) }, now - 30_000),
+    limits(null, null, now - 5_000)
+  ]
+  const body = lines.map((line) => JSON.stringify(line)).join(String.fromCharCode(10))
+  writeFileSync(join(dir, 'rollout-2026-10-29T10-00-00-019a0000-0000-7000-8000-000000000001.jsonl'), body + String.fromCharCode(10), 'utf8')
+}
+
 function writeClaudeLimits(sandbox: Sandbox): void {
   const now = Date.now()
   writeFileSync(
@@ -120,6 +136,61 @@ test('at the 1024px CI width the usage meter shows the agent mark and the most u
     await meter.click()
     await expect(page.getByRole('dialog', { name: 'Limits by agent' })).toBeVisible()
     await page.keyboard.press('Escape')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Codex limits come from its rollout files and show in the meter and the popover', async () => {
+  const sandbox = createSandbox()
+  writeCodexRollout(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    const meter = page.locator('#topbar-limits')
+    await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
+    await page.getByRole('menuitem', { name: 'Codex session' }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await expect(meter.locator('.limits-agent')).toContainText('Codex')
+    await expect(meter.locator('[data-limit="five_hour"]')).toContainText('5h 99%', { timeout: 15_000 })
+    await meter.click()
+    const codex = page.getByRole('dialog', { name: 'Limits by agent' }).locator('.limits-agent-block[data-agent="codex"]')
+    await expect(codex.locator('[data-limit="five_hour"]')).toContainText('5h')
+    await expect(codex.locator('[data-limit="five_hour"]')).toContainText('99%')
+    await expect(codex.locator('[data-limit="seven_day"]')).toContainText('week')
+    await expect(codex.locator('[data-limit="seven_day"]')).toContainText('15%')
+    await expect(codex.locator('.limits-agent-age')).toContainText('updated')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('with no session open the meter and popover use the last known readings and the most urgent agent leads', async () => {
+  const sandbox = createSandbox()
+  writeCodexRollout(sandbox)
+  const now = Date.now()
+  writeFileSync(
+    join(sandbox.userData, 'usage-history.json'),
+    JSON.stringify({ v: 1, limits: [{ at: now - 2 * 3_600_000, w: { five_hour: 62, seven_day: 18 }, r: { five_hour: now + 3_600_000, seven_day: now + 4 * 86_400_000 } }], costs: {} }),
+    'utf8'
+  )
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    const meter = page.locator('#topbar-limits')
+    await expect(page.locator('.pane')).toHaveCount(0)
+    await expect(meter).toBeVisible({ timeout: 15_000 })
+    await expect(meter.locator('.limits-agent')).toContainText('Codex')
+    await expect(meter.locator('[data-limit="five_hour"]')).toContainText('5h 99%')
+    await meter.click()
+    const popover = page.getByRole('dialog', { name: 'Limits by agent' })
+    const claude = popover.locator('.limits-agent-block[data-agent="claude"]')
+    await expect(claude.locator('[data-limit="five_hour"]')).toContainText('62%')
+    await expect(claude.locator('[data-limit="seven_day"]')).toContainText('18%')
+    await expect(claude.locator('.limits-agent-age')).toContainText('updated 2h ago')
+    await expect(popover.locator('.limits-agent-block[data-agent="codex"] [data-limit="five_hour"]')).toContainText('99%')
+    await expect(popover.locator('.limits-agent-block[data-agent="gemini"] .limits-agent-age')).toHaveText('no limits reported')
+    await page.screenshot({ path: 'C:/Users/tuy_2/Desktop/Work/dawsha-shots/limits-no-session.png' })
   } finally {
     await closeApp(app)
   }
