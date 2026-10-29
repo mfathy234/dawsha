@@ -5,7 +5,7 @@ import { npmClaudeBinary, scanClaudeInstalls } from './claudeInstalls'
 import { claudeFallbackDirs, platformExecutableDirs, resolveExecutable, splitArgs } from './executables'
 import { AGENT_NAMES, FULL_ACCESS_FLAGS } from '../shared/agents'
 import { promptArgs } from '../shared/compare'
-import { isCrewLaunch, INSTRUCTIONS_MAX, type CrewLaunch } from '../shared/crew'
+import { isCrewLaunch, INSTRUCTIONS_MAX, modelFits, type CrewLaunch } from '../shared/crew'
 import { crewArgs, crewPrompt } from '../shared/crewLaunch'
 import type { AgentKind, SpawnRequest } from '../shared/types'
 
@@ -158,6 +158,7 @@ const systemClaudeLookup: ClaudeLookup = { resolve: resolveExecutable, npmProgra
 
 export function launchSpec(input: SpawnRequest, platform = process.platform, lookup: ClaudeLookup = systemClaudeLookup): LaunchSpec | string {
   const crew = crewOf(input)
+  if (crew && input.agent !== 'shell' && crew.model !== '' && !modelFits(input.agent, crew.model)) return `The crew model is not valid for ${AGENT_NAMES[input.agent]}. Pick one from the list.`
   const request = crew && input.agent !== 'shell' ? { ...input, prompt: crewPrompt(input.agent, crew, input.prompt ?? '') } : input
   const crewExtra = crewFlags(request, crew)
   if (request.agent === 'shell') {

@@ -241,6 +241,17 @@ describe('launchSpec for a crew run', () => {
     expect(gemini.args).toEqual(['-m', 'gemini-2.5-pro', '--prompt-interactive=<instructions>\nBe careful.\n</instructions>\n\nGo'])
   })
 
+  it('refuses a crew model that is not a model name, and still starts a crew member with no model', () => {
+    process.env.DAWSHA_CLAUDE_COMMAND = process.execPath
+    process.env.DAWSHA_CODEX_COMMAND = process.execPath
+    expect(launchSpec({ ...base, agent: 'claude', crew: launch({ model: '--yolo' }) })).toContain('not valid')
+    expect(launchSpec({ ...base, agent: 'codex', crew: launch({ model: '--yolo' }) })).toContain('not valid')
+    const spec = launchSpec({ ...base, agent: 'codex', crew: launch({ model: 'gpt-5.6-sol', effort: '' }) })
+    if (typeof spec === 'string') throw new Error(spec)
+    expect(spec.args.slice(0, 2)).toEqual(['-m', 'gpt-5.6-sol'])
+    expect(typeof launchSpec({ ...base, agent: 'claude', crew: launch({ model: '' }) })).toBe('object')
+  })
+
   it('ignores a malformed crew section and never adds it to a shell tab', () => {
     process.env.DAWSHA_CLAUDE_COMMAND = process.execPath
     const bad = launchSpec({ ...base, agent: 'claude', prompt: 'x', crew: { instructions: 5 } as never })
