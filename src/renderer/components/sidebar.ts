@@ -1,5 +1,5 @@
 import { AGENT_NAMES, agentOf } from '../../shared/agents'
-import { SIDEBAR_FILTER_EVENT, hideEmptyProjects, isFolded, monogram, projectSummary, railBadge, SIDEBAR_SORTS, sessionAge, sessionStatusLine, sortProjects, waitingOnYou, type SidebarSort } from '../../shared/sidebarModel'
+import { SIDEBAR_FILTER_EVENT, hideEmptyProjects, isFolded, monogram, projectSummary, railBadge, SIDEBAR_SORTS, sessionAge, sessionStatusLine, sidebarZones, sortProjects, waitingOnYou, type SidebarZones, type SidebarSort } from '../../shared/sidebarModel'
 import { canDropProject, canMoveProject, orderProjects, seedOrder } from '../../shared/projectOrder'
 import { projectStatus, projectStatusLabel } from '../../shared/projectStatus'
 import { filterSidebar, type SidebarEntry } from '../../shared/sidebarFilter'
@@ -35,6 +35,8 @@ const DOUBLE_CLICK_MS = 280
 
 const NAV_SELECTOR = '.proj-toggle, .sess-row, .closed-toggle, .closed-more'
 
+type ProjectZone = 'active' | 'pinned' | 'quiet' | 'all'
+
 const viewState =(view: PaneView) => sessionState({ status: view.status, attention: view.attention })
 
 export class SidebarComponent {
@@ -51,6 +53,8 @@ export class SidebarComponent {
   private filterText = ''
   private filterOpen = false
   private focusFilterNext = false
+  /** Quiet projects the user has expanded from their one-line row; not remembered across restarts. */
+  private readonly quietOpen = new Set<string>()
 
   constructor() {
     this.filter.addEventListener('input', () => {
@@ -169,9 +173,12 @@ export class SidebarComponent {
   private foldByKey(event: KeyboardEvent, target: HTMLElement): void {
     const projectId = target.dataset.sidebarProject
     if (!target.classList.contains('proj-toggle') || !projectId || this.filterText.trim() !== '') return
-    const folded = this.lastState?.settings.foldedProjects.includes(projectId) === true
-    if (folded === (event.key === 'ArrowRight')) toggleProjectExpanded(projectId)
     event.preventDefault()
+    const quiet = target.closest('.proj-group')?.getAttribute('data-zone') === 'quiet'
+    const folded = quiet ? !this.quietOpen.has(projectId) : this.lastState?.settings.foldedProjects.includes(projectId) === true
+    if (folded !== (event.key === 'ArrowRight')) return
+    if (quiet) this.toggleQuiet(projectId)
+    else toggleProjectExpanded(projectId)
   }
 
   private removeClosedByKey(event: KeyboardEvent, target: HTMLElement, items: HTMLElement[], index: number): void {
@@ -218,7 +225,8 @@ export class SidebarComponent {
     const focusedView = views.find((v) => v.pane.id === state.focusedId)
     const filtering = this.filterText.trim() !== ''
     const sorted = sortProjects(state.settings.projects, state.settings.sidebarSort, projectActivity(state, views))
-    this.displayedIds = sorted.map((project) => project.id)
+    const all = sidebarZones(sorted.map((project) => ({ project, views: views.filter((view) => view.pane.projectId === project.id) })), false)
+    this.displayedIds = [...all.active, ...all.pinned, ...all.quiet].map((entry) => entry.project.id)
     const found = filterSidebar(sorted, views, state.settings.keptSessions, openSessionKeys(state), this.filterText)
     const entries = filtering ? found : hideEmptyProjects(found, state.settings.sidebarHideEmpty)
     const hiddenEmpty = found.length - entries.length
@@ -237,6 +245,7 @@ export class SidebarComponent {
       projects.map((p) => projectTodayLabel(state.usage.projectsToday[p.id])),
       views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent, v.attention, v.tag, v.tagAuto, sessionAge(viewActivity(v), state.now), v.info.ops?.running.length ?? 0]),
       this.edit?.key,
+      [...this.quietOpen],
       state.settings.keptSessions.map((session) => closedUsageShort(state.usage.sessions[session.sessionId])),
       state.settings.keptSessions,
       state.settings.foldedClosedSessions,
@@ -309,8 +318,9 @@ export class SidebarComponent {
     clear(this.list)
     this.list.append(...this.waitingGroup(state, views))
     const filtering = this.filterText.trim() !== ''
-    if (state.settings.projects.length > 0) this.list.append(this.sectionHead(state))
-    for (const entry of entries) this.list.append(...this.projectRows(state, entry, filtering))
+    const zones = sidebarZones(entries, filtering)
+    if (state.settings.projects.length > 0) this.list.append(this.sectionHead(state, zones.grouped && zones.active.length > 0 ? `Active · ${zones.active.length}` : 'All projects'))
+    this.list.append(...this.zoneGroups(state, zones, filtering))
     if (entries.length === 0) {
       this.list.append(this.emptyState(state.settings.projects.length === 0, hiddenEmpty > 0))
     } else if (hiddenEmpty > 0) {
@@ -402,11 +412,11 @@ export class SidebarComponent {
     this.filter.focus()
   }
 
-  private sectionHead(state: AppState): HTMLElement {
+  private sectionHead(state: AppState, label: string): HTMLElement {
     const sort = iconButton('Sort and filter projects', SORT_ICON, () => this.toggleSortMenu(state.settings.sidebarSort, state.settings.sidebarHideEmpty), 'small sidebar-sort')
     sort.setAttribute('aria-haspopup', 'menu')
     sort.dataset.menuKey = 'sort'
-    return h('div', { class: 'side-sec' }, h('span', { class: 'side-sec-label' }, 'All projects'), sort)
+    return h('div', { class: 'side-sec' }, h('span', { class: 'side-sec-label' }, label), sort)
   }
 
   private toggleSortMenu(current: SidebarSort, hideEmpty: boolean): void {
@@ -420,12 +430,31 @@ export class SidebarComponent {
     this.popup.open('sort', [...sorts, h('div', { class: 'pv-menu-sep', role: 'separator' }), hide], 'Sort and filter projects')
   }
 
-  private projectRows(state: AppState, { project, views: own, closed }: SidebarEntry<PaneView>, filtering: boolean): HTMLElement[] {
-    const collapsed = isFolded(state.settings.foldedProjects, project.id, filtering)
+  private zoneGroups(state: AppState, zones: SidebarZones<SidebarEntry<PaneView>>, filtering: boolean): HTMLElement[] {
+    const group = (entry: SidebarEntry<PaneView>, zone: ProjectZone): HTMLElement =>
+      h('div', { class: `proj-group zone-${zone}${zone === 'active' ? ' card' : ''}`, 'data-zone': zone }, ...this.projectRows(state, entry, filtering, zone))
+    const groups = [...zones.active.map((entry) => group(entry, zones.grouped ? 'active' : 'all')), ...zones.pinned.map((entry) => group(entry, 'pinned'))]
+    if (zones.quiet.length === 0) return groups
+    if (groups.length > 0) groups.push(h('div', { class: 'side-sec quiet-sec' }, h('span', { class: 'side-sec-label' }, `No sessions · ${zones.quiet.length}`)))
+    return [...groups, ...zones.quiet.map((entry) => group(entry, 'quiet'))]
+  }
+
+  private toggleQuiet(projectId: string): void {
+    if (!this.quietOpen.delete(projectId)) this.quietOpen.add(projectId)
+    this.focusAfterRender(`p:${projectId}`)
+    this.signature = ''
+    this.render(this.lastState, this.lastViews)
+  }
+
+  private projectRows(state: AppState, { project, views: own, closed }: SidebarEntry<PaneView>, filtering: boolean, zone: ProjectZone): HTMLElement[] {
+    const quiet = zone === 'quiet'
+    const compact = quiet && !this.quietOpen.has(project.id)
+    const collapsed = quiet ? compact : isFolded(state.settings.foldedProjects, project.id, filtering)
     const summary = projectSummary(own.map(viewState))
     const branch = state.branches[project.folder] ?? null
     const today = this.todayTotal(state, project.id)
-    const sub = branch || today.length > 0 ? h('span', { class: 'proj-sub' }, branch ? h('span', { class: 'proj-branch', dir: 'auto', title: `Branch ${branch}` }, branch) : null, ...today) : null
+    const branchEl = branch ? h('span', { class: 'proj-branch', dir: 'auto', title: `Branch ${branch}` }, branch) : null
+    const sub = branch || today.length > 0 ? h('span', { class: 'proj-sub' }, branchEl, ...today.map((el) => (branch ? this.withDot(el) : el))) : null
     const toggle = h(
       'button',
       {
@@ -436,19 +465,24 @@ export class SidebarComponent {
         'aria-label': `${collapsed ? 'Show' : 'Hide'} sessions for ${project.name}`,
         'data-nav': `p:${project.id}`,
         'data-sidebar-project': project.id,
-        onClick: () => toggleProjectExpanded(project.id)
+        onClick: () => (quiet ? this.toggleQuiet(project.id) : toggleProjectExpanded(project.id))
       },
-      icon(collapsed ? ICONS.chevronRight : ICONS.chevronDown),
-      h('span', { class: 'proj-text' },
-        h('span', { class: 'proj-title' },
-          h('span', { class: 'proj-name', dir: 'auto' }, project.name),
-          project.pinned === true ? h('span', { class: 'proj-pin', role: 'img', 'aria-label': 'Pinned' }, icon(ICONS.pin)) : null
-        ),
-        sub)
+      ...(compact
+        ? [h('span', { class: 'proj-name', dir: 'auto' }, project.name), branchEl]
+        : [
+            icon(collapsed ? ICONS.chevronRight : ICONS.chevronDown),
+            h('span', { class: 'proj-text' },
+              h('span', { class: 'proj-title' },
+                h('span', { class: 'proj-name', dir: 'auto' }, project.name),
+                project.pinned === true ? h('span', { class: 'proj-pin', role: 'img', 'aria-label': 'Pinned' }, icon(ICONS.pin)) : null
+              ),
+              sub)
+          ])
     )
+    if (compact) toggle.classList.add('quiet-toggle')
     const row = h(
       'div',
-      { class: `proj-row${filtering ? '' : ' reorderable'}`, 'data-drop-project': project.id },
+      { class: `proj-row${compact ? ' quiet-row' : ''}${filtering ? '' : ' reorderable'}`, 'data-drop-project': project.id },
       toggle,
       summary.text ? h('span', { class: `proj-count tone-${summary.tone}` }, summary.text) : null,
       h(
@@ -458,7 +492,7 @@ export class SidebarComponent {
         this.agentMenuButton(project)
       )
     )
-    if (!filtering) this.enableProjectDrag(row, project)
+    if (!filtering) this.enableProjectDrag(row, project, zone)
     const rows: HTMLElement[] = [row]
     if (collapsed) return rows
     if (own.length + closed.length === 0) {
@@ -470,20 +504,21 @@ export class SidebarComponent {
     return rows
   }
 
-  // The row a pointer is over, or the project a session row belongs to: rows are flat siblings, so walk back to the project's own row.
-  private projectRowAt(x: number, y: number): HTMLElement | null {
-    let node = document.elementFromPoint(x, y)?.closest<HTMLElement>('.proj-list > *') ?? null
-    while (node && !node.classList.contains('proj-row')) node = node.previousElementSibling as HTMLElement | null
-    return node
+  // The project row of whichever group the pointer is over, with that group's zone.
+  private projectRowAt(x: number, y: number): { row: HTMLElement; zone: string | undefined } | null {
+    const group = document.elementFromPoint(x, y)?.closest<HTMLElement>('.proj-group') ?? null
+    const row = group?.querySelector<HTMLElement>('.proj-row') ?? null
+    return group && row ? { row, zone: group.dataset.zone } : null
   }
 
-  private enableProjectDrag(row: HTMLElement, project: Project): void {
+  private enableProjectDrag(row: HTMLElement, project: Project, zone: ProjectZone): void {
     const projects = (): Project[] => seedOrder(this.lastState?.settings.projects ?? [], this.displayedIds)
     enableDrag<HTMLElement>(row, {
       ignore: '.icon-btn, input',
       targetAt: (x, y) => {
         const hit = this.projectRowAt(x, y)
-        return hit?.dataset.dropProject && canDropProject(projects(), project.id, hit.dataset.dropProject) ? hit : null
+        const id = hit?.row.dataset.dropProject
+        return hit && id && hit.zone === zone && canDropProject(projects(), project.id, id) ? hit.row : null
       },
       mark: (target) => {
         for (const marked of this.list.querySelectorAll('.drop-before, .drop-after')) marked.classList.remove('drop-before', 'drop-after')
@@ -520,9 +555,10 @@ export class SidebarComponent {
           },
           agentMark(view.agent),
           h('span', { class: 'sess-body' },
-            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title), h('span', { class: 'sess-age', 'aria-label': `active ${age}` }, age)),
+            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title)),
             h('span', { class: 'sess-meta' },
-              h('span', { class: `sess-state state-${sessionStateName}` }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, status))))
+              h('span', { class: `sess-state state-${sessionStateName}` }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, status)),
+              h('span', { class: 'sess-age', 'aria-label': `active ${age}` }, age)))
         )
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}` },
       main,
@@ -534,7 +570,7 @@ export class SidebarComponent {
   private closedRows(state: AppState, project: Project, closed: KeptSession[], filtering: boolean): HTMLElement[] {
     if (closed.length === 0) return []
     const hidden = !filtering && state.settings.foldedClosedSessions.includes(project.id)
-    const label = `Closed sessions (${closed.length})`
+    const label = `${closed.length} closed`
     const toggle = h(
       'button',
       {
@@ -685,11 +721,16 @@ export class SidebarComponent {
     return [h('section', { class: 'needs-group', 'aria-label': 'Waiting on you' }, h('div', { class: 'side-sec needs' }, h('span', { class: 'side-sec-label' }, 'Waiting on you'), h('span', { class: 'side-sec-count' }, String(waiting.length))), ...rows)]
   }
 
+  private withDot(el: HTMLElement): HTMLElement {
+    el.prepend('· ')
+    return el
+  }
+
   private todayTotal(state: AppState, projectId: string): HTMLElement[] {
     const today = state.usage.projectsToday[projectId]
     const short = projectTodayShort(today)
     const label = projectTodayLabel(today)
-    return short && label ? [h('span', { class: 'proj-today', title: projectTodayTooltip(today), 'aria-label': label }, short)] : []
+    return short && label ? [h('span', { class: 'proj-today', title: projectTodayTooltip(today), 'aria-label': label }, `${short} today`)] : []
   }
 
   private agentMenuButton(project: Project): HTMLElement {

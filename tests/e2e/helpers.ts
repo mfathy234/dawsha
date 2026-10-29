@@ -264,3 +264,9 @@ export async function openMore(page: Page, view: MoreMenuView): Promise<void> {
   await page.locator('#more-button').click()
   await page.locator(`#${view}-menu-item`).click()
 }
+
+/** A project without open sessions starts as a one-line row; this opens it the way a click does, so its closed sessions show. */
+export async function openQuietProject(page: Page, name = 'Smoke'): Promise<void> {
+  const toggle = page.locator('.proj-row.quiet-row', { hasText: name }).locator('.quiet-toggle')
+  if ((await toggle.count()) > 0) await toggle.click()
+}

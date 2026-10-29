@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { closeApp, createSandbox, launchApp, type Sandbox, openQuietProject } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -62,6 +62,7 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     await closeFirstPane(page)
     await expect(page.locator('.pane')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).keptSessions[0]?.tag).toBe('review')
+    await openQuietProject(page)
     const closed = page.locator('.kept-session-row.closed')
     await expect(closed.locator('.sess-row')).toHaveAttribute('title', /Tag: Review/)
     await expect(closed.locator('.tag-word')).toHaveCount(0)
@@ -94,6 +95,7 @@ test('closed sessions take a tag from their menu and a right click opens it', as
   writeSettings(sandbox, { keptSessions: [{ projectId: 'smoke', agent: 'claude', sessionId: id, title: 'Plan the release', closedAt: Date.now() - 5_000 }] })
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const row = page.locator('.kept-session-row.closed')
     await row.locator('.sess-row').click({ button: 'right' })
     const menu = page.getByRole('menu', { name: 'Actions for Plan the release' })
@@ -121,6 +123,7 @@ test('a session takes its tag from the branch, a manual tag wins, and the settin
   git('commit', '-q', '-m', 'first')
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     await startGemini(page)
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.pane-tag .tag-word')).toHaveText('feature')
@@ -171,6 +174,7 @@ for (const [theme, name] of [['dawsha-night', 'dark'], ['dawsha-daylight', 'ligh
     writeSettings(sandbox, { keptSessions: kept })
     const { app, page } = await launchApp(sandbox)
     try {
+      await openQuietProject(page)
       if (theme === 'dawsha-daylight') {
         await page.locator('#theme-button').click()
         await page.locator('#theme-dawsha-daylight').click()
