@@ -1,11 +1,11 @@
 import { AGENT_NAMES, agentOf } from '../../shared/agents'
 import { SIDEBAR_FILTER_EVENT, hideEmptyProjects, isFolded, monogram, projectSummary, railBadge, SIDEBAR_SORTS, sessionAge, sessionStatusLine, sortProjects, waitingOnYou, type SidebarSort } from '../../shared/sidebarModel'
-import { canDropProject, canMoveProject, orderProjects } from '../../shared/projectOrder'
+import { canDropProject, canMoveProject, orderProjects, seedOrder } from '../../shared/projectOrder'
 import { projectStatus, projectStatusLabel } from '../../shared/projectStatus'
 import { filterSidebar, type SidebarEntry } from '../../shared/sidebarFilter'
 import { projectTodayLabel, projectTodayShort, projectTodayTooltip } from '../../shared/sessionCost'
 import type { AgentKind, KeptSession, Project } from '../../shared/types'
-import { addProject, clearClosedSessions, closePane, focusPane, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeKeptSession, removeProject, renameKeptSession, renameSession, reopenKeptSessions, reorderProject, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagKeptSession, tagSession, toggleClosedSessions, toggleClosedShowAll, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
+import { addProject, clearClosedSessions, closePane, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeKeptSession, removeProject, renameKeptSession, renameSession, reopenKeptSessions, reorderProjectFromDisplay, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagKeptSession, tagSession, toggleClosedSessions, toggleClosedShowAll, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
 import { CLOSED_PREVIEW_COUNT, closedAgoShort, closedDayLabel, closedUsageShort, closedUsageTooltip, groupClosedByDay, reopenGroupLabel } from '../../shared/keptSessions'
 import { autoTag, autoTagSource, cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
 import type { PaneView } from '../derive'
@@ -110,8 +110,9 @@ export class SidebarComponent {
   }
 
   private onListKey(event: KeyboardEvent): void {
-    if (event.isComposing || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return
+    if (event.isComposing || event.ctrlKey || event.metaKey || event.shiftKey) return
     const target = event.target instanceof HTMLElement ? event.target : null
+    if (event.altKey) return this.moveProjectByKey(event, target)
     const items = this.navItems()
     const index = target ? items.indexOf(target) : -1
     if (!target || index < 0) return
@@ -130,6 +131,16 @@ export class SidebarComponent {
       case 'Delete':
       case 'Backspace': return this.removeClosedByKey(event, target, items, index)
     }
+  }
+
+  private moveProjectByKey(event: KeyboardEvent, target: HTMLElement | null): void {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+    const key = target?.dataset.nav
+    if (!key?.startsWith('p:') || this.filterText.trim() !== '') return
+    event.preventDefault()
+    const id = key.slice(2)
+    this.focusAfterRender(key)
+    moveProjectFromDisplay(this.displayedIds, id, event.key === 'ArrowUp' ? -1 : 1)
   }
 
   private renameByKey(event: KeyboardEvent, target: HTMLElement): void {
@@ -191,6 +202,7 @@ export class SidebarComponent {
   }
 
   private lastState: AppState | null = null
+  private displayedIds: string[] = []
   private lastViews: PaneView[] = []
 
   update(state: AppState, views: PaneView[]): void {
@@ -206,6 +218,7 @@ export class SidebarComponent {
     const focusedView = views.find((v) => v.pane.id === state.focusedId)
     const filtering = this.filterText.trim() !== ''
     const sorted = sortProjects(state.settings.projects, state.settings.sidebarSort, projectActivity(state, views))
+    this.displayedIds = sorted.map((project) => project.id)
     const found = filterSidebar(sorted, views, state.settings.keptSessions, openSessionKeys(state), this.filterText)
     const entries = filtering ? found : hideEmptyProjects(found, state.settings.sidebarHideEmpty)
     const hiddenEmpty = found.length - entries.length
@@ -239,6 +252,26 @@ export class SidebarComponent {
     this.popup.reanchor()
   }
 
+  private enableRailDrag(button: HTMLElement, project: Project): void {
+    const projects = (): Project[] => seedOrder(this.lastState?.settings.projects ?? [], this.displayedIds)
+    enableDrag<HTMLElement>(button, {
+      ignore: '[data-no-drag]',
+      targetAt: (x, y) => {
+        const hit = document.elementFromPoint(x, y)?.closest<HTMLElement>('.rail-mono')
+        return hit?.dataset.dropProject && canDropProject(projects(), project.id, hit.dataset.dropProject) ? hit : null
+      },
+      mark: (target) => {
+        for (const marked of this.el.querySelectorAll('.drop-before, .drop-after')) marked.classList.remove('drop-before', 'drop-after')
+        if (!target) return
+        const order = projects().map((item) => item.id)
+        target.classList.add(order.indexOf(project.id) < order.indexOf(target.dataset.dropProject ?? '') ? 'drop-after' : 'drop-before')
+      },
+      drop: (target) => {
+        if (target.dataset.dropProject) reorderProjectFromDisplay(this.displayedIds, project.id, target.dataset.dropProject)
+      }
+    })
+  }
+
   private renderRail(projects: Project[], views: PaneView[], activeProject?: string): void {
     clear(this.el)
     this.el.append(
@@ -252,6 +285,9 @@ export class SidebarComponent {
       const key = `fly:${project.id}`
       const button = h('button', { class: 'rail-btn rail-mono', type: 'button', 'aria-label': label, title: label, 'aria-haspopup': 'menu', 'data-menu-key': key, onClick: () => this.toggleFlyout(key, project) }, h('span', { class: 'rail-letters', 'aria-hidden': 'true' }, monogram(project.name)))
       button.classList.toggle('selected', project.id === activeProject)
+      button.dataset.dropProject = project.id
+      button.classList.add('reorderable')
+      this.enableRailDrag(button, project)
       const badge = railBadge(states)
       if (badge) button.append(h('span', { class: `rail-badge${status.needs > 0 ? ' needs' : ''}`, 'aria-hidden': 'true' }, badge))
       this.el.append(button)
@@ -412,7 +448,7 @@ export class SidebarComponent {
     )
     const row = h(
       'div',
-      { class: 'proj-row', 'data-drop-project': project.id },
+      { class: `proj-row${filtering ? '' : ' reorderable'}`, 'data-drop-project': project.id },
       toggle,
       summary.text ? h('span', { class: `proj-count tone-${summary.tone}` }, summary.text) : null,
       h(
@@ -422,7 +458,7 @@ export class SidebarComponent {
         this.agentMenuButton(project)
       )
     )
-    if (!filtering && state.settings.sidebarSort === 'manual') this.enableProjectDrag(row, project)
+    if (!filtering) this.enableProjectDrag(row, project)
     const rows: HTMLElement[] = [row]
     if (collapsed) return rows
     if (own.length + closed.length === 0) {
@@ -442,7 +478,7 @@ export class SidebarComponent {
   }
 
   private enableProjectDrag(row: HTMLElement, project: Project): void {
-    const projects = (): Project[] => this.lastState?.settings.projects ?? []
+    const projects = (): Project[] => seedOrder(this.lastState?.settings.projects ?? [], this.displayedIds)
     enableDrag<HTMLElement>(row, {
       ignore: '.icon-btn, input',
       targetAt: (x, y) => {
@@ -458,7 +494,7 @@ export class SidebarComponent {
       drop: (target) => {
         if (!target.dataset.dropProject) return
         this.focusAfterRender(`p:${project.id}`)
-        reorderProject(project.id, target.dataset.dropProject)
+        reorderProjectFromDisplay(this.displayedIds, project.id, target.dataset.dropProject)
       }
     })
   }

@@ -54,3 +54,20 @@ export const canDropProject = (projects: readonly Project[], id: string, targetI
   const target = projects.find((project) => project.id === targetId)
   return from !== undefined && target !== undefined && from !== target && isPinned(from) === isPinned(target)
 }
+
+/** The stored projects in the order the sidebar shows them (pinned first); any it does not show follow in stored order. */
+export function seedOrder(projects: readonly Project[], displayedIds: readonly string[]): Project[] {
+  const shown = displayedIds.map((id) => projects.find((project) => project.id === id)).filter((project): project is Project => project !== undefined)
+  const shownIds = new Set(shown.map((project) => project.id))
+  return orderProjects([...shown, ...projects.filter((project) => !shownIds.has(project.id))])
+}
+
+/** A drag in any sort mode: the manual order starts from what is displayed, then the project takes the target's place. */
+export function reorderFromDisplay(projects: readonly Project[], displayedIds: readonly string[], id: string, targetId: string): Project[] {
+  return moveProjectTo(seedOrder(projects, displayedIds), id, targetId)
+}
+
+/** An Alt+Arrow step in any sort mode, on top of the displayed order. */
+export function moveFromDisplay(projects: readonly Project[], displayedIds: readonly string[], id: string, direction: MoveDirection): Project[] {
+  return moveProject(seedOrder(projects, displayedIds), id, direction)
+}
