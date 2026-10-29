@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HTML_PREVIEW_CSP, HTML_PREVIEW_SANDBOX, htmlPreviewDocument, imageMime, previewByDefault, previewKind } from '../../src/shared/filePreview'
+import { HTML_PREVIEW_SANDBOX, imageMime, previewByDefault, previewKind } from '../../src/shared/filePreview'
 
 describe('previewKind', () => {
   it('knows documents, pages and images', () => {
@@ -25,13 +25,5 @@ describe('html preview isolation', () => {
   it('sandboxes with scripts only: no same-origin, navigation, forms or popups', () => {
     expect(HTML_PREVIEW_SANDBOX).toBe('allow-scripts')
     for (const word of ['same-origin', 'top-navigation', 'forms', 'popups']) expect(HTML_PREVIEW_SANDBOX).not.toContain(word)
-  })
-  it('puts a policy with no network first in the document', () => {
-    const doc = htmlPreviewDocument('<script>fetch("https://x")</script>')
-    expect(doc.startsWith('<!doctype html><meta http-equiv="Content-Security-Policy"')).toBe(true)
-    expect(HTML_PREVIEW_CSP).toContain("default-src 'none'")
-    expect(HTML_PREVIEW_CSP).not.toMatch(/connect-src|https?:/)
-    expect(HTML_PREVIEW_CSP).toContain("form-action 'none'")
-    expect(HTML_PREVIEW_CSP).toContain("frame-src 'none'")
   })
 })

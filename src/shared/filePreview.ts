@@ -21,14 +21,8 @@ export const isHtmlPath = (path: string): boolean => previewKind(path) === 'html
 /** Docs open as a rendered page; code and HTML open as source until the user asks for the preview. */
 export const previewByDefault = (path: string): boolean => previewKind(path) === 'markdown' || previewKind(path) === 'image'
 
-// No network, no frames, no forms and no navigation: the page can run its own scripts and show inline styles, images and fonts it carries.
-export const HTML_PREVIEW_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'; frame-src 'none'"
-
-/** The srcdoc for the sandboxed HTML preview: the policy comes first, so nothing in the file can come before it. */
-export function htmlPreviewDocument(source: string): string {
-  return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${HTML_PREVIEW_CSP}">${source}`
-}
-
+// The page is served from the dawsha-preview scheme, whose responses carry their own policy (see main/filePreviewServer).
+// The frame is sandboxed with scripts only: no same-origin access, no navigation of the app, no popups, no forms.
 export const HTML_PREVIEW_SANDBOX = 'allow-scripts'
 
 export type FileImageResult = { ok: true; dataUrl: string; size: number } | { ok: false; error: string }
