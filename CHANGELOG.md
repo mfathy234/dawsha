@@ -3,6 +3,56 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.6] - 2026-10-29
+
+### Added
+
+- **Agents you keep.** The Agents tab is now your crew. Each agent has a name, role, colour and its own instructions, prompt fields, model, permissions and projects.
+  - Eight built-in agents ship with Dawsha: Maya (Lead), Sami (code reviewer), Tarek (debugger), Omar (builder), Hana (tester), Lina (UI polisher), Nour (docs and releases) and Yara (explainer). Duplicate one to change it.
+  - Run an agent in any project and pick the model for that run: Claude Fable, Opus, Sonnet or Haiku, Codex or Gemini. Each run opens as a normal session titled with the agent's name, for example "Sami · PR 8841".
+  - Runs start lean by default, without your MCP servers. That was about 40% cheaper in our tests than running the same instructions as a skill.
+- **Live state on every agent.** An agent's avatar breathes while it works, flashes when it needs you, flashes once when it's done and shows ✕ when it fails, always with a word too. The top bar shows who is on a job, and sessions, the sidebar, Waiting on you and notifications show the agent's name and avatar.
+- **Maya, the Lead.** Give Maya a goal and a project:
+  - She proposes a plan: who does what, on which model, at what estimated cost.
+  - Once you approve it, she runs the agents as normal sessions and shows them as lanes on a board.
+  - She asks you before pushing, merging, posting comments or deleting.
+  - Dawsha itself enforces her limits: how many agents run at once (2 by default), a budget per goal ($3 by default) and which agents she may use. Change them under "How she leads".
+- **Import your agents.** Bring in `~/.claude/agents`, your skills and your Codex prompts. They stay linked to their files.
+- **Turn any skill into an agent.** In Skills, "Make an agent" fills in the name, role, fields, permissions, projects and paste patterns from the skill. Every choice says why it was made.
+- **Hand a job to an agent.** From New session ▾, paste a correlation id with "on dev", a pull request link or a build link, and Dawsha suggests the agent with its fields filled in.
+- **`dawsha crew` commands:** list, run, status and result. The Lead also uses plan, ask and note.
+- **Agents on your phone.** Remote Access has an Agents tab: run one of your agents on your PC from the phone, and follow what's on a job and the goal Maya is working on. It's behind a new "Run agents" phone permission, which is off by default.
+- **Remote Access status.** Remote Access says plainly whether your phone can reach this PC. It notices a dropped tunnel in about ten seconds instead of two minutes, and offers Reconnect. It can also reconnect on its own, and tell you when the link changes.
+
+### Changed
+
+- **The Remote Access page is rebuilt.**
+  - Connect a phone, the connection details, and your phones, where Remove asks first and names the phone.
+  - What a phone can do, now enforced on the PC.
+  - A recent activity log.
+  - The PIN email has a clear description, and once saved it offers Change and Remove.
+- **The phone app is refreshed.** Real agent logos, filled cards, big buttons and a light theme, with no capital-letter labels or pills.
+- **Files:**
+  - The outline and activity panel has its own Hide button.
+  - The worktree switcher is shown on the location button ("3 worktrees") and is also in the palette.
+  - Loading states and Retry replace empty panels.
+  - Markdown previews keep even line spacing.
+
+### Removed
+
+- **The old Agents tab.** The list of background sub-agents, its detail pane, timeline and running counts are gone, replaced by your agents.
+
+### Fixed
+
+- Agent instructions can no longer reach the Windows command shell when Claude is installed through npm. Dawsha starts the real Claude program instead.
+- Imported settings can no longer bring agents with full access silently. They become "ask" unless you choose to keep full access.
+- Secrets in commands are masked in the Remote Access activity log.
+- Switching projects, worktrees or files quickly in Files could show an older result over the newer one.
+
+### Known issues
+
+- A Lead session that you resume later no longer has her goal limits. Start a new goal instead.
+
 ## [1.7.5] - 2026-10-29
 
 ### Added
