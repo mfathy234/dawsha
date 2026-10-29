@@ -103,6 +103,7 @@ export interface RunInput {
   choice: RunChoice
   fields: Record<string, string>
   background: boolean
+  goalId?: string
 }
 
 export type RunOutcome = { ok: true; runId: string; paneId: string; termId: string } | { ok: false; error: string }
@@ -154,7 +155,8 @@ export async function runMember(input: RunInput): Promise<RunOutcome> {
       outcome: 'running',
       costUsd: null,
       paneId: started.paneId,
-      termId: started.termId
+      termId: started.termId,
+      ...(input.goalId ? { goalId: input.goalId } : {})
     },
     ...runs
   ])

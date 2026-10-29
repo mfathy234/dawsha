@@ -6,6 +6,7 @@ import { store, type AppState, type PaneState, type TermState } from './state'
 import { getTerminal } from './terminals'
 import { memberState, stepTrack, visibleState, type AvatarState, type RunTrack } from '../shared/crewLive'
 import { sessionState } from '../shared/sessionState'
+import { leadWaiting } from '../shared/crewLead'
 import type { CrewRun } from '../shared/crew'
 import type { CrewRunStatus } from '../shared/cli'
 
@@ -20,7 +21,9 @@ const crewTab = (pane: PaneState): TermState | undefined => {
 function observe(state: AppState, view: PaneView, tab: TermState, now: number): RunTrack {
   const runId = tab.crew!.runId
   // A run waiting on you needs you even while its pane is the one being watched.
-  const waiting = view.status !== 'exited' && (view.fileWaiting || state.waiting[view.pane.id] === true)
+  const waiting =
+    view.status !== 'exited' &&
+    (view.fileWaiting || state.waiting[view.pane.id] === true || leadWaiting(state.settings.crewGoals, state.goalLive, runId))
   const next = stepTrack(tracks.get(runId), {
     session: waiting ? 'needs' : sessionState({ status: view.status, attention: view.attention }),
     tab: tab.status,

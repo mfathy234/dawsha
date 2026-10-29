@@ -6,6 +6,7 @@ import type { RemoteActivityEntry } from './remoteActivity'
 import type { RemoteCapabilities } from './remoteCapabilities'
 import type { SessionTag } from './sessionTags'
 import type { CrewIdentity, CrewLaunch, CrewRun, CrewSettings } from './crew'
+import type { CrewGoal, LeadSettings } from './crewLead'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
 export type SessionStatus = 'busy' | 'idle'
@@ -168,6 +169,10 @@ export interface Settings {
   crew: CrewSettings
   /** The latest crew runs, newest first. */
   crewRuns: CrewRun[]
+  /** How the Lead works: her rules, limits and which members she may use. */
+  lead: LeadSettings
+  /** The latest goals handed to the Lead, newest first. */
+  crewGoals: CrewGoal[]
   legacyModelCacheCleared: boolean
 }
 

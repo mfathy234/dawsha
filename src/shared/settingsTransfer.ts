@@ -42,6 +42,9 @@ export const EXCLUDED_KEYS = [
   'runCommands',
   // Run history points at this PC's panes and projects.
   'crewRuns',
+  // Goals point at this PC's projects and panes; the Lead's limits name members of this PC.
+  'crewGoals',
+  'lead',
   // Keyed by this PC's project ids and branches, like closed sessions.
   'ticketNotes',
   'tasks',

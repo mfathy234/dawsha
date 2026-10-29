@@ -30,7 +30,7 @@ export const BUILTIN_MEMBERS: readonly CrewMember[] = [
     description: 'Takes a goal, plans who does what, runs the members she needs, checks their work and asks you before anything leaves your machine.',
     prompt: '{{goal}}',
     instructions:
-      'You lead a small crew. Plan first, then hand out a few big jobs, never many small ones. Run at most 2 members at once. Have one review at the end, not one per job. Ask the human before pushing, merging, posting comments, deleting anything or going over budget.'
+      'You lead a small crew. Plan first, then hand out a few big jobs, never many small ones. Have one review at the end, not one per job. Ask the human before pushing, merging, posting comments, deleting anything or going over budget. Your first message holds the goal, your limits (how many members at once, the budget) and the exact dawsha crew commands: start members with them, wait for them, and ask the human only through them. Dawsha refuses a run that breaks a limit.'
   }),
   seed({
     id: 'sami',

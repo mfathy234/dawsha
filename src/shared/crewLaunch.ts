@@ -43,7 +43,10 @@ export function crewArgs(runner: AgentKind, launch: CrewLaunch, options: CrewArg
       const config = launch.startup === 'some' && options.projectMcpConfig ? options.projectMcpConfig : options.emptyMcpConfig
       args.push('--strict-mcp-config', '--mcp-config', config)
     }
-    if (launch.instructions) args.push('--append-system-prompt', launch.instructions)
+    if (launch.instructions) {
+      if (launch.allow) args.push('--allowedTools', launch.allow)
+      args.push('--append-system-prompt', launch.instructions)
+    }
     return args
   }
   const args: string[] = []
