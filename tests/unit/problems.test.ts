@@ -3,6 +3,24 @@ import { groupProblems, parseProblems, problemsLabel, resolveProblemFile } from 
 
 const lines = (...rows: string[]): string => rows.join('\n')
 
+describe('parseProblems: bounded input', () => {
+  it('skips oversized lines but keeps diagnostics up to 2000 characters', () => {
+    const prefix = 'a.ts(1,1): error TS1: '
+    const boundary = prefix + 'x'.repeat(2000 - prefix.length)
+    expect(parseProblems(lines(`${boundary}x`, boundary))).toEqual([
+      expect.objectContaining({ file: 'a.ts', message: 'x'.repeat(2000 - prefix.length) })
+    ])
+  })
+  it('parses hostile whitespace and long lines in under 200 ms', () => {
+    const output = lines(' '.repeat(200_000) + 'x', 'a.ts(1,1): error TS1: ' + 'x'.repeat(200_000),
+      'a.js:1:1: x' + ' '.repeat(200_000), ' FAIL ' + ' '.repeat(200_000),
+      ' '.repeat(1900) + 'x', 'a.ts(2,1): error TS1: kept')
+    const start = performance.now()
+    expect(parseProblems(output)).toEqual([expect.objectContaining({ line: 2, message: 'kept' })])
+    expect(performance.now() - start).toBeLessThan(200)
+  })
+})
+
 describe('parseProblems: TypeScript', () => {
   it('reads the plain tsc format', () => {
     expect(parseProblems("src/a.ts(12,5): error TS2322: Type 'string' is not assignable to type 'number'.")).toEqual([

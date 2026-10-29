@@ -29,6 +29,15 @@ const SOURCE_NAME: Record<Problem['source'], string> = { typescript: 'TypeScript
 const baseName = (path: string): string => path.replace(/\\/g, '/').split('/').pop() ?? path
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? '' : 's'}`
 
+/** The tail changes as capped output rolls forward, even when its length stays fixed. */
+export function runProblemsCacheKey(run: Pick<RunSnapshot, 'id' | 'output' | 'cwd'>): string {
+  let hash = 2166136261
+  for (let i = Math.max(0, run.output.length - 4096); i < run.output.length; i++) {
+    hash = Math.imul(hash ^ run.output.charCodeAt(i), 16777619)
+  }
+  return `${run.id}|${run.output.length}|${hash >>> 0}|${run.cwd}`
+}
+
 /** The latest run of each command in this checkout: starting it again replaces the earlier run's problems. */
 export function latestRuns(runs: readonly RunSnapshot[], folder: string | null): RunSnapshot[] {
   const latest = new Map<string, RunSnapshot>()
@@ -78,7 +87,7 @@ export class ProblemsPane {
     const used = new Set<string>()
     const next: RunProblem[] = []
     for (const run of current) {
-      const key = `${run.id}|${run.output.length}|${run.cwd}`
+      const key = runProblemsCacheKey(run)
       used.add(key)
       let found = this.cache.get(key)
       if (!found) {

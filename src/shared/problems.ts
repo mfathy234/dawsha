@@ -19,16 +19,17 @@ export interface ParseOptions {
 
 export const MAX_PROBLEMS = 500
 const FAILURE_WINDOW = 40
+const MAX_LINE_LENGTH = 2000
 
 // eslint-disable-next-line no-control-regex
 const ANSI = /\u001b\[[0-9;?]*[ -/]*[@-~]/g
 
-const TS_PAREN = /^\s*(.+?)\((\d+)(?:,(\d+))?(?:,\d+,\d+)?\):\s+(error|warning)\s+([A-Za-z]+\d+):\s*(.*?)\s*$/
-const TS_PRETTY = /^\s*(.+?):(\d+):(\d+)\s+-\s+(error|warning)\s+(TS\d+):\s*(.*?)\s*$/
-const ESLINT_UNIX = /^\s*(.+?):(\d+):(\d+):\s+(.*?)\s+\[(Error|Warning)(?:\/([^\]]+))?\]\s*$/
+const TS_PAREN = /^\s*(\S.*?)\((\d+)(?:,(\d+))?(?:,\d+,\d+)?\):\s+(error|warning)\s+([A-Za-z]+\d+):\s*(.*?)\s*$/
+const TS_PRETTY = /^\s*(\S.*?):(\d+):(\d+)\s+-\s+(error|warning)\s+(TS\d+):\s*(.*?)\s*$/
+const ESLINT_UNIX = /^\s*(\S.*?):(\d+):(\d+):\s+(\S(?:.*?\S)?)\s+\[(Error|Warning)(?:\/([^\]]+))?\]\s*$/
 const ESLINT_ROW = /^\s+(\d+):(\d+)\s+(error|warning)\s+(.*?)\s*$/
 const MSBUILD_PROJECT = /\s+\[[^\]]*\.(?:csproj|vbproj|fsproj|sln|proj|props|targets)[^\]]*\]\s*$/i
-const TEST_HEADER = /^\s*(?:FAIL\s+(\S.*?)|●\s+(\S.*?))\s*$/
+const TEST_HEADER = /^\s*(FAIL|●)\s+(\S(?:.*\S)?)\s*$/
 const FRAME = /^\s*(?:❯|at)\s+(?:.*?\()?(.+?):(\d+):(\d+)\)?\s*$/
 const ERROR_LINE = /^\s*((?:[A-Za-z]*(?:Error|Exception)\b.*)|(?:expect\(.*))$/
 const GENERIC = /^\s*((?:[A-Za-z]:)?[^\s:()'"<>|*?]+?):(\d+)(?::(\d+))?(?::|\s+-)\s*(.+?)\s*$/
@@ -71,6 +72,10 @@ export function parseProblems(output: string, options: ParseOptions = {}): Probl
   }
   for (const raw of output.replace(ANSI, '').split(/\r?\n/)) {
     if (out.length >= MAX_PROBLEMS) break
+    if (raw.length > MAX_LINE_LENGTH) {
+      if (pending && ++pending.seen > FAILURE_WINDOW) pending = null
+      continue
+    }
     if (raw.trim() === '') {
       if (pending) pending.seen += 1
       continue
@@ -121,7 +126,7 @@ export function parseProblems(output: string, options: ParseOptions = {}): Probl
     if (!/^\s/.test(raw)) eslintFile = looksLikeFile(raw.trim()) && !/\s{2,}/.test(raw) ? raw.trim() : ''
     const header = TEST_HEADER.exec(raw)
     if (header) {
-      pending = { title: header[1] !== undefined ? testTitle(header[1]) : (header[2] ?? ''), error: '', seen: 0 }
+      pending = { title: header[1] === 'FAIL' ? testTitle(header[2]) : header[2], error: '', seen: 0 }
       continue
     }
     const generic = GENERIC.exec(raw)

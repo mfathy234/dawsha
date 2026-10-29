@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { latestRuns, problemLine, problemsMessage, runProblems } from '../../src/renderer/files/problemsPane'
+import { latestRuns, problemLine, problemsMessage, runProblems, runProblemsCacheKey } from '../../src/renderer/files/problemsPane'
 import type { RunSnapshot } from '../../src/shared/runCommands'
 
 const run = (over: Partial<RunSnapshot>): RunSnapshot => ({
@@ -7,6 +7,14 @@ const run = (over: Partial<RunSnapshot>): RunSnapshot => ({
 })
 
 describe('latestRuns', () => {
+  it('invalidates cached problems when capped output changes without growing', () => {
+    const before = run({ output: '\na.ts(1,1): error TS1: old'.padStart(200_000, 'x') })
+    const after = { ...before, output: before.output.replace('old', 'new') }
+    expect(after.output.length).toBe(before.output.length)
+    expect(runProblemsCacheKey(after)).not.toBe(runProblemsCacheKey(before))
+    expect(runProblemsCacheKey({ ...after })).toBe(runProblemsCacheKey(after))
+    expect(runProblemsCacheKey({ ...after, cwd: '/elsewhere' })).not.toBe(runProblemsCacheKey(after))
+  })
   it('keeps the newest run of each command in this checkout only', () => {
     const runs = [run({ id: 'a' }), run({ id: 'b' }), run({ id: 'c', commandId: 'test' }), run({ id: 'd', folder: '/other' })]
     expect(latestRuns(runs, '/repo').map((r) => r.id)).toEqual(['b', 'c'])
