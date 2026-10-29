@@ -7,14 +7,15 @@ const fake = vi.hoisted(() => ({
   data: null as null | ((data: string) => void),
   exit: null as null | ((event: { exitCode: number }) => void),
   spawn: vi.fn(),
-  kill: vi.fn()
+  kill: vi.fn(),
+  taskkill: vi.fn((_file: string, _args: string[], _options: unknown, callback: (error: Error | null) => void) => {
+    queueMicrotask(() => callback(null))
+  })
 }))
 
 vi.mock('node:child_process', async (importOriginal) => ({
   ...await importOriginal<typeof import('node:child_process')>(),
-  execFile: (_file: string, _args: string[], _options: unknown, callback: (error: Error | null) => void) => {
-    queueMicrotask(() => callback(null))
-  }
+  execFile: fake.taskkill
 }))
 
 vi.mock('node-pty', () => ({
@@ -51,6 +52,7 @@ describe('PtyManager desktop output delivery', () => {
     fake.exit = null
     fake.spawn.mockClear()
     fake.kill.mockClear()
+    fake.taskkill.mockClear()
     cwd = mkdtempSync(join(tmpdir(), 'dawsha-pty-manager-'))
   })
 
@@ -73,6 +75,38 @@ describe('PtyManager desktop output delivery', () => {
     await manager.terminateAll(1000)
     expect(fake.kill).toHaveBeenCalledTimes(1)
     expect(manager.activityRoots()).toEqual([])
+  })
+
+  it.runIf(process.platform === 'win32')('waits for taskkill to finish before disposing the root PTY', async () => {
+    let complete: ((error: Error | null) => void) | undefined
+    fake.taskkill.mockImplementationOnce((_file, _args, _options, callback) => { complete = callback })
+    const manager = new PtyManager({ onData: vi.fn(), onExit: vi.fn() })
+    manager.spawn({ id: 'quitting', projectId: 'p1', agent: 'codex', cwd, resume: false, cols: 80, rows: 24 })
+    const quitting = manager.terminateAll(1000)
+    expect(fake.taskkill).toHaveBeenCalledWith('taskkill', ['/PID', '123', '/T', '/F'], expect.objectContaining({ windowsHide: true }), expect.any(Function))
+    expect(fake.kill).not.toHaveBeenCalled()
+    complete?.(null)
+    await quitting
+    expect(fake.kill).toHaveBeenCalledTimes(1)
+  })
+
+  it.runIf(process.platform === 'win32')('bounds a hung taskkill without killing its root ahead of the tree', async () => {
+    vi.useFakeTimers()
+    try {
+      let complete: ((error: Error | null) => void) | undefined
+      fake.taskkill.mockImplementationOnce((_file, _args, _options, callback) => { complete = callback })
+      const manager = new PtyManager({ onData: vi.fn(), onExit: vi.fn() })
+      manager.spawn({ id: 'quitting', projectId: 'p1', agent: 'codex', cwd, resume: false, cols: 80, rows: 24 })
+      const quitting = manager.terminateAll(25)
+      await vi.advanceTimersByTimeAsync(25)
+      await quitting
+      expect(fake.kill).not.toHaveBeenCalled()
+      complete?.(new Error('taskkill timed out'))
+      await Promise.resolve()
+      expect(fake.kill).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('does not create remote replay history when remote control is disabled', () => {

@@ -189,19 +189,15 @@ export class PtyManager {
       this.remoteTerminals?.remove(id)
       this.recording?.recorder.stop(id)
       if (entry.timer) clearTimeout(entry.timer)
-      if (process.platform === 'win32') return taskkillTree(entry.process.pid, log)
-      killPosixTree(entry.process.pid)
-      return Promise.resolve()
-    })
-    if (process.platform === 'win32') {
-      // Killing the shell tree does not release ConPTY's native handles/output
-      // worker. Dispose every PTY while taskkill runs, before Electron tears Node down.
-      for (const [, entry] of entries) {
+      if (process.platform === 'win32') return taskkillTree(entry.process.pid, log).then(() => {
+        // Dispose ConPTY only after taskkill has found the shell and its children.
         try { entry.process.kill() } catch (error) {
           log(`pty dispose failed pid=${entry.process.pid}: ${(error as Error).message}`)
         }
-      }
-    }
+      })
+      killPosixTree(entry.process.pid)
+      return Promise.resolve()
+    })
     let timer: NodeJS.Timeout | undefined
     const deadline = new Promise<void>((resolve) => {
       timer = setTimeout(resolve, timeoutMs)

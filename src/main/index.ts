@@ -28,7 +28,8 @@ import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
 import { createQuitLog } from './quitLog'
 import { startQuitWatchdog } from './quitWatchdog'
-import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, runPhases, runQuit, type ShutdownDeps } from './shutdown'
+import { requestCloseCheck } from './closeCheck'
+import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, exitProcess, runPhases, runQuit, type ShutdownDeps } from './shutdown'
 import { isPrivateRemoteBuild, isRemoteControlBuild } from '../shared/remoteBuild'
 
 const IMAGE_SCHEME = 'dawsha-image'
@@ -80,46 +81,14 @@ function flushRenderer(): Promise<void> {
 }
 
 // Asks the page whether the app may close (unsaved Files tabs ask the user); a page that is not there answers yes.
-// The page acknowledges at once, so a dialog can stay open as long as the user needs; a page that never
-// acknowledges (hung or gone) must not make the app unclosable, so no acknowledgement within CLOSE_ACK_MS means yes.
-const CLOSE_ACK_MS = FLUSH_TIMEOUT_MS
-
 function askMayClose(): Promise<boolean> {
   const window = mainWindow
   if (!window || window.isDestroyed() || !rendererReady) return Promise.resolve(true)
-  quitLog('close check requested')
-  return new Promise((resolve) => {
-    const finish = (_event?: unknown, ok?: unknown): void => {
-      clearTimeout(ackTimer)
-      ipcMain.removeListener(IPC.closeCheckAck, acknowledged)
-      ipcMain.removeListener(IPC.closeCheckDone, finish)
-      window.webContents.removeListener('destroyed', onGone)
-      window.webContents.removeListener('render-process-gone', onGone)
-      quitLog(`close check ${ok === false ? 'cancelled' : 'approved'}`)
-      resolve(ok !== false)
-    }
-    const acknowledged = (): void => {
-      clearTimeout(ackTimer)
-      quitLog('close check acknowledged')
-    }
-    const onGone = (): void => finish(undefined, true)
-    const ackTimer = setTimeout(() => {
-      quitLog('close check acknowledgement timed out')
-      finish(undefined, true)
-    }, CLOSE_ACK_MS)
-    ipcMain.once(IPC.closeCheckAck, acknowledged)
-    ipcMain.once(IPC.closeCheckDone, finish)
-    window.webContents.once('destroyed', onGone)
-    window.webContents.once('render-process-gone', onGone)
-    window.webContents.send(IPC.closeCheck)
-  })
+  return requestCloseCheck(ipcMain, window.webContents, quitLog)
 }
 
 function terminateProcess(code: number): void {
-  quitLog(`terminating the process (code ${code})`)
-  // Let Electron shut down Chromium's children. Self-SIGKILL strands processes
-  // holding the launcher's pipes; the independent watchdog handles a stuck exit.
-  app.exit(code)
+  exitProcess(code, { exit: (value) => app.exit(value), log: quitLog })
 }
 
 function send(channel: string, ...args: unknown[]): void {
