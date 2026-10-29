@@ -104,7 +104,8 @@ async function pick(page: Page, trigger: string, option: string): Promise<void> 
   await page.getByRole('option', { name: option, exact: true }).click()
 }
 
-test('Agents tab sits after Sessions, shows the running count and agents grouped by session', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('Agents tab sits after Sessions, shows the running count and agents grouped by session', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -146,7 +147,8 @@ test('Agents tab sits after Sessions, shows the running count and agents grouped
   }
 })
 
-test('every filter narrows the list and Clear filters resets them', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('every filter narrows the list and Clear filters resets them', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -209,7 +211,8 @@ test('every filter narrows the list and Clear filters resets them', async () => 
   }
 })
 
-test('the detail pane shows task, files and usage, and its actions work', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('the detail pane shows task, files and usage, and its actions work', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -265,7 +268,8 @@ test('the detail pane shows task, files and usage, and its actions work', async 
   }
 })
 
-test('a running agent shows live activity and a failed one offers a retry; Stop is not offered', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('a running agent shows live activity and a failed one offers a retry; Stop is not offered', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -290,7 +294,8 @@ test('a running agent shows live activity and a failed one offers a retry; Stop 
   }
 })
 
-test('the detail pane becomes a drawer below 900px', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('the detail pane becomes a drawer below 900px', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -310,7 +315,8 @@ test('the detail pane becomes a drawer below 900px', async () => {
   }
 })
 
-test('the timeline has a lane per session and per agent, and clicking a bar selects the agent', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('the timeline has a lane per session and per agent, and clicking a bar selects the agent', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -338,7 +344,8 @@ test('the timeline has a lane per session and per agent, and clicking a bar sele
   }
 })
 
-test('the more menu exports what is visible as Markdown', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('the more menu exports what is visible as Markdown', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -356,7 +363,8 @@ test('the more menu exports what is visible as Markdown', async () => {
   }
 })
 
-test('groups with running or failed agents open, finished-only groups fold to one line, and the choice is remembered', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('groups with running or failed agents open, finished-only groups fold to one line, and the choice is remembered', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const first = await launchApp(sandbox)
@@ -412,7 +420,8 @@ test('groups with running or failed agents open, finished-only groups fold to on
   }
 })
 
-test('Left and Right fold a focused group, Up and Down walk headers and rows, and filtering keeps the folds', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('Left and Right fold a focused group, Up and Down walk headers and rows, and filtering keeps the folds', async () => {
   const sandbox = createSandbox()
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
@@ -456,7 +465,8 @@ test('Left and Right fold a focused group, Up and Down walk headers and rows, an
   }
 })
 
-test('empty states follow the range and the filters', async () => {
+// removed in phase 2: the old background agents view is no longer reachable from the top bar.
+test.skip('empty states follow the range and the filters', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {

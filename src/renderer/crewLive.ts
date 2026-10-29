@@ -17,10 +17,12 @@ const crewTab = (pane: PaneState): TermState | undefined => {
   return primary.crew ? primary : pane.tabs.find((tab) => tab.crew)
 }
 
-function observe(view: PaneView, tab: TermState, now: number): RunTrack {
+function observe(state: AppState, view: PaneView, tab: TermState, now: number): RunTrack {
   const runId = tab.crew!.runId
+  // A run waiting on you needs you even while its pane is the one being watched.
+  const waiting = view.status !== 'exited' && (view.fileWaiting || state.waiting[view.pane.id] === true)
   const next = stepTrack(tracks.get(runId), {
-    session: sessionState({ status: view.status, attention: view.attention }),
+    session: waiting ? 'needs' : sessionState({ status: view.status, attention: view.attention }),
     tab: tab.status,
     exitCode: tab.exitCode,
     startedAt: tab.startedAt,
@@ -64,7 +66,7 @@ function evaluate(state: AppState): void {
     for (const view of derivePanes(state)) {
       const tab = crewTab(view.pane)
       if (!tab?.crew) continue
-      const track = observe(view, tab, now)
+      const track = observe(state, view, tab, now)
       seen.set(tab.crew.runId, { track, view })
       next[view.pane.id] = visibleState(track, now)
     }

@@ -34,7 +34,6 @@ import { store, type AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import { setSessionsLayout } from '../sessionsLayout'
 import { NotificationBell } from './notificationBell'
-import { onAgentsChange, runningAgents } from '../backgroundAgents'
 import { AVATAR_LABELS, compareAvatarStates, stripSummary, type AvatarState } from '../../shared/crewLive'
 import { acknowledgeRun, liveRuns } from '../crewLive'
 import { crewAvatar } from './crewAvatar'
@@ -88,9 +87,7 @@ export class TopBarComponent {
     h('span', { class: 'utility-label' }, 'Theme')
   )
   private readonly sessions = h('button', { class: 'btn ghost', type: 'button', id: 'sessions-button', onClick: () => showView('grid') }, 'Sessions')
-  private readonly agentsBadge = h('span', { class: 'count-badge', hidden: true, 'aria-hidden': 'true' })
-  private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Background agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'background') }, 'Agents', this.agentsBadge)
-  private readonly crew = h('button', { class: 'btn ghost', type: 'button', id: 'crew-button', title: 'Crew', onClick: () => showView(this.crew.getAttribute('aria-pressed') === 'true' ? 'grid' : 'crew') }, 'Crew')
+  private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'crew') }, 'Agents')
   private readonly crewStrip = h('div', { class: 'crew-strip', id: 'crew-strip', role: 'group', 'aria-label': 'Who is on a job', hidden: true })
   private crewStripSignature = ''
   private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
@@ -150,7 +147,6 @@ export class TopBarComponent {
       if (this.settings.getAttribute('aria-pressed') === 'true') showView('grid')
       else openSettings()
     })
-    onAgentsChange(() => this.updateAgentsBadge())
     this.el = h(
       'header',
       { class: 'topbar' },
@@ -160,7 +156,6 @@ export class TopBarComponent {
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
         this.sessions,
         this.background,
-        this.crew,
         this.files,
         this.more
       ),
@@ -191,9 +186,8 @@ export class TopBarComponent {
     this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
     const dim = state.settings.dimOtherPanes
     this.dimSwitch.setAttribute('aria-pressed', String(dim))
-    this.background.setAttribute('aria-pressed', String(state.view === 'background'))
+    this.background.setAttribute('aria-pressed', String(state.view === 'crew'))
     this.files.setAttribute('aria-pressed', String(state.view === 'files'))
-    this.crew.setAttribute('aria-pressed', String(state.view === 'crew'))
     this.updateCrewStrip(state)
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
     this.agentUpdates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
@@ -246,13 +240,6 @@ export class TopBarComponent {
         return button
       })
     )
-  }
-
-  private updateAgentsBadge(): void {
-    const running = runningAgents()
-    this.agentsBadge.hidden = running === 0
-    this.agentsBadge.textContent = String(running)
-    this.background.setAttribute('aria-label', running > 0 ? `Agents, ${running} running` : 'Agents')
   }
 
   private updateMore(state: AppState): void {

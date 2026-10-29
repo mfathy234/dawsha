@@ -322,8 +322,9 @@ for (const [mode, themeId] of THEMES) {
       await page.locator('#files-button').click()
 
       await page.locator('#background-button').click()
-      await expect(page.locator('.bg-view')).toBeVisible()
-      await expect(page.locator('.bg-item').first()).toBeVisible({ timeout: 20_000 })
+      // The Agents tab opens the crew now; the old background view is removed in phase 2.
+      await expect(page.locator('.crew-view')).toBeVisible()
+      await expect(page.locator('.crew-item').first()).toBeVisible({ timeout: 20_000 })
       await shot(page, `${mode}-agents`)
       await page.locator('#sessions-button').click()
 

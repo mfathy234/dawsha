@@ -319,7 +319,7 @@ export class PaneComponent {
       onReviewFiles: () => this.reviewInFiles(),
       onShowAgents: (sessionId) => {
         setAgentFilters({ ...DEFAULT_BG_FILTERS, session: sessionId })
-        showView('background')
+        showView('crew')
       }
     })
     this.info.hidden = items.length === 0

@@ -19,7 +19,7 @@ test('top bar shows the brand and the split New session button picks the agent',
     await expect(chevron).toHaveAttribute('aria-expanded', 'false')
     await chevron.click()
     await expect(chevron).toHaveAttribute('aria-expanded', 'true')
-    await expect(page.getByRole('menuitem')).toHaveText(['Claude session', 'Codex session', 'Gemini session', 'Resume a session…Ctrl+Shift+R', 'Ask two agents…Ctrl+Shift+A'])
+    await expect(page.getByRole('menuitem')).toHaveText(['Claude session', 'Codex session', 'Gemini session', 'Resume a session…Ctrl+Shift+R', 'Ask two agents…Ctrl+Shift+A', 'Hand a job to an agent…'])
     await expect(page.getByRole('menuitem', { name: /Claude session/ })).toBeFocused()
 
     await page.keyboard.press('ArrowDown')
@@ -89,7 +89,7 @@ test('the top bar never pushes out its icons, with the usage limits shown and a 
     // The limits hide below 1220px, and CI's window is about 1024px wide.
     await page.setViewportSize({ width: 1600, height: 900 })
     await expect(page.locator('.topbar-limits')).toBeVisible({ timeout: 20_000 })
-    await expect(page.locator('#background-button .count-badge')).toBeVisible({ timeout: 20_000 })
+    // The old running-agents badge on the Agents tab is gone: the crew strip replaces it.
     const navHeight = (await page.locator('#files-button').boundingBox())!.height
     for (const width of [1600, 1440, 1280, 1024, 960]) {
       await page.setViewportSize({ width, height: 900 })
