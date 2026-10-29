@@ -30,7 +30,7 @@ export async function askPermission(page: Page, index: number): Promise<void> {
   }).toPass({ timeout: 30_000 })
 }
 
-function seedRepos(): void {
+export function seedRepos(): void {
   for (const project of PROJECTS) rmSync(folder(project.name), { recursive: true, force: true })
   makeAcmeWeb(folder('acme-web'))
   makeRepo(folder('billing-api'), 'billing-api', 'fix/invoice-rounding', { 'src/export/invoices.ts': 'export function exportInvoices() {}\n' })
@@ -38,7 +38,7 @@ function seedRepos(): void {
   makeRepo(folder('docs-site'), 'docs-site', 'docs/getting-started', { 'docs/getting-started.md': '# Getting started\n' })
 }
 
-export async function launchDemo(settingsPatch: Record<string, unknown>) {
+export async function launchDemo(settingsPatch: Record<string, unknown>, options: { panes?: boolean } = {}) {
   const sandbox = createSandbox()
   seed(sandbox, true)
   seedRepos()
@@ -46,10 +46,11 @@ export async function launchDemo(settingsPatch: Record<string, unknown>) {
   const stored = JSON.parse(readFileSync(settingsPath, 'utf8'))
   writeFileSync(settingsPath, JSON.stringify({ ...stored, onboardingDismissed: true, recordings: { enabled: false, keepDays: 14, maxMegabytes: 1024 }, ...settingsPatch }), 'utf8')
   writeActiveTranscript(sandbox, folder('acme-web'))
-  const launched = await launchApp(sandbox, demoEnv())
+  const launched = await launchApp(sandbox, { ...demoEnv(), DAWSHA_SHARED_HOME: join(sandbox.root, 'shared-home') })
   await resize(launched.app)
   const { page } = launched
   await page.emulateMedia({ reducedMotion: 'reduce' })
+  if (options.panes === false) return { ...launched, sandbox }
   for (const project of PROJECTS) {
     const agent = project.defaultAgent[0].toUpperCase() + project.defaultAgent.slice(1)
     await page.getByRole('button', { name: `New ${agent} session in ${project.name}`, exact: true }).click()
@@ -63,5 +64,5 @@ export async function launchDemo(settingsPatch: Record<string, unknown>) {
   for (const title of ['Add dark mode toggle', 'Refactor invoice export', 'Fix flaky login test', 'Rewrite the getting started guide']) {
     await expect(page.locator('.pane-title', { hasText: title })).toHaveCount(1, { timeout: 20_000 })
   }
-  return launched
+  return { ...launched, sandbox }
 }

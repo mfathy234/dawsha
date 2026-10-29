@@ -273,6 +273,11 @@ html.lenis { scroll-behavior: auto; }
 .feat-wide { margin-top: 88px; }
 .feat-wide .shot { margin-top: 28px; }
 .feat-cols { margin: 32px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 40px; font-size: 0.97rem; }
+.shot-pair { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); gap: 20px; align-items: center; }
+.shot-pair .shot { margin-top: 0; }
+.shot-pair .phone { width: 100%; max-width: 250px; justify-self: center; }
+.shot-pair.zones { grid-template-columns: 248px minmax(0, 1fr); align-items: start; margin-top: 28px; }
+.feat-cols.four { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .earlier { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px 48px; margin-top: 40px; }
 .earlier h3 { font-size: 1.25rem; }
 .earlier p { color: var(--muted); margin: 10px 0 14px; font-size: 0.97rem; }
@@ -282,7 +287,8 @@ html.lenis { scroll-behavior: auto; }
   .feat-row.flip .feat-copy { order: 0; }
   .feat-row > * { min-width: 0; }
   .feat-wide { margin-top: 64px; }
-  .feat-cols, .earlier { grid-template-columns: 1fr; }
+  .feat-cols, .feat-cols.four, .earlier, .shot-pair, .shot-pair.zones { grid-template-columns: 1fr; }
+  .shot-pair.zones .narrow { max-width: 248px; }
   .feat-cols { gap: 16px; }
 }
 .shot-stack { display: grid; gap: 20px; }

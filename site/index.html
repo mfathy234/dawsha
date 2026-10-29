@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.7.4</a>
+      <a href="#new">New in 1.7.6</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,42 +97,77 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.7.4</h2>
-      <p class="section-lead">1.7.4 turns Files into a place to review what agents changed, rebuilds the Projects sidebar around what needs you, and refines the Dawsha Cards look.</p>
-      <div class="feat-row" id="files-review">
+      <h2 id="new-h">New in 1.7.6</h2>
+      <p class="section-lead">1.7.6 turns the Agents tab into a crew you keep, adds Maya to lead it, and puts your agents on your phone. It also carries the 1.7.5 changes: a much smaller app, a clearer sidebar, Codex limits and a Problems tab.</p>
+      <div class="feat-row" id="agents-crew">
         <div class="feat-copy">
-          <h3>Search and review in Files</h3>
-          <p>Check an agent's work without leaving Dawsha. The explorer now has Files, Search and Review modes.</p>
-          <ul><li>Ctrl+Shift+F searches the selected checkout, skips files Git ignores, and groups results by file. Match case, whole word, regular expression and an include pattern are there.</li><li>Review steps through the changed files. Click a + line to leave a comment.</li><li>Send to agent types every comment, with file and line, into that session's prompt without sending it, so you press Enter.</li><li>Commit… drafts a message and lets you pick files. Discard file… asks first.</li><li>Added lines carry a mark for the session that wrote them, with the task and time on hover.</li><li>Markdown opens as a preview, HTML as a static preview, and a changed image can be compared with main.</li></ul>
+          <h3>Agents you keep</h3>
+          <p>The Agents tab is now your crew. Each agent has a name, a role, its own instructions, prompt fields, a model, permissions and the projects it may work in.</p>
+          <ul><li>Eight built-in agents ship with Dawsha: Maya the Lead, Sami, Tarek, Omar, Hana, Lina, Nour and Yara. Duplicate one to change it, or make your own.</li><li>Run an agent in any project and pick the model for that run: Claude Fable, Opus, Sonnet or Haiku, Codex or Gemini. Each run opens as a normal session titled with the agent's name, like "Sami · PR 8841".</li><li>Runs start lean, without your MCP servers. That was about 40% cheaper in our tests than running the same instructions as a skill.</li><li>In Skills, Make an agent turns a skill into an agent and says why for every choice. You can also import your Claude agents and Codex prompts.</li><li>Paste a correlation id with "on dev", a pull request link or a build link into New session, and Dawsha suggests the agent with its fields filled in.</li></ul>
         </div>
         <div class="shot-stack">
           <figure class="shot framed">
-            <img loading="lazy" src="assets/files-review.png" width="1600" height="952" alt="Review mode in Files with the changed files listed on the left and a comment on an added line of theme.tsx">
+            <img loading="lazy" src="assets/agents.png" width="1352" height="952" alt="The Agents tab with eight built-in agents, one agent of your own called Zed, and the setup of Sami the code reviewer on the right">
           </figure>
           <figure class="shot framed">
-            <img loading="lazy" src="assets/files-search.png" width="1600" height="952" alt="Search mode in Files with results for the word theme, grouped by file with the matches highlighted">
+            <img loading="lazy" src="assets/agents-run.png" width="648" height="509" alt="The Run Sami dialog with a target field, the project, a choice of model for this run and a preview of the command">
           </figure>
         </div>
       </div>
-      <div class="feat-wide" id="dawsha-cards">
+      <div class="feat-wide" id="agent-states">
         <div class="feat-copy">
-          <h3>A refined Dawsha Cards look</h3>
-          <p>Lighter, clearer layers, and terminals that sit flush in their cards.</p>
+          <h3>See who is working</h3>
+          <p>An agent's avatar breathes while it works, flashes when it needs you, flashes once when it's done and shows ✕ when it fails, always with a word too.</p>
         </div>
         <figure class="shot framed">
-          <img loading="lazy" src="assets/cards-grid.png" width="1600" height="1000" alt="Four sessions in the Dawsha Cards theme, one with a soft neutral ring because it is focused and one with a solid orange ring because it needs you">
+          <img loading="lazy" src="assets/agent-panes.png" width="1600" height="1000" alt="Four sessions titled with agent names, such as Sami · PR 8841, each with its avatar, and a strip in the top bar showing who is working and who needs you">
         </figure>
-        <ul class="feat-cols"><li>The terminal fills its card instead of sitting in a dark well.</li><li>The focused session has a soft neutral ring instead of a green outline. Other sessions are a little dimmer.</li><li>A session that needs you has a solid orange ring. Done is sage green, so bright green is kept for buttons and the cursor.</li></ul>
+        <ul class="feat-cols"><li>The top bar shows who is on a job. Sessions, the sidebar, Waiting on you and notifications show the agent's name and avatar.</li><li>Every run is a normal session, so it sits in the grid, the board and Resume like any other.</li><li>The dawsha crew command lists your agents and runs them from a terminal, with status and result.</li></ul>
       </div>
-      <div class="feat-row" id="projects-sidebar">
+      <div class="feat-row flip" id="lead-maya">
         <div class="feat-copy">
-          <h3>A sidebar built around you</h3>
-          <p>A Waiting on you section at the top lists sessions blocked on you, across all projects.</p>
-          <ul><li>Each project shows its branch and a quiet "2 live" or "needs you". The + and ⋯ buttons appear on hover or focus.</li><li>Sessions show their full name, their age and a status word.</li><li>Sort by recent activity, name or your own order, and hide projects without sessions.</li><li>The narrow rail shows each project's initials and opens its sessions in a flyout.</li><li>The usage meter now names its agent. Click it for Claude, Codex and Gemini limits with reset times.</li></ul>
+          <h3>Maya, the Lead</h3>
+          <p>Give Maya a goal and a project. She plans, you approve, and she runs the agents as normal sessions.</p>
+          <ul><li>She proposes a plan first: who does what, on which model, at what estimated cost. Nothing starts until you approve it.</li><li>Approved jobs show as lanes on a board, each with the agent's live state.</li><li>She asks you before pushing, merging, posting comments or deleting. The question waits on the board for your answer.</li><li>Dawsha enforces her limits, not Maya: how many agents run at once (2 by default), a budget per goal ($3 by default) and which agents she may use. Change them under How she leads.</li></ul>
         </div>
-        <figure class="shot framed narrow">
-          <img loading="lazy" src="assets/sidebar.png" width="248" height="620" alt="The Projects sidebar with a Waiting on you section on top, then projects that show their branch and how many sessions are live">
-        </figure>
+        <div class="shot-stack">
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/lead-plan.png" width="932" height="347" alt="Maya's plan with three jobs for Omar, Hana and Sami, each with a model and an estimated cost, and the buttons Cancel, Change the plan and Approve and start">
+          </figure>
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/lead-board.png" width="932" height="427" alt="The board with three lanes, Omar needing you, Hana working and Sami waiting, and a question from Maya about pushing the branch with two answer buttons">
+          </figure>
+        </div>
+      </div>
+      <div class="feat-row" id="phone-agents">
+        <div class="feat-copy">
+          <h3>Agents and Remote Access on your phone</h3>
+          <p>Remote Access has an Agents tab. Run one of your agents on your PC from the phone, and follow what is on a job and the goal Maya is working on.</p>
+          <ul><li>Running agents from the phone is behind a new Run agents permission, which is off by default.</li><li>Remote Access says plainly whether your phone can reach this PC. It notices a dropped tunnel in about ten seconds, offers Reconnect, and can reconnect on its own.</li><li>The Remote Access page is rebuilt: connect a phone, your phones (Remove asks first and names the phone), what a phone can do, now enforced on the PC, and a recent activity log.</li><li>The phone app has real agent logos, filled cards, big buttons and a light theme.</li></ul>
+        </div>
+        <div class="shot-pair">
+          <figure class="phone">
+            <img loading="lazy" src="assets/phone-agents.png" width="780" height="1400" alt="The Agents tab of Dawsha Remote on a phone, with eight agents, three of them working, needing you or done, and the jobs running now">
+          </figure>
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/remote-access.png" width="836" height="944" alt="The Remote Access page on the PC, reporting that your phone can reach this PC, with a pairing code, the connection details and your phones">
+          </figure>
+        </div>
+      </div>
+      <div class="feat-wide" id="from-1-7-5">
+        <div class="feat-copy">
+          <h3>From 1.7.5</h3>
+          <p>Shipped just before 1.7.6, and worth a second look.</p>
+        </div>
+        <div class="shot-pair zones">
+          <figure class="shot framed narrow">
+            <img loading="lazy" src="assets/sidebar-zones.png" width="248" height="759" alt="The Projects sidebar in zones: an Active section of project cards, a pinned project, and a quiet list headed No sessions with the number of projects">
+          </figure>
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/files-problems.png" width="1600" height="952" alt="Files with the Problems tab open under the editor, listing two TypeScript errors and a warning grouped by file">
+          </figure>
+        </div>
+        <ul class="feat-cols four"><li><strong>A much smaller app.</strong> The Windows installer went from 199 MB to 114 MB.</li><li><strong>A clearer sidebar.</strong> Active projects sit on cards, pinned projects come first, and projects with no sessions fold into one quiet list.</li><li><strong>Codex limits.</strong> The limits popover shows Codex next to Claude, and the account you are signed in with.</li><li><strong>A Problems tab.</strong> Files lists the errors and warnings from a run, by file, and opens each at its line.</li></ul>
       </div>
     </div>
   </section>
@@ -141,6 +176,11 @@
     <div class="wrap">
       <h2 id="earlier-h">Earlier releases</h2>
       <div class="earlier">
+        <div id="new-1-7-4">
+          <h3>1.7.4</h3>
+          <p>Search and Review in Files, with comments you send to the agent. A details pane for background agents, since replaced by your own agents. A Projects sidebar built around what needs you, and refined Dawsha Cards.</p>
+          <a href="https://github.com/mfathy234/dawsha/releases/tag/v1.7.4" target="_blank" rel="noopener noreferrer">Notes for 1.7.4</a>
+        </div>
         <div id="new-1-7">
           <h3>1.7</h3>
           <p>The Files view with Ctrl+P quick open, session tags that colour themselves, and a calmer grid. Later 1.7 releases added worktree browsing in Files, a Delete that asks first and uses the Recycle Bin, and run commands for .NET and Node projects.</p>

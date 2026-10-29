@@ -35,6 +35,30 @@ try {
       if (comments[index]) element.textContent = comments[index]
     })
 
+    const latin = /⁨([^⁩]+)⁩|(Sami · PR 8841|Dawsha Cards|dawsha crew|Ctrl\+[A-Za-z+]+|TypeScript|on dev|PR 8841|Maya|Sami|Tarek|Omar|Hana|Lina|Nour|Yara|Zed|Fable|Opus|Sonnet|Haiku|MCP)/g
+    for (const section of document.querySelectorAll('#new, #earlier')) {
+      const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT)
+      const found = []
+      while (walker.nextNode()) if (!walker.currentNode.parentElement.closest('bdi,script,style,svg,pre,code')) found.push(walker.currentNode)
+      for (const node of found) {
+        const text = node.textContent
+        latin.lastIndex = 0
+        if (!latin.test(text)) continue
+        latin.lastIndex = 0
+        const fragment = document.createDocumentFragment()
+        let last = 0
+        for (const match of text.matchAll(latin)) {
+          fragment.append(text.slice(last, match.index))
+          const bdi = document.createElement('bdi')
+          bdi.textContent = match[1] ?? match[2]
+          fragment.append(bdi)
+          last = match.index + match[0].length
+        }
+        fragment.append(text.slice(last))
+        node.replaceWith(fragment)
+      }
+    }
+
     for (const element of document.querySelectorAll('link[href], script[src], img[src], source[src], video[poster]')) {
       for (const attribute of ['src', 'href', 'poster']) {
         const value = element.getAttribute(attribute)
