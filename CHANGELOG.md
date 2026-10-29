@@ -3,6 +3,30 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.5] - 2026-10-29
+
+### Added
+
+- **Problems tab in Files.** Errors from your runs show as clickable `file:line` rows, grouped by file. It reads TypeScript, ESLint, `dotnet build`, and Vitest or Jest failures. Send one problem, or all of them, to an agent's prompt without sending it.
+- **Review from a session.** A "Review N files" button in a session's footer opens Files in Review mode on exactly what that session changed.
+- **Drag projects in the sidebar in any sort order.** Dropping a project switches to your own order, starting from the order you saw. Pinned projects stay on top. Alt+Up and Alt+Down move the focused project, and the narrow rail can be reordered too.
+- **`npm run release:check`** checks a release in one go: the version and changelog, the tag, every download, the release build and the website.
+
+### Changed
+
+- **HTML previews run their scripts**, so interactive mockups work inside Files. They load from a private local address with no network access, and can't reach your other files or the app.
+- **Exact line authorship.** Marks on changed lines show exactly which session wrote each line, where the session's edits allow it. Estimated marks are dimmed and say "About".
+- **Compact usage meter on narrow windows.** It now shows the agent and its busiest window (for example "62%") instead of disappearing below 1220 pixels. The popover lists model-specific windows, such as Opus week, by name.
+- **Real Claude, Codex and Gemini logos** wherever an agent is shown, including the phone app, the timeline search and the Work list.
+- **Menus open next to their button** and flip near the window edges instead of opening to the right.
+- **"N running" in a session's footer** opens the Agents view filtered to that session. The small activity drawer it replaced is gone.
+
+### Fixed
+
+- The sidebar's pin icon no longer sits under the + and ⋯ buttons on hover. It now follows the project name.
+- Pressing Enter right after opening the new-session picker could start nothing.
+- Quitting could wait up to ten seconds for the window, and a session starting during quit could outlive the app.
+
 ## [1.7.4] - 2026-10-29
 
 ### Added
