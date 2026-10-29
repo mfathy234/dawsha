@@ -325,15 +325,15 @@ export class TopBarComponent {
       h('span', { class: 'kbd' }, formatShortcut(bind('Ctrl+Shift+A')))
     )
     items.push(resume, compare)
-    const rect = this.newSession.getBoundingClientRect()
     this.agentMenu = h(
       'div',
-      { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 6)}px` },
+      { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent' },
       ...items
     )
     this.agentMenu.addEventListener('keydown', (event) => this.onMenuKey(event, items))
     this.chevron.setAttribute('aria-expanded', 'true')
     document.body.appendChild(this.agentMenu)
+    placeNearAnchor(this.agentMenu, this.chevron.parentElement ?? this.newSession, 6)
     items[0].focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
   }
@@ -396,15 +396,15 @@ export class TopBarComponent {
     this.moreItems = Object.fromEntries(entries) as unknown as Record<MoreView, HTMLElement>
     const items = entries.map(([, item]) => item)
     for (const [view] of entries) this.markMoreItem(view)
-    const rect = this.more.getBoundingClientRect()
     this.moreMenu = h(
       'div',
-      { class: 'popover menu floating', role: 'menu', 'aria-label': 'More views', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 6)}px` },
+      { class: 'popover menu floating', role: 'menu', 'aria-label': 'More views' },
       ...items
     )
     this.moreMenu.addEventListener('keydown', (event) => this.onMoreKey(event, items))
     this.more.setAttribute('aria-expanded', 'true')
     document.body.appendChild(this.moreMenu)
+    placeNearAnchor(this.moreMenu, this.more, 6)
     items[0].focus()
     setTimeout(() => document.addEventListener('pointerdown', this.moreOutside, true), 0)
   }

@@ -236,6 +236,10 @@
   cursor: inherit;
 }
 
+.proj-title { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.proj-list .proj-text .proj-title .proj-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-title .proj-pin { margin: 0; opacity: 0.7; }
+
 .proj-sub { display: flex; align-items: center; gap: var(--s-2); min-width: 0; font-size: var(--fs-status); color: var(--muted); }
 .proj-branch { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--fs-status); }
 .proj-sub .proj-today { margin: 0; flex: none; }

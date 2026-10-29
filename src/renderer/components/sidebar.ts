@@ -403,13 +403,17 @@ export class SidebarComponent {
         onClick: () => toggleProjectExpanded(project.id)
       },
       icon(collapsed ? ICONS.chevronRight : ICONS.chevronDown),
-      h('span', { class: 'proj-text' }, h('span', { class: 'proj-name', dir: 'auto' }, project.name), sub)
+      h('span', { class: 'proj-text' },
+        h('span', { class: 'proj-title' },
+          h('span', { class: 'proj-name', dir: 'auto' }, project.name),
+          project.pinned === true ? h('span', { class: 'proj-pin', role: 'img', 'aria-label': 'Pinned' }, icon(ICONS.pin)) : null
+        ),
+        sub)
     )
     const row = h(
       'div',
       { class: 'proj-row', 'data-drop-project': project.id },
       toggle,
-      project.pinned === true ? h('span', { class: 'proj-pin', role: 'img', 'aria-label': 'Pinned', title: 'Pinned' }, icon(ICONS.pin)) : null,
       summary.text ? h('span', { class: `proj-count tone-${summary.tone}` }, summary.text) : null,
       h(
         'span',

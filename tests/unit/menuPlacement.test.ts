@@ -4,12 +4,12 @@ import { placeAtPoint, placeMenu } from '../../src/shared/menuPlacement'
 const button = (top: number, left = 900) => ({ left, top, right: left + 28, bottom: top + 28 })
 
 describe('placeMenu', () => {
-  it('opens below the button, right-aligned, when it fits', () => {
-    expect(placeMenu(button(80), 240, 300, 1440, 900)).toEqual({ left: 688, top: 112, maxHeight: null })
+  it('opens below the button, start-aligned, when it fits', () => {
+    expect(placeMenu(button(80), 240, 300, 1440, 900)).toEqual({ left: 900, top: 112, maxHeight: null })
   })
 
   it('opens above when there is room above but not below', () => {
-    expect(placeMenu(button(700), 240, 300, 1440, 900)).toEqual({ left: 688, top: 396, maxHeight: null })
+    expect(placeMenu(button(700), 240, 300, 1440, 900)).toEqual({ left: 900, top: 396, maxHeight: null })
   })
 
   it('never covers the button: a menu taller than both sides goes to the larger side and scrolls', () => {
@@ -17,6 +17,11 @@ describe('placeMenu', () => {
     expect(placed.top).toBe(122)
     expect(placed.maxHeight).toBe(728 - 8 - 122)
     expect(placed.top).toBeGreaterThanOrEqual(90 + 28)
+  })
+
+  it('flips to the end of the button near the right edge', () => {
+    expect(placeMenu(button(80, 980), 240, 100, 1024, 728).left).toBe(768)
+    expect(placeMenu(button(80, 1000), 240, 100, 1024, 728).left).toBe(788)
   })
 
   it('keeps the menu inside the window horizontally', () => {

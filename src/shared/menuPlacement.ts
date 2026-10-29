@@ -15,12 +15,14 @@ export interface Placement {
 const MARGIN = 8
 
 /**
- * Where to open a menu of `width` x `height` next to `anchor` in a `viewWidth` x `viewHeight` window: below when it
- * fits, otherwise on the side with more room, shortened to that room, so it never covers the button that opened it.
+ * Where to open a menu of `width` x `height` next to `anchor` in a `viewWidth` x `viewHeight` window: below and aligned
+ * to the start of the button, flipping to its end when the start side would leave the window. Below when it fits,
+ * otherwise on the side with more room, shortened to that room, so it never covers the button that opened it.
  */
 export function placeMenu(anchor: Rect, width: number, height: number, viewWidth: number, viewHeight: number, gap = 4): Placement {
-  const alignRight = anchor.right - width
-  const left = Math.max(MARGIN, alignRight < MARGIN ? Math.min(anchor.left, viewWidth - width - MARGIN) : alignRight)
+  const fitsAtStart = anchor.left + width <= viewWidth - MARGIN
+  const alignEnd = anchor.right - width
+  const left = Math.max(MARGIN, fitsAtStart ? anchor.left : alignEnd >= MARGIN ? alignEnd : Math.min(anchor.left, viewWidth - width - MARGIN))
   const roomBelow = viewHeight - MARGIN - (anchor.bottom + gap)
   const roomAbove = anchor.top - gap - MARGIN
   const below = height <= roomBelow || roomBelow >= roomAbove

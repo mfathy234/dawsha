@@ -96,7 +96,7 @@ test('at the 1024px CI width the usage meter shows the agent mark and the most u
     await expect(meter).toBeVisible()
     await expect(meter.locator('.agent-mark')).toBeVisible()
     await expect(meter.locator('.limits-windows')).toBeHidden()
-    await expect(meter).toHaveAttribute('aria-label', /Claude limits: 5h: 62% used/)
+    await expect(meter).toHaveAttribute('aria-label', /Claude Code limits: 5h: 62% used/)
     await expect(meter).toHaveAttribute('title', /5h: 62% used/)
 
     const boxes = await page.locator('.topbar > *:visible').evaluateAll((nodes) =>

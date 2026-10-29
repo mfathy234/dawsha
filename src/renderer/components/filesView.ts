@@ -445,7 +445,7 @@ export class FilesViewComponent {
     ]
     const box = anchor.getBoundingClientRect()
     this.bar.setMenuOpen('more', true)
-    openContextMenu({ x: box.right - 4, y: box.bottom + 2, label: 'More actions', entries, returnFocus: anchor })
+    openContextMenu({ x: box.left, y: box.bottom + 2, anchor: box, label: 'More actions', entries, returnFocus: anchor })
     this.watchMenuClose(() => this.bar.setMenuOpen('more', false))
   }
 
