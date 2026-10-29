@@ -159,6 +159,13 @@ test('a plan shows as a card; Approve unblocks the command, Change sends the not
     const cancel = runCli(sandbox, ['crew', 'plan', '--goal', id, '--file', plan])
     await expect(page.locator('#crew-plan-cancel')).toBeVisible()
     await page.locator('#crew-plan-cancel').click()
+    const asked = page.getByRole('alertdialog', { name: 'Cancel this plan?' })
+    await expect(asked).toContainText(`Maya stops "${GOAL}"`)
+    await asked.getByRole('button', { name: 'Keep the plan' }).click()
+    await expect(asked).toHaveCount(0)
+    await expect(page.locator('#crew-plan-approve')).toBeVisible()
+    await page.locator('#crew-plan-cancel').click()
+    await page.getByRole('button', { name: `Cancel plan for "${GOAL}"` }).click()
     const cancelled = await cancel
     expect(cancelled.code).toBe(2)
     expect(cancelled.err).toBe('cancelled')

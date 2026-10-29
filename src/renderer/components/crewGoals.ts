@@ -17,6 +17,7 @@ import { answerFor, decidePlanFor, goalActive, leadMember, runsOfGoal, startGoal
 import { acknowledgeRun, paneOfRun, stateOfPane } from '../crewLive'
 import { clear, h } from '../dom'
 import { store, type AppState } from '../state'
+import { confirmDialog } from './dialogs'
 import { crewAvatar } from './crewAvatar'
 
 const MODEL_CHOICES: RunChoice[] = ['default', 'fable', 'sonnet', 'codex']
@@ -200,7 +201,7 @@ export class CrewGoalsPage {
     const status = h('div', { class: 'crew-plan-status', 'data-plan-status': plan.status })
     if (plan.status === 'waiting') {
       foot.push(
-        h('button', { class: 'btn', type: 'button', id: 'crew-plan-cancel', onClick: () => decidePlanFor(goal.id, { kind: 'cancelled' }) }, 'Cancel'),
+        h('button', { class: 'btn', type: 'button', id: 'crew-plan-cancel', onClick: () => void this.cancelPlan(goal) }, 'Cancel'),
         h('button', { class: 'btn', type: 'button', id: 'crew-plan-change', onClick: () => { this.changing = !this.changing; this.liveSig = ''; this.update(store.state) } }, 'Change the plan…'),
         h('button', { class: 'btn primary', type: 'button', id: 'crew-plan-approve', onClick: () => { this.changing = false; decidePlanFor(goal.id, { kind: 'approved' }) } }, 'Approve and start')
       )
@@ -219,6 +220,17 @@ export class CrewGoalsPage {
       change,
       h('div', { class: 'crew-plan-foot' }, ...foot)
     )
+  }
+
+  private async cancelPlan(goal: CrewGoal): Promise<void> {
+    const name = firstLine(goal.text, 70)
+    const confirmed = await confirmDialog({
+      title: 'Cancel this plan?',
+      body: `Maya stops "${name}" and no member starts. The plan is discarded.`,
+      confirmLabel: `Cancel plan for "${name}"`,
+      cancelLabel: 'Keep the plan'
+    })
+    if (confirmed) decidePlanFor(goal.id, { kind: 'cancelled' })
   }
 
   private changeBox(goal: CrewGoal): HTMLElement {
