@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, realpathSync, statSync } from 'node:fs'
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import type { BulkSkillExport, SkillEntry } from '../shared/skills'
 
@@ -93,6 +93,21 @@ function skillFolder(path: string, followLinks: boolean): { linked: boolean; tar
   }
 }
 
+// The one-line description from SKILL.md frontmatter, or the first prose line when there is no frontmatter.
+export function descriptionOf(path: string): string | undefined {
+  try {
+    const file = isFile(path) ? path : join(path, 'SKILL.md')
+    const text = readFileSync(file, 'utf8').slice(0, 4096)
+    const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
+    const keyed = front ? /^description:\s*(.+)$/m.exec(front[1]) : null
+    const line = keyed ? keyed[1] : text.split(/\r?\n/).find((item) => item.trim() !== '' && !item.startsWith('#') && !item.startsWith('---'))
+    const value = line?.trim().replace(/^["']|["']$/g, '').slice(0, 240)
+    return value ? value : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function idFor(path: string): string {
   return createHash('sha256').update(path.toLowerCase()).digest('hex').slice(0, 24)
 }
@@ -121,7 +136,8 @@ export function listSkills(locations: SkillLocations): SkillEntry[] {
         seen.add(canonical)
         if (root.kind === 'agent') agentNames.add(displayName.toLowerCase())
         const link = folder?.linked ? { linked: true, linkTarget: folder.target } : {}
-        found.push({ id: idFor(canonical), name: displayName, kind: root.kind, agent: root.agent, scope: root.scope, path, project: root.project, ...link })
+        const description = descriptionOf(path)
+        found.push({ id: idFor(canonical), name: displayName, kind: root.kind, agent: root.agent, scope: root.scope, path, project: root.project, ...(description ? { description } : {}), ...link })
       } catch { /* Unreadable skill; leave it out of the inventory. */ }
     }
   }

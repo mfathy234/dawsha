@@ -263,8 +263,15 @@ export async function closeSettings(page: Page): Promise<void> {
 
 export type MoreMenuView = 'projects' | 'usage' | 'work' | 'agents' | 'skills' | 'layouts'
 
+/** Leaves an agent's page for the Agents roster (the breadcrumb). */
+export async function backToAgents(page: Page): Promise<void> {
+  await page.locator('.crew-crumb-link').click()
+  await expect(page.locator('.crew-roster')).toBeVisible()
+}
+
 /** Opens a view that lives under the top bar's More menu (Projects, Usage, Work, Agent tools, Skills, Layouts). */
 export async function openMore(page: Page, view: MoreMenuView): Promise<void> {
+  if (view === 'skills' || view === 'work') return page.locator(`#${view}-button`).click()
   await page.locator('#more-button').click()
   await page.locator(`#${view}-menu-item`).click()
 }

@@ -83,6 +83,7 @@ export class CrewGoalsPage {
     const box = h(
       'div',
       { class: 'crew-goalbox' },
+      h('div', { class: 'crew-goal-head' }, h('h3', { class: 'crew-goal-title' }, 'Give Maya a goal'), h('span', { class: 'crew-muted' }, 'She plans first. Nothing runs until you approve.')),
       this.goalText,
       h(
         'div',

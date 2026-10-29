@@ -2,12 +2,14 @@ import { api } from '../api'
 import { toast } from './toast'
 import { clear, h } from '../dom'
 import { filterSkills, skillExportLabel, skillExportSummary } from '../../shared/skillSearch'
+import { agentLabel } from '../../shared/agents'
 import type { SkillEntry } from '../../shared/skills'
 import { currentMembers } from '../crewActions'
 import { store } from '../state'
 import { crewAvatar } from './crewAvatar'
 import { openConvertDialog } from './crewDialogs'
 import './crew.css'
+import './pages.css'
 
 const norm = (path: string): string => path.replace(/\\/g, '/').toLowerCase()
 const convertible = (entry: SkillEntry): boolean => entry.kind === 'skill' || /\.md$/i.test(entry.path)
@@ -160,8 +162,12 @@ export class SkillsViewComponent {
     return h('article', { class: 'skill-row', 'data-agent': entry.agent, 'data-kind': entry.kind },
       h('span', { class: 'skill-pick' }, pick),
       h('div', { class: 'skill-details' },
-        h('strong', {}, entry.name),
-        h('span', { class: 'skill-meta' }, `${entry.agent} · ${entry.scope}${entry.project ? ` · ${entry.project}` : ''}${entry.linked ? ' · Linked' : ''}`),
+        h('span', { class: 'skill-head' },
+          h('strong', {}, entry.name),
+          entry.linked ? h('span', { class: 'skill-badge', title: entry.linkTarget ? `Linked to ${entry.linkTarget}` : 'Linked' }, 'Linked') : null
+        ),
+        entry.description ? h('span', { class: 'skill-desc' }, entry.description) : null,
+        h('span', { class: 'skill-meta' }, `${entry.agent === 'shared' ? 'Shared' : agentLabel(entry.agent)} · ${entry.project ?? (entry.scope === 'user' ? 'Your computer' : entry.scope)}`),
         h('span', { class: 'skill-path', title: entry.linkTarget ? `${entry.path} → ${entry.linkTarget}` : entry.path }, entry.path)
       ),
       h('div', { class: 'skill-actions' },

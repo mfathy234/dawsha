@@ -377,3 +377,98 @@ aside.sidebar.rail { width: 56px; }
 }
 .closed-toggle svg { width: 11px; height: 11px; }
 .closed-toggle:hover { background: var(--hover); color: var(--muted); }
+
+/* Dawsha 1.8 sidebar (mockup Direction A, project tree). The resize handle sits above the sessions toolbar (z-sticky), so its drag target is never covered. */
+.sidebar {
+  width: var(--sidebar-width, 248px);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome);
+  box-shadow: 1px 0 0 var(--seam);
+  overflow: hidden;
+}
+
+.sidebar-resize-handle {
+  position: relative;
+  z-index: var(--z-panel);
+  width: 5px;
+  flex: none;
+  margin-left: -2px;
+  margin-right: -3px;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.sidebar-resize-handle::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 1px;
+  background: transparent;
+  content: '';
+}
+
+.sidebar-resize-handle:hover::after,
+.sidebar-resize-handle:focus-visible::after,
+.sidebar-resize-handle.dragging::after {
+  background: var(--accent);
+}
+
+.sidebar-resize-handle:focus-visible::after {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.needs-group {
+  margin: 0 var(--s-2) var(--s-2);
+  padding: var(--s-2);
+  border-radius: var(--r-card);
+  background: color-mix(in srgb, var(--needs) 12%, var(--chrome));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--needs) 40%, transparent);
+}
+
+.needs-group .side-sec {
+  padding: 0 var(--s-1) var(--s-1);
+  color: var(--needs-ink);
+  font-weight: 600;
+}
+
+.needs-group .side-sec-count {
+  margin-inline-start: var(--s-2);
+}
+
+.needs-group .sidebar-kbd {
+  margin-inline-start: auto;
+  border-color: color-mix(in srgb, var(--needs) 40%, transparent);
+  background: transparent;
+  color: var(--needs-ink);
+}
+
+.proj-row.proj-missing {
+  color: var(--muted);
+}
+
+.proj-row.proj-missing .proj-name {
+  color: var(--text-2);
+}
+
+.proj-missing-line {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-2) var(--s-2) var(--s-6);
+  color: var(--danger);
+  font-size: var(--fs-1);
+  line-height: var(--lh-1);
+}
+
+.proj-missing-line .icon {
+  flex: none;
+}
+
+.proj-missing-text {
+  flex: 1;
+  min-width: 0;
+}

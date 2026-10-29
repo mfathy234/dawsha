@@ -266,7 +266,7 @@ test('F2 and double click rename closed and open sessions; Enter and blur save, 
     await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Gemini session' }).click()
     const open = page.locator('.kept-session-row:not(.closed) .sess-row')
-    await expect(open.locator('.sess-name')).toHaveText('Smoke')
+    await expect(open.locator('.sess-name')).toHaveText('Gemini session 1')
     await open.focus()
     await page.keyboard.press('F2')
     const openField = page.getByRole('textbox', { name: 'Rename Smoke' })

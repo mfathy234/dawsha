@@ -1,0 +1,97 @@
+/* Dawsha 1.8 page contents: Board, with the peek panel sharing the width instead of covering the filter row. */
+.board-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4) 0;
+  min-width: 0;
+}
+
+.board-filters .board-hint {
+  flex: 1 1 200px;
+}
+
+.board-peek {
+  width: clamp(320px, 42%, 520px);
+  flex: none;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome);
+  box-shadow: -1px 0 0 var(--seam);
+}
+
+/* Four columns fit beside the peek without a horizontal scroll, and the footer "+ New session" stays inside the Reviewed column. */
+.board-col {
+  min-width: 132px;
+}
+
+.board-new {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Reviewed keeps room for its "Close all" link and card titles beside the peek. */
+.board-col-reviewed {
+  min-width: 150px;
+  flex-grow: 1.2;
+}
+
+/* Skills: name, one-line description, source and a Linked badge; the path stays underneath. */
+.skill-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.skill-badge {
+  flex: none;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-round);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-size: var(--fs-1);
+  line-height: 18px;
+  font-weight: var(--w-medium);
+}
+
+.skill-desc {
+  color: var(--text-2, var(--muted));
+  font-size: var(--fs-2);
+  line-height: var(--lh-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Usage: readable panel headings and tables that keep agent names and costs on one line. */
+.usage-view h1 {
+  font-size: var(--fs-4);
+  font-weight: var(--w-semi);
+}
+
+.usage-panel h2 {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-3);
+  line-height: var(--lh-3);
+  font-weight: var(--w-semi);
+}
+
+.usage-table th,
+.usage-table td {
+  white-space: nowrap;
+}
+
+/* Projects: a row whose folder is gone is flagged, and its Locate action sits beside New session. */
+.pv-row.missing .pv-name {
+  color: var(--text-2, var(--muted));
+}
+
+.pv-row.missing .pv-folder.invalid {
+  color: var(--danger);
+}

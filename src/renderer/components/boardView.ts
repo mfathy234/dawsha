@@ -11,6 +11,7 @@ import { BoardCard, drag, type BoardEntry } from './boardCard'
 import { BoardPeek } from './boardPeek'
 import { FilterMenu } from './filterMenu'
 import { stateIcon } from './stateIcon'
+import './pages.css'
 
 const PREVIEW_MS = 1500
 
