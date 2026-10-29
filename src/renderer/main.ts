@@ -2,7 +2,6 @@ import { installUsageSnapshot } from './usageSnapshot'
 import { installBackgroundAgents } from './backgroundAgents'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
-import './orchestrator.css'
 import './components/controls.css'
 import {
   flushWorkspace,
@@ -16,6 +15,7 @@ import {
   refreshBridge,
   refreshGitChanges,
   restoreWorkspace,
+  saveSettings,
   setCodexSessions,
   setGeminiSessions,
   setStatusInfos,
@@ -32,10 +32,7 @@ import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
 import { installBuiltinCommands } from './commands/builtin'
-import { installDictationPill } from './dictation/dictationPill'
 import { installCompareCommands } from './commands/compare'
-import { installOrchestratorCommands } from './commands/orchestrator'
-import { closeOrchPane, openOrchPane, refreshOrch } from './orchActions'
 import { installHandoffCommands } from './commands/handoff'
 import { installClosedSessionCommands } from './commands/closedSessions'
 import { installLayoutCommands } from './commands/layouts'
@@ -49,12 +46,26 @@ import { store } from './state'
 import { confirmQuitWithUnsavedFiles } from './files/filesActions'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
 import { applyTheme, onThemeChange } from './themeManager'
+import { removeLegacyModelCache } from './legacyModelCache'
 
 const BRANCH_POLL_MS = 5000
 const GIT_CHANGES_POLL_MS = 10_000
 
 function paneOfTerm(termId: string): string | undefined {
   return store.state.panes.find((p) => p.tabs.some((t) => t.id === termId))?.id
+}
+
+async function clearLegacyModelCache(alreadyCleared: boolean): Promise<void> {
+  if (alreadyCleared) return
+  let removed: boolean
+  try {
+    removed = await removeLegacyModelCache()
+  } catch (error) {
+    console.warn('Could not clear the old speech model cache; it will be retried on the next start', error)
+    return
+  }
+  // Settings are only written when a cache was actually removed, so a PC that never used dictation sees no change.
+  if (removed) await saveSettings({ legacyModelCacheCleared: true })
 }
 
 async function boot(): Promise<void> {
@@ -122,7 +133,6 @@ async function boot(): Promise<void> {
   void installOps()
   installProcessActivity()
   installBuiltinCommands()
-  installDictationPill()
   installLayoutCommands()
   installNotificationCommands()
   installCompareCommands()
@@ -130,20 +140,16 @@ async function boot(): Promise<void> {
   installClosedSessionCommands()
   installReplayCommands()
   installSettingsTransferCommands()
-  installOrchestratorCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)
   initWhatsNew()
   api.onFlushRequest(flushWorkspace)
   api.onCloseCheck(confirmQuitWithUnsavedFiles)
   api.onCliRun(runCliCommand)
-  api.onOrchOpenPane(openOrchPane)
-  api.onOrchClosePane(closeOrchPane)
-  api.onOrchChanged(() => void refreshOrch())
-  void refreshOrch()
   api.onCliNotice((text, ok) => toast(text, ok ? 'info' : 'error'))
   if (loaded.warning) toast(loaded.warning, 'info')
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()
+  void clearLegacyModelCache(loaded.settings.legacyModelCacheCleared)
   await restoreWorkspace()
   api.cliReady()
   document.documentElement.dataset.ready = 'true'

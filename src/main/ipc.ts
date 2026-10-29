@@ -1,4 +1,3 @@
-import { registerOrchestratorIpc, type OrchestratorIpc } from './orch/switch'
 import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -30,6 +29,8 @@ import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveP
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
+import { PreviewServer } from './filePreviewServer'
+import { registerPreviewProtocol } from './previewProtocol'
 import { fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { trashProjectPath } from './filesTrash'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
@@ -37,6 +38,8 @@ import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
 import { bridgeDirs, claudeHome, claudeProjectsDir, claudeSettingsPath } from './paths'
 import { codexHome } from './agentLaunch'
+import { createAgentAccountsReader } from './agentAccounts'
+import { createCodexLimitsReader } from './codexLimits'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
   import { previewPaneonImport, queuePaneonImport } from './paneonImport'
   import { paneonUserDataDir } from './paths'
@@ -59,11 +62,11 @@ import { collectProcessActivity } from './processActivity'
 import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
-import { WorkService, readWorkRuns } from './workDashboard'
+import { WorkService } from './workDashboard'
 import { BackgroundAgentScanner } from './backgroundAgents'
 import { revealAgentFile } from './backgroundAgentsReveal'
 import { DEFAULT_BG_RANGE, isBgRange } from '../shared/backgroundAgents'
-import { priceLookupFor } from '../shared/orch/profiles'
+import { priceLookupFor } from '../shared/agentCosts'
 import { MAX_STEPS_BACK, type WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
@@ -108,8 +111,7 @@ export function registerIpc(
   usage: UsageService,
   initialWarning: string | null,
   remoteAccess?: ReturnType<typeof createRemoteAccessController>,
-  recordings?: RecordingService,
-  orchestrator?: OrchestratorIpc
+  recordings?: RecordingService
 ): void {
   const locations = (): BridgeLocations => ({
     settingsPath: claudeSettingsPath(),
@@ -131,7 +133,6 @@ export function registerIpc(
   })
   ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => {
     const updated = settings.update(patch)
-    orchestrator?.apply(updated)
     return updated
   })
   ipcMain.handle(IPC.settingsExport, () => exportSettings(getWindow(), settings.get()))
@@ -271,6 +272,9 @@ export function registerIpc(
     const root = await known(folder)
     return root ? fileLog(root, path) : refused
   })
+  const previews = new PreviewServer(known)
+  registerPreviewProtocol(previews)
+  ipcMain.handle(IPC.filesPreviewUrl, (_event, folder: unknown, path: unknown, text: unknown) => previews.register(folder, path, typeof text === 'string' ? text : null))
   ipcMain.handle(IPC.filesImage, async (_event, folder: unknown, path: unknown, base: unknown) => {
     const root = await known(folder)
     return root ? readImage(root, path, base === true) : refused
@@ -334,12 +338,7 @@ export function registerIpc(
       if (typeof id === 'string' && typeof title === 'string') recordings.setTitle(id, title)
     })
   }
-  ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => {
-    const extras = orchestrator?.prepareSpawn(request) ?? null
-    if (extras && 'error' in extras) return { ok: false, error: extras.error, retired: 'retired' in extras && extras.retired === true }
-    return ptys.spawn(extras ? { ...request, resume: extras.resume } : request, extras ?? {})
-  })
-  if (orchestrator) registerOrchestratorIpc(orchestrator)
+  ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => ptys.spawn(request))
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))
   ipcMain.on(IPC.ptyResize, (_event, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))
   ipcMain.handle(IPC.ptyKill, (_event, id: string) => ptys.kill(id))
@@ -347,18 +346,25 @@ export function registerIpc(
     const known = USAGE_RANGES.some((entry) => entry.value === range)
     return usage.report(known ? range : '7d', settings.get().projects)
   })
+  const readAccounts = createAgentAccountsReader()
+  const readCodexLimitsCached = createCodexLimitsReader()
+  ipcMain.handle(IPC.agentAccounts, async () => {
+    const accounts = await readAccounts()
+    if (accounts.codex.kind !== 'account' || accounts.codex.plan) return accounts
+    return { ...accounts, codex: { ...accounts.codex, plan: (await readCodexLimitsCached()).plan } }
+  })
+  ipcMain.handle(IPC.knownLimits, async () => ({ claude: usage.lastClaudeLimits(), codex: (await readCodexLimitsCached()).entry }))
   ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
   const work = new WorkService()
   ipcMain.handle(IPC.workGet, async (_event, period: unknown, offset: unknown) => {
     const valid: WorkPeriod = period === 'week' || period === 'month' ? period : 'today'
     // Steps back from now; anything else is now.
     const steps = typeof offset === 'number' && Number.isInteger(offset) && offset <= 0 && offset >= -MAX_STEPS_BACK ? offset : 0
-    const runs = await readWorkRuns(join(app.getPath('userData'), 'orchestrator.db'))
-    return work.report(valid, settings.get().projects, runs, steps)
+    return work.report(valid, settings.get().projects, steps)
   })
   const agentScanner = new BackgroundAgentScanner(() => ({ claudeProjects: claudeProjectsDir(), codex: codexHome() }))
   ipcMain.handle(IPC.backgroundAgents, (_event, range: unknown) =>
-    agentScanner.list(isBgRange(range) ? range : DEFAULT_BG_RANGE, settings.get().projects, priceLookupFor(settings.get().orchestrator)))
+    agentScanner.list(isBgRange(range) ? range : DEFAULT_BG_RANGE, settings.get().projects, priceLookupFor()))
   ipcMain.handle(IPC.backgroundAgentsReveal, (_event, kind: unknown, id: unknown) =>
     revealAgentFile(typeof id === 'string' && (kind === 'claude' || kind === 'codex') ? agentScanner.pathOf(kind, id) : null, [claudeHome(), codexHome()], kind))
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))

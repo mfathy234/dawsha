@@ -72,15 +72,17 @@ export interface BgFilters {
   range: BgRange
   query: string
   showAutomatic: boolean
+  /** Only the agents one session started (its id), or null for every session. */
+  session: string | null
 }
 
-export const DEFAULT_BG_FILTERS: BgFilters = { statuses: [], kinds: [], project: null, range: DEFAULT_BG_RANGE, query: '', showAutomatic: false }
+export const DEFAULT_BG_FILTERS: BgFilters = { statuses: [], kinds: [], project: null, range: DEFAULT_BG_RANGE, query: '', showAutomatic: false, session: null }
 
 export const toggleIn = <T>(items: readonly T[], item: T): T[] => (items.includes(item) ? items.filter((entry) => entry !== item) : [...items, item])
 
 /** True when anything but the range differs from the defaults, or the range is not the default one. */
 export const filtersActive = (filters: BgFilters): boolean =>
-  filters.statuses.length > 0 || filters.kinds.length > 0 || filters.project !== null || filters.query.trim() !== '' || filters.showAutomatic || filters.range !== DEFAULT_BG_RANGE
+  filters.statuses.length > 0 || filters.kinds.length > 0 || filters.project !== null || filters.query.trim() !== '' || filters.showAutomatic || filters.session !== null || filters.range !== DEFAULT_BG_RANGE
 
 const slashed = (text: string): string => text.split(String.fromCharCode(92)).join('/')
 const projectKey = (agent: BackgroundAgent): string => agent.projectId ?? OTHER_PROJECT
@@ -94,6 +96,7 @@ export function applyFilters(agents: readonly BackgroundAgent[], filters: BgFilt
     if (skip !== 'status' && filters.statuses.length > 0 && !filters.statuses.includes(agent.status)) return false
     if (filters.kinds.length > 0 && !filters.kinds.includes(agent.kind)) return false
     if (filters.project !== null && projectKey(agent) !== filters.project) return false
+    if (filters.session !== null && agent.parentId !== filters.session) return false
     if (!query) return true
     return [agent.description, agent.parentTitle, agent.type].some((text) => text.toLocaleLowerCase().includes(query)) || agent.files.some((file) => slashed(file.path).toLocaleLowerCase().includes(pathQuery))
   })

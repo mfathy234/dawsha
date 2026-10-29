@@ -3,6 +3,40 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.5] - 2026-10-29
+
+### Added
+
+- **Problems tab in Files.** Errors from your runs show as clickable `file:line` rows, grouped by file. It reads TypeScript, ESLint, `dotnet build`, and Vitest or Jest failures. Send one problem, or all of them, to an agent's prompt without sending it.
+- **Review from a session.** A "Review N files" button in a session's footer opens Files in Review mode on exactly what that session changed.
+- **Drag projects in the sidebar in any sort order.** Dropping a project switches to your own order, starting from the order you saw. Pinned projects stay on top. Alt+Up and Alt+Down move the focused project, and the narrow rail can be reordered too.
+- **Codex limits.** Codex's 5-hour and weekly limits now show in the usage meter and its popover. Dawsha reads them from Codex's own session files, so they show even with no Codex session open.
+- **Limits without a session.** The popover lists every agent's last known limits with their age ("updated 2h ago"), and windows that have already reset are marked as reset. With no agent session focused, the meter shows the agent closest to its limit.
+- **Which account each agent uses.** The limits popover shows the signed-in email and plan under each agent, for example "you@example.com · Max", or "API key" or "Not signed in". Dawsha reads only the email and plan name, never your login tokens, and calls no online service for this.
+- **`npm run release:check`** checks a release in one go: the version and changelog, the tag, every download, the release build and the website.
+
+### Changed
+
+- **A clearer projects sidebar.** Projects with open sessions sit on their own cards at the top, then pinned projects. Projects without sessions are listed below as compact rows with their branch. Session names wrap to two lines instead of being cut off, and the age moves to the status line. Project costs read "· $74.57 today", and closed sessions collapse to a small "N closed" row.
+- **A much smaller app.** With voice dictation gone, the app no longer ships the speech engine. The interface code shrank from 28 MB to 3.7 MB, and the installers are smaller.
+- **HTML previews run their scripts**, so interactive mockups work inside Files. They load from a private local address with no network access, and can't reach your other files or the app.
+- **Exact line authorship.** Marks on changed lines show exactly which session wrote each line, where the session's edits allow it. Estimated marks are dimmed and say "About".
+- **Compact usage meter on narrow windows.** It now shows the agent and its busiest window (for example "62%") instead of disappearing below 1220 pixels. The popover lists model-specific windows, such as Opus week, by name.
+- **Real Claude, Codex and Gemini logos** wherever an agent is shown, including the phone app, the timeline search and the Work list.
+- **Menus open next to their button** and flip near the window edges instead of opening to the right.
+- **"N running" in a session's footer** opens the Agents view filtered to that session. The small activity drawer it replaced is gone.
+
+### Removed
+
+- **Orchestrator.** The lead-agent runs, Boards, History and Settings > Orchestrator are gone, and the Work dashboard counts only sessions. Settings and layouts from older versions still load. Run archives already on disk are left alone, and Dawsha no longer reads them.
+- **Voice dictation.** The microphone button, its settings and the speech model are gone. On first start Dawsha deletes the downloaded speech model, and nothing else. Dawsha no longer asks for microphone access.
+
+### Fixed
+
+- The sidebar's pin icon no longer sits under the + and ⋯ buttons on hover. It now follows the project name.
+- Pressing Enter right after opening the new-session picker could start nothing.
+- Quitting could wait up to ten seconds for the window, and a session starting during quit could outlive the app.
+
 ## [1.7.4] - 2026-10-29
 
 ### Added

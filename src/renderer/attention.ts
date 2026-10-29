@@ -1,4 +1,3 @@
-import { ORCH_NOTIFY_PREFIX, showOrch } from './orchActions'
 import { stepContextNotice, type ContextNotice } from '../shared/contextWarning'
 import { initialAttention, stepAttention, type Attention, type AttentionMemory } from '../shared/attention'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
@@ -99,10 +98,6 @@ export function installAttention(): void {
   window.addEventListener('blur', sync)
   sync()
   api.onNotifyClick((paneId) => {
-    if (paneId.startsWith(ORCH_NOTIFY_PREFIX)) {
-      showOrch('review')
-      return
-    }
     if (!store.state.panes.some((pane) => pane.id === paneId)) {
       toast('That session is no longer open.', 'info')
       return

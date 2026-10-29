@@ -136,7 +136,6 @@ function build(candidate: Candidate, id: string, title: string, detail: SessionD
     lastActivityAt: evidence.endedAt ?? candidate.modifiedAt,
     ...(evidence.spans ? { activeSpans: evidence.spans } : {}),
     workBranch: evidence.branch,
-    ...(evidence.orchestrated ? { orchestrated: true as const } : {}),
     messageCount: detail.messages,
     model: modelLabel(candidate.agent, detail.model),
     firstPrompt: detail.firstPrompt,

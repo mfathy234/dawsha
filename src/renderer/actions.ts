@@ -1,5 +1,5 @@
 import type { SidebarSort } from '../shared/sidebarModel'
-import { canDropProject, canMoveProject, moveProject, moveProjectTo, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
+import { canDropProject, canMoveProject, moveFromDisplay, moveProject, moveProjectTo, reorderFromDisplay, seedOrder, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -173,7 +173,6 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     prompt: term.prompt,
     title: term.titleHint,
     fullAccess: term.agent !== 'shell' && state.settings.fullAccess[term.agent],
-    orchAgentId: term.orchAgentId,
     cols: view?.cols ?? 120,
     rows: view?.rows ?? 30
   })
@@ -181,11 +180,6 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     store.set((s) =>
       mapTerm(s, termId, (t) => ({ ...t, status: 'running', pid: result.pid, startedAt, resumed: resume, prompt: undefined }))
     )
-    return
-  }
-  // A restored pane of an orchestrator agent that has finished has nothing left to do: remove it quietly.
-  if (result.retired && term.orchAgentId) {
-    void discardPane(paneId)
     return
   }
   view?.writeLine(`\x1b[31m${result.error}\x1b[0m`)
@@ -394,8 +388,7 @@ function keepClosedTabs(pane: PaneState, tabs: TermState[]): KeptSession[] {
   const view = derivePanes(state).find((item) => item.pane.id === pane.id)
   const matches = matchAll(state)
   const additions: KeptSession[] = tabs.flatMap((tab) => {
-    // Orchestrator agents are not sessions to come back to: they stay out of the sidebar's closed sessions.
-    if (tab.agent === 'shell' || tab.orchAgentId || !state.settings.projects.some((project) => project.id === pane.projectId)) return []
+    if (tab.agent === 'shell' || !state.settings.projects.some((project) => project.id === pane.projectId)) return []
     const sessionId = tab.sessionId || (tab.agent === 'claude' ? matches.claude.get(tab.id)?.sessionId
       : tab.agent === 'codex' ? matches.codex.get(tab.id)?.sessionId
       : matches.gemini.get(tab.id)?.sessionId)
@@ -753,11 +746,6 @@ export function restoreGrid(): void {
   if (store.state.maximizedId) {
     store.set((s) => ({ ...s, maximizedId: null, detailsPaneId: null, timelinePaneId: null, sidebarOverride: null }))
   }
-}
-
-export function toggleAgents(termId: string): void {
-  store.set((s) => mapTerm(s, termId, (t) => ({ ...t, agentsOpen: t.agentsOpen !== true })))
-  persistWorkspace()
 }
 
 export function openDetails(paneId: string): void {
@@ -1184,6 +1172,39 @@ export function reorderProject(projectId: string, targetId: string): void {
   saveProjects()
 }
 
+/** Saves an order made from the displayed list and, outside Manual sort, switches to Manual so the order sticks. */
+function keepDisplayedOrder(projects: Project[], displayed: Project[]): void {
+  if (projects.every((project, index) => project.id === displayed[index]?.id)) return
+  const before = store.state.settings
+  const switched = before.sidebarSort !== 'manual'
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects, sidebarSort: 'manual' } }))
+  void saveSettings({ projects, ...(switched ? { sidebarSort: 'manual' as const } : {}) })
+  if (switched) toast('Switched to your own order, starting from this list. Your earlier order was replaced.', 'info', {
+    label: 'Undo',
+    run: () => {
+      const current = new Map(store.state.settings.projects.map((project) => [project.id, project]))
+      const restored = before.projects.flatMap((project) => {
+        const found = current.get(project.id)
+        current.delete(project.id)
+        return found ? [found] : []
+      }).concat([...current.values()])
+      store.set((s) => ({ ...s, settings: { ...s.settings, projects: restored, sidebarSort: before.sidebarSort } }))
+      void saveSettings({ projects: restored, sidebarSort: before.sidebarSort })
+    }
+  })
+}
+
+export function reorderProjectFromDisplay(displayedIds: readonly string[], projectId: string, targetId: string): void {
+  const before = store.state.settings.projects
+  if (!canDropProject(before, projectId, targetId)) return
+  keepDisplayedOrder(reorderFromDisplay(before, displayedIds, projectId, targetId), seedOrder(before, displayedIds))
+}
+
+export function moveProjectFromDisplay(displayedIds: readonly string[], projectId: string, direction: MoveDirection): void {
+  const before = store.state.settings.projects
+  keepDisplayedOrder(moveFromDisplay(before, displayedIds, projectId, direction), seedOrder(before, displayedIds))
+}
+
 export async function removeProject(projectId: string): Promise<void> {
   const project = projectById(store.state, projectId)
   if (!project) return
@@ -1211,7 +1232,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline, orchAgentId: tab.orchAgentId, name: tab.name, tag: tab.tag })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, from: tab.from, baseline: tab.baseline, name: tab.name, tag: tab.tag })
   }
   return {
     id: newId(),

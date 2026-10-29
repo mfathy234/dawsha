@@ -4,27 +4,25 @@ import { formatTokens } from '../../shared/usage'
 import { modelLetter } from '../../shared/opsFeed'
 import { contextLevel } from '../../shared/contextWarning'
 import type { PaneInfo } from '../derive'
-import { h, icon } from '../dom'
+import { h } from '../dom'
 import { chargeBar } from './chargeBar'
 
 export interface StripHandlers {
   title: string
   now: number
-  onToggleAgents(): void
+  onReviewFiles(): void
+  onShowAgents(sessionId: string): void
   onOpenChanges(): void
   bridgeInstalled: boolean
   onEnableBridge(): void
 }
-
-const ACTIVITY_ICON =
-  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
 
 function opsItems(info: PaneInfo, handlers: StripHandlers): HTMLElement[] {
   const ops = info.ops
   const items: HTMLElement[] = []
   if (ops?.plan) items.push(h('span', { class: 'info-plan', title: 'Plan progress' }, `▸ ${ops.plan.done}/${ops.plan.total}`))
   if (ops && ops.running.length > 0) {
-    items.push(h('span', { class: 'info-running', title: 'Running agents' }, `${ops.running.length} running`))
+    items.push(h('button', { class: 'link-quiet info-running', type: 'button', title: 'Show these agents in the Agents view', onClick: () => handlers.onShowAgents(ops.sessionId) }, `${ops.running.length} running`))
     items.push(
       h(
         'span',
@@ -33,23 +31,6 @@ function opsItems(info: PaneInfo, handlers: StripHandlers): HTMLElement[] {
       )
     )
   }
-  if (info.agent === 'shell') return items
-  items.push(h('span', { class: 'spacer' }))
-  const label = `${info.agentsOpen ? 'Hide' : 'Show'} activity of ${handlers.title}`
-  items.push(
-    h(
-      'button',
-      {
-        class: `agents-toggle${info.agentsOpen ? ' open' : ''}`,
-        type: 'button',
-        'aria-label': label,
-        'aria-expanded': info.agentsOpen ? 'true' : 'false',
-        title: label,
-        onClick: handlers.onToggleAgents
-      },
-      icon(ACTIVITY_ICON)
-    )
-  )
   return items
 }
 
@@ -118,5 +99,11 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
     const last = info.geminiTools[info.geminiTools.length - 1]
     items.push(h('span', { class: 'info-gemini-tool', title: `Last Gemini tool recorded at ${new Date(last.at).toLocaleTimeString()}` }, `tool ${last.name}`))
   }
-  return [...items, ...opsItems(info, handlers)]
+  const ops = opsItems(info, handlers)
+  const files = info.changes?.files ?? 0
+  const review =
+    files > 0 && info.agent !== 'shell'
+      ? [h('span', { class: 'spacer' }), h('button', { class: 'link-quiet info-review', type: 'button', title: 'Review what this session changed', onClick: handlers.onReviewFiles }, `Review ${files} file${files === 1 ? '' : 's'}`)]
+      : []
+  return [...items, ...ops, ...review]
 }

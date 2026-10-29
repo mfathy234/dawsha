@@ -62,7 +62,7 @@ class BlameMarker extends GutterMarker {
   }
 
   override eq(other: BlameMarker): boolean {
-    return other.blame.key === this.blame.key && other.blame.at === this.blame.at && other.blame.task === this.blame.task
+    return other.blame.key === this.blame.key && other.blame.at === this.blame.at && other.blame.task === this.blame.task && other.blame.exact === this.blame.exact
   }
 
   override toDOM(): HTMLElement {
@@ -74,8 +74,9 @@ class BlameMarker extends GutterMarker {
     else mark.textContent = this.blame.label.trim().slice(0, 1).toUpperCase() || '?'
     const when = this.blame.at > 0 ? ` at ${formatClock(this.blame.at)}` : ''
     const text = `${this.blame.label}${this.blame.task ? `: ${this.blame.task}` : ''}${when}`
-    mark.title = text
-    mark.setAttribute('aria-label', `Written by ${text}`)
+    mark.title = this.blame.exact ? text : `About: ${text}`
+    mark.setAttribute('aria-label', this.blame.exact ? `Written by ${text}` : `About, written by ${text}`)
+    mark.classList.toggle('estimated', !this.blame.exact)
     return mark
   }
 }

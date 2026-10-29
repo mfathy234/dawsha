@@ -1,4 +1,4 @@
-import { placeAtPoint } from '../../shared/menuPlacement'
+import { placeAtPoint, placeMenu } from '../../shared/menuPlacement'
 import { h, icon, leave } from '../dom'
 import { ICONS } from '../icons'
 import './contextMenu.css'
@@ -28,6 +28,8 @@ export interface ContextMenuOptions {
   entries: readonly ContextEntry[]
   /** Gets focus back when the menu closes without a choice. */
   returnFocus?: HTMLElement | (() => void) | null
+  /** The button that opened the menu: the menu then aligns to it (below, start-aligned, flipping near the edge) instead of the pointer. */
+  anchor?: DOMRect
 }
 
 const ITEMS = '[role="menuitem"]:not([disabled])'
@@ -103,7 +105,9 @@ export function openContextMenu(options: ContextMenuOptions): HTMLElement {
 
   document.body.appendChild(el)
   // Layout size, not the drawn box, which is still scaled down by the opening animation.
-  const placed = placeAtPoint(options.x, options.y, el.offsetWidth, el.offsetHeight, window.innerWidth, window.innerHeight)
+  const placed = options.anchor
+    ? placeMenu(options.anchor, el.offsetWidth, el.offsetHeight, window.innerWidth, window.innerHeight, 2)
+    : placeAtPoint(options.x, options.y, el.offsetWidth, el.offsetHeight, window.innerWidth, window.innerHeight)
   el.style.left = `${placed.left}px`
   el.style.top = `${placed.top}px`
   el.style.right = 'auto'

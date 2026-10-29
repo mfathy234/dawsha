@@ -2,14 +2,13 @@ import type { RateLimitWindow } from './types'
 import { formatPercent } from './statusLine'
 import { SESSION_STATE_LABELS, compareSessionStates, type SessionState } from './sessionState'
 
-export type MoreView = 'projects' | 'usage' | 'work' | 'orchestrator' | 'agents' | 'skills' | 'layouts'
+export type MoreView = 'projects' | 'usage' | 'work' | 'agents' | 'skills' | 'layouts'
 
 // Everything the top bar does not show: Sessions, Agents and Files stay in the bar, the rest lives under More.
 export const MORE_VIEWS: readonly { view: MoreView; label: string }[] = [
   { view: 'projects', label: 'Projects' },
   { view: 'usage', label: 'Usage' },
   { view: 'work', label: 'Work' },
-  { view: 'orchestrator', label: 'Orchestrator' },
   { view: 'agents', label: 'Agent tools' },
   { view: 'skills', label: 'Skills' },
   { view: 'layouts', label: 'Layouts' }
@@ -35,6 +34,21 @@ export function formatResetIn(resetsAt: number | null, now: number): string | nu
 export function limitText(window: RateLimitWindow, now: number): string {
   const reset = window.key === 'five_hour' ? formatResetIn(window.resetsAt, now) : null
   return reset ? `${formatPercent(window.percent)} · ${reset}` : formatPercent(window.percent)
+}
+
+/** The window closest to its cap: the one the compact meter shows. Earlier windows win a tie. */
+export function urgentWindow(windows: RateLimitWindow[]): RateLimitWindow | null {
+  let best: RateLimitWindow | null = null
+  for (const window of windows) if (best === null || window.percent > best.percent) best = window
+  return best
+}
+
+/** Row label in the limits popover: a model-family window reads "Opus week", others keep their own label. */
+export function limitRowLabel(window: RateLimitWindow): string {
+  if (!window.family) return window.label
+  const family = window.family.charAt(0).toUpperCase() + window.family.slice(1)
+  const period = window.label.replace(new RegExp(String.raw`\s*${window.family}\s*`, 'i'), ' ').trim()
+  return period ? `${family} ${period}` : family
 }
 
 /** "needs you · 2m": the lowercase state word plus how long since the last activity when known. */

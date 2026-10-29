@@ -35,7 +35,6 @@ function writeOps(sandbox: Sandbox, extra: Record<string, unknown> = {}): void {
     updatedAt: now,
     ended: false,
     model: 'claude-opus-5-5',
-    orchestrate: true,
     plan: { title: 'Allow editing own messages', done: 3, total: 6 },
     agents: [
       { id: 'a1', description: 'Read existing edit handlers', type: 'worker', model: 'claude-haiku-4-5', status: 'done', startedAt: now - 60_000, finishedAt: now - 46_000, tokens: 12_000, tools: 3 },
@@ -89,29 +88,14 @@ test('ops feed: strip, agents drawer, details panel, updates, stale and ended', 
     await expect(page.locator('[data-limit="seven_day_fable"] .limit-label')).toHaveText('fable')
     await expect(page.locator('[data-limit="seven_day_fable"] .limit-label')).toHaveClass(/fam-fable/)
 
-    const toggle = page.locator('.agents-toggle')
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(page.locator('.agents-drawer')).toBeHidden()
-    const bodyBefore = await page.locator('.pane-body').evaluate((el) => el.getBoundingClientRect().height)
-    await toggle.click()
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
-    const drawer = page.locator('.agents-drawer')
-    await expect(drawer).toBeVisible()
-    await expect(drawer.locator('.drawer-item')).toHaveCount(4)
-    await expect(drawer.locator('.drawer-marker')).toHaveText(['[x]', '[~]', '[~]', '[ ]'])
-    await expect(drawer.locator('.drawer-item').nth(1)).toContainText('7 tools   last: Bash dotnet test --filter Edit')
-    await expect(drawer.locator('.drawer-item').nth(0).locator('.drawer-model')).toHaveClass(/fam-haiku/)
-    await expect(drawer.locator('.drawer-item').nth(0).locator('.drawer-tokens')).toHaveText('12k')
-    await expect(drawer.locator('.drawer-item').nth(0).locator('.drawer-elapsed')).toHaveText('0:14')
-    await expect(drawer.locator('.drawer-advisor')).toContainText('Advisor on the plan')
-    await expect(drawer.locator('.drawer-advisor .verdict')).toHaveText('OK with notes')
-    await expect(drawer.locator('.drawer-advisor .verdict')).toHaveClass(/tone-warn/)
-    const bodyAfter = await page.locator('.pane-body').evaluate((el) => el.getBoundingClientRect().height)
-    expect(bodyAfter).toBeLessThan(bodyBefore)
-    const running = drawer.locator('.drawer-item').nth(1).locator('.drawer-elapsed')
-    const first = await running.textContent()
-    await expect.poll(async () => running.textContent(), { timeout: 8000 }).not.toBe(first)
-    await page.screenshot({ path: join(SCREENS, '16-ops-drawer.png') })
+    await expect(page.locator('.agents-toggle')).toHaveCount(0)
+    await expect(page.locator('.agents-drawer')).toHaveCount(0)
+    const running = page.locator('.pane-info button.info-running')
+    await expect(running).toHaveText('2 running')
+    await running.click()
+    await expect(page.locator('#bg-clear')).toBeVisible()
+    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
 
     await page.getByRole('button', { name: 'Maximize pane' }).click()
     await expect(page.locator('.pane.maximized')).toHaveCount(1)
@@ -156,10 +140,7 @@ test('ops feed: strip, agents drawer, details panel, updates, stale and ended', 
     await expect(details).toBeHidden()
 
     writeOps(sandbox, { ended: true })
-    await expect(page.locator('.agents-toggle')).toHaveCount(1, { timeout: 15_000 })
-    await expect(page.locator('.info-letters')).toHaveCount(0)
-    await expect(page.locator('.agents-drawer')).toContainText('Processes')
-    await expect(page.locator('.agents-drawer .drawer-item')).toHaveCount(0)
+    await expect(page.locator('.info-letters')).toHaveCount(0, { timeout: 15_000 })
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
@@ -177,7 +158,7 @@ test('details panel without a snapshot explains what the ops mod adds', async ()
     const details = page.locator('.pane-details')
     await expect(details).toBeVisible()
     await expect(details).toContainText('The ops mod adds plan, agents, files and checks to this panel.')
-    await expect(page.locator('.agents-toggle')).toHaveCount(1)
+    await expect(page.locator('.agents-toggle')).toHaveCount(0)
   } finally {
     await closeBounded(app)
   }

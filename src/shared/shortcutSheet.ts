@@ -16,13 +16,12 @@ export interface SheetCommand {
   shortcut?: string
 }
 
-export const SHEET_GROUPS = ['Sessions', 'Panes', 'Terminal', 'Views', 'Dictation', 'General'] as const
+export const SHEET_GROUPS = ['Sessions', 'Panes', 'Terminal', 'Views', 'General'] as const
 
 export function sheetGroupFor(id: string): (typeof SHEET_GROUPS)[number] {
   if (id.startsWith('session.')) return 'Sessions'
   if (id.startsWith('terminal.') || id === 'pane.find') return 'Terminal'
   if (id.startsWith('pane.') || id.startsWith('git.')) return 'Panes'
-  if (id.startsWith('dictation.')) return 'Dictation'
   if (id.startsWith('view.') || id.startsWith('app.')) return 'Views'
   return 'General'
 }

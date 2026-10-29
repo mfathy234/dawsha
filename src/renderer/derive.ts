@@ -24,7 +24,6 @@ export interface TabView {
 
 export interface PaneInfo {
   agent: TabAgent
-  agentsOpen: boolean
   model: { label: string; family: ModelFamily } | null
   contextPercent: number | null
   limits: RateLimitWindow[]
@@ -56,7 +55,7 @@ export const paneLimits = (tab: TermState, live: StatusInfo | null, snapshot: Op
 export interface PaneOpsInfo {
   plan: { done: number; total: number } | null
   running: ModelFamily[]
-  agentsOpen: boolean
+  sessionId: string
 }
 
 export interface PaneView {
@@ -81,7 +80,6 @@ export interface PaneView {
   activity: ProcessActivity[]
   opsLive: boolean
   live: StatusInfo | null
-  agentsOpen: boolean
   detailsOpen: boolean
   timelineOpen: boolean
   now: number
@@ -179,9 +177,6 @@ function titleFor(pane: PaneState, matches: Matches, project: Project | undefine
     const name = nameOf(tab, matches)
     if (name) return { title: name, named: true }
   }
-  // An orchestrator agent's pane is named for its role and model ("Lead · opus") until its session has a name.
-  const orch = ordered.find((t) => t.orchAgentId && t.titleHint)
-  if (orch?.titleHint) return { title: orch.titleHint, named: true }
   return { title: project?.name ?? 'Session', named: false }
 }
 
@@ -218,12 +213,12 @@ function liveStatusFor(state: AppState, tab: TermState, matches: Matches): Statu
   return session ? (state.statusInfo[session.sessionId] ?? null) : null
 }
 
-function opsInfoFor(snapshot: OpsSnapshot | null, live: boolean, agentsOpen: boolean): PaneOpsInfo | null {
+function opsInfoFor(snapshot: OpsSnapshot | null, live: boolean): PaneOpsInfo | null {
   if (!snapshot || !live) return null
   return {
     plan: snapshot.plan ? { done: snapshot.plan.done, total: snapshot.plan.total } : null,
     running: runningFamilies(snapshot),
-    agentsOpen
+    sessionId: snapshot.sessionId
   }
 }
 
@@ -248,7 +243,7 @@ function claudeInfo(
     limitsAt: paneLimitReading(tab, live, snapshot, state.now)?.at ?? null,
     costUsd: live?.costUsd ?? null,
     ageMs: known ? ageSince(state.now, live?.receivedAt, snapshot?.updatedAt, session?.updatedAt) : null,
-    ops: opsInfoFor(snapshot, opsLive, tab.agentsOpen === true)
+    ops: opsInfoFor(snapshot, opsLive)
   }
 }
 
@@ -285,7 +280,7 @@ function baseInfoFor(
   opsLive: boolean
 ): PaneInfo {
   const changes = folder ? (state.gitChanges[folder] ?? null) : null
-  const empty: PaneInfo = { agent: tab.agent, agentsOpen: tab.agentsOpen === true, model: null, contextPercent: null, limits: [], limitsAt: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [] }
+  const empty: PaneInfo = { agent: tab.agent, model: null, contextPercent: null, limits: [], limitsAt: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [] }
   if (tab.agent === 'claude') return claudeInfo(state, tab, matches, empty, snapshot, opsLive)
   if (tab.agent === 'codex') {
     const session = matches.codex.get(tab.id)
@@ -346,7 +341,6 @@ export function derivePanes(state: AppState): PaneView[] {
       activity: primary.status === 'exited' ? [] : (state.processActivity[primary.id] ?? []),
       opsLive,
       live: liveStatusFor(state, primary, matches),
-      agentsOpen: primary.agentsOpen === true,
       now: state.now,
       detailsOpen: state.detailsPaneId === pane.id && state.maximizedId === pane.id,
       timelineOpen: state.timelinePaneId === pane.id && state.maximizedId === pane.id,

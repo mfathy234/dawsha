@@ -53,14 +53,34 @@ export function waitingOnYou<T extends { state: SessionState; at: number }>(item
 
 export interface ProjectSummary {
   text: string
-  tone: 'needs' | 'live' | 'none'
+  tone: 'needs' | 'live' | 'idle' | 'none'
 }
 
-/** The quiet word on the right of a project row: "needs you", "2 live", or nothing. */
+/** The quiet word on the right of a project row: "needs you", "2 live" (something is working), "1 idle", or nothing. */
 export function projectSummary(states: readonly SessionState[]): ProjectSummary {
   if (states.some((state) => state === 'needs')) return { text: 'needs you', tone: 'needs' }
-  const live = states.filter((state) => state !== 'exited').length
-  return live > 0 ? { text: `${live} live`, tone: 'live' } : { text: '', tone: 'none' }
+  const open = states.filter((state) => state !== 'exited')
+  if (open.length === 0) return { text: '', tone: 'none' }
+  return open.some((state) => state === 'working') ? { text: `${open.length} live`, tone: 'live' } : { text: `${open.length} idle`, tone: 'idle' }
+}
+
+export interface SidebarZones<T> {
+  /** False while filtering: every match sits in `active`, in one list. */
+  grouped: boolean
+  /** Projects with open sessions. */
+  active: T[]
+  /** Pinned projects without open sessions. */
+  pinned: T[]
+  /** The remaining projects, shown as compact one-line rows. */
+  quiet: T[]
+}
+
+/** Splits already-sorted entries into the sidebar's zones, keeping the given order inside each. A live session puts its project in Active; a filter ungroups. */
+export function sidebarZones<T extends { project: Project; views: readonly unknown[] }>(entries: readonly T[], filtering: boolean): SidebarZones<T> {
+  if (filtering) return { grouped: false, active: [...entries], pinned: [], quiet: [] }
+  const active = entries.filter((entry) => entry.views.length > 0)
+  const rest = entries.filter((entry) => entry.views.length === 0)
+  return { grouped: true, active, pinned: rest.filter((entry) => entry.project.pinned === true), quiet: rest.filter((entry) => entry.project.pinned !== true) }
 }
 
 /** Second line of a session row: "Working · 3 agents", "Idle", "Needs you". */

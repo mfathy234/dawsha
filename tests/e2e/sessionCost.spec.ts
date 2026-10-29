@@ -74,9 +74,10 @@ test('a Claude pane shows time, tokens and cost and the sidebar totals today for
   seedClaude(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
+    await page.locator('.proj-row.quiet-row', { hasText: 'Smoke' }).locator('.quiet-toggle').click()
     const rows = page.locator('.proj-today')
     await expect(rows).toHaveCount(1, { timeout: 20_000 })
-    await expect(rows).toHaveText('$1.84')
+    await expect(rows).toHaveText('$1.84 today')
     await expect(rows).toHaveAttribute('aria-label', 'today $1.84 · 1.0K')
     await rows.hover()
     await expect(rows).toHaveAttribute('title', 'Today\nClaude: $1.84 · 1.0K tokens')
@@ -98,7 +99,8 @@ test('a Codex pane shows tokens without cost and the sidebar total has no cost p
   seedCodex(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
-    await expect(page.locator('.proj-today')).toHaveText('1.3K', { timeout: 20_000 })
+    await page.locator('.proj-row.quiet-row', { hasText: 'Smoke' }).locator('.quiet-toggle').click()
+    await expect(page.locator('.proj-today')).toHaveText('1.3K today', { timeout: 20_000 })
     await expect(page.locator('.proj-today')).toHaveAttribute('aria-label', 'today 1.3K')
     await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Codex session' }).click()

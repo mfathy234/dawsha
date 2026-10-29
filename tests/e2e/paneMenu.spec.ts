@@ -25,7 +25,6 @@ test('the pane menu shows icons and shortcuts, and opens the folder in VS Code o
       await expect(header.getByRole('button', { name, exact: true })).toBeHidden()
     }
     await expect(header.getByRole('button', { name: 'Pane actions' })).toBeVisible()
-    await expect(header.getByRole('button', { name: /^Dictate/ })).toBeVisible()
     await expect(header.getByRole('button', { name: 'Close pane' })).toBeVisible()
     await page.getByRole('button', { name: 'Pane actions' }).click()
     for (const name of ['Move pane…', 'Show session timeline', 'Replay session']) {

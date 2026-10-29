@@ -37,7 +37,6 @@ export const ICONS = {
   compare: svg(14, '<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/>'),
   dim: svg(16, '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>'),
   bolt: svg(14, '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>'),
-  mic: svg(14, '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0 M12 18v3"/>'),
   layout: svg(14, '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16 M3 12h9"/>'),
   palette: svg(16, '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10" r="1"/><path d="M12 21a2 2 0 0 1-2-2c0-1.5 1-1.5 1-3a2 2 0 0 1 2-2h3"/>'),
   play: svg(16, '<polygon points="7 4 20 12 7 20 7 4" fill="currentColor"/>'),

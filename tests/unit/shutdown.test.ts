@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { armHardDeadline, bounded, runPhases, runQuit, type ShutdownDeps } from '../../src/main/shutdown'
+import { armHardDeadline, bounded, exitProcess, runPhases, runQuit, type ShutdownDeps } from '../../src/main/shutdown'
 
 const never = (): Promise<void> => new Promise(() => undefined)
 
@@ -25,6 +25,22 @@ function makeDeps(overrides: Partial<ShutdownDeps> = {}): ShutdownDeps & { lines
 describe('shutdown', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
+
+  it.each(['win32', 'darwin', 'linux'] as const)('preserves immediate exit behaviour on %s', (platform) => {
+    const calls: string[] = []
+    const kill = vi.fn(() => { calls.push('kill'); return true as const })
+    const deps = makeDeps({ exit: (code) => calls.push(`exit ${code}`) })
+    exitProcess(2, deps, platform, kill)
+    expect(calls).toEqual(platform === 'win32' ? ['exit 2'] : ['kill', 'exit 2'])
+    if (platform !== 'win32') expect(kill).toHaveBeenCalledWith(process.pid, 'SIGKILL')
+  })
+
+  it('falls back to app.exit when the POSIX self kill throws', () => {
+    const deps = makeDeps()
+    exitProcess(3, deps, 'linux', () => { throw new Error('denied') })
+    expect(deps.exits).toEqual([3])
+    expect(deps.lines).toContain('self kill failed: denied')
+  })
 
   it('bounded reports done, error and timeout', async () => {
     expect(await bounded(async () => undefined, 100)).toBe('done')

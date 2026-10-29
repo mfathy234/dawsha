@@ -1,15 +1,13 @@
 import { DEFAULT_FONT_SIZE } from '../shared/types'
 import { DEFAULT_PALETTE_SHORTCUT } from '../shared/settingsSchema'
 import { bind, formatShortcut, matchesBinding, parseShortcut, type KeyBinding, type KeyEventLike } from '../shared/shortcuts'
-import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, zoomPane } from './actions'
+import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, startSession, zoomPane } from './actions'
+import { pickedAgent } from '../shared/quickPick'
 import { commandForEvent } from './commands/registry'
 import { store, type AppState } from './state'
 import { closeTimeline } from './timelineActions'
 import { closePeek } from './boardActions'
 import { boardShowing } from './sessionsLayout'
-import { DICTATION_SHORTCUT } from '../shared/dictation'
-import { cancelDictation, toggleDictation } from './dictation/dictationActions'
-import { dictationStatus } from './dictation/dictationState'
 import { contextMenuOpen } from './components/contextMenu'
 import { requestFilesSearch } from './files/filesActions'
 
@@ -60,30 +58,19 @@ function consume(event: KeyboardEvent): void {
 
 const inFindBar = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.term-find, .timeline-search') != null
 
-const DICTATION_BINDING = bind(DICTATION_SHORTCUT)
-
-// Dictation works from dialogs and text boxes too, so it is handled before the overlay guard.
-function handleDictationKey(event: KeyboardEvent): boolean {
-  if (matchesBinding(event, DICTATION_BINDING)) {
-    consume(event)
-    // Holding the keys repeats keydown; only the first press toggles.
-    if (!event.repeat) void toggleDictation()
-    return true
-  }
-  if (event.key === 'Escape' && dictationStatus().phase !== 'idle') {
-    consume(event)
-    cancelDictation()
-    return true
-  }
-  return false
-}
-
 function onKeyDown(event: KeyboardEvent): void {
   if (event.isComposing) return
   if (contextMenuOpen() || (event.target as HTMLElement | null)?.closest?.('[role="menu"]:not(.leaving)')) return
-  if (handleDictationKey(event)) return
   if (overlayOpen() || inFindBar(event)) return
   const state = store.state
+  // State changes immediately; the picker mounts on the next animation frame. A fast Enter
+  // in that gap still starts its default choice instead of reaching the old terminal.
+  if (state.quickPickOpen && state.quickPickMode === 'new' && event.key === 'Enter' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+    consume(event)
+    const project = state.settings.projects[0]
+    if (project) void startSession(project.id, pickedAgent(project, {}, state.quickPickPreset))
+    return
+  }
   // Find in files: only while Files is showing, so Ctrl+Shift+F keeps searching the terminal everywhere else.
   if (state.view === 'files' && event.shiftKey && !event.altKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
     consume(event)

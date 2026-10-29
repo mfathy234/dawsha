@@ -3,7 +3,7 @@ import { basename, join } from 'node:path'
 import { codexParentId, parseClaudeAgent, parseCodexAgent, type ParsedAgent, type Sampled } from '../shared/agentRecords'
 import { type BackgroundAgent, type BackgroundAgentsReport, type BgKind, type BgRange, rangeMs } from '../shared/backgroundAgents'
 import { parseSessionIndex, rolloutIdFromName } from '../shared/codexSession'
-import { estimateCost, type PriceLookup } from '../shared/orch/usage'
+import { estimateCost, type PriceLookup } from '../shared/agentCosts'
 import { claudeProjectSlug, sessionTitle } from '../shared/projectSessions'
 import { normalizePath } from '../shared/sessionMatch'
 import { realPrompt } from '../shared/sessionText'
@@ -128,7 +128,7 @@ export class BackgroundAgentScanner {
         statusNote: raw.agent.statusNote,
         tokens: usage.input + usage.output + usage.cacheWrite,
         tokensApprox: raw.agent.usageApprox,
-        costUsd: price && price !== 'free' ? estimateCost({ inputTokens: usage.input, outputTokens: usage.output, cacheReadTokens: usage.cacheRead, cacheWriteTokens: usage.cacheWrite, reportedCostUsd: null }, price) : null,
+        costUsd: price && price !== 'free' ? estimateCost({ inputTokens: usage.input, outputTokens: usage.output, cacheReadTokens: usage.cacheRead, cacheWriteTokens: usage.cacheWrite }, price) : null,
         lastStep: raw.agent.lastStep,
         result: raw.agent.result,
         cwd: raw.agent.cwd,

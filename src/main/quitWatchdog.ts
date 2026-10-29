@@ -1,4 +1,6 @@
 import { Worker } from 'node:worker_threads'
+import { spawn } from 'node:child_process'
+import { join } from 'node:path'
 
 const BEAT_MS = 250
 
@@ -27,7 +29,54 @@ export interface QuitWatchdogOptions {
   logPath?: string
 }
 
+// A Node worker stops before Electron finishes native teardown on Windows.
+// Hold an OS process handle so the guard survives that teardown and PID reuse.
+const WINDOWS_SOURCE = `
+$ErrorActionPreference = 'Stop'
+$watchTarget = $null
+try {
+  $watchTarget = [Diagnostics.Process]::GetProcessById([int]$env:DAWSHA_WATCHDOG_PID)
+  $watchHandle = $watchTarget.Handle
+  if ([DateTimeOffset]$watchTarget.StartTime.ToUniversalTime() -gt [DateTimeOffset]::FromUnixTimeMilliseconds([long]$env:DAWSHA_WATCHDOG_ARMED)) {
+    return
+  }
+  $remaining = [Math]::Max(0, [long]$env:DAWSHA_WATCHDOG_DEADLINE - [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+  if (-not $watchTarget.WaitForExit([int]$remaining)) {
+    if ($env:DAWSHA_WATCHDOG_LOG) {
+      try {
+        [IO.File]::AppendAllText($env:DAWSHA_WATCHDOG_LOG, [DateTime]::UtcNow.ToString('o') +
+          ' watchdog: pid ' + $env:DAWSHA_WATCHDOG_PID + ' still alive after ' + $env:DAWSHA_WATCHDOG_MS + 'ms, killing it' + [char]10)
+      } catch {}
+    }
+    $watchTarget.Kill()
+  }
+} catch {} finally {
+  if ($watchTarget) { $watchTarget.Dispose() }
+}
+`
+
+function startWindowsWatchdog(options: QuitWatchdogOptions): () => void {
+  const armedAt = Date.now()
+  const executable = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  const watcher = spawn(executable, ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(WINDOWS_SOURCE, 'utf16le').toString('base64')], {
+    windowsHide: true,
+    stdio: 'ignore',
+    env: {
+      ...process.env,
+      DAWSHA_WATCHDOG_PID: String(options.pid ?? process.pid),
+      DAWSHA_WATCHDOG_ARMED: String(armedAt),
+      DAWSHA_WATCHDOG_DEADLINE: String(armedAt + options.ms),
+      DAWSHA_WATCHDOG_MS: String(options.ms),
+      DAWSHA_WATCHDOG_LOG: options.logPath ?? process.env.DAWSHA_QUIT_LOG ?? ''
+    }
+  })
+  watcher.on('error', () => undefined)
+  watcher.unref()
+  return () => { watcher.kill() }
+}
+
 export function startQuitWatchdog(options: QuitWatchdogOptions): () => void {
+  if (process.platform === 'win32') return startWindowsWatchdog(options)
   const shared = new SharedArrayBuffer(8)
   const beat = new Float64Array(shared)
   beat[0] = Date.now()

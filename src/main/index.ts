@@ -5,12 +5,13 @@ import { IPC } from '../shared/ipc'
 import { CodexWatcher } from './codexWatcher'
 import { GeminiWatcher } from './geminiWatcher'
 import { registerIpc } from './ipc'
+import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
 import { PtyManager } from './ptyManager'
 import { Recorder } from './recorder'
 import { RecordingService } from './recordings'
 import { SessionsWatcher } from './sessionsWatcher'
-import { installMediaPermissions } from './mediaPermissions'
+import { denyPermissionRequests } from './mediaPermissions'
 import { SettingsStore } from './settingsStore'
 import { StatusWatcher } from './statusWatcher'
 import { OpsWatcher } from './opsWatcher'
@@ -20,14 +21,13 @@ import { platformExecutableDirs, resolveExecutable } from './executables'
 import { migrateLegacyUserData } from './userDataMigration'
 import { CliRunner } from './cliRunner'
 import { startCliServer } from './cliServer'
-import { OrchRuntime } from './orch/runtime'
-import { createOrchestratorSwitch } from './orch/switch'
 import { setupUpdates } from './updates'
 import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
 import { createQuitLog } from './quitLog'
 import { startQuitWatchdog } from './quitWatchdog'
-import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, runPhases, runQuit, type ShutdownDeps } from './shutdown'
+import { requestCloseCheck } from './closeCheck'
+import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, exitProcess, runPhases, runQuit, type ShutdownDeps } from './shutdown'
 import { isPrivateRemoteBuild, isRemoteControlBuild } from '../shared/remoteBuild'
 
 const IMAGE_SCHEME = 'dawsha-image'
@@ -38,7 +38,8 @@ if (process.platform === 'win32') app.setAppUserModelId('io.github.mfathy234.daw
 if (process.env.DAWSHA_USER_DATA) app.setPath('userData', process.env.DAWSHA_USER_DATA)
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } }
+  { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+  { scheme: PREVIEW_SCHEME, privileges: { standard: true, secure: true } }
 ])
 
 let mainWindow: BrowserWindow | null = null
@@ -78,39 +79,14 @@ function flushRenderer(): Promise<void> {
 }
 
 // Asks the page whether the app may close (unsaved Files tabs ask the user); a page that is not there answers yes.
-// The page acknowledges at once, so a dialog can stay open as long as the user needs; a page that never
-// acknowledges (hung or gone) must not make the app unclosable, so no acknowledgement within CLOSE_ACK_MS means yes.
-const CLOSE_ACK_MS = 10_000
-
 function askMayClose(): Promise<boolean> {
   const window = mainWindow
   if (!window || window.isDestroyed() || !rendererReady) return Promise.resolve(true)
-  return new Promise((resolve) => {
-    const finish = (_event?: unknown, ok?: unknown): void => {
-      clearTimeout(ackTimer)
-      ipcMain.removeListener(IPC.closeCheckAck, acknowledged)
-      ipcMain.removeListener(IPC.closeCheckDone, finish)
-      window.webContents.removeListener('destroyed', onGone)
-      resolve(ok !== false)
-    }
-    const acknowledged = (): void => clearTimeout(ackTimer)
-    const onGone = (): void => finish(undefined, true)
-    const ackTimer = setTimeout(() => finish(undefined, true), CLOSE_ACK_MS)
-    ipcMain.once(IPC.closeCheckAck, acknowledged)
-    ipcMain.once(IPC.closeCheckDone, finish)
-    window.webContents.once('destroyed', onGone)
-    window.webContents.send(IPC.closeCheck)
-  })
+  return requestCloseCheck(ipcMain, window.webContents, quitLog)
 }
 
 function terminateProcess(code: number): void {
-  quitLog(`terminating the process (code ${code})`)
-  try {
-    process.kill(process.pid, 'SIGKILL')
-  } catch (error) {
-    quitLog(`self kill failed: ${(error as Error).message}`)
-  }
-  app.exit(code)
+  exitProcess(code, { exit: (value) => app.exit(value), log: quitLog })
 }
 
 function send(channel: string, ...args: unknown[]): void {
@@ -157,6 +133,9 @@ function createWindow(): BrowserWindow {
   window.webContents.on('did-start-loading', () => {
     if (mainWindow === window) rendererReady = false
   })
+  window.webContents.on('render-process-gone', () => {
+    if (mainWindow === window) rendererReady = false
+  })
   let flushedOnClose = false
   let asking = false
   window.on('close', (event) => {
@@ -199,7 +178,7 @@ function registerImageProtocol(settings: SettingsStore): void {
 app.whenReady().then(async () => {
   if (!gotLock) return
   Menu.setApplicationMenu(null)
-  installMediaPermissions(() => mainWindow)
+  denyPermissionRequests()
   const userData = app.getPath('userData')
   const legacyDir = legacyUserDataDir()
   const migration = legacyDir
@@ -230,23 +209,6 @@ app.whenReady().then(async () => {
     recorder,
     projectName: (projectId) => store.get().projects.find((project) => project.id === projectId)?.name ?? ''
   })
-  const orchestrator = new OrchRuntime({
-    dbPath: join(userData, 'orchestrator.db'),
-    configRoot: join(userData, 'orchestrator', 'agents'),
-    version: app.getVersion(),
-    log: quitLog,
-    settings: () => store.get().orchestrator,
-    projectFolder: (id) => store.get().projects.find((project) => project.id === id)?.folder ?? null,
-    writePty: (tabId, data) => ptys.write(tabId, data),
-    openPane: (request) => send(IPC.orchOpenPane, request),
-    closePane: (agentId) => send(IPC.orchClosePane, agentId),
-    changed: () => send(IPC.orchChanged)
-  })
-  ptys.observe({
-    onOutput: (id, data) => orchestrator.onOutput(id, data),
-    onEnd: (id, reason) => orchestrator.onEnd(id, reason),
-    onResize: (id, cols, rows) => orchestrator.onResize(id, cols, rows)
-  })
   const watcher = new SessionsWatcher((sessions) => send(IPC.sessionsUpdate, sessions))
   const codexWatcher = new CodexWatcher((sessions) => send(IPC.codexUpdate, sessions))
   const geminiWatcher = new GeminiWatcher((sessions) => send(IPC.geminiUpdate, sessions))
@@ -255,7 +217,6 @@ app.whenReady().then(async () => {
   const statusWatcher = new StatusWatcher(bridgeDirs(app.getPath('userData')).statusDir, (infos) => {
     send(IPC.statusUpdate, infos)
     usage.recordStatus(infos)
-    orchestrator.onStatus(infos)
   })
   const opsWatcher = new OpsWatcher(opsDirs(), (snapshots) => send(IPC.opsUpdate, snapshots))
   const remoteAccess = isRemoteControlBuild
@@ -273,21 +234,13 @@ app.whenReady().then(async () => {
     powerMonitor.on('unlock-screen', () => remoteAccess.onSystemResume())
   }
   registerImageProtocol(store)
-  const orchestratorSwitch = createOrchestratorSwitch(orchestrator, quitLog)
-  registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings, orchestratorSwitch)
+  registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings)
   const stopRunCommands = registerRunIpc(() => mainWindow, store)
   recordings.startSchedule()
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
   app.on('will-quit', () => cliServer.close())
-  orchestratorSwitch.apply(store.get())
-  app.on('will-quit', (event) => {
-    if (!orchestrator.running) return
-    // Close the server and database cleanly, then quit again (stop() leaves running false).
-    event.preventDefault()
-    void orchestrator.stop().finally(() => app.quit())
-  })
   void cli.executeFromArgv(process.argv, process.cwd())
   mainWindow.webContents.once('did-finish-load', () => {
     watcher.start()

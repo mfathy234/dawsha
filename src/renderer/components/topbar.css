@@ -25,8 +25,11 @@
 .limits-agent-title { font-weight: 600; }
 .limits-focused { color: var(--accent); font-size: var(--fs-status); }
 .limits-agent-age { margin-inline-start: auto; color: var(--muted); font-size: var(--fs-status); white-space: nowrap; }
+.limits-account { padding-inline-start: var(--s-5); color: var(--muted); font-size: var(--fs-status); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.limits-account.none { color: color-mix(in srgb, var(--muted) 70%, transparent); }
+.limits-row.reset { opacity: 0.5; }
 .limits-agent-block.stale .limits-row { opacity: 0.65; }
-.limits-row { display: grid; grid-template-columns: 52px auto 44px 1fr; align-items: center; gap: var(--s-2); padding-inline-start: var(--s-5); color: var(--muted); }
+.limits-row { display: grid; grid-template-columns: 84px auto 44px 1fr; align-items: center; gap: var(--s-2); padding-inline-start: var(--s-5); color: var(--muted); }
 .limits-row .charge { height: auto; margin: 0; padding: 1.5px; gap: 2px; }
 .limits-row .charge::after { display: none; }
 .limits-row .charge i { width: 6px; height: 10px; border-radius: 1.5px; }
@@ -66,7 +69,16 @@
 @media (max-width: 1400px) {
   .topbar-limits .limit:nth-child(n+2) { display: none; }
 }
-@media (max-width: 1220px) { .topbar-limits { display: none; } }
+.topbar-limits .limits-compact { display: none; font-weight: 600; color: var(--muted); }
+.topbar-limits .limits-compact.stage-warn { color: var(--busy); }
+.topbar-limits .limits-compact.stage-high { color: var(--needs-ink); }
+.topbar-limits .limits-compact.stage-critical { color: var(--danger); }
+@media (max-width: 1220px) {
+  .topbar-limits { gap: var(--s-2); flex: none; }
+  .topbar-limits .limits-agent-name, .topbar-limits .limits-windows, .topbar-limits .limits-none, .topbar-limits .limits-note { display: none; }
+  .topbar-limits .limits-compact { display: inline; }
+}
+@media (max-width: 900px) { .topbar-limits { display: none; } }
 @media (max-width: 1100px) {
   .topbar { gap: var(--s-1); padding: 0 var(--s-2); }
   .topbar .btn { padding: 0 var(--s-2); }

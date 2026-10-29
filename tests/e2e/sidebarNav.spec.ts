@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { bufferText, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox } from './helpers'
+import { bufferText, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox, openQuietProject } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -37,6 +37,19 @@ test('pinned projects lead the sidebar, move within their group and persist afte
     await expect(projectNames(page)).toHaveText(['Other', 'Smoke', 'Missing'])
     await expect(page.locator('.proj-row', { hasText: 'Other' }).getByRole('img', { name: 'Pinned' })).toBeVisible()
     await page.locator('.sidebar').screenshot({ path: join(SCREENS, 'sidebar-pinned.png') })
+
+    const pinnedRow = page.locator('.proj-row').first()
+    await pinnedRow.hover()
+    await expect(pinnedRow.locator('.proj-acts')).toHaveCSS('opacity', '1')
+    await pinnedRow.locator('.proj-name').evaluate((node) => { node.textContent = 'A very long project name that cannot possibly fit in the sidebar row' })
+    const pin = await pinnedRow.locator('.proj-pin').boundingBox()
+    const acts = await pinnedRow.locator('.proj-acts').boundingBox()
+    const name = await pinnedRow.locator('.proj-name').boundingBox()
+    expect(pin && acts && name).toBeTruthy()
+    expect(pin!.x + pin!.width, 'the pin and the hover actions do not intersect').toBeLessThanOrEqual(acts!.x + 0.5)
+    expect(name!.x + name!.width, 'the name ends before the pin').toBeLessThanOrEqual(pin!.x + 0.5)
+    expect(await pinnedRow.locator('.proj-name').evaluate((node) => node.scrollWidth > node.clientWidth), 'a long name ellipsizes').toBe(true)
+    await page.locator('.sidebar').screenshot({ path: join(SCREENS, 'sidebar-pinned-hover.png') })
 
     menu = await openMenu(page, 'Other')
     await expect(menu.getByRole('menuitem', { name: 'Unpin' })).toBeVisible()
@@ -216,6 +229,7 @@ test('F2 and double click rename closed and open sessions; Enter and blur save, 
   let session = await launchApp(sandbox)
   try {
     const { page } = session
+    await openQuietProject(page)
     const names = page.locator('.kept-session-row.closed .sess-name')
     await expect(names).toHaveText(['Beta', 'Alpha'])
 
@@ -291,6 +305,7 @@ test('a session row keeps time and cost on their own line and the close button s
   writeFileSync(join(sandbox.userData, 'usage-history.json'), JSON.stringify({ v: 1, limits: [], costs: { [KEPT_ID(0)]: { at: now - 1000, usd: 8.69, cwd: sandbox.projectFolder } } }), 'utf8')
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const row = page.locator('.kept-session-row.closed')
     const cost = row.locator('.sess-cost')
     await expect(cost).toHaveText('$8.69', { timeout: 20_000 })
@@ -324,6 +339,7 @@ test('Reopen all brings a day of closed sessions back, asking first when it is a
   })
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const today = page.getByRole('button', { name: 'Reopen 3 sessions from Today in Smoke' })
     const older = page.getByRole('button', { name: 'Reopen 2 sessions from Yesterday in Smoke' })
     await expect(today).toHaveCount(1)
@@ -351,6 +367,7 @@ test('Reopen all brings a day of closed sessions back, asking first when it is a
   const second = await launchApp(crowd)
   try {
     const { page } = second
+    await openQuietProject(page)
     await page.getByRole('button', { name: 'Reopen 5 sessions from Today in Smoke' }).click()
     const dialog = page.getByRole('alertdialog')
     await expect(dialog).toContainText('Reopen 5 sessions in Smoke?')
@@ -377,6 +394,7 @@ test('arrow keys walk the sidebar list, fold projects and remove closed sessions
   writeSettings(sandbox, { keptSessions: kept })
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const key = (i: number): string => `c:claude:00000000-0000-4000-8000-00000000020${i}`
     await page.getByRole('button', { name: 'Filter projects and sessions' }).click()
     await page.keyboard.press('ArrowDown')
@@ -421,6 +439,92 @@ test('arrow keys walk the sidebar list, fold projects and remove closed sessions
     await page.getByRole('alertdialog').getByRole('button', { name: 'Remove First', exact: true }).click()
     await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Third', 'Second'])
     expect(await focusedNav(page)).toBe(key(1))
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('dragging works in Name and Recent sort: it switches to Manual, says so and keeps the order after a restart', async () => {
+  const sandbox = createSandbox()
+  seedThreeProjects(sandbox)
+  writeSettings(sandbox, { sidebarSort: 'name' })
+  let session = await launchApp(sandbox)
+  try {
+    const { page } = session
+    await expect(projectNames(page)).toHaveText(['Missing', 'Other', 'Smoke'])
+    await expect(page.locator('.proj-row.reorderable').first()).toBeVisible()
+    expect(await page.locator('.proj-row .proj-toggle').first().evaluate((node) => getComputedStyle(node).cursor)).toBe('grab')
+    await dragProject(page, 'Smoke', 'Missing', 'drop')
+    await expect(projectNames(page)).toHaveText(['Smoke', 'Missing', 'Other'])
+    await expect(page.getByText('Switched to your own order, starting from this list. Your earlier order was replaced.')).toBeVisible()
+    await expect.poll(() => readSettings(sandbox.userData).sidebarSort).toBe('manual')
+    await expect.poll(() => readSettings(sandbox.userData).projects.map((p: any) => p.id)).toEqual(['smoke', 'gone', 'other'])
+  } finally {
+    await closeApp(session.app)
+  }
+  session = await launchApp(sandbox)
+  try {
+    await expect(projectNames(session.page)).toHaveText(['Smoke', 'Missing', 'Other'])
+  } finally {
+    await closeApp(session.app)
+  }
+})
+
+test('a drag cannot cross between pinned and unpinned projects', async () => {
+  const sandbox = createSandbox()
+  seedThreeProjects(sandbox)
+  const { projects } = readSettings(sandbox.userData)
+  writeSettings(sandbox, { sidebarSort: 'name', projects: projects.map((p: any) => (p.id === 'other' ? { ...p, pinned: true } : p)) })
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await expect(projectNames(page)).toHaveText(['Other', 'Missing', 'Smoke'])
+    await dragProject(page, 'Smoke', 'Other', 'hold')
+    await expect(page.locator('.proj-row.drop-before, .proj-row.drop-after')).toHaveCount(0)
+    await page.mouse.up()
+    await expect(projectNames(page)).toHaveText(['Other', 'Missing', 'Smoke'])
+    expect(readSettings(sandbox.userData).sidebarSort).toBe('name')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Alt+Up and Alt+Down move the focused project and switch to Manual', async () => {
+  const sandbox = createSandbox()
+  seedThreeProjects(sandbox)
+  writeSettings(sandbox, { sidebarSort: 'name' })
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await expect(projectNames(page)).toHaveText(['Missing', 'Other', 'Smoke'])
+    await page.locator('[data-nav="p:smoke"]').focus()
+    await page.keyboard.press('Alt+ArrowUp')
+    await expect(projectNames(page)).toHaveText(['Missing', 'Smoke', 'Other'])
+    await expect.poll(() => readSettings(sandbox.userData).sidebarSort).toBe('manual')
+    expect(await focusedNav(page)).toBe('p:smoke')
+    await page.keyboard.press('Alt+ArrowDown')
+    await expect(projectNames(page)).toHaveText(['Missing', 'Other', 'Smoke'])
+    await expect.poll(() => readSettings(sandbox.userData).projects.map((p: any) => p.id)).toEqual(['gone', 'other', 'smoke'])
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('rail monograms can be dragged to reorder', async () => {
+  const sandbox = createSandbox()
+  seedThreeProjects(sandbox)
+  writeSettings(sandbox, { sidebarSort: 'name', sidebarCollapsed: true })
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const monos = page.locator('.rail-mono')
+    await expect(monos).toHaveCount(3)
+    const source = (await monos.nth(2).boundingBox())!
+    const target = (await monos.nth(0).boundingBox())!
+    await page.mouse.move(source.x + 10, source.y + 10)
+    await page.mouse.down()
+    await page.mouse.move(source.x + 12, source.y - 6, { steps: 3 })
+    await page.mouse.move(target.x + 10, target.y + 10, { steps: 8 })
+    await page.mouse.up()
+    await expect.poll(() => readSettings(sandbox.userData).projects.map((p: any) => p.id)).toEqual(['smoke', 'gone', 'other'])
+    await expect.poll(() => readSettings(sandbox.userData).sidebarSort).toBe('manual')
   } finally {
     await closeApp(app)
   }

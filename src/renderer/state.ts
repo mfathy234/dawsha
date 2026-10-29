@@ -1,4 +1,3 @@
-import type { OrchSnapshot } from '../shared/orch/api'
 import { defaultSettings } from '../shared/settingsSchema'
 import type { AgentPreset } from '../shared/quickPick'
 import type { SyncCounts } from '../shared/gitBranches'
@@ -39,14 +38,11 @@ export interface TermState {
   resumed?: boolean
   resumeChipAt?: number
   retried?: boolean
-  agentsOpen?: boolean
   command?: string
   prompt?: string
   from?: AgentKind
   baseline?: SessionBaseline
   task?: { agents: AgentKind[]; before: ToolReport[] }
-  /** Orchestrator agent run in this tab. */
-  orchAgentId?: string
   /** The user's own name for the session; it wins over the name the agent reports. */
   name?: string
   tag?: SessionTag
@@ -65,17 +61,14 @@ export interface PaneState {
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'background' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'orchestrator' | 'files'
-
-/** Tabs of the Orchestrator view. A selected run (orchRunId) shows its dashboard instead. */
-export type OrchTab = 'runs' | 'boards' | 'review' | 'history' | 'new' | 'spec'
+export type View = 'grid' | 'background' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'files'
 
 export interface ReplayRef {
   id: string
   returnView: View
 }
 
-export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote' | 'orchestrator'
+export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
 
 export type ProjectsTab = 'projects' | 'tasks' | 'instructions'
 
@@ -110,10 +103,6 @@ export interface AppState {
   replay: ReplayRef | null
   replayPickerOpen: boolean
   settingsSection: SettingsSection
-  /** Latest orchestrator state from the main process; null until loaded or while it is off. */
-  orch: OrchSnapshot | null
-  orchTab: OrchTab
-  orchRunId: string | null
   projectsTab: ProjectsTab
   instructionsProject: string | null
   sessions: SessionFile[]
@@ -163,9 +152,6 @@ export const initialState = (): AppState => ({
   replay: null,
   replayPickerOpen: false,
   settingsSection: 'general',
-  orch: null,
-  orchTab: 'runs',
-  orchRunId: null,
   projectsTab: 'projects',
   instructionsProject: null,
   sessions: [],

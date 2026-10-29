@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS, openMore } from './helpers'
+import { closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS, openMore, openQuietProject } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -157,6 +157,7 @@ test('closed sessions stay under their project until removed there', async () =>
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     await page.keyboard.press('Control+Shift+R')
     await page.locator('.rp-row', { hasText: 'Add dark mode toggle' }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
@@ -194,6 +195,7 @@ test('closed sessions list the newest first, fold away and clear after a confirm
   writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({ ...settings, keptSessions: kept }), 'utf8')
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const names = page.locator('.kept-session-row.closed .sess-name')
     await expect(names).toHaveCount(5)
     await expect(names).toHaveText(['Closed 6', 'Closed 5', 'Closed 4', 'Closed 3', 'Closed 2'])
@@ -204,7 +206,7 @@ test('closed sessions list the newest first, fold away and clear after a confirm
     await page.locator('.closed-head').hover()
     await page.screenshot({ path: join(SCREENS, '63-closed-sessions.png') })
 
-    const toggle = page.getByRole('button', { name: 'Closed sessions (7)' })
+    const toggle = page.getByRole('button', { name: '7 closed' })
     await expect(toggle).toHaveAttribute('aria-expanded', 'true')
     await toggle.click()
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
@@ -249,9 +251,10 @@ test('the sidebar filter also finds sessions, even inside folds and past the row
   seedKept(sandbox, titles, { foldedClosedSessions: ['smoke'] })
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const filter = page.getByRole('textbox', { name: 'Filter projects and sessions' })
     const names = page.locator('.kept-session-row.closed .sess-name')
-    await expect(page.getByRole('button', { name: 'Closed sessions (8)' })).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.getByRole('button', { name: '8 closed' })).toHaveAttribute('aria-expanded', 'false')
     await expect(names).toHaveCount(0)
     await page.getByRole('button', { name: 'Filter projects and sessions' }).click()
     await filter.fill(' zEBRA ')
@@ -278,6 +281,7 @@ test('removing a closed session offers an undo that restores its place', async (
   seedKept(sandbox, [['First', now - 3_000], ['Second', now - 2_000], ['Third', now - 1_000]])
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const names = page.locator('.kept-session-row.closed .sess-name')
     await expect(names).toHaveText(['Third', 'Second', 'First'])
     await page.getByRole('button', { name: 'Remove Second from Smoke' }).click()
@@ -297,12 +301,13 @@ test('removing a closed session offers an undo that restores its place', async (
 test('project and closed session folds survive a restart', async () => {
   const sandbox = createSandbox()
   const now = Date.now()
-  seedKept(sandbox, [['Alpha run', now - 2_000], ['Beta run', now - 1_000]])
+  const stored = readSettings(sandbox.userData).projects as { id: string }[]
+  seedKept(sandbox, [['Alpha run', now - 2_000], ['Beta run', now - 1_000]], { projects: stored.map((item) => (item.id === 'smoke' ? { ...item, pinned: true } : item)) })
   let session = await launchApp(sandbox)
   try {
     const names = session.page.locator('.kept-session-row.closed .sess-name')
     await expect(names).toHaveCount(2)
-    await session.page.getByRole('button', { name: 'Closed sessions (2)' }).click()
+    await session.page.getByRole('button', { name: '2 closed' }).click()
     await expect(names).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).foldedClosedSessions).toEqual(['smoke'])
   } finally {
@@ -311,7 +316,7 @@ test('project and closed session folds survive a restart', async () => {
   session = await launchApp(sandbox)
   try {
     const names = session.page.locator('.kept-session-row.closed .sess-name')
-    const closedToggle = session.page.getByRole('button', { name: 'Closed sessions (2)' })
+    const closedToggle = session.page.getByRole('button', { name: '2 closed' })
     await expect(closedToggle).toHaveAttribute('aria-expanded', 'false')
     await expect(names).toHaveCount(0)
     await closedToggle.click()
@@ -341,6 +346,7 @@ test('closed sessions are grouped under day labels only when they span several d
   seedKept(sandbox, [['Old one', daysAgo(10)], ['Midweek', daysAgo(3)], ['Yesterday one', daysAgo(1)], ['Fresh', Date.now() - 1_000]])
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const labels = page.locator('.closed-day')
     await expect(labels).toHaveText(['Today', 'Yesterday', 'This week', 'Earlier'])
     await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Fresh', 'Yesterday one', 'Midweek', 'Old one'])

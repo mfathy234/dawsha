@@ -19,13 +19,15 @@ import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
 import type { PaneView } from '../derive'
 import { countSessionStates, sessionState } from '../../shared/sessionState'
-import { MORE_VIEWS, formatResetIn, limitText, moreLabel, type MoreView } from '../../shared/topbarSummary'
-import { allAgentLimits, dataAge, focusedLimits, recordLimits, type AgentLimitStore, type AgentLimits } from '../../shared/agentLimits'
+import { MORE_VIEWS, formatResetIn, limitRowLabel, limitText, moreLabel, urgentWindow, type MoreView } from '../../shared/topbarSummary'
+import { api } from '../api'
+import type { AgentAccount, AgentAccounts } from '../../shared/agentAccounts'
+import { allAgentLimits, dataAge, meterLimits, recordLimits, type AgentLimitStore, type AgentLimits } from '../../shared/agentLimits'
 import { stateIcon } from './stateIcon'
 import { toolState } from '../../shared/agentTools'
 import { formatPercent, gaugeStage } from '../../shared/statusLine'
 import { chargeBar } from './chargeBar'
-import type { RateLimitWindow } from '../../shared/types'
+import type { RateLimitWindow, TabAgent } from '../../shared/types'
 import { h, icon, leave, placeNearAnchor } from '../dom'
 import { store, type AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
@@ -35,6 +37,7 @@ import { onAgentsChange, runningAgents } from '../backgroundAgents'
 import './topbar.css'
 
 const LIMIT_CELLS = 5
+const KNOWN_LIMITS_MS = 15_000
 const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
 
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
@@ -83,14 +86,12 @@ export class TopBarComponent {
   private readonly agentsBadge = h('span', { class: 'count-badge', hidden: true, 'aria-hidden': 'true' })
   private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Background agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'background') }, 'Agents', this.agentsBadge)
   private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
-  private readonly orchBadge = h('span', { class: 'count-badge orch-badge', hidden: true })
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')
   private readonly more = h(
     'button',
     { class: 'btn ghost more-button', type: 'button', id: 'more-button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: () => this.toggleMoreMenu() },
     this.moreText,
-    this.orchBadge,
     h('span', { class: 'more-chevron', 'aria-hidden': 'true' }, icon(ICONS.chevronDown)),
     this.moreDot
   )
@@ -99,8 +100,6 @@ export class TopBarComponent {
   private moreItems: Record<MoreView, HTMLElement> | null = null
   private agentUpdates = false
   private activeMore: MoreView | null = null
-  private orchestratorEnabled = false
-  private orchWaiting = 0
   private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings', title: 'Settings' },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
     h('span', { class: 'utility-label' }, 'Settings')
@@ -127,8 +126,12 @@ export class TopBarComponent {
   private limitsSignature = ''
   private limitStore: AgentLimitStore = {}
   private limitsFocused: AgentLimits | null = null
+  private focusedAgent: TabAgent | null = null
+  private lastLimitsArgs: { state: AppState; views: PaneView[] } | null = null
+  private knownLimitsAt = 0
   private limitsNow = 0
   private limitsPopover: HTMLElement | null = null
+  private accounts: AgentAccounts | null = null
   private readonly limitsOutside = (event: Event): void => {
     const target = event.target as Node
     if (this.limitsPopover && !this.limitsPopover.contains(target) && !this.limits.contains(target)) this.closeLimitsPopover()
@@ -173,7 +176,6 @@ export class TopBarComponent {
 
   update(state: AppState, views: PaneView[]): void {
     this.updateLimits(state, views)
-    this.updateOrchestrator(state)
     this.sessions.setAttribute('aria-pressed', String(state.view === 'grid'))
     this.gridMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'grid'))
     this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
@@ -325,15 +327,15 @@ export class TopBarComponent {
       h('span', { class: 'kbd' }, formatShortcut(bind('Ctrl+Shift+A')))
     )
     items.push(resume, compare)
-    const rect = this.newSession.getBoundingClientRect()
     this.agentMenu = h(
       'div',
-      { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 6)}px` },
+      { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent' },
       ...items
     )
     this.agentMenu.addEventListener('keydown', (event) => this.onMenuKey(event, items))
     this.chevron.setAttribute('aria-expanded', 'true')
     document.body.appendChild(this.agentMenu)
+    placeNearAnchor(this.agentMenu, this.chevron.parentElement ?? this.newSession, 6)
     items[0].focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
   }
@@ -383,28 +385,27 @@ export class TopBarComponent {
       this.closeMoreMenu()
       return
     }
-    const entries = MORE_VIEWS.filter(({ view }) => view !== 'orchestrator' || this.orchestratorEnabled).map(({ view, label }) => {
+    const entries = MORE_VIEWS.map(({ view, label }) => {
       const item = h(
         'button',
         { class: 'menu-item more-item', type: 'button', role: 'menuitem', id: `${view}-menu-item`, 'data-view': view, onClick: () => this.openMore(view) },
         label,
-        view === 'agents' ? h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' }) : '',
-        view === 'orchestrator' && this.orchWaiting > 0 ? h('span', { class: 'count-badge' }, String(this.orchWaiting)) : ''
+        view === 'agents' ? h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' }) : ''
       )
       return [view, item] as const
     })
     this.moreItems = Object.fromEntries(entries) as unknown as Record<MoreView, HTMLElement>
     const items = entries.map(([, item]) => item)
     for (const [view] of entries) this.markMoreItem(view)
-    const rect = this.more.getBoundingClientRect()
     this.moreMenu = h(
       'div',
-      { class: 'popover menu floating', role: 'menu', 'aria-label': 'More views', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 6)}px` },
+      { class: 'popover menu floating', role: 'menu', 'aria-label': 'More views' },
       ...items
     )
     this.moreMenu.addEventListener('keydown', (event) => this.onMoreKey(event, items))
     this.more.setAttribute('aria-expanded', 'true')
     document.body.appendChild(this.moreMenu)
+    placeNearAnchor(this.moreMenu, this.more, 6)
     items[0].focus()
     setTimeout(() => document.addEventListener('pointerdown', this.moreOutside, true), 0)
   }
@@ -429,13 +430,31 @@ export class TopBarComponent {
     }
   }
 
+  private refreshKnownLimits(force: boolean): void {
+    const now = Date.now()
+    if (!force && now - this.knownLimitsAt < KNOWN_LIMITS_MS) return
+    this.knownLimitsAt = now
+    void api.knownLimits().then((known) => {
+      const next = recordLimits(this.limitStore, [
+        ...(known.claude ? [{ agent: 'claude' as const, windows: known.claude.windows, at: known.claude.at }] : []),
+        ...(known.codex ? [{ agent: 'codex' as const, windows: known.codex.windows, at: known.codex.at }] : [])
+      ])
+      if (next === this.limitStore || !this.lastLimitsArgs) return
+      this.limitStore = next
+      this.updateLimits(this.lastLimitsArgs.state, this.lastLimitsArgs.views)
+    }, () => undefined)
+  }
+
   private updateLimits(state: AppState, views: PaneView[]): void {
+    this.lastLimitsArgs = { state, views }
+    this.refreshKnownLimits(false)
     this.limitStore = recordLimits(
       this.limitStore,
       views.map((view) => ({ agent: view.agent, windows: view.info.limits, at: view.info.limitsAt ?? state.now }))
     )
     const focusedView = views.find((view) => view.pane.id === state.focusedId)
-    const focused = focusedLimits(this.limitStore, focusedView?.agent ?? null, state.now)
+    this.focusedAgent = focusedView?.agent ?? null
+    const focused = meterLimits(this.limitStore, this.focusedAgent, state.now)
     this.limitsFocused = focused
     this.limitsNow = state.now
     const items = (focused?.windows ?? []).map((window) => ({ window, text: limitText(window, state.now), title: resetText(window) }))
@@ -454,12 +473,14 @@ export class TopBarComponent {
     const name = agentLabel(focused.agent)
     const summary = items.map((item) => item.title).join('; ')
     this.limits.setAttribute('aria-label', focused.state === 'none' ? `${name}: no limits reported. Show limits for every agent` : `${name} limits${focused.state === 'stale' ? ' (stale)' : ''}: ${summary}. Show limits for every agent`)
-    this.limits.title = 'Limits by agent'
+    this.limits.title = focused.state === 'none' ? `${name}: no limits reported` : `${name} limits${focused.state === 'stale' ? ' (stale)' : ''}: ${summary}`
+    const urgent = urgentWindow(items.map((item) => item.window))
     this.limits.replaceChildren(
       h('span', { class: 'limits-agent' }, agentMark(focused.agent), h('span', { class: 'limits-agent-name' }, name)),
       focused.state === 'none'
         ? h('span', { class: 'limits-none' }, 'no limits reported')
         : h('span', { class: 'limits-windows' }, ...items.map((item) => limitItem(item.window, item.text, item.title))),
+      ...(urgent && focused.state !== 'none' ? [h('span', { class: `limits-compact stage-${gaugeStage(urgent.percent)}`, 'data-limit-compact': urgent.key }, formatPercent(urgent.percent))] : []),
       ...(focused.state === 'stale' ? [h('span', { class: 'limits-note' }, 'stale')] : [])
     )
   }
@@ -476,7 +497,12 @@ export class TopBarComponent {
       this.closeLimitsPopover(true)
     })
     this.limitsPopover = popover
+    this.refreshKnownLimits(true)
     this.fillLimitsPopover(popover)
+    void api.agentAccounts().then((accounts) => {
+      this.accounts = accounts
+      if (this.limitsPopover === popover) this.fillLimitsPopover(popover)
+    }, () => undefined)
     document.body.appendChild(popover)
     placeNearAnchor(popover, this.limits, 6)
     this.limits.setAttribute('aria-expanded', 'true')
@@ -495,23 +521,15 @@ export class TopBarComponent {
   }
 
   private fillLimitsPopover(popover: HTMLElement): void {
-    const focused = this.limitsFocused?.agent
+    const focused = this.focusedAgent
     const now = this.limitsNow
-    const sections = allAgentLimits(this.limitStore, now).map((entry) => limitsSection(entry, entry.agent === focused, now))
+    const sections = allAgentLimits(this.limitStore, now).map((entry) => limitsSection(entry, entry.agent === focused, now, this.accounts))
     const link = h('button', { class: 'link limits-usage-link', type: 'button', onClick: () => { this.closeLimitsPopover(); showView('usage') } }, 'Open Usage')
     const keep = popover.contains(document.activeElement) && document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('limits-usage-link')
     popover.replaceChildren(h('div', { class: 'popover-title' }, 'Limits by agent'), ...sections, h('div', { class: 'popover-foot' }, link))
     if (keep) link.focus()
   }
 
-  private updateOrchestrator(state: AppState): void {
-    this.orchestratorEnabled = state.settings.experimental.orchestrator
-    const waiting = state.orch?.decisions.length ?? 0
-    this.orchWaiting = waiting
-    this.orchBadge.hidden = waiting === 0 || !this.orchestratorEnabled
-    this.orchBadge.textContent = waiting > 0 ? String(waiting) : ''
-    this.more.title = waiting && this.orchestratorEnabled ? `More: Orchestrator has ${waiting} waiting for you` : 'More views'
-  }
 }
 
 function resetText(window: RateLimitWindow): string {
@@ -520,12 +538,19 @@ function resetText(window: RateLimitWindow): string {
   return `${window.label}: ${formatPercent(window.percent)} used, resets ${when}`
 }
 
-function limitsSection(entry: AgentLimits, focused: boolean, now: number): HTMLElement {
+function accountLine(account: AgentAccount | null): HTMLElement | null {
+  if (!account) return null
+  if (account.kind === 'none') return h('div', { class: 'limits-account none' }, 'Not signed in')
+  const text = account.kind === 'apiKey' ? 'API key' : [account.email, account.plan].filter(Boolean).join(' · ')
+  return h('div', { class: 'limits-account', title: text }, text)
+}
+
+function limitsSection(entry: AgentLimits, focused: boolean, now: number, accounts: AgentAccounts | null): HTMLElement {
   const name = agentLabel(entry.agent)
   const status = entry.state === 'none' ? 'no limits reported' : `updated ${dataAge(entry.at as number, now)}${entry.state === 'stale' ? ' · stale' : ''}`
   const windows = entry.windows.map((window) =>
-    h('div', { class: 'limits-row', 'data-limit': window.key },
-      h('span', { class: 'limits-row-label' }, window.label),
+    h('div', { class: `limits-row${window.resetsAt !== null && window.resetsAt <= now ? ' reset' : ''}`, 'data-limit': window.key },
+      h('span', { class: 'limits-row-label' }, limitRowLabel(window)),
       chargeBar(window.percent, LIMIT_CELLS),
       h('span', { class: 'limits-row-value' }, formatPercent(window.percent)),
       h('span', { class: 'limits-row-reset' }, window.resetsAt === null ? '' : resetLine(window.resetsAt, now))
@@ -538,6 +563,7 @@ function limitsSection(entry: AgentLimits, focused: boolean, now: number): HTMLE
       focused ? h('span', { class: 'limits-focused' }, 'focused') : null,
       h('span', { class: 'limits-agent-age' }, status)
     ),
+    entry.agent === 'claude' || entry.agent === 'codex' || entry.agent === 'gemini' ? accountLine(accounts?.[entry.agent] ?? null) : null,
     ...windows
   )
 }

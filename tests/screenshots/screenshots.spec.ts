@@ -89,7 +89,6 @@ test('generates the README screenshots from fake projects only', async () => {
     await expect(page.locator('.pane.maximized')).toHaveCount(0)
 
     await settle(page, 1200)
-    await page.locator('.agents-toggle').first().evaluate((button) => (button as HTMLButtonElement).click())
 
     await page.locator('#more-button').click()
     await page.locator('#skills-menu-item').click()
@@ -101,10 +100,7 @@ test('generates the README screenshots from fake projects only', async () => {
     await settle(page, 400)
     await page.screenshot({ path: join(OUT, 'installed-agents.png') })
     await page.getByRole('button', { name: 'Sessions', exact: true }).click()
-    await expect(page.locator('.agents-drawer:visible')).toHaveCount(1)
     await settle(page)
-    await page.screenshot({ path: join(OUT, 'agents-drawer.png') })
-    await page.locator('.agents-toggle').first().evaluate((button) => (button as HTMLButtonElement).click())
 
     await openMore(page, 'projects')
     await expect(page.locator('.projects-view')).toBeVisible()

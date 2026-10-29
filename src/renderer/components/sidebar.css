@@ -150,6 +150,13 @@
   bottom: -2px;
 }
 
+.proj-row.reorderable .proj-toggle { cursor: grab; }
+.proj-row.drag-source .proj-toggle { cursor: grabbing; }
+.rail-btn.rail-mono.reorderable { cursor: grab; }
+.rail-btn.rail-mono.drop-before::before, .rail-btn.rail-mono.drop-after::after { content: ''; position: absolute; inset-inline: 6px; height: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; }
+.rail-btn.rail-mono.drop-before::before { top: -4px; }
+.rail-btn.rail-mono.drop-after::after { bottom: -4px; }
+
 .proj-row.drag-source {
   opacity: 0.55;
 }
@@ -236,6 +243,10 @@
   cursor: inherit;
 }
 
+.proj-title { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.proj-list .proj-text .proj-title .proj-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-title .proj-pin { margin: 0; opacity: 0.7; }
+
 .proj-sub { display: flex; align-items: center; gap: var(--s-2); min-width: 0; font-size: var(--fs-status); color: var(--muted); }
 .proj-branch { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--fs-status); }
 .proj-sub .proj-today { margin: 0; flex: none; }
@@ -311,3 +322,58 @@ aside.sidebar.rail { width: 56px; }
 @media (prefers-reduced-motion: reduce) {
   .proj-toggle, .foot-btn, .rail-btn { transition: none; }
 }
+
+/* 1.7.5 zones: open sessions on soft cards, then pinned, then a quiet list of one-line rows. */
+.proj-group { flex: none; }
+.proj-group.card {
+  margin: var(--s-1) var(--s-2) var(--s-2);
+  padding: 0 0 var(--s-2);
+  border-radius: 10px;
+  background: var(--pane);
+}
+.proj-group .proj-row,
+.proj-group .proj-row:first-child { margin-top: 0; }
+.proj-group.card .proj-row { margin: 0 var(--s-1); padding-top: var(--s-1); }
+.proj-group.card .kept-session-row { margin-inline-start: var(--s-1); margin-inline-end: var(--s-1); padding-inline-end: 0; }
+.proj-group.zone-pinned,
+.proj-group.zone-all { margin-bottom: var(--s-2); }
+.proj-group.zone-pinned:last-of-type { margin-bottom: 0; }
+.side-sec.quiet-sec { margin-top: var(--s-3); }
+
+.proj-today { white-space: nowrap; }
+.proj-sub .proj-branch { flex: 0 1 auto; }
+
+/* Quiet projects: one line, bold name then the branch. */
+.proj-list .proj-row.quiet-row { min-height: 30px; margin-top: 0; margin-inline: var(--s-1); }
+.quiet-toggle { align-items: baseline; gap: var(--s-2); padding-inline-start: var(--s-2); overflow: hidden; }
+.quiet-toggle .proj-name { flex: 0 1 auto; max-width: 70%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quiet-toggle .proj-branch { flex: 1 1 0; color: color-mix(in srgb, var(--muted) 72%, transparent); font-size: 11.5px; }
+
+.proj-count.tone-idle { color: var(--muted); }
+
+/* A session name may wrap to two lines; the status line carries the state and the age. */
+.kept-session-row:not(.waiting-row) .sess-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.kept-session-row .sess-row { align-items: flex-start; }
+.kept-session-row .sess-row .agent-mark { margin-top: 2px; }
+.kept-session-row:not(.waiting-row) .sess-meta .sess-age { flex: none; margin-inline-start: 0; }
+.kept-session-row .sess-state + .sess-age::before { content: '·'; margin-inline-end: var(--s-1); }
+
+/* "36 closed": a small, faint row at the bottom of its project. */
+.closed-head { margin-top: 2px; }
+.closed-toggle {
+  padding: 3px var(--s-2) 2px var(--s-2);
+  margin-inline-start: var(--s-1);
+  border-radius: 6px;
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+  font-size: 11.5px;
+}
+.closed-toggle svg { width: 11px; height: 11px; }
+.closed-toggle:hover { background: var(--hover); color: var(--muted); }

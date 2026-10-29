@@ -23,14 +23,12 @@ export function openBranchMenu(paneId: string, anchor: HTMLElement): void {
       h('span', { class: 'menu-icon', 'aria-hidden': 'true' }, icon(svg)),
       h('span', { class: 'menu-label' }, label)
     )
-  const rect = anchor.getBoundingClientRect()
   const root = h(
     'div',
     {
       class: 'popover menu floating branch-menu',
       role: 'menu',
-      'aria-label': 'Git actions',
-      style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 4)}px`
+      'aria-label': 'Git actions'
     },
     item('Pull', ICONS.download, pullPane, 'pull'),
     item('Switch branch…', ICONS.branch, switchBranchPane, 'switch'),

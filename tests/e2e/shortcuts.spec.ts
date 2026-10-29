@@ -15,7 +15,7 @@ test('Ctrl+/ and the palette open a searchable, read-only keyboard shortcuts she
     const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
     await expect(sheet).toBeVisible()
     await expect(page.getByRole('searchbox', { name: 'Search shortcuts' })).toBeFocused()
-    await expect(sheet.locator('.shortcuts-group h3')).toHaveText(['Sessions', 'Panes', 'Terminal', 'Views', 'Dictation', 'General'])
+    await expect(sheet.locator('.shortcuts-group h3')).toHaveText(['Sessions', 'Panes', 'Terminal', 'Views', 'General'])
     await expect(sheet.getByRole('listitem').filter({ hasText: 'Open the command palette' }).locator('kbd')).toHaveText('Ctrl+K')
     await expect(sheet.getByRole('listitem').filter({ hasText: 'New session' }).first().locator('kbd')).toHaveText('Ctrl+N')
     await expect(sheet.getByRole('listitem').filter({ hasText: 'Keyboard shortcuts' }).locator('kbd')).toHaveText('Ctrl+/')

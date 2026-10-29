@@ -22,7 +22,6 @@
 - **A grid of real terminals.** 1 to 6+ panes laid out automatically, each a full terminal (xterm.js on `node-pty`) with tabs for more agent sessions or a shell. Maximize any pane, zoom text per project.
 - **Three agents, one workflow.** Pick a project and its default agent starts in that folder without a prompt. Switch agent per session with the split **New session** button (Claude / Codex / Gemini) or Tab in the quick-pick.
 - **Arabic in every session.** Replies and prompts in Arabic show joined letters in right-to-left order in Claude Code, Codex, Gemini and shell sessions and in Replay, with numbers and English words kept in place. Copy, transcripts and find use normal reading order, and the terminal text itself is never changed. A bundled Arabic font and right-to-left text boxes make Arabic look the same on every computer.
-- **Voice dictation.** Press the mic in a pane header or **Ctrl+Shift+Space**, speak Arabic or English, and press it again; the text is typed into the session or the text box you were in, without sending it. Speech becomes text on your computer with Whisper large-v3-turbo (a one-time download of about 570 MB, then offline), with a live microphone level and a microphone picker in Settings.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Activity per pane.** Native child-process activity works for Claude, Codex and Gemini without a mod. An optional Claude ops feed adds plan progress and sub-agent details. Context and any available 5-hour/weekly limits stay with their own pane.
 - **Files view.** A light editor beside your sessions (Ctrl+Shift+E). One button at the top shows the project, branch and worktree. The explorer has Files, Search and Review modes with foldable Changes and Open in sessions sections, read-only files with a Changes toggle, small edits saved with Ctrl+S, and an inspector with the outline and the agents and commits that touched the file. Added lines carry a mark for the session that wrote them. **Send to agent** lists the project's live sessions, or starts a new one with the file, or copies an `@mention`. Markdown and HTML open as previews, images get Compare with main.
@@ -35,7 +34,6 @@
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
 - **Find work across sessions.** Search prompts and replies in the Resume picker. Leave **Search all projects** unchecked to search one project, or check it to search every project.
 - **Keep closed sessions in Projects.** Closing a pane keeps its resumable sessions under that project in the left sidebar. Resume one there or use its Remove button to clear it from Dawsha's list; the agent transcript stays on disk. Open sessions also have a Close button in the sidebar.
-- **Orchestrator.** Describe a feature or a bug and a lead agent sizes it, does small work itself and starts only the agents bigger work needs, each in its own pane and git worktree, on Claude Code and Codex. Approve specs, answer questions in Human review, follow cost per agent, then mark a run done or push it and open a PR.
 - **Work dashboard.** See the tickets and sessions you worked on today, this week or this month, per project, typed Feature, Bug, Other or Conversation, with exact active time, your own ticket names and links, and a Copy summary for standups.
 - **Remote Control (Beta).** Enable Remote Access in Settings to pair your own browser with this running Dawsha installation. The app creates a temporary Cloudflare Quick Tunnel; remote input and session control are separate opt-in permissions, and paired browsers can be revoked at any time.
 - **A sidebar built around you.** A Waiting on you section lists sessions blocked on you across projects. Projects show their branch and a quiet "2 live" or "needs you", with sort, a search filter (Ctrl+Shift+O), and a narrow rail with a flyout. The usage meter names its agent, and a click shows Claude, Codex and Gemini limits.
@@ -75,9 +73,9 @@
 - **Themes.** Seven themes (Dawsha, Dawsha Cards, Graphite Cards, Dawsha Daylight, Nord, Catppuccin Mocha, GitHub Light) with contrast checks, plus an optional background image. The Cards and Daylight themes draw each pane as a card. In Dawsha Cards the terminal sits flush, the focused session has a soft neutral ring and a session that needs you an orange one.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
 
-| Arabic in a Claude Code pane | Voice dictation |
-|---|---|
-| ![A Claude Code pane with an Arabic prompt and reply, joined and right to left, with a file name and a number in place](docs/screenshots/arabic.png) | ![A pane while dictating, with the mic button red and a live microphone level meter](docs/screenshots/dictation.png) |
+| Arabic in a Claude Code pane |
+|---|
+| ![A Claude Code pane with an Arabic prompt and reply, joined and right to left, with a file name and a number in place](docs/screenshots/arabic.png) |
 
 | Sessions board | Peek at a card |
 |---|---|
@@ -322,20 +320,11 @@ Lines that contain `error`, `failed`, `exception` (red), `warning` (amber) or `p
 
 ### Settings
 
-Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Highlights**, **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now, and Download / Install when available), **Orchestrator** (plans, agent profiles, effort and prices), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Dawsha keeps there). The Theme menu holds the themes and the background image.
-
-### Orchestrator
-
-**Orchestrator** in the top bar runs work with more than one agent. In **New run**, pick the project, choose **Feature** or **Bug**, and paste the story or bug report.
-
-- **Feature:** a lead agent reads the story and calls a size first. Small and medium work it does itself; large work gets implementers, a spec writer when the request is unclear (you approve the spec and mockups before anything is built) and reviewers that use the agent's built-in code review. You can pick the lead's model for one run, or choose **Lead works alone**.
-- **Bug:** one agent fixes it. Pick **Claude** or **Codex**; the model comes from your plan.
-
-Each agent opens in its own pane and git worktree on the run's branch, so your checkout stays untouched, and nothing merges into your main branch. The run dashboard shows the stages, tasks, agents with their model, state and cost, and the total. **Restart** replaces a stuck agent on the same task; **Continue with…** moves a task to another model. Questions from agents wait in **Human review**. When a run is ready, choose **Mark as done**, or **Push and open a PR**, optionally with instructions for the lead. **Boards** shows tasks from all runs, and **History** keeps finished runs for search and export. Plans, profiles and prices are in Settings > Orchestrator.
+Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Highlights**, **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now, and Download / Install when available), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Dawsha keeps there). The Theme menu holds the themes and the background image.
 
 ### Work
 
-**Work** in the top bar shows what you worked on **Today**, **This week** or **This month**, with ‹ and › to step back. Each session and orchestrator run is a **Feature**, **Bug**, **Other** change or **Conversation**, worked out from its branch and your own commits (by your git `user.email`). Time spent is active time from the full transcripts, leaving out breaks longer than 5 minutes. **Tickets** groups the sessions of one branch; give a ticket a name and a link, kept on this computer. Search, a project filter and **Copy summary** (standup text for what is shown) sit above the list.
+**Work** in the top bar shows what you worked on **Today**, **This week** or **This month**, with ‹ and › to step back. Each session is a **Feature**, **Bug**, **Other** change or **Conversation**, worked out from its branch and your own commits (by your git `user.email`). Time spent is active time from the full transcripts, leaving out breaks longer than 5 minutes. **Tickets** groups the sessions of one branch; give a ticket a name and a link, kept on this computer. Search, a project filter and **Copy summary** (standup text for what is shown) sit above the list.
 
 ### Usage
 
@@ -443,6 +432,8 @@ npm run test:e2e
 ```
 
 The end-to-end tests launch the built app with a temporary user-data folder and fake agent commands, so they never touch your real settings or agent folders.
+
+After publishing, run `npm run release:check -- 1.7.5` (or omit the version to use `package.json`). With an authenticated `gh` CLI, it checks version agreement, origin's tag and main ancestry, the published release and its nine required assets, the latest release workflow, and the website's status and New in heading. It reports each check and exits non-zero on failure; it does not update local refs or change the release.
 
 | Variable | Effect |
 |---|---|

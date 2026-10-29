@@ -27,7 +27,6 @@ import { WhatsNewComponent } from './whatsNew'
 import { TopBarComponent } from './topbar'
 import { UsageViewComponent } from './usageView'
 import { WorkViewComponent } from './workView'
-import { OrchestratorViewComponent } from './orch/orchestratorView'
 import { isSidebarCollapsed } from './sidebar'
 
 export class AppShell {
@@ -52,7 +51,6 @@ export class AppShell {
   private readonly skills = new SkillsViewComponent()
   private readonly usage = new UsageViewComponent()
   private readonly work = new WorkViewComponent()
-  private readonly orchestrator = new OrchestratorViewComponent()
   private readonly settings = new SettingsViewComponent()
   private readonly replay = new ReplayViewComponent()
   private readonly replayPicker = new ReplayPickerComponent()
@@ -69,7 +67,7 @@ export class AppShell {
   private resizeWidth = DEFAULT_SIDEBAR_WIDTH
 
   constructor() {
-    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.background.el, this.files.el, this.agents.el, this.skills.el, this.usage.el, this.work.el, this.orchestrator.el, this.settings.el, this.replay.el)
+    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.background.el, this.files.el, this.agents.el, this.skills.el, this.usage.el, this.work.el, this.settings.el, this.replay.el)
     this.sidebarResize.addEventListener('pointerdown', this.onResizeStart)
     this.sidebarResize.addEventListener('pointermove', this.onResizeMove)
     this.sidebarResize.addEventListener('pointerup', this.onResizeEnd)
@@ -155,8 +153,6 @@ export class AppShell {
     this.usage.update(state)
     this.work.el.hidden = state.view !== 'work'
     this.work.update(state)
-    this.orchestrator.el.hidden = state.view !== 'orchestrator'
-    if (state.view === 'orchestrator') this.orchestrator.update(state)
     this.settings.el.hidden = state.view !== 'settings'
     if (state.view === 'settings' && this.lastView !== 'settings') this.settings.show()
     else if (state.view === 'settings') this.settings.update(state)

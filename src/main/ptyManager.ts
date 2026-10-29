@@ -52,22 +52,9 @@ function folderProblem(cwd: string): string | null {
   }
 }
 
-/** Extra launch arguments and environment for one spawn (used by the orchestrator). */
-export interface SpawnExtras {
-  args?: string[]
-  env?: Record<string, string>
-}
-
-export interface PtyObserver {
-  onOutput(id: string, data: string): void
-  /** The pane's process ended: the user closed it or the CLI exited. Not called on app shutdown. */
-  onEnd(id: string, reason: string): void
-  onResize?(id: string, cols: number, rows: number): void
-}
-
 export class PtyManager {
   private readonly entries = new Map<string, Entry>()
-  private readonly observers: PtyObserver[] = []
+  private closing = false
   private readonly remoteTerminals: RemoteTerminalStateLike | null
 
   constructor(
@@ -98,21 +85,17 @@ export class PtyManager {
     return this.remoteTerminals?.tail(id) ?? Promise.resolve(null)
   }
 
-  /** Sees every pane's raw output and its end (exit or close by the user, not app shutdown). */
-  observe(observer: PtyObserver): void {
-    this.observers.push(observer)
-  }
-
   subscribeRemoteOutput(id: string, listener: (frame: RemoteTerminalFrame) => void): (() => void) | null {
     return this.remoteTerminals?.subscribe(id, listener) ?? null
   }
 
-  spawn(request: SpawnRequest, extras: SpawnExtras = {}): SpawnResult {
+  spawn(request: SpawnRequest): SpawnResult {
+    if (this.closing) return { ok: false, error: 'Dawsha is shutting down' }
     const problem = folderProblem(request.cwd)
     if (problem) return { ok: false, error: problem }
-    const spec = launchSpec(request, process.platform, extras.args ?? [])
+    const spec = launchSpec(request)
     if (typeof spec === 'string') return { ok: false, error: spec }
-    this.kill(request.id, false)
+    this.kill(request.id)
     try {
       const cols = Math.max(2, request.cols)
       const rows = Math.max(1, request.rows)
@@ -121,7 +104,7 @@ export class PtyManager {
         cols,
         rows,
         cwd: request.cwd,
-        env: { ...this.environment(), ...(extras.env ?? {}) }
+        env: this.environment()
       })
       this.attach(request.id, child, request.projectId ?? null, request.agent, request.desktopVisible !== false, request.remoteManaged === true, { cols, rows })
       this.recording?.recorder.start(
@@ -158,15 +141,12 @@ export class PtyManager {
     }
     this.remoteTerminals?.resize(id, cols, rows)
     this.recording?.recorder.resize(id, cols, rows)
-    for (const observer of this.observers) observer.onResize?.(id, cols, rows)
   }
 
-  /** notify=false when a tab is restarted in place: its observers keep watching the new process. */
-  kill(id: string, notify = true): void {
+  kill(id: string): void {
     const entry = this.entries.get(id)
     if (!entry) return
     this.entries.delete(id)
-    if (notify) for (const observer of this.observers) observer.onEnd(id, 'The pane was closed')
     this.remoteTerminals?.remove(id)
     this.recording?.recorder.stop(id)
     entry.killed = true
@@ -175,10 +155,11 @@ export class PtyManager {
   }
 
   killAll(): void {
-    for (const id of [...this.entries.keys()]) this.kill(id, false)
+    for (const id of [...this.entries.keys()]) this.kill(id)
   }
 
   async terminateAll(timeoutMs: number, log: QuitLog = () => undefined): Promise<void> {
+    this.closing = true
     const entries = [...this.entries.entries()]
     this.entries.clear()
     const trees = entries.map(([id, entry]) => {
@@ -186,7 +167,12 @@ export class PtyManager {
       this.remoteTerminals?.remove(id)
       this.recording?.recorder.stop(id)
       if (entry.timer) clearTimeout(entry.timer)
-      if (process.platform === 'win32') return taskkillTree(entry.process.pid, log)
+      if (process.platform === 'win32') return taskkillTree(entry.process.pid, log).then(() => {
+        // Dispose ConPTY only after taskkill has found the shell and its children.
+        try { entry.process.kill() } catch (error) {
+          log(`pty dispose failed pid=${entry.process.pid}: ${(error as Error).message}`)
+        }
+      })
       killPosixTree(entry.process.pid)
       return Promise.resolve()
     })
@@ -220,7 +206,6 @@ export class PtyManager {
     child.onData((data) => {
       if (entry.killed) return
       entry.buffer += data
-      for (const observer of this.observers) observer.onOutput(id, data)
       this.remoteTerminals?.append(id, data)
       this.recording?.recorder.output(id, data)
       if (entry.timer) return
@@ -232,7 +217,6 @@ export class PtyManager {
       this.entries.delete(id)
       this.remoteTerminals?.remove(id)
       this.recording?.recorder.stop(id, exitCode)
-      for (const observer of this.observers) observer.onEnd(id, `The CLI exited with code ${exitCode}`)
       if (entry.desktopVisible) this.handlers.onExit(id, exitCode)
     })
   }

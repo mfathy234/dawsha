@@ -10,11 +10,9 @@ export interface SnapshotTab {
   label: string
   titleHint?: string
   sessionId?: string
-  agentsOpen?: boolean
   from?: AgentKind
   baseline?: SessionBaseline
   task?: unknown
-  orchAgentId?: string
   name?: string
   tag?: SessionTag
 }
@@ -59,10 +57,8 @@ export function snapshotWorkspace(
           label: tab.label,
           titleHint: tab.titleHint,
           sessionId: tab.agent === 'shell' || detached ? undefined : sessionFor(tab),
-          agentsOpen: tab.agentsOpen === true ? true : undefined,
           from: tab.from,
           baseline: options.portable === true ? undefined : tab.baseline,
-          orchAgentId: options.portable === true ? undefined : tab.orchAgentId,
           name: tab.name,
           tag: tab.tag
         }))

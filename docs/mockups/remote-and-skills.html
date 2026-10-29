@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dawsha remote and skills — design preview</title>
+<style>
+:root{color-scheme:dark;--canvas:#0c0e13;--chrome:#11141a;--pane:#181c24;--raised:#222731;--overlay:#2b313d;--well:#14171e;--seam:rgb(255 255 255/.085);--ring:inset 0 0 0 1px rgb(255 255 255/.10);--text:#d4d9e2;--muted:#9ba4b6;--faint:#6e778a;--accent:#3ad6a0;--on-accent:#04261a;--run:#8fb4ff;--done:#86c5a8;--fail:#ff8b82;--needs:#f0954c;--hover:color-mix(in srgb,var(--text) 6%,transparent);--field:inset 0 1px 2px rgb(0 0 0/.35),0 0 0 1px rgb(255 255 255/.14);--pop:0 0 0 1px rgb(255 255 255/.09),0 18px 44px rgb(0 0 0/.55);--claude:#e5866a;--codex:#c9ced8;--gemini:#ad95fb;--kw:#c4a2f0;--mono:'JetBrains Mono','Cascadia Mono',Consolas,monospace;
+ --id-red:#f2777a;--id-orange:#f0a35e;--id-yellow:#e5c76b;--id-green:#7fcf9a;--id-cyan:#6cc9d6;--id-blue:#7fa7f5;--id-purple:#b19af5;--id-pink:#ec8fc4}
+:root.light{color-scheme:light;--canvas:#dce1e8;--chrome:#edf0f4;--pane:#fff;--raised:#e8edf3;--overlay:#fff;--well:#f6f8fa;--seam:rgb(24 28 40/.12);--ring:inset 0 0 0 1px rgb(24 28 40/.12);--text:#172336;--muted:#4e6077;--faint:#8a96a8;--accent:#087c58;--on-accent:#fff;--run:#255aa6;--done:#28614d;--fail:#a83229;--needs:#9a4a00;--field:inset 0 1px 2px rgb(24 28 40/.12),0 0 0 1px rgb(24 28 40/.32);--pop:0 0 0 1px rgb(24 28 40/.1),0 14px 36px rgb(24 28 40/.22);--codex:#2b3340;--kw:#7c3aed;
+ --id-red:#c0392b;--id-orange:#b9620f;--id-yellow:#8a6d00;--id-green:#237a4b;--id-cyan:#0d7b8a;--id-blue:#2f5fc4;--id-purple:#6b4fc4;--id-pink:#b23b82}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--canvas);color:var(--text);font:13px/1.45 'Segoe UI Variable','Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:0;background:transparent;border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover{background:var(--hover)}
+:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 70%,transparent);outline-offset:1px}
+.muted{color:var(--muted)}.faint{color:var(--faint)}.run{color:var(--run)}.done{color:var(--done)}.fail{color:var(--fail)}.needs{color:var(--needs)}
+.mono{font-family:var(--mono);font-size:12px}
+.field{background:var(--well);box-shadow:var(--field);border:0;border-radius:6px;padding:7px 10px;width:100%}
+textarea.field{resize:vertical;font-family:var(--mono);font-size:12px;line-height:1.6}
+.primary{background:var(--accent);color:var(--on-accent);font-weight:600}.primary:hover{background:color-mix(in srgb,var(--accent) 88%,white)}
+.soft{background:var(--raised)}
+.danger-soft{background:var(--raised);color:var(--fail)}
+.mark{font-size:13px;line-height:1}.mark.claude{color:var(--claude)}.mark.codex{color:var(--codex)}.mark.gemini{color:var(--gemini)}
+.seg{display:inline-flex;gap:2px;background:var(--chrome);border-radius:8px;padding:2px}
+.seg button{padding:4px 11px;color:var(--muted)}.seg button[aria-pressed=true]{background:var(--raised);color:var(--text)}
+.av{--c:var(--id-blue);--size:32px;position:relative;flex:none;width:var(--size);height:var(--size);border-radius:30%;display:grid;place-items:center;font-weight:700;font-size:calc(var(--size)*.38);color:var(--c);background:color-mix(in srgb,var(--c) 16%,var(--raised));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 30%,transparent)}
+.av.agent{border-radius:8px}
+.av::after{content:'';position:absolute;inset:-4px;border-radius:34%;pointer-events:none;opacity:0}
+.av[data-state=needs]::after{opacity:1;box-shadow:0 0 0 2px var(--needs);animation:flash .5s ease-in-out 3}
+.av[data-state=working]::after{opacity:1;box-shadow:0 0 0 2px var(--run);animation:breathe 1.8s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.15}}
+@media(prefers-reduced-motion:reduce){.av::after{animation:none!important}}
+.preview{display:flex;align-items:center;gap:12px;padding:8px 16px;background:#000;color:#cfd5df;font-size:12px;border-bottom:1px solid #222;flex-wrap:wrap}
+.preview strong{color:#fff}.preview .seg{background:#151a22}.preview .seg button{color:#9aa4b5}.preview .seg button[aria-pressed=true]{background:#2a3241;color:#fff}
+.top{display:flex;align-items:center;gap:6px;height:44px;padding:0 12px;background:var(--chrome);border-bottom:1px solid var(--seam)}
+.top .logo{width:22px;height:22px;border-radius:6px;background:var(--accent);display:grid;place-items:center;color:var(--on-accent);font-weight:800;font-size:12px;margin-right:6px}
+.top nav{display:flex;gap:2px;margin-left:10px}.top nav button{color:var(--muted)}.top nav button[aria-current=page]{color:var(--text);background:var(--raised)}
+.view{flex:1;overflow:auto;min-height:0}
+.page{max-width:1100px;margin:0 auto;padding:24px 28px 60px}
+.page h1{font-size:20px;margin:0 0 4px;font-weight:600}
+.lede{color:var(--muted);margin:0 0 20px}
+h2.sub{font-size:13px;font-weight:600;margin:26px 0 10px}
+
+/* ===== skills -> crew ===== */
+.sk-list{display:flex;flex-direction:column}
+.sk{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 10px;border-radius:8px}
+.sk:hover{background:var(--hover)}
+.sk input{grid-row:1/3}
+.sk b{font-weight:600}.sk .src{color:var(--faint);font-size:12px;margin-left:6px}
+.sk small{grid-column:2/3;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sk .acts{grid-row:1/3;grid-column:3;display:flex;gap:6px;align-items:center}
+.sk .is-member{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.sk .is-member .av{--size:22px;border-radius:7px;font-size:9px}
+.bulk{display:flex;gap:10px;align-items:center;padding:10px;background:var(--well);border-radius:10px;margin-bottom:10px}
+.bulk .sp{flex:1}
+dialog{background:var(--overlay);color:var(--text);border:0;border-radius:14px;box-shadow:var(--pop);padding:20px 22px;width:min(980px,96vw)}
+dialog::backdrop{background:rgb(0 0 0/.5)}
+dialog h2{font-size:16px;margin:0 0 4px}
+.conv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;margin-top:14px}
+.conv h3{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 8px}
+.skill-src{background:var(--well);border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--muted);white-space:pre-wrap;max-height:420px;overflow:auto}
+.skill-src mark{background:color-mix(in srgb,var(--kw) 22%,transparent);color:var(--text);border-radius:3px;padding:0 2px}
+.gen{display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px 14px;align-items:start}
+.gen>label{color:var(--muted);padding-top:7px}
+.gen .why{font-size:11.5px;color:var(--faint);margin-top:3px}
+.idrow{display:flex;gap:8px;align-items:center}
+.swatches{display:flex;gap:5px}
+.swatches button{width:22px;height:22px;padding:0;border-radius:7px;display:grid;place-items:center}
+.swatches button span{width:14px;height:14px;border-radius:4px;background:var(--c)}
+.swatches button[aria-checked=true]{box-shadow:0 0 0 2px var(--text)}
+.vars{display:flex;gap:6px;flex-wrap:wrap}
+.vars code{font-family:var(--mono);font-size:11.5px;background:var(--well);padding:3px 8px;border-radius:5px;color:var(--kw)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;gap:6px;align-items:center;background:var(--well);padding:6px 10px;border-radius:7px;cursor:pointer}
+.chip[aria-checked=true]{background:var(--raised);box-shadow:inset 0 0 0 1px rgb(255 255 255/.28)}
+.dlg-acts{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;align-items:center}
+.dlg-acts .sp{flex:1}
+
+/* ===== remote access (desktop) ===== */
+.status{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--pane);border-radius:12px;box-shadow:var(--ring)}
+.status .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:16px;flex:none}
+.status.on .ic{background:color-mix(in srgb,var(--done) 18%,var(--raised));color:var(--done)}
+.status.drop .ic{background:color-mix(in srgb,var(--needs) 18%,var(--raised));color:var(--needs)}
+.status.off .ic{background:var(--raised);color:var(--muted)}
+.status b{font-size:15px;font-weight:600}
+.status .sp{flex:1}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:16px}
+.card{background:var(--pane);border-radius:12px;box-shadow:var(--ring);padding:16px 18px}
+.card h3{font-size:13px;margin:0 0 10px;font-weight:600}
+.pair{display:grid;grid-template-columns:132px 1fr;gap:16px;align-items:start}
+.qr{width:132px;height:132px;border-radius:10px;background:#fff;padding:10px}
+.qr i{display:block;width:100%;height:100%;background:repeating-conic-gradient(#111 0 25%,#fff 0 50%) 0 0/12px 12px;border-radius:4px;-webkit-mask:radial-gradient(circle at 50% 50%,#000 60%,transparent 61%) , linear-gradient(#000,#000);}
+.code{font-family:var(--mono);font-size:22px;letter-spacing:.3em;margin:4px 0 2px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:6px 12px;font-size:12.5px}
+.kv span:nth-child(odd){color:var(--muted)}
+.dev{display:grid;grid-template-columns:auto 1fr auto;gap:2px 12px;align-items:center;padding:10px 6px;border-radius:8px}
+.dev:hover{background:var(--hover)}
+.dev .di{grid-row:1/3;width:32px;height:32px;border-radius:9px;background:var(--raised);display:grid;place-items:center;font-size:15px}
+.dev small{grid-column:2;color:var(--muted)}
+.dev .acts{grid-row:1/3;grid-column:3}
+.perm{display:flex;flex-direction:column;gap:8px}
+.perm label{display:flex;gap:10px;align-items:flex-start}
+.perm small{display:block;color:var(--muted);font-size:12px}
+.log{font-size:12.5px}
+.log div{display:grid;grid-template-columns:58px auto 1fr;gap:10px;padding:5px 0;align-items:center}
+.log .t{color:var(--faint);font-variant-numeric:tabular-nums}
+.log .av{--size:20px;font-size:8px;border-radius:6px}
+.switch{position:relative;width:38px;height:22px;border-radius:11px;background:var(--raised);box-shadow:var(--ring);flex:none;cursor:pointer}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:transform .15s}
+.switch[aria-checked=true]{background:color-mix(in srgb,var(--accent) 35%,var(--raised))}
+.switch[aria-checked=true]::after{transform:translateX(16px);background:var(--accent)}
+
+/* ===== phone ===== */
+.phones{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;padding:24px}
+.phone{width:380px;height:780px;border-radius:44px;background:#000;padding:12px;box-shadow:0 30px 60px rgb(0 0 0/.5),0 0 0 2px #2a2f3a}
+.screen{width:100%;height:100%;border-radius:34px;overflow:hidden;background:var(--canvas);display:flex;flex-direction:column}
+.ph-top{display:flex;align-items:center;gap:10px;padding:46px 18px 10px}
+.ph-top .logo{width:28px;height:28px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:var(--on-accent);font-weight:800}
+.ph-top .conn{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.ph-top .sp{flex:1}
+.ph-tabs{display:flex;gap:4px;padding:0 14px 10px}
+.ph-tabs button{flex:1;padding:9px 6px;border-radius:10px;color:var(--muted);font-size:13.5px}
+.ph-tabs button[aria-selected=true]{background:var(--raised);color:var(--text)}
+.ph-body{flex:1;overflow:auto;padding:4px 14px 20px}
+.ph-h{font-size:22px;font-weight:600;margin:8px 4px 2px}
+.ph-sub{color:var(--muted);margin:0 4px 14px;font-size:13px}
+.ap{background:var(--pane);border-radius:16px;padding:14px;margin-bottom:12px}
+.ap.is-needs{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--needs) 50%,transparent)}
+.ap .who{display:flex;gap:10px;align-items:center}
+.ap .who .av{--size:36px}
+.ap .who b{font-weight:600;font-size:14.5px}
+.ap .who small{display:block;color:var(--muted);font-size:12.5px}
+.ap .kind{margin-left:auto;font-size:12px;color:var(--muted)}
+.ap pre{margin:12px 0 10px;background:var(--well);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;color:var(--text)}
+.ap .risk{font-size:12.5px;color:var(--muted);margin:0 2px 12px}
+.ap .btns{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.ap .btns button{padding:13px;border-radius:12px;font-size:15px;font-weight:600}
+.ap .btns .no{background:var(--raised)}
+.ap .btns .yes{background:var(--accent);color:var(--on-accent)}
+.ap .btns.one{grid-template-columns:1fr}
+.ap .answer{display:flex;flex-direction:column;gap:6px}
+.ap .answer button{background:var(--raised);text-align:left;padding:11px 12px;border-radius:10px}
+.sess{display:grid;grid-template-columns:auto 1fr auto;gap:1px 10px;align-items:center;padding:11px 8px;border-radius:12px}
+.sess .av{grid-row:1/3}
+.sess small{grid-column:2/4;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess .st{font-size:12.5px}
+.ph-crew{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.ph-crew button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:12px;font-size:12px}
+.ph-crew button:hover{background:var(--hover)}
+.ph-crew .av{--size:44px}
+.note{position:fixed;left:16px;bottom:16px;max-width:400px;background:var(--overlay);box-shadow:var(--pop);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--muted);z-index:15;max-height:72vh;overflow:auto}
+.note b{color:var(--text)}.note ul{margin:6px 0 10px;padding-left:16px}.note li{margin-bottom:3px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--overlay);box-shadow:var(--pop);border-radius:10px;padding:8px 14px;font-size:12.5px;z-index:30}
+@media(max-width:900px){.grid2,.conv{grid-template-columns:1fr}}
+</style>
+
+<div class="preview">
+  <strong>Dawsha · Crew release</strong><span>design preview · example data · nothing runs</span>
+  <span class="seg" id="v-seg"><button data-v="skills" aria-pressed="true">Skill → crew member</button><button data-v="remote" aria-pressed="false">Remote Access</button><button data-v="phone" aria-pressed="false">Phone</button></span>
+  <span style="flex:1"></span>
+  <span id="remote-sim" hidden>Tunnel: <span class="seg" id="tun"><button data-s="on" aria-pressed="true">On</button><button data-s="drop" aria-pressed="false">Dropped</button><button data-s="off" aria-pressed="false">Off</button></span></span>
+  <button id="notes-t" style="color:#cfd5df">Design notes</button>
+  <span class="seg" id="t-seg"><button data-th="dark" aria-pressed="true">Dark</button><button data-th="light" aria-pressed="false">Light</button></span>
+</div>
+
+<header class="top">
+  <span class="logo">D</span>
+  <nav><button>Sessions</button><button>Agents</button><button id="nav-crew">Crew</button><button>Files</button><button aria-current="page" id="nav-more">More</button></nav>
+</header>
+
+<!-- ============ SKILLS → CREW ============ -->
+<main class="view" id="skills">
+  <div class="page">
+    <h1>Skills</h1>
+    <p class="lede">The skills Claude Code, Codex and Gemini can use on this PC. Any of them can become a crew member that you run on its own, with any model.</p>
+    <div class="bulk"><span class="muted" id="bulk-count">2 selected</span><span class="sp"></span><button class="soft" id="bulk-go">Make 2 crew members…</button></div>
+    <div class="sk-list" id="sk-list"></div>
+  </div>
+</main>
+
+<!-- ============ REMOTE ACCESS (desktop) ============ -->
+<main class="view" id="remote" hidden>
+  <div class="page">
+    <h1>Remote Access</h1>
+    <p class="lede">Answer your agents and run your crew from your phone. Everything goes through a private tunnel to this PC; nothing is stored anywhere else.</p>
+    <div class="status on" id="status"></div>
+    <div class="grid2">
+      <section class="card">
+        <h3>Connect a phone</h3>
+        <div class="pair">
+          <div class="qr" aria-label="QR code that opens Dawsha and pairs your phone"><i></i></div>
+          <div>
+            <div class="muted" style="font-size:12px">Scan it, or open the link and type the code</div>
+            <div class="code" aria-label="Pairing code 4 8 1 9 0 2">481 902</div>
+            <div class="faint" style="font-size:12px" id="expiry">Expires in 4:52 · one phone per code</div>
+            <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="soft">Copy link</button><button class="soft">New code</button></div>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <h3>Connection</h3>
+        <div class="kv" id="health"></div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:14px"><span class="switch" role="switch" aria-checked="true" tabindex="0" aria-label="Reconnect on its own"></span><span>Reconnect on its own when the tunnel drops</span></div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:10px"><span class="switch" role="switch" aria-checked="true" tabindex="0" aria-label="Tell me when the link changes"></span><span>Tell me when the link changes, so I can re-scan</span></div>
+      </section>
+    </div>
+    <div class="grid2">
+      <section class="card">
+        <h3>Phones</h3>
+        <div class="dev"><span class="di">▯</span><b>Pixel 9</b><span class="acts"><button class="danger-soft" data-revoke="Pixel 9">Remove…</button></span><small>Active now · paired 12 Oct</small></div>
+        <div class="dev"><span class="di">▯</span><b>iPad mini</b><span class="acts"><button class="danger-soft" data-revoke="iPad mini">Remove…</button></span><small>Last seen 3 days ago · paired 2 Sep</small></div>
+      </section>
+      <section class="card">
+        <h3>What a phone can do</h3>
+        <div class="perm">
+          <label><input type="checkbox" checked><span>Allow or deny commands<small>Edits to CI and config files can only be denied from the phone.</small></span></label>
+          <label><input type="checkbox" checked><span>Answer questions and plan approvals</span></label>
+          <label><input type="checkbox" checked><span>Send a message to a session</span></label>
+          <label><input type="checkbox" checked><span>Run crew members and give Maya a goal<small>Runs use the member's own permissions.</small></span></label>
+          <label><input type="checkbox"><span>Read full terminal output<small>Off: the phone sees status lines and questions only.</small></span></label>
+        </div>
+      </section>
+    </div>
+    <h2 class="sub">Recent from your phones</h2>
+    <div class="card log">
+      <div><span class="t">12:41</span><span class="av" style="--c:var(--id-orange)">RA</span><span>Pixel 9 let <b>Rami</b> post 2 comments on PR 8841</span></div>
+      <div><span class="t">12:30</span><span class="av" style="--c:var(--id-purple);border-radius:50%">MA</span><span>Pixel 9 gave <b>Maya</b> a goal: fix the flaky login test</span></div>
+      <div><span class="t">11:02</span><span class="av agent" style="--c:var(--claude)">✳</span><span>Pixel 9 allowed <span class="mono">npm test -- invoices</span> in billing-api</span></div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ PHONE ============ -->
+<main class="view" id="phone" hidden>
+  <div class="phones">
+    <div class="phone"><div class="screen">
+      <div class="ph-top"><span class="logo">D</span><span class="conn" id="ph-conn">Connected to your PC</span><span class="sp"></span><span class="av" style="--size:30px;--c:var(--id-purple);border-radius:50%" data-state="needs">MA</span></div>
+      <div class="ph-tabs" role="tablist"><button role="tab" aria-selected="true">Needs you 2</button><button role="tab" aria-selected="false">Sessions</button><button role="tab" aria-selected="false">Crew</button></div>
+      <div class="ph-body">
+        <div class="ph-h">Needs you</div>
+        <p class="ph-sub">Oldest first. Answering here is the same as answering on the PC.</p>
+        <div class="ap is-needs">
+          <div class="who"><span class="av" style="--c:var(--id-orange)" data-state="needs">RA</span><span><b>Rami</b><small>PR reviewer · Platforms · 2m</small></span><span class="kind">Posts to Azure DevOps</span></div>
+          <pre>Post 2 comments to PR 8841
+ 1. StockSettingsController.cs:41
+ 2. ServiceStockRepository.cs:88</pre>
+          <div class="btns"><button class="no" data-t="Kept as a draft. Nothing was posted.">Draft only</button><button class="yes" data-t="Rami posts the 2 comments.">Post comments</button></div>
+        </div>
+        <div class="ap">
+          <div class="who"><span class="av agent" style="--c:var(--claude)">✳</span><span><b>Claude · billing-api</b><small>Refactor invoice export · 5m</small></span><span class="kind">Command</span></div>
+          <pre>npm test -- invoices</pre>
+          <p class="risk">Runs with your user's rights on the PC.</p>
+          <div class="btns"><button class="no" data-t="Denied. Claude is told why.">Deny…</button><button class="yes" data-t="Allowed once.">Allow once</button></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="phone"><div class="screen">
+      <div class="ph-top"><span class="logo">D</span><span class="conn">Connected to your PC</span><span class="sp"></span></div>
+      <div class="ph-tabs" role="tablist"><button role="tab" aria-selected="false">Needs you 2</button><button role="tab" aria-selected="false">Sessions</button><button role="tab" aria-selected="true">Crew</button></div>
+      <div class="ph-body">
+        <div class="ph-h">Crew</div>
+        <p class="ph-sub">Hand a job to someone. It runs on your PC, in the project you pick.</p>
+        <div class="ph-crew">
+          <button><span class="av" style="--c:var(--id-purple);border-radius:50%" data-state="working">MA</span>Maya</button>
+          <button><span class="av" style="--c:var(--id-red)">SA</span>Sami</button>
+          <button><span class="av" style="--c:var(--id-blue)">TA</span>Tarek</button>
+          <button><span class="av" style="--c:var(--id-orange)">RA</span>Rami</button>
+        </div>
+        <div class="ap">
+          <div class="who"><span class="av" style="--c:var(--id-orange)">RA</span><span><b>Run Rami</b><small>PR reviewer</small></span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+            <input class="field" value="PR 8850" aria-label="pr" style="padding:11px 12px">
+            <select class="field" style="padding:11px 12px" aria-label="Project"><option>Platforms · develop</option></select>
+            <div class="chips"><span class="chip" aria-checked="true" role="radio">✳ Opus</span><span class="chip" role="radio" aria-checked="false">✳ Fable</span><span class="chip" role="radio" aria-checked="false">◎ Codex</span></div>
+          </div>
+          <div class="btns one" style="margin-top:12px"><button class="yes" data-t="Rami starts on your PC. You get a notification when he needs you.">Run Rami</button></div>
+        </div>
+        <div class="sess"><span class="av" style="--c:var(--id-purple);border-radius:50%" data-state="working">MA</span><b>Maya · fix the flaky login test</b><span class="st run">Working</span><small>Omar is writing the failing test · 2 of 3</small></div>
+      </div>
+    </div></div>
+  </div>
+</main>
+
+<dialog id="dlg-conv">
+  <h2 id="conv-title">Make a crew member from correlation-id</h2>
+  <div class="muted">Dawsha reads the skill and fills in a member. Check it, change anything, then save.</div>
+  <div class="conv">
+    <div><h3>The skill · ~/.claude/skills/correlation-id/SKILL.md</h3>
+<div class="skill-src">---
+name: correlation-id
+description: Investigates why a Microtec ERP request failed from its <mark>correlation id</mark> (trace id) by pulling every log line and span from OpenObserve, then reading the code on the <mark>environment's</mark> branch. Use when the user pastes a correlation id and names an environment (<mark>dev, stage, uat, preprod</mark>)…
+---
+
+# Correlation id investigation
+<mark>Read-only.</mark> Never print credentials.
+1. Resolve the environment's branch…
+2. Query OpenObserve for the id…
+3. Explain the root cause with file:line…</div></div>
+    <div><h3>The crew member</h3>
+      <div class="gen">
+        <label>Who</label><div><div class="idrow"><span class="av" style="--c:var(--id-blue)">ZA</span><input class="field" value="Zaid" style="width:130px" aria-label="Name"><input class="field" value="Incident investigator" aria-label="Role"></div><div class="why">Role from the skill's description</div></div>
+        <label>Colour</label><div class="swatches" role="radiogroup" aria-label="Colour"><button role="radio" aria-checked="false" style="--c:var(--id-red)" aria-label="red"><span></span></button><button role="radio" aria-checked="false" style="--c:var(--id-orange)" aria-label="orange"><span></span></button><button role="radio" aria-checked="false" style="--c:var(--id-green)" aria-label="green"><span></span></button><button role="radio" aria-checked="true" style="--c:var(--id-blue)" aria-label="blue"><span></span></button><button role="radio" aria-checked="false" style="--c:var(--id-purple)" aria-label="purple"><span></span></button><button role="radio" aria-checked="false" style="--c:var(--id-pink)" aria-label="pink"><span></span></button></div>
+        <label>Asks you for</label><div><div class="vars"><code>{{id}}</code><code>{{env}}</code></div><div class="why">Found in the description: a correlation id and one of dev, stage, uat, preprod</div></div>
+        <label>Prompt</label><div><textarea class="field" rows="2">Use the correlation-id skill. Correlation id {{id}} on {{env}}: find every log line and span and explain the root cause.</textarea></div>
+        <label>Instructions</label><div><textarea class="field" rows="3">Use the correlation-id skill and follow it exactly. It is at ~/.claude/skills/correlation-id/SKILL.md; read it first if your CLI cannot load skills.</textarea><div class="why">On Codex and Gemini, the member reads the skill file itself</div></div>
+        <label>Permissions</label><div class="chips"><span class="chip" role="radio" aria-checked="true">Read only</span><span class="chip" role="radio" aria-checked="false">Ask</span><span class="chip" role="radio" aria-checked="false">Full</span><div class="why" style="width:100%">The skill says read-only</div></div>
+        <label>Model</label><div class="chips"><span class="chip" role="radio" aria-checked="false"><span class="mark claude">✳</span>Sonnet</span><span class="chip" role="radio" aria-checked="true"><span class="mark codex">◎</span>Codex</span><span class="chip" role="radio" aria-checked="false"><span class="mark claude">✳</span>Fable</span></div>
+        <label>Paste to run</label><div><div class="vars"><code>8-4-4-4-12 hex id</code><code>"on dev" … "on uat"</code></div><div class="why">Pasting an id with an environment offers Zaid first</div></div>
+        <label>Projects</label><div><input class="field" value="Platforms, InfrastructureServices" aria-label="Projects"><div class="why">The skill mentions Microtec ERP</div></div>
+      </div>
+    </div>
+  </div>
+  <form method="dialog" class="dlg-acts"><label class="muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" checked> Keep it linked: when the skill changes, Zaid follows</label><span class="sp"></span><button value="cancel">Cancel</button><button value="ok" class="primary">Add Zaid to the crew</button></form>
+</dialog>
+
+<dialog id="dlg-rm" style="width:min(440px,92vw)"><h2 id="rm-title">Remove Pixel 9?</h2><p class="muted" style="margin:6px 0 0">It is signed out at once and needs a new code to come back.</p><form method="dialog" class="dlg-acts"><button value="cancel" autofocus>Cancel</button><button value="ok" id="rm-go" style="background:var(--fail);color:#2a0b0b;font-weight:600">Remove Pixel 9</button></form></dialog>
+
+<div class="note" id="note" hidden>
+  <b>Skill → crew member</b>
+  <ul>
+    <li>Every skill in the Skills list gets "Make a crew member". You can also select several at once.</li>
+    <li>Dawsha reads the skill and fills in a member, showing where each choice came from: name and role from the description, fields to ask for, permissions ("read-only"), projects it mentions, and a paste pattern for paste to run.</li>
+    <li>Members stay linked to their skill. Claude loads the skill natively; Codex and Gemini read the SKILL.md file.</li>
+  </ul>
+  <b>Remote Access, refined</b>
+  <ul>
+    <li>One status line says plainly whether the phone can reach this PC, with Reconnect when the tunnel drops. This is the silent-drop complaint from your sessions.</li>
+    <li>Health: tunnel type, round trip, last check and when the link last changed.</li>
+    <li>Choose what a phone can do. Removing a phone asks first and names it.</li>
+    <li>A short log of what your phones did.</li>
+  </ul>
+  <b>Phone app</b>
+  <ul><li>Your design rules apply: no ALL-CAPS labels, no pills and no boxed cards. Crew identities replace letter tiles, the questions come first, buttons are large, and a Crew tab lets you run a member or give Maya a goal from the phone.</li></ul>
+  <b>Also in this release</b>
+  <ul><li>Voice dictation is removed, along with its settings, the speech model download and onnxruntime. That is also most of the app-size saving.</li></ul>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let tt;function toast(t){$('toast').textContent=t;$('toast').hidden=false;clearTimeout(tt);tt=setTimeout(()=>$('toast').hidden=true,2600)}
+const skills=[
+ ['correlation-id','~/.claude/skills','Investigates a failed request from its correlation id in OpenObserve on dev, stage, uat or preprod.',null,true],
+ ['sql-doctor','~/.claude/skills','Diagnoses database problems on the Microtec SQL servers through CloudBeaver, read-only.',null,true],
+ ['pr-review','~/.claude/agents','Reviews an Azure DevOps pull request against the Microtec standards.',['RA','orange','Rami'],false],
+ ['dev-stack','~/.claude/skills','Starts, stops or restarts the local Blazor clients, APIs and containers.',null,false],
+ ['capture-page','~/.claude/skills','Screenshots an authenticated app route with Playwright, in Arabic or English.',null,false],
+ ['aca-doctor','~/.claude/skills','Diagnoses Azure Container Apps for the Microtec ERP on dev, stage, uat and preprod.',null,false],
+ ['taste-skill','~/.claude/skills','Anti-slop frontend design rules for redesigns and landing pages.',['LI','pink','Lina (built in)'],false],
+ ['release-notes','~/.codex/prompts','Drafts release notes from the commits since the last tag.',null,false]
+];
+function renderSkills(){$('sk-list').innerHTML=skills.map((s,i)=>`<div class="sk"><input type="checkbox" ${s[4]?'checked':''} data-i="${i}" aria-label="Select ${s[0]}"><span><b>${s[0]}</b><span class="src">${s[1]}</span></span><small>${s[2]}</small><span class="acts">${s[3]?`<span class="is-member"><span class="av" style="--c:var(--id-${s[3][1]})">${s[3][0]}</span>${s[3][2]}</span>`:`<button class="soft" data-make="${s[0]}">Make a crew member</button>`}</span></div>`).join('');
+ const n=skills.filter(s=>s[4]).length;$('bulk-count').textContent=n+' selected';$('bulk-go').textContent=`Make ${n} crew member${n===1?'':'s'}…`;$('bulk-go').disabled=n===0}
+renderSkills();
+$('sk-list').onclick=e=>{const c=e.target.closest('[data-i]');if(c){skills[+c.dataset.i][4]=c.checked;renderSkills();return}const m=e.target.closest('[data-make]');if(m){$('conv-title').textContent='Make a crew member from correlation-id (worked example)';$('dlg-conv').showModal()}};
+$('bulk-go').onclick=()=>{$('conv-title').textContent='Make a crew member from correlation-id (1 of 2)';$('dlg-conv').showModal()};
+$('dlg-conv').onclose=()=>{if($('dlg-conv').returnValue==='ok'){skills[0][3]=['ZA','blue','Zaid'];skills[0][4]=false;renderSkills();toast('Zaid joined the crew. Preview only.')}};
+$('dlg-conv').querySelectorAll('.chips,.swatches').forEach(g=>g.onclick=e=>{const c=e.target.closest('[role=radio]');if(!c)return;g.querySelectorAll('[role=radio]').forEach(x=>x.setAttribute('aria-checked',String(x===c)))});
+/* remote */
+const ST={on:['on','✓','Your phone can reach this PC','Quick Tunnel · checked 10 seconds ago','Turn off'],drop:['drop','!','The tunnel dropped 2 minutes ago','Your phone cannot reach this PC. Reconnecting gives a new link, so re-scan the code.','Reconnect'],off:['off','⏻','Remote Access is off','Turn it on to answer your agents from your phone.','Turn on']};
+function renderRemote(s){const [c,ic,t,sub,btn]=ST[s];$('status').className='status '+c;$('status').innerHTML=`<span class="ic" aria-hidden="true">${ic}</span><div><b>${t}</b><div class="muted">${sub}</div></div><span class="sp"></span>${s==='on'?'<button class="soft">Test from here</button>':''}<button class="${s==='drop'?'primary':'soft'}" id="st-btn">${btn}</button>`;
+ $('health').innerHTML=s==='off'?'<span>Status</span><span class="muted">Off</span>':`<span>Status</span><span class="${s==='on'?'done':'needs'}">${s==='on'?'Reachable':'Not reachable'}</span><span>Tunnel</span><span>Cloudflare Quick Tunnel</span><span>Round trip</span><span>${s==='on'?'84 ms':'—'}</span><span>Link changed</span><span>today 09:12${s==='drop'?' · will change on reconnect':''}</span><span>Phones online</span><span>${s==='on'?'Pixel 9':'none'}</span>`;
+ const b=$('st-btn');b.onclick=()=>{const next=s==='on'?'off':'on';setTun(next);toast(next==='on'?'Reconnected. The link is new, so re-scan on the phone.':'Remote Access is off.')}}
+function setTun(s){$('tun').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.s===s)));renderRemote(s);$('ph-conn').textContent=s==='on'?'Connected to your PC':'Cannot reach your PC · retrying'}
+$('tun').onclick=e=>{const b=e.target.closest('button');if(b)setTun(b.dataset.s)};
+setTun('on');
+document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=()=>{const n=b.dataset.revoke;$('rm-title').textContent=`Remove ${n}?`;$('rm-go').textContent=`Remove ${n}`;$('dlg-rm').showModal()});
+$('dlg-rm').onclose=()=>{if($('dlg-rm').returnValue==='ok')toast('Preview only. No phone was removed.')};
+document.querySelectorAll('.switch').forEach(s=>s.onclick=()=>s.setAttribute('aria-checked',String(s.getAttribute('aria-checked')!=='true')));
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>toast(b.dataset.t));
+/* views */
+function view(v){['skills','remote','phone'].forEach(x=>$(x).hidden=x!==v);$('v-seg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===v)));$('remote-sim').hidden=v==='skills'}
+$('v-seg').onclick=e=>{const b=e.target.closest('button');if(b)view(b.dataset.v)};
+$('notes-t').onclick=()=>$('note').hidden=!$('note').hidden;
+$('t-seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;document.documentElement.classList.toggle('light',b.dataset.th==='light');$('t-seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))};
+</script>
+</html>

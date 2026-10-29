@@ -9,6 +9,12 @@ export interface AgentLimitEntry {
 /** The latest limit windows each agent reported, with when. Limits belong to an account, so they are kept per agent, never per pane. */
 export type AgentLimitStore = Readonly<Partial<Record<AgentKind, AgentLimitEntry>>>
 
+/** What main already knows without a running session: Claude's last saved reading and Codex's newest rollout reading. */
+export interface KnownLimits {
+  claude: AgentLimitEntry | null
+  codex: AgentLimitEntry | null
+}
+
 export interface LimitObservation {
   agent: TabAgent
   windows: readonly RateLimitWindow[]
@@ -55,6 +61,25 @@ export function agentLimits(store: AgentLimitStore, agent: AgentKind, now: numbe
 export function focusedLimits(store: AgentLimitStore, focused: TabAgent | null, now: number): AgentLimits | null {
   if (focused === null || focused === 'shell') return null
   return agentLimits(store, focused, now)
+}
+
+/** The agent the meter falls back to with no agent pane focused: the one whose last-known window, not yet reset, is closest to its cap. Null when nothing is known. */
+export function mostUrgentLimits(store: AgentLimitStore, now: number): AgentLimits | null {
+  let best: { agent: AgentKind; percent: number } | null = null
+  for (const agent of AGENTS) {
+    const entry = store[agent]
+    if (!entry) continue
+    for (const window of entry.windows) {
+      if (window.resetsAt !== null && window.resetsAt <= now) continue
+      if (best === null || window.percent > best.percent) best = { agent, percent: window.percent }
+    }
+  }
+  return best ? agentLimits(store, best.agent, now) : null
+}
+
+/** What the meter shows: the focused agent's own limits, or with no agent focused (no panes, or a shell) the most urgent last-known reading. */
+export function meterLimits(store: AgentLimitStore, focused: TabAgent | null, now: number): AgentLimits | null {
+  return focused === null || focused === 'shell' ? mostUrgentLimits(store, now) : agentLimits(store, focused, now)
 }
 
 export const allAgentLimits = (store: AgentLimitStore, now: number): AgentLimits[] => AGENTS.map((agent) => agentLimits(store, agent, now))

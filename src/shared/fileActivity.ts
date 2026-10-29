@@ -1,3 +1,5 @@
+import type { EditChange } from './editChange'
+import { locateEdits } from './editLocate'
 import { relativePath, type TimelineEvent } from './timeline'
 import { toRepoPath } from './projectPaths'
 
@@ -7,6 +9,8 @@ export interface EditRecord {
   removed: number
   /** The prompt the agent was working on when it made the edit. */
   task: string
+  /** The text the edit wrote, when the transcript carried it. */
+  change?: EditChange
 }
 
 export interface BlameSource {
@@ -23,6 +27,8 @@ export interface LineBlame {
   agent?: string
   task: string
   at: number
+  /** The line was found in the file from the edit's own text; false means it is an estimate from edit counts. */
+  exact: boolean
 }
 
 const TASK_CHARS = 120
@@ -40,25 +46,24 @@ export function collectEdits(events: readonly TimelineEvent[], base: string, pre
     if (event.kind === 'prompt') task = shorten(event.text)
     if (event.kind !== 'edit' || !event.path) continue
     const path = toRepoPath(prefix, relativePath(event.path, base))
-    out.set(path, [...(out.get(path) ?? []), { at: event.at, added: event.added ?? 0, removed: event.removed ?? 0, task }])
+    out.set(path, [...(out.get(path) ?? []), { at: event.at, added: event.added ?? 0, removed: event.removed ?? 0, task, ...(event.change ? { change: event.change } : {}) }])
   }
   return out
 }
 
 /**
- * Which session wrote which added line. A timeline records how many lines each edit added, not where, so lines are
- * handed out in file order to the edits in time order; this is an estimate. One session alone owns every added line.
- * Lines nothing accounts for get no mark.
+ * The old estimate: a timeline records how many lines each edit added, not where, so lines are handed out in file order
+ * to the edits in time order. One session alone owns every added line. Lines nothing accounts for get no mark.
  */
-export function blameLines(addedLines: readonly number[], sources: readonly BlameSource[]): Map<number, LineBlame> {
+function estimateLines(addedLines: readonly number[], sources: readonly BlameSource[], solo: boolean): Map<number, LineBlame> {
   const out = new Map<number, LineBlame>()
   const active = sources.filter((source) => source.edits.length > 0)
   if (addedLines.length === 0 || active.length === 0) return out
   const lines = [...addedLines].sort((a, b) => a - b)
-  if (active.length === 1) {
+  if (solo && active.length === 1) {
     const [only] = active
     const last = only.edits.reduce((latest, edit) => (edit.at >= latest.at ? edit : latest))
-    for (const line of lines) out.set(line, { key: only.key, label: only.label, agent: only.agent, task: last.task, at: last.at })
+    for (const line of lines) out.set(line, { key: only.key, label: only.label, agent: only.agent, task: last.task, at: last.at, exact: false })
     return out
   }
   const ordered = active
@@ -67,8 +72,36 @@ export function blameLines(addedLines: readonly number[], sources: readonly Blam
     .sort((a, b) => a.edit.at - b.edit.at)
   let next = 0
   for (const { source, edit } of ordered) {
-    for (let i = 0; i < edit.added && next < lines.length; i += 1, next += 1) out.set(lines[next], { key: source.key, label: source.label, agent: source.agent, task: edit.task, at: edit.at })
+    for (let i = 0; i < edit.added && next < lines.length; i += 1, next += 1) out.set(lines[next], { key: source.key, label: source.label, agent: source.agent, task: edit.task, at: edit.at, exact: false })
   }
+  return out
+}
+
+/**
+ * Which session wrote which added line. With the file's text, each edit's own new text is found in the file, so those
+ * lines are exact; edits that cannot be found that way fall back to the estimate over the lines left, marked as such.
+ */
+export function blameLines(addedLines: readonly number[], sources: readonly BlameSource[], text?: string): Map<number, LineBlame> {
+  const solo = sources.filter((source) => source.edits.length > 0).length === 1
+  if (text === undefined) return estimateLines(addedLines, sources, solo)
+  const flat = sources.flatMap((source) => source.edits.map((edit) => ({ source, edit })))
+  const located = locateEdits(text, flat.map(({ edit }) => ({ at: edit.at, change: edit.change })))
+  const out = new Map<number, LineBlame>()
+  const wanted = new Set(addedLines)
+  for (const [line, index] of located.owners) {
+    if (!wanted.has(line)) continue
+    const { source, edit } = flat[index]
+    out.set(line, { key: source.key, label: source.label, agent: source.agent, task: edit.task, at: edit.at, exact: true })
+  }
+  const unplaced = new Map<BlameSource, EditRecord[]>()
+  flat.forEach(({ source, edit }, index) => {
+    if (!located.estimate.has(index)) return
+    const rest = Math.max(0, edit.added - (located.placed.get(index) ?? 0))
+    unplaced.set(source, [...(unplaced.get(source) ?? []), { ...edit, added: rest }])
+  })
+  const remaining = addedLines.filter((line) => !located.owners.has(line))
+  const rough = estimateLines(remaining, [...unplaced].map(([source, edits]) => ({ ...source, edits })), solo)
+  for (const [line, blame] of rough) out.set(line, blame)
   return out
 }
 

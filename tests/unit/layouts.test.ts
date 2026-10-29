@@ -41,7 +41,7 @@ describe('snapshotWorkspace', () => {
       { id: 't2', agent: 'shell', label: 'shell', sessionId: 'ignored' },
       { id: 't3', agent: 'shell', label: 'update codex', task: {} }
     ], 't2'),
-    pane('p2', 'b', [{ id: 't4', agent: 'codex', label: 'codex', agentsOpen: true }]),
+    pane('p2', 'b', [{ id: 't4', agent: 'codex', label: 'codex' }]),
     pane('p3', 'c', [{ id: 't5', agent: 'shell', label: 'task', task: {} }])
   ]
 
@@ -54,11 +54,11 @@ describe('snapshotWorkspace', () => {
       fontSize: 16,
       activeIndex: 1,
       tabs: [
-        { agent: 'claude', label: 'claude', sessionId: 's-claude', agentsOpen: undefined },
-        { agent: 'shell', label: 'shell', sessionId: undefined, agentsOpen: undefined }
+        { agent: 'claude', label: 'claude', sessionId: 's-claude' },
+        { agent: 'shell', label: 'shell', sessionId: undefined }
       ]
     })
-    expect(result.panes[1].tabs[0]).toMatchObject({ agent: 'codex', agentsOpen: true })
+    expect(result.panes[1].tabs[0]).toMatchObject({ agent: 'codex' })
   })
 
   it('saves the pinned flag, the splits and the reordered tab order with the active tab', () => {
@@ -161,6 +161,20 @@ describe('layoutProjectNames and paneAgent', () => {
 })
 
 describe('layouts in settings', () => {
+  it('restores saved panes and tabs while dropping retired agent metadata', () => {
+    const tab = { agent: 'codex', label: 'Worker', sessionId: 'session-1', orchAgentId: 'old-agent' }
+    const pane = { projectId: 'a', folder: 'C:/work/tree', orchAgentId: 'old-pane', tabs: [tab], activeIndex: 0, fontSize: 18 }
+    const result = migrateSettings({
+      projects: [{ id: 'a', folder: 'C:/work' }],
+      workspace: { panes: [pane], focusedIndex: 0 },
+      layouts: [{ id: 'saved', name: 'Saved', createdAt: 5, panes: [pane], focusedIndex: 0 }]
+    })
+    const clean = { projectId: 'a', folder: 'C:/work/tree', tabs: [{ agent: 'codex', label: 'Worker', sessionId: 'session-1' }], activeIndex: 0, fontSize: 18 }
+    expect(result.workspace.panes).toEqual([clean])
+    expect(result.layouts[0].panes).toEqual([clean])
+    expect(planOpen(result.layouts[0], result.projects).openable).toEqual([clean])
+  })
+
   it('keeps valid layouts even when a project was removed and drops broken ones', () => {
     const result = migrateSettings({
       projects: [{ id: 'a', name: 'acme-web', folder: 'C:\\acme-web' }],

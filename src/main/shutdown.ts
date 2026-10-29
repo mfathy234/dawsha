@@ -23,6 +23,17 @@ export interface ShutdownDeps {
 
 export type PhaseResult = 'done' | 'timeout' | 'error'
 
+export function exitProcess(code: number, deps: Pick<ShutdownDeps, 'exit' | 'log'>, platform = process.platform, kill = process.kill): void {
+  deps.log(`terminating the process (code ${code})`)
+  // Windows needs Electron to release Chromium's children and the launcher's pipes.
+  if (platform !== 'win32') {
+    try { kill(process.pid, 'SIGKILL') } catch (error) {
+      deps.log(`self kill failed: ${(error as Error).message}`)
+    }
+  }
+  deps.exit(code)
+}
+
 export async function bounded(work: () => Promise<void>, timeoutMs: number): Promise<PhaseResult> {
   let timer: NodeJS.Timeout | undefined
   const limit = new Promise<PhaseResult>((resolve) => {

@@ -1,6 +1,7 @@
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { AGENTS, AGENT_MARKS, AGENT_NAMES } from '../../shared/agents'
+import { brandLogo } from '../brandLogo'
 import { deviceNameFromAgent, pairingCodeFromHash } from '../../shared/remotePairing'
 import { DEFAULT_THEME_ID, findTheme } from '../../shared/themes'
 import type { AgentKind } from '../../shared/types'
@@ -217,7 +218,9 @@ function makeAgentMark(agent: AgentKind): HTMLElement {
   const mark = document.createElement('span')
   mark.className = `agent-badge agent-${agent}`
   mark.setAttribute('aria-hidden', 'true')
-  mark.textContent = AGENT_MARKS[agent]
+  const logo = brandLogo(agent)
+  if (logo) mark.innerHTML = logo
+  else mark.textContent = AGENT_MARKS[agent]
   return mark
 }
 

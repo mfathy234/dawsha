@@ -1,4 +1,5 @@
-import type { OrchExportFormat, OrchArchiveFileResult } from './orch/api'
+import type { AgentAccounts } from './agentAccounts'
+import type { KnownLimits } from './agentLimits'
 import type { WorkPeriod, WorkReport } from './workDashboard'
 import type { BackgroundAgentsReport, BgKind, BgRange } from './backgroundAgents'
 import type { ClipboardContent } from './clipboard'
@@ -30,7 +31,6 @@ import type { PaneonImportPreview } from './paneonImport'
 import type { SettingsExportResult, SettingsImportRead } from './settingsTransfer'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
-import type { OrchDecisionView, OrchHandoffInput, OrchPaneRequest, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus, OrchSpecView, OrchSpecContent } from './orch/api'
 import type { TimelineExportRequest, TimelineExportResult, TimelineRequest, TimelineResult } from './timeline'
 import type { TimelineSearchRequest, TimelineSearchResult } from './timelineSearch'
 import type { TranscriptRequest, TranscriptResult } from './transcript'
@@ -136,6 +136,7 @@ export interface GridApi {
   trashProjectPath(folder: string, path: string): Promise<import('./filesWorkspace').FilesTrashResult>
   searchFiles(folder: string, request: import('./fileSearch').SearchRequest): Promise<import('./fileSearch').SearchResult>
   fileLog(folder: string, path: string): Promise<import('./filePreview').FileLogResult>
+  filePreviewUrl(folder: string, path: string, text: string | null): Promise<{ ok: true; url: string } | { ok: false; error: string }>
   fileImage(folder: string, path: string, base: boolean): Promise<import('./filePreview').FileImageResult>
   openFileInBrowser(folder: string, path: string): Promise<{ ok: true } | { ok: false; error: string }>
   linkedRepos(projectId: string, folders: string[]): Promise<import('./linkedRepos').LinkedRepo[]>
@@ -180,6 +181,8 @@ export interface GridApi {
   openUpdateLink(url: string): Promise<void>
   usageReport(range: UsageRange): Promise<UsageReport>
   usageSnapshot(): Promise<UsageSnapshot>
+  agentAccounts(): Promise<AgentAccounts>
+  knownLimits(): Promise<KnownLimits>
   /** `offset`: periods back from now (0 now, -1 the one before). */
   workReport(period: WorkPeriod, offset?: number): Promise<WorkReport>
   backgroundAgents(range: BgRange): Promise<BackgroundAgentsReport>
@@ -194,24 +197,6 @@ export interface GridApi {
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>
   compareRemove(request: WorktreeRemoval): Promise<GitResult>
-  onOrchOpenPane(listener: (request: OrchPaneRequest) => void): () => void
-  onOrchClosePane(listener: (agentId: string) => void): () => void
-  orchStatus(): Promise<OrchStatus>
-  orchStartRun(input: OrchStartInput): Promise<OrchResult<string>>
-  orchRuns(): Promise<OrchRunView[]>
-  orchDecisions(): Promise<OrchDecisionView[]>
-  orchAnswer(decisionId: string, answer: string): Promise<OrchResult>
-  orchSnapshot(): Promise<OrchSnapshot>
-  onOrchChanged(listener: () => void): () => void
-  orchRestart(runId: string, agentId: string): Promise<OrchResult>
-  orchHandoff(input: OrchHandoffInput): Promise<OrchResult>
-  orchCancelRun(runId: string): Promise<OrchResult>
-  orchRetryCleanup(runId: string): Promise<OrchResult>
-  orchSpec(runId: string): Promise<OrchSpecView | null>
-  orchSpecVersion(runId: string, version: number): Promise<OrchSpecContent | null>
-  orchExportRun(runId: string, format: OrchExportFormat): Promise<OrchResult<string | null>>
-  orchExportRuns(runIds: string[]): Promise<OrchResult<OrchArchiveFileResult[]>>
-  orchImportRuns(): Promise<OrchResult<OrchArchiveFileResult[]>>
   listRecordings(): Promise<RecordingSummary[]>
   readRecording(id: string): Promise<string>
   recordingStats(): Promise<RecordingStats>

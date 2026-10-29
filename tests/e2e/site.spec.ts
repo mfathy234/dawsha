@@ -314,7 +314,7 @@ test('Earlier releases is one compact section that keeps the old release anchors
   await expect(page.locator('section[id^="new-1"]')).toHaveCount(0)
   expect(await page.locator('#earlier').evaluate((el) => el.textContent?.length ?? 0)).toBeLessThan(1500)
   await expect(page.locator('body')).not.toContainText(/snippet/i)
-  await expect(page.locator('#features')).toContainText('Voice dictation')
+  await expect(page.locator('#features')).not.toContainText(/dictat/i)
 })
 
 test('the remote section keeps its phone screenshots and says Remote Control is beta in plain text', async ({ page }) => {

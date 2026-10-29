@@ -19,7 +19,7 @@ import { asAddedDiff, decodeText, git, hasHead, insideRoot, readTextFile, repoRo
 
 const MAX_LISTED = 20_000
 const MAX_WALKED = 5_000
-const MAX_READ_BYTES = 1024 * 1024
+export const MAX_READ_BYTES = 1024 * 1024
 const MAX_DIFF_CHARS = 200_000
 const SKIPPED_DIRS = new Set(['.git', 'node_modules'])
 

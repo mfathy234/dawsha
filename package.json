@@ -1,7 +1,7 @@
 {
   "name": "dawsha",
   "productName": "Dawsha",
-  "version": "1.7.4",
+  "version": "1.7.5",
   "description": "One window for all your AI coding agents: a grid of readable terminals for Claude Code, Codex CLI and Gemini CLI",
   "homepage": "https://dawsha.pages.dev/",
   "repository": {
@@ -29,7 +29,8 @@
     "test:e2e:private-remote": "node scripts/private-remote.mjs e2e",
     "icons": "node scripts/make-icons.mjs",
     "screenshots": "electron-vite build && playwright test -c playwright.screenshots.config.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "release:check": "node scripts/release-check.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.1",
@@ -49,7 +50,6 @@
     "@codemirror/state": "6.7.6",
     "@codemirror/view": "6.43.14",
     "@fontsource/ibm-plex-sans-arabic": "5.3.0",
-    "@huggingface/transformers": "4.2.0",
     "@lezer/highlight": "1.2.5",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/addon-search": "0.16.0",

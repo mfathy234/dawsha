@@ -15,12 +15,20 @@ export interface Placement {
 const MARGIN = 8
 
 /**
- * Where to open a menu of `width` x `height` next to `anchor` in a `viewWidth` x `viewHeight` window: below when it
- * fits, otherwise on the side with more room, shortened to that room, so it never covers the button that opened it.
+ * Where to open a menu of `width` x `height` next to `anchor` in a `viewWidth` x `viewHeight` window: below, and aligned
+ * to the start of the button when the button sits in the start half of its `bounds` (its pane, sidebar or bar; the
+ * window by default), otherwise to its end, so a trailing ⋯ opens inward. It flips when the preferred side would leave
+ * the window. Below when it fits, otherwise on the side with more room, shortened to that room, so it never covers
+ * the button that opened it.
  */
-export function placeMenu(anchor: Rect, width: number, height: number, viewWidth: number, viewHeight: number, gap = 4): Placement {
-  const alignRight = anchor.right - width
-  const left = Math.max(MARGIN, alignRight < MARGIN ? Math.min(anchor.left, viewWidth - width - MARGIN) : alignRight)
+export function placeMenu(anchor: Rect, width: number, height: number, viewWidth: number, viewHeight: number, gap = 4, bounds?: { left: number; right: number }): Placement {
+  const area = bounds ?? { left: 0, right: viewWidth }
+  const preferEnd = (anchor.left + anchor.right) / 2 > (area.left + area.right) / 2
+  const fitsAtStart = anchor.left + width <= viewWidth - MARGIN
+  const alignEnd = anchor.right - width
+  const fitsAtEnd = alignEnd >= MARGIN
+  const startSide = fitsAtStart || !fitsAtEnd
+  const left = Math.max(MARGIN, (preferEnd ? !fitsAtEnd : startSide) ? (fitsAtStart ? anchor.left : Math.min(anchor.left, viewWidth - width - MARGIN)) : alignEnd)
   const roomBelow = viewHeight - MARGIN - (anchor.bottom + gap)
   const roomAbove = anchor.top - gap - MARGIN
   const below = height <= roomBelow || roomBelow >= roomAbove

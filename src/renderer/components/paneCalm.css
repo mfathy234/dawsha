@@ -55,7 +55,7 @@
   .pane-header .pane-tag, .pane-header .pane-fresh { display: none; }
 }
 @container pane-header (max-width: 460px) {
-  .pane-header .pane-prev, .pane-header .pane-next, .pane-header .pane-mic { display: none; }
+  .pane-header .pane-prev, .pane-header .pane-next { display: none; }
 }
 @container pane-header (max-width: 300px) {
   .pane-header .chip-resumed { display: none; }

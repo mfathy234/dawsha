@@ -45,6 +45,17 @@ const labelRank = (key: string): number => (key === 'five_hour' ? 0 : key === 's
 
 export const toMillis = (epoch: number): number => (epoch < 100_000_000_000 ? epoch * 1000 : epoch)
 
+export function limitWindow(key: string, percent: number, resetsAt: number | null): RateLimitWindow {
+  const family = modelFamily(key)
+  return {
+    key,
+    label: rateLimitLabel(key),
+    family: ['opus', 'sonnet', 'haiku', 'fable'].includes(family) ? family : undefined,
+    percent: Math.min(100, Math.max(0, percent)),
+    resetsAt
+  }
+}
+
 function parseRateLimits(value: unknown): RateLimitWindow[] {
   if (!isRecord(value)) return []
   const windows: RateLimitWindow[] = []

@@ -5,7 +5,6 @@ import { IPC } from '../shared/ipc'
 import { isRemoteControlBuild } from '../shared/remoteBuild'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { UpdateState } from '../shared/updates'
-import type { OrchPaneRequest } from '../shared/orch/api'
 import type { RemoteAccessState, CodexSession, GeminiSession, SessionFile, StatusInfo, RemoteSessionStarted } from '../shared/types'
 
 function subscribe<T extends unknown[]>(channel: string, listener: (...args: T) => void): () => void {
@@ -95,6 +94,7 @@ const api: GridApi = {
   trashProjectPath: (folder, path) => ipcRenderer.invoke(IPC.filesTrash, folder, path),
   searchFiles: (folder, request) => ipcRenderer.invoke(IPC.filesSearch, folder, request),
   fileLog: (folder, path) => ipcRenderer.invoke(IPC.filesLog, folder, path),
+  filePreviewUrl: (folder, path, text) => ipcRenderer.invoke(IPC.filesPreviewUrl, folder, path, text),
   fileImage: (folder, path, base) => ipcRenderer.invoke(IPC.filesImage, folder, path, base),
   openFileInBrowser: (folder, path) => ipcRenderer.invoke(IPC.filesOpenBrowser, folder, path),
   linkedRepos: (projectId, folders) => ipcRenderer.invoke(IPC.filesLinked, projectId, folders),
@@ -145,6 +145,8 @@ const api: GridApi = {
   backgroundAgents: (range) => ipcRenderer.invoke(IPC.backgroundAgents, range),
   revealBackgroundAgent: (kind, id) => ipcRenderer.invoke(IPC.backgroundAgentsReveal, kind, id),
   usageSnapshot: () => ipcRenderer.invoke(IPC.usageSnapshot),
+  agentAccounts: () => ipcRenderer.invoke(IPC.agentAccounts),
+  knownLimits: () => ipcRenderer.invoke(IPC.knownLimits),
   exportTranscript: (request) => ipcRenderer.invoke(IPC.transcriptExport, request),
   writeHandoffTranscript: (request) => ipcRenderer.invoke(IPC.handoffTranscript, request),
   revealHandoff: (path) => ipcRenderer.invoke(IPC.handoffReveal, path),
@@ -153,24 +155,6 @@ const api: GridApi = {
   searchTimelines: (request) => ipcRenderer.invoke(IPC.timelineSearch, request),
   compareProbe: (folder) => ipcRenderer.invoke(IPC.compareProbe, folder),
   compareCreate: (folder, short) => ipcRenderer.invoke(IPC.compareCreate, folder, short),
-  onOrchOpenPane: (listener) => subscribe<[OrchPaneRequest]>(IPC.orchOpenPane, listener),
-  onOrchClosePane: (listener) => subscribe<[string]>(IPC.orchClosePane, listener),
-  orchStatus: () => ipcRenderer.invoke(IPC.orchStatus),
-  orchStartRun: (input) => ipcRenderer.invoke(IPC.orchStartRun, input),
-  orchRuns: () => ipcRenderer.invoke(IPC.orchRuns),
-  orchDecisions: () => ipcRenderer.invoke(IPC.orchDecisions),
-  orchAnswer: (decisionId, answer) => ipcRenderer.invoke(IPC.orchAnswer, decisionId, answer),
-  orchSnapshot: () => ipcRenderer.invoke(IPC.orchSnapshot),
-  onOrchChanged: (listener) => subscribe<[]>(IPC.orchChanged, listener),
-  orchRestart: (runId, agentId) => ipcRenderer.invoke(IPC.orchRestart, runId, agentId),
-  orchHandoff: (input) => ipcRenderer.invoke(IPC.orchHandoff, input),
-  orchExportRun: (runId, format) => ipcRenderer.invoke(IPC.orchExportRun, runId, format),
-  orchExportRuns: (ids) => ipcRenderer.invoke(IPC.orchExportRuns, ids),
-  orchImportRuns: () => ipcRenderer.invoke(IPC.orchImportRuns),
-  orchCancelRun: (runId) => ipcRenderer.invoke(IPC.orchCancelRun, runId),
-  orchRetryCleanup: (runId) => ipcRenderer.invoke(IPC.orchRetryCleanup, runId),
-  orchSpec: (runId) => ipcRenderer.invoke(IPC.orchSpec, runId),
-  orchSpecVersion: (runId, version) => ipcRenderer.invoke(IPC.orchSpecVersion, runId, version),
   compareStatus: (repo, path, branch) => ipcRenderer.invoke(IPC.compareStatus, repo, path, branch),
   compareRemove: (request) => ipcRenderer.invoke(IPC.compareRemove, request),
   listRecordings: () => ipcRenderer.invoke(IPC.recordingsList),
