@@ -81,7 +81,7 @@ test('checkout selection keeps dirty documents separate; Delete cancels safely a
     await page.locator('#files-button').click()
     await expect(page.locator('#files-location .files-loc-project')).toHaveText('Smoke')
     await page.locator('#files-location').click()
-    await expect(page.locator('.ctx-item', { has: page.locator('.ctx-detail', { hasText: /^(Smoke Project|linked)$/ }) })).toHaveCount(2)
+    await expect(page.locator('.ctx-item', { has: page.locator('.ctx-detail', { hasText: /^(Current · Smoke Project|linked)$/ }) })).toHaveCount(2)
     await page.keyboard.press('Escape')
     await row('src').click()
     await row('src/a.txt').click()

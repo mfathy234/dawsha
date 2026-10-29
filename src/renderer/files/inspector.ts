@@ -2,7 +2,8 @@ import type { FileCommit } from '../../shared/filePreview'
 import type { InspectorTab } from '../../shared/filesLayout'
 import { ago } from '../../shared/fileActivity'
 import { formatClock } from '../../shared/timeline'
-import { h } from '../dom'
+import { h, icon } from '../dom'
+import { errorNote, loadingNote } from './loadNote'
 import type { OutlineItem } from './outline'
 import { orderSessions, type TouchingSession } from './sessionTouch'
 
@@ -10,7 +11,14 @@ export interface InspectorHooks {
   tab(tab: InspectorTab): void
   jump(item: OutlineItem): void
   focusSession(paneId: string): void
+  hide(): void
+  retryCommits(): void
 }
+
+/** The commits of a file: still loading (null), could not be read, or the list. */
+export type CommitsState = readonly FileCommit[] | 'error' | null
+
+const PANEL_RIGHT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>'
 
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? '' : 's'}`
 
@@ -22,6 +30,7 @@ export class Inspector {
   private readonly outlineList = h('div', { class: 'files-side-list', id: 'files-outline', role: 'tabpanel', 'aria-labelledby': 'files-tab-outline' })
   private readonly activity = h('div', { class: 'files-side-list', id: 'files-activity', role: 'tabpanel', 'aria-labelledby': 'files-tab-activity' })
   private tab: InspectorTab = 'outline'
+  private readonly hideButton = h('button', { class: 'icon-btn files-side-hide', type: 'button', id: 'files-inspector-hide', 'aria-label': 'Hide outline and activity', title: 'Hide outline and activity (Ctrl+Alt+B)', onClick: () => this.hooks.hide() }, icon(PANEL_RIGHT))
 
   constructor(private readonly hooks: InspectorHooks) {
     const tabs = h('div', { class: 'files-side-tabs', role: 'tablist', 'aria-label': 'Inspector' }, this.outlineTab, this.activityTab)
@@ -32,7 +41,7 @@ export class Inspector {
       this.hooks.tab(next)
       ;(next === 'outline' ? this.outlineTab : this.activityTab).focus()
     })
-    this.el.append(tabs, this.outlineList, this.activity)
+    this.el.append(h('div', { class: 'files-side-head' }, tabs, this.hideButton), this.outlineList, this.activity)
     this.setTab('outline')
   }
 
@@ -45,7 +54,11 @@ export class Inspector {
     }
   }
 
-  renderOutline(items: readonly OutlineItem[], hasFile: boolean): void {
+  renderOutline(items: readonly OutlineItem[], hasFile: boolean, loading = false): void {
+    if (items.length === 0 && loading) {
+      this.outlineList.replaceChildren(loadingNote('Reading the file…'))
+      return
+    }
     if (items.length === 0) {
       this.outlineList.replaceChildren(h('p', { class: 'files-side-empty' }, hasFile ? 'Nothing to outline in this file.' : 'Open a file to see its outline.'))
       return
@@ -55,14 +68,15 @@ export class Inspector {
     }, h('span', { class: 'files-side-name' }, item.name), h('span', { class: 'files-side-meta' }, String(item.line)))))
   }
 
-  renderActivity(hasFile: boolean, sessions: readonly TouchingSession[], commits: readonly FileCommit[] | null): void {
+  renderActivity(hasFile: boolean, sessions: readonly TouchingSession[], commits: CommitsState, sessionsLoading = false): void {
     if (!hasFile) {
       this.activity.replaceChildren(h('p', { class: 'files-side-empty' }, 'Open a file to see who touched it.'))
       return
     }
     const ordered = orderSessions(sessions)
     const out: HTMLElement[] = [h('h2', { class: 'files-side-heading' }, 'Agents and sessions')]
-    if (ordered.length === 0) out.push(h('p', { class: 'files-side-empty' }, 'No open session has read or edited this file.'))
+    if (ordered.length === 0 && sessionsLoading) out.push(loadingNote('Looking at your sessions…'))
+    else if (ordered.length === 0) out.push(h('p', { class: 'files-side-empty' }, 'No open session has read or edited this file.'))
     for (const session of ordered) {
       const last = session.records.reduce((latest, record) => Math.max(latest, record.at), 0)
       const parts = [session.live ? 'Live' : 'Closed', session.edits > 0 ? plural(session.edits, 'edit') : null, session.reads > 0 ? plural(session.reads, 'read') : null, last > 0 ? formatClock(last) : null]
@@ -70,7 +84,8 @@ export class Inspector {
         h('span', { class: 'files-side-name' }, session.title), h('span', { class: 'files-side-meta' }, parts.filter(Boolean).join(' · '))))
     }
     out.push(h('h2', { class: 'files-side-heading' }, 'Recent commits'))
-    if (commits === null) out.push(h('p', { class: 'files-side-empty' }, 'Loading…'))
+    if (commits === null) out.push(loadingNote('Loading commits…'))
+    else if (commits === 'error') out.push(errorNote("Couldn't read the commits.", () => this.hooks.retryCommits()))
     else if (commits.length === 0) out.push(h('p', { class: 'files-side-empty' }, 'No commits touch this file yet.'))
     else {
       for (const commit of commits) {

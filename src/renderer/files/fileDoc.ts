@@ -15,7 +15,10 @@ let statModule: Promise<StatModule> | null = null
 
 /** The CodeMirror bundle loads the first time a file is opened, so startup stays as fast as before. */
 export function loadEditorModule(): Promise<EditorModule> {
-  editorModule ??= import('./editor')
+  editorModule ??= import('./editor').catch((error: Error) => {
+    editorModule = null
+    throw error
+  })
   return editorModule
 }
 
@@ -63,6 +66,7 @@ export class FileDoc {
   previewing: boolean
   newFile = false
   private loading: Promise<void> | null = null
+  private destroyed = false
   private toggling: Promise<void> = Promise.resolve()
   private baseText: string | null | undefined
   private statTimer: number | undefined
@@ -109,10 +113,29 @@ export class FileDoc {
     return this.loading
   }
 
+  /** Reads the file again after it could not be opened. */
+  retry(): Promise<void> {
+    if (this.status === 'loading') return this.loading ?? Promise.resolve()
+    this.status = 'idle'
+    this.message = ''
+    this.hooks.changed(this)
+    return this.ensureLoaded()
+  }
+
   private async load(): Promise<void> {
-    const [result, module] = await Promise.all([api.projectFile(this.folder, this.path).catch((error: Error) => ({ ok: false as const, error: error.message })), loadEditorModule()])
+    let result: Awaited<ReturnType<typeof api.projectFile>>
+    let module: EditorModule
+    try {
+      ;[result, module] = await Promise.all([api.projectFile(this.folder, this.path).catch((error: Error) => ({ ok: false as const, error: error.message })), loadEditorModule()])
+    } catch {
+      this.status = 'missing'
+      this.message = "Couldn't open this editor. Try again."
+      return
+    }
+    if (this.destroyed) return
     if (!result.ok) {
       if (await this.openDeleted(module, result.error)) return
+      if (this.destroyed) return
       this.status = 'missing'
       this.message = result.error
       return
@@ -132,7 +155,7 @@ export class FileDoc {
   private async openDeleted(module: EditorModule, error: string): Promise<boolean> {
     if (!/no longer exists/.test(error)) return false
     const result = await api.fileAgainstBase(this.folder, this.path).catch(() => null)
-    if (!result?.ok || !result.deleted) return false
+    if (this.destroyed || !result?.ok || !result.deleted) return false
     this.deleted = true
     this.mount(module, '', true)
     this.editor?.showChanges(result.base)
@@ -358,6 +381,7 @@ export class FileDoc {
   }
 
   destroy(): void {
+    this.destroyed = true
     window.clearTimeout(this.outlineTimer)
     window.clearTimeout(this.statTimer)
     this.editor?.destroy()

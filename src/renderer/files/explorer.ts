@@ -4,8 +4,11 @@ import { ICONS } from '../icons'
 import { fileIcon } from './fileIcon'
 import { filesLayout, updateLayout } from './filesPrefs'
 import { FilesTree, type TreeHooks } from './filesTree'
+import { errorNote, loadingNote } from './loadNote'
 import { SearchPanel, type SearchHooks } from './searchPanel'
 import { ReviewPanel, type ReviewHooks } from './reviewPanel'
+
+export type LoadStatus = 'loading' | 'error' | 'ready'
 
 export type ExplorerMode = 'files' | 'search' | 'review'
 
@@ -24,10 +27,16 @@ export interface ExplorerHooks {
   search: SearchHooks
   review: ReviewHooks
   goToFile(): void
-  openLocation(button: HTMLElement): void
+  /** The project button (projects first) or the branch control (worktrees first) was used. */
+  openLocation(button: HTMLElement, worktreesFirst: boolean): void
+  hide(): void
+  retryChanges(): void
+  retryOpen(): void
   rowMenu(path: string, x: number, y: number, returnFocus: HTMLElement): void
   openRow(path: string, pin: boolean): void
 }
+
+const PANEL_LEFT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>'
 
 const BADGE_TITLES: Record<string, string> = { M: 'Modified', A: 'Added', D: 'Deleted', U: 'New (untracked)', R: 'Renamed', C: 'Copied', T: 'Type changed', '!': 'Conflict' }
 
@@ -48,12 +57,18 @@ export class Explorer {
   private open: OpenRow[] = []
   private readonly projectLine = h('span', { class: 'files-loc-project' }, 'No project')
   private readonly branchLineEl = h('span', { class: 'files-loc-branch' })
+  private readonly worktreeCount = h('span', { class: 'files-loc-count' })
   private readonly location = h('button', { class: 'files-location', type: 'button', id: 'files-location', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'Project and checkout' },
-    h('span', { class: 'files-loc-text' }, this.projectLine, this.branchLineEl), icon(ICONS.chevronDown))
+    h('span', { class: 'files-loc-text' }, this.projectLine), icon(ICONS.chevronDown))
+  private readonly branchButton = h('button', { class: 'files-branch', type: 'button', id: 'files-branch', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: 'Switch branch or worktree', hidden: true },
+    icon(ICONS.branch), this.branchLineEl, this.worktreeCount, icon(ICONS.chevronDown))
+  private readonly hideButton = h('button', { class: 'icon-btn files-hide-explorer', type: 'button', id: 'files-explorer-hide', 'aria-label': 'Hide the file explorer', title: 'Hide the file explorer (Ctrl+Alt+E)', onClick: () => this.hooks.hide() }, icon(PANEL_LEFT))
   private readonly tabs = (['files', 'search', 'review'] as const).map((mode) => h('button', {
     class: 'files-mode', type: 'button', role: 'tab', id: `files-mode-${mode}`, 'aria-selected': 'false', tabindex: '-1', onClick: () => this.setMode(mode)
   }))
   private readonly tablist = h('div', { class: 'files-modes', role: 'tablist', 'aria-label': 'Explorer' }, ...this.tabs)
+  private changesStatus: LoadStatus = 'ready'
+  private openStatus: LoadStatus = 'ready'
   private readonly goTo = h('button', { class: 'files-goto', type: 'button', id: 'files-goto', onClick: () => this.hooks.goToFile() },
     icon(ICONS.search), h('span', { class: 'files-goto-text' }, 'Go to file…'), h('span', { class: 'files-goto-keys' }, 'Ctrl+P'))
   private readonly changesBody = h('div', { class: 'files-sec-body', id: 'files-changes-list' })
@@ -77,9 +92,10 @@ export class Explorer {
       tree: this.section('tree', '', this.tree.el, this.treeTitle)
     }
     this.filesPane.append(this.goTo, this.sections.changes.root, this.sections.open.root, this.sections.tree.root)
-    this.location.addEventListener('click', () => hooks.openLocation(this.location))
+    this.location.addEventListener('click', () => hooks.openLocation(this.location, false))
+    this.branchButton.addEventListener('click', () => hooks.openLocation(this.branchButton, true))
     this.tablist.addEventListener('keydown', (event) => this.onTabKey(event))
-    this.el.append(this.location, this.tablist, this.filesPane, this.search.el, this.review.el)
+    this.el.append(h('div', { class: 'files-loc' }, this.location, this.branchButton), h('div', { class: 'files-modes-row' }, this.tablist, this.hideButton), this.filesPane, this.search.el, this.review.el)
     this.renderTabs()
     this.renderChanges()
     this.renderOpen()
@@ -109,15 +125,38 @@ export class Explorer {
     this.syncFold(id, head, head.nextElementSibling as HTMLElement)
   }
 
-  setLocation(project: string, branch: string, title: string): void {
+  setLocation(project: string, branch: string, worktrees: string, title: string): void {
     this.projectLine.textContent = project || 'No project'
     this.branchLineEl.textContent = branch
-    this.branchLineEl.hidden = branch === ''
+    this.worktreeCount.textContent = worktrees ? ` · ${worktrees}` : ''
+    this.branchButton.hidden = branch === ''
+    this.branchButton.setAttribute('aria-label', `Switch branch or worktree. Now on ${branch}${worktrees ? `, ${worktrees}` : ''}`)
     this.location.title = title
   }
 
-  setLocationOpen(open: boolean): void {
-    this.location.setAttribute('aria-expanded', String(open))
+  setLocationOpen(open: boolean, button: HTMLElement | null = null): void {
+    for (const control of [this.location, this.branchButton]) control.setAttribute('aria-expanded', String(open && (button === null || control === button)))
+  }
+
+  /** Moves focus to the branch control (the Ctrl+Alt+W shortcut and palette command use it as the menu's anchor). */
+  branchAnchor(): HTMLElement {
+    return this.branchButton.hidden ? this.location : this.branchButton
+  }
+
+  focusLocation(): void {
+    this.location.focus()
+  }
+
+  setChangesStatus(status: LoadStatus): void {
+    if (status === this.changesStatus) return
+    this.changesStatus = status
+    this.renderChanges()
+  }
+
+  setOpenStatus(status: LoadStatus): void {
+    if (status === this.openStatus) return
+    this.openStatus = status
+    this.renderOpen()
   }
 
   setTreeTitle(name: string): void {
@@ -197,7 +236,13 @@ export class Explorer {
   private renderChanges(): void {
     this.sections.changes.count.textContent = this.changes.length > 0 ? String(this.changes.length) : ''
     this.sections.changes.head.setAttribute('aria-label', `Changes, ${this.changes.length}`)
-    this.changesBody.replaceChildren(...(this.changes.length === 0
+    this.changesBody.setAttribute('aria-busy', String(this.changesStatus === 'loading'))
+    if (this.changesStatus === 'loading' && this.changes.length === 0 && this.changesBody.querySelector('.files-loading')) return
+    this.changesBody.replaceChildren(...(this.changesStatus === 'loading' && this.changes.length === 0
+      ? [loadingNote('Loading changes…')]
+      : this.changesStatus === 'error' && this.changes.length === 0
+        ? [errorNote("Couldn't read the changes.", () => this.hooks.retryChanges())]
+        : this.changes.length === 0
       ? [h('div', { class: 'files-empty' }, 'Nothing has changed yet.')]
       : this.changes.map((row) => this.flat(row.path, h('span', { class: `files-badge b-${row.letter === 'U' ? 'A' : row.letter}`, title: BADGE_TITLES[row.letter] ?? row.letter }, row.letter === 'U' ? 'A' : row.letter)))))
   }
@@ -205,7 +250,13 @@ export class Explorer {
   private renderOpen(): void {
     this.sections.open.count.textContent = this.open.length > 0 ? String(this.open.length) : ''
     this.sections.open.head.setAttribute('aria-label', `Open in sessions, ${this.open.length}`)
-    this.openBody.replaceChildren(...(this.open.length === 0
+    this.openBody.setAttribute('aria-busy', String(this.openStatus === 'loading'))
+    if (this.openStatus === 'loading' && this.open.length === 0 && this.openBody.querySelector('.files-loading')) return
+    this.openBody.replaceChildren(...(this.openStatus === 'loading' && this.open.length === 0
+      ? [loadingNote('Looking at your sessions…')]
+      : this.openStatus === 'error' && this.open.length === 0
+        ? [errorNote("Couldn't read the session records.", () => this.hooks.retryOpen())]
+        : this.open.length === 0
       ? [h('div', { class: 'files-empty' }, 'No open session has edited a file yet.')]
       : this.open.map((row) => this.flat(row.path, h('span', { class: 'files-flat-who', title: row.sessions.join(', ') }, row.sessions.length > 1 ? `${row.sessions[0]} +${row.sessions.length - 1}` : row.sessions[0] ?? '')))))
   }

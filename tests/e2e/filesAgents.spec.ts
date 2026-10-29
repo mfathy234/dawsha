@@ -70,7 +70,7 @@ test('the location button, Open in sessions, linked repos and Send to agent work
     await expect(page.locator('#files-view')).toBeVisible()
 
     await expect(page.locator('#files-location .files-loc-project')).toHaveText('Smoke')
-    await expect(page.locator('#files-location .files-loc-branch')).toHaveText('main · Smoke Project')
+    await expect(page.locator('#files-branch .files-loc-branch')).toHaveText('main')
     await expect(page.locator('#files-project, #files-checkout')).toHaveCount(0)
 
     await expect(page.locator('#files-open-list .files-flat[data-path="a.txt"] .files-flat-who')).toContainText('Smoke', { timeout: 20_000 })
@@ -90,7 +90,7 @@ test('the location button, Open in sessions, linked repos and Send to agent work
     }, { timeout: 30_000 }).toBe(1)
     await page.locator('#files-location').click()
     const menu = page.locator('.ctx-menu:not(.leaving)')
-    await expect(menu.locator('.ctx-heading')).toContainText(['Projects', 'Checkouts of Smoke', 'Linked repos'])
+    await expect(menu.locator('.ctx-heading')).toContainText(['Projects', 'Worktrees', 'Linked repos'])
     const stranger = menu.locator('.ctx-item', { hasText: 'stranger-repo' })
     await expect(stranger).toBeDisabled()
     await expect(stranger).toContainText('Not a project')
