@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { spawn, spawnSync } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { _electron as electron, expect, type ElectronApplication, type Page } from '@playwright/test'
 
 export interface Sandbox {
@@ -20,6 +20,13 @@ export interface Sandbox {
 }
 
 export const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')).version as string
+
+// Playwright disposes its server-side app object on exit; process() is unsafe after that.
+interface AppProcess {
+  proc: ReturnType<ElectronApplication['process']>
+  mainPid: number | null
+}
+const appProcesses = new WeakMap<ElectronApplication, AppProcess>()
 
 interface GridHook {
   bufferText(id: string): string
@@ -103,9 +110,23 @@ export async function launchApp(
       ...extraEnv
     }
   })
-  const page = await app.firstWindow()
-  await page.waitForSelector('html[data-ready="true"]', { timeout: 30_000 })
-  return { app, page }
+  const proc = app.process()
+  const tracked: AppProcess = { proc, mainPid: null }
+  appProcesses.set(app, tracked)
+  // Playwright waits for ChildProcess 'close', not 'exit'. Detached descendants can
+  // inherit these pipes and prevent close forever, even after Electron has exited.
+  const releasePipes = (): void => { for (const pipe of proc.stdio) pipe?.destroy() }
+  proc.once('exit', releasePipes)
+  if (proc.exitCode !== null || proc.signalCode !== null) releasePipes()
+  try {
+    tracked.mainPid = await app.evaluate(() => process.pid)
+    const page = await app.firstWindow()
+    await page.waitForSelector('html[data-ready="true"]', { timeout: 30_000 })
+    return { app, page }
+  } catch (error) {
+    await closeBounded(app)
+    throw error
+  }
 }
 
 export async function activeTermId(page: Page): Promise<string> {
@@ -135,10 +156,30 @@ export const fontSize = (page: Page, id: string): Promise<number> =>
 
 export const QUIT_BUDGET_MS = 10_000
 
-function killTree(proc: ReturnType<ElectronApplication['process']>, reason: string): void {
+async function killTree(proc: ReturnType<ElectronApplication['process']>, reason: string): Promise<void> {
   if (proc.exitCode !== null || proc.signalCode !== null || proc.pid === undefined) return
   console.warn(`[e2e] ${reason}: killing the app process tree (pid ${proc.pid})`)
-  spawnSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true })
+  await new Promise<void>((resolve) => {
+    execFile('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { windowsHide: true, timeout: 1000 }, () => {
+      // Tree enumeration itself can stall on Windows. The tracked launcher must
+      // still exit so its inherited pipes and Playwright connection can close.
+      if (proc.exitCode === null && proc.signalCode === null) proc.kill()
+      resolve()
+    })
+  })
+}
+
+function reclaimLauncher(tracked: AppProcess): boolean {
+  if (tracked.mainPid === null || tracked.mainPid === tracked.proc.pid) return false
+  if (tracked.proc.exitCode !== null || tracked.proc.signalCode !== null) return false
+  // On Windows Playwright launches through cmd.exe. Its close RPC can still be
+  // waiting on that shell after the real Electron process is gone, even if the
+  // browser context never emitted close. Only reclaim it while closing the app.
+  try { process.kill(tracked.mainPid, 0); return false } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') return false
+  }
+  void killTree(tracked.proc, 'Electron exited but its launcher is still running')
+  return true
 }
 
 async function waitForCleanup(work: Promise<unknown>, ms: number): Promise<void> {
@@ -152,25 +193,32 @@ async function waitForCleanup(work: Promise<unknown>, ms: number): Promise<void>
 
 export async function closeApp(app: ElectronApplication): Promise<number> {
   const started = Date.now()
-  let proc: ReturnType<ElectronApplication['process']>
+  const tracked = appProcesses.get(app)
+  let proc = tracked?.proc
   try {
-    proc = app.process()
+    proc ??= app.process()
   } catch {
-    return 0
+    // The app has already exited. Still dispose its Playwright context below.
   }
   // Let Playwright close its debugger connection as it requests quit, before Electron exits.
-  const closed = app.close().catch(() => undefined)
-  await waitForCleanup(closed, QUIT_BUDGET_MS)
-  const elapsed = Date.now() - started
-  killTree(proc, 'quit took longer than the budget')
-  await waitForCleanup(closed, 5_000)
-  return elapsed
+  const reaper = tracked && process.platform === 'win32' ? setInterval(() => {
+    if (reclaimLauncher(tracked)) clearInterval(reaper)
+  }, 50) : undefined
+  reaper?.unref()
+  try {
+    const closed = app.close().catch(() => undefined)
+    await waitForCleanup(closed, QUIT_BUDGET_MS)
+    const elapsed = Date.now() - started
+    if (proc) await killTree(proc, 'quit took longer than the budget')
+    await waitForCleanup(closed, 5_000)
+    return elapsed
+  } finally {
+    clearInterval(reaper)
+  }
 }
 
 export async function closeBounded(app: ElectronApplication): Promise<void> {
-  const proc = app.process()
-  await Promise.race([app.close().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 20_000))])
-  killTree(proc, 'close took longer than 20 s')
+  await closeApp(app)
 }
 
 export interface CliResult {

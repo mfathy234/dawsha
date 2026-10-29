@@ -9,7 +9,10 @@ async function openPanes(page: Page, count: number): Promise<void> {
   const existing = await page.locator('.pane').count()
   for (let index = 0; index < count; index += 1) {
     await page.keyboard.press('Control+n')
-    await expect(page.locator('.quickpick')).toHaveCount(1)
+    const picker = page.locator('.quickpick:not(.leaving)')
+    await expect(picker.locator('[role="option"][aria-selected="true"]')).toHaveCount(1)
+    await expect(picker.locator('input')).toBeFocused()
+    await expect(picker.locator('.nd-start')).toBeEnabled()
     await page.keyboard.press('Enter')
     await expect(page.locator('.pane')).toHaveCount(existing + index + 1, { timeout: 20_000 })
   }
