@@ -160,7 +160,7 @@ export interface Settings {
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
   recordings: RecordingSettings
-  dictation: import('./dictation').DictationSettings
+  legacyModelCacheCleared: boolean
 }
 
 export type FullAccess = Record<AgentKind, boolean>

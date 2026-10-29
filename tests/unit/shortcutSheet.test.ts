@@ -8,7 +8,6 @@ describe('shortcut sheet', () => {
     expect(sheetGroupFor('terminal.copy-reply')).toBe('Terminal')
     expect(sheetGroupFor('pane.find')).toBe('Terminal')
     expect(sheetGroupFor('view.settings')).toBe('Views')
-    expect(sheetGroupFor('dictation.toggle')).toBe('Dictation')
     expect(sheetGroupFor('something.else')).toBe('General')
   })
 

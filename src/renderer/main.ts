@@ -15,6 +15,7 @@ import {
   refreshBridge,
   refreshGitChanges,
   restoreWorkspace,
+  saveSettings,
   setCodexSessions,
   setGeminiSessions,
   setStatusInfos,
@@ -31,7 +32,6 @@ import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
 import { installBuiltinCommands } from './commands/builtin'
-import { installDictationPill } from './dictation/dictationPill'
 import { installCompareCommands } from './commands/compare'
 import { installHandoffCommands } from './commands/handoff'
 import { installClosedSessionCommands } from './commands/closedSessions'
@@ -46,12 +46,24 @@ import { store } from './state'
 import { confirmQuitWithUnsavedFiles } from './files/filesActions'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
 import { applyTheme, onThemeChange } from './themeManager'
+import { removeLegacyModelCache } from './legacyModelCache'
 
 const BRANCH_POLL_MS = 5000
 const GIT_CHANGES_POLL_MS = 10_000
 
 function paneOfTerm(termId: string): string | undefined {
   return store.state.panes.find((p) => p.tabs.some((t) => t.id === termId))?.id
+}
+
+async function clearLegacyModelCache(alreadyCleared: boolean): Promise<void> {
+  if (alreadyCleared) return
+  try {
+    await removeLegacyModelCache()
+  } catch (error) {
+    console.warn('Could not clear the old speech model cache; it will be retried on the next start', error)
+    return
+  }
+  await saveSettings({ legacyModelCacheCleared: true })
 }
 
 async function boot(): Promise<void> {
@@ -119,7 +131,6 @@ async function boot(): Promise<void> {
   void installOps()
   installProcessActivity()
   installBuiltinCommands()
-  installDictationPill()
   installLayoutCommands()
   installNotificationCommands()
   installCompareCommands()
@@ -136,6 +147,7 @@ async function boot(): Promise<void> {
   api.onCliNotice((text, ok) => toast(text, ok ? 'info' : 'error'))
   if (loaded.warning) toast(loaded.warning, 'info')
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()
+  void clearLegacyModelCache(loaded.settings.legacyModelCacheCleared)
   await restoreWorkspace()
   api.cliReady()
   document.documentElement.dataset.ready = 'true'

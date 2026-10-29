@@ -41,7 +41,7 @@ test('generates the 1.6 screenshots from fake projects only', async () => {
   seed(sandbox, true)
   const settingsPath = join(sandbox.userData, 'settings.json')
   const stored = JSON.parse(readFileSync(settingsPath, 'utf8'))
-  writeFileSync(settingsPath, JSON.stringify({ ...stored, onboardingDismissed: true, dictation: { introShown: true, language: 'ar' } }), 'utf8')
+  writeFileSync(settingsPath, JSON.stringify({ ...stored, onboardingDismissed: true }), 'utf8')
   const { app, page } = await launchApp(sandbox, demoEnv(), ['--use-fake-device-for-media-stream'])
   try {
     await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -64,18 +64,6 @@ test('generates the 1.6 screenshots from fake projects only', async () => {
     await expect(page.locator('.term-host.active .term-arabic-row').first()).toBeVisible()
     await settle(page, 1200)
     writeFileSync(join(OUT, 'arabic-reply.png'), await shrinkTo(await page.screenshot(), 1600, 1000))
-
-    // Dictation listening with the level meter.
-    await page.locator('.pane-mic').click()
-    const meter = page.locator('.pane-dictation .dictation-meter')
-    await expect(meter).toBeVisible()
-    await expect.poll(async () => Number(await meter.getAttribute('aria-valuenow')), { timeout: 10_000 }).toBeGreaterThan(0)
-    await feedTerminal(page, id, reply())
-    await expect(page.locator('.term-host.active .term-arabic-row').first()).toBeVisible()
-    await settle(page, 600)
-    writeFileSync(join(OUT, 'dictation.png'), await shrinkTo(await page.screenshot(), 1600, 1000))
-    await page.keyboard.press('Escape')
-    await expect(page.locator('.pane-mic')).not.toHaveClass(/recording/)
 
     // Keyboard shortcuts sheet.
     await page.locator('.term-host.active').click()

@@ -8,6 +8,18 @@ import { SettingsStore } from '../../src/main/settingsStore'
 const tempFile = (): string => join(mkdtempSync(join(tmpdir(), 'cg-settings-')), 'settings.json')
 
 describe('migrateSettings', () => {
+  it('loads older settings while discarding the retired dictation field', () => {
+    for (const dictation of [{ language: 'ar', model: 'turbo', microphone: 'old-device' }, 'invalid', null]) {
+      const file = tempFile()
+      writeFileSync(file, JSON.stringify({ ...defaultSettings(), paletteShortcut: 'Alt+Space', dictation }))
+      const loaded = new SettingsStore(file).load()
+      expect(loaded.warning).toBeNull()
+      expect(loaded.settings.paletteShortcut).toBe('Alt+Space')
+      expect(loaded.settings).not.toHaveProperty('dictation')
+      expect(defaultSettings()).not.toHaveProperty('dictation')
+    }
+  })
+
   it('persists the Files layout through a settings reload and repairs a bad one', () => {
     const file = tempFile()
     const store = new SettingsStore(file)

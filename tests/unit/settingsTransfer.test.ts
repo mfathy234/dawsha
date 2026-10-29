@@ -96,6 +96,18 @@ describe('what is exported', () => {
 })
 
 describe('parseTransfer', () => {
+  it('discards retired dictation fields from older exports without rejecting the import', () => {
+    for (const dictation of [{ language: 'en', model: 'small' }, 'invalid', null]) {
+      const data = parsed({ ...buildTransferData(rich()), dictation })
+      expect(data).not.toHaveProperty('dictation')
+      for (const mode of ['merge', 'replace'] as const) {
+        const imported = run(rich(), data, mode)
+        expect(imported).not.toHaveProperty('dictation')
+      }
+      expect(buildTransferData(rich())).not.toHaveProperty('dictation')
+    }
+  })
+
   it('still reads an older export that carries snippets and drops them', () => {
     const envelope = { ...buildEnvelope(rich(), '1.0.0', new Date()) }
     const old = { ...envelope, data: { ...envelope.data, snippets: [{ id: 's1', name: 'Old', text: 'text', projectId: null, shortcut: 1 }] } }

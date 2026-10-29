@@ -60,11 +60,8 @@ import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
-import { toggleDictation } from '../dictation/dictationActions'
-import { dictationIndicator } from '../dictation/dictationIndicator'
 import './paneCalm.css'
 import { recapFromScreen } from '../../shared/recap'
-import { onDictationStatus, type DictationStatus } from '../dictation/dictationState'
 
 const RESUMED_CHIP_MS = 60_000
 const RECAP_REFRESH_MS = 2_500
@@ -107,10 +104,6 @@ export class PaneComponent {
   private infoSignature = ''
   private readonly hint = h('div', { class: 'pane-hint', role: 'status', hidden: true })
   private hintSignature = ''
-  private readonly dictation = dictationIndicator()
-  private readonly dictationStrip = h('div', { class: 'pane-dictation', role: 'status', hidden: true }, this.dictation.meter, this.dictation.text)
-  private readonly mic = iconButton('Dictate (Ctrl+Shift+Space)', ICONS.mic, () => void toggleDictation(), 'pane-mic')
-  private readonly stopDictationStatus: () => void
   private readonly details = h('aside', { class: 'pane-details', 'aria-label': 'Details', hidden: true })
   private detailsSignature = ''
   private readonly timeline: TimelinePanel
@@ -146,7 +139,6 @@ export class PaneComponent {
       this.restart,
       h('span', { class: 'spacer' }),
       this.tabAdd,
-      this.mic,
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
       iconButton('Previous pane', ICONS.prev, () => focusRelative(-1), 'pane-prev'),
       iconButton('Next pane', ICONS.next, () => focusRelative(1), 'pane-next'),
@@ -178,11 +170,8 @@ export class PaneComponent {
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, this.dictationStrip, content, this.permission, this.foot)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, content, this.permission, this.foot)
     this.watchFileDrops()
-    // Keep the pointer from moving focus to the button, so a focused text box stays the dictation target.
-    this.mic.addEventListener('mousedown', (event) => event.preventDefault())
-    this.stopDictationStatus = onDictationStatus((status) => this.showDictation(status))
     this.el.addEventListener('pointerdown', () => focusPane(paneId, true), true)
   }
 
@@ -742,17 +731,7 @@ export class PaneComponent {
     this.menuAnchor = null
   }
 
-  private showDictation(status: DictationStatus): void {
-    const mine = status.phase !== 'idle' && status.paneId === this.paneId
-    this.dictationStrip.hidden = !mine
-    this.dictation.update(mine ? status : { ...status, phase: 'idle' })
-    this.mic.classList.toggle('recording', mine && status.phase === 'recording')
-    this.mic.classList.toggle('busy', mine && status.phase !== 'recording')
-    this.mic.setAttribute('aria-pressed', String(mine && status.phase === 'recording'))
-  }
-
   dispose(): void {
-    this.stopDictationStatus()
     this.closeMenu()
     this.closeActions()
     this.timeline.dispose()
