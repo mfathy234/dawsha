@@ -589,7 +589,7 @@ describe('phone capabilities are enforced by the server', () => {
     context.auth.setPermissions({ fullOutput: false, messages: true })
     try {
       const state = await bodyJson(await request(`${context.base}/state`, { headers: context.headers }))
-      expect(state.permissions).toEqual({ read: true, terminalInput: true, sessionControl: false, approvals: false, commands: false, answers: false, fullOutput: false })
+      expect(state.permissions).toEqual({ read: true, terminalInput: true, sessionControl: false, crew: false, approvals: false, commands: false, answers: false, fullOutput: false })
     } finally { await context.server.stop() }
   })
 })

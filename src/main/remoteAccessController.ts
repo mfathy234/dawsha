@@ -13,6 +13,7 @@ import { createTunnelHealthMonitor, probeTunnel, type HealthReason } from './tun
 import { startRemoteServer, type RemoteServerHandle, type RemoteServerOptions } from './remoteServer'
 import { startRemoteSession } from './remoteSessions'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
+import { createRemoteCrewHost, type RemoteCrewBridge, type RemoteCrewHost } from './remoteCrew'
 import { createRemoteApprovals, type RemoteApprovals } from './remoteApprovals'
 import { clampAwayMinutes } from '../shared/settingsSchema'
 import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
@@ -51,7 +52,9 @@ const SAFE_REMOTE_PATHS = new Set([
   '/dawsha/api/terminal/output',
   '/dawsha/api/approvals',
   '/dawsha/api/approvals/answer',
-  '/dawsha/api/approvals/stream'
+  '/dawsha/api/approvals/stream',
+  '/dawsha/api/crew',
+  '/dawsha/api/crew/run'
 ])
 
 const FIRST_REACHABLE_WINDOW_MS = 45_000
@@ -87,6 +90,7 @@ export interface RemoteAccessControllerOptions {
   settings: SettingsStoreLike
   ptys: RemotePtys
   getWindow(): HostWindow | null
+  crew?: RemoteCrewBridge
   idleSeconds?(): number
   tunnel?: ReturnType<typeof createCloudflareQuickTunnel>
   createServer?: (options: RemoteServerOptions) => Promise<RemoteServerHandle>
@@ -140,6 +144,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   let stopping = false
   let stoppingOperation: Promise<void> | null = null
   const remoteSessionIds = new Set<string>()
+  const crewHost: RemoteCrewHost | undefined = options.crew ? createRemoteCrewHost({ settings: options.settings, bridge: options.crew }) : undefined
   const approvals: RemoteApprovals = createRemoteApprovals({
     terminals: {
       snapshot: (id) => options.ptys.remoteSnapshot(id),
@@ -452,6 +457,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
           return true
         },
         approvals,
+        crew: crewHost,
         onActivity: (entry) => activity.record(entry),
         assetDirectory: options.assetDirectory,
         onRequestError: (error, method, pathname) => {

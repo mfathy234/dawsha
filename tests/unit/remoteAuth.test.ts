@@ -54,7 +54,7 @@ describe('private remote authentication', () => {
   it('gates each capability on its own and treats approvals as commands or answers', () => {
     const auth = createRemoteAuth(store(), () => 1000)
     const paired = auth.pair(auth.createPairingCode().code, 'Phone')!
-    for (const capability of ['commands', 'answers', 'messages', 'sessions', 'fullOutput'] as const) expect(auth.can(paired.token, capability)).toBe(false)
+    for (const capability of ['commands', 'answers', 'messages', 'sessions', 'crew', 'fullOutput'] as const) expect(auth.can(paired.token, capability)).toBe(false)
     expect(auth.can(paired.token, 'approvals')).toBe(false)
     auth.setPermissions({ answers: true })
     expect(auth.can(paired.token, 'approvals')).toBe(true)

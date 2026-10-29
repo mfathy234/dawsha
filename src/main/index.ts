@@ -227,6 +227,7 @@ app.whenReady().then(async () => {
         settings: store,
         ptys,
         getWindow: () => mainWindow,
+        crew: (await import('./remoteCrew')).createRemoteCrewBridge({ getWindow: () => mainWindow, ipc: ipcMain }),
         idleSeconds: () => powerMonitor.getSystemIdleTime(),
         notify: (title, body) => notifyUser(() => mainWindow, { paneId: '', title, body, sound: false }, () => undefined)
       })

@@ -16,11 +16,12 @@ describe('remote capabilities', () => {
   })
 
   it('keeps only known capabilities that are exactly true', () => {
-    expect(sanitizeCapabilities({ commands: true, answers: 'yes', fullOutput: 1, crew: true })).toEqual({ ...defaultCapabilities(), commands: true })
+    expect(sanitizeCapabilities({ commands: true, answers: 'yes', fullOutput: 1, crew: 'true', extra: true })).toEqual({ ...defaultCapabilities(), commands: true })
+    expect(sanitizeCapabilities({ crew: true })).toEqual({ ...defaultCapabilities(), crew: true })
   })
 
   it('migrates the old settings, and never grants full output', () => {
-    expect(sanitizeCapabilities(undefined, { approvals: true, terminalInput: true, sessionControl: false })).toEqual({ commands: true, answers: true, messages: true, sessions: false, fullOutput: false })
+    expect(sanitizeCapabilities(undefined, { approvals: true, terminalInput: true, sessionControl: false })).toEqual({ commands: true, answers: true, messages: true, sessions: false, crew: false, fullOutput: false })
     expect(sanitizeCapabilities('junk', undefined)).toEqual(defaultCapabilities())
   })
 
@@ -28,7 +29,8 @@ describe('remote capabilities', () => {
     expect(isCapabilityPatch({ commands: true })).toBe(true)
     expect(isCapabilityPatch({})).toBe(true)
     expect(isCapabilityPatch({ commands: 'yes' })).toBe(false)
-    expect(isCapabilityPatch({ crew: true })).toBe(false)
+    expect(isCapabilityPatch({ crew: true })).toBe(true)
+    expect(isCapabilityPatch({ other: true })).toBe(false)
     expect(isCapabilityPatch([true])).toBe(false)
     expect(isCapabilityPatch(null)).toBe(false)
   })

@@ -1,4 +1,4 @@
-export type RemoteActivityAction = 'paired' | 'approved' | 'denied' | 'message' | 'interrupt' | 'session-started' | 'session-stopped' | 'blocked'
+export type RemoteActivityAction = 'paired' | 'approved' | 'denied' | 'message' | 'interrupt' | 'session-started' | 'session-stopped' | 'crew-run' | 'blocked'
 
 export interface RemoteActivityEntry {
   id: string
@@ -47,6 +47,7 @@ export function describeActivity(entry: RemoteActivityEntry): string {
     case 'interrupt': return `${entry.device} interrupted a session${where}`
     case 'session-started': return `${entry.device} started a session${where}`
     case 'session-stopped': return `${entry.device} stopped a session${where}`
+    case 'crew-run': return `${entry.device} ran ${entry.detail}${entry.session ? ` on ${entry.session}` : ''}`
     case 'blocked': return `${entry.device} was blocked from ${entry.detail}${where}`
   }
 }

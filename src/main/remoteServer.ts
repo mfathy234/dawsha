@@ -11,6 +11,7 @@ import type { RemoteApprovals } from './remoteApprovals'
 import { KIND_OFF_MESSAGE } from './remoteApprovals'
 import type { ApprovalsPayload } from '../shared/approvals'
 import type { RemoteActivityInput } from '../shared/remoteActivity'
+import type { RemoteCrewHost } from './remoteCrew'
 import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
 
 const REMOTE_PREFIX = '/dawsha'
@@ -26,7 +27,9 @@ const REMOTE_API_PATHS = new Set([
   `${REMOTE_PREFIX}/api/terminal/output`,
   `${REMOTE_PREFIX}/api/approvals`,
   `${REMOTE_PREFIX}/api/approvals/answer`,
-  `${REMOTE_PREFIX}/api/approvals/stream`
+  `${REMOTE_PREFIX}/api/approvals/stream`,
+  `${REMOTE_PREFIX}/api/crew`,
+  `${REMOTE_PREFIX}/api/crew/run`
 ])
 const MAX_BODY_BYTES = 16 * 1024
 const MAX_TERMINAL_INPUT = 4096
@@ -35,6 +38,7 @@ const MAX_APPROVAL_CLIENTS = 4
 const APPROVALS_DISABLED = 'Answering permission prompts is turned off in Dawsha settings.'
 const MESSAGES_DISABLED = 'Sending messages is turned off for phones in Dawsha settings.'
 const SESSIONS_DISABLED = 'Remote session control is disabled in Dawsha settings.'
+const CREW_DISABLED = 'Running agents from the phone is turned off in Dawsha settings.'
 const MAX_OUTPUT_CLIENTS = 8
 const MAX_REMOTE_SESSIONS_PER_PROJECT = 15
 const RATE_WINDOW_MS = 60_000
@@ -57,6 +61,7 @@ export interface RemoteServerOptions {
     write(id: string, data: string): void
   }
   approvals?: RemoteApprovals
+  crew?: RemoteCrewHost
   startSession(input: unknown, authorizeStart: () => boolean): Promise<{ ok: boolean; error?: string; id?: string }>
   stopSession(id: string): boolean
   assetDirectory?: string
@@ -320,6 +325,7 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
           read: true,
           terminalInput: options.auth.can(token, 'messages'),
           sessionControl: options.auth.can(token, 'sessions'),
+          crew: Boolean(options.crew) && options.auth.can(token, 'crew'),
           approvals: Boolean(options.approvals) && options.auth.can(token, 'approvals'),
           commands: Boolean(options.approvals) && options.auth.can(token, 'commands'),
           answers: Boolean(options.approvals) && options.auth.can(token, 'answers'),
@@ -437,6 +443,45 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         return
       }
       sendJson(response, 200, { ok: true, reasonSent: result.reasonSent, ...(result.reasonFailure ? { reasonFailure: result.reasonFailure } : {}) })
+      return
+    }
+
+    if (path === '/api/crew' && request.method === 'GET') {
+      if (!options.crew || !options.auth.can(token, 'crew')) {
+        sendJson(response, 403, { error: CREW_DISABLED })
+        return
+      }
+      if (!withinRateLimit(device.id, 'crew', 120)) {
+        sendJson(response, 429, { error: 'Too many requests. Try again shortly.' })
+        return
+      }
+      sendJson(response, 200, options.crew.list())
+      return
+    }
+
+    if (path === '/api/crew/run' && request.method === 'POST') {
+      if (!options.crew || !options.auth.can(token, 'crew')) {
+        record({ device: device.name, action: 'blocked', session: null, detail: 'running an agent' })
+        sendJson(response, 403, { error: CREW_DISABLED })
+        return
+      }
+      if (!withinRateLimit(device.id, 'crew-run', 10)) {
+        sendJson(response, 429, { error: 'Too many runs. Try again shortly.' })
+        return
+      }
+      const body = await readJson(request, response)
+      if (body === null || response.writableEnded) return
+      if (!options.auth.authorize(token) || !options.auth.can(token, 'crew')) {
+        sendJson(response, 403, { error: CREW_DISABLED })
+        return
+      }
+      const result = await options.crew.run(body)
+      if (!result.ok) {
+        sendJson(response, 400, { error: result.error })
+        return
+      }
+      record({ device: device.name, action: 'crew-run', session: result.project, detail: result.member })
+      sendJson(response, 200, { runId: result.runId })
       return
     }
 

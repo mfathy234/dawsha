@@ -85,6 +85,11 @@ export interface GridApi {
     revokeDevice(id: string): Promise<RemoteAccessState>
     recordApproval(terminalId: string, allowed: boolean, tail?: string): Promise<void>
   }
+  remoteCrew?: {
+    publish(snapshot: import('./remoteCrew').RemoteCrewSnapshot): void
+    onRun(listener: (id: string, request: { memberId: string; projectId: string; choice: string; fields: Record<string, string> }) => void): () => void
+    reply(id: string, result: { ok: true; runId: string } | { ok: false; error: string }): void
+  }
   paneonImportPreview(): Promise<PaneonImportPreview>
   queuePaneonImport(): Promise<void>
   pickFolder(): Promise<string | null>

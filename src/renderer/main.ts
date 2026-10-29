@@ -32,6 +32,7 @@ import { installProcessActivity } from './processActivity'
 import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
+import { installRemoteCrew } from './remoteCrewSync'
 import { installBuiltinCommands } from './commands/builtin'
 import { installCompareCommands } from './commands/compare'
 import { installHandoffCommands } from './commands/handoff'
@@ -116,6 +117,7 @@ async function boot(): Promise<void> {
   })
   connectPtyStreams(handleTerminalExit)
   api.onRemoteSessionStarted(attachRemoteSession)
+  installRemoteCrew()
   api.onSessions((next) => store.patch({ sessions: next }))
   setStatusInfos(statusInfos)
   void refreshBridge()
