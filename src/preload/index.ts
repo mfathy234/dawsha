@@ -41,7 +41,7 @@ const api: GridApi = {
     },
     remoteCrew: {
       publish: (snapshot) => ipcRenderer.send(IPC.remoteCrewSnapshot, snapshot),
-      onRun: (listener) => subscribe<[string, { memberId: string; projectId: string; choice: string; fields: Record<string, string> }]>(IPC.remoteCrewRun, listener),
+      onRun: (listener) => subscribe<[string, { memberId: string; projectId: string; choice: string; fields: Record<string, string>; deadline: number }]>(IPC.remoteCrewRun, listener),
       reply: (id, result) => ipcRenderer.send(IPC.remoteCrewRunResult, id, result)
     }
   } : {}),
