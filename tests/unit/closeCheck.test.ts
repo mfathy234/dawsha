@@ -28,9 +28,9 @@ describe('close acknowledgement', () => {
     expect(await result).toBe(false)
   })
 
-  it('unblocks an unresponsive renderer after ten seconds', async () => {
+  it('unblocks an unresponsive renderer after three seconds', async () => {
     const { result, settled } = setup()
-    await vi.advanceTimersByTimeAsync(9999)
+    await vi.advanceTimersByTimeAsync(2999)
     expect(settled).not.toHaveBeenCalled()
     await vi.advanceTimersByTimeAsync(1)
     expect(await result).toBe(true)

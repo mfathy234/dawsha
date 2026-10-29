@@ -451,7 +451,7 @@ test('dragging works in Name and Recent sort: it switches to Manual, says so and
     expect(await page.locator('.proj-row .proj-toggle').first().evaluate((node) => getComputedStyle(node).cursor)).toBe('grab')
     await dragProject(page, 'Smoke', 'Missing', 'drop')
     await expect(projectNames(page)).toHaveText(['Smoke', 'Missing', 'Other'])
-    await expect(page.getByText('Switched to your own order. Change it in Sort.')).toBeVisible()
+    await expect(page.getByText('Switched to your own order, starting from this list. Your earlier order was replaced.')).toBeVisible()
     await expect.poll(() => readSettings(sandbox.userData).sidebarSort).toBe('manual')
     await expect.poll(() => readSettings(sandbox.userData).projects.map((p: any) => p.id)).toEqual(['smoke', 'gone', 'other'])
   } finally {

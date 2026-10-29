@@ -2,7 +2,8 @@ import type { EventEmitter } from 'node:events'
 import { IPC } from '../shared/ipc'
 import type { QuitLog } from './quitLog'
 
-const CLOSE_ACK_MS = 10_000
+// The renderer only confirms it received the check; a live page does that at once, and the user's answer is not timed.
+const CLOSE_ACK_MS = 3_000
 type Events = Pick<EventEmitter, 'once' | 'removeListener'>
 
 /** Acknowledgement is bounded; once a user dialog opens, wait for its decision or a page crash. */
