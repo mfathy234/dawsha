@@ -38,6 +38,7 @@ import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
 import { bridgeDirs, claudeHome, claudeProjectsDir, claudeSettingsPath } from './paths'
 import { codexHome } from './agentLaunch'
+import { createAgentAccountsReader } from './agentAccounts'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
   import { previewPaneonImport, queuePaneonImport } from './paneonImport'
   import { paneonUserDataDir } from './paths'
@@ -344,6 +345,8 @@ export function registerIpc(
     const known = USAGE_RANGES.some((entry) => entry.value === range)
     return usage.report(known ? range : '7d', settings.get().projects)
   })
+  const readAccounts = createAgentAccountsReader()
+  ipcMain.handle(IPC.agentAccounts, () => readAccounts())
   ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
   const work = new WorkService()
   ipcMain.handle(IPC.workGet, async (_event, period: unknown, offset: unknown) => {

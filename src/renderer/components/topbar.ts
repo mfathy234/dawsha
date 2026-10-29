@@ -20,6 +20,8 @@ import { agentMark } from './agentMark'
 import type { PaneView } from '../derive'
 import { countSessionStates, sessionState } from '../../shared/sessionState'
 import { MORE_VIEWS, formatResetIn, limitRowLabel, limitText, moreLabel, urgentWindow, type MoreView } from '../../shared/topbarSummary'
+import { api } from '../api'
+import type { AgentAccount, AgentAccounts } from '../../shared/agentAccounts'
 import { allAgentLimits, dataAge, focusedLimits, recordLimits, type AgentLimitStore, type AgentLimits } from '../../shared/agentLimits'
 import { stateIcon } from './stateIcon'
 import { toolState } from '../../shared/agentTools'
@@ -125,6 +127,7 @@ export class TopBarComponent {
   private limitsFocused: AgentLimits | null = null
   private limitsNow = 0
   private limitsPopover: HTMLElement | null = null
+  private accounts: AgentAccounts | null = null
   private readonly limitsOutside = (event: Event): void => {
     const target = event.target as Node
     if (this.limitsPopover && !this.limitsPopover.contains(target) && !this.limits.contains(target)) this.closeLimitsPopover()
@@ -473,6 +476,10 @@ export class TopBarComponent {
     })
     this.limitsPopover = popover
     this.fillLimitsPopover(popover)
+    void api.agentAccounts().then((accounts) => {
+      this.accounts = accounts
+      if (this.limitsPopover === popover) this.fillLimitsPopover(popover)
+    }, () => undefined)
     document.body.appendChild(popover)
     placeNearAnchor(popover, this.limits, 6)
     this.limits.setAttribute('aria-expanded', 'true')
@@ -493,7 +500,7 @@ export class TopBarComponent {
   private fillLimitsPopover(popover: HTMLElement): void {
     const focused = this.limitsFocused?.agent
     const now = this.limitsNow
-    const sections = allAgentLimits(this.limitStore, now).map((entry) => limitsSection(entry, entry.agent === focused, now))
+    const sections = allAgentLimits(this.limitStore, now).map((entry) => limitsSection(entry, entry.agent === focused, now, this.accounts))
     const link = h('button', { class: 'link limits-usage-link', type: 'button', onClick: () => { this.closeLimitsPopover(); showView('usage') } }, 'Open Usage')
     const keep = popover.contains(document.activeElement) && document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('limits-usage-link')
     popover.replaceChildren(h('div', { class: 'popover-title' }, 'Limits by agent'), ...sections, h('div', { class: 'popover-foot' }, link))
@@ -508,7 +515,14 @@ function resetText(window: RateLimitWindow): string {
   return `${window.label}: ${formatPercent(window.percent)} used, resets ${when}`
 }
 
-function limitsSection(entry: AgentLimits, focused: boolean, now: number): HTMLElement {
+function accountLine(account: AgentAccount | null): HTMLElement | null {
+  if (!account) return null
+  if (account.kind === 'none') return h('div', { class: 'limits-account none' }, 'Not signed in')
+  const text = account.kind === 'apiKey' ? 'API key' : [account.email, account.plan].filter(Boolean).join(' · ')
+  return h('div', { class: 'limits-account', title: text }, text)
+}
+
+function limitsSection(entry: AgentLimits, focused: boolean, now: number, accounts: AgentAccounts | null): HTMLElement {
   const name = agentLabel(entry.agent)
   const status = entry.state === 'none' ? 'no limits reported' : `updated ${dataAge(entry.at as number, now)}${entry.state === 'stale' ? ' · stale' : ''}`
   const windows = entry.windows.map((window) =>
@@ -526,6 +540,7 @@ function limitsSection(entry: AgentLimits, focused: boolean, now: number): HTMLE
       focused ? h('span', { class: 'limits-focused' }, 'focused') : null,
       h('span', { class: 'limits-agent-age' }, status)
     ),
+    entry.agent === 'claude' || entry.agent === 'codex' || entry.agent === 'gemini' ? accountLine(accounts?.[entry.agent] ?? null) : null,
     ...windows
   )
 }
