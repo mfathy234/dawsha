@@ -1,5 +1,6 @@
 import {
   focusNextAttention,
+  focusPane,
   openQuickPick,
   openSettings,
   openResumePicker,
@@ -34,6 +35,10 @@ import { bind, formatShortcut } from '../../shared/shortcuts'
 import { setSessionsLayout } from '../sessionsLayout'
 import { NotificationBell } from './notificationBell'
 import { onAgentsChange, runningAgents } from '../backgroundAgents'
+import { AVATAR_LABELS, compareAvatarStates, stripSummary, type AvatarState } from '../../shared/crewLive'
+import { acknowledgeRun, liveRuns } from '../crewLive'
+import { crewAvatar } from './crewAvatar'
+import { openHandDialog } from './crewDialogs'
 import './topbar.css'
 
 const LIMIT_CELLS = 5
@@ -85,6 +90,9 @@ export class TopBarComponent {
   private readonly sessions = h('button', { class: 'btn ghost', type: 'button', id: 'sessions-button', onClick: () => showView('grid') }, 'Sessions')
   private readonly agentsBadge = h('span', { class: 'count-badge', hidden: true, 'aria-hidden': 'true' })
   private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Background agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'background') }, 'Agents', this.agentsBadge)
+  private readonly crew = h('button', { class: 'btn ghost', type: 'button', id: 'crew-button', title: 'Crew', onClick: () => showView(this.crew.getAttribute('aria-pressed') === 'true' ? 'grid' : 'crew') }, 'Crew')
+  private readonly crewStrip = h('div', { class: 'crew-strip', id: 'crew-strip', role: 'group', 'aria-label': 'Who is on a job', hidden: true })
+  private crewStripSignature = ''
   private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')
@@ -152,6 +160,7 @@ export class TopBarComponent {
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
         this.sessions,
         this.background,
+        this.crew,
         this.files,
         this.more
       ),
@@ -159,6 +168,7 @@ export class TopBarComponent {
       h('span', { class: 'spacer' }),
       h('div', { class: 'layout-switch', role: 'group', 'aria-label': 'Sessions layout' }, this.gridMode, this.boardMode),
       this.dimSwitch,
+      this.crewStrip,
       this.summary,
       this.limits,
       h('div', { class: 'topbar-tools' },
@@ -183,6 +193,8 @@ export class TopBarComponent {
     this.dimSwitch.setAttribute('aria-pressed', String(dim))
     this.background.setAttribute('aria-pressed', String(state.view === 'background'))
     this.files.setAttribute('aria-pressed', String(state.view === 'files'))
+    this.crew.setAttribute('aria-pressed', String(state.view === 'crew'))
+    this.updateCrewStrip(state)
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
     this.agentUpdates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
     this.updateMore(state)
@@ -191,6 +203,49 @@ export class TopBarComponent {
     this.zoomValue.textContent = focused ? `${focused.fontSize}px` : '15px'
     this.themeButton.setAttribute('aria-expanded', String(state.themePickerOpen))
     this.updateSummary(views)
+  }
+
+  private updateCrewStrip(state: AppState): void {
+    const byMember = new Map<string, { run: ReturnType<typeof liveRuns>[number]; states: AvatarState[] }>()
+    for (const run of liveRuns(state)) {
+      if (run.state === 'idle') continue
+      const key = run.tab.crew!.memberId
+      const known = byMember.get(key)
+      if (!known) {
+        byMember.set(key, { run, states: [run.state] })
+      } else {
+        known.states.push(run.state)
+        if (compareAvatarStates(run.state, known.run.state) < 0) known.run = run
+      }
+    }
+    const entries = [...byMember.values()].sort((a, b) => compareAvatarStates(a.run.state, b.run.state))
+    const signature = JSON.stringify(entries.map((e) => [e.run.tab.crew!.runId, e.run.pane.id, e.run.state, e.states]))
+    if (signature === this.crewStripSignature) return
+    this.crewStripSignature = signature
+    this.crewStrip.hidden = entries.length === 0
+    const label = h('span', { class: 'crew-strip-label', 'data-crew-summary': '' }, stripSummary(entries.flatMap((entry) => entry.states)))
+    this.crewStrip.replaceChildren(
+      label,
+      ...entries.map(({ run }) => {
+        const identity = run.tab.crew!
+        const button = h(
+          'button',
+          {
+            class: 'crew-strip-btn',
+            type: 'button',
+            'data-run': identity.runId,
+            'aria-label': `${identity.name}, ${AVATAR_LABELS[run.state]}. Go to its pane`,
+            title: `${identity.name} · ${AVATAR_LABELS[run.state]}`
+          },
+          crewAvatar(identity, run.state, 24)
+        )
+        button.addEventListener('click', () => {
+          acknowledgeRun(identity.runId, run.pane.id)
+          focusPane(run.pane.id)
+        })
+        return button
+      })
+    )
   }
 
   private updateAgentsBadge(): void {
@@ -326,7 +381,22 @@ export class TopBarComponent {
       'Ask two agents…',
       h('span', { class: 'kbd' }, formatShortcut(bind('Ctrl+Shift+A')))
     )
-    items.push(resume, compare)
+    const crewItem = h(
+      'button',
+      {
+        class: 'menu-item',
+        type: 'button',
+        role: 'menuitem',
+        id: 'crew-hand-menu-item',
+        onClick: () => {
+          this.closeAgentMenu()
+          openHandDialog()
+        }
+      },
+      icon(ICONS.next),
+      'Hand a job to an agent…'
+    )
+    items.push(resume, compare, crewItem)
     this.agentMenu = h(
       'div',
       { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent' },

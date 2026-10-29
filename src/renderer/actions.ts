@@ -67,6 +67,7 @@ import {
 import { nextAttentionPane } from '../shared/attention'
 import { shouldRelaunchPlain } from '../shared/resumeFallback'
 import { sessionDisplayName } from '../shared/sessionMatch'
+import type { CrewIdentity, CrewLaunch } from '../shared/crew'
 import { applyTheme } from './themeManager'
 import { disposeTerminal, getTerminal } from './terminals'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
@@ -172,13 +173,14 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     command: term.command,
     prompt: term.prompt,
     title: term.titleHint,
-    fullAccess: term.agent !== 'shell' && state.settings.fullAccess[term.agent],
+    fullAccess: term.crewFullAccess ?? (term.agent !== 'shell' && state.settings.fullAccess[term.agent]),
+    crew: term.crewLaunch,
     cols: view?.cols ?? 120,
     rows: view?.rows ?? 30
   })
   if (result.ok) {
     store.set((s) =>
-      mapTerm(s, termId, (t) => ({ ...t, status: 'running', pid: result.pid, startedAt, resumed: resume, prompt: undefined }))
+      mapTerm(s, termId, (t) => ({ ...t, status: 'running', pid: result.pid, startedAt, resumed: resume, prompt: undefined, crewLaunch: undefined }))
     )
     return
   }
@@ -223,9 +225,10 @@ export async function startSession(
   resumeId?: string,
   chip = false,
   titleHint?: string,
-  kept?: Pick<KeptSession, 'tag' | 'renamed'>
+  kept?: Pick<KeptSession, 'tag' | 'renamed'>,
+  prompt?: string
 ): Promise<number> {
-  return (await openSession(projectId, agent, resumeId, chip, titleHint, kept))?.number ?? 0
+  return (await openSession(projectId, agent, resumeId, chip, titleHint, kept, undefined, prompt))?.number ?? 0
 }
 
 /** Starts a session in a given checkout of the project (its own folder when none) and returns the new pane's id. */
@@ -240,7 +243,8 @@ async function openSession(
   chip = false,
   titleHint?: string,
   kept?: Pick<KeptSession, 'tag' | 'renamed'>,
-  folder?: string
+  folder?: string,
+  prompt?: string
 ): Promise<{ number: number; paneId: string } | null> {
   const project = projectById(store.state, projectId)
   if (!project) return null
@@ -249,6 +253,7 @@ async function openSession(
     titleHint,
     name: kept?.renamed ? titleHint : undefined,
     tag: kept?.tag,
+    prompt: prompt && prompt.trim() !== '' ? prompt : undefined,
     resumeChipAt: chip ? Date.now() : undefined
   }
   const pane: PaneState = {
@@ -274,6 +279,50 @@ async function openSession(
   const number = store.state.panes.findIndex((p) => p.id === pane.id) + 1
   void launch(pane.id, tab.id, resumeId !== undefined)
   return { number, paneId: pane.id }
+}
+
+export interface CrewStart {
+  agent: AgentKind
+  title: string
+  prompt: string
+  launch: CrewLaunch
+  fullAccess: boolean
+  identity: CrewIdentity
+  /** Start the pane without taking focus or leaving the current view. */
+  background: boolean
+}
+
+/** Opens a normal pane for a crew run, titled with the member's name, and returns its ids. */
+export async function startCrewSession(projectId: string, start: CrewStart): Promise<{ paneId: string; termId: string; number: number } | null> {
+  const project = projectById(store.state, projectId)
+  if (!project) return null
+  const tab: TermState = {
+    ...makeTerm(start.agent, []),
+    titleHint: start.title,
+    name: start.title,
+    prompt: start.prompt,
+    crew: start.identity,
+    crewLaunch: start.launch,
+    crewFullAccess: start.fullAccess
+  }
+  const pane: PaneState = {
+    id: newId(),
+    projectId,
+    tabs: [tab],
+    activeTabId: tab.id,
+    fontSize: clampFontSize(project.fontSize ?? DEFAULT_FONT_SIZE)
+  }
+  store.set((s) =>
+    start.background
+      ? { ...s, panes: [...s.panes, pane], quickPickOpen: false }
+      : { ...s, panes: [...s.panes, pane], focusedId: pane.id, maximizedId: s.maximizedId ? pane.id : null, view: 'grid', quickPickOpen: false, sidebarOverride: null }
+  )
+  persistWorkspace()
+  void refreshBranches()
+  void refreshGitChanges()
+  const number = store.state.panes.findIndex((p) => p.id === pane.id) + 1
+  void launch(pane.id, tab.id, false)
+  return { paneId: pane.id, termId: tab.id, number }
 }
 
 export function attachRemoteSession(session: RemoteSessionStarted): void {
@@ -1232,7 +1281,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, from: tab.from, baseline: tab.baseline, name: tab.name, tag: tab.tag })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, from: tab.from, baseline: tab.baseline, name: tab.name, tag: tab.tag, crew: tab.crew })
   }
   return {
     id: newId(),

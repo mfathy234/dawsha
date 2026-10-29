@@ -1,4 +1,5 @@
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
+import { openHandDialog } from '../components/crewDialogs'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import {
   addTab,
@@ -261,6 +262,8 @@ export function installBuiltinCommands(): void {
     { id: 'view.files', title: 'Open Files', group: 'Actions', keywords: 'files tree editor code browse project explorer', ...withKeys('Ctrl+Shift+E'), run: () => showView('files') },
     { id: 'view.quickopen', title: 'Find a file…', group: 'Actions', keywords: 'quick open ctrl p files search project fuzzy', ...withKeys('Ctrl+P'), run: () => toggleQuickOpen() },
     { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },
+    { id: 'view.crew', title: 'Open Crew', group: 'Actions', keywords: 'crew members agents run lead maya', run: () => showView('crew') },
+    { id: 'crew.hand', title: 'Hand a job to the crew…', group: 'Actions', keywords: 'crew paste run member job', run: () => openHandDialog() },
     { id: 'view.skills', title: 'Open Skills', group: 'Actions', keywords: 'installed export copy agent', run: () => showView('skills') },
     { id: 'view.usage', title: 'Open Usage', group: 'Actions', keywords: 'tokens cost limits history', run: () => showView('usage') },
     {

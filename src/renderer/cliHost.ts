@@ -11,6 +11,8 @@ import {
   startSession
 } from './actions'
 import { openLayoutByName } from './layoutActions'
+import { currentMembers, runMember } from './crewActions'
+import { crewRunResult, crewRunStatuses } from './crewLive'
 import { store } from './state'
 
 async function addProject(folder: string, name?: string): Promise<ReturnType<typeof createProject> | string> {
@@ -50,7 +52,14 @@ export function runCliCommand(command: CliCommand): Promise<CliReply> {
     resumeSession: resumeInNewPane,
     openResumePicker,
     openLayout: openLayoutByName,
-    updateAgents
+    updateAgents,
+    crewMembers: currentMembers,
+    crewRun: async (request) => {
+      const result = await runMember({ member: request.member, projectId: request.project.id, choice: request.choice, fields: request.fields, background: request.background })
+      return result.ok ? { ok: true, runId: result.runId } : result
+    },
+    crewRuns: () => crewRunStatuses(store.state),
+    crewResult: (run) => crewRunResult(store.state, run)
   }
   return runCli(command, host)
 }

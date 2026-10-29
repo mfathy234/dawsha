@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { launchSpec } from '../../src/main/agentLaunch'
 import type { CrewLaunch } from '../../src/shared/crew'
 import { BUILTIN_MEMBERS } from '../../src/shared/crewBuiltins'
 import { READ_ONLY_NOTE, commandPreview, composeInstructions, crewArgs, crewFullAccess, crewPrompt } from '../../src/shared/crewLaunch'
@@ -205,5 +207,47 @@ describe('avatar state mapping', () => {
     expect(formatSpan(45_000)).toBe('45s')
     expect(formatSpan(6 * 60_000)).toBe('6m')
     expect(formatSpan(75 * 60_000)).toBe('1h 15m')
+  })
+})
+
+describe('launchSpec for a crew run', () => {
+  const saved = { ...process.env }
+  afterEach(() => {
+    process.env = { ...saved }
+  })
+  const base = { id: 't', cwd: process.cwd(), resume: false, cols: 80, rows: 24 } as const
+
+  it('adds the crew flags after the extra arguments and before the first message, even for overridden commands', () => {
+    process.env.DAWSHA_CLAUDE_COMMAND = process.execPath
+    process.env.DAWSHA_CLAUDE_ARGS = '["--fake"]'
+    const spec = launchSpec({ ...base, agent: 'claude', prompt: 'Review PR 7', crew: launch({ permissions: 'read', model: 'opus' }) })
+    if (typeof spec === 'string') throw new Error(spec)
+    expect(spec.args.slice(0, 1)).toEqual(['--fake'])
+    expect(spec.args).toEqual(expect.arrayContaining(['--model', 'opus', '--permission-mode', 'plan', '--strict-mcp-config']))
+    expect(spec.args.at(-1)).toBe('Review PR 7')
+    expect(spec.args.at(-3)).toBe('--append-system-prompt')
+    const config = spec.args[spec.args.indexOf('--mcp-config') + 1]
+    expect(JSON.parse(readFileSync(config, 'utf8'))).toEqual({ mcpServers: {} })
+  })
+
+  it('sends codex and gemini the instructions inside the first message', () => {
+    process.env.DAWSHA_CODEX_COMMAND = process.execPath
+    process.env.DAWSHA_GEMINI_COMMAND = process.execPath
+    const codex = launchSpec({ ...base, agent: 'codex', prompt: 'Go', crew: launch({ model: 'gpt-5.6', effort: 'high' }) })
+    if (typeof codex === 'string') throw new Error(codex)
+    expect(codex.args).toEqual(['-m', 'gpt-5.6', '-c', 'model_reasoning_effort=high', '<instructions>\nBe careful.\n</instructions>\n\nGo'])
+    const gemini = launchSpec({ ...base, agent: 'gemini', prompt: 'Go', crew: launch({ model: 'gemini-2.5-pro' }) })
+    if (typeof gemini === 'string') throw new Error(gemini)
+    expect(gemini.args).toEqual(['-m', 'gemini-2.5-pro', '--prompt-interactive=<instructions>\nBe careful.\n</instructions>\n\nGo'])
+  })
+
+  it('ignores a malformed crew section and never adds it to a shell tab', () => {
+    process.env.DAWSHA_CLAUDE_COMMAND = process.execPath
+    const bad = launchSpec({ ...base, agent: 'claude', prompt: 'x', crew: { instructions: 5 } as never })
+    expect(bad).toEqual({ file: process.execPath, args: ['x'] })
+    process.env.DAWSHA_SHELL = process.execPath
+    const shell = launchSpec({ ...base, agent: 'shell', crew: launch() })
+    if (typeof shell === 'string') throw new Error(shell)
+    expect(shell.args.join(' ')).not.toContain('append-system-prompt')
   })
 })

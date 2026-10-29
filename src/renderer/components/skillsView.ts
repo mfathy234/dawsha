@@ -1,7 +1,21 @@
 import { api } from '../api'
+import { toast } from './toast'
 import { clear, h } from '../dom'
 import { filterSkills, skillExportLabel, skillExportSummary } from '../../shared/skillSearch'
 import type { SkillEntry } from '../../shared/skills'
+import { currentMembers } from '../crewActions'
+import { store } from '../state'
+import { crewAvatar } from './crewAvatar'
+import { openConvertDialog } from './crewDialogs'
+import './crew.css'
+
+const norm = (path: string): string => path.replace(/\\/g, '/').toLowerCase()
+const convertible = (entry: SkillEntry): boolean => entry.kind === 'skill' || /\.md$/i.test(entry.path)
+
+function memberOf(entry: SkillEntry) {
+  const wanted = norm(entry.kind === 'skill' ? `${entry.path}/SKILL.md` : entry.path)
+  return currentMembers().find((member) => member.source.path !== '' && norm(member.source.path) === wanted)
+}
 
 type Filter = 'all' | SkillEntry['agent']
 type Kind = SkillEntry['kind']
@@ -21,6 +35,8 @@ export class SkillsViewComponent {
   })
   private readonly exportShown = h('button', { class: 'btn small', type: 'button', 'data-skill-export-shown': '', onClick: () => void this.exportVisible() })
   private readonly exportStatus = h('span', { class: 'skill-feedback', role: 'status' })
+  private readonly picked = new Set<string>()
+  private readonly bulk = h('div', { class: 'skill-bulk', hidden: true })
   private visible: SkillEntry[] = []
   private entries: SkillEntry[] = []
   private filter: Filter = 'all'
@@ -49,6 +65,7 @@ export class SkillsViewComponent {
       this.kinds,
       h('div', { class: 'skill-toolbar' }, this.filters, this.search, this.exportShown, this.exportStatus),
       this.status,
+      this.bulk,
       this.rows
     )
   }
@@ -84,6 +101,26 @@ export class SkillsViewComponent {
     const why = this.search.value.trim() ? 'this search' : 'this filter'
     if (this.loaded && entries.length === 0) this.rows.append(h('p', { class: 'skill-empty' }, `No ${this.kind === 'skill' ? 'skills' : 'agents'} found for ${why}.`))
     for (const entry of entries) this.rows.append(this.row(entry))
+    this.drawBulk()
+  }
+
+  private drawBulk(): void {
+    const count = this.picked.size
+    this.bulk.hidden = count === 0
+    clear(this.bulk)
+    if (count === 0) return
+    this.bulk.append(
+      h('span', {}, `${count} selected`),
+      h('button', { class: 'btn small primary', type: 'button', 'data-skill-make-bulk': '', onClick: () => void this.convert([...this.picked]) }, `Make ${count} agent${count === 1 ? '' : 's'}…`),
+      h('button', { class: 'btn small ghost', type: 'button', onClick: () => { this.picked.clear(); this.render() } }, 'Clear')
+    )
+  }
+
+  private async convert(ids: string[]): Promise<void> {
+    const added = await openConvertDialog(ids)
+    for (const id of ids) this.picked.delete(id)
+    if (added.length > 0) toast(`${added.length === 1 ? added[0].name : `${added.length} agents`} was added to your agents.`, 'info')
+    this.render()
   }
 
   private async exportVisible(): Promise<void> {
@@ -107,13 +144,28 @@ export class SkillsViewComponent {
       feedback.textContent = ''
       try { const result = await action(); feedback.textContent = result === null ? '' : success } catch (error) { feedback.textContent = error instanceof Error ? error.message : 'Action failed.' }
     }
+    const member = memberOf(entry)
+    const pick = h('input', { type: 'checkbox', 'aria-label': `Select ${entry.name}`, disabled: !convertible(entry) || member !== undefined })
+    pick.checked = this.picked.has(entry.id)
+    pick.addEventListener('change', () => {
+      if (pick.checked) this.picked.add(entry.id)
+      else this.picked.delete(entry.id)
+      this.drawBulk()
+    })
+    const make = !convertible(entry)
+      ? null
+      : member
+        ? h('span', { class: 'skill-member', 'data-skill-member': member.name }, crewAvatar(member, 'idle', 22), `Agent: ${member.name}`)
+        : h('button', { class: 'btn ghost small', type: 'button', 'data-skill-make': '', onClick: () => void this.convert([entry.id]) }, 'Make an agent')
     return h('article', { class: 'skill-row', 'data-agent': entry.agent, 'data-kind': entry.kind },
+      h('span', { class: 'skill-pick' }, pick),
       h('div', { class: 'skill-details' },
         h('strong', {}, entry.name),
         h('span', { class: 'skill-meta' }, `${entry.agent} · ${entry.scope}${entry.project ? ` · ${entry.project}` : ''}`),
         h('span', { class: 'skill-path', title: entry.path }, entry.path)
       ),
       h('div', { class: 'skill-actions' },
+        make,
         h('button', { class: 'btn ghost small', type: 'button', onClick: () => void run(() => api.openSkill(entry.id), 'Opened') }, 'Open'),
         h('button', { class: 'btn ghost small', type: 'button', onClick: () => void run(() => api.writeClipboard(entry.path), 'Copied') }, 'Copy path'),
         h('button', { class: 'btn ghost small', type: 'button', onClick: () => void run(() => api.exportSkill(entry.id), 'Export complete') }, 'Export'),

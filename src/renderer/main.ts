@@ -25,6 +25,7 @@ import {
 import { CODEX_MARK, GEMINI_MARK } from '../shared/agents'
 import { api } from './api'
 import { installAttention } from './attention'
+import { installCrewLive } from './crewLive'
 import { guardWindowDrops } from './fileDrop'
 import { installOps } from './ops'
 import { installProcessActivity } from './processActivity'
@@ -151,6 +152,7 @@ async function boot(): Promise<void> {
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()
   void clearLegacyModelCache(loaded.settings.legacyModelCacheCleared)
   await restoreWorkspace()
+  installCrewLive()
   api.cliReady()
   document.documentElement.dataset.ready = 'true'
 }
