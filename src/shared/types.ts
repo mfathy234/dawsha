@@ -1,4 +1,3 @@
-import type { OrchSettings } from './orch/profiles'
 import type { SessionBaseline } from './gitStatus'
 import type { SessionsLayout } from './board'
 import type { HighlightSettings } from './highlights'
@@ -54,8 +53,6 @@ export interface SavedTab {
   sessionId?: string
   from?: AgentKind
   baseline?: SessionBaseline
-  /** The orchestrator agent this pane runs; it reconnects with a fresh token when restored. */
-  orchAgentId?: string
   /** The user's own name for this session, shown instead of the one the agent reports. */
   name?: string
   tag?: SessionTag
@@ -164,13 +161,6 @@ export interface Settings {
   highlights: HighlightSettings
   recordings: RecordingSettings
   dictation: import('./dictation').DictationSettings
-  experimental: ExperimentalSettings
-  orchestrator: OrchSettings
-}
-
-/** Features that used to be opt-in. The orchestrator is always on since 1.5; the key stays so older settings files load. */
-export interface ExperimentalSettings {
-  orchestrator: boolean
 }
 
 export type FullAccess = Record<AgentKind, boolean>
@@ -282,7 +272,6 @@ export interface ResumeSession {
   lastActivityAt?: number
   /** When the session was active (from its sampled activity); work time is counted from these. */
   activeSpans?: [number, number][]
-  orchestrated?: true
   agent: AgentKind
   id: string
   title: string
@@ -342,8 +331,6 @@ export interface SpawnRequest {
   fullAccess?: boolean
   desktopVisible?: boolean
   remoteManaged?: boolean
-  /** Set for orchestrator agent panes; the main process adds the agent's launch args and token. */
-  orchAgentId?: string
 }
 
 export interface RemoteSessionStarted {
@@ -354,8 +341,7 @@ export interface RemoteSessionStarted {
   sessionId?: string
 }
 
-/** `retired`: the pane belongs to an orchestrator agent that has finished, so the pane can simply go away. */
-export type SpawnResult = { ok: true; pid: number } | { ok: false; error: string; retired?: boolean }
+export type SpawnResult = { ok: true; pid: number } | { ok: false; error: string }
 
 export interface RepoProbe {
   isRepo: boolean

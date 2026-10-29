@@ -24,8 +24,7 @@ export const INCLUDED_KEYS = [
   'showRecap',
   'colorSessionsByTag',
   'sidebarWidth',
-  'othersCollapsed',
-  'orchestrator'
+  'othersCollapsed'
 ] as const satisfies readonly (keyof Settings)[]
 
 export const EXCLUDED_KEYS = [
@@ -45,8 +44,6 @@ export const EXCLUDED_KEYS = [
   'tasks',
   'lastSeenVersion',
   'onboardingDismissed',
-  // Experimental features are switched on per PC, on purpose.
-  'experimental',
   // Never carried between PCs: a shared file must not be able to switch agents to skipping permission prompts.
   'fullAccess'
 ] as const satisfies readonly (keyof Settings)[]
@@ -219,8 +216,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['showRecap', 'Session recap'],
   ['colorSessionsByTag', 'Tag colours'],
   ['sidebarWidth', 'Sidebar'],
-  ['othersCollapsed', 'Sidebar'],
-  ['orchestrator', 'Orchestrator settings']
+  ['othersCollapsed', 'Sidebar']
 ]
 
 export function preferenceLabels(data: Partial<TransferData>): string[] {

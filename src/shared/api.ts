@@ -1,4 +1,3 @@
-import type { OrchExportFormat, OrchArchiveFileResult } from './orch/api'
 import type { WorkPeriod, WorkReport } from './workDashboard'
 import type { BackgroundAgentsReport, BgKind, BgRange } from './backgroundAgents'
 import type { ClipboardContent } from './clipboard'
@@ -30,7 +29,6 @@ import type { PaneonImportPreview } from './paneonImport'
 import type { SettingsExportResult, SettingsImportRead } from './settingsTransfer'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
-import type { OrchDecisionView, OrchHandoffInput, OrchPaneRequest, OrchResult, OrchRunView, OrchSnapshot, OrchStartInput, OrchStatus, OrchSpecView, OrchSpecContent } from './orch/api'
 import type { TimelineExportRequest, TimelineExportResult, TimelineRequest, TimelineResult } from './timeline'
 import type { TimelineSearchRequest, TimelineSearchResult } from './timelineSearch'
 import type { TranscriptRequest, TranscriptResult } from './transcript'
@@ -195,24 +193,6 @@ export interface GridApi {
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>
   compareRemove(request: WorktreeRemoval): Promise<GitResult>
-  onOrchOpenPane(listener: (request: OrchPaneRequest) => void): () => void
-  onOrchClosePane(listener: (agentId: string) => void): () => void
-  orchStatus(): Promise<OrchStatus>
-  orchStartRun(input: OrchStartInput): Promise<OrchResult<string>>
-  orchRuns(): Promise<OrchRunView[]>
-  orchDecisions(): Promise<OrchDecisionView[]>
-  orchAnswer(decisionId: string, answer: string): Promise<OrchResult>
-  orchSnapshot(): Promise<OrchSnapshot>
-  onOrchChanged(listener: () => void): () => void
-  orchRestart(runId: string, agentId: string): Promise<OrchResult>
-  orchHandoff(input: OrchHandoffInput): Promise<OrchResult>
-  orchCancelRun(runId: string): Promise<OrchResult>
-  orchRetryCleanup(runId: string): Promise<OrchResult>
-  orchSpec(runId: string): Promise<OrchSpecView | null>
-  orchSpecVersion(runId: string, version: number): Promise<OrchSpecContent | null>
-  orchExportRun(runId: string, format: OrchExportFormat): Promise<OrchResult<string | null>>
-  orchExportRuns(runIds: string[]): Promise<OrchResult<OrchArchiveFileResult[]>>
-  orchImportRuns(): Promise<OrchResult<OrchArchiveFileResult[]>>
   listRecordings(): Promise<RecordingSummary[]>
   readRecording(id: string): Promise<string>
   recordingStats(): Promise<RecordingStats>

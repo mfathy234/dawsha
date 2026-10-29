@@ -2,14 +2,13 @@ import type { RateLimitWindow } from './types'
 import { formatPercent } from './statusLine'
 import { SESSION_STATE_LABELS, compareSessionStates, type SessionState } from './sessionState'
 
-export type MoreView = 'projects' | 'usage' | 'work' | 'orchestrator' | 'agents' | 'skills' | 'layouts'
+export type MoreView = 'projects' | 'usage' | 'work' | 'agents' | 'skills' | 'layouts'
 
 // Everything the top bar does not show: Sessions, Agents and Files stay in the bar, the rest lives under More.
 export const MORE_VIEWS: readonly { view: MoreView; label: string }[] = [
   { view: 'projects', label: 'Projects' },
   { view: 'usage', label: 'Usage' },
   { view: 'work', label: 'Work' },
-  { view: 'orchestrator', label: 'Orchestrator' },
   { view: 'agents', label: 'Agent tools' },
   { view: 'skills', label: 'Skills' },
   { view: 'layouts', label: 'Layouts' }
