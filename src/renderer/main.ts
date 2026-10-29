@@ -57,13 +57,15 @@ function paneOfTerm(termId: string): string | undefined {
 
 async function clearLegacyModelCache(alreadyCleared: boolean): Promise<void> {
   if (alreadyCleared) return
+  let removed: boolean
   try {
-    await removeLegacyModelCache()
+    removed = await removeLegacyModelCache()
   } catch (error) {
     console.warn('Could not clear the old speech model cache; it will be retried on the next start', error)
     return
   }
-  await saveSettings({ legacyModelCacheCleared: true })
+  // Settings are only written when a cache was actually removed, so a PC that never used dictation sees no change.
+  if (removed) await saveSettings({ legacyModelCacheCleared: true })
 }
 
 async function boot(): Promise<void> {

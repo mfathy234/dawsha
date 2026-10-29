@@ -5,6 +5,7 @@ export interface NamedCacheStorage {
   delete(name: string): Promise<boolean>
 }
 
-export async function removeLegacyModelCache(storage: NamedCacheStorage = caches): Promise<void> {
-  await storage.delete(LEGACY_MODEL_CACHE)
+/** True when there was a cache to remove; false when this PC never had one. */
+export async function removeLegacyModelCache(storage: NamedCacheStorage = caches): Promise<boolean> {
+  return storage.delete(LEGACY_MODEL_CACHE)
 }
