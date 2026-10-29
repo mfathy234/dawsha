@@ -11,7 +11,7 @@ function matches(query: string, fields: readonly (string | null | undefined)[]):
 export function filterWorkItems(items: readonly WorkItem[], query: string, projectId: string | null = null): WorkItem[] {
   return items.filter(item => (projectId === null || item.projectId === projectId) && matches(query, [
     item.title, item.project, item.branch, item.ticket,
-    item.agent === 'orchestrator' ? 'Orchestrator' : agentLabel(item.agent)
+    agentLabel(item.agent)
   ]))
 }
 

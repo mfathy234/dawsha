@@ -23,7 +23,7 @@ async function shot(page: Page, name: string): Promise<void> {
   }
 }
 
-function withTheme(sandbox: Sandbox, themeId: string | undefined, extra: Record<string, unknown> = {}): void {
+function withTheme(sandbox: Sandbox, themeId?: string, extra: Record<string, unknown> = {}): void {
   const settings = { version: 2, lastSeenVersion: APP_VERSION, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }], ...(themeId ? { theme: { id: themeId } } : {}), ...extra }
   writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(settings), 'utf8')
 }
@@ -78,14 +78,14 @@ test('the surface ladder: dark tokens and the plane colours that paint', async (
 
 test('nav: Sessions, Agents, Files and More, the rest live under More', async () => {
   const sandbox = createSandbox()
-  withTheme(sandbox, undefined, { experimental: { orchestrator: true } })
+  withTheme(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
     const labels = await page.locator('.topbar-nav .btn').allTextContents()
     expect(labels.map((text) => text.replace(/\s+/g, ' ').trim())).toEqual(['Sessions', 'Agents', 'Files', 'More'])
     await page.locator('#more-button').click()
     const items = await page.locator('.more-item').allTextContents()
-    expect(items.map((text) => text.replace(/\s+/g, ' ').trim())).toEqual(expect.arrayContaining(['Projects', 'Usage', 'Work', 'Orchestrator', 'Agent tools', 'Skills', 'Layouts']))
+    expect(items.map((text) => text.replace(/\s+/g, ' ').trim())).toEqual(expect.arrayContaining(['Projects', 'Usage', 'Work', 'Agent tools', 'Skills', 'Layouts']))
     await page.keyboard.press('Escape')
     await openMore(page, 'usage')
     await expect(page.locator('#more-button')).toHaveAttribute('aria-pressed', 'true')

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { defaultSettings } from '../../src/shared/settingsSchema'
-import { defaultOrchSettings } from '../../src/shared/orch/profiles'
 import {
   EXCLUDED_KEYS,
   INCLUDED_KEYS,
@@ -224,10 +223,12 @@ describe('planImport merge', () => {
 })
 
 describe('what the preview and the toast say', () => {
-  it('lists orchestrator settings among the preferences an import changes', () => {
-    const plan = run(rich(), parsed({ orchestrator: defaultOrchSettings() }), 'merge')
-    expect(plan.patch.orchestrator).toBeDefined()
-    expect(previewLines(plan.summary)).toContain('Preferences: Orchestrator settings')
+  it('ignores retired feature settings in older exports', () => {
+    // Compatibility fixture: exports before removal included orchestrator profiles and plans.
+    const data = parsed({ orchestrator: { profiles: [{ id: 'lead' }], plans: [{ id: 'default' }] }, experimental: { orchestrator: true }, theme: { id: 'nord' } })
+    expect(data).toEqual({ theme: { id: 'nord' } })
+    const plan = run(rich(), data, 'merge')
+    expect(previewLines(plan.summary)).toEqual(['Preferences: Theme'])
   })
 
   it('mentions preferences in the toast only when the file had some', () => {

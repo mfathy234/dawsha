@@ -21,6 +21,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **Menus open next to their button** and flip near the window edges instead of opening to the right.
 - **"N running" in a session's footer** opens the Agents view filtered to that session. The small activity drawer it replaced is gone.
 
+### Removed
+
+- **Orchestrator.** The lead-agent runs, Boards, History and Settings > Orchestrator are gone, and the Work dashboard counts only sessions. Settings and layouts from older versions still load. Run archives already on disk are left alone, and Dawsha no longer reads them.
+
 ### Fixed
 
 - The sidebar's pin icon no longer sits under the + and ⋯ buttons on hover. It now follows the project name.

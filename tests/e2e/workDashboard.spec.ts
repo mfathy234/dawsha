@@ -3,7 +3,6 @@ import { join, resolve } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
 import { closeApp, createSandbox, launchApp, type Sandbox, openMore } from './helpers'
-import { OrchStore } from '../../src/main/orch/store'
 
 const SHOTS = resolve(__dirname, '../../test-results/work-dashboard-shots')
 const id = (n: number) => `11111111-2222-4333-8444-${String(n).padStart(12, '0')}`
@@ -43,22 +42,6 @@ function seed(s: Sandbox): void {
     { type: 'user', timestamp: start, message: { content: 'Discuss roadmap' } },
     { type: 'assistant', timestamp: end, message: { content: 'Done' } }
   ))
-}
-
-function seedRuns(s: Sandbox): void {
-  const settings = JSON.parse(readFileSync(join(s.userData, 'settings.json'), 'utf8'))
-  settings.experimental = { orchestrator: true }
-  writeFileSync(join(s.userData, 'settings.json'), JSON.stringify(settings))
-  const store = new OrchStore(join(s.userData, 'orchestrator.db'))
-  for (const kind of ['feature', 'bug'] as const) store.putRun({ id: `run_${kind === 'feature' ? 'abcdefgh' : 'ijklmnop'}`, title: `${kind} orchestrator item`, kind,
-    projectId: 'smoke', projectPath: s.projectFolder, createdAt: Date.now() - 61_000, finishedAt: Date.now() - 1000, story: 'Test work history', plan: '', stage: 'done' })
-  for (const [n, runner] of [[1, 'claude'], [5, 'gemini']] as const) store.putAgent({ id: `a${n}`, runId: 'run_abcdefgh', role: 'lead', runner, model: '', token: `test-token-${n}`,
-    taskId: null, createdAt: Date.now() - 61_000, retiredAt: Date.now() - 1000, usage: null,
-    launch: { agent: runner, args: ['--session-id', id(n)], env: {}, files: [] } })
-  store.close()
-  const dir = join(s.codexHome, 'sessions', '2026', '10', '16')
-  const path = join(dir, `rollout-2026-10-16T10-00-00-${id(4)}.jsonl`)
-  writeFileSync(path, readFileSync(path, 'utf8').replace('feat/123-chart', 'orch/abcdefgh/t-1'))
 }
 
 test('work dashboard counts agent sessions, filters projects, resumes and supports calendar periods in both themes', async () => {
@@ -111,25 +94,6 @@ test('work dashboard counts agent sessions, filters projects, resumes and suppor
     await expect(view).toBeHidden()
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).workspace?.panes?.[0]?.tabs?.[0]?.sessionId).toBe(id(1))
-  } finally { await closeApp(app) }
-})
-
-test('counts each orchestrator run once, excludes child sessions of all agents, and opens its run', async () => {
-  const sandbox = createSandbox()
-  seed(sandbox)
-  seedRuns(sandbox)
-  const { app, page } = await launchApp(sandbox)
-  try {
-    await openMore(page, 'work')
-    await expect(page.locator('#work-total .count-value')).toHaveText('5')
-    await expect(page.locator('#work-feature .count-value')).toHaveText('1')
-    await expect(page.locator('#work-bug .count-value')).toHaveText('2')
-    await expect(page.locator('.work-item').filter({ hasText: 'Build stock service' })).toHaveCount(0)
-    await expect(page.locator('.work-item').filter({ hasText: 'Explore options' })).toHaveCount(0)
-    await expect(page.locator('.work-item').filter({ hasText: 'Build chart' })).toHaveCount(0)
-    await page.locator('.work-item').filter({ hasText: 'feature orchestrator item' }).click()
-    await expect(page.locator('.orch-run')).toBeVisible()
-    await expect(page.locator('.orch-run')).toContainText('feature orchestrator item')
   } finally { await closeApp(app) }
 })
 

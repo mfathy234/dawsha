@@ -35,7 +35,7 @@ export class TicketsPanel {
     const searched = filterWorkTickets(all, ctx.query, null, ctx.notes)
     const tickets = filterWorkTickets(searched, '', ctx.projectId, ctx.notes)
     return [this.tiles(tickets), this.projects(searched, ctx), this.list(tickets, ctx),
-      h('p', { class: 'usage-local muted' }, 'One ticket per branch in a project (or per orchestrator run), however many sessions it took. Chats on main or develop are not tickets. Give a ticket your own name or a link with Edit.')]
+      h('p', { class: 'usage-local muted' }, 'One ticket per branch in a project, however many sessions it took. Chats on main or develop are not tickets. Give a ticket your own name or a link with Edit.')]
   }
 
   private tiles(tickets: WorkTicket[]): HTMLElement {
@@ -64,7 +64,7 @@ export class TicketsPanel {
       tickets.length === 0
         ? h('p', { class: 'usage-empty', role: 'status' }, ctx.query.trim()
           ? `No matches for “${ctx.query.trim()}”. Clear the search to see more work.`
-          : ctx.projectId ? 'No tickets for this project in this period.' : 'No tickets in this period. Work on a feature or fix branch, or an orchestrator run, shows up here.')
+          : ctx.projectId ? 'No tickets for this project in this period.' : 'No tickets in this period. Work on a feature or fix branch shows up here.')
         : h('ul', { class: 'work-tickets' }, ...tickets.map((t) => this.ticket(t, ctx))))
   }
 
@@ -83,7 +83,7 @@ export class TicketsPanel {
         link,
         h('span', { class: 'spacer' }),
         h('button', { class: 'btn small ghost', type: 'button', 'aria-expanded': String(this.editing === ticket.key), onClick: () => { this.editing = this.editing === ticket.key ? null : ticket.key; this.focusEditor = this.editing !== null; this.error = null; this.draft = null; ctx.rerender() } }, 'Edit')),
-      h('p', { class: 'work-item-meta' }, ticket.project, ' · ', ticket.branch ?? 'Orchestrator run', ' · ', `${sessions} ${sessions === 1 ? 'session' : 'sessions'}`, ' · ',
+      h('p', { class: 'work-item-meta' }, ticket.project, ' · ', ticket.branch ?? 'Unknown branch', ' · ', `${sessions} ${sessions === 1 ? 'session' : 'sessions'}`, ' · ',
         new Date(ticket.lastAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), ' · ', ctx.duration(ticket.activeMs)),
       this.editing === ticket.key ? this.form(ticket, note, ctx) : null,
       h('details', { class: 'work-ticket-sessions' }, h('summary', {}, sessions === 1 ? 'Show the session' : `Show the ${sessions} sessions`),

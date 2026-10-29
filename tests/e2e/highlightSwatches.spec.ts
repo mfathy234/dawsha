@@ -56,7 +56,7 @@ test('no visible native select is left without the selectMenu wrapper', async ()
           .map((el) => el.id || el.getAttribute('aria-label') || el.className)
       )
     expect(await bare()).toEqual([])
-    for (const view of ['projects', 'work', 'orchestrator', 'agents', 'skills'] as const) {
+    for (const view of ['projects', 'work', 'agents', 'skills'] as const) {
       await openMore(page, view)
       expect(await bare(), view).toEqual([])
     }

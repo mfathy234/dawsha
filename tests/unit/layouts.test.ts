@@ -161,6 +161,20 @@ describe('layoutProjectNames and paneAgent', () => {
 })
 
 describe('layouts in settings', () => {
+  it('restores saved panes and tabs while dropping retired agent metadata', () => {
+    const tab = { agent: 'codex', label: 'Worker', sessionId: 'session-1', orchAgentId: 'old-agent' }
+    const pane = { projectId: 'a', folder: 'C:/work/tree', orchAgentId: 'old-pane', tabs: [tab], activeIndex: 0, fontSize: 18 }
+    const result = migrateSettings({
+      projects: [{ id: 'a', folder: 'C:/work' }],
+      workspace: { panes: [pane], focusedIndex: 0 },
+      layouts: [{ id: 'saved', name: 'Saved', createdAt: 5, panes: [pane], focusedIndex: 0 }]
+    })
+    const clean = { projectId: 'a', folder: 'C:/work/tree', tabs: [{ agent: 'codex', label: 'Worker', sessionId: 'session-1' }], activeIndex: 0, fontSize: 18 }
+    expect(result.workspace.panes).toEqual([clean])
+    expect(result.layouts[0].panes).toEqual([clean])
+    expect(planOpen(result.layouts[0], result.projects).openable).toEqual([clean])
+  })
+
   it('keeps valid layouts even when a project was removed and drops broken ones', () => {
     const result = migrateSettings({
       projects: [{ id: 'a', name: 'acme-web', folder: 'C:\\acme-web' }],

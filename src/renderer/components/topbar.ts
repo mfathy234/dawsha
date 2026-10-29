@@ -83,14 +83,12 @@ export class TopBarComponent {
   private readonly agentsBadge = h('span', { class: 'count-badge', hidden: true, 'aria-hidden': 'true' })
   private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Background agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'background') }, 'Agents', this.agentsBadge)
   private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
-  private readonly orchBadge = h('span', { class: 'count-badge orch-badge', hidden: true })
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')
   private readonly more = h(
     'button',
     { class: 'btn ghost more-button', type: 'button', id: 'more-button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: () => this.toggleMoreMenu() },
     this.moreText,
-    this.orchBadge,
     h('span', { class: 'more-chevron', 'aria-hidden': 'true' }, icon(ICONS.chevronDown)),
     this.moreDot
   )
@@ -99,8 +97,6 @@ export class TopBarComponent {
   private moreItems: Record<MoreView, HTMLElement> | null = null
   private agentUpdates = false
   private activeMore: MoreView | null = null
-  private orchestratorEnabled = false
-  private orchWaiting = 0
   private readonly settings = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'settings-button', 'aria-label': 'Settings', title: 'Settings' },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
     h('span', { class: 'utility-label' }, 'Settings')
@@ -173,7 +169,6 @@ export class TopBarComponent {
 
   update(state: AppState, views: PaneView[]): void {
     this.updateLimits(state, views)
-    this.updateOrchestrator(state)
     this.sessions.setAttribute('aria-pressed', String(state.view === 'grid'))
     this.gridMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'grid'))
     this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
@@ -383,13 +378,12 @@ export class TopBarComponent {
       this.closeMoreMenu()
       return
     }
-    const entries = MORE_VIEWS.filter(({ view }) => view !== 'orchestrator' || this.orchestratorEnabled).map(({ view, label }) => {
+    const entries = MORE_VIEWS.map(({ view, label }) => {
       const item = h(
         'button',
         { class: 'menu-item more-item', type: 'button', role: 'menuitem', id: `${view}-menu-item`, 'data-view': view, onClick: () => this.openMore(view) },
         label,
-        view === 'agents' ? h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' }) : '',
-        view === 'orchestrator' && this.orchWaiting > 0 ? h('span', { class: 'count-badge' }, String(this.orchWaiting)) : ''
+        view === 'agents' ? h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' }) : ''
       )
       return [view, item] as const
     })
@@ -506,14 +500,6 @@ export class TopBarComponent {
     if (keep) link.focus()
   }
 
-  private updateOrchestrator(state: AppState): void {
-    this.orchestratorEnabled = state.settings.experimental.orchestrator
-    const waiting = state.orch?.decisions.length ?? 0
-    this.orchWaiting = waiting
-    this.orchBadge.hidden = waiting === 0 || !this.orchestratorEnabled
-    this.orchBadge.textContent = waiting > 0 ? String(waiting) : ''
-    this.more.title = waiting && this.orchestratorEnabled ? `More: Orchestrator has ${waiting} waiting for you` : 'More views'
-  }
 }
 
 function resetText(window: RateLimitWindow): string {

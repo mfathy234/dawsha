@@ -17,7 +17,7 @@ export interface WorkItem {
   projectId: string
   project: string
   type: WorkType
-  agent: AgentKind | 'orchestrator'
+  agent: AgentKind
   branch: string | null
   ticket: string | null
   startedAt: number
@@ -25,7 +25,6 @@ export interface WorkItem {
   /** When the work was active; without them, the whole start-to-end span counts. */
   spans?: [number, number][]
   session?: ResumeSession
-  run?: { stage: string; story: string; plan: string }
 }
 export interface WorkReport {
   period: WorkPeriod
@@ -111,7 +110,7 @@ export function aggregateWork(input: readonly WorkItem[], period: WorkPeriod, no
   return { period, start, end, total: items.length, counts, items, buckets, projects: [...projects.values()].sort((a, b) => b.total - a.total || a.project.localeCompare(b.project)) }
 }
 
-/** One ticket: the work on one branch of one project (or one orchestrator run), however many sessions it took. */
+/** One ticket: the work on one branch of one project, however many sessions it took. */
 export interface WorkTicket {
   key: string
   title: string
@@ -131,7 +130,6 @@ const BASE_BRANCH = /^(main|master|develop|dev|stage|staging|prod|production|rel
 const TYPE_WEIGHT: Record<WorkType, number> = { bug: 3, feature: 2, other: 1, conversation: 0 }
 
 function ticketKeyOf(item: WorkItem): string | null {
-  if (item.agent === 'orchestrator') return `run:${item.id}`
   if (item.branch && !BASE_BRANCH.test(item.branch)) return `branch:${item.projectId}:${item.branch}`
   // On a base branch or none, only work that changed something is a ticket of its own.
   return item.type === 'conversation' ? null : `item:${item.id}`

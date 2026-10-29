@@ -3,7 +3,6 @@ import { checkoutTabsKey } from './filesWorkspace'
 import { parseFolds } from './agentFolds'
 import { defaultLayout, parseLayout } from './filesLayout'
 import { sanitizeRunOverrides } from './runCommands'
-import { defaultOrchSettings, sanitizeOrchSettings } from './orch/profiles'
 import { isAgent } from './agents'
 import { isSessionsLayout } from './board'
 import { isSidebarSort } from './sidebarModel'
@@ -102,9 +101,7 @@ export const defaultSettings = (): Settings => ({
   remoteAccess: defaultRemoteAccess(),
   highlights: defaultHighlights(),
   recordings: defaultRecordings(),
-  dictation: defaultDictation(),
-  experimental: { orchestrator: true },
-  orchestrator: defaultOrchSettings()
+  dictation: defaultDictation()
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -156,8 +153,6 @@ function sanitizeTab(value: unknown): SavedTab | null {
   if (isAgent(value.from) && agent !== 'shell') tab.from = value.from
   const baseline = sanitizeBaseline(value.baseline)
   if (baseline) tab.baseline = baseline
-  const orchAgentId = asString(value.orchAgentId)
-  if (orchAgentId && agent !== 'shell') tab.orchAgentId = orchAgentId
   const name = typeof value.name === 'string' ? cleanSessionName(value.name) : null
   if (name && agent !== 'shell') tab.name = name
   if (isSessionTag(value.tag) && agent !== 'shell') tab.tag = value.tag
@@ -399,9 +394,6 @@ export function migrateSettings(raw: unknown): Settings {
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
     highlights: sanitizeHighlights(raw.highlights),
     recordings: sanitizeRecordings(raw.recordings),
-    dictation: sanitizeDictation(raw.dictation),
-    // The orchestrator left Experimental in 1.5; older files that turned it off get it too.
-    experimental: { orchestrator: true },
-    orchestrator: sanitizeOrchSettings(raw.orchestrator)
+    dictation: sanitizeDictation(raw.dictation)
   }
 }

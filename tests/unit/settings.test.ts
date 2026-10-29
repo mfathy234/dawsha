@@ -26,10 +26,16 @@ describe('migrateSettings', () => {
     expect(Object.keys(migrateSettings({ agentFolds: many }).agentFolds)).toHaveLength(400)
     expect(migrateSettings({ agentFolds: [] }).agentFolds).toEqual({})
   })
-  it('turns the orchestrator on for everyone, including settings that turned it off before 1.5', () => {
-    expect(defaultSettings().experimental).toEqual({ orchestrator: true })
-    expect(migrateSettings({ experimental: { orchestrator: false } }).experimental).toEqual({ orchestrator: true })
-    expect(migrateSettings({}).experimental).toEqual({ orchestrator: true })
+  it('loads old settings while dropping retired feature settings and profiles', () => {
+    // Compatibility fixture: old files stored orchestrator settings and an experimental flag.
+    const old = { experimental: { orchestrator: true }, orchestrator: { profiles: [{ id: 'lead' }], plans: [{ id: 'default' }] }, orch: { enabled: true } }
+    expect(migrateSettings(old)).toEqual(defaultSettings())
+    const file = tempFile()
+    writeFileSync(file, JSON.stringify({ ...defaultSettings(), ...old, theme: { id: 'nord' } }))
+    const loaded = new SettingsStore(file).load()
+    expect(loaded.settings.theme.id).toBe('nord')
+    expect(Object.keys(loaded.settings)).not.toContain('experimental')
+    expect(Object.keys(loaded.settings)).toEqual(Object.keys(defaultSettings()))
   })
   it('shows the recap by default and only turns it off when told to', () => {
     expect(defaultSettings().showRecap).toBe(true)
