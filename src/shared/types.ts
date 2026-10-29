@@ -2,6 +2,8 @@ import type { SessionBaseline } from './gitStatus'
 import type { SessionsLayout } from './board'
 import type { HighlightSettings } from './highlights'
 import type { RecordingSettings } from './recordings'
+import type { RemoteActivityEntry } from './remoteActivity'
+import type { RemoteCapabilities } from './remoteCapabilities'
 import type { SessionTag } from './sessionTags'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
@@ -167,14 +169,16 @@ export type FullAccess = Record<AgentKind, boolean>
 
 export interface RemoteAccessSettings {
   allowedEmail: string
-  terminalInput: boolean
-  sessionControl: boolean
-  approvals: boolean
+  capabilities: RemoteCapabilities
+  autoReconnect: boolean
+  notifyLinkChange: boolean
   approvalsNotify: boolean
   approvalsOnlyWhenAway: boolean
   approvalsAwayMinutes: number
   approvalsAllowConfigEdits: boolean
 }
+
+export type RemoteAccessPatch = Omit<Partial<RemoteAccessSettings>, 'capabilities'> & { capabilities?: Partial<RemoteCapabilities> }
 
 export interface RemoteAccessDevice {
   id: string
@@ -184,7 +188,7 @@ export interface RemoteAccessDevice {
 }
 
 export interface RemoteAccessState {
-  status: 'off' | 'setup-required' | 'connecting' | 'reconnecting' | 'available'
+  status: 'off' | 'setup-required' | 'connecting' | 'reconnecting' | 'available' | 'dropped'
   enabled: boolean
   url: string | null
   message: string
@@ -192,6 +196,11 @@ export interface RemoteAccessState {
   devices: RemoteAccessDevice[]
   pairing: { code: string; expiresAt: number } | null
   permissions: RemoteAccessSettings
+  droppedAt: number | null
+  linkChangedAt: number | null
+  roundTripMs: number | null
+  checkedAt: number | null
+  activity: RemoteActivityEntry[]
 }
 
 export interface SettingsLoadResult {

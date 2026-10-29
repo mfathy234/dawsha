@@ -44,7 +44,11 @@ export const ICONS = {
   pause: svg(16, '<rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/>'),
   skipBack: svg(16, '<polyline points="19 20 9 12 19 4" fill="currentColor"/><line x1="5" y1="19" x2="5" y2="5"/>'),
   skipForward: svg(16, '<polyline points="5 4 15 12 5 20" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/>'),
-  settings: svg(16, '<path d="M10 2h4l.5 2.5 2 1 2.3-1.1 2 3.5-1.9 1.6v2.5l1.9 1.6-2 3.5-2.3-1.1-2 1L14 20h-4l-.5-2.5-2-1-2.3 1.1-2-3.5 1.9-1.6V10l-1.9-1.6 2-3.5 2.3 1.1 2-1L10 2Z"/><circle cx="12" cy="11" r="2.5"/>')
+  settings: svg(16, '<path d="M10 2h4l.5 2.5 2 1 2.3-1.1 2 3.5-1.9 1.6v2.5l1.9 1.6-2 3.5-2.3-1.1-2 1L14 20h-4l-.5-2.5-2-1-2.3 1.1-2-3.5 1.9-1.6V10l-1.9-1.6 2-3.5 2.3 1.1 2-1L10 2Z"/><circle cx="12" cy="11" r="2.5"/>'),
+  linkOn: svg(18, '<circle cx="12" cy="12" r="9"/><polyline points="8 12.5 11 15.5 16 9"/>', 2),
+  linkDropped: svg(18, '<path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5 M12 17.2v.3"/>', 2),
+  linkOff: svg(18, '<path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/>', 2),
+  phone: svg(16, '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>')
 }
 
 export const logoMark = (size: number): string =>

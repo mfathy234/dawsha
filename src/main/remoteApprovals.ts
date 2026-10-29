@@ -7,6 +7,7 @@ import {
   type AllowBlock,
   type ApprovalAnswerSource,
   type ApprovalHistoryEntry,
+  type ApprovalKind,
   type ApprovalItem,
   type ApprovalsPayload,
   type ExtractedPrompt
@@ -42,6 +43,15 @@ export interface ApprovalAnswerRequest {
   allow: boolean
   reason?: unknown
   device: string
+  canAnswer?(kind: ApprovalKind): boolean
+  onAnswered?(item: AnsweredPrompt): void
+}
+
+export interface AnsweredPrompt {
+  summary: string
+  kind: ApprovalKind
+  agent: string
+  projectName: string
 }
 
 export type ReasonFailure = 'new-prompt' | 'exited' | 'timeout' | 'unreadable'
@@ -67,6 +77,8 @@ const GONE_POLL_MS = 100
 const SUBMIT_DELAY_MS = 150
 const DEFAULT_POLL_MS = 1000
 const MAX_DESKTOP_TAIL = 20_000
+
+export const KIND_OFF_MESSAGE = 'Answering this kind of prompt is turned off for phones in Dawsha settings.'
 
 export const BLOCK_MESSAGES: Record<AllowBlock, string> = {
   config: 'This edit touches files outside the project or CI and config files. Open Dawsha to allow it.',
@@ -238,6 +250,7 @@ export function createRemoteApprovals(dependencies: ApprovalDependencies): Remot
       if (item.fingerprint !== request.fingerprint) {
         return { ok: false, status: 409, error: 'That prompt changed or was already answered. Check the list and try again.' }
       }
+      if (request.canAnswer && !request.canAnswer(item.kind)) return { ok: false, status: 403, error: KIND_OFF_MESSAGE }
       if (request.allow && item.allowBlock) return { ok: false, status: 403, error: BLOCK_MESSAGES[item.allowBlock] }
       dependencies.terminals.write(terminal.id, request.allow ? ALLOW_KEY : DENY_KEY)
       tracked.delete(terminal.id)
@@ -246,6 +259,7 @@ export function createRemoteApprovals(dependencies: ApprovalDependencies): Remot
       if (reason) failure = await sendReason(terminal, prompt.fingerprint, reason)
       record(item, request.allow, 'phone', request.device, Boolean(reason) && failure === null)
       void poll().catch(() => undefined)
+      request.onAnswered?.({ summary: item.summary, kind: item.kind, agent: item.agent, projectName: item.projectName })
       return failure ? { ok: true, reasonSent: false, reasonFailure: failure } : { ok: true, reasonSent: Boolean(reason) }
     } finally {
       answering.delete(request.id)

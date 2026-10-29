@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { createRemoteAccessController } from '../../src/main/remoteAccessController'
+import { createRemoteAccessController, type RemoteAccessControllerOptions } from '../../src/main/remoteAccessController'
 import type { RemoteServerOptions } from '../../src/main/remoteServer'
 import { defaultSettings } from '../../src/shared/settingsSchema'
 import type { Settings } from '../../src/shared/types'
@@ -67,6 +67,17 @@ describe('Remote Access controller', () => {
     } finally { vi.useRealTimers() }
   })
 
+  it('keeps the last phone actions the server reports, newest first', async () => {
+    const context = fixture()
+    await context.controller.enable()
+    const options = context.createServer.mock.calls[0]![0]
+    options.onActivity!({ device: 'Pixel 9', action: 'approved', session: 'billing-api', detail: 'npm test' })
+    options.onActivity!({ device: 'Pixel 9', action: 'message', session: 'Claude · billing-api', detail: '' })
+    const { activity } = await context.controller.getState()
+    expect(activity.map((entry) => entry.action)).toEqual(['message', 'approved'])
+    expect(activity[1]).toMatchObject({ device: 'Pixel 9', session: 'billing-api', detail: 'npm test' })
+  })
+
   it('serves the remote browser from the renderer directory supplied by the main entry', async () => {
     const context = fixture()
     await context.controller.enable()
@@ -110,7 +121,7 @@ describe('Remote Access controller', () => {
     const context = fixture()
     context.store.update({
       projects: [{ id: 'p1', name: 'Project', folder: 'C:/projects/app', defaultAgent: 'codex' }],
-      remoteAccess: { ...context.settings().remoteAccess, sessionControl: true }
+      remoteAccess: { ...context.settings().remoteAccess, capabilities: { ...context.settings().remoteAccess.capabilities, sessions: true } }
     })
     await context.controller.enable()
     const options = context.createServer.mock.calls[0]![0]
@@ -157,25 +168,26 @@ describe('Remote Access controller', () => {
   it('stores allowed email and permission settings', async () => {
     const context = fixture()
     await context.controller.setAllowedEmail('new@example.com')
-    const state = await context.controller.setPermissions({ terminalInput: true })
-    expect(state.permissions).toMatchObject({ allowedEmail: 'new@example.com', terminalInput: true, sessionControl: false, approvals: false })
+    const state = await context.controller.setPermissions({ capabilities: { messages: true } })
+    expect(state.permissions).toMatchObject({ allowedEmail: 'new@example.com', capabilities: { messages: true, sessions: false, commands: false, answers: false, fullOutput: false } })
     expect(context.settings().remoteAccess).toEqual(state.permissions)
   })
 
   it('stores the approval settings, keeps them off by default and clamps the idle minutes', async () => {
     const context = fixture()
-    expect((await context.controller.getState()).permissions).toMatchObject({ approvals: false, approvalsAllowConfigEdits: false, approvalsOnlyWhenAway: false })
-    const state = await context.controller.setPermissions({ approvals: true, approvalsOnlyWhenAway: true, approvalsAwayMinutes: 500, approvalsAllowConfigEdits: true })
-    expect(state.permissions).toMatchObject({ approvals: true, approvalsOnlyWhenAway: true, approvalsAwayMinutes: 60, approvalsAllowConfigEdits: true, terminalInput: false })
-    expect(context.settings().remoteAccess.approvals).toBe(true)
+    expect((await context.controller.getState()).permissions).toMatchObject({ capabilities: { commands: false, answers: false }, approvalsAllowConfigEdits: false, approvalsOnlyWhenAway: false })
+    const state = await context.controller.setPermissions({ capabilities: { commands: true, answers: true }, approvalsOnlyWhenAway: true, approvalsAwayMinutes: 500, approvalsAllowConfigEdits: true })
+    expect(state.permissions).toMatchObject({ capabilities: { commands: true, answers: true, messages: false }, approvalsOnlyWhenAway: true, approvalsAwayMinutes: 60, approvalsAllowConfigEdits: true })
+    expect(context.settings().remoteAccess.capabilities.commands).toBe(true)
   })
 
   it('rejects unknown or mistyped permission keys', async () => {
     const context = fixture()
-    await expect(context.controller.setPermissions({ approvals: 'yes' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
+    await expect(context.controller.setPermissions({ capabilities: { commands: 'yes' } } as never)).rejects.toThrow('Invalid Remote Access permissions.')
     await expect(context.controller.setPermissions({ approvalsAwayMinutes: '3' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
     await expect(context.controller.setPermissions({ allowedEmail: 'x@y.com' } as never)).rejects.toThrow('Invalid Remote Access permissions.')
-    expect(context.settings().remoteAccess.approvals).toBe(false)
+    await expect(context.controller.setPermissions({ capabilities: { crew: true } } as never)).rejects.toThrow('Invalid Remote Access permissions.')
+    expect(context.settings().remoteAccess.capabilities.commands).toBe(false)
   })
 
   it('returns a connecting state instead of failing while the hostname is still propagating, then becomes available', async () => {
@@ -210,7 +222,7 @@ describe('Remote Access controller', () => {
 
 describe('Remote Access tunnel health', () => {
   type Wait = (host: string, o: { timeoutMs: number }) => Promise<boolean>
-  async function enabled(probeResults: boolean[], waitForHostname?: Wait) {
+  async function enabled(probeResults: boolean[], waitForHostname?: Wait, extra: Partial<RemoteAccessControllerOptions> = {}) {
     const context = fixture(waitForHostname)
     const queue = [...probeResults]
     const probe = vi.fn(async () => (queue.length ? queue.shift()! : true))
@@ -226,7 +238,10 @@ describe('Remote Access tunnel health', () => {
       assetDirectory: context.assetDirectory,
       waitForHostname: context.waitForHostname,
       readyGraceMs: 5,
-      probe
+      probe,
+      recheckMs: 60_000,
+      reconnectDelaysMs: [0],
+      ...extra
     })
     await controller.enable()
     return { ...context, controller, probe }
@@ -272,17 +287,75 @@ describe('Remote Access tunnel health', () => {
     await context.controller.disable()
   })
 
-  it('ends in the setup error with Try again when the reconnect never becomes reachable, and stops checking', async () => {
+  it('stays dropped, logs the give-up and offers Reconnect when every capped attempt fails', async () => {
     let calls = 0
-    const context = await enabled([false, false], async () => ++calls === 1)
+    const context = await enabled([false, false], async () => ++calls === 1, { reconnectDelaysMs: [0, 0] })
     await context.controller.verify()
-    await vi.waitFor(async () => expect((await context.controller.getState()).status).toBe('setup-required'))
+    await vi.waitFor(() => expect(readFileSync(join(context.userDataDir, 'remote-access.log'), 'utf8')).toContain('reconnect-gave-up'))
     const state = await context.controller.getState()
-    expect(state).toMatchObject({ enabled: false, url: null })
-    expect(state.message).toMatch(/not reachable/)
-    const before = context.probe.mock.calls.length
+    expect(state).toMatchObject({ status: 'dropped', enabled: true, url: null, pairing: null })
+    expect(state.droppedAt).toBeTypeOf('number')
+    expect(readFileSync(join(context.userDataDir, 'remote-access.log'), 'utf8').match(/"event":"tunnel-reconnect"/g)).toHaveLength(2)
+    await context.controller.disable()
+  })
+
+  it('moves to dropped at once when checks fail with auto-reconnect off, hiding the link and not reconnecting', async () => {
+    const context = await enabled([false, false])
+    await context.controller.setPermissions({ autoReconnect: false })
+    const state = await context.controller.verify()
+    expect(state).toMatchObject({ status: 'dropped', enabled: true, url: null, pairing: null, notice: null })
+    expect(state.droppedAt).toBeTypeOf('number')
+    expect(state.message).toMatch(/cannot reach/)
+    expect(context.tunnel.start).toHaveBeenCalledTimes(1)
+    await context.controller.disable()
+  })
+
+  it('returns to available on its own, with the same link, when a dropped tunnel answers again', async () => {
+    const context = await enabled([false, false, true])
+    await context.controller.setPermissions({ autoReconnect: false })
+    expect((await context.controller.verify()).status).toBe('dropped')
+    const state = await context.controller.verify()
+    expect(state).toMatchObject({ status: 'available', url: 'https://brisk-fox.trycloudflare.com/dawsha/', droppedAt: null })
+    expect(context.tunnel.start).toHaveBeenCalledTimes(1)
+    await context.controller.disable()
+  })
+
+  it('Reconnect replaces a dropped tunnel, shows the new link and tells the owner to re-scan', async () => {
+    const notify = vi.fn()
+    const context = await enabled([false, false], undefined, { notify })
+    await context.controller.setPermissions({ autoReconnect: false })
+    expect((await context.controller.verify()).status).toBe('dropped')
+    expect((await context.controller.reconnect()).status).toBe('reconnecting')
+    await vi.waitFor(async () => expect((await context.controller.getState()).status).toBe('available'))
+    const after = await context.controller.getState()
+    expect(after).toMatchObject({ url: 'https://calm-owl.trycloudflare.com/dawsha/', droppedAt: null, notice: 'The address changed. Scan the new code on your phone.' })
+    expect(after.linkChangedAt).toBeTypeOf('number')
+    expect(notify).toHaveBeenCalledOnce()
+    await context.controller.disable()
+  })
+
+  it('only notifies about a changed link when that setting is on', async () => {
+    const notify = vi.fn()
+    const context = await enabled([false, false], undefined, { notify })
+    await context.controller.setPermissions({ notifyLinkChange: false })
     await context.controller.verify()
-    expect(context.probe.mock.calls.length).toBe(before)
+    await vi.waitFor(async () => expect((await context.controller.getState()).url).toBe('https://calm-owl.trycloudflare.com/dawsha/'))
+    expect(notify).not.toHaveBeenCalled()
+    await context.controller.disable()
+  })
+
+  it('refuses Reconnect while Remote Access is off', async () => {
+    const context = fixture()
+    await expect(context.controller.reconnect()).rejects.toThrow(/Turn on Remote Access/)
+  })
+
+  it('reports the round trip and check time from the health probe', async () => {
+    const context = await enabled([true])
+    const state = await context.controller.verify()
+    expect(state.roundTripMs).toBeGreaterThanOrEqual(0)
+    expect(state.checkedAt).toBeTypeOf('number')
+    await context.controller.disable()
+    expect(await context.controller.getState()).toMatchObject({ roundTripMs: null, checkedAt: null, droppedAt: null })
   })
 
   it('logs health failures and the reconnect', async () => {

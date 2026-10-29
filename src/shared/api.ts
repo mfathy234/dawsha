@@ -57,7 +57,7 @@ import type {
   SessionFile,
   Settings,
   SettingsLoadResult,
-  RemoteAccessSettings,
+  RemoteAccessPatch,
   RemoteAccessState,
   RemoteSessionStarted,
   SpawnRequest,
@@ -78,7 +78,8 @@ export interface GridApi {
     disable(): Promise<RemoteAccessState>
     verify(): Promise<RemoteAccessState>
     refreshPairing(): Promise<RemoteAccessState>
-    setPermissions(patch: Partial<RemoteAccessSettings>): Promise<RemoteAccessState>
+    setPermissions(patch: RemoteAccessPatch): Promise<RemoteAccessState>
+    reconnect(): Promise<RemoteAccessState>
     setAllowedEmail(email: string): Promise<RemoteAccessState>
     revokeDevice(id: string): Promise<RemoteAccessState>
     recordApproval(terminalId: string, allowed: boolean, tail?: string): Promise<void>
