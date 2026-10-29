@@ -25,7 +25,18 @@ export function remoteCrewSnapshot(state: AppState): RemoteCrewSnapshot {
       termId: run.tab.id
     }]
   })
-  return { states, jobs, goal: null }
+  return { states, jobs, goal: currentGoal(state) }
+}
+
+/** The newest goal whose Lead session is still open, so the phone can show what Maya is working on. */
+function currentGoal(state: AppState): RemoteCrewSnapshot['goal'] {
+  const live = liveRuns(state)
+  const goals = [...state.settings.crewGoals].sort((a, b) => b.startedAt - a.startedAt)
+  for (const goal of goals) {
+    const lead = live.find((run) => run.tab.crew?.runId === goal.leadRunId)
+    if (lead) return { title: goal.text.split('\n')[0].slice(0, 120), state: lead.state, line: '' }
+  }
+  return null
 }
 
 /** Keeps the phone's picture of the crew current and starts the runs a phone asks for. Only exists in builds that have Remote Access. */
