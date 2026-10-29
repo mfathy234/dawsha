@@ -17,6 +17,7 @@ import {
   type TransferData,
   type TransferMode
 } from '../../src/shared/settingsTransfer'
+import type { CrewMember } from '../../src/shared/crew'
 import type { Project, SavedLayout, Settings } from '../../src/shared/types'
 
 const project = (id: string, folder: string, name = id): Project => ({ id, name, folder, defaultAgent: 'claude' })
@@ -36,7 +37,7 @@ function rich(): Settings {
     sessionsLayout: 'board',
     paletteShortcut: 'Alt+Space',
     recordings: { enabled: true, keepDays: 30, maxMegabytes: 500 },
-    remoteAccess: { ...defaultSettings().remoteAccess, allowedEmail: 'me@example.com', terminalInput: true },
+    remoteAccess: { ...defaultSettings().remoteAccess, allowedEmail: 'me@example.com' },
     onboardingDismissed: true,
     lastSeenVersion: '0.5.3',
     keptSessions: [{ projectId: 'a', agent: 'claude', sessionId: 'sess-1', title: 'Old', closedAt: 5 }],
@@ -53,10 +54,12 @@ const parsed = (data: unknown): Partial<TransferData> => {
   return result.transfer.data
 }
 
-const run = (current: Settings, data: Partial<TransferData>, mode: TransferMode, missing: string[] = []) => {
+const run = (current: Settings, data: Partial<TransferData>, mode: TransferMode, missing: string[] = [], keepFullAccess = false) => {
   let n = 0
-  return planImport({ current, data, mode, missingFolders: new Set(missing), newId: () => `new-${(n += 1)}` })
+  return planImport({ current, data, mode, missingFolders: new Set(missing), newId: () => `new-${(n += 1)}`, keepFullAccess })
 }
+
+const crewMember = (id: string, name: string, permissions: 'read' | 'ask' | 'full'): CrewMember => ({ ...defaultSettings().crew.members[0], id, name, builtin: false, permissions })
 
 describe('what is exported', () => {
   it('considers every top-level settings key as included or explicitly excluded', () => {
@@ -231,6 +234,51 @@ describe('planImport merge', () => {
   it('leaves lists alone when the file does not mention them', () => {
     const plan = run(rich(), { sessionsLayout: 'grid' }, 'merge')
     expect(Object.keys(plan.patch)).toEqual(['sessionsLayout'])
+  })
+})
+
+describe('planImport crew full access', () => {
+  const incomingCrew = (): Partial<TransferData> => ({
+    crew: { members: [crewMember('ext', 'Ext', 'full'), crewMember('plain', 'Plain', 'read')], hidden: [] }
+  })
+
+  it('downgrades an imported member with full access to ask and names it in the preview', () => {
+    const plan = run(defaultSettings(), incomingCrew(), 'merge')
+    const members = plan.patch.crew?.members ?? []
+    expect(members.find((m) => m.name === 'Ext')?.permissions).toBe('ask')
+    expect(members.find((m) => m.name === 'Plain')?.permissions).toBe('read')
+    expect(plan.summary.fullAccessMembers).toEqual(['Ext'])
+    expect(previewLines(plan.summary).join('\n')).toContain('Ext')
+    expect(previewLines(plan.summary).join('\n')).toContain('Keep full access')
+  })
+
+  it('keeps full access for imported members only when the user asks to keep it', () => {
+    const plan = run(defaultSettings(), incomingCrew(), 'merge', [], true)
+    expect(plan.patch.crew?.members.find((m) => m.name === 'Ext')?.permissions).toBe('full')
+    expect(plan.summary.keepFullAccess).toBe(true)
+    expect(previewLines(plan.summary).join('\n')).toContain('Keeping full access')
+  })
+
+  it('downgrades in replace mode as well', () => {
+    const plan = run(rich(), incomingCrew(), 'replace')
+    expect(plan.patch.crew?.members.map((m) => [m.name, m.permissions])).toEqual([
+      ['Ext', 'ask'],
+      ['Plain', 'read']
+    ])
+    expect(replaceWarning(plan.summary, 0)).toContain('Ext')
+  })
+
+  it('leaves a member already here alone, with whatever access it has', () => {
+    const current = { ...defaultSettings(), crew: { members: [crewMember('ext', 'Ext', 'full')], hidden: [] } }
+    const plan = run(current, incomingCrew(), 'merge')
+    expect(plan.patch.crew?.members.filter((m) => m.name === 'Ext').map((m) => m.permissions)).toEqual(['full'])
+    expect(plan.summary.fullAccessMembers).toEqual([])
+  })
+
+  it('does not list anything when no imported member has full access', () => {
+    const plan = run(defaultSettings(), { crew: { members: [crewMember('plain', 'Plain', 'ask')], hidden: [] } }, 'merge')
+    expect(plan.summary.fullAccessMembers).toEqual([])
+    expect(previewLines(plan.summary).join('\n')).not.toContain('full access')
   })
 })
 

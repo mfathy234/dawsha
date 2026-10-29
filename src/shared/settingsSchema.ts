@@ -1,6 +1,5 @@
 import { sanitizeTicketNotes } from './ticketNotes'
 import { checkoutTabsKey } from './filesWorkspace'
-import { parseFolds } from './agentFolds'
 import { defaultLayout, parseLayout } from './filesLayout'
 import { sanitizeRunOverrides } from './runCommands'
 import { isAgent } from './agents'
@@ -14,6 +13,10 @@ import { sanitizeSplits } from './splits'
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './sidebarWidth'
 import { defaultHighlights, sanitizeHighlights } from './highlights'
 import { defaultRecordings, sanitizeRecordings } from './recordings'
+import { defaultCapabilities, sanitizeCapabilities } from './remoteCapabilities'
+import { BUILTIN_IDS } from './crewBuiltins'
+import { defaultCrew, sanitizeCrew, sanitizeCrewRuns, sanitizeIdentity } from './crew'
+import { defaultLead, sanitizeGoals, sanitizeLead } from './crewLead'
 import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from './sessionTags'
 import {
   DEFAULT_FONT_SIZE,
@@ -56,9 +59,9 @@ export const DEFAULT_PALETTE_SHORTCUT = 'Ctrl+K'
 export const defaultFullAccess = (): FullAccess => ({ claude: true, codex: true, gemini: false })
 export const defaultRemoteAccess = (): RemoteAccessSettings => ({
   allowedEmail: '',
-  terminalInput: false,
-  sessionControl: false,
-  approvals: false,
+  capabilities: defaultCapabilities(),
+  autoReconnect: true,
+  notifyLinkChange: true,
   approvalsNotify: true,
   approvalsOnlyWhenAway: false,
   approvalsAwayMinutes: 3,
@@ -87,7 +90,6 @@ export const defaultSettings = (): Settings => ({
   keptSessions: [],
   foldedProjects: [],
   foldedClosedSessions: [],
-  agentFolds: {},
   filesLayout: defaultLayout(),
   filesTabs: {},
   runCommands: [],
@@ -100,6 +102,10 @@ export const defaultSettings = (): Settings => ({
   remoteAccess: defaultRemoteAccess(),
   highlights: defaultHighlights(),
   recordings: defaultRecordings(),
+  crew: defaultCrew(),
+  crewRuns: [],
+  lead: defaultLead(),
+  crewGoals: [],
   legacyModelCacheCleared: false
 })
 
@@ -155,6 +161,8 @@ function sanitizeTab(value: unknown): SavedTab | null {
   const name = typeof value.name === 'string' ? cleanSessionName(value.name) : null
   if (name && agent !== 'shell') tab.name = name
   if (isSessionTag(value.tag) && agent !== 'shell') tab.tag = value.tag
+  const crew = sanitizeIdentity(value.crew)
+  if (crew && agent !== 'shell') tab.crew = crew
   return tab
 }
 
@@ -269,9 +277,9 @@ function sanitizeRemoteAccess(value: unknown): RemoteAccessSettings {
   if (!isRecord(value)) return defaults
   return {
     allowedEmail: typeof value.allowedEmail === 'string' && value.allowedEmail.length <= 254 ? value.allowedEmail : '',
-    terminalInput: value.terminalInput === true,
-    sessionControl: value.sessionControl === true,
-    approvals: value.approvals === true,
+    capabilities: sanitizeCapabilities(value.capabilities, value),
+    autoReconnect: typeof value.autoReconnect === 'boolean' ? value.autoReconnect : defaults.autoReconnect,
+    notifyLinkChange: typeof value.notifyLinkChange === 'boolean' ? value.notifyLinkChange : defaults.notifyLinkChange,
     approvalsNotify: typeof value.approvalsNotify === 'boolean' ? value.approvalsNotify : defaults.approvalsNotify,
     approvalsOnlyWhenAway: value.approvalsOnlyWhenAway === true,
     approvalsAwayMinutes: clampAwayMinutes(value.approvalsAwayMinutes, defaults.approvalsAwayMinutes),
@@ -380,7 +388,6 @@ export function migrateSettings(raw: unknown): Settings {
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
     foldedProjects: sanitizeProjectIds(raw.foldedProjects, projects),
     foldedClosedSessions: sanitizeProjectIds(raw.foldedClosedSessions, projects),
-    agentFolds: parseFolds(raw.agentFolds),
     filesLayout: parseLayout(raw.filesLayout),
     filesTabs: sanitizeFilesTabs(raw.filesTabs, projects),
     runCommands: sanitizeRunOverrides(raw.runCommands).filter((entry) => projects.some((project) => project.id === entry.projectId)),
@@ -393,6 +400,10 @@ export function migrateSettings(raw: unknown): Settings {
     remoteAccess: sanitizeRemoteAccess(raw.remoteAccess),
     highlights: sanitizeHighlights(raw.highlights),
     recordings: sanitizeRecordings(raw.recordings),
+    crew: sanitizeCrew(raw.crew, BUILTIN_IDS),
+    crewRuns: sanitizeCrewRuns(raw.crewRuns),
+    lead: sanitizeLead(raw.lead),
+    crewGoals: sanitizeGoals(raw.crewGoals),
     legacyModelCacheCleared: raw.legacyModelCacheCleared === true
   }
 }

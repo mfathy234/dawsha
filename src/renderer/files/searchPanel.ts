@@ -1,6 +1,8 @@
 import { SEARCH_MAX_MATCHES, matchRanges, matcherFor, type SearchRequest, type SearchResult } from '../../shared/fileSearch'
 import { h } from '../dom'
 import { fileIcon } from './fileIcon'
+import { LatestGate } from './asyncGuard'
+import { errorNote, loadingNote } from './loadNote'
 
 const DEBOUNCE_MS = 300
 
@@ -66,7 +68,7 @@ export class SearchPanel {
   }
   private readonly summary = h('div', { class: 'files-search-summary', id: 'files-search-summary', role: 'status', 'aria-live': 'polite' })
   private readonly results = h('div', { class: 'files-search-results', id: 'files-search-results' })
-  private token = 0
+  private readonly gate = new LatestGate()
   private timer: number | undefined
   private lastKey = ''
 
@@ -93,7 +95,7 @@ export class SearchPanel {
 
   /** The folder changed: results from another checkout do not apply. */
   reset(): void {
-    this.token += 1
+    this.gate.cancel()
     this.lastKey = ''
     window.clearTimeout(this.timer)
     this.results.replaceChildren()
@@ -120,7 +122,8 @@ export class SearchPanel {
     const folder = this.hooks.folder()
     const request = this.request()
     if (!folder || request.query.trim() === '') {
-      this.token += 1
+      this.gate.cancel()
+      this.lastKey = ''
       this.results.replaceChildren()
       this.showHint()
       return
@@ -128,14 +131,14 @@ export class SearchPanel {
     const key = JSON.stringify([folder, request])
     if (key === this.lastKey) return
     this.lastKey = key
-    const token = ++this.token
-    this.summary.textContent = 'Searching…'
+    const ticket = this.gate.begin()
+    this.summary.replaceChildren(loadingNote('Searching…'))
     const result = await this.hooks.run(folder, request).catch((error: Error) => ({ ok: false as const, error: error.message }))
-    if (token !== this.token) return
+    if (!ticket.current()) return
     if (!result.ok) {
       this.lastKey = ''
       this.results.replaceChildren()
-      this.summary.textContent = result.error
+      this.summary.replaceChildren(errorNote("Couldn't search.", () => void this.run(), result.error))
       return
     }
     this.render(result, request)

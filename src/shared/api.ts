@@ -1,7 +1,6 @@
 import type { AgentAccounts } from './agentAccounts'
 import type { KnownLimits } from './agentLimits'
 import type { WorkPeriod, WorkReport } from './workDashboard'
-import type { BackgroundAgentsReport, BgKind, BgRange } from './backgroundAgents'
 import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
@@ -27,6 +26,7 @@ import type { OpsSnapshot } from './opsFeed'
 import type { RecordingStats, RecordingSummary } from './recordings'
 import type { ProcessActivity } from './processActivity'
 import type { BulkSkillExport, SkillEntry } from './skills'
+import type { CrewSourceFile } from './crewSources'
 import type { PaneonImportPreview } from './paneonImport'
 import type { SettingsExportResult, SettingsImportRead } from './settingsTransfer'
 import type { UpdateState } from './updates'
@@ -57,7 +57,7 @@ import type {
   SessionFile,
   Settings,
   SettingsLoadResult,
-  RemoteAccessSettings,
+  RemoteAccessPatch,
   RemoteAccessState,
   RemoteSessionStarted,
   SpawnRequest,
@@ -78,10 +78,16 @@ export interface GridApi {
     disable(): Promise<RemoteAccessState>
     verify(): Promise<RemoteAccessState>
     refreshPairing(): Promise<RemoteAccessState>
-    setPermissions(patch: Partial<RemoteAccessSettings>): Promise<RemoteAccessState>
+    setPermissions(patch: RemoteAccessPatch): Promise<RemoteAccessState>
+    reconnect(): Promise<RemoteAccessState>
     setAllowedEmail(email: string): Promise<RemoteAccessState>
     revokeDevice(id: string): Promise<RemoteAccessState>
     recordApproval(terminalId: string, allowed: boolean, tail?: string): Promise<void>
+  }
+  remoteCrew?: {
+    publish(snapshot: import('./remoteCrew').RemoteCrewSnapshot): void
+    onRun(listener: (id: string, request: { memberId: string; projectId: string; choice: string; fields: Record<string, string>; deadline: number }) => void): () => void
+    reply(id: string, result: { ok: true; runId: string } | { ok: false; error: string }): void
   }
   paneonImportPreview(): Promise<PaneonImportPreview>
   queuePaneonImport(): Promise<void>
@@ -163,6 +169,10 @@ export interface GridApi {
   exportSkill(id: string): Promise<string | null>
   /** Asks for a folder once, then exports every id. Null when the folder picker is cancelled. */
   exportSkills(ids: string[]): Promise<BulkSkillExport | null>
+  /** Agent files, skills and Codex prompts on this PC, read-only. With ids, only those. */
+  crewSources(ids?: string[]): Promise<CrewSourceFile[]>
+  /** The current text of a linked agent, skill or prompt file, or null when it is gone. */
+  crewReadLinked(path: string): Promise<string | null>
   readClipboard(): Promise<ClipboardContent>
   writeClipboard(text: string): Promise<void>
   openExternal(url: string): Promise<void>
@@ -185,8 +195,6 @@ export interface GridApi {
   knownLimits(): Promise<KnownLimits>
   /** `offset`: periods back from now (0 now, -1 the one before). */
   workReport(period: WorkPeriod, offset?: number): Promise<WorkReport>
-  backgroundAgents(range: BgRange): Promise<BackgroundAgentsReport>
-  revealBackgroundAgent(kind: BgKind, id: string): Promise<boolean>
   exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
   writeHandoffTranscript(request: HandoffTranscriptRequest): Promise<HandoffTranscriptResult>
   revealHandoff(path: string): Promise<void>

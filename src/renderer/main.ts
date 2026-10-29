@@ -1,5 +1,4 @@
 import { installUsageSnapshot } from './usageSnapshot'
-import { installBackgroundAgents } from './backgroundAgents'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import './components/controls.css'
@@ -25,12 +24,15 @@ import {
 import { CODEX_MARK, GEMINI_MARK } from '../shared/agents'
 import { api } from './api'
 import { installAttention } from './attention'
+import { installCrewLive } from './crewLive'
+import { installLead } from './crewLead'
 import { guardWindowDrops } from './fileDrop'
 import { installOps } from './ops'
 import { installProcessActivity } from './processActivity'
 import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
+import { installRemoteCrew } from './remoteCrewSync'
 import { installBuiltinCommands } from './commands/builtin'
 import { installCompareCommands } from './commands/compare'
 import { installHandoffCommands } from './commands/handoff'
@@ -115,6 +117,7 @@ async function boot(): Promise<void> {
   })
   connectPtyStreams(handleTerminalExit)
   api.onRemoteSessionStarted(attachRemoteSession)
+  installRemoteCrew()
   api.onSessions((next) => store.patch({ sessions: next }))
   setStatusInfos(statusInfos)
   void refreshBridge()
@@ -129,7 +132,6 @@ async function boot(): Promise<void> {
   installNeedsNotices()
   guardWindowDrops()
   installUsageSnapshot()
-  installBackgroundAgents()
   void installOps()
   installProcessActivity()
   installBuiltinCommands()
@@ -151,6 +153,8 @@ async function boot(): Promise<void> {
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()
   void clearLegacyModelCache(loaded.settings.legacyModelCacheCleared)
   await restoreWorkspace()
+  installCrewLive()
+  installLead()
   api.cliReady()
   document.documentElement.dataset.ready = 'true'
 }

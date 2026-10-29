@@ -4,6 +4,7 @@ import { treeShortcut, type FileActionId } from '../../shared/fileMenus'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
 import { fileIcon, folderIcon } from './fileIcon'
+import { errorNote, skeletonRows } from './loadNote'
 import { ancestorsOf, flattenTree, treeKey, type TreeRow } from './filesState'
 
 const MAX_ROWS = 2000
@@ -17,6 +18,8 @@ export interface TreeHooks {
   action(id: FileActionId, target: TreeTarget): void
   /** Right click, the Menu key or Shift+F10 on a row: x and y are where the menu opens. */
   menu(target: TreeTarget, x: number, y: number, returnFocus: HTMLElement): void
+  /** Retry after the folder could not be read. */
+  retry(): void
 }
 
 export interface TreeTarget {
@@ -36,6 +39,7 @@ export class FilesTree {
   private cursor: string | null = null
   private active: string | null = null
   private note = ''
+  private skeleton = false
 
   constructor(private readonly hooks: TreeHooks) {
     this.el = this.list
@@ -49,12 +53,18 @@ export class FilesTree {
     this.status = status
     this.nodes = buildTree(files, status)
     this.note = note
+    this.skeleton = false
     this.render()
   }
 
-  setLoading(loading: boolean): void {
+  /** While loading the tree is inert; with replace the old rows give way to placeholder rows (another project or checkout). */
+  setLoading(loading: boolean, replace = false): void {
     this.list.inert = loading
     this.list.setAttribute('aria-busy', String(loading))
+    const skeleton = loading && replace
+    if (skeleton === this.skeleton) return
+    this.skeleton = skeleton
+    this.render()
   }
 
   /** Returns the saved fold state of this project's tree, so switching projects keeps each tree as it was. */
@@ -83,11 +93,18 @@ export class FilesTree {
   private isOpen = (path: string): boolean => this.openFolders.has(path)
 
   private render(): void {
+    if (this.skeleton) {
+      this.rows = []
+      this.list.replaceChildren(skeletonRows('Loading files…'))
+      this.list.removeAttribute('aria-activedescendant')
+      return
+    }
     this.rows = flattenTree(this.nodes, this.isOpen)
     const shown = this.rows.slice(0, MAX_ROWS)
     const children = shown.map((row) => this.rowEl(row))
+    if (this.note) children.unshift(errorNote("Couldn't read this folder.", () => this.hooks.retry(), this.note))
     if (this.rows.length > MAX_ROWS) children.push(h('div', { class: 'files-empty' }, `${this.rows.length - MAX_ROWS} more. Use Go to file to find the rest.`))
-    else if (shown.length === 0) children.push(h('div', { class: 'files-empty' }, this.emptyText()))
+    else if (shown.length === 0 && !this.note) children.push(h('div', { class: 'files-empty' }, this.emptyText()))
     this.list.replaceChildren(...children)
     this.list.removeAttribute('aria-activedescendant')
     const at = this.cursorRow()

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { APP_VERSION, closeApp, closeSettings, createSandbox, feedTerminal, launchApp, openMore, openSettings, type Sandbox } from './helpers'
@@ -255,11 +255,7 @@ test('batteries: a gauge per limit with its stage, and the percent takes the sta
 const git = (cwd: string, ...args: string[]): void => {
   execFileSync('git', ['-c', 'core.autocrlf=false', '-c', 'user.name=Test User', '-c', 'user.email=test@example.invalid', ...args], { cwd, stdio: 'ignore' })
 }
-const lines = (...records: unknown[]): string => records.map((r) => JSON.stringify(r)).join('\n')
-const iso = (minutes: number): string => new Date(Date.now() - minutes * 60_000).toISOString()
-const slug = (folder: string): string => folder.replace(/[^A-Za-z0-9]/g, '-')
-
-function seedRepoAndAgents(sandbox: Sandbox): void {
+function seedRepo(sandbox: Sandbox): void {
   const repo = sandbox.projectFolder
   mkdirSync(join(repo, 'src'), { recursive: true })
   git(repo, 'init', '-q', '-b', 'main')
@@ -267,24 +263,6 @@ function seedRepoAndAgents(sandbox: Sandbox): void {
   writeFileSync(join(repo, 'README.md'), 'hello\n')
   git(repo, 'add', '.')
   git(repo, 'commit', '-q', '-m', 'first')
-  const parent = '4d1b16b0-2a58-42e8-a971-0fadf4e0f3e4'
-  const dir = join(sandbox.claudeHome, 'projects', slug(repo))
-  mkdirSync(join(dir, parent, 'subagents'), { recursive: true })
-  writeFileSync(join(dir, `${parent}.jsonl`), lines({ type: 'user', timestamp: iso(90), cwd: repo, message: { content: 'Polish the release' } }, { type: 'ai-title', aiTitle: 'Release polish' }))
-  const agent = (id: string, description: string, age: number, final: string | null): void => {
-    const base = join(dir, parent, 'subagents', `agent-${id}`)
-    writeFileSync(`${base}.meta.json`, JSON.stringify({ agentType: 'general-purpose', spawnDepth: 1, requestShape: 'background', model: 'sonnet', description, ...(final ? { finished: true } : {}) }))
-    const first = { type: 'user', timestamp: iso(age + 20), cwd: repo, isSidechain: true, message: { role: 'user', content: 'Go' } }
-    const usage = { input_tokens: 10, output_tokens: 20 }
-    const last = final
-      ? { type: 'assistant', timestamp: iso(age), message: { id: `m-${id}`, model: 'claude-sonnet-5-5', stop_reason: 'end_turn', usage, content: [{ type: 'text', text: final }] } }
-      : { type: 'assistant', timestamp: iso(age), message: { id: `m-${id}`, model: 'claude-sonnet-5-5', stop_reason: 'tool_use', usage, content: [{ type: 'tool_use', name: 'Bash', input: { command: 'npm test' } }] } }
-    writeFileSync(`${base}.jsonl`, lines(first, last))
-    utimesSync(`${base}.jsonl`, new Date(Date.now() - age * 60_000), new Date(Date.now() - age * 60_000))
-  }
-  agent('run1', 'Option A grid pass', 0.3, null)
-  agent('done1', 'Sidebar session features', 20, 'Rebased the branch and all 14 tests pass.')
-  agent('done2', 'Handoff export', 75, 'Found the export code in handoff.ts.')
 }
 
 for (const [mode, themeId] of THEMES) {
@@ -292,7 +270,7 @@ for (const [mode, themeId] of THEMES) {
     test.setTimeout(120_000)
     const sandbox = createSandbox()
     withTheme(sandbox, themeId)
-    seedRepoAndAgents(sandbox)
+    seedRepo(sandbox)
     const { app, page } = await launchApp(sandbox)
     try {
       await openThreePanes(page)
@@ -322,8 +300,8 @@ for (const [mode, themeId] of THEMES) {
       await page.locator('#files-button').click()
 
       await page.locator('#background-button').click()
-      await expect(page.locator('.bg-view')).toBeVisible()
-      await expect(page.locator('.bg-item').first()).toBeVisible({ timeout: 20_000 })
+      await expect(page.locator('.crew-view')).toBeVisible()
+      await expect(page.locator('.crew-item').first()).toBeVisible({ timeout: 20_000 })
       await shot(page, `${mode}-agents`)
       await page.locator('#sessions-button').click()
 

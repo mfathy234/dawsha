@@ -16,7 +16,12 @@ function sourceLine(transfer: ParsedTransfer): string {
   return `Exported from ${version}${when}.${skipped}`
 }
 
-export function chooseImportMode(summary: ImportSummary, transfer: ParsedTransfer): Promise<TransferMode | null> {
+export interface ImportChoice {
+  mode: TransferMode
+  keepFullAccess: boolean
+}
+
+export function chooseImportMode(summary: ImportSummary, transfer: ParsedTransfer): Promise<ImportChoice | null> {
   const id = nextDialogId()
   const titleId = `dlg-title-${id}`
   const group = `import-mode-group-${id}`
@@ -25,6 +30,10 @@ export function chooseImportMode(summary: ImportSummary, transfer: ParsedTransfe
   const confirm = h('button', { class: 'btn primary', type: 'button', id: 'import-confirm', 'data-confirm': '' }, 'Import')
   const merge = modeOption(group, 'merge', 'Merge', 'Add what is new and keep what is already here. Imported preferences are applied.', true)
   const replace = modeOption(group, 'replace', 'Replace', 'Replace your projects and layouts with the ones in the file.', false)
+  const keep = h('input', { type: 'checkbox', id: 'import-keep-full-access' })
+  const keepRow = summary.fullAccessMembers.length > 0
+    ? h('label', { class: 'import-keep', for: 'import-keep-full-access' }, keep, h('span', {}, 'Keep full access for these agents'))
+    : null
   const dialog = h(
     'div',
     { class: 'dialog import-preview', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId },
@@ -32,13 +41,14 @@ export function chooseImportMode(summary: ImportSummary, transfer: ParsedTransfe
     h('p', { class: 'dialog-hint' }, sourceLine(transfer)),
     lines.length > 0 ? h('ul', { class: 'import-lines' }, ...lines.map((line) => h('li', {}, line))) : h('p', {}, 'The file has nothing to import.'),
     h('div', { class: 'import-modes', role: 'radiogroup', 'aria-label': 'How to import' }, merge, replace),
+    keepRow,
     h('div', { class: 'dialog-actions' }, cancel, confirm)
   )
-  const shown = present<TransferMode | null>(dialog, null, confirm)
+  const shown = present<ImportChoice | null>(dialog, null, confirm)
   cancel.addEventListener('click', () => shown.finish(null))
   confirm.addEventListener('click', () => {
     const picked = dialog.querySelector<HTMLInputElement>(`input[name="${group}"]:checked`)
-    shown.finish(picked?.value === 'replace' ? 'replace' : 'merge')
+    shown.finish({ mode: picked?.value === 'replace' ? 'replace' : 'merge', keepFullAccess: keep.checked })
   })
   return shown.result
 }

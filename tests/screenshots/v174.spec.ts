@@ -70,7 +70,7 @@ test('generates the Files, Review and Search screenshots from fake projects only
   }
 })
 
-test('generates the sidebar, grid and Agents screenshots', async () => {
+test('generates the sidebar and grid screenshots', async () => {
   const { app, page } = await launchDemo({})
   try {
     await page.locator('.pane-title', { hasText: 'Add dark mode toggle' }).click()
@@ -82,18 +82,6 @@ test('generates the sidebar, grid and Agents screenshots', async () => {
     const rail = await boxOf(page, '.sidebar')
     await save(page, [site('sidebar.png')], { ...rail, height: Math.min(rail.height, 620) })
 
-    await page.locator('#background-button').click()
-    await expect(page.locator('.bg-view')).toBeVisible()
-    await page.locator('.bg-item', { hasText: 'Persist the choice in localStorage' }).click()
-    await expect(page.locator('#bg-details')).toBeVisible()
-    await expect(page.locator('#bg-detail-title')).toHaveText('Persist the choice in localStorage')
-    await settle(page, 1200)
-    await save(page, [docs('agents-tab.png'), site('agents-detail.png')])
-
-    await page.locator('#bg-layout-timeline').click()
-    await expect(page.locator('#bg-timeline')).toBeVisible()
-    await settle(page, 1200)
-    await save(page, [site('agents-timeline.png')])
   } finally {
     await closeApp(app)
   }

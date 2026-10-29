@@ -13,6 +13,7 @@ import { clear, h, icon, iconButton } from '../dom'
 import { enableDrag } from '../drag'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
+import { crewSignature, identityMark } from './crewAvatar'
 import { openFolderInFiles } from '../files/filesActions'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
@@ -243,7 +244,7 @@ export class SidebarComponent {
       hiddenEmpty,
       this.filterOpen,
       projects.map((p) => projectTodayLabel(state.usage.projectsToday[p.id])),
-      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent, v.attention, v.tag, v.tagAuto, sessionAge(viewActivity(v), state.now), v.info.ops?.running.length ?? 0]),
+      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent, v.attention, v.tag, v.tagAuto, sessionAge(viewActivity(v), state.now), v.info.ops?.running.length ?? 0, crewSignature(v)]),
       this.edit?.key,
       [...this.quietOpen],
       state.settings.keptSessions.map((session) => closedUsageShort(state.usage.sessions[session.sessionId])),
@@ -553,7 +554,7 @@ export class SidebarComponent {
             'data-nav': key,
             onClick: () => focusPane(view.pane.id)
           },
-          agentMark(view.agent),
+          identityMark(view),
           h('span', { class: 'sess-body' },
             h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title)),
             h('span', { class: 'sess-meta' },
@@ -709,7 +710,7 @@ export class SidebarComponent {
             'data-nav': `n:${view.pane.id}`,
             onClick: () => focusPane(view.pane.id)
           },
-          agentMark(view.agent),
+          identityMark(view),
           h('span', { class: 'sess-body' },
             h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title), h('span', { class: 'sess-age' }, age)),
             h('span', { class: 'sess-meta' },
@@ -779,7 +780,7 @@ export class SidebarComponent {
       return h(
         'button',
         { class: 'menu-item fly-session', type: 'button', role: 'menuitem', title: `${view.title}\n${status}`, onClick: () => { this.popup.close(); focusPane(view.pane.id) } },
-        agentMark(view.agent),
+        identityMark(view),
         h('span', { class: 'fly-body' },
           h('span', { class: 'fly-title', dir: 'auto' }, view.title),
           h('span', { class: `sess-state state-${name}` }, stateIcon(name), h('span', { class: 'sess-state-word' }, status)))

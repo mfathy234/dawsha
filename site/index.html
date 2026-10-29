@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.7.4</a>
+      <a href="#new">New in 1.7.6</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,57 +97,77 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.7.4</h2>
-      <p class="section-lead">1.7.4 turns Files into a place to review what agents changed, adds a details pane and a timeline to Agents, rebuilds the Projects sidebar around what needs you, and refines the Dawsha Cards look.</p>
-      <div class="feat-row" id="files-review">
+      <h2 id="new-h">New in 1.7.6</h2>
+      <p class="section-lead">1.7.6 turns the Agents tab into a crew you keep, adds Maya to lead it, and puts your agents on your phone. It also carries the 1.7.5 changes: a much smaller app, a clearer sidebar, Codex limits and a Problems tab.</p>
+      <div class="feat-row" id="agents-crew">
         <div class="feat-copy">
-          <h3>Search and review in Files</h3>
-          <p>Check an agent's work without leaving Dawsha. The explorer now has Files, Search and Review modes.</p>
-          <ul><li>Ctrl+Shift+F searches the selected checkout, skips files Git ignores, and groups results by file. Match case, whole word, regular expression and an include pattern are there.</li><li>Review steps through the changed files. Click a + line to leave a comment.</li><li>Send to agent types every comment, with file and line, into that session's prompt without sending it, so you press Enter.</li><li>Commit… drafts a message and lets you pick files. Discard file… asks first.</li><li>Added lines carry a mark for the session that wrote them, with the task and time on hover.</li><li>Markdown opens as a preview, HTML as a static preview, and a changed image can be compared with main.</li></ul>
+          <h3>Agents you keep</h3>
+          <p>The Agents tab is now your crew. Each agent has a name, a role, its own instructions, prompt fields, a model, permissions and the projects it may work in.</p>
+          <ul><li>Eight built-in agents ship with Dawsha: Maya the Lead, Sami, Tarek, Omar, Hana, Lina, Nour and Yara. Duplicate one to change it, or make your own.</li><li>Run an agent in any project and pick the model for that run: Claude Fable, Opus, Sonnet or Haiku, Codex or Gemini. Each run opens as a normal session titled with the agent's name, like "Sami · PR 8841".</li><li>Runs start lean, without your MCP servers. That was about 40% cheaper in our tests than running the same instructions as a skill.</li><li>In Skills, Make an agent turns a skill into an agent and says why for every choice. You can also import your Claude agents and Codex prompts.</li><li>Paste a correlation id with "on dev", a pull request link or a build link into New session, and Dawsha suggests the agent with its fields filled in.</li></ul>
         </div>
         <div class="shot-stack">
           <figure class="shot framed">
-            <img loading="lazy" src="assets/files-review.png" width="1600" height="952" alt="Review mode in Files with the changed files listed on the left and a comment on an added line of theme.tsx">
+            <img loading="lazy" src="assets/agents.png" width="1352" height="952" alt="The Agents tab with eight built-in agents, one agent of your own called Zed, and the setup of Sami the code reviewer on the right">
           </figure>
           <figure class="shot framed">
-            <img loading="lazy" src="assets/files-search.png" width="1600" height="952" alt="Search mode in Files with results for the word theme, grouped by file with the matches highlighted">
+            <img loading="lazy" src="assets/agents-run.png" width="648" height="509" alt="The Run Sami dialog with a target field, the project, a choice of model for this run and a preview of the command">
           </figure>
         </div>
       </div>
-      <div class="feat-row flip" id="agents-details">
+      <div class="feat-wide" id="agent-states">
         <div class="feat-copy">
-          <h3>Agent details and a timeline</h3>
-          <p>Select an agent in the Agents view and a details pane opens on the right.</p>
-          <ul><li>It shows the agent's task, its live tool calls or its result, and the files it touched. Click a file to open it in Files.</li><li>Tokens, cost and model are listed underneath.</li><li>Timeline shows which agents ran side by side and for how long.</li><li>One All, Running, Failed and Done filter with counts replaces the old chips, and Export as Markdown is in the ⋯ menu.</li></ul>
-        </div>
-        <div class="shot-stack">
-          <figure class="shot framed">
-            <img loading="lazy" src="assets/agents-detail.png" width="1600" height="1000" alt="The Agents view with agents grouped by session and a details pane on the right showing the selected agent's task, result, files and usage">
-          </figure>
-          <figure class="shot framed">
-            <img loading="lazy" src="assets/agents-timeline.png" width="1600" height="1000" alt="The Agents timeline with a lane for each session and a bar for each agent showing when it ran">
-          </figure>
-        </div>
-      </div>
-      <div class="feat-wide" id="dawsha-cards">
-        <div class="feat-copy">
-          <h3>A refined Dawsha Cards look</h3>
-          <p>Lighter, clearer layers, and terminals that sit flush in their cards.</p>
+          <h3>See who is working</h3>
+          <p>An agent's avatar breathes while it works, flashes when it needs you, flashes once when it's done and shows ✕ when it fails, always with a word too.</p>
         </div>
         <figure class="shot framed">
-          <img loading="lazy" src="assets/cards-grid.png" width="1600" height="1000" alt="Four sessions in the Dawsha Cards theme, one with a soft neutral ring because it is focused and one with a solid orange ring because it needs you">
+          <img loading="lazy" src="assets/agent-panes.png" width="1600" height="1000" alt="Four sessions titled with agent names, such as Sami · PR 8841, each with its avatar, and a strip in the top bar showing who is working and who needs you">
         </figure>
-        <ul class="feat-cols"><li>The terminal fills its card instead of sitting in a dark well.</li><li>The focused session has a soft neutral ring instead of a green outline. Other sessions are a little dimmer.</li><li>A session that needs you has a solid orange ring. Done is sage green, so bright green is kept for buttons and the cursor.</li></ul>
+        <ul class="feat-cols"><li>The top bar shows who is on a job. Sessions, the sidebar, Waiting on you and notifications show the agent's name and avatar.</li><li>Every run is a normal session, so it sits in the grid, the board and Resume like any other.</li><li>The dawsha crew command lists your agents and runs them from a terminal, with status and result.</li></ul>
       </div>
-      <div class="feat-row" id="projects-sidebar">
+      <div class="feat-row flip" id="lead-maya">
         <div class="feat-copy">
-          <h3>A sidebar built around you</h3>
-          <p>A Waiting on you section at the top lists sessions blocked on you, across all projects.</p>
-          <ul><li>Each project shows its branch and a quiet "2 live" or "needs you". The + and ⋯ buttons appear on hover or focus.</li><li>Sessions show their full name, their age and a status word.</li><li>Sort by recent activity, name or your own order, and hide projects without sessions.</li><li>The narrow rail shows each project's initials and opens its sessions in a flyout.</li><li>The usage meter now names its agent. Click it for Claude, Codex and Gemini limits with reset times.</li></ul>
+          <h3>Maya, the Lead</h3>
+          <p>Give Maya a goal and a project. She plans, you approve, and she runs the agents as normal sessions.</p>
+          <ul><li>She proposes a plan first: who does what, on which model, at what estimated cost. Nothing starts until you approve it.</li><li>Approved jobs show as lanes on a board, each with the agent's live state.</li><li>She asks you before pushing, merging, posting comments or deleting. The question waits on the board for your answer.</li><li>Dawsha enforces her limits, not Maya: how many agents run at once (2 by default), a budget per goal ($3 by default) and which agents she may use. Change them under How she leads.</li></ul>
         </div>
-        <figure class="shot framed narrow">
-          <img loading="lazy" src="assets/sidebar.png" width="248" height="620" alt="The Projects sidebar with a Waiting on you section on top, then projects that show their branch and how many sessions are live">
-        </figure>
+        <div class="shot-stack">
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/lead-plan.png" width="932" height="347" alt="Maya's plan with three jobs for Omar, Hana and Sami, each with a model and an estimated cost, and the buttons Cancel, Change the plan and Approve and start">
+          </figure>
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/lead-board.png" width="932" height="427" alt="The board with three lanes, Omar needing you, Hana working and Sami waiting, and a question from Maya about pushing the branch with two answer buttons">
+          </figure>
+        </div>
+      </div>
+      <div class="feat-row" id="phone-agents">
+        <div class="feat-copy">
+          <h3>Agents and Remote Access on your phone</h3>
+          <p>Remote Access has an Agents tab. Run one of your agents on your PC from the phone, and follow what is on a job and the goal Maya is working on.</p>
+          <ul><li>Running agents from the phone is behind a new Run agents permission, which is off by default.</li><li>Remote Access says plainly whether your phone can reach this PC. It notices a dropped tunnel in about ten seconds, offers Reconnect, and can reconnect on its own.</li><li>The Remote Access page is rebuilt: connect a phone, your phones (Remove asks first and names the phone), what a phone can do, now enforced on the PC, and a recent activity log.</li><li>The phone app has real agent logos, filled cards, big buttons and a light theme.</li></ul>
+        </div>
+        <div class="shot-pair">
+          <figure class="phone">
+            <img loading="lazy" src="assets/phone-agents.png" width="780" height="1400" alt="The Agents tab of Dawsha Remote on a phone, with eight agents, three of them working, needing you or done, and the jobs running now">
+          </figure>
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/remote-access.png" width="836" height="944" alt="The Remote Access page on the PC, reporting that your phone can reach this PC, with a pairing code, the connection details and your phones">
+          </figure>
+        </div>
+      </div>
+      <div class="feat-wide" id="from-1-7-5">
+        <div class="feat-copy">
+          <h3>From 1.7.5</h3>
+          <p>Shipped just before 1.7.6, and worth a second look.</p>
+        </div>
+        <div class="shot-pair zones">
+          <figure class="shot framed narrow">
+            <img loading="lazy" src="assets/sidebar-zones.png" width="248" height="759" alt="The Projects sidebar in zones: an Active section of project cards, a pinned project, and a quiet list headed No sessions with the number of projects">
+          </figure>
+          <figure class="shot framed">
+            <img loading="lazy" src="assets/files-problems.png" width="1600" height="952" alt="Files with the Problems tab open under the editor, listing two TypeScript errors and a warning grouped by file">
+          </figure>
+        </div>
+        <ul class="feat-cols four"><li><strong>A much smaller app.</strong> The Windows installer went from 199 MB to 114 MB.</li><li><strong>A clearer sidebar.</strong> Active projects sit on cards, pinned projects come first, and projects with no sessions fold into one quiet list.</li><li><strong>Codex limits.</strong> The limits popover shows Codex next to Claude, and the account you are signed in with.</li><li><strong>A Problems tab.</strong> Files lists the errors and warnings from a run, by file, and opens each at its line.</li></ul>
       </div>
     </div>
   </section>
@@ -156,6 +176,11 @@
     <div class="wrap">
       <h2 id="earlier-h">Earlier releases</h2>
       <div class="earlier">
+        <div id="new-1-7-4">
+          <h3>1.7.4</h3>
+          <p>Search and Review in Files, with comments you send to the agent. A details pane for background agents, since replaced by your own agents. A Projects sidebar built around what needs you, and refined Dawsha Cards.</p>
+          <a href="https://github.com/mfathy234/dawsha/releases/tag/v1.7.4" target="_blank" rel="noopener noreferrer">Notes for 1.7.4</a>
+        </div>
         <div id="new-1-7">
           <h3>1.7</h3>
           <p>The Files view with Ctrl+P quick open, session tags that colour themselves, and a calmer grid. Later 1.7 releases added worktree browsing in Files, a Delete that asks first and uses the Recycle Bin, and run commands for .NET and Node projects.</p>
@@ -252,14 +277,10 @@
   <section id="features" aria-labelledby="features-h">
     <div class="wrap">
       <h2 id="features-h">Built for running several agents at once</h2>
-      <figure class="shot feature-shot">
-        <img loading="lazy" src="assets/agents-drawer.png" width="1600" height="1000" alt="A session with the sub-agents drawer open next to its terminal">
-        <figcaption><strong>Activity at a glance.</strong> Native processes and optional Claude sub-agent progress sit beside each session.</figcaption>
-      </figure>
       <div class="fgroups">
         <div class="fgroup"><h3>Run</h3><ul><li><strong>Three agents in one grid</strong><span>Up to 6 real terminals. Resize, drag, pin or maximize any session, Ctrl+Tab between them.</span></li><li><strong>The dawsha command</strong><span>Start, resume and open layouts from the terminal you already use.</span></li><li><strong>Commit and push</strong><span>Review the changed files, commit the ones you pick or commit and push. Pull, switch branch and stash in a click.</span></li><li><strong>Layouts and instructions</strong><span>Restore a setup by name, and keep CLAUDE.md, AGENTS.md and GEMINI.md in sync.</span></li><li><strong>Arabic support</strong><span>Joined, right-to-left Arabic in every session, with copy and find in reading order.</span></li><li><strong>Import existing settings</strong><span>Bring in projects and preferences from an earlier setup, with a backup of your current Dawsha settings.</span></li><li><strong>Back up and move</strong><span>Export your settings to one JSON file without remote-access secrets, then import it on another computer with Merge or Replace.</span></li><li><strong>Themes</strong><span>Seven themes, including card-style light and dark themes, with contrast checks and an optional background image.</span></li><li><strong>Installed skills</strong><span>Browse, open, copy and export skills for every agent, including project skills.</span></li></ul></div>
         <div class="fgroup"><h3>Switch<img class="ill ill-hop brand-logo" src="favicon.svg?v=0.2.0-2" width="38" height="38" alt="Dawsha logo"></h3><ul><li><strong>Remote Control (Beta)</strong><span>Pair a browser with your running Dawsha app. Input and session controls stay off until you enable them.</span></li><li><strong>Resizable Projects panel</strong><span>Drag the sidebar edge to set a width that suits your projects; Dawsha remembers it.</span></li><li><strong>Find and resume sessions</strong><span>Ctrl+Shift+R searches prompts and replies. Choose the current project or include all projects.</span></li><li><strong>Keep closed sessions</strong><span>Closed tabs stay under their project until you remove them there. Resume one whenever you need it.</span></li><li><strong>Project tasks</strong><span>Keep a task timeline with notes, commit references and linked sessions.</span></li><li><strong>Command palette</strong><span>Ctrl+K finds sessions, projects and layouts.</span></li><li><strong>Find and copy</strong><span>Search any terminal, open files in their matching apps, and copy the last reply or the prompt you are typing.</span></li><li><strong>Ask two agents</strong><span>One prompt, two worktrees, two answers to compare.</span></li><li><strong>Continue in another agent</strong><span>Hand a session over with an editable summary, or export it as Markdown.</span></li></ul></div>
-        <div class="fgroup"><h3>Stay informed</h3><ul><li><strong>Needs-you alerts</strong><span>An amber border and a notification when a session needs your input.</span></li><li><strong>Close confirmation</strong><span>Dawsha asks before closing a session only while it is working. Idle, done and exited sessions close straight away.</span></li><li><strong>Highlights and context</strong><span>Errors stand out, and a nearly full session warns you before it runs out.</span></li><li><strong>Reset countdowns</strong><span>Claude sessions show the 5-hour and weekly reset countdowns when Claude reports them.</span></li><li><strong>Cost and usage</strong><span>Time, tokens and cost for every session, plus a full usage view.</span></li><li><strong>Gemini tool activity</strong><span>See Gemini's recent tools beside its session and in the agents drawer.</span></li><li><strong>In-app updates</strong><span>The installed build updates itself while sessions keep running.</span></li><li class="has-ill"><strong>Local by default</strong><span>No account or telemetry. Remote Control is optional and routes traffic through Cloudflare.</span><svg class="ill ill-lock" width="56" height="42" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" style="--dd:0ms" d="M9 5 Q9 3 11 3 L53 3.3 Q55 3.5 55 6 L54.6 33 Q54.5 35 52.5 35 L11 34.8 Q9 34.5 9 32.5Z"/><path class="dr" pathLength="1" style="--dd:200ms" d="M3 40 Q3 38 6 38 L58 38.4 Q61 38.5 61 40.5 Q61 43 58 43 L6 43 Q3 42.8 3 40Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M27 38.5 Q32 41 37 38.5"/><path class="fd" d="M25.5 20.5 Q25.5 19 27 19 L37 19.2 Q38.5 19.4 38.5 21 L38.3 28 Q38.2 29.6 36.7 29.6 L27 29.5 Q25.5 29.4 25.5 28Z" fill="#34d399" fill-opacity=".25" stroke="#34d399"/><circle class="fd" cx="32" cy="24" r="1.2" fill="#34d399" stroke="none"/><path class="shk" stroke="#34d399" d="M28.5 19 L28.4 15.5 Q28.5 11.5 32 11.5 Q35.5 11.5 35.6 15.5 L35.5 19"/></svg></li></ul></div>
+        <div class="fgroup"><h3>Stay informed</h3><ul><li><strong>Needs-you alerts</strong><span>An amber border and a notification when a session needs your input.</span></li><li><strong>Close confirmation</strong><span>Dawsha asks before closing a session only while it is working. Idle, done and exited sessions close straight away.</span></li><li><strong>Highlights and context</strong><span>Errors stand out, and a nearly full session warns you before it runs out.</span></li><li><strong>Reset countdowns</strong><span>Claude sessions show the 5-hour and weekly reset countdowns when Claude reports them.</span></li><li><strong>Cost and usage</strong><span>Time, tokens and cost for every session, plus a full usage view.</span></li><li><strong>Gemini tool activity</strong><span>See Gemini's recent tools beside its session.</span></li><li><strong>In-app updates</strong><span>The installed build updates itself while sessions keep running.</span></li><li class="has-ill"><strong>Local by default</strong><span>No account or telemetry. Remote Control is optional and routes traffic through Cloudflare.</span><svg class="ill ill-lock" width="56" height="42" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><path class="dr" pathLength="1" style="--dd:0ms" d="M9 5 Q9 3 11 3 L53 3.3 Q55 3.5 55 6 L54.6 33 Q54.5 35 52.5 35 L11 34.8 Q9 34.5 9 32.5Z"/><path class="dr" pathLength="1" style="--dd:200ms" d="M3 40 Q3 38 6 38 L58 38.4 Q61 38.5 61 40.5 Q61 43 58 43 L6 43 Q3 42.8 3 40Z"/><path class="dr" pathLength="1" style="--dd:400ms" d="M27 38.5 Q32 41 37 38.5"/><path class="fd" d="M25.5 20.5 Q25.5 19 27 19 L37 19.2 Q38.5 19.4 38.5 21 L38.3 28 Q38.2 29.6 36.7 29.6 L27 29.5 Q25.5 29.4 25.5 28Z" fill="#34d399" fill-opacity=".25" stroke="#34d399"/><circle class="fd" cx="32" cy="24" r="1.2" fill="#34d399" stroke="none"/><path class="shk" stroke="#34d399" d="M28.5 19 L28.4 15.5 Q28.5 11.5 32 11.5 Q35.5 11.5 35.6 15.5 L35.5 19"/></svg></li></ul></div>
       </div>
     </div>
   </section>

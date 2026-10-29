@@ -9,6 +9,7 @@ import { timeInState } from '../stateClock'
 import { getTerminal } from '../terminals'
 import type { AppState } from '../state'
 import { agentMark } from './agentMark'
+import { crewSignature, identityMark } from './crewAvatar'
 import { stateIcon } from './stateIcon'
 
 const PREVIEW_LINES = 2
@@ -50,7 +51,7 @@ export class OthersPanelComponent {
     }
     const signature = JSON.stringify([
       collapsed,
-      this.others.map(({ view, state: s }) => [view.pane.id, view.pane.activeTabId, view.title, s, stateWord(s, timeInState(view.pane.id, s, view.now)), view.agent, view.project?.name ?? 'project', cardSummary(view)])
+      this.others.map(({ view, state: s }) => [view.pane.id, view.pane.activeTabId, view.title, s, stateWord(s, timeInState(view.pane.id, s, view.now)), view.agent, view.project?.name ?? 'project', cardSummary(view), crewSignature(view)])
     ])
     if (signature === this.signature) return
     this.signature = signature
@@ -113,7 +114,7 @@ export class OthersPanelComponent {
         'div',
         { class: 'others-card-head' },
         stateIcon(state),
-        agentMark(view.agent),
+        identityMark(view),
         h('span', { class: 'others-title' }, `${view.index + 1} · `, h('bdi', { dir: 'auto' }, view.title)),
         h('span', { class: `others-state state-${state}` }, word)
       ),
@@ -145,7 +146,7 @@ export class OthersPanelComponent {
             'aria-label': `${view.title} in ${project}, ${status}`,
             onClick: () => focusPane(view.pane.id)
           },
-          agentMark(view.agent),
+          identityMark(view),
           stateIcon(state)
         )
       )

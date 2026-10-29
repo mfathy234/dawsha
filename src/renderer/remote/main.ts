@@ -7,6 +7,7 @@ import { DEFAULT_THEME_ID, findTheme } from '../../shared/themes'
 import type { AgentKind } from '../../shared/types'
 import { TERMINAL_FONT } from '../terminalFont'
 import { initApprovals, reconnectApprovals, refresh as refreshApprovals, setApprovalsEnabled, setApprovalsVisible } from './approvals'
+import { initCrew, refresh as refreshCrew, setCrewEnabled, setCrewVisible } from './crew'
 import './remote.css'
 
 interface RemoteSession { id: string; title: string; modifiedAt: number; agent: AgentKind }
@@ -16,9 +17,23 @@ interface RemoteState {
   device: { id: string; name: string } | null
   projects: RemoteProject[]
   terminals: RemoteTerminal[]
-  permissions: { read: boolean; terminalInput: boolean; sessionControl: boolean; approvals?: boolean }
+  permissions: { read: boolean; terminalInput: boolean; sessionControl: boolean; approvals?: boolean; crew?: boolean; commands?: boolean; answers?: boolean; fullOutput?: boolean }
 }
-type BrowserView = 'sessions' | 'projects' | 'terminal' | 'approvals'
+type BrowserView = 'sessions' | 'projects' | 'terminal' | 'approvals' | 'crew'
+type TabView = Exclude<BrowserView, 'terminal'>
+
+// To add a tab, add an entry here and a section with the matching id in remote.html.
+const TABS: ReadonlyArray<{ id: TabView; label: string; badge?: boolean }> = [
+  { id: 'approvals', label: 'Needs you', badge: true },
+  { id: 'crew', label: 'Agents' },
+  { id: 'sessions', label: 'Sessions' },
+  { id: 'projects', label: 'Projects' }
+]
+const CONNECTION_ICONS = {
+  online: '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M3.5 8.5 6.5 11.5 12.5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>',
+  offline: '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 2.5 14 13H2z M8 7v3 M8 11.6v.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>',
+  idle: '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 8h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>'
+} as const
 
 class RemoteRequestError extends Error {
   constructor(message: string, readonly status: number) { super(message) }
@@ -36,9 +51,12 @@ const sessionsView = document.querySelector<HTMLElement>('#sessions-view')!
 const projectsView = document.querySelector<HTMLElement>('#projects-view')!
 const terminalView = document.querySelector<HTMLElement>('#terminal-view')!
 const approvalsView = document.querySelector<HTMLElement>('#approvals-view')!
-const approvalsBadge = document.querySelector<HTMLElement>('#approvals-badge')!
-const connectionDot = document.querySelector<HTMLElement>('#connection-dot')!
+const crewView = document.querySelector<HTMLElement>('#crew-view')!
+const connection = document.querySelector<HTMLElement>('#connection')!
+const connectionIcon = document.querySelector<HTMLElement>('#connection-icon')!
 const connectionLabel = document.querySelector<HTMLElement>('#connection-label')!
+const remoteNav = document.querySelector<HTMLElement>('#remote-nav')!
+const remoteHeader = document.querySelector<HTMLElement>('#remote-header')!
 const pairForm = document.querySelector<HTMLFormElement>('#pair-form')!
 const pairError = document.querySelector<HTMLElement>('#pair-error')!
 const activeSessions = document.querySelector<HTMLElement>('#active-sessions')!
@@ -72,6 +90,8 @@ let activeTerminalRequestedAt = 0
 let activeTerminalSeen = false
 let selectedProjectFilter: string | null = null
 let currentView: BrowserView = 'sessions'
+let viewChosen = false
+let reachable = true
 let stream: WebSocket | null = null
 let streamTerminalId: string | null = null
 let terminal: Terminal | null = null
@@ -158,8 +178,7 @@ function showPair(message?: string): void {
   document.querySelector<HTMLElement>('#remote-nav')!.hidden = true
   document.querySelector<HTMLButtonElement>('#remote-new-session')!.hidden = true
   logoutButton.hidden = true
-  connectionDot.className = 'status-dot offline'
-  connectionLabel.textContent = 'Not paired'
+  setConnection('idle', 'Not paired')
   if (message) {
     pairError.textContent = message
     pairError.hidden = false
@@ -187,9 +206,14 @@ function showDisconnected(message: string): void {
   document.querySelector<HTMLElement>('#remote-nav')!.hidden = true
   document.querySelector<HTMLButtonElement>('#remote-new-session')!.hidden = true
   logoutButton.hidden = false
-  connectionDot.className = 'status-dot offline'
-  connectionLabel.textContent = 'Disconnected'
+  setConnection('offline', 'Cannot reach your PC')
   document.querySelector('#disconnect-message')!.textContent = message
+}
+
+function setConnection(kind: 'online' | 'offline' | 'idle', label: string): void {
+  connection.dataset.state = kind
+  connectionIcon.innerHTML = CONNECTION_ICONS[kind]
+  connectionLabel.textContent = label
 }
 
 function setNotice(message: string, error = false, target = notice): void {
@@ -238,13 +262,41 @@ function projectTerminals(projectId: string): RemoteTerminal[] {
 
 function setView(view: BrowserView): void {
   currentView = view
+  viewChosen = true
   render()
+}
+
+function buildTabs(): void {
+  remoteNav.replaceChildren(...TABS.map((tab) => {
+    const element = button(tab.label, 'nav-button', () => setView(tab.id))
+    element.id = `remote-nav-${tab.id}`
+    element.setAttribute('role', 'tab')
+    if (tab.badge) {
+      const count = document.createElement('span')
+      count.id = `${tab.id}-badge`
+      count.className = 'nav-count'
+      count.hidden = true
+      count.setAttribute('aria-live', 'polite')
+      element.append(count)
+    }
+    return element
+  }))
+}
+
+function showTabs(): void {
+  const selected: BrowserView = currentView === 'terminal' ? 'sessions' : currentView
+  for (const tab of TABS) {
+    const element = document.querySelector<HTMLElement>(`#remote-nav-${tab.id}`)!
+    element.classList.toggle('selected', tab.id === selected)
+    element.setAttribute('aria-selected', String(tab.id === selected))
+  }
 }
 
 function openTerminal(id: string): void {
   activeTerminalId = id
   activeTerminalRequestedAt = Date.now()
   activeTerminalSeen = false
+  viewChosen = true
   const selected = state?.terminals.find((item) => item.id === id)
   if (selected?.projectId) activeProjectId = selected.projectId
   currentView = 'terminal'
@@ -412,14 +464,14 @@ function attachOutput(id: string): void {
       }
       else if (frame.event === 'closed') { source.close(); stream = null; streamTerminalId = null; setStreamStatus('Session ended', 'offline'); setNotice('This terminal has ended.', false, terminalNotice) }
       else if (frame.event === 'revoked') { source.close(); showPair('This browser was revoked from Dawsha. Pair again to reconnect.') }
+      else if (frame.event === 'denied') { source.close(); stream = null; streamTerminalId = null; void loadState(false) }
     } catch { setNotice('Received invalid terminal output.', true, terminalNotice) }
   })
   source.addEventListener('close', () => {
     if (stream !== source) return
     stream = null
     streamTerminalId = null
-    connectionDot.className = 'status-dot offline'
-    connectionLabel.textContent = 'Reconnecting'
+    setConnection('offline', 'Cannot reach your PC · retrying')
     setStreamStatus('Reconnecting', 'connecting')
   })
   source.onerror = () => {
@@ -427,8 +479,7 @@ function attachOutput(id: string): void {
       stream = null
       streamTerminalId = null
       source.close()
-      connectionDot.className = 'status-dot offline'
-      connectionLabel.textContent = 'Reconnecting'
+      setConnection('offline', 'Cannot reach your PC · retrying')
       setStreamStatus('Reconnecting', 'connecting')
     }
   }
@@ -610,10 +661,7 @@ function renderTerminalSessions(): void {
     appendLabel(copy, 'terminal-session-agent', AGENT_NAMES[item.agent!])
     appendLabel(copy, 'terminal-session-project', project?.name ?? 'Unknown project')
     meta.append(copy)
-    const status = document.createElement('span')
-    status.className = 'terminal-session-live-dot'
-    status.setAttribute('aria-label', 'Running')
-    option.append(meta, status)
+    option.append(meta)
     return option
   }))
   if (focusedSessionId) {
@@ -647,7 +695,7 @@ function renderTerminal(): void {
       streamTerminalId = null
     }
     terminalEmpty.replaceChildren(
-      Object.assign(document.createElement('p'), { className: 'eyebrow', textContent: activeTerminalId ? starting ? 'STARTING SESSION' : 'SESSION ENDED' : 'NO ACTIVE TERMINAL' }),
+      Object.assign(document.createElement('p'), { className: 'eyebrow', textContent: activeTerminalId ? starting ? 'Starting session' : 'Session ended' : 'No active terminal' }),
       Object.assign(document.createElement('h2'), { textContent: activeTerminalId ? starting ? 'Connecting to your session' : 'This session is no longer active' : 'Choose a session' }),
       Object.assign(document.createElement('p'), { textContent: activeTerminalId ? starting ? 'Dawsha is opening the terminal. This view will connect as soon as it is ready.' : 'Return to Sessions to resume it or choose another terminal.' : 'Choose a running session or resume one from the Sessions view.' })
     )
@@ -669,12 +717,26 @@ function renderTerminal(): void {
   connection.textContent = state.permissions.terminalInput ? 'Input enabled' : 'Read only'
   connection.classList.toggle('live', state.permissions.terminalInput)
   terminalReadonly.hidden = state.permissions.terminalInput
-  const view = ensureTerminal()
-  const touchInput = window.matchMedia('(pointer: coarse)').matches
-  view.options.disableStdin = !state.permissions.terminalInput || touchInput
-  if (streamTerminalId !== current.id) view.reset()
-  attachOutput(current.id)
-  requestAnimationFrame(fitTerminal)
+  if (state.permissions.fullOutput === false) {
+    stream?.close()
+    stream = null
+    streamTerminalId = null
+    terminalElement.hidden = true
+    terminalEmpty.hidden = false
+    terminalEmpty.replaceChildren(
+      Object.assign(document.createElement('h2'), { textContent: 'Full terminal output is off' }),
+      Object.assign(document.createElement('p'), { textContent: `${current.agent ? AGENT_NAMES[current.agent] : 'The agent'} is running. Your phone shows questions and status lines only. To read the terminal here, turn on “Read full terminal output” in Remote Access on your PC.` })
+    )
+    setStreamStatus('Status only', 'offline')
+    terminalDimensions.textContent = ''
+  } else {
+    const view = ensureTerminal()
+    const touchInput = window.matchMedia('(pointer: coarse)').matches
+    view.options.disableStdin = !state.permissions.terminalInput || touchInput
+    if (streamTerminalId !== current.id) view.reset()
+    attachOutput(current.id)
+    requestAnimationFrame(fitTerminal)
+  }
 
   const existingComposer = composeHost.querySelector<HTMLFormElement>('#terminal-compose')
   if (state.permissions.terminalInput && existingComposer && composeHost.dataset.terminalId === current.id) return
@@ -806,25 +868,19 @@ function render(): void {
   pairView.hidden = true
   disconnectedView.hidden = true
   workspaceView.hidden = false
-  document.querySelector<HTMLElement>('#remote-nav')!.hidden = false
+  remoteNav.hidden = false
   logoutButton.hidden = false
-  connectionDot.className = 'status-dot online'
-  connectionLabel.textContent = state.device?.name ?? 'Paired'
+  if (reachable) setConnection('online', 'Connected to your PC')
   const canStart = state.permissions.sessionControl && state.projects.length > 0
   document.querySelector<HTMLButtonElement>('#remote-new-session')!.hidden = !canStart
   document.querySelector<HTMLButtonElement>('#empty-new-session')!.hidden = !canStart
-  const sessionsButton = document.querySelector<HTMLButtonElement>('#remote-nav-sessions')!
-  const projectsButton = document.querySelector<HTMLButtonElement>('#remote-nav-projects')!
-  const approvalsButton = document.querySelector<HTMLButtonElement>('#remote-nav-approvals')!
-  sessionsButton.classList.toggle('selected', currentView === 'sessions' || currentView === 'terminal')
-  projectsButton.classList.toggle('selected', currentView === 'projects')
-  sessionsButton.setAttribute('aria-pressed', String(currentView === 'sessions' || currentView === 'terminal'))
-  projectsButton.setAttribute('aria-pressed', String(currentView === 'projects'))
-  approvalsButton.classList.toggle('selected', currentView === 'approvals')
-  approvalsButton.setAttribute('aria-pressed', String(currentView === 'approvals'))
+  showTabs()
   approvalsView.hidden = currentView !== 'approvals'
   setApprovalsEnabled(state.permissions.approvals === true)
   setApprovalsVisible(currentView === 'approvals')
+  crewView.hidden = currentView !== 'crew'
+  setCrewEnabled(state.permissions.crew === true)
+  setCrewVisible(currentView === 'crew')
   sessionsView.hidden = currentView !== 'sessions'
   projectsView.hidden = currentView !== 'projects'
   terminalView.hidden = currentView !== 'terminal'
@@ -838,6 +894,8 @@ async function loadState(initial: boolean): Promise<void> {
     const next = await apiRequest<RemoteState>('state')
     if (!next || !Array.isArray(next.projects) || !Array.isArray(next.terminals)) throw new Error('Dawsha returned an invalid state.')
     state = next
+    reachable = true
+    if (initial && !viewChosen && next.permissions.approvals === true) currentView = 'approvals'
     if (!activeProjectId || !state.projects.some((item) => item.id === activeProjectId)) {
       activeProjectId = state.terminals.find((item) => item.projectId && state?.projects.some((project) => project.id === item.projectId))?.projectId ?? state.projects[0]?.id ?? null
     }
@@ -852,8 +910,9 @@ async function loadState(initial: boolean): Promise<void> {
       return
     }
     const message = error instanceof Error ? error.message : 'Dawsha could not be reached.'
+    reachable = false
     if (initial) showDisconnected(message)
-    else setNotice(message, true)
+    else { setConnection('offline', 'Cannot reach your PC · retrying'); setNotice(message, true) }
   }
 }
 
@@ -873,20 +932,32 @@ pairForm.addEventListener('submit', (event) => {
 })
 
 document.querySelector<HTMLButtonElement>('#remote-retry')!.addEventListener('click', () => void loadState(true))
-document.querySelector<HTMLButtonElement>('#remote-nav-sessions')!.addEventListener('click', () => setView('sessions'))
-document.querySelector<HTMLButtonElement>('#remote-nav-projects')!.addEventListener('click', () => setView('projects'))
-document.querySelector<HTMLButtonElement>('#remote-nav-approvals')!.addEventListener('click', () => setView('approvals'))
+buildTabs()
 window.addEventListener('dawsha-open-approvals', () => setView('approvals'))
 initApprovals({
   root: document.querySelector<HTMLElement>('#approvals-root')!,
   host: {
     request: apiRequest,
     endpoint,
-    onBadge: (count) => { approvalsBadge.textContent = String(count); approvalsBadge.hidden = count === 0 },
+    onBadge: (count) => {
+      const badge = document.querySelector<HTMLElement>('#approvals-badge')!
+      badge.textContent = String(count)
+      badge.hidden = count === 0
+    },
     onUnpaired: () => showPair('This browser was revoked from Dawsha. Pair again to reconnect.')
   }
 })
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { reconnectApprovals(); void refreshApprovals() } })
+initCrew({
+  root: document.querySelector<HTMLElement>('#crew-root')!,
+  host: {
+    request: apiRequest,
+    projects: () => state?.projects.map((project) => ({ id: project.id, name: project.name })) ?? [],
+    fullOutput: () => state?.permissions.fullOutput === true,
+    openTerminal,
+    onUnpaired: () => showPair('This browser was revoked from Dawsha. Pair again to reconnect.')
+  }
+})
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { reconnectApprovals(); void refreshApprovals(); void refreshCrew() } })
 document.querySelector<HTMLButtonElement>('#remote-new-session')!.addEventListener('click', () => showSessionDialog(activeProjectId ?? undefined))
 document.querySelector<HTMLButtonElement>('#empty-new-session')!.addEventListener('click', () => showSessionDialog(activeProjectId ?? undefined))
 document.querySelector<HTMLButtonElement>('#terminal-back')!.addEventListener('click', () => setView('sessions'))
@@ -920,12 +991,14 @@ const syncViewportHeight = (): void => {
   document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`)
 }
 window.visualViewport?.addEventListener('resize', syncViewportHeight)
+new ResizeObserver(() => document.documentElement.style.setProperty('--header-height', `${remoteHeader.offsetHeight}px`)).observe(remoteHeader)
 syncViewportHeight()
 window.addEventListener('focus', () => void loadState(false))
 window.setInterval(() => { if (!document.hidden && state) void loadState(false) }, 5000)
 
 if (location.hash === '#approvals') {
   currentView = 'approvals'
+  viewChosen = true
   history.replaceState(null, '', location.pathname + location.search)
 }
 void loadState(true)

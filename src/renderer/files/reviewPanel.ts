@@ -40,15 +40,15 @@ export class ReviewPanel {
   readonly el = h('div', { class: 'files-pane files-pane-review' })
   private readonly progress = h('div', { class: 'files-review-progress', id: 'files-review-progress', role: 'status', 'aria-live': 'polite' })
   private readonly list = h('div', { class: 'files-review-list', id: 'files-review-list', role: 'list', 'aria-label': 'Changed files' })
-  private readonly prev = h('button', { class: 'btn small', type: 'button', id: 'files-review-prev', title: 'Previous file (P)', onClick: () => this.hooks.step(-1) }, 'Previous')
-  private readonly next = h('button', { class: 'btn small', type: 'button', id: 'files-review-next', title: 'Next file (N)', onClick: () => this.hooks.step(1) }, 'Next')
+  private readonly prev = h('button', { class: 'btn small', type: 'button', id: 'files-review-prev', disabled: true, title: 'Previous file (P)', onClick: () => this.hooks.step(-1) }, 'Previous')
+  private readonly next = h('button', { class: 'btn small', type: 'button', id: 'files-review-next', disabled: true, title: 'Next file (N)', onClick: () => this.hooks.step(1) }, 'Next')
   private readonly note = h('textarea', {
     class: 'files-review-note', id: 'files-review-note', rows: '2', placeholder: 'Overall note (optional)', 'aria-label': 'Overall note for the agent',
     onInput: (event: Event) => this.hooks.note((event.target as HTMLTextAreaElement).value)
   })
-  private readonly send = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-send', onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send comments to agent')
-  private readonly commit = h('button', { class: 'btn small', type: 'button', id: 'files-review-commit', onClick: () => this.hooks.commit() }, 'Commit…')
-  private readonly discard = h('button', { class: 'btn small', type: 'button', id: 'files-review-discard', onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
+  private readonly send = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-send', disabled: true, onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send comments to agent')
+  private readonly commit = h('button', { class: 'btn small', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
+  private readonly discard = h('button', { class: 'btn small', type: 'button', id: 'files-review-discard', disabled: true, onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
   private current: string | null = null
 
   constructor(private readonly hooks: ReviewHooks) {

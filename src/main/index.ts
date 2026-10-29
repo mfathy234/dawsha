@@ -5,6 +5,7 @@ import { IPC } from '../shared/ipc'
 import { CodexWatcher } from './codexWatcher'
 import { GeminiWatcher } from './geminiWatcher'
 import { registerIpc } from './ipc'
+import { notifyUser } from './desktop'
 import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
 import { PtyManager } from './ptyManager'
@@ -226,7 +227,9 @@ app.whenReady().then(async () => {
         settings: store,
         ptys,
         getWindow: () => mainWindow,
-        idleSeconds: () => powerMonitor.getSystemIdleTime()
+        crew: (await import('./remoteCrew')).createRemoteCrewBridge({ getWindow: () => mainWindow, ipc: ipcMain }),
+        idleSeconds: () => powerMonitor.getSystemIdleTime(),
+        notify: (title, body) => notifyUser(() => mainWindow, { paneId: '', title, body, sound: false }, () => undefined)
       })
     : undefined
   if (remoteAccess) {

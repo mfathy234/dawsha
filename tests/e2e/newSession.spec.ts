@@ -19,7 +19,7 @@ test('top bar shows the brand and the split New session button picks the agent',
     await expect(chevron).toHaveAttribute('aria-expanded', 'false')
     await chevron.click()
     await expect(chevron).toHaveAttribute('aria-expanded', 'true')
-    await expect(page.getByRole('menuitem')).toHaveText(['Claude session', 'Codex session', 'Gemini session', 'Resume a session…Ctrl+Shift+R', 'Ask two agents…Ctrl+Shift+A'])
+    await expect(page.getByRole('menuitem')).toHaveText(['Claude session', 'Codex session', 'Gemini session', 'Resume a session…Ctrl+Shift+R', 'Ask two agents…Ctrl+Shift+A', 'Hand a job to an agent…'])
     await expect(page.getByRole('menuitem', { name: /Claude session/ })).toBeFocused()
 
     await page.keyboard.press('ArrowDown')
@@ -65,21 +65,14 @@ test('compact header keeps New session, zoom, Settings and Theme usable at 960px
   }
 })
 
-test('the top bar never pushes out its icons, with the usage limits shown and a sub-agent running', async () => {
+test('the top bar never pushes out its icons with the usage limits shown', async () => {
   const sandbox = createSandbox()
   const now = Date.now()
   const slug = sandbox.projectFolder.replace(/[^A-Za-z0-9]/g, '-')
   const dir = join(sandbox.claudeHome, 'projects', slug)
-  const subagents = join(dir, SESSION_ID, 'subagents')
-  mkdirSync(subagents, { recursive: true })
+  mkdirSync(dir, { recursive: true })
   const iso = (minutes: number): string => new Date(now - minutes * 60_000).toISOString()
   writeFileSync(join(dir, `${SESSION_ID}.jsonl`), JSON.stringify({ type: 'user', timestamp: iso(30), cwd: sandbox.projectFolder, message: { content: 'Polish the release' } }) + '\n')
-  writeFileSync(join(subagents, 'agent-run1.meta.json'), JSON.stringify({ agentType: 'general-purpose', spawnDepth: 1, requestShape: 'background', model: 'sonnet', description: 'Unit tests' }))
-  const usage = { input_tokens: 100, output_tokens: 400, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
-  writeFileSync(join(subagents, 'agent-run1.jsonl'), [
-    { type: 'user', timestamp: iso(10), cwd: sandbox.projectFolder, isSidechain: true, message: { role: 'user', content: 'Go' } },
-    { type: 'assistant', timestamp: new Date(now - 1000).toISOString(), message: { id: 'm1', model: 'claude-sonnet-5-5', stop_reason: 'tool_use', usage, content: [{ type: 'tool_use', name: 'Bash', input: { command: 'npm test' } }] } }
-  ].map((record) => JSON.stringify(record)).join('\n'))
   const { app, page } = await launchApp(sandbox)
   try {
     await page.getByRole('button', { name: /^New (Claude|Codex|Gemini) session in Smoke$/ }).click()
@@ -89,7 +82,7 @@ test('the top bar never pushes out its icons, with the usage limits shown and a 
     // The limits hide below 1220px, and CI's window is about 1024px wide.
     await page.setViewportSize({ width: 1600, height: 900 })
     await expect(page.locator('.topbar-limits')).toBeVisible({ timeout: 20_000 })
-    await expect(page.locator('#background-button .count-badge')).toBeVisible({ timeout: 20_000 })
+    // The old running-agents badge on the Agents tab is gone: the crew strip replaces it.
     const navHeight = (await page.locator('#files-button').boundingBox())!.height
     for (const width of [1600, 1440, 1280, 1024, 960]) {
       await page.setViewportSize({ width, height: 900 })

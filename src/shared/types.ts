@@ -2,7 +2,11 @@ import type { SessionBaseline } from './gitStatus'
 import type { SessionsLayout } from './board'
 import type { HighlightSettings } from './highlights'
 import type { RecordingSettings } from './recordings'
+import type { RemoteActivityEntry } from './remoteActivity'
+import type { RemoteCapabilities } from './remoteCapabilities'
 import type { SessionTag } from './sessionTags'
+import type { CrewIdentity, CrewLaunch, CrewRun, CrewSettings } from './crew'
+import type { CrewGoal, LeadSettings } from './crewLead'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
 export type SessionStatus = 'busy' | 'idle'
@@ -56,6 +60,7 @@ export interface SavedTab {
   /** The user's own name for this session, shown instead of the one the agent reports. */
   name?: string
   tag?: SessionTag
+  crew?: CrewIdentity
 }
 
 export interface SavedPane {
@@ -142,8 +147,6 @@ export interface Settings {
   foldedProjects: string[]
   /** Ids of projects whose "Closed sessions" group is folded in the sidebar. */
   foldedClosedSessions: string[]
-  /** Explicit open/folded choices for background agent session groups. */
-  agentFolds: import('./agentFolds').FoldMap
   /** Folded Files sections, the inspector and the bottom panel. */
   filesLayout: import('./filesLayout').FilesLayout
   /** Open files of the Files view, by project id (at most FILES_TABS_MAX each). */
@@ -160,6 +163,14 @@ export interface Settings {
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
   recordings: RecordingSettings
+  /** Your own crew members and which built-ins are hidden. */
+  crew: CrewSettings
+  /** The latest crew runs, newest first. */
+  crewRuns: CrewRun[]
+  /** How the Lead works: her rules, limits and which members she may use. */
+  lead: LeadSettings
+  /** The latest goals handed to the Lead, newest first. */
+  crewGoals: CrewGoal[]
   legacyModelCacheCleared: boolean
 }
 
@@ -167,14 +178,16 @@ export type FullAccess = Record<AgentKind, boolean>
 
 export interface RemoteAccessSettings {
   allowedEmail: string
-  terminalInput: boolean
-  sessionControl: boolean
-  approvals: boolean
+  capabilities: RemoteCapabilities
+  autoReconnect: boolean
+  notifyLinkChange: boolean
   approvalsNotify: boolean
   approvalsOnlyWhenAway: boolean
   approvalsAwayMinutes: number
   approvalsAllowConfigEdits: boolean
 }
+
+export type RemoteAccessPatch = Omit<Partial<RemoteAccessSettings>, 'capabilities'> & { capabilities?: Partial<RemoteCapabilities> }
 
 export interface RemoteAccessDevice {
   id: string
@@ -184,7 +197,7 @@ export interface RemoteAccessDevice {
 }
 
 export interface RemoteAccessState {
-  status: 'off' | 'setup-required' | 'connecting' | 'reconnecting' | 'available'
+  status: 'off' | 'setup-required' | 'connecting' | 'reconnecting' | 'available' | 'dropped'
   enabled: boolean
   url: string | null
   message: string
@@ -192,6 +205,11 @@ export interface RemoteAccessState {
   devices: RemoteAccessDevice[]
   pairing: { code: string; expiresAt: number } | null
   permissions: RemoteAccessSettings
+  droppedAt: number | null
+  linkChangedAt: number | null
+  roundTripMs: number | null
+  checkedAt: number | null
+  activity: RemoteActivityEntry[]
 }
 
 export interface SettingsLoadResult {
@@ -331,6 +349,7 @@ export interface SpawnRequest {
   fullAccess?: boolean
   desktopVisible?: boolean
   remoteManaged?: boolean
+  crew?: CrewLaunch
 }
 
 export interface RemoteSessionStarted {

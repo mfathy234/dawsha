@@ -93,3 +93,19 @@ describe('Trash boundaries', () => {
     expect(await trashProjectPath([{ folder }], folder, 'links', async () => {})).toMatchObject({ ok: false })
   })
 })
+
+import { branchName, worktreeCountText } from '../../src/shared/filesWorkspace'
+
+describe('location button second line', () => {
+  const base = { folder: 'C:\w\acme', branch: 'main', head: 'abcdef1234', detached: false, unavailable: false, main: true }
+  it('names the branch or the detached head and nothing outside git', () => {
+    expect(branchName(base)).toBe('main')
+    expect(branchName({ ...base, detached: true, branch: '' })).toBe('Detached · abcdef12')
+    expect(branchName(base, false)).toBe('')
+    expect(branchName(undefined)).toBe('')
+  })
+  it('counts worktrees only when there is more than one', () => {
+    expect(worktreeCountText(1)).toBe('')
+    expect(worktreeCountText(2)).toBe('2 worktrees')
+  })
+})

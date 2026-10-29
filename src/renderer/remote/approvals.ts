@@ -20,7 +20,7 @@ const REASON_FAILURES: Record<string, string> = {
   timeout: 'the agent was still busy',
   unreadable: 'the screen could not be read'
 }
-const KIND_LABEL = { command: 'Command', edit: 'File edit', other: 'Prompt' } as const
+const KIND_LABEL = { command: 'Command', edit: 'File edit', other: 'Question' } as const
 
 let host: ApprovalsHost
 let root: HTMLElement
@@ -214,7 +214,7 @@ function submitDeny(): void {
   void answer(item, false, reason || undefined)
 }
 
-interface CardView { element: HTMLElement; wait: HTMLElement; note: HTMLElement; deny: HTMLButtonElement; allow: HTMLButtonElement; signature: string }
+interface CardView { element: HTMLElement; wait: HTMLElement; note: HTMLElement; actions: HTMLElement; deny: HTMLButtonElement; allow: HTMLButtonElement; signature: string }
 
 const cards = new Map<string, CardView>()
 let shell: { notify: HTMLElement; status: HTMLElement; list: HTMLElement; history: HTMLElement } | null = null
@@ -250,18 +250,20 @@ function buildCard(item: ApprovalItem): CardView {
   const allow = actionButton('Allow once', 'approval-btn primary', () => void answer(item, true))
   actions.append(deny, allow)
   element.append(head, body, note, actions)
-  return { element, wait, note, deny, allow, signature: '' }
+  return { element, wait, note, actions, deny, allow, signature: '' }
 }
 
 function updateCard(view: CardView, item: ApprovalItem): void {
   const busy = busyId === item.id
-  const wait = `waiting ${waitingLabel(item.since, Date.now())}`
+  const age = waitingLabel(item.since, Date.now())
+  const wait = age === 'just now' ? 'Just now' : `Waiting ${age}`
   if (view.wait.textContent !== wait) view.wait.textContent = wait
   const note = blockNote(item)
   if (view.note.textContent !== note) view.note.textContent = note
   view.note.hidden = !note
   view.deny.disabled = busy
   view.allow.hidden = !item.canAllow
+  view.actions.classList.toggle('single', !item.canAllow)
   view.allow.disabled = busy
   const label = busy ? 'Working…' : 'Allow once'
   if (view.allow.textContent !== label) view.allow.textContent = label
@@ -295,7 +297,7 @@ function ensureShell(): NonNullable<typeof shell> {
 
 function renderOff(): void {
   const off = make('div', 'empty-state')
-  off.append(make('p', 'eyebrow', 'TURNED OFF'), make('h2', '', 'Approvals are off'), make('p', '', 'Turn on “Let paired phones answer permission prompts” in Dawsha’s Remote Access settings, then come back here.'))
+  off.append(make('h2', '', 'Approvals are off'), make('p', '', 'Turn on “Allow or deny commands” or “Answer questions and plan approvals” in Dawsha’s Remote Access settings, then come back here.'))
   root.replaceChildren(off)
   shell = null
   cards.clear()

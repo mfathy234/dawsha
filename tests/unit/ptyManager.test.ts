@@ -43,6 +43,9 @@ vi.mock('../../src/main/agentLaunch', () => ({
 import { PtyManager } from '../../src/main/ptyManager'
 import { RemoteTerminalState } from '../../src/main/remoteTerminalState'
 import type { Recorder } from '../../src/main/recorder'
+import type { CrewLaunch } from '../../src/shared/crew'
+
+const crewLaunch = (change: Partial<CrewLaunch>): CrewLaunch => ({ instructions: '', model: 'sonnet', effort: '', permissions: 'ask', startup: 'lean', ...change })
 
 describe('PtyManager desktop output delivery', () => {
   let cwd: string
@@ -202,6 +205,16 @@ describe('PtyManager recording hooks', () => {
     target.spawn({ id: 't1', projectId: 'p1', agent: 'claude', cwd, resume: false, cols: 80, rows: 24 })
     target.kill('t1')
     expect(recorder.stop).toHaveBeenCalledWith('t1')
+  })
+
+  it('gives a Lead pane its goal in DAWSHA_CREW_GOAL, and no other pane one', () => {
+    fake.spawn.mockClear()
+    const target = new PtyManager({ onData: vi.fn(), onExit: vi.fn() })
+    target.spawn({ id: 'lead', projectId: 'p1', agent: 'claude', cwd, resume: false, cols: 80, rows: 24, crew: crewLaunch({ goal: 'g7' }) })
+    target.spawn({ id: 'member', projectId: 'p1', agent: 'claude', cwd, resume: false, cols: 80, rows: 24, crew: crewLaunch({}) })
+    const [[, , leadOptions], [, , memberOptions]] = fake.spawn.mock.calls as Array<[string, unknown, { env: Record<string, string> }]>
+    expect(leadOptions.env.DAWSHA_CREW_GOAL).toBe('g7')
+    expect(memberOptions.env.DAWSHA_CREW_GOAL).toBeUndefined()
   })
 
   it('works without a recorder', () => {

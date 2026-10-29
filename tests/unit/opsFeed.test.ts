@@ -11,7 +11,6 @@ import {
   formatLeft,
   formatResets,
   formatTokens,
-  modelLetter,
   newestLimits,
   opsModelLabel,
   parseOpsSnapshot,
@@ -180,8 +179,7 @@ describe('readOpsDir', () => {
 })
 
 describe('formatting', () => {
-  it('maps models to letters and labels', () => {
-    expect((['opus', 'sonnet', 'haiku', 'fable'] as const).map(modelLetter)).toEqual(['O', 'S', 'H', 'F'])
+  it('labels models', () => {
     expect(opsModelLabel('claude-opus-5-5')).toBe('Opus 5.5')
     expect(opsModelLabel('claude-fable-1')).toBe('Fable 1')
     expect(opsModelLabel(null)).toBeNull()
@@ -264,7 +262,7 @@ describe('precedence', () => {
     expect(view.info.model).toEqual({ label: 'Opus 5.5', family: 'opus' })
     expect(view.info.contextPercent).toBe(41)
     expect(view.info.costUsd).toBe(0.5)
-    expect(view.info.ops).toEqual({ plan: { done: 3, total: 6 }, running: ['sonnet'], sessionId: expect.any(String) })
+    expect(view.info.ops).toEqual({ plan: { done: 3, total: 6 }, running: ['sonnet'] })
   })
 
   it('falls back to the status line without a snapshot', () => {

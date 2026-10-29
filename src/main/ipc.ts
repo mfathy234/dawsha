@@ -36,10 +36,10 @@ import { trashProjectPath } from './filesTrash'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
-import { bridgeDirs, claudeHome, claudeProjectsDir, claudeSettingsPath } from './paths'
-import { codexHome } from './agentLaunch'
+import { bridgeDirs, claudeHome, claudeSettingsPath } from './paths'
 import { createAgentAccountsReader } from './agentAccounts'
 import { createCodexLimitsReader } from './codexLimits'
+import { readLinked, scanSources } from './crewSources'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
   import { previewPaneonImport, queuePaneonImport } from './paneonImport'
   import { paneonUserDataDir } from './paths'
@@ -63,14 +63,10 @@ import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
 import { WorkService } from './workDashboard'
-import { BackgroundAgentScanner } from './backgroundAgents'
-import { revealAgentFile } from './backgroundAgentsReveal'
-import { DEFAULT_BG_RANGE, isBgRange } from '../shared/backgroundAgents'
-import { priceLookupFor } from '../shared/agentCosts'
 import { MAX_STEPS_BACK, type WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
-import type { RemoteAccessSettings, RemoteAccessState } from '../shared/types'
+import type { RemoteAccessPatch, RemoteAccessState } from '../shared/types'
 import type { createRemoteAccessController } from './remoteAccessController'
 
 async function remoteResult(action: () => Promise<RemoteAccessState>): Promise<{ ok: true; state: RemoteAccessState } | { ok: false; error: string }> {
@@ -142,8 +138,9 @@ export function registerIpc(
     ipcMain.handle(IPC.remoteAccessEnable, () => remoteResult(() => remoteAccess.enable()))
     ipcMain.handle(IPC.remoteAccessDisable, () => remoteResult(() => remoteAccess.disable()))
     ipcMain.handle(IPC.remoteAccessVerify, () => remoteResult(() => remoteAccess.verify()))
+    ipcMain.handle(IPC.remoteAccessReconnect, () => remoteResult(() => remoteAccess.reconnect()))
     ipcMain.handle(IPC.remoteAccessPairing, () => remoteResult(() => remoteAccess.refreshPairing()))
-    ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: Partial<RemoteAccessSettings>) => remoteResult(() => remoteAccess.setPermissions(patch)))
+    ipcMain.handle(IPC.remoteAccessPermissions, (_event, patch: RemoteAccessPatch) => remoteResult(() => remoteAccess.setPermissions(patch)))
     ipcMain.handle(IPC.remoteAccessEmail, (_event, email: string) => remoteResult(() => remoteAccess.setAllowedEmail(email)))
     ipcMain.handle(IPC.remoteApprovalAnswered, (_event, terminalId: string, allowed: boolean, tail?: string) => remoteAccess.recordDesktopApproval(terminalId, allowed, tail))
     ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteResult(() => remoteAccess.revoke(id)))
@@ -181,6 +178,10 @@ export function registerIpc(
     if (selected.canceled || !selected.filePaths[0]) return null
     return exportSkills(skillLocations(), ids, selected.filePaths[0])
   })
+  ipcMain.handle(IPC.crewSources, (_event, ids: unknown) =>
+    scanSources(skillLocations(), Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string').slice(0, 200) : undefined)
+  )
+  ipcMain.handle(IPC.crewReadLinked, (_event, path: unknown) => readLinked(skillLocations(), path))
   ipcMain.on(IPC.opsTrack, (_event, ids: unknown) => {
     ops.track(Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [])
   })
@@ -362,11 +363,6 @@ export function registerIpc(
     const steps = typeof offset === 'number' && Number.isInteger(offset) && offset <= 0 && offset >= -MAX_STEPS_BACK ? offset : 0
     return work.report(valid, settings.get().projects, steps)
   })
-  const agentScanner = new BackgroundAgentScanner(() => ({ claudeProjects: claudeProjectsDir(), codex: codexHome() }))
-  ipcMain.handle(IPC.backgroundAgents, (_event, range: unknown) =>
-    agentScanner.list(isBgRange(range) ? range : DEFAULT_BG_RANGE, settings.get().projects, priceLookupFor()))
-  ipcMain.handle(IPC.backgroundAgentsReveal, (_event, kind: unknown, id: unknown) =>
-    revealAgentFile(typeof id === 'string' && (kind === 'claude' || kind === 'codex') ? agentScanner.pathOf(kind, id) : null, [claudeHome(), codexHome()], kind))
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
   ipcMain.handle(IPC.handoffTranscript, (_event, request: unknown) => writeHandoffTranscript(settings.get().projects, join(app.getPath('userData'), 'handoffs'), request))
   ipcMain.handle(IPC.handoffReveal, (_event, path: unknown) => revealHandoff(join(app.getPath('userData'), 'handoffs'), path))

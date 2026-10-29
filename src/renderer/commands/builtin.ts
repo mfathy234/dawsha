@@ -1,4 +1,5 @@
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
+import { openHandDialog } from '../components/crewDialogs'
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import {
   addTab,
@@ -44,6 +45,7 @@ import { exportTranscript } from '../transcriptActions'
 import { replayPane } from '../replayActions'
 import { openShortcutsSheet } from '../components/shortcutsSheet'
 import { toggleQuickOpen } from '../components/quickOpen'
+import { requestFilesCommand } from '../files/filesActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setSessionsLayout } from '../sessionsLayout'
@@ -257,10 +259,38 @@ export function installBuiltinCommands(): void {
     },
     { id: 'view.toggleTagColors', title: 'Toggle tag colours', group: 'Actions', keywords: 'session tag bug feature colour color chip', run: () => setColorSessionsByTag(!store.state.settings.colorSessionsByTag) },
     { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'folders', run: () => showView('projects') },
-    { id: 'view.background', title: 'Open background agents', group: 'Actions', keywords: 'agents subagents sub-agents timeline running tasks codex claude', ...withKeys('Ctrl+Shift+L'), run: () => showView('background') },
     { id: 'view.files', title: 'Open Files', group: 'Actions', keywords: 'files tree editor code browse project explorer', ...withKeys('Ctrl+Shift+E'), run: () => showView('files') },
+    {
+      id: 'files.inspector',
+      title: 'Show or hide outline and activity',
+      group: 'Actions',
+      keywords: 'files inspector outline activity panel side right',
+      ...withKeys('Ctrl+Alt+B'),
+      enabled: (state) => state.view === 'files',
+      run: () => requestFilesCommand('toggle-inspector')
+    },
+    {
+      id: 'files.explorer',
+      title: 'Show or hide the file explorer',
+      group: 'Actions',
+      keywords: 'files explorer tree sidebar left panel',
+      ...withKeys('Ctrl+Alt+E'),
+      enabled: (state) => state.view === 'files',
+      run: () => requestFilesCommand('toggle-explorer')
+    },
+    {
+      id: 'files.worktree',
+      title: 'Switch worktree…',
+      group: 'Actions',
+      keywords: 'files checkout branch git worktree switch',
+      ...withKeys('Ctrl+Alt+W'),
+      enabled: (state) => state.view === 'files',
+      run: () => requestFilesCommand('switch-worktree')
+    },
     { id: 'view.quickopen', title: 'Find a file…', group: 'Actions', keywords: 'quick open ctrl p files search project fuzzy', ...withKeys('Ctrl+P'), run: () => toggleQuickOpen() },
     { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },
+    { id: 'view.crew', title: 'Open Agents', group: 'Actions', keywords: 'agents crew members run lead maya', ...withKeys('Ctrl+Shift+L'), run: () => showView('crew') },
+    { id: 'crew.hand', title: 'Hand a job to an agent…', group: 'Actions', keywords: 'crew paste run member job', run: () => openHandDialog() },
     { id: 'view.skills', title: 'Open Skills', group: 'Actions', keywords: 'installed export copy agent', run: () => showView('skills') },
     { id: 'view.usage', title: 'Open Usage', group: 'Actions', keywords: 'tokens cost limits history', run: () => showView('usage') },
     {

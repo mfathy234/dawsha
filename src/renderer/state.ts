@@ -24,6 +24,9 @@ import type {
 } from '../shared/types'
 import type { SessionBaseline } from '../shared/gitStatus'
 import type { SessionTag } from '../shared/sessionTags'
+import type { CrewIdentity, CrewLaunch } from '../shared/crew'
+import type { AvatarState } from '../shared/crewLive'
+import type { GoalLive } from '../shared/crewLead'
 
 export interface TermState {
   id: string
@@ -46,6 +49,11 @@ export interface TermState {
   /** The user's own name for the session; it wins over the name the agent reports. */
   name?: string
   tag?: SessionTag
+  /** The crew member this session works as, kept so the pane keeps its identity after a restart. */
+  crew?: CrewIdentity
+  /** What the first start of a crew run needs; spent after the spawn. */
+  crewLaunch?: CrewLaunch
+  crewFullAccess?: boolean
 }
 
 export interface PaneState {
@@ -61,7 +69,7 @@ export interface PaneState {
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'background' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'files'
+export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'files' | 'crew'
 
 export interface ReplayRef {
   id: string
@@ -119,6 +127,10 @@ export interface AppState {
   gitChanges: Record<string, GitChanges | null>
   usage: UsageSnapshot
   attention: Record<string, Attention>
+  /** The live state of each crew run's avatar, by pane id. */
+  crewStates: Record<string, AvatarState>
+  /** What each active goal shows right now: the plan, the open question and Maya's notes. */
+  goalLive: Record<string, GoalLive>
   waiting: Record<string, boolean>
   contextDismissed: Record<string, number>
   bridge: BridgeState
@@ -168,6 +180,8 @@ export const initialState = (): AppState => ({
   gitChanges: {},
   usage: emptySnapshot(),
   attention: {},
+  crewStates: {},
+  goalLive: {},
   waiting: {},
   contextDismissed: {},
   bridge: { installed: false, busy: false, error: null, note: null },

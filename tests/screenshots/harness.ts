@@ -5,8 +5,8 @@ import type { Sandbox } from '../e2e/helpers'
 import { APP_VERSION } from '../e2e/helpers'
 import { CLAUDE_IDS } from './resumeFixtures'
 
-export const OUT = resolve(__dirname, '../../docs/screenshots')
-export const DEMO_ROOT = 'C:\\dawsha-demo'
+export const OUT = process.env.DAWSHA_SHOTS_OUT ?? resolve(__dirname, '../../docs/screenshots')
+export const DEMO_ROOT = resolve(__dirname, '../../test-results/demo')
 export const SCRIPT = resolve(__dirname, 'demo-agent.cjs')
 export const SIZE = { width: 1600, height: 1000 }
 

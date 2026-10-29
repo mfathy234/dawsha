@@ -32,11 +32,17 @@ const api: GridApi = {
       enable: () => invokeRemote(IPC.remoteAccessEnable),
       disable: () => invokeRemote(IPC.remoteAccessDisable),
       verify: () => invokeRemote(IPC.remoteAccessVerify),
+      reconnect: () => invokeRemote(IPC.remoteAccessReconnect),
       refreshPairing: () => invokeRemote(IPC.remoteAccessPairing),
       setPermissions: (patch) => invokeRemote(IPC.remoteAccessPermissions, patch),
       setAllowedEmail: (email) => invokeRemote(IPC.remoteAccessEmail, email),
       revokeDevice: (id) => invokeRemote(IPC.remoteAccessRevoke, id),
       recordApproval: (terminalId, allowed, tail) => ipcRenderer.invoke(IPC.remoteApprovalAnswered, terminalId, allowed, tail)
+    },
+    remoteCrew: {
+      publish: (snapshot) => ipcRenderer.send(IPC.remoteCrewSnapshot, snapshot),
+      onRun: (listener) => subscribe<[string, { memberId: string; projectId: string; choice: string; fields: Record<string, string>; deadline: number }]>(IPC.remoteCrewRun, listener),
+      reply: (id, result) => ipcRenderer.send(IPC.remoteCrewRunResult, id, result)
     }
   } : {}),
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
@@ -120,6 +126,8 @@ const api: GridApi = {
   openSkill: (id) => ipcRenderer.invoke(IPC.skillsOpen, id),
   exportSkill: (id) => ipcRenderer.invoke(IPC.skillsExport, id),
   exportSkills: (ids) => ipcRenderer.invoke(IPC.skillsExportMany, ids),
+  crewSources: (ids) => ipcRenderer.invoke(IPC.crewSources, ids),
+  crewReadLinked: (path) => ipcRenderer.invoke(IPC.crewReadLinked, path),
   readClipboard: () => ipcRenderer.invoke(IPC.clipboardRead),
   writeClipboard: (text) => ipcRenderer.invoke(IPC.clipboardWrite, text),
   openExternal: (url) => ipcRenderer.invoke(IPC.openExternal, url),
@@ -142,8 +150,6 @@ const api: GridApi = {
   openUpdateLink: (url) => ipcRenderer.invoke(IPC.updateOpenLink, url),
   usageReport: (range) => ipcRenderer.invoke(IPC.usageGet, range),
   workReport: (period, offset) => ipcRenderer.invoke(IPC.workGet, period, offset ?? 0),
-  backgroundAgents: (range) => ipcRenderer.invoke(IPC.backgroundAgents, range),
-  revealBackgroundAgent: (kind, id) => ipcRenderer.invoke(IPC.backgroundAgentsReveal, kind, id),
   usageSnapshot: () => ipcRenderer.invoke(IPC.usageSnapshot),
   agentAccounts: () => ipcRenderer.invoke(IPC.agentAccounts),
   knownLimits: () => ipcRenderer.invoke(IPC.knownLimits),

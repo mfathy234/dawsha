@@ -5,7 +5,6 @@ import { store } from '../state'
 import { saveSettings } from '../actions'
 import { syncRecordingTitles } from '../replayActions'
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, MIN_SIDEBAR_WIDTH } from '../../shared/sidebarWidth'
-import { BackgroundAgentsViewComponent } from './backgroundAgentsView'
 import { AgentsViewComponent } from './agentsView'
 import { BoardComponent } from './boardView'
 import { FilesViewComponent } from './filesView'
@@ -20,6 +19,7 @@ import { QuickPickComponent } from './quickpick'
 import { ResumePickerComponent } from './resumePicker'
 import { SettingsViewComponent } from './settingsView'
 import { SkillsViewComponent } from './skillsView'
+import { CrewViewComponent } from './crewView'
 import { SidebarComponent } from './sidebar'
 import { ThemePickerComponent } from './themePicker'
 import { UpdatePopoverComponent } from './updatePopover'
@@ -46,9 +46,9 @@ export class AppShell {
   private readonly board = new BoardComponent()
   private readonly projects = new ProjectsViewComponent()
   private readonly agents = new AgentsViewComponent()
-  private readonly background = new BackgroundAgentsViewComponent()
   private readonly files = new FilesViewComponent()
   private readonly skills = new SkillsViewComponent()
+  private readonly crew = new CrewViewComponent()
   private readonly usage = new UsageViewComponent()
   private readonly work = new WorkViewComponent()
   private readonly settings = new SettingsViewComponent()
@@ -67,7 +67,7 @@ export class AppShell {
   private resizeWidth = DEFAULT_SIDEBAR_WIDTH
 
   constructor() {
-    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.background.el, this.files.el, this.agents.el, this.skills.el, this.usage.el, this.work.el, this.settings.el, this.replay.el)
+    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.files.el, this.agents.el, this.crew.el, this.skills.el, this.usage.el, this.work.el, this.settings.el, this.replay.el)
     this.sidebarResize.addEventListener('pointerdown', this.onResizeStart)
     this.sidebarResize.addEventListener('pointermove', this.onResizeMove)
     this.sidebarResize.addEventListener('pointerup', this.onResizeEnd)
@@ -141,12 +141,12 @@ export class AppShell {
     this.projects.el.hidden = state.view !== 'projects'
     if (state.view === 'projects' && this.lastView !== 'projects') this.projects.show(state)
     else if (state.view === 'projects') this.projects.update(state)
-    this.background.el.hidden = state.view !== 'background'
-    this.background.update(state)
     this.files.el.hidden = state.view !== 'files'
     this.files.update(state)
     this.agents.el.hidden = state.view !== 'agents'
     if (state.view === 'agents') this.agents.update(state)
+    this.crew.el.hidden = state.view !== 'crew'
+    if (state.view === 'crew') this.crew.update(state)
     this.skills.el.hidden = state.view !== 'skills'
     if (state.view === 'skills' && this.lastView !== 'skills') this.skills.show()
     this.usage.el.hidden = state.view !== 'usage'

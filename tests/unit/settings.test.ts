@@ -23,20 +23,26 @@ describe('migrateSettings', () => {
   it('persists the Files layout through a settings reload and repairs a bad one', () => {
     const file = tempFile()
     const store = new SettingsStore(file)
-    const layout = { sections: { changes: false, open: true, tree: true }, inspector: { open: false, tab: 'activity' as const }, panel: { minimised: false, height: 260 } }
+    const layout = { sections: { changes: false, open: true, tree: true }, inspector: { open: false, tab: 'activity' as const }, explorer: { open: false }, panel: { minimised: false, height: 260 } }
     store.update({ filesLayout: layout })
     expect(new SettingsStore(file).load().settings.filesLayout).toEqual(layout)
     expect(migrateSettings({ filesLayout: 'nope' }).filesLayout.panel.minimised).toBe(true)
   })
-  it('persists bounded, boolean agent fold choices through a settings reload', () => {
-    const file = tempFile()
-    const store = new SettingsStore(file)
-    store.update({ agentFolds: { 'claude:busy': false, 'codex:done': true } })
-    expect(new SettingsStore(file).load().settings.agentFolds).toEqual({ 'claude:busy': false, 'codex:done': true })
-    expect(migrateSettings({ agentFolds: { good: false, bad: 'yes' } }).agentFolds).toEqual({ good: false })
-    const many = Object.fromEntries(Array.from({ length: 420 }, (_, i) => [`s${i}`, false]))
-    expect(Object.keys(migrateSettings({ agentFolds: many }).agentFolds)).toHaveLength(400)
-    expect(migrateSettings({ agentFolds: [] }).agentFolds).toEqual({})
+  it('loads legacy agentFolds settings and drops them on the next save', () => {
+    // Compatibility: earlier versions persisted fold choices for the retired view.
+    for (const agentFolds of [{ 'claude:busy': false, 'codex:done': true }, 'invalid', [], null]) {
+      const file = tempFile()
+      writeFileSync(file, JSON.stringify({ ...defaultSettings(), paletteShortcut: 'Alt+Space', agentFolds }))
+      const store = new SettingsStore(file)
+      const loaded = store.load()
+      expect(loaded.warning).toBeNull()
+      expect(loaded.settings.paletteShortcut).toBe('Alt+Space')
+      expect(loaded.settings).not.toHaveProperty('agentFolds')
+      expect(defaultSettings()).not.toHaveProperty('agentFolds')
+      store.update({ showRecap: false })
+      expect(JSON.parse(readFileSync(file, 'utf8'))).not.toHaveProperty('agentFolds')
+      expect(new SettingsStore(file).load().settings.showRecap).toBe(false)
+    }
   })
   it('loads old settings while dropping retired feature settings and profiles', () => {
     // Compatibility fixture: old files stored orchestrator settings and an experimental flag.
@@ -124,10 +130,17 @@ describe('migrateSettings', () => {
   })
 
   it('defaults private remote permissions off and sanitizes them independently', () => {
-    const off = { allowedEmail: '', terminalInput: false, sessionControl: false, approvals: false, approvalsNotify: true, approvalsOnlyWhenAway: false, approvalsAwayMinutes: 3, approvalsAllowConfigEdits: false }
+    const none = { commands: false, answers: false, messages: false, sessions: false, crew: false, fullOutput: false }
+    const off = { allowedEmail: '', capabilities: none, autoReconnect: true, notifyLinkChange: true, approvalsNotify: true, approvalsOnlyWhenAway: false, approvalsAwayMinutes: 3, approvalsAllowConfigEdits: false }
     expect(defaultSettings().remoteAccess).toEqual(off)
-    expect(migrateSettings({ remoteAccess: { terminalInput: true, sessionControl: 'yes' } }).remoteAccess).toEqual({ ...off, terminalInput: true })
-    expect(migrateSettings({ remoteAccess: { approvals: true, approvalsAwayMinutes: 500, approvalsNotify: 'no' } }).remoteAccess).toMatchObject({ approvals: true, approvalsAwayMinutes: 60, approvalsNotify: true })
+    expect(migrateSettings({ remoteAccess: { capabilities: { messages: true, sessions: 'yes', fullOutput: true } } }).remoteAccess).toEqual({ ...off, capabilities: { ...none, messages: true, fullOutput: true } })
+    expect(migrateSettings({ remoteAccess: { approvalsAwayMinutes: 500, approvalsNotify: 'no', autoReconnect: false } }).remoteAccess).toMatchObject({ approvalsAwayMinutes: 60, approvalsNotify: true, autoReconnect: false, notifyLinkChange: true })
+  })
+
+  it('moves the old phone permissions into capabilities and never turns on full output', () => {
+    const migrated = migrateSettings({ remoteAccess: { terminalInput: true, sessionControl: false, approvals: true } }).remoteAccess
+    expect(migrated.capabilities).toEqual({ commands: true, answers: true, messages: true, sessions: false, crew: false, fullOutput: false })
+    expect(migrated).not.toHaveProperty('approvals')
   })
 
   it('returns defaults for junk input', () => {

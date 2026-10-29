@@ -97,6 +97,8 @@ describe('pipePath and isCliRequest', () => {
 
   it('validates request shape', () => {
     expect(isCliRequest({ args: ['a'], cwd: 'x' })).toBe(true)
+    expect(isCliRequest({ args: ['a'], cwd: 'x', leadGoal: 'g1' })).toBe(true)
+    expect(isCliRequest({ args: ['a'], cwd: 'x', leadGoal: 5 })).toBe(false)
     expect(isCliRequest({ args: 'a', cwd: 'x' })).toBe(false)
     expect(isCliRequest(null)).toBe(false)
   })

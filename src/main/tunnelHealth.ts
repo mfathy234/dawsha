@@ -4,7 +4,7 @@ const HEALTH_INTERVAL_MS = 60_000
 const PROBE_TIMEOUT_MS = 5_000
 const FAILURES_BEFORE_RECONNECT = 2
 
-export type HealthReason = 'failures' | 'resume'
+export type HealthReason = 'failures' | 'resume' | 'exit'
 
 export interface TunnelHealthOptions {
   probe(): Promise<boolean>

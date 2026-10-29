@@ -30,3 +30,14 @@ export const unavailableReason = (checkout: FilesCheckout): string => (checkout.
 export const checkoutTitle = (checkout: FilesCheckout): string => (checkout.detached ? `Detached · ${checkout.head.slice(0, 8)}` : checkout.branch || folderTail(checkout.folder))
 
 export const checkoutFolderName = folderTail
+
+/** The branch of a checkout for the location button (empty outside git or without a branch). */
+export function branchName(checkout: FilesCheckout | undefined, git = true): string {
+  if (!checkout || !git) return ''
+  return checkout.detached ? `Detached · ${checkout.head.slice(0, 8)}` : checkout.branch
+}
+
+/** "2 worktrees" when the repository has more than one checkout, else empty. */
+export const worktreeCountText = (count: number): string => (count > 1 ? `${count} worktrees` : '')
+
+export const ONLY_MAIN_CHECKOUT = { label: 'Only the main checkout.', detail: 'Add a worktree with git worktree add, or from an agent session.' }

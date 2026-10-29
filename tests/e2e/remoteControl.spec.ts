@@ -5,6 +5,52 @@ import { chromium, expect, test, type Browser, type Page, type WebSocketRoute } 
 import { closeApp, createSandbox, launchApp } from './helpers'
 
 const renderer = resolve(process.cwd(), process.env.DAWSHA_PRIVATE_REMOTE_BUILD === '1' ? 'out/renderer-private' : 'out/renderer')
+const shots = process.env.DAWSHA_SHOTS ?? 'test-results/screens'
+
+interface FakeDevice { id: string; name: string; pairedAt: number; lastSeenAt: number }
+
+function fakeRemoteState(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    status: 'available',
+    enabled: true,
+    url: 'https://quiet-river-1234.trycloudflare.com/dawsha/',
+    message: 'Remote Access is on.',
+    notice: null,
+    devices: [],
+    pairing: { code: '482913', expiresAt: Date.now() + 5 * 60_000 },
+    permissions: {
+      allowedEmail: '',
+      capabilities: { commands: true, answers: true, messages: true, sessions: false, fullOutput: false },
+      autoReconnect: true,
+      notifyLinkChange: true,
+      approvalsNotify: true,
+      approvalsOnlyWhenAway: false,
+      approvalsAwayMinutes: 3,
+      approvalsAllowConfigEdits: false
+    },
+    droppedAt: null,
+    linkChangedAt: Date.now() - 3 * 3_600_000,
+    roundTripMs: 84,
+    checkedAt: Date.now() - 10_000,
+    activity: [],
+    ...overrides
+  }
+}
+
+async function mockRemoteIpc(app: Awaited<ReturnType<typeof launchApp>>['app'], state: Record<string, unknown>): Promise<void> {
+  await app.evaluate(({ ipcMain }, initial) => {
+    const holder = globalThis as unknown as { __remote: Record<string, unknown>; __calls: string[] }
+    holder.__remote = initial
+    holder.__calls = []
+    ipcMain.removeHandler('remote-access:get')
+    ipcMain.handle('remote-access:get', () => holder.__remote)
+    ipcMain.removeHandler('remote-access:verify')
+    ipcMain.handle('remote-access:verify', () => { holder.__calls.push('verify'); return { ok: true, state: holder.__remote } })
+  }, state)
+}
+
+const mockedCalls = (app: Awaited<ReturnType<typeof launchApp>>['app']): Promise<string[]> =>
+  app.evaluate(() => (globalThis as unknown as { __calls: string[] }).__calls)
 const terminalFixture = 'prefix line\nline after bare LF\r\n\u001b[31mANSI red marker\u001b[0m\r\n\u001b[32mANSI green marker\u001b[0m\r\n\u001b[33mANSI yellow marker\u001b[0m\r\n\u001b[34mANSI blue marker\u001b[0m\r\nRemote session ready\r\n'
 
 function startStaticServer(): Promise<{ server: Server; url: string }> {
@@ -59,6 +105,7 @@ interface MockControls {
   outputSocket?: WebSocketRoute
   pairBodies?: unknown[]
   approvals?: boolean
+  fullOutput?: boolean
 }
 
 async function installApiMocks(page: Page, controls: MockControls): Promise<void> {
@@ -97,7 +144,7 @@ async function installApiMocks(page: Page, controls: MockControls): Promise<void
           { id: 'terminal-1', projectId: 'project-1', agent: 'codex', startedAt: 1, output: 'Remote session ready\r\n' },
           ...(createdAgent && !controls.stoppedSessionIds.has(createdTerminalId) ? [{ id: createdTerminalId, projectId: 'project-1', agent: createdAgent, startedAt: 2, output: 'New session ready\r\n', remoteManaged: true }] : [])
         ].filter(() => !controls.terminalEnded),
-        permissions: { read: true, terminalInput: controls.canControl, sessionControl: controls.canControl, approvals: controls.approvals === true }
+        permissions: { read: true, terminalInput: controls.canControl, sessionControl: controls.canControl, approvals: controls.approvals === true, commands: controls.approvals === true, answers: controls.approvals === true, fullOutput: controls.fullOutput !== false }
       }
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(state) })
       return
@@ -147,7 +194,7 @@ test('pairs a browser, respects permissions, and adapts to a phone screen', asyn
     await page.goto(url)
 
     await expect(page.getByRole('heading', { name: /Dawsha/i })).toBeVisible()
-    await expect(page.locator('#remote-beta-badge')).toHaveText('BETA')
+    await expect(page.locator('#remote-beta-badge')).toHaveCount(0)
     await expect(page.locator('#pair-view')).toBeVisible()
     await page.locator('#pairing-code').fill('123456')
     await page.locator('#device-name').fill('Test phone')
@@ -418,8 +465,14 @@ test('public build exposes beta Remote Access settings and stays off until confi
     await page.locator('#settings-tab-remote').click()
     await expect(page.locator('#remote-settings-beta')).toHaveText('Beta')
     await expect(page.locator('#remote-access-toggle')).toBeEnabled()
-    await expect(page.getByText(/pairing code is the only login gate/i)).toBeVisible()
-    await expect(page.locator('.remote-status-off')).toContainText('off')
+    await expect(page.locator('#remote-access-toggle')).toHaveText('Turn on')
+    await expect(page.locator('#remote-status.ra-off')).toContainText('Remote Access is off')
+    await expect(page.locator('#remote-status')).toContainText('Turn it on to answer your agents from your phone.')
+    await expect(page.locator('#remote-status #remote-access-toggle')).toHaveCount(1)
+    await expect(page.locator('[class*="status-dot"]')).toHaveCount(0)
+    await expect(page.locator('#remote-install-note')).toContainText('installs a verified copy in app data')
+    await expect(page.getByText(/pairing code is the only login gate/i)).toHaveCount(0)
+    await page.screenshot({ path: `${shots}/remote-desktop-off.png` })
   } finally {
     await closeApp(app)
   }
@@ -450,22 +503,7 @@ test('Remote Access settings show a QR code that opens the page with the pairing
   const { app, page } = await launchApp(createSandbox())
   try {
     const url = 'https://quiet-river-1234.trycloudflare.com/dawsha/'
-    await app.evaluate(({ ipcMain }, tunnel) => {
-      const state = () => ({
-        status: 'available',
-        enabled: true,
-        url: tunnel,
-        message: 'Remote Access is on.',
-        notice: null,
-        devices: [],
-        pairing: { code: '482913', expiresAt: Date.now() + 5 * 60_000 },
-        permissions: { allowedEmail: '', terminalInput: true, sessionControl: true }
-      })
-      ipcMain.removeHandler('remote-access:get')
-      ipcMain.handle('remote-access:get', () => state())
-      ipcMain.removeHandler('remote-access:verify')
-      ipcMain.handle('remote-access:verify', () => ({ ok: true, state: state() }))
-    }, url)
+    await mockRemoteIpc(app, fakeRemoteState({ url }))
     // Settings reads the Remote Access state once at startup.
     await page.reload()
     await page.locator('#settings-button').click()
@@ -474,11 +512,20 @@ test('Remote Access settings show a QR code that opens the page with the pairing
     await expect(qr).toBeVisible()
     await expect(qr).toHaveAttribute('data-qr', `${url}#pair=482913`)
     await expect(qr.locator('svg[role="img"]')).toHaveAttribute('aria-label', /pairs your phone/)
-    await expect(page.locator('.remote-qr-card')).toContainText('Scan with your phone')
-    await expect(page.locator('.remote-manual')).toContainText('Or connect by hand')
+    await expect(page.locator('#remote-connect')).toContainText('Connect a phone')
+    await expect(page.locator('#remote-connect')).toContainText('Scan it, or open the link and type the code')
+    await expect(page.locator('#remote-connect')).toContainText(/Expires in \d:\d\d/)
+    await expect(page.getByRole('button', { name: 'Copy link' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'New code' })).toBeVisible()
     await expect(page.locator('.remote-pairing-code')).toHaveAttribute('aria-label', 'Pairing code 4 8 2 9 1 3')
+    await expect(page.locator('#remote-security-note')).toHaveText('Anyone with the link still needs a pairing code from this PC. Add a PIN email below for a second check.')
     await expect(page.getByRole('textbox', { name: 'Cloudflare PIN email' })).toBeVisible()
-    await page.screenshot({ path: 'test-results/screens/remote-access-qr.png' })
+    await expect(page.locator('#remote-status.ra-on')).toContainText('Your phone can reach this PC')
+    await expect(page.getByRole('button', { name: 'Test from here' })).toBeVisible()
+    await expect(page.locator('#remote-connection')).toContainText('Round trip')
+    await expect(page.locator('#remote-connection')).toContainText('84 ms')
+    await expect(page.locator('#remote-install-note')).toHaveCount(0)
+    await page.screenshot({ path: `${shots}/remote-desktop-on.png` })
   } finally {
     await closeApp(app)
   }
@@ -489,14 +536,14 @@ test('Remote Access never shows the stale link after the tunnel dies: it reconne
   try {
     const oldUrl = 'https://old-river-1234.trycloudflare.com/dawsha/'
     const newUrl = 'https://new-river-5678.trycloudflare.com/dawsha/'
-    await app.evaluate(({ ipcMain }, urls) => {
+    const base = fakeRemoteState()
+    await app.evaluate(({ ipcMain }, { urls, base }) => {
       let phase: 'old' | 'reconnecting' | 'new' = 'old'
-      const base = { enabled: true, devices: [], permissions: { allowedEmail: '', terminalInput: true, sessionControl: true } }
       const state = () => phase === 'old'
-        ? { ...base, status: 'available', url: urls.old, message: 'Remote Access is on.', notice: null, pairing: { code: '111111', expiresAt: Date.now() + 5 * 60_000 } }
+        ? { ...base, status: 'available', url: urls.old, notice: null, pairing: { code: '111111', expiresAt: Date.now() + 5 * 60_000 } }
         : phase === 'reconnecting'
           ? { ...base, status: 'reconnecting', url: null, message: 'The connection dropped. Reconnecting…', notice: null, pairing: null }
-          : { ...base, status: 'available', url: urls.next, message: 'Remote Access is on.', notice: 'The address changed. Scan the new code on your phone.', pairing: { code: '222222', expiresAt: Date.now() + 5 * 60_000 } }
+          : { ...base, status: 'available', url: urls.next, notice: 'The address changed. Scan the new code on your phone.', pairing: { code: '222222', expiresAt: Date.now() + 5 * 60_000 } }
       ipcMain.removeHandler('remote-access:get')
       ipcMain.handle('remote-access:get', () => state())
       ipcMain.removeHandler('remote-access:verify')
@@ -506,11 +553,11 @@ test('Remote Access never shows the stale link after the tunnel dies: it reconne
         setTimeout(() => { phase = 'new' }, 1500)
         return { ok: true, state: state() }
       })
-    }, { old: oldUrl, next: newUrl })
+    }, { urls: { old: oldUrl, next: newUrl }, base })
     await page.reload()
     await page.locator('#settings-button').click()
     await page.locator('#settings-tab-remote').click()
-    await expect(page.locator('.remote-status')).toContainText('Reconnecting…')
+    await expect(page.locator('#remote-status')).toContainText('Reconnecting the tunnel')
     await expect(page.locator('.remote-qr')).toHaveCount(0)
     await expect(page.locator('.remote-url')).toHaveCount(0)
     await expect(page.locator('.remote-qr')).toHaveAttribute('data-qr', /new-river-5678.*#pair=222222/, { timeout: 15_000 })
@@ -685,18 +732,22 @@ test('phone approvals: a disabled permission shows a clear off state and no prom
   }
 })
 
-test('desktop settings: phone approvals are off by default and each setting persists through the main process', async () => {
+test('desktop settings: every phone capability is off by default and each setting persists through the main process', async () => {
   const { app, page } = await launchApp(createSandbox())
   try {
     await page.locator('#settings-button').click()
     await page.locator('#settings-tab-remote').click()
-    const approvals = page.locator('#remote-approvals')
-    await expect(approvals).not.toBeChecked()
+    for (const id of ['commands', 'answers', 'messages', 'sessions', 'crew', 'fullOutput']) await expect(page.locator(`#remote-cap-${id}`)).not.toBeChecked()
+    await expect(page.locator('#remote-capabilities')).toContainText('Off: the phone sees status lines and questions only.')
     await expect(page.locator('#remote-approvals-notify')).toBeDisabled()
     await expect(page.locator('#remote-approvals-config')).toBeDisabled()
+    const approvals = page.locator('#remote-cap-commands')
     await approvals.check()
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Allow phone approvals' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Allow commands from phones' }).click()
     await expect(approvals).toBeChecked()
+    await page.locator('#remote-cap-fullOutput').check()
+    await page.locator('#remote-auto-reconnect').click()
+    await expect(page.locator('#remote-auto-reconnect')).toHaveAttribute('aria-checked', 'false')
     await expect(page.locator('#remote-approvals-notify')).toBeEnabled()
     await expect(page.locator('#remote-approvals-config')).not.toBeChecked()
     await page.locator('#remote-approvals-away').check()
@@ -705,9 +756,287 @@ test('desktop settings: phone approvals are off by default and each setting pers
     await page.locator('#remote-approvals-minutes').blur()
     await page.locator('#remote-approvals-config').check()
     const stored = await page.evaluate(async () => (await window.gridApi.remoteAccess!.getState()).permissions)
-    expect(stored).toMatchObject({ approvals: true, approvalsOnlyWhenAway: true, approvalsAwayMinutes: 7, approvalsAllowConfigEdits: true, terminalInput: false, sessionControl: false })
+    expect(stored).toMatchObject({ capabilities: { commands: true, answers: false, messages: false, sessions: false, fullOutput: true }, autoReconnect: false, notifyLinkChange: true, approvalsOnlyWhenAway: true, approvalsAwayMinutes: 7, approvalsAllowConfigEdits: true })
     await page.screenshot({ path: 'test-results/screens/remote-approvals-settings.png' })
   } finally {
     await closeApp(app)
+  }
+})
+
+test('Remote Access status card: a silent drop shows how long ago, offers Reconnect, and asks to re-scan afterwards', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    const newUrl = 'https://new-river-5678.trycloudflare.com/dawsha/'
+    await app.evaluate(({ ipcMain }, { dropped, recovered }) => {
+      const holder = globalThis as unknown as { __phase: 'dropped' | 'reconnecting' | 'on'; __calls: string[] }
+      holder.__phase = 'dropped'
+      holder.__calls = []
+      const state = () => holder.__phase === 'dropped'
+        ? dropped
+        : holder.__phase === 'reconnecting'
+          ? { ...dropped, status: 'reconnecting', droppedAt: null }
+          : recovered
+      ipcMain.removeHandler('remote-access:get')
+      ipcMain.handle('remote-access:get', () => state())
+      ipcMain.removeHandler('remote-access:verify')
+      ipcMain.handle('remote-access:verify', () => ({ ok: true, state: state() }))
+      ipcMain.removeHandler('remote-access:reconnect')
+      ipcMain.handle('remote-access:reconnect', () => {
+        holder.__calls.push('reconnect')
+        holder.__phase = 'reconnecting'
+        setTimeout(() => { holder.__phase = 'on' }, 1200)
+        return { ok: true, state: state() }
+      })
+    }, {
+      dropped: fakeRemoteState({ status: 'dropped', url: null, pairing: null, message: 'The tunnel dropped.', droppedAt: Date.now() - 2 * 60_000, roundTripMs: null }),
+      recovered: fakeRemoteState({ url: newUrl, notice: 'The address changed. Scan the new code on your phone.', pairing: { code: '999999', expiresAt: Date.now() + 5 * 60_000 } })
+    })
+    await page.reload()
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-remote').click()
+    const status = page.locator('#remote-status')
+    await expect(status).toHaveClass(/ra-dropped/)
+    await expect(status).toContainText('The tunnel dropped 2 minutes ago')
+    await expect(status).toContainText('Your phone cannot reach this PC. Reconnecting gives a new link, so re-scan the code.')
+    await expect(page.locator('#remote-reconnect')).toHaveClass(/primary/)
+    await expect(page.locator('#remote-connection')).toContainText('Not reachable')
+    await expect(page.locator('.remote-qr')).toHaveCount(0)
+    await expect(page.locator('[class*="status-dot"]')).toHaveCount(0)
+    await page.screenshot({ path: `${shots}/remote-desktop-dropped.png` })
+    await page.locator('#remote-reconnect').click()
+    await expect.poll(() => mockedCalls(app)).toEqual(['reconnect'])
+    await expect(status).toContainText('Reconnecting the tunnel')
+    await expect(page.locator('.remote-qr')).toHaveAttribute('data-qr', /new-river-5678.*#pair=999999/, { timeout: 15_000 })
+    await expect(status).toHaveClass(/ra-on/)
+    await expect(page.locator('#remote-address-changed')).toHaveText('The address changed. Scan the new code on your phone.')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Remote Access phones: Remove names the phone in the message and on the button, and Cancel changes nothing', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    const id = 'a'.repeat(32)
+    const now = Date.now()
+    const devices: FakeDevice[] = [{ id, name: 'Pixel 9', pairedAt: now - 17 * 86_400_000, lastSeenAt: now - 5_000 }, { id: 'b'.repeat(32), name: 'iPad mini', pairedAt: now - 40 * 86_400_000, lastSeenAt: now - 3 * 86_400_000 }]
+    await mockRemoteIpc(app, fakeRemoteState({ devices }))
+    await app.evaluate(({ ipcMain }) => {
+      const holder = globalThis as unknown as { __remote: { devices: Array<{ id: string }> }; __calls: string[] }
+      ipcMain.removeHandler('remote-access:revoke')
+      ipcMain.handle('remote-access:revoke', (_event, deviceId: string) => {
+        holder.__calls.push(`revoke:${deviceId}`)
+        holder.__remote = { ...holder.__remote, devices: holder.__remote.devices.filter((device) => device.id !== deviceId) }
+        return { ok: true, state: holder.__remote }
+      })
+    })
+    await page.reload()
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-remote').click()
+    const pixel = page.locator('.ra-device[data-device="Pixel 9"]')
+    await expect(pixel).toContainText('Active now')
+    await expect(page.locator('.ra-device[data-device="iPad mini"]')).toContainText('Last seen 72 hours ago')
+    await expect(page.locator('#remote-connection')).toContainText('Pixel 9')
+    await pixel.getByRole('button', { name: 'Remove Pixel 9' }).click()
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toContainText('Remove Pixel 9?')
+    await expect(dialog).toContainText('Pixel 9 is signed out at once and needs a new code to come back.')
+    await expect(dialog.getByRole('button', { name: 'Remove Pixel 9' })).toBeVisible()
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    expect((await mockedCalls(app)).filter((call) => call.startsWith('revoke'))).toEqual([])
+    await expect(pixel).toBeVisible()
+    await pixel.getByRole('button', { name: 'Remove Pixel 9' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove Pixel 9' }).click()
+    await expect.poll(async () => (await mockedCalls(app)).filter((call) => call.startsWith('revoke'))).toEqual([`revoke:${id}`])
+    await expect(pixel).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Remote Access PIN email: its own description, validation, a saved state with Change and Remove, and a named confirmation', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-remote').click()
+    const row = page.locator('#remote-email-row')
+    await expect(row).toContainText('Cloudflare PIN email (optional)')
+    await expect(page.locator('#remote-email-note')).toHaveText('Cloudflare emails a one-time PIN to this address before anyone can open the link.')
+    await expect(row).not.toContainText('installs a verified copy')
+    const input = page.locator('#remote-email-input')
+    const save = page.locator('#remote-email-save')
+    const [rowBox, inputBox, saveBox] = [await row.boundingBox(), await input.boundingBox(), await save.boundingBox()]
+    expect(inputBox!.x, 'the input sits to the right of the label column').toBeGreaterThan(rowBox!.x + rowBox!.width / 2 - 40)
+    expect(Math.abs((inputBox!.y + inputBox!.height / 2) - (saveBox!.y + saveBox!.height / 2)), 'input and Save share one line').toBeLessThan(6)
+    await input.fill('not an email')
+    await save.click()
+    await expect(page.locator('#remote-email-error')).toContainText('Enter a full address')
+    await expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(await page.evaluate(async () => (await window.gridApi.remoteAccess!.getState()).permissions.allowedEmail)).toBe('')
+    await input.fill('me@example.com')
+    await save.click()
+    await expect(page.locator('#remote-email-saved')).toHaveText('me@example.com')
+    await expect(page.locator('#remote-email-input')).toHaveCount(0)
+    expect(await page.evaluate(async () => (await window.gridApi.remoteAccess!.getState()).permissions.allowedEmail)).toBe('me@example.com')
+    await page.screenshot({ path: `${shots}/remote-desktop-email-saved.png` })
+    await page.locator('#remote-email-change').click()
+    await expect(page.locator('#remote-email-input')).toHaveValue('me@example.com')
+    await page.locator('#remote-email-cancel').click()
+    await expect(page.locator('#remote-email-saved')).toBeVisible()
+    await page.locator('#remote-email-remove').click()
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toContainText('me@example.com')
+    await expect(dialog.getByRole('button', { name: 'Remove me@example.com' })).toBeVisible()
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.locator('#remote-email-saved')).toBeVisible()
+    await page.locator('#remote-email-remove').click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove me@example.com' }).click()
+    await expect(page.locator('#remote-email-input')).toBeVisible()
+    expect(await page.evaluate(async () => (await window.gridApi.remoteAccess!.getState()).permissions.allowedEmail)).toBe('')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Remote Access activity log and connection switches show what phones did and persist', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    const now = Date.now()
+    await mockRemoteIpc(app, fakeRemoteState({
+      activity: [
+        { id: '2', time: now - 60_000, device: 'Pixel 9', action: 'approved', session: 'billing-api', detail: 'npm test' },
+        { id: '1', time: now - 120_000, device: 'Pixel 9', action: 'blocked', session: null, detail: 'sending a message' }
+      ]
+    }))
+    await page.reload()
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-remote').click()
+    const log = page.locator('#remote-activity')
+    await expect(log).toContainText('Pixel 9 allowed npm test in billing-api')
+    await expect(log).toContainText('Pixel 9 was blocked from sending a message')
+    await expect(page.locator('#remote-auto-reconnect')).toHaveAttribute('aria-checked', 'true')
+    await expect(page.locator('#remote-notify-link')).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByText('Reconnect on its own when the tunnel drops')).toBeVisible()
+    await expect(page.getByText('Tell me when the link changes, so I can re-scan')).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('phone refresh: tabs, connection line, filled approval cards with a 1:1.4 button grid, no caps and no borders, in dark and light', async () => {
+  test.setTimeout(60_000)
+  const { server, url } = await startStaticServer()
+  let browser: Browser | undefined
+  const controls: MockControls = { paired: true, canControl: true, approvals: true, writes: [], writeTimes: [], inputAttempts: [], inputFailures: 0, inputDelayMs: 0, resizes: [], sessions: [], stoppedSessionIds: new Set(), outputConnections: 0, closeFirstOutput: false, terminalEnded: false }
+  const pending = [
+    approvalCard('terminal-1', { agent: 'claude', title: 'Claude needs you', projectName: 'billing-api' }),
+    approvalCard('terminal-2', { agent: 'claude', title: 'Claude needs you', projectName: 'mobile-shell', kind: 'edit', summary: 'Edit .github/workflows/ci.yml', text: 'Edit file\n.github/workflows/ci.yml\n 15 +   timeout-minutes: 20', fingerprint: 'fedcba9876543210', restriction: 'config', allowBlock: 'config', canAllow: false })
+  ]
+  try {
+    browser = await chromium.launch({ headless: true })
+    for (const scheme of ['dark', 'light'] as const) {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: scheme })
+      const page = await context.newPage()
+      await installApiMocks(page, controls)
+      await installApprovalMocks(page, pending, [])
+      await page.goto(url)
+      await expect(page.locator('#approvals-view')).toBeVisible()
+      await expect(page.locator('#connection-label')).toHaveText('Connected to your PC')
+      await expect(page.getByRole('tab')).toHaveText(['Needs you2', 'Agents', 'Sessions', 'Projects'])
+      await expect(page.locator('#remote-nav-approvals')).toHaveAttribute('aria-selected', 'true')
+      const first = page.locator('.approval-card').first()
+      await expect(first.locator('.approval-head .agent-badge svg')).toHaveCount(1)
+      await expect(first.locator('.approval-who strong')).toHaveText('Claude · billing-api')
+      await expect(first.locator('.approval-kind')).toHaveText('Command')
+      await expect(page.locator('.approval-card').nth(1).locator('.approval-kind')).toHaveText('File edit')
+      await expect(page.locator('.approval-card').nth(1).locator('.approval-btn:visible')).toHaveText(['Deny…'])
+      const cardStyle = await first.evaluate((element) => {
+        const style = getComputedStyle(element)
+        return { shadow: style.boxShadow, border: style.borderTopWidth, background: style.backgroundColor }
+      })
+      expect(cardStyle.shadow).toBe('none')
+      expect(cardStyle.border).toBe('0px')
+      expect(cardStyle.background).not.toBe('rgba(0, 0, 0, 0)')
+      const kindStyle = await first.locator('.approval-kind').evaluate((element) => ({ radius: getComputedStyle(element).borderTopLeftRadius, background: getComputedStyle(element).backgroundColor, transform: getComputedStyle(element).textTransform }))
+      expect(kindStyle).toEqual({ radius: '0px', background: 'rgba(0, 0, 0, 0)', transform: 'none' })
+      const deny = await first.getByRole('button', { name: 'Deny…' }).boundingBox()
+      const allow = await first.getByRole('button', { name: 'Allow once' }).boundingBox()
+      expect(allow!.width / deny!.width).toBeGreaterThan(1.3)
+      expect(allow!.width / deny!.width).toBeLessThan(1.5)
+      expect(Math.min(deny!.height, allow!.height)).toBeGreaterThanOrEqual(48)
+      await expect(first).toContainText('Commands run with your user')
+      const caps = await page.evaluate(() => {
+        const found: string[] = []
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const text = (node.textContent ?? '').trim()
+          const element = node.parentElement
+          if (!text || !element || element.closest('script,style,[hidden]') || getComputedStyle(element).display === 'none') continue
+          if (getComputedStyle(element).textTransform === 'uppercase' || (/[A-Z]{4,}/.test(text) && text === text.toUpperCase() && /[A-Z]/.test(text) && text.length > 3)) found.push(text)
+        }
+        return found
+      })
+      expect(caps).toEqual([])
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
+      const pageBackground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+      expect(pageBackground).toBe(scheme === 'dark' ? 'rgb(12, 14, 18)' : 'rgb(244, 245, 247)')
+      await page.screenshot({ path: `${shots}/remote-phone-needs-you-${scheme}.png` })
+      await page.locator('#remote-nav-sessions').click()
+      await expect(page.locator('#sessions-view')).toBeVisible()
+      await page.screenshot({ path: `${shots}/remote-phone-sessions-${scheme}.png` })
+      await context.close()
+    }
+  } finally {
+    await browser?.close()
+    await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
+  }
+})
+
+test('phone: when full terminal output is off the phone shows status and questions only and opens no terminal stream', async () => {
+  const { server, url } = await startStaticServer()
+  let browser: Browser | undefined
+  const controls: MockControls = { paired: true, canControl: true, fullOutput: false, writes: [], writeTimes: [], inputAttempts: [], inputFailures: 0, inputDelayMs: 0, resizes: [], sessions: [], stoppedSessionIds: new Set(), outputConnections: 0, closeFirstOutput: false, terminalEnded: false }
+  try {
+    browser = await chromium.launch({ headless: true })
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    await installApiMocks(page, controls)
+    await page.goto(url)
+    await page.locator('.running-card').click()
+    await expect(page.locator('#terminal-empty')).toContainText('Full terminal output is off')
+    await expect(page.locator('#terminal-empty')).toContainText('questions and status lines only')
+    await expect(page.locator('#terminal')).toBeHidden()
+    await expect(page.locator('#terminal-compose')).toBeVisible()
+    await expect(page.locator('#terminal-stream-label')).toHaveText('Status only')
+    expect(controls.outputConnections).toBe(0)
+  } finally {
+    await browser?.close()
+    await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
+  }
+})
+
+test('phone: the connection line says when the PC cannot be reached and keeps trying', async () => {
+  const { server, url } = await startStaticServer()
+  let browser: Browser | undefined
+  const controls: MockControls = { paired: true, canControl: false, writes: [], writeTimes: [], inputAttempts: [], inputFailures: 0, inputDelayMs: 0, resizes: [], sessions: [], stoppedSessionIds: new Set(), outputConnections: 0, closeFirstOutput: false, terminalEnded: false }
+  try {
+    browser = await chromium.launch({ headless: true })
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    await installApiMocks(page, controls)
+    await page.goto(url)
+    await expect(page.locator('#connection-label')).toHaveText('Connected to your PC')
+    let down = true
+    await page.route('**/dawsha/api/state', async (route) => {
+      if (down) await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Cloudflare Quick Tunnel is not ready."}' })
+      else await route.fallback()
+    })
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await expect(page.locator('#connection-label')).toHaveText('Cannot reach your PC · retrying')
+    await expect(page.locator('#connection')).toHaveAttribute('data-state', 'offline')
+    down = false
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await expect(page.locator('#connection-label')).toHaveText('Connected to your PC')
+  } finally {
+    await browser?.close()
+    await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
   }
 })
