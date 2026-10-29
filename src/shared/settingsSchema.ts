@@ -1,6 +1,5 @@
 import { sanitizeTicketNotes } from './ticketNotes'
 import { checkoutTabsKey } from './filesWorkspace'
-import { parseFolds } from './agentFolds'
 import { defaultLayout, parseLayout } from './filesLayout'
 import { sanitizeRunOverrides } from './runCommands'
 import { isAgent } from './agents'
@@ -90,7 +89,6 @@ export const defaultSettings = (): Settings => ({
   keptSessions: [],
   foldedProjects: [],
   foldedClosedSessions: [],
-  agentFolds: {},
   filesLayout: defaultLayout(),
   filesTabs: {},
   runCommands: [],
@@ -387,7 +385,6 @@ export function migrateSettings(raw: unknown): Settings {
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
     foldedProjects: sanitizeProjectIds(raw.foldedProjects, projects),
     foldedClosedSessions: sanitizeProjectIds(raw.foldedClosedSessions, projects),
-    agentFolds: parseFolds(raw.agentFolds),
     filesLayout: parseLayout(raw.filesLayout),
     filesTabs: sanitizeFilesTabs(raw.filesTabs, projects),
     runCommands: sanitizeRunOverrides(raw.runCommands).filter((entry) => projects.some((project) => project.id === entry.projectId)),

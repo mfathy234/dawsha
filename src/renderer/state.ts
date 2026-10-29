@@ -68,7 +68,7 @@ export interface PaneState {
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'background' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'files' | 'crew'
+export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'files' | 'crew'
 
 export interface ReplayRef {
   id: string

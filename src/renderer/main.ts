@@ -1,5 +1,4 @@
 import { installUsageSnapshot } from './usageSnapshot'
-import { installBackgroundAgents } from './backgroundAgents'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import './components/controls.css'
@@ -130,7 +129,6 @@ async function boot(): Promise<void> {
   installNeedsNotices()
   guardWindowDrops()
   installUsageSnapshot()
-  installBackgroundAgents()
   void installOps()
   installProcessActivity()
   installBuiltinCommands()

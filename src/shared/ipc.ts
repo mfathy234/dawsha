@@ -110,8 +110,6 @@ export const IPC = {
   updateOpenLink: 'update:open-link',
   usageGet: 'usage:get',
   workGet: 'work:get',
-  backgroundAgents: 'background-agents:list',
-  backgroundAgentsReveal: 'background-agents:reveal',
   usageSnapshot: 'usage:snapshot',
   agentAccounts: 'agents:accounts',
   knownLimits: 'agents:known-limits',

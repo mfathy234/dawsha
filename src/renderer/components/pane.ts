@@ -18,7 +18,6 @@ import {
   togglePinned,
   showPaneDiff,
   openChanges,
-  showView,
   paneHasRepo,
   paneSolution,
   findInPane,
@@ -28,9 +27,7 @@ import {
 } from '../actions'
 import { derivePanes, type PaneView } from '../derive'
 import { folderOfPane, paneById, store } from '../state'
-import { setAgentFilters } from '../backgroundAgents'
 import { openReviewInFiles } from '../files/filesActions'
-import { DEFAULT_BG_FILTERS } from '../../shared/backgroundAgents'
 import { shortcutFor } from '../commands/registry'
 import { clear, h, icon, iconButton, placeNearAnchor, leave } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
@@ -316,11 +313,7 @@ export class PaneComponent {
       onOpenChanges: () => void openChanges(this.paneId),
       bridgeInstalled,
       onEnableBridge: () => void enableBridge(),
-      onReviewFiles: () => this.reviewInFiles(),
-      onShowAgents: (sessionId) => {
-        setAgentFilters({ ...DEFAULT_BG_FILTERS, session: sessionId })
-        showView('crew')
-      }
+      onReviewFiles: () => this.reviewInFiles()
     })
     this.info.hidden = items.length === 0
     this.info.replaceChildren(...items)

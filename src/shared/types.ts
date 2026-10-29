@@ -146,8 +146,6 @@ export interface Settings {
   foldedProjects: string[]
   /** Ids of projects whose "Closed sessions" group is folded in the sidebar. */
   foldedClosedSessions: string[]
-  /** Explicit open/folded choices for background agent session groups. */
-  agentFolds: import('./agentFolds').FoldMap
   /** Folded Files sections, the inspector and the bottom panel. */
   filesLayout: import('./filesLayout').FilesLayout
   /** Open files of the Files view, by project id (at most FILES_TABS_MAX each). */

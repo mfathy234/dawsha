@@ -1,7 +1,6 @@
 import { formatChanges } from '../../shared/gitChanges'
 import { formatAge, formatCost, formatPercent, gaugeStage } from '../../shared/statusLine'
 import { formatTokens } from '../../shared/usage'
-import { modelLetter } from '../../shared/opsFeed'
 import { contextLevel } from '../../shared/contextWarning'
 import type { PaneInfo } from '../derive'
 import { h } from '../dom'
@@ -11,26 +10,15 @@ export interface StripHandlers {
   title: string
   now: number
   onReviewFiles(): void
-  onShowAgents(sessionId: string): void
   onOpenChanges(): void
   bridgeInstalled: boolean
   onEnableBridge(): void
 }
 
-function opsItems(info: PaneInfo, handlers: StripHandlers): HTMLElement[] {
+function opsItems(info: PaneInfo): HTMLElement[] {
   const ops = info.ops
   const items: HTMLElement[] = []
   if (ops?.plan) items.push(h('span', { class: 'info-plan', title: 'Plan progress' }, `▸ ${ops.plan.done}/${ops.plan.total}`))
-  if (ops && ops.running.length > 0) {
-    items.push(h('button', { class: 'link-quiet info-running', type: 'button', title: 'Show these agents in the Agents view', onClick: () => handlers.onShowAgents(ops.sessionId) }, `${ops.running.length} running`))
-    items.push(
-      h(
-        'span',
-        { class: 'info-letters', title: 'Models of the running agents' },
-        ...ops.running.map((family) => h('span', { class: `agent-letter fam-${family}` }, modelLetter(family)))
-      )
-    )
-  }
   return items
 }
 
@@ -99,7 +87,7 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
     const last = info.geminiTools[info.geminiTools.length - 1]
     items.push(h('span', { class: 'info-gemini-tool', title: `Last Gemini tool recorded at ${new Date(last.at).toLocaleTimeString()}` }, `tool ${last.name}`))
   }
-  const ops = opsItems(info, handlers)
+  const ops = opsItems(info)
   const files = info.changes?.files ?? 0
   const review =
     files > 0 && info.agent !== 'shell'
