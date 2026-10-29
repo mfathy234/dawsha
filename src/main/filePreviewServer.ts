@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { readFile, stat } from 'node:fs/promises'
 import { posix } from 'node:path'
 import { isHtmlPath } from '../shared/filePreview'
-import { resolveProjectFile } from './gitWorkspace'
+import { MAX_READ_BYTES, resolveProjectFile } from './gitWorkspace'
 
 export const PREVIEW_SCHEME = 'dawsha-preview'
 
@@ -41,7 +41,7 @@ interface Tree {
 const answer = (status: number, body: Buffer | string, type = 'text/plain; charset=utf-8'): PreviewResponse => ({
   status,
   body,
-  headers: { 'Content-Type': type, 'Content-Security-Policy': PREVIEW_CSP, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }
+  headers: { 'Content-Type': type, 'Content-Security-Policy': PREVIEW_CSP, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' }
 })
 
 const dirOf = (rel: string): string => {
@@ -63,6 +63,7 @@ export class PreviewServer {
   /** The URL to load a page from. The text, when given, is what the editor holds and is served instead of the saved file. */
   async register(folder: unknown, path: unknown, text: string | null): Promise<PreviewRegistration> {
     if (typeof folder !== 'string' || typeof path !== 'string' || !isHtmlPath(path)) return { ok: false, error: 'Not an HTML file.' }
+    if (typeof text === 'string' && Buffer.byteLength(text, 'utf8') > MAX_READ_BYTES) return { ok: false, error: 'File is too large to preview here.' }
     const known = await this.gate(folder)
     if (!known) return { ok: false, error: 'Not a project folder.' }
     const target = await resolveProjectFile(known, path)

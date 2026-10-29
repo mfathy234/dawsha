@@ -56,6 +56,16 @@ describe('registering a preview', () => {
     const b = new URL(await open(server, 'docs/b.html')).host
     expect(a).toBe(b)
   })
+  it('limits editor overrides to the file reader size in UTF-8 bytes', async () => {
+    put('page.html', 'saved')
+    const server = new PreviewServer(gate)
+    const boundary = 'x'.repeat(1024 * 1024)
+    const url = await open(server, 'page.html', boundary)
+    expect(text((await server.serve(url)).body)).toBe(boundary)
+    expect(await server.register(root, 'page.html', boundary + 'x')).toMatchObject({ ok: false })
+    expect(await server.register(root, 'page.html', '€'.repeat(400_000))).toMatchObject({ ok: false })
+    expect(text((await server.serve(url)).body)).toBe(boundary)
+  })
 })
 
 describe('serving a preview', () => {
@@ -91,7 +101,7 @@ describe('serving a preview', () => {
     const svg = await server.serve(`dawsha-preview://${host}/img/logo.svg`)
     expect([svg.status, svg.headers['Content-Type']]).toEqual([200, 'image/svg+xml'])
     expect((await server.serve(`dawsha-preview://${host}/app.js`)).headers['Content-Type']).toBe('text/javascript; charset=utf-8')
-    expect((await server.serve(`dawsha-preview://${host}/style.css`)).headers['Access-Control-Allow-Origin']).toBe('*')
+    expect(css.headers['Access-Control-Allow-Origin']).toBeUndefined()
   })
   it('refuses traversal in every spelling', async () => {
     put('docs/page.html', 'x')
