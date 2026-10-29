@@ -24,6 +24,27 @@ describe('classifyTool', () => {
   })
 })
 
+describe('edit text kept for exact blame', () => {
+  const claude = (name: string, input: Record<string, unknown>): string =>
+    JSON.stringify({ type: 'assistant', timestamp: '2026-10-29T10:00:00Z', message: { content: [{ type: 'tool_use', id: 't1', name, input }] } })
+  it('keeps what a Claude Edit, MultiEdit and Write wrote', () => {
+    const edit = parseClaudeTimeline(claude('Edit', { file_path: 'a.ts', old_string: 'x', new_string: 'y\nz' })).find((e) => e.kind === 'edit')
+    expect(edit?.change).toEqual({ pieces: [{ text: 'y\nz' }] })
+    const multi = parseClaudeTimeline(claude('MultiEdit', { file_path: 'a.ts', edits: [{ old_string: 'a', new_string: 'b' }, { old_string: 'c', new_string: 'd' }] })).find((e) => e.kind === 'edit')
+    expect(multi?.change?.pieces).toHaveLength(2)
+    const write = parseClaudeTimeline(claude('Write', { file_path: 'a.ts', content: 'one\ntwo' })).find((e) => e.kind === 'edit')
+    expect(write?.change).toEqual({ pieces: [{ text: 'one\ntwo' }], whole: true })
+  })
+  it('keeps the hunks of a Codex apply_patch, one change per file', () => {
+    const patch = '*** Begin Patch\n*** Update File: src/a.ts\n@@\n ctx\n-old\n+new\n*** Add File: src/b.ts\n+x\n*** End Patch'
+    const line = JSON.stringify({ timestamp: '2026-10-29T10:00:00Z', type: 'response_item', payload: { type: 'custom_tool_call', name: 'apply_patch', call_id: 'c1', input: patch } })
+    const edits = parseCodexTimeline(line).filter((e) => e.kind === 'edit')
+    expect(edits.map((e) => e.path)).toEqual(['src/a.ts', 'src/b.ts'])
+    expect(edits[0].change).toEqual({ pieces: [{ text: 'new', before: 'ctx', after: '' }] })
+    expect(edits[1].change).toEqual({ pieces: [{ text: 'x' }], whole: true })
+  })
+})
+
 describe('parsePatch and lineCount', () => {
   it('counts added and removed lines per file', () => {
     const patch = '*** Begin Patch\n*** Update File: src/a.ts\n@@\n-old\n+new\n+more\n*** Add File: src/b.ts\n+x\n*** End Patch'
