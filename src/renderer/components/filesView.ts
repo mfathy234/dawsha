@@ -45,6 +45,7 @@ import { confirmDialog } from './dialogs'
 import { toast } from './toast'
 import { toggleQuickOpen } from './quickOpen'
 import { RunCommandsPanel } from './runCommandsPanel'
+import { pageHeader } from './pageHeader'
 import './filesView.css'
 
 const TOUCH_REFRESH_MS = 8000
@@ -187,7 +188,7 @@ export class FilesViewComponent {
 
   constructor() {
     this.stage.append(this.empty, this.preview.el)
-    this.el.append(this.explorer.el, h('div', { class: 'files-main' }, this.tabs, this.bar.el, this.conflict, this.stage, this.panel.el, this.status), this.inspector.el)
+    this.el.append(pageHeader({ title: 'Files' }), this.explorer.el, h('div', { class: 'files-main' }, this.tabs, this.bar.el, this.conflict, this.stage, this.panel.el, this.status), this.inspector.el)
     this.el.addEventListener('keydown', (event) => this.onKey(event))
     this.tabs.addEventListener('keydown', (event) => this.onTabKey(event))
     api.onFilesChanged((key, paths) => this.onDiskChange(key, paths))

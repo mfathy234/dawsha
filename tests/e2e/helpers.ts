@@ -245,14 +245,15 @@ export function runCli(sandbox: Sandbox, args: string[], cwd: string = sandbox.r
   })
 }
 
-export type SettingsSectionId = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
+export type SettingsSectionId = 'general' | 'appearance' | 'notifications' | 'agents' | 'import' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
 
 export async function openSettings(page: Page, section: SettingsSectionId = 'general'): Promise<void> {
   const button = page.locator('#settings-button')
+  const tab = section === 'highlights' ? 'notifications' : section === 'changelog' ? 'about' : section
   if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click()
   await expect(page.locator('.settings-view')).toBeVisible()
-  await page.locator(`#settings-tab-${section}`).click()
-  await expect(page.locator(`#settings-tab-${section}`)).toHaveAttribute('aria-selected', 'true')
+  await page.locator(`#settings-tab-${tab}`).click()
+  await expect(page.locator(`#settings-tab-${tab}`)).toHaveAttribute('aria-selected', 'true')
 }
 
 export async function closeSettings(page: Page): Promise<void> {

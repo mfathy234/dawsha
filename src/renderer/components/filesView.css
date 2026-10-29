@@ -4,9 +4,11 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 270px;
+  grid-template-rows: auto minmax(0, 1fr);
   background: var(--canvas);
   overflow: hidden;
 }
+.files-view > .page-header { grid-column: 1 / -1; }
 .files-view[hidden] { display: none; }
 .files-view.no-inspector { grid-template-columns: 280px minmax(0, 1fr); }
 .files-view.no-inspector .files-side { display: none; }
@@ -170,6 +172,8 @@
 .files-review-foot .btn, .files-review-steps .btn { border-color: transparent; background: var(--hover); color: var(--text); height: 28px; }
 .files-review-foot .btn:hover:not(:disabled), .files-review-steps .btn:hover:not(:disabled) { background: var(--press); }
 .files-review-foot .btn.primary { background: var(--accent); color: var(--on-accent, #06130d); font-weight: 600; }
+.files-review-foot #files-review-commit { background: var(--accent); color: var(--on-accent); font-weight: var(--w-semi); }
+.files-review-foot #files-review-discard { margin-inline-start: var(--sp-3); padding-inline-start: var(--sp-3); border-inline-start: 1px solid var(--line-strong); color: var(--danger); }
 .files-review-foot .btn.danger { margin-inline-start: auto; border-color: color-mix(in srgb, var(--danger) 55%, transparent); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--danger); }
 .files-review-foot .btn.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); }
 .files-review-foot .btn:disabled, .files-review-steps .btn:disabled { opacity: 0.5; }

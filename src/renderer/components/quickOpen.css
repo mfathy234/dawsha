@@ -3,6 +3,7 @@
   width: min(900px, calc(100vw - 32px)); height: min(520px, calc(100vh - 120px)); display: flex; flex-direction: column; overflow: hidden;
   background: var(--overlay); border-radius: var(--r-pop); box-shadow: var(--shadow-pop);
 }
+.qo-head > .select-menu { flex: 0 1 180px; width: auto; }
 .qo-head { display: flex; align-items: center; gap: var(--s-3); flex: none; height: 54px; padding: 0 var(--s-3) 0 var(--s-5); color: var(--muted); }
 .qo-input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--fs-title); }
 .qo-input:focus-visible { outline: none; }

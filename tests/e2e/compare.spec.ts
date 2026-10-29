@@ -47,7 +47,7 @@ function seedProjects(sandbox: Sandbox, projects: { id: string; name: string; fo
 }
 
 async function openDialog(page: Page): Promise<ReturnType<Page['getByRole']>> {
-  await page.getByRole('button', { name: 'Choose agent', exact: true }).click()
+  await page.locator('#new-session-agent').click()
   await page.getByRole('menuitem', { name: /Ask two agents/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Ask two agents' })
   await expect(dialog).toBeVisible()

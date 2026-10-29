@@ -17,7 +17,8 @@ import {
   setShowRecap,
   setSidebarCollapsed,
   showSettingsSection,
-  showView
+  showView,
+  toggleThemePicker
 } from '../actions'
 import { AGENTS, AGENT_NAMES, FULL_ACCESS_FLAGS } from '../../shared/agents'
 import {
@@ -51,17 +52,18 @@ import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
+import { pageHeader } from './pageHeader'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
-  { id: 'notifications', label: 'Notifications & session info', lede: 'What Dawsha shows and tells you while sessions run.' },
+  { id: 'appearance', label: 'Appearance', lede: 'Choose a theme and terminal background.' },
+  { id: 'notifications', label: 'Notifications', lede: 'What Dawsha shows and tells you while sessions run.' },
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
+  { id: 'import', label: 'Import', lede: 'Bring settings from another Dawsha installation.' },
+  ...(isRemoteControlBuild ? [{ id: 'remote' as const, label: 'Remote access', lede: 'Reach this Dawsha installation from your own devices.' }] : []),
   { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
-  { id: 'highlights', label: 'Highlights', lede: 'Tint terminal lines that contain the words you care about.' },
-  { id: 'changelog', label: 'Changelog', lede: 'Every released version, newest first.' },
   { id: 'about', label: 'About', lede: 'Version, links and where your data lives.' }
 ]
-if (isRemoteControlBuild) SECTIONS.push({ id: 'remote', label: 'Remote Access', lede: 'Reach this Dawsha installation from your own devices.' })
 
 const visibleSections = (_state: AppState): typeof SECTIONS => SECTIONS
 
@@ -106,6 +108,7 @@ export class SettingsViewComponent {
   private readonly title = h('h2', { class: 'settings-section-title' })
   private readonly lede = h('p', { class: 'lede' })
   private signature = ''
+  private importPath = ''
   private navSection: string | null = null
   private shortcutDraft: string | null = null
   private shortcutError: string | null = null
@@ -147,7 +150,7 @@ export class SettingsViewComponent {
       openUpdateLink(link.href)
     })
     this.el.append(
-      h('div', { class: 'settings-head' }, h('h1', {}, 'Settings'), h('p', { class: 'lede' }, 'Preferences for Dawsha. Theme and background image stay in the Theme menu.')),
+  pageHeader({ title: 'Settings', subtitle: 'Preferences for Dawsha.' }),
       h('div', { class: 'settings-body' }, h('aside', { class: 'settings-rail' }, this.search, this.nav), h('div', { class: 'settings-content' }, this.title, this.lede, this.panel))
     )
   }
@@ -201,7 +204,8 @@ export class SettingsViewComponent {
   private render(state: AppState): void {
     const focusedId = (document.activeElement as HTMLElement | null)?.id
     const sections = visibleSections(state)
-    const section = sections.find((s) => s.id === state.settingsSection) ?? sections[0]
+    const route = state.settingsSection === 'highlights' ? 'notifications' : state.settingsSection === 'changelog' ? 'about' : state.settingsSection
+    const section = sections.find((s) => s.id === route) ?? sections[0]
     const query = this.search.value.trim().toLocaleLowerCase()
     const filteredSections = query ? sections.filter((item) => `${item.label} ${item.lede}`.toLocaleLowerCase().includes(query)) : sections
     const navKey = `${section.id}|${sections.length}|${query}`
@@ -212,6 +216,8 @@ export class SettingsViewComponent {
         : [h('p', { class: 'settings-no-match', role: 'status' }, 'No matching settings sections')]))
     }
     this.title.replaceChildren(section.label)
+    this.title.hidden = section.id === 'remote'
+    this.lede.hidden = section.id === 'remote'
     if (section.id === 'remote') {
       this.title.append(h('span', { id: 'remote-settings-beta', class: 'beta-badge' }, 'Beta'))
     }
@@ -252,8 +258,18 @@ export class SettingsViewComponent {
     switch (section) {
       case 'general':
         return this.general(state)
+      case 'appearance':
+        return [h('div', { class: 'settings-appearance' }, h('p', {}, 'Theme and background image'), h('button', { class: 'btn', type: 'button', id: 'settings-theme-picker', onClick: () => toggleThemePicker() }, 'Choose theme'))]
+      case 'import':
+        return [h('div', { class: 'settings-import' },
+          h('p', {}, 'Choose a settings file to preview its projects and preferences before importing.'),
+          h('div', { class: 'set-inline' },
+            h('input', { class: 'text-input settings-import-path', id: 'settings-import-path', type: 'text', readonly: true, value: this.importPath, placeholder: 'No file selected', 'aria-label': 'Settings file' }),
+            h('button', { class: 'btn', type: 'button', id: 'import-settings', onClick: () => void importSettingsFromUi((path) => { this.importPath = path; this.refresh() }) }, 'Browse'),
+            h('button', { class: 'btn', type: 'button', id: 'export-settings', onClick: () => void exportSettingsFromUi() }, 'Export settings')
+          ))]
       case 'notifications':
-        return this.notifications(state)
+        return [...this.notifications(state), ...this.highlights(state)]
       case 'agents':
         return this.agents(state)
       case 'updates':
@@ -263,9 +279,9 @@ export class SettingsViewComponent {
       case 'remote':
         return this.remoteAccessBody()
       case 'changelog':
-        return this.changelog(state)
+        return [...this.about(state), ...this.changelog(state)]
       default:
-        return this.about(state)
+        return [...this.about(state), ...this.changelog(state)]
     }
   }
 
@@ -389,14 +405,6 @@ export class SettingsViewComponent {
       ),
       h('h3', { class: 'set-subhead', id: 'recordings-heading' }, 'Recordings'),
       ...recordingRows(state, () => this.refresh()),
-      h('h3', { class: 'set-subhead', id: 'transfer-heading' }, 'Back up and move'),
-      row(
-        'Settings file',
-        h('div', { class: 'set-inline' },
-          h('button', { class: 'btn ghost small', type: 'button', id: 'export-settings', onClick: () => void exportSettingsFromUi() }, 'Export settings…'),
-          h('button', { class: 'btn ghost small', type: 'button', id: 'import-settings', onClick: () => void importSettingsFromUi() }, 'Import settings…')),
-        h('p', { class: 'hint' }, 'Save your projects, layouts, highlight rules and preferences to one file to move Dawsha to another PC. Remote Access, open sessions and usage history are never included.')
-      )
     ]
   }
 

@@ -19,6 +19,24 @@ const listeners = new Set<Listener>()
 let current: ThemeBundle = buildBundle({ id: 'grid-dark', image: { enabled: false, path: null, dim: 60, blur: 0 } })
 let imageVersion = 0
 
+function foundationTheme(theme: Theme): Theme {
+  if (theme.id === 'grid-dark') {
+    return {
+      ...theme,
+      app: { ...theme.app, background: '#090b0f', sidebar: '#0e1116', surface: '#14181f', raised: '#1b212a', overlay: '#232a35', well: '#0a0c10', border: '#343b48', text: '#e8ebf1', muted: '#aab3c3', accent: '#34d399', onAccent: '#04261b', busy: '#ffa54f', idle: '#8c96a8', exited: '#ff8080', danger: '#ff8080', onDanger: '#ffffff' },
+      term: { ...theme.term, background: '#0a0c10', foreground: '#d9dee8', cursor: '#34d399', cursorAccent: '#0a0c10', red: '#ff8f8f', green: '#4ade9f', yellow: '#f5b54a', blue: '#86bdff', white: '#d9dee8', brightBlack: '#8e98aa', brightRed: '#ff8f8f', brightGreen: '#4ade9f', brightYellow: '#f5b54a', brightBlue: '#86bdff' }
+    }
+  }
+  if (theme.id === 'dawsha-daylight' || theme.id === 'dawsha-daylight-dark') {
+    return {
+      ...theme,
+      app: { ...theme.app, background: '#dde2e9', sidebar: '#eaedf2', surface: '#f8f9fb', raised: '#edf0f4', overlay: '#fdfdfe', well: '#f1f4f8', border: '#aeb8c5', text: '#141a22', muted: '#414c5c', accent: '#0b7a52', onAccent: '#ffffff', busy: '#8c4300', idle: '#4a5870', exited: '#a8231b', danger: '#a8231b', onDanger: '#ffffff' },
+      term: theme.id === 'dawsha-daylight' ? { ...theme.term, background: '#f1f4f8', foreground: '#1a212b', cursor: '#0b7a52', cursorAccent: '#f1f4f8', red: '#a8231b', green: '#0a6a40', yellow: '#8a5600', blue: '#1a5cb0', white: '#1a212b', brightBlack: '#566377', brightRed: '#a8231b', brightGreen: '#0a6a40', brightYellow: '#8a5600', brightBlue: '#1a5cb0' } : theme.term
+    }
+  }
+  return theme
+}
+
 const VARIABLES: Record<string, Exclude<keyof Theme['app'], 'faint' | 'done'>> = {
   '--bg': 'background',
   '--canvas': 'background',
@@ -43,7 +61,7 @@ const VARIABLES: Record<string, Exclude<keyof Theme['app'], 'faint' | 'done'>> =
 }
 
 function buildBundle(settings: ThemeSettings): ThemeBundle {
-  const theme = findTheme(settings.id)
+  const theme = foundationTheme(findTheme(settings.id))
   const { image } = settings
   const imageActive = image.enabled && image.path !== null
   const background = imageActive ? withAlpha(theme.term.background, image.dim / 100) : theme.term.background
@@ -74,6 +92,7 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
     '--text-3': text2,
     '--line': `color-mix(in srgb, ${app.border} ${light ? '75%' : '82%'}, transparent)`,
     '--line-strong': `color-mix(in srgb, ${app.border} ${light ? '100%' : '100%'}, transparent)`,
+    '--focus': light ? app.accent : `color-mix(in srgb, ${app.accent} 72%, white)`,
     '--st-working': light ? '#1a5cb0' : '#72b4ff',
     '--st-needs': needs.text,
     '--st-done': app.done ?? app.accent,
@@ -87,7 +106,6 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
     '--ag-gemini-bg': light ? '#6544d4' : '#a78bfa',
     '--ag-gemini-fg': light ? '#ffffff' : '#180f33',
     '--accent-ink': light ? app.accent : `color-mix(in srgb, ${app.accent} 84%, white)`,
-    '--focus': light ? app.accent : `color-mix(in srgb, ${app.accent} 72%, white)`,
     '--danger-fill': app.danger,
     '--on-danger-fill': app.onDanger,
     '--scrim': light ? 'rgb(21 27 35 / .38)' : 'rgb(5 7 10 / .62)',

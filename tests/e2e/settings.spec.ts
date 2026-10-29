@@ -51,8 +51,10 @@ test('Settings opens from the top bar and with Ctrl+comma, and every section ren
 
     const expected: Record<SettingsSectionId, string> = {
       general: '#palette-shortcut',
+      appearance: '#settings-theme-picker',
       notifications: '#bridge-toggle',
       agents: '#settings-full-access-claude',
+      import: '#import-settings',
       updates: '#check-now',
       highlights: '#highlights-toggle',
       changelog: '#changelog-list',
@@ -69,10 +71,12 @@ test('Settings opens from the top bar and with Ctrl+comma, and every section ren
     await openSettings(page, 'general')
     await page.locator('#settings-tab-general').focus()
     await page.keyboard.press('ArrowDown')
+    await expect(page.locator('#settings-tab-appearance')).toHaveAttribute('aria-selected', 'true')
+    await page.keyboard.press('ArrowDown')
     await expect(page.locator('#settings-tab-notifications')).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('#settings-tab-notifications')).toBeFocused()
     await page.keyboard.press('End')
-    const lastTab = '#settings-tab-remote'
+    const lastTab = '#settings-tab-about'
     await expect(page.locator(lastTab)).toHaveAttribute('aria-selected', 'true')
   } finally {
     await closeApp(app)
@@ -82,7 +86,8 @@ test('Settings opens from the top bar and with Ctrl+comma, and every section ren
 test('the Theme menu keeps only the theme and the background image', async () => {
   const { app, page } = await launchApp(createSandbox())
   try {
-    await page.getByRole('button', { name: 'Theme' }).click()
+    await openSettings(page, 'appearance')
+    await page.locator('#settings-theme-picker').click()
     await expect(page.locator('.theme-picker')).toBeVisible()
     await expect(page.locator('#image-enabled')).toBeVisible()
     for (const id of ['#bridge-toggle', '#notify-toggle', '#sound-toggle', '#auto-update-toggle', '#check-now', '#whats-new', '#getting-started']) {
@@ -228,7 +233,7 @@ test('the changelog lists every version newest first and the What is new dialog 
     await dialog.getByRole('button', { name: 'Full changelog' }).click()
     await expect(page.locator('.whats-new')).toHaveCount(0)
     await expect(page.locator('.settings-view')).toBeVisible()
-    await expect(page.locator('#settings-tab-changelog')).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('#settings-tab-about')).toHaveAttribute('aria-selected', 'true')
   } finally {
     await closeApp(app)
   }

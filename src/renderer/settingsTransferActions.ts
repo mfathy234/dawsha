@@ -43,10 +43,11 @@ async function applyPlan(plan: ImportPlan): Promise<void> {
   toast(importToastText(plan.summary), 'info')
 }
 
-export async function importSettingsFromUi(): Promise<void> {
+export async function importSettingsFromUi(onSelectedPath?: (path: string) => void): Promise<void> {
   try {
     const read = await api.readSettingsImport()
     if (read.status === 'cancelled') return
+    if (read.path) onSelectedPath?.(read.path)
     if (read.status === 'error') {
       toast(read.message)
       return

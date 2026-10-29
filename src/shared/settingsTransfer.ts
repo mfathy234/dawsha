@@ -432,6 +432,6 @@ export type SettingsExportResult =
   | { status: 'error'; message: string }
 
 export type SettingsImportRead =
-  | { status: 'ok'; transfer: ParsedTransfer }
+  | { status: 'ok'; path: string; transfer: ParsedTransfer }
   | { status: 'cancelled' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; path?: string }

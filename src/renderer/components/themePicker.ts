@@ -1,7 +1,7 @@
 import { setImage, setTheme, toggleThemePicker } from '../actions'
 import { api } from '../api'
 import { THEMES, findTheme, hasLightTerminal } from '../../shared/themes'
-import { h, leave } from '../dom'
+import { h, leave, placeNearAnchor } from '../dom'
 import type { AppState } from '../state'
 import { popupDismissButton } from './popupDismiss'
 
@@ -14,6 +14,10 @@ export class ThemePickerComponent {
 
   constructor(private readonly anchor: () => HTMLElement) {}
 
+  private getAnchor(): HTMLElement {
+    return document.querySelector<HTMLElement>('#settings-theme-picker') ?? this.anchor()
+  }
+
   update(state: AppState): void {
     if (state.themePickerOpen && !this.root) this.open()
     if (!state.themePickerOpen && this.root) this.close()
@@ -21,12 +25,10 @@ export class ThemePickerComponent {
   }
 
   private open(): void {
-    const rect = this.anchor().getBoundingClientRect()
     this.root = h('div', {
       class: 'popover theme-picker',
       role: 'dialog',
-      'aria-label': 'Theme',
-      style: `right:${Math.round(window.innerWidth - rect.right)}px;top:${Math.round(rect.bottom + 2)}px`
+      'aria-label': 'Theme'
     })
     this.root.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
@@ -42,14 +44,15 @@ export class ThemePickerComponent {
   private readonly outside = (event: Event): void => {
     const target = event.target as Node
     if ((target as HTMLElement).closest?.('.overlay')) return
-    if (this.root && !this.root.contains(target) && !this.anchor().contains(target)) toggleThemePicker(false)
+    const anchor = this.getAnchor()
+    if (this.root && !this.root.contains(target) && !anchor.contains(target)) toggleThemePicker(false)
   }
 
   private close(): void {
     document.removeEventListener('pointerdown', this.outside, true)
     leave(this.root)
     this.root = null
-    this.anchor().focus()
+    this.getAnchor().focus()
   }
 
   private render(state: AppState): void {
@@ -66,6 +69,7 @@ export class ThemePickerComponent {
       this.imageSection(state)
     ]
     this.root.replaceChildren(...children.filter((c): c is HTMLElement => c !== null))
+    placeNearAnchor(this.root, this.getAnchor(), 6)
     if (focusedId) document.getElementById(focusedId)?.focus()
     else this.root.querySelector<HTMLElement>('[aria-checked="true"]')?.focus()
   }

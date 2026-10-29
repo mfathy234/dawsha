@@ -13,6 +13,7 @@ import type { AppState } from '../state'
 import { currentBundle, onThemeChange } from '../themeManager'
 import { toast } from './toast'
 import { ReplaySearchPanel } from './replaySearchPanel'
+import { pageHeader } from './pageHeader'
 
 const MAX_SCALE = 1.6
 const SEEK_STEP_SECONDS = 5
@@ -49,8 +50,9 @@ function whenLabel(meta: RecordingSummary): string {
 
 export class ReplayViewComponent {
   readonly el = h('main', { class: 'replay-view', 'aria-label': 'Replay' })
-  private readonly title = h('h1', { class: 'replay-title' })
-  private readonly subtitle = h('span', { class: 'replay-sub' })
+  private readonly pageHead = pageHeader({ title: 'Replay', subtitle: '' })
+  private readonly title = this.pageHead.querySelector('h1') as HTMLHeadingElement
+  private readonly subtitle = this.pageHead.querySelector('p') as HTMLParagraphElement
   private readonly stageTime = h('span', { class: 'replay-stage-time mono' })
   private readonly stageNote = h('span', { class: 'replay-stage-note' })
   private readonly limitNote = h('span', { class: 'replay-limit', role: 'status', hidden: true }, 'Recording stopped at size limit')
@@ -310,12 +312,12 @@ export class ReplayViewComponent {
 
   private buildLayout(): void {
     const back = h('button', { class: 'btn ghost', type: 'button', id: 'replay-back', onClick: () => closeReplay() }, '← Back')
-    const head = h('header', { class: 'replay-head' },
+    const head = this.pageHead
+    head.classList.add('replay-head')
+    head.append(
       back,
       h('span', { class: 'replay-divider' }),
       h('span', { class: 'replay-badge' }, 'Replay'),
-      this.title,
-      this.subtitle,
       h('span', { class: 'spacer' }),
       h('span', { class: 'replay-readonly' }, 'Read only. Nothing here changes your files.')
     )

@@ -51,9 +51,9 @@ export async function readSettingsImport(window: BrowserWindow | null): Promise<
     const path = await chooseOpenPath(window)
     if (!path) return { status: 'cancelled' }
     const info = await stat(path)
-    if (info.size > TRANSFER_MAX_BYTES) return { status: 'error', message: 'This file is too large to be a Dawsha settings export (over 2 MB).' }
+    if (info.size > TRANSFER_MAX_BYTES) return { status: 'error', path, message: 'This file is too large to be a Dawsha settings export (over 2 MB).' }
     const parsed = parseTransfer(await readFile(path, 'utf8'), info.size)
-    return parsed.ok ? { status: 'ok', transfer: parsed.transfer } : { status: 'error', message: parsed.error }
+    return parsed.ok ? { status: 'ok', path, transfer: parsed.transfer } : { status: 'error', path, message: parsed.error }
   } catch (error) {
     return { status: 'error', message: error instanceof Error ? error.message : 'Could not read the settings file.' }
   }

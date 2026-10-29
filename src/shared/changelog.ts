@@ -13,7 +13,7 @@ export interface ChangelogEntry {
 
 const ENTRY_HEADING = /^##\s+\[([^\]]+)\](?:\s+-\s+(\S+))?\s*$/
 const SECTION_HEADING = /^###\s+(.+?)\s*$/
-const BULLET = /^[-*]\s+(.*)$/
+const BULLET = /^\s*[-*]\s+(.*)$/
 
 export function parseChangelog(text: string): ChangelogEntry[] {
   const entries: ChangelogEntry[] = []

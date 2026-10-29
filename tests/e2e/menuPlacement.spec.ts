@@ -48,7 +48,7 @@ test('the main menus and popovers open aligned to their trigger and inside the 1
 
     const chevron = page.locator('#new-session-agent')
     await chevron.click()
-    await expectPlaced(page, page.locator('.topbar .split'), 'New session menu')
+    await expectPlaced(page, page.locator('#new-session'), 'New session menu')
 
     const more = page.locator('#more-button')
     await more.click()

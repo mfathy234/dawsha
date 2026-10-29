@@ -14,6 +14,7 @@ import { selectMenu } from './selectMenu'
 import { formatWorkSummary } from '../../shared/workSummary'
 import { toast } from './toast'
 import { countLine } from './countLine'
+import { pageHeader } from './pageHeader'
 import './workView.css'
 
 type WorkMode = 'sessions' | 'tickets'
@@ -143,8 +144,7 @@ export class WorkViewComponent {
 
   private renderContent(): void {
     this.el.setAttribute('aria-busy', String(this.loading))
-    this.el.replaceChildren(h('div', { class: 'usage-head' },
-      h('h1', {}, 'Work'),
+    this.el.replaceChildren(pageHeader({ title: 'Work', actions: [
       h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Work period' }, ...PERIODS.map(p => h('button', {
         class: `rp-tab${this.period === p.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.period === p.value),
         onClick: () => this.changePeriod(p.value)
@@ -158,7 +158,8 @@ export class WorkViewComponent {
         onClick: () => { this.mode = m.value; this.render() }
       }, m.label))), h('span', { class: 'spacer' }),
       h('button', { class: 'btn ghost', type: 'button', disabled: this.loading || !this.report, onClick: () => void this.copySummary() }, 'Copy summary'),
-      h('button', { class: 'btn ghost', type: 'button', disabled: this.loading, onClick: () => void this.load() }, 'Refresh')))
+      h('button', { class: 'btn ghost', type: 'button', disabled: this.loading, onClick: () => void this.load() }, 'Refresh')
+    ] }))
     this.el.append(this.filters())
     if (this.error) this.el.append(h('p', { class: 'field-error', role: 'alert' }, this.error))
     const source = this.report
