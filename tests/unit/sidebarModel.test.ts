@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hideEmptyProjects, isFolded, monogram, projectSummary, railBadge, sessionAge, sessionStatusLine, sortProjects, waitingOnYou } from '../../src/shared/sidebarModel'
+import { hideEmptyProjects, isFolded, monogram, projectSummary, railBadge, sessionAge, sessionStatusLine, sidebarZones, sortProjects, waitingOnYou } from '../../src/shared/sidebarModel'
 import type { Project } from '../../src/shared/types'
 
 const project = (id: string, name: string, pinned = false): Project => ({ id, name, folder: `/x/${id}`, defaultAgent: 'claude', ...(pinned ? { pinned: true } : {}) })
@@ -49,7 +49,10 @@ describe('rows', () => {
   it('words the project summary', () => {
     expect(projectSummary(['working', 'idle', 'exited'])).toEqual({ text: '2 live', tone: 'live' })
     expect(projectSummary(['working', 'needs'])).toEqual({ text: 'needs you', tone: 'needs' })
+    expect(projectSummary(['idle'])).toEqual({ text: '1 idle', tone: 'idle' })
+    expect(projectSummary(['done', 'idle', 'exited'])).toEqual({ text: '2 idle', tone: 'idle' })
     expect(projectSummary([])).toEqual({ text: '', tone: 'none' })
+    expect(projectSummary(['exited'])).toEqual({ text: '', tone: 'none' })
   })
   it('words the session status line', () => {
     expect(sessionStatusLine('working', 3)).toBe('Working · 3 agents')
@@ -75,5 +78,45 @@ describe('rows', () => {
   it('unfolds everything while filtering', () => {
     expect(isFolded(['a'], 'a', false)).toBe(true)
     expect(isFolded(['a'], 'a', true)).toBe(false)
+  })
+})
+
+describe('sidebarZones', () => {
+  const entry = (id: string, name: string, views: number, pinned = false) => ({ project: project(id, name, pinned), views: new Array<unknown>(views).fill(0) })
+  const entries = [entry('p', 'Pinned quiet', 0, true), entry('a', 'Alpha', 0), entry('b', 'Beta', 2), entry('c', 'Gamma', 1, true), entry('d', 'Delta', 0, true), entry('e', 'Echo', 1)]
+  const ids = (list: readonly { project: Project }[]) => list.map((item) => item.project.id)
+
+  it('puts open sessions in Active, pinned empties next, the rest quiet', () => {
+    const zones = sidebarZones(entries, false)
+    expect(zones.grouped).toBe(true)
+    expect(ids(zones.active)).toEqual(['b', 'c', 'e'])
+    expect(ids(zones.pinned)).toEqual(['p', 'd'])
+    expect(ids(zones.quiet)).toEqual(['a'])
+  })
+  it('keeps the sort inside each zone', () => {
+    const projects = [project('z', 'Zed'), project('m', 'Mid', true), project('a', 'Ann'), project('q', 'Quill', true), project('b', 'Bob')]
+    const live = new Set(['z', 'a', 'q'])
+    const sorted = sortProjects(projects, 'name', {}).map((item) => ({ project: item, views: live.has(item.id) ? [1] : [] }))
+    const zones = sidebarZones(sorted, false)
+    expect(ids(zones.active)).toEqual(['q', 'a', 'z'])
+    expect(ids(zones.pinned)).toEqual(['m'])
+    expect(ids(zones.quiet)).toEqual(['b'])
+    const recent = sortProjects(projects, 'recent', { b: 5, a: 9, z: 1 }).map((item) => ({ project: item, views: live.has(item.id) ? [1] : [] }))
+    expect(ids(sidebarZones(recent, false).active)).toEqual(['q', 'a', 'z'])
+  })
+  it('moves a project to Active as soon as it has a live session', () => {
+    const quiet = [entry('a', 'Alpha', 0), entry('b', 'Beta', 0)]
+    expect(ids(sidebarZones(quiet, false).quiet)).toEqual(['a', 'b'])
+    const live = [entry('a', 'Alpha', 0), entry('b', 'Beta', 1)]
+    const zones = sidebarZones(live, false)
+    expect(ids(zones.active)).toEqual(['b'])
+    expect(ids(zones.quiet)).toEqual(['a'])
+  })
+  it('shows matches in one list while filtering', () => {
+    const zones = sidebarZones(entries, true)
+    expect(zones.grouped).toBe(false)
+    expect(ids(zones.active)).toEqual(['p', 'a', 'b', 'c', 'd', 'e'])
+    expect(zones.pinned).toEqual([])
+    expect(zones.quiet).toEqual([])
   })
 })

@@ -40,7 +40,7 @@ test('project rows show the branch, fold on click and remember it; + and the men
     await expect(page.locator('.pane')).toHaveCount(1)
     const row = smokeRow(page)
     await expect(row.locator('.proj-branch')).toHaveText('feat/sidebar')
-    await expect(row.locator('.proj-count')).toHaveText('1 live')
+    await expect(row.locator('.proj-count')).toHaveText('1 idle')
     await page.locator('.pane .pane-title').first().click()
     await page.mouse.move(700, 500)
     await expect(row.locator('.proj-acts')).toHaveCSS('opacity', '0')
@@ -213,6 +213,53 @@ test('the rail shows monograms and opens a flyout with the full session names', 
     await rail.screenshot({ path: join(SCREENS, 'sidebar-rail-flyout.png') })
     await page.keyboard.press('Escape')
     await expect(flyout).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('projects with sessions sit on cards, the rest in a quiet list, and session titles wrap to two lines', async () => {
+  const sandbox = createSandbox()
+  const base = readSettings(sandbox.userData).projects as { id: string; name: string; folder: string }[]
+  const extra = ['Alpha', 'Beta', 'Gamma'].map((name) => ({ id: name.toLowerCase(), name, folder: join(sandbox.root, name) }))
+  const kept = [0, 1, 2].map((i) => ({ projectId: 'smoke', agent: 'claude', sessionId: `00000000-0000-4000-8000-00000000020${i}`, title: `Earlier ${i}`, closedAt: Date.now() - (i + 1) * 60_000 }))
+  writeSettings(sandbox, { projects: [...base, ...extra.map((item, i) => (i === 0 ? { ...item, pinned: true } : item))], keptSessions: kept })
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await expect(page.locator('.side-sec-label').first()).toHaveText('All projects')
+    await expect(page.locator('.quiet-sec')).toHaveText('No sessions · 4')
+    await page.getByRole('button', { name: NEW_IN_SMOKE }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await expect(page.locator('.side-sec-label').first()).toHaveText('Active · 1')
+    await expect(page.locator('.proj-group.card')).toHaveCount(1)
+    await expect(page.locator('.proj-group.card .proj-name')).toHaveText('Smoke')
+    await expect(page.locator('.proj-group.zone-pinned .proj-name')).toHaveText('Alpha')
+    await expect(page.locator('.quiet-sec')).toHaveText('No sessions · 3')
+    const quiet = page.locator('.proj-group.zone-quiet .proj-row.quiet-row')
+    await expect(quiet.locator('.proj-name')).toHaveText(['Missing', 'Beta', 'Gamma'])
+    const rowBox = (await quiet.first().boundingBox())!
+    expect(rowBox.height).toBeLessThan(36)
+    await expect(page.locator('.proj-group.zone-quiet .sess-row')).toHaveCount(0)
+
+    await expect(page.getByRole('button', { name: '3 closed' })).toBeVisible()
+    await expect(page.locator('.proj-count')).toHaveText('1 idle')
+    await quiet.first().locator('.quiet-toggle').click()
+    await expect(page.locator('.proj-group.zone-quiet').first().locator('.proj-toggle')).toHaveAttribute('aria-expanded', 'true')
+
+    const row = page.locator('.kept-session-row:not(.closed) .sess-row').first()
+    await row.dblclick()
+    const longName = 'Reworking the projects sidebar so every long session name stays readable on two lines'
+    await page.getByRole('textbox', { name: /^Rename/ }).fill(longName)
+    await page.keyboard.press('Enter')
+    const name = page.locator('.kept-session-row:not(.closed) .sess-name').first()
+    await expect(name).toHaveText(longName)
+    await expect(name).toHaveCSS('-webkit-line-clamp', '2')
+    const nameBox = (await name.boundingBox())!
+    const lineHeight = parseFloat(await name.evaluate((node) => getComputedStyle(node).lineHeight))
+    expect(nameBox.height).toBeGreaterThan(lineHeight * 1.5)
+    expect(nameBox.height).toBeLessThan(lineHeight * 2.5)
+    await expect(page.locator('.kept-session-row:not(.closed) .sess-row').first()).toHaveAttribute('title', new RegExp(`^${longName}`))
+    await expect(page.locator('.kept-session-row:not(.closed) .sess-meta').first()).toHaveText(/^(Working|Idle|Done|Needs you).*(now|\d+m)$/)
   } finally {
     await closeApp(app)
   }

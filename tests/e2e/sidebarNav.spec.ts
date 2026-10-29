@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { bufferText, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox } from './helpers'
+import { bufferText, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox, openQuietProject } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -229,6 +229,7 @@ test('F2 and double click rename closed and open sessions; Enter and blur save, 
   let session = await launchApp(sandbox)
   try {
     const { page } = session
+    await openQuietProject(page)
     const names = page.locator('.kept-session-row.closed .sess-name')
     await expect(names).toHaveText(['Beta', 'Alpha'])
 
@@ -304,6 +305,7 @@ test('a session row keeps time and cost on their own line and the close button s
   writeFileSync(join(sandbox.userData, 'usage-history.json'), JSON.stringify({ v: 1, limits: [], costs: { [KEPT_ID(0)]: { at: now - 1000, usd: 8.69, cwd: sandbox.projectFolder } } }), 'utf8')
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const row = page.locator('.kept-session-row.closed')
     const cost = row.locator('.sess-cost')
     await expect(cost).toHaveText('$8.69', { timeout: 20_000 })
@@ -337,6 +339,7 @@ test('Reopen all brings a day of closed sessions back, asking first when it is a
   })
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const today = page.getByRole('button', { name: 'Reopen 3 sessions from Today in Smoke' })
     const older = page.getByRole('button', { name: 'Reopen 2 sessions from Yesterday in Smoke' })
     await expect(today).toHaveCount(1)
@@ -364,6 +367,7 @@ test('Reopen all brings a day of closed sessions back, asking first when it is a
   const second = await launchApp(crowd)
   try {
     const { page } = second
+    await openQuietProject(page)
     await page.getByRole('button', { name: 'Reopen 5 sessions from Today in Smoke' }).click()
     const dialog = page.getByRole('alertdialog')
     await expect(dialog).toContainText('Reopen 5 sessions in Smoke?')
@@ -390,6 +394,7 @@ test('arrow keys walk the sidebar list, fold projects and remove closed sessions
   writeSettings(sandbox, { keptSessions: kept })
   const { app, page } = await launchApp(sandbox)
   try {
+    await openQuietProject(page)
     const key = (i: number): string => `c:claude:00000000-0000-4000-8000-00000000020${i}`
     await page.getByRole('button', { name: 'Filter projects and sessions' }).click()
     await page.keyboard.press('ArrowDown')
