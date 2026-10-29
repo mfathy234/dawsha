@@ -22,7 +22,6 @@
 - **A grid of real terminals.** 1 to 6+ panes laid out automatically, each a full terminal (xterm.js on `node-pty`) with tabs for more agent sessions or a shell. Maximize any pane, zoom text per project.
 - **Three agents, one workflow.** Pick a project and its default agent starts in that folder without a prompt. Switch agent per session with the split **New session** button (Claude / Codex / Gemini) or Tab in the quick-pick.
 - **Arabic in every session.** Replies and prompts in Arabic show joined letters in right-to-left order in Claude Code, Codex, Gemini and shell sessions and in Replay, with numbers and English words kept in place. Copy, transcripts and find use normal reading order, and the terminal text itself is never changed. A bundled Arabic font and right-to-left text boxes make Arabic look the same on every computer.
-- **Voice dictation.** Press the mic in a pane header or **Ctrl+Shift+Space**, speak Arabic or English, and press it again; the text is typed into the session or the text box you were in, without sending it. Speech becomes text on your computer with Whisper large-v3-turbo (a one-time download of about 570 MB, then offline), with a live microphone level and a microphone picker in Settings.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Activity per pane.** Native child-process activity works for Claude, Codex and Gemini without a mod. An optional Claude ops feed adds plan progress and sub-agent details. Context and any available 5-hour/weekly limits stay with their own pane.
 - **Files view.** A light editor beside your sessions (Ctrl+Shift+E). One button at the top shows the project, branch and worktree. The explorer has Files, Search and Review modes with foldable Changes and Open in sessions sections, read-only files with a Changes toggle, small edits saved with Ctrl+S, and an inspector with the outline and the agents and commits that touched the file. Added lines carry a mark for the session that wrote them. **Send to agent** lists the project's live sessions, or starts a new one with the file, or copies an `@mention`. Markdown and HTML open as previews, images get Compare with main.
@@ -75,9 +74,9 @@
 - **Themes.** Seven themes (Dawsha, Dawsha Cards, Graphite Cards, Dawsha Daylight, Nord, Catppuccin Mocha, GitHub Light) with contrast checks, plus an optional background image. The Cards and Daylight themes draw each pane as a card. In Dawsha Cards the terminal sits flush, the focused session has a soft neutral ring and a session that needs you an orange one.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
 
-| Arabic in a Claude Code pane | Voice dictation |
-|---|---|
-| ![A Claude Code pane with an Arabic prompt and reply, joined and right to left, with a file name and a number in place](docs/screenshots/arabic.png) | ![A pane while dictating, with the mic button red and a live microphone level meter](docs/screenshots/dictation.png) |
+| Arabic in a Claude Code pane |
+|---|
+| ![A Claude Code pane with an Arabic prompt and reply, joined and right to left, with a file name and a number in place](docs/screenshots/arabic.png) |
 
 | Sessions board | Peek at a card |
 |---|---|
