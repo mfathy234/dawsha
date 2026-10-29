@@ -111,6 +111,7 @@ svg { display: block; flex: none; }
 .session-card + .session-card { box-shadow: inset 0 1px 0 var(--line); }
 .session-card-meta { min-width: 0; flex: 1; display: flex; align-items: center; gap: 12px; }
 .agent-badge { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 10px; color: #fff; background: var(--raised); font-size: 13px; font-weight: 700; }
+.agent-badge svg { width: 58%; height: 58%; fill: currentColor; }
 .agent-claude { background: var(--claude); }
 .agent-codex { background: var(--codex); }
 .agent-gemini { background: var(--gemini); }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cardSummary, formatResetIn, lastLines, sortByUrgency, limitText, moreLabel, stateWord } from '../../src/shared/topbarSummary'
+import { cardSummary, formatResetIn, lastLines, sortByUrgency, limitText, limitRowLabel, moreLabel, stateWord, urgentWindow } from '../../src/shared/topbarSummary'
 import type { RateLimitWindow } from '../../src/shared/types'
 
 const win = (key: string, percent: number, resetsAt: number | null = null): RateLimitWindow => ({ key, label: key, percent, resetsAt })
@@ -52,5 +52,21 @@ describe('others panel helpers', () => {
   it('summarises from the plan title', () => {
     expect(cardSummary({ snapshot: { plan: { title: '  Fix  the\nbug ' } } })).toBe('Fix the bug')
     expect(cardSummary({ snapshot: null })).toBe('')
+  })
+})
+
+describe('compact usage meter helpers', () => {
+  it('picks the window with the highest percent, the first on a tie', () => {
+    expect(urgentWindow([])).toBeNull()
+    expect(urgentWindow([win('five_hour', 62), win('seven_day', 18)])?.key).toBe('five_hour')
+    expect(urgentWindow([win('five_hour', 20), win('seven_day', 71)])?.key).toBe('seven_day')
+    expect(urgentWindow([win('five_hour', 40), win('seven_day', 40)])?.key).toBe('five_hour')
+  })
+
+  it('labels a model-family window by its family', () => {
+    expect(limitRowLabel(win('five_hour', 1))).toBe('five_hour')
+    expect(limitRowLabel({ key: 'seven_day_opus', label: 'week opus', percent: 5, resetsAt: null, family: 'opus' })).toBe('Opus week')
+    expect(limitRowLabel({ key: 'seven_day_fable', label: 'week fable', percent: 5, resetsAt: null, family: 'fable' })).toBe('Fable week')
+    expect(limitRowLabel({ key: 'fable', label: 'fable', percent: 5, resetsAt: null, family: 'fable' })).toBe('Fable')
   })
 })

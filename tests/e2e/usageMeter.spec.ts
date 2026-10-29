@@ -36,7 +36,7 @@ test('the usage meter names the focused agent, never borrows another agent numbe
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
-    // The top bar hides the meter below 1220px, and the CI window is about 1024 wide.
+    // The full meter shows from 1220px up; the 1024px compact form has its own test below.
     await page.setViewportSize({ width: 1440, height: 900 })
     const meter = page.locator('#topbar-limits')
     await page.getByRole('button', { name: 'New Claude session in Smoke' }).click()
@@ -77,6 +77,44 @@ test('the usage meter names the focused agent, never borrows another agent numbe
     await meter.click()
     await page.getByRole('button', { name: 'Open Usage' }).click()
     await expect(page.locator('#more-button')).toHaveAttribute('aria-label', /Usage/)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('at the 1024px CI width the usage meter shows the agent mark and the most urgent window, and nothing in the top bar overlaps', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.setViewportSize({ width: 1024, height: 728 })
+    const meter = page.locator('#topbar-limits')
+    await page.getByRole('button', { name: 'New Claude session in Smoke' }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    writeClaudeLimits(sandbox)
+    const compact = meter.locator('.limits-compact')
+    await expect(compact).toHaveText('62%', { timeout: 15_000 })
+    await expect(meter).toBeVisible()
+    await expect(meter.locator('.agent-mark')).toBeVisible()
+    await expect(meter.locator('.limits-windows')).toBeHidden()
+    await expect(meter).toHaveAttribute('aria-label', /Claude Code limits: 5h: 62% used/)
+    await expect(meter).toHaveAttribute('title', /5h: 62% used/)
+
+    const boxes = await page.locator('.topbar > *:visible').evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const r = node.getBoundingClientRect()
+        return { name: node.id || node.className, left: r.left, right: r.right, width: r.width }
+      }).filter((box) => box.width > 0)
+    )
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++)
+        expect(boxes[i].right <= boxes[j].left + 0.5 || boxes[j].right <= boxes[i].left + 0.5, `${boxes[i].name} overlaps ${boxes[j].name}`).toBe(true)
+    const bar = await page.locator('.topbar').boundingBox()
+    for (const box of boxes) expect(box.right).toBeLessThanOrEqual((bar?.x ?? 0) + (bar?.width ?? 0) + 0.5)
+
+    await page.screenshot({ path: join(SCREENS, 'usage-meter-1024.png'), clip: { x: 0, y: 0, width: 1024, height: 60 } })
+    await meter.click()
+    await expect(page.getByRole('dialog', { name: 'Limits by agent' })).toBeVisible()
+    await page.keyboard.press('Escape')
   } finally {
     await closeApp(app)
   }

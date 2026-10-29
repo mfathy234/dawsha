@@ -153,7 +153,6 @@ function sanitizeTab(value: unknown): SavedTab | null {
   if (titleHint && agent !== 'shell') tab.titleHint = titleHint
   const sessionId = asString(value.sessionId)
   if (sessionId && agent !== 'shell') tab.sessionId = sessionId
-  if (value.agentsOpen === true && agent === 'claude') tab.agentsOpen = true
   if (isAgent(value.from) && agent !== 'shell') tab.from = value.from
   const baseline = sanitizeBaseline(value.baseline)
   if (baseline) tab.baseline = baseline

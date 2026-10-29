@@ -5,6 +5,7 @@ import { api } from '../api'
 import { resumeInNewPane } from '../actions'
 import { refreshOrch, showOrch } from '../orchActions'
 import { h } from '../dom'
+import { agentMark } from './agentMark'
 import type { AppState } from '../state'
 import { buildStackedBars } from './usageChart'
 import { store } from '../state'
@@ -261,7 +262,7 @@ export class WorkViewComponent {
     return h('li', {}, h('button', { class: 'work-item', type: 'button', onClick: () => void this.open(item) },
       h('span', { class: 'work-item-main' }, h('strong', {}, item.title), h('span', { class: `work-chip work-${item.type}` }, WORK_LABELS[item.type]),
         !this.projectId ? h('span', { class: 'work-project-chip' }, item.project) : null, item.ticket ? h('span', { class: 'work-ticket' }, item.ticket) : null),
-      h('span', { class: 'work-item-meta' }, item.project, ' · ', item.agent === 'orchestrator' ? 'Orchestrator' : agentLabel(item.agent), ' · ', item.branch ?? 'Unknown branch',
+      h('span', { class: 'work-item-meta' }, item.project, ' · ', item.agent === 'orchestrator' ? null : agentMark(item.agent), item.agent === 'orchestrator' ? 'Orchestrator' : agentLabel(item.agent), ' · ', item.branch ?? 'Unknown branch',
         ' · ', new Date(item.endedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), ' · ', duration(this.itemTime(item)))))
   }
 

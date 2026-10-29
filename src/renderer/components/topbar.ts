@@ -19,7 +19,7 @@ import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
 import type { PaneView } from '../derive'
 import { countSessionStates, sessionState } from '../../shared/sessionState'
-import { MORE_VIEWS, formatResetIn, limitText, moreLabel, type MoreView } from '../../shared/topbarSummary'
+import { MORE_VIEWS, formatResetIn, limitRowLabel, limitText, moreLabel, urgentWindow, type MoreView } from '../../shared/topbarSummary'
 import { allAgentLimits, dataAge, focusedLimits, recordLimits, type AgentLimitStore, type AgentLimits } from '../../shared/agentLimits'
 import { stateIcon } from './stateIcon'
 import { toolState } from '../../shared/agentTools'
@@ -325,15 +325,15 @@ export class TopBarComponent {
       h('span', { class: 'kbd' }, formatShortcut(bind('Ctrl+Shift+A')))
     )
     items.push(resume, compare)
-    const rect = this.newSession.getBoundingClientRect()
     this.agentMenu = h(
       'div',
-      { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 6)}px` },
+      { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent' },
       ...items
     )
     this.agentMenu.addEventListener('keydown', (event) => this.onMenuKey(event, items))
     this.chevron.setAttribute('aria-expanded', 'true')
     document.body.appendChild(this.agentMenu)
+    placeNearAnchor(this.agentMenu, this.chevron.parentElement ?? this.newSession, 6)
     items[0].focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
   }
@@ -396,15 +396,15 @@ export class TopBarComponent {
     this.moreItems = Object.fromEntries(entries) as unknown as Record<MoreView, HTMLElement>
     const items = entries.map(([, item]) => item)
     for (const [view] of entries) this.markMoreItem(view)
-    const rect = this.more.getBoundingClientRect()
     this.moreMenu = h(
       'div',
-      { class: 'popover menu floating', role: 'menu', 'aria-label': 'More views', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 6)}px` },
+      { class: 'popover menu floating', role: 'menu', 'aria-label': 'More views' },
       ...items
     )
     this.moreMenu.addEventListener('keydown', (event) => this.onMoreKey(event, items))
     this.more.setAttribute('aria-expanded', 'true')
     document.body.appendChild(this.moreMenu)
+    placeNearAnchor(this.moreMenu, this.more, 6)
     items[0].focus()
     setTimeout(() => document.addEventListener('pointerdown', this.moreOutside, true), 0)
   }
@@ -454,12 +454,14 @@ export class TopBarComponent {
     const name = agentLabel(focused.agent)
     const summary = items.map((item) => item.title).join('; ')
     this.limits.setAttribute('aria-label', focused.state === 'none' ? `${name}: no limits reported. Show limits for every agent` : `${name} limits${focused.state === 'stale' ? ' (stale)' : ''}: ${summary}. Show limits for every agent`)
-    this.limits.title = 'Limits by agent'
+    this.limits.title = focused.state === 'none' ? `${name}: no limits reported` : `${name} limits${focused.state === 'stale' ? ' (stale)' : ''}: ${summary}`
+    const urgent = urgentWindow(items.map((item) => item.window))
     this.limits.replaceChildren(
       h('span', { class: 'limits-agent' }, agentMark(focused.agent), h('span', { class: 'limits-agent-name' }, name)),
       focused.state === 'none'
         ? h('span', { class: 'limits-none' }, 'no limits reported')
         : h('span', { class: 'limits-windows' }, ...items.map((item) => limitItem(item.window, item.text, item.title))),
+      ...(urgent && focused.state !== 'none' ? [h('span', { class: `limits-compact stage-${gaugeStage(urgent.percent)}`, 'data-limit-compact': urgent.key }, formatPercent(urgent.percent))] : []),
       ...(focused.state === 'stale' ? [h('span', { class: 'limits-note' }, 'stale')] : [])
     )
   }
@@ -525,7 +527,7 @@ function limitsSection(entry: AgentLimits, focused: boolean, now: number): HTMLE
   const status = entry.state === 'none' ? 'no limits reported' : `updated ${dataAge(entry.at as number, now)}${entry.state === 'stale' ? ' · stale' : ''}`
   const windows = entry.windows.map((window) =>
     h('div', { class: 'limits-row', 'data-limit': window.key },
-      h('span', { class: 'limits-row-label' }, window.label),
+      h('span', { class: 'limits-row-label' }, limitRowLabel(window)),
       chargeBar(window.percent, LIMIT_CELLS),
       h('span', { class: 'limits-row-value' }, formatPercent(window.percent)),
       h('span', { class: 'limits-row-reset' }, window.resetsAt === null ? '' : resetLine(window.resetsAt, now))

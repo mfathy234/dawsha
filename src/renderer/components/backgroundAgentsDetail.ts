@@ -3,6 +3,7 @@ import { AGENT_NAMES } from '../../shared/agents'
 import { STATUS_LABELS, compactTokens, costLabel, spanLabel, type BackgroundAgent, type BgStatus } from '../../shared/backgroundAgents'
 import { modelLabel } from '../../shared/sessionDetail'
 import { h, icon } from '../dom'
+import { agentMark } from './agentMark'
 import { ICONS } from '../icons'
 import { stateIcon } from './stateIcon'
 
@@ -86,7 +87,7 @@ export function agentDetails(agent: BackgroundAgent, actions: DetailActions): HT
     h('p', { class: 'bg-sub' },
       h('span', { class: `bg-status st-${agent.status}`, id: 'bg-detail-status' }, h('span', { class: 'bg-status-icon', 'aria-hidden': 'true' }, statusGlyph(agent.status)), STATUS_LABELS[agent.status]),
       h('span', {}, spanLabel(end - agent.startedAt)),
-      h('span', {}, `${AGENT_NAMES[agent.kind]} · ${kind}`),
+      h('span', { class: 'bg-sub-agent' }, agentMark(agent.kind), `${AGENT_NAMES[agent.kind]} · ${kind}`),
       h('span', { class: 'bg-sub-session' }, 'in ', h('button', { class: 'bg-link', type: 'button', id: 'bg-go-link', title: agent.parentTitle, disabled: !actions.canGo, onClick: actions.onGo }, agent.parentTitle))),
     agent.statusNote ? h('p', { class: 'bg-note', id: 'bg-detail-note' }, agent.statusNote) : null,
     h('div', { class: 'bg-actions' },

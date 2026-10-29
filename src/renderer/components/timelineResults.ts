@@ -3,6 +3,7 @@ import { formatClock } from '../../shared/timeline'
 import { SEARCH_HITS_SHOWN, type SearchHit, type SessionHits } from '../../shared/timelineSearch'
 import type { ResumeSession } from '../../shared/types'
 import { h } from '../dom'
+import { agentMark } from './agentMark'
 
 const KIND_WORDS: Record<string, string> = {
   prompt: 'Prompt',
@@ -51,7 +52,7 @@ export function resultGroups(groups: readonly SessionHits<ResumeSession>[], proj
         'button',
         { class: 'tl-result-head', type: 'button', 'aria-label': `Open ${session.title}`, onClick: () => handlers.open(session, group.hits[0]) },
         h('b', {}, session.title),
-        h('span', { class: 'tl-result-meta' }, meta)
+        h('span', { class: 'tl-result-meta' }, agentMark(session.agent), meta)
       ),
       ...group.hits.map((hit) => hitRow(group, hit, handlers)),
       more > 0

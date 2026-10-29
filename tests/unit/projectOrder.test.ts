@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canMoveProject, moveProject, orderProjects, setProjectPinned } from '../../src/shared/projectOrder'
+import { canMoveProject, moveFromDisplay, moveProject, orderProjects, reorderFromDisplay, seedOrder, setProjectPinned } from '../../src/shared/projectOrder'
 import { projectStatus, projectStatusLabel, projectStatusText } from '../../src/shared/projectStatus'
 import type { Project } from '../../src/shared/types'
 
@@ -48,5 +48,32 @@ describe('project status in the collapsed sidebar', () => {
     expect(projectStatusText({ needs: 1, working: 0 })).toBe('1 needs you')
     expect(projectStatusLabel('Smoke', { needs: 0, working: 3 })).toBe('Smoke, working')
     expect(projectStatusLabel('Smoke', projectStatus(['done', 'idle']))).toBe('Smoke')
+  })
+})
+
+describe('ordering from the displayed order', () => {
+  const stored = [p('a'), p('b'), p('c'), p('d', true), p('e', true)]
+
+  it('seeds the manual order from what the sidebar shows, pinned first', () => {
+    expect(ids(seedOrder(stored, ['e', 'd', 'c', 'a', 'b']))).toEqual(['e', 'd', 'c', 'a', 'b'])
+    expect(ids(seedOrder(stored, ['c', 'a', 'e', 'b', 'd']))).toEqual(['e', 'd', 'c', 'a', 'b'])
+  })
+
+  it('keeps projects the sidebar does not show after the shown ones in stored order', () => {
+    expect(ids(seedOrder(stored, ['c', 'b']))).toEqual(['d', 'e', 'c', 'b', 'a'])
+  })
+
+  it('applies a drag on top of the displayed order, not the stored one', () => {
+    expect(ids(reorderFromDisplay(stored, ['d', 'e', 'c', 'b', 'a'], 'a', 'c'))).toEqual(['d', 'e', 'a', 'c', 'b'])
+  })
+
+  it('does not let a drag cross between pinned and unpinned', () => {
+    expect(ids(reorderFromDisplay(stored, ['d', 'e', 'c', 'b', 'a'], 'a', 'd'))).toEqual(['d', 'e', 'c', 'b', 'a'])
+  })
+
+  it('moves one step in the displayed order and stops at the group edge', () => {
+    expect(ids(moveFromDisplay(stored, ['d', 'e', 'c', 'b', 'a'], 'a', -1))).toEqual(['d', 'e', 'c', 'a', 'b'])
+    expect(ids(moveFromDisplay(stored, ['d', 'e', 'c', 'b', 'a'], 'c', -1))).toEqual(['d', 'e', 'c', 'b', 'a'])
+    expect(ids(moveFromDisplay(stored, ['d', 'e', 'c', 'b', 'a'], 'e', -1))).toEqual(['e', 'd', 'c', 'b', 'a'])
   })
 })

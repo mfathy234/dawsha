@@ -1,5 +1,5 @@
 import type { SidebarSort } from '../shared/sidebarModel'
-import { canDropProject, canMoveProject, moveProject, moveProjectTo, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
+import { canDropProject, canMoveProject, moveFromDisplay, moveProject, moveProjectTo, reorderFromDisplay, seedOrder, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -755,11 +755,6 @@ export function restoreGrid(): void {
   }
 }
 
-export function toggleAgents(termId: string): void {
-  store.set((s) => mapTerm(s, termId, (t) => ({ ...t, agentsOpen: t.agentsOpen !== true })))
-  persistWorkspace()
-}
-
 export function openDetails(paneId: string): void {
   if (!paneById(store.state, paneId)) return
   leaveBoard()
@@ -1184,6 +1179,26 @@ export function reorderProject(projectId: string, targetId: string): void {
   saveProjects()
 }
 
+/** Saves an order made from the displayed list and, outside Manual sort, switches to Manual so the order sticks. */
+function keepDisplayedOrder(projects: Project[], displayed: Project[]): void {
+  if (projects.every((project, index) => project.id === displayed[index]?.id)) return
+  const switched = store.state.settings.sidebarSort !== 'manual'
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects, sidebarSort: 'manual' } }))
+  void saveSettings({ projects, ...(switched ? { sidebarSort: 'manual' as const } : {}) })
+  if (switched) toast('Switched to your own order. Change it in Sort.', 'info')
+}
+
+export function reorderProjectFromDisplay(displayedIds: readonly string[], projectId: string, targetId: string): void {
+  const before = store.state.settings.projects
+  if (!canDropProject(before, projectId, targetId)) return
+  keepDisplayedOrder(reorderFromDisplay(before, displayedIds, projectId, targetId), seedOrder(before, displayedIds))
+}
+
+export function moveProjectFromDisplay(displayedIds: readonly string[], projectId: string, direction: MoveDirection): void {
+  const before = store.state.settings.projects
+  keepDisplayedOrder(moveFromDisplay(before, displayedIds, projectId, direction), seedOrder(before, displayedIds))
+}
+
 export async function removeProject(projectId: string): Promise<void> {
   const project = projectById(store.state, projectId)
   if (!project) return
@@ -1211,7 +1226,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline, orchAgentId: tab.orchAgentId, name: tab.name, tag: tab.tag })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, from: tab.from, baseline: tab.baseline, orchAgentId: tab.orchAgentId, name: tab.name, tag: tab.tag })
   }
   return {
     id: newId(),

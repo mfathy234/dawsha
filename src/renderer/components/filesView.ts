@@ -222,6 +222,7 @@ export class FilesViewComponent {
     }
     if (!await this.activateTarget(target)) return
     if (request?.path) void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
+    if (request?.review) this.explorer.setMode('review')
     void this.refreshTouches()
     this.touchTimer = window.setInterval(() => void this.refreshTouches(), TOUCH_REFRESH_MS)
   }
@@ -249,6 +250,7 @@ export class FilesViewComponent {
       if (!await this.activateTarget(request)) return
     }
     if (request.path) void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
+    if (request.review) this.explorer.setMode('review')
   }
 
   private async activateTarget(requested: FilesTarget): Promise<boolean> {
@@ -450,7 +452,7 @@ export class FilesViewComponent {
     ]
     const box = anchor.getBoundingClientRect()
     this.bar.setMenuOpen('more', true)
-    openContextMenu({ x: box.right - 4, y: box.bottom + 2, label: 'More actions', entries, returnFocus: anchor })
+    openContextMenu({ x: box.left, y: box.bottom + 2, anchor: box, label: 'More actions', entries, returnFocus: anchor })
     this.watchMenuClose(() => this.bar.setMenuOpen('more', false))
   }
 

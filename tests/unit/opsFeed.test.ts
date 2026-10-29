@@ -264,7 +264,7 @@ describe('precedence', () => {
     expect(view.info.model).toEqual({ label: 'Opus 5.5', family: 'opus' })
     expect(view.info.contextPercent).toBe(41)
     expect(view.info.costUsd).toBe(0.5)
-    expect(view.info.ops).toEqual({ plan: { done: 3, total: 6 }, running: ['sonnet'], agentsOpen: false })
+    expect(view.info.ops).toEqual({ plan: { done: 3, total: 6 }, running: ['sonnet'], sessionId: expect.any(String) })
   })
 
   it('falls back to the status line without a snapshot', () => {

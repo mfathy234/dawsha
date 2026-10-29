@@ -39,7 +39,6 @@ export interface TermState {
   resumed?: boolean
   resumeChipAt?: number
   retried?: boolean
-  agentsOpen?: boolean
   command?: string
   prompt?: string
   from?: AgentKind

@@ -41,7 +41,7 @@ describe('snapshotWorkspace', () => {
       { id: 't2', agent: 'shell', label: 'shell', sessionId: 'ignored' },
       { id: 't3', agent: 'shell', label: 'update codex', task: {} }
     ], 't2'),
-    pane('p2', 'b', [{ id: 't4', agent: 'codex', label: 'codex', agentsOpen: true }]),
+    pane('p2', 'b', [{ id: 't4', agent: 'codex', label: 'codex' }]),
     pane('p3', 'c', [{ id: 't5', agent: 'shell', label: 'task', task: {} }])
   ]
 
@@ -54,11 +54,11 @@ describe('snapshotWorkspace', () => {
       fontSize: 16,
       activeIndex: 1,
       tabs: [
-        { agent: 'claude', label: 'claude', sessionId: 's-claude', agentsOpen: undefined },
-        { agent: 'shell', label: 'shell', sessionId: undefined, agentsOpen: undefined }
+        { agent: 'claude', label: 'claude', sessionId: 's-claude' },
+        { agent: 'shell', label: 'shell', sessionId: undefined }
       ]
     })
-    expect(result.panes[1].tabs[0]).toMatchObject({ agent: 'codex', agentsOpen: true })
+    expect(result.panes[1].tabs[0]).toMatchObject({ agent: 'codex' })
   })
 
   it('saves the pinned flag, the splits and the reordered tab order with the active tab', () => {

@@ -1,4 +1,5 @@
 import { AGENT_MARKS } from '../../shared/agents'
+import { brandLogo } from '../brandLogo'
 import { waitingLabel, type ApprovalHistoryEntry, type ApprovalItem, type ApprovalsPayload } from '../../shared/approvals'
 import type { AgentKind } from '../../shared/types'
 
@@ -231,7 +232,9 @@ function blockNote(item: ApprovalItem): string {
 function buildCard(item: ApprovalItem): CardView {
   const element = make('article', 'approval-card')
   const head = make('div', 'approval-head')
-  const mark = make('span', `agent-badge agent-${item.agent}`, AGENT_MARKS[item.agent as AgentKind] ?? '?')
+  const logo = brandLogo(item.agent as AgentKind)
+  const mark = make('span', `agent-badge agent-${item.agent}`, logo ? '' : (AGENT_MARKS[item.agent as AgentKind] ?? '?'))
+  if (logo) mark.innerHTML = logo
   mark.setAttribute('aria-hidden', 'true')
   const who = make('div', 'approval-who')
   const wait = make('span', 'approval-wait')

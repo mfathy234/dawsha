@@ -16,6 +16,7 @@ export interface FilesRequest extends FilesTarget {
   path: string
   pin: boolean
   line?: number
+  review?: boolean
 }
 
 export interface LineRange {
@@ -71,6 +72,13 @@ export function takeFilesRequest(): FilesRequest | null {
 /** Shows a project folder in the Files view without opening a file. */
 export function openFolderInFiles(target: FilesTarget): void {
   openInFiles(target, '')
+}
+
+/** Opens Files on a checkout in Review mode, listing what changed there. */
+export function openReviewInFiles(target: FilesTarget): void {
+  pending = { ...target, path: '', pin: false, review: true }
+  showView('files')
+  for (const listener of listeners) listener()
 }
 
 /** Opens a file in the Files view (loading its editor on first use). */

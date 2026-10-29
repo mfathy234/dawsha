@@ -18,16 +18,19 @@ import {
   togglePinned,
   showPaneDiff,
   openChanges,
+  showView,
   paneHasRepo,
   paneSolution,
   findInPane,
-  toggleAgents,
   toggleDetails,
   toggleMaximize,
   tagSession
 } from '../actions'
 import { derivePanes, type PaneView } from '../derive'
-import { store } from '../state'
+import { folderOfPane, paneById, store } from '../state'
+import { setAgentFilters } from '../backgroundAgents'
+import { openReviewInFiles } from '../files/filesActions'
+import { DEFAULT_BG_FILTERS } from '../../shared/backgroundAgents'
 import { shortcutFor } from '../commands/registry'
 import { clear, h, icon, iconButton, placeNearAnchor, leave } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
@@ -40,7 +43,6 @@ import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
 import { tagMenuItems, tagWord, type TagSource } from './sessionTagUi'
 import { SESSION_TAG_LABELS, type SessionTag } from '../../shared/sessionTags'
-import { AgentsDrawer } from './agentsDrawer'
 import { openBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
@@ -109,7 +111,6 @@ export class PaneComponent {
   private readonly dictationStrip = h('div', { class: 'pane-dictation', role: 'status', hidden: true }, this.dictation.meter, this.dictation.text)
   private readonly mic = iconButton('Dictate (Ctrl+Shift+Space)', ICONS.mic, () => void toggleDictation(), 'pane-mic')
   private readonly stopDictationStatus: () => void
-  private readonly drawer = new AgentsDrawer()
   private readonly details = h('aside', { class: 'pane-details', 'aria-label': 'Details', hidden: true })
   private detailsSignature = ''
   private readonly timeline: TimelinePanel
@@ -177,7 +178,7 @@ export class PaneComponent {
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, this.dictationStrip, this.drawer.el, content, this.permission, this.foot)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, this.dictationStrip, content, this.permission, this.foot)
     this.watchFileDrops()
     // Keep the pointer from moving focus to the button, so a focused text box stays the dictation target.
     this.mic.addEventListener('mousedown', (event) => event.preventDefault())
@@ -200,7 +201,7 @@ export class PaneComponent {
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
     const origin = view.pane.tabs.find((t) => t.id === view.primaryTabId)?.from
     this.fromChip.hidden = !origin
-    this.fromChip.textContent = origin ? `from ${AGENT_NAMES[origin]}` : ''
+    this.fromChip.replaceChildren(...(origin ? ['from ', agentMark(origin) ?? '', ` ${AGENT_NAMES[origin]}`] : []))
     const link = view.pane.compare
     this.compareChip.hidden = !link
     this.compareChip.textContent = link ? link.slot.toUpperCase() : ''
@@ -226,7 +227,6 @@ export class PaneComponent {
     this.recap.hidden = !store.state.settings.showRecap || this.recapText === ''
     this.updateHint(view)
     this.updatePermission(view, state)
-    this.drawer.update(view.opsLive ? view.snapshot : null, view.activity, view.agentsOpen, view.title.toUpperCase(), view.now, view.info.geminiTools)
     this.updateDetails(view, maximized)
     this.timeline.update(view, maximized && view.timelineOpen)
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
@@ -308,6 +308,12 @@ export class PaneComponent {
     )
   }
 
+  private reviewInFiles(): void {
+    const pane = paneById(store.state, this.paneId)
+    const folder = pane ? folderOfPane(store.state, pane) : null
+    if (pane && folder) openReviewInFiles({ projectId: pane.projectId, folder })
+  }
+
   private updateInfo(view: PaneView, maximized: boolean): void {
     this.info.classList.toggle('clickable', maximized)
     const bridgeInstalled = store.state.bridge.installed
@@ -320,9 +326,10 @@ export class PaneComponent {
       onOpenChanges: () => void openChanges(this.paneId),
       bridgeInstalled,
       onEnableBridge: () => void enableBridge(),
-      onToggleAgents: () => {
-        const tabId = view.primaryTabId
-        toggleAgents(tabId)
+      onReviewFiles: () => this.reviewInFiles(),
+      onShowAgents: (sessionId) => {
+        setAgentFilters({ ...DEFAULT_BG_FILTERS, session: sessionId })
+        showView('background')
       }
     })
     this.info.hidden = items.length === 0
