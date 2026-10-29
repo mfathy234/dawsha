@@ -63,7 +63,7 @@ for (const [mode, themeId] of THEMES) {
       await expect(page.locator('#needs-chip')).toContainText('1 needs you')
       await expect(page.locator('.topbar-count')).toContainText('idle')
       await expect(page.locator('.pane.calm')).toHaveCount(2)
-      await expect(page.locator('.pane.calm .pane-body').first()).toHaveCSS('filter', mode === 'dark' ? 'brightness(0.72) saturate(0.8)' : 'brightness(0.86) saturate(0.8)')
+      await expect(page.locator('.pane.calm .pane-body').first()).toHaveCSS('filter', mode === 'dark' ? 'brightness(0.72) saturate(0.8)' : 'none')
       await shot(page, `${mode}-3-panes`)
 
       await addPanes(page, 4)

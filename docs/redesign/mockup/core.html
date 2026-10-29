@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dawsha core screens</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="core.css">
+</head>
+<body>
+<header class="mbar">
+  <span class="brand"><span class="logo">D</span>Dawsha redesign</span>
+  <nav aria-label="Sections">
+    <a href="#grid">Sessions grid</a><a href="#pane">Pane</a><a href="#sidebar">Sidebar</a><a href="#topbar">Top bar</a><a href="#first-run">First run</a>
+  </nav>
+  <span class="grow"></span>
+  <span class="links"><a href="foundation.html">Foundation</a></span>
+  <div class="tabs" role="tablist" aria-label="Theme">
+    <button class="tab" role="tab" data-act="theme" data-theme="dark" aria-selected="true"><i class="icon">dark_mode</i>Dark</button>
+    <button class="tab" role="tab" data-act="theme" data-theme="light" aria-selected="false"><i class="icon">light_mode</i>Light</button>
+  </div>
+</header>
+
+<main class="page">
+
+<section class="sec" id="grid">
+  <div class="sec-head">
+    <div>
+      <h2 class="t-page">Sessions grid</h2>
+      <p><b>What changed.</b> A session that needs you now takes space and shows exactly what it is asking: the tool, the command and the file it writes, with Allow, Allow always and Deny at the point of action <span class="ref">(audit 1)</span>. Needs-you is an orange edge, a tinted header and a slow pulse that stops under reduced motion, and the grid reflows around it <span class="ref">(2, 3)</span>. Every pane header has the same four slots, so the state chip always sits in the same place <span class="ref">(4)</span>. Pick a direction and a pane count, click a sidebar session, open a pane menu, or press Allow (or Enter).</p>
+    </div>
+    <div class="befores">
+      <a class="before" data-img="G-02-three-panes-states" target="_blank" rel="noopener"><img alt="Current 3-pane grid" loading="lazy"><span>Before: 3 panes</span></a>
+      <a class="before" data-img="G-03-five-panes" target="_blank" rel="noopener"><img alt="Current 5-pane grid" loading="lazy"><span>Before: 5 panes</span></a>
+    </div>
+  </div>
+  <div class="ctrls">
+    <div class="tabs tabs-lg" role="tablist" aria-label="Direction"><button class="tab" role="tab" data-act="dir" data-v="A" aria-selected="true">A Calm focus</button><button class="tab" role="tab" data-act="dir" data-v="B" aria-selected="false">B Mission control</button></div>
+    <div class="tabs tabs-lg" role="tablist" aria-label="Pane count"><button class="tab" role="tab" data-act="count" data-v="3" aria-selected="true">3 panes</button><button class="tab" role="tab" data-act="count" data-v="5" aria-selected="false">5 panes</button></div>
+    <button class="btn btn-lg" data-act="reset"><i class="icon">restart_alt</i>Reset demo</button>
+    <span class="note"><i class="icon sm">keyboard</i>Enter allows, Esc denies the pane that needs you</span>
+  </div>
+  <p class="dirnote" id="dirnote-A"><b>A, Calm focus.</b> One pane is the focus and gets the room. Siblings are quiet: no footer, a short tail of output, lower chrome. A sibling that needs you promotes itself to a tall card in the column so you can answer without moving focus. Best for one main task with helpers.</p>
+  <p class="dirnote" id="dirnote-B" hidden><b>B, Mission control.</b> Equal tiles, each with the same anatomy, so a scan across the grid reads state only. Needs-you is the one tile with a full orange edge, a tinted header and the approval card. Best when you babysit three to six agents at once.</p>
+  <div class="app" id="frame-grid">
+    <div class="tbslot"></div>
+    <div class="app-body"><div class="sbslot"></div><div class="app-main mainslot"></div></div>
+  </div>
+</section>
+
+<section class="sec" id="pane">
+  <div class="sec-head">
+    <div>
+      <h2 class="t-page">Pane anatomy</h2>
+      <p><b>What changed.</b> The header holds a state chip and three buttons; everything else is in one grouped overflow menu of 12 items instead of 22 flat ones <span class="ref">(4)</span>. The footer is model, branch, diff stats and a visible Review button; "Turn on live info" moved into the Info panel as a real toggle <span class="ref">(3, 6)</span>. Info, Timeline, Tasks and Changes slide over the terminal instead of squeezing it, and the Timeline starts with one filter row instead of seven control rows. Use the panel button and the tabs.</p>
+    </div>
+    <div class="befores">
+      <a class="before" data-img="17-pane-actions-menu" target="_blank" rel="noopener"><img alt="Current pane menu" loading="lazy"><span>Before: 22-item menu</span></a>
+      <a class="before" data-img="18-panel-timeline" target="_blank" rel="noopener"><img alt="Current timeline panel" loading="lazy"><span>Before: timeline</span></a>
+    </div>
+  </div>
+  <div class="anat-grid">
+    <div class="anat" id="frame-anat">
+      <span class="co" style="top:2px;left:48px">1</span>
+      <span class="co" style="top:200px;left:2px">2</span>
+      <span class="co" style="bottom:2px;left:48px">3</span>
+      <span class="co" style="top:200px;right:2px">4</span>
+      <div id="anat-pane" style="display:flex;flex:1;min-width:0"></div>
+    </div>
+    <div class="legend">
+      <ol>
+        <li><span class="co">1</span><span><b>Header: mark, title, state, 3 buttons</b>Same slots in every pane and every focus state. The title keeps Arabic and Latin correct with dir="auto".</span></li>
+        <li><span class="co">2</span><span><b>Terminal</b>Stays the hero. Panels never resize it, so line wrapping does not change when you peek at info.</span></li>
+        <li><span class="co">3</span><span><b>Footer</b>Model, branch, diff stats, then the one action that matters, Review.</span></li>
+        <li><span class="co">4</span><span><b>Slide-over panel</b>One tab skin, 312px, 320ms drawer curve, closes with the same button.</span></li>
+      </ol>
+      <span class="t-meta">Overflow menu: 12 items in 3 groups, danger last</span>
+      <div id="anat-menu" style="width:100%;max-width:300px"></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="sidebar">
+  <div class="sec-head">
+    <div>
+      <h2 class="t-page">Sidebar</h2>
+      <p><b>What changed.</b> Rows now say what the session is doing instead of "Idle . now": the title, then the live activity, with the state on the agent mark itself <span class="ref">(12)</span>. Needs-you has its own block above everything. The missing folder is flagged in the list with a Locate action, projects have a right-click menu, and menus anchor to the row without covering its neighbours. Hover a row for its menu, right-click a row or project, collapse a project, click a row to focus its pane.</p>
+    </div>
+    <div class="befores">
+      <a class="before" data-img="05-sidebar-expanded" target="_blank" rel="noopener"><img alt="Current sidebar" loading="lazy"><span>Before: sidebar</span></a>
+      <a class="before" data-img="G-06-sidebar-kept-session-menu" target="_blank" rel="noopener"><img alt="Current row menu" loading="lazy"><span>Before: row menu</span></a>
+    </div>
+  </div>
+  <div class="sb-pair">
+    <div class="sb-box">
+      <div id="sb-A-full" style="display:contents"></div>
+      <div id="sb-A-compact" style="display:contents"></div>
+      <div class="sb-col">
+        <h3 class="t-title">A, Project tree</h3>
+        <p>Projects first, sessions inside, like a file tree. Familiar, and right when you work project by project.</p>
+        <ul>
+          <li><i class="icon">check</i><span>Collapsible projects with branch and a needs-you hand on the header</span></li>
+          <li><i class="icon">check</i><span>Missing folder keeps its place with Locate</span></li>
+          <li><i class="icon">check</i><span>Compact rail: project initials, then session marks</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="sb-box">
+      <div id="sb-B-full" style="display:contents"></div>
+      <div id="sb-B-compact" style="display:contents"></div>
+      <div class="sb-col">
+        <h3 class="t-title">B, By attention</h3>
+        <p>Sessions grouped by what they need from you, with the project as a filter chip. Best when you run many sessions across projects.</p>
+        <ul>
+          <li><i class="icon">check</i><span>Needs you, Working, Ready to review, Idle, in that order</span></li>
+          <li><i class="icon">check</i><span>One-line project filter instead of nested folders</span></li>
+          <li><i class="icon">check</i><span>Compact rail follows the same order, so it doubles as a status strip</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="topbar">
+  <div class="sec-head">
+    <div>
+      <h2 class="t-page">Top bar and usage</h2>
+      <p><b>What changed.</b> The bar has 11 targets instead of 17: logo, five pages, one usage strip, search, bell, settings and New session <span class="ref">(8)</span>. Grid and Board, Layouts, Dim others and text size moved into the sessions toolbar where they apply. The active page is always highlighted, and Projects, Usage and Agent tools no longer hide under a "More" tab; "Agents" is now "Crew" so it cannot be confused with Skills or the CLI installer <span class="ref">(7)</span>. The usage strip opens a popover with the same numbers as the Usage page, including the reset time <span class="ref">(8)</span>. Click a page, click the strip.</p>
+    </div>
+    <div class="befores">
+      <a class="before" data-img="10-topbar-limits-popover" target="_blank" rel="noopener"><img alt="Current top bar" loading="lazy"><span>Before: top bar</span></a>
+      <a class="before" data-img="16-more-menu" target="_blank" rel="noopener"><img alt="Current More menu" loading="lazy"><span>Before: More menu</span></a>
+    </div>
+  </div>
+  <div class="app mid" id="frame-top">
+    <div class="tbslot"></div>
+    <div class="tp-body">
+      <div id="page-stub" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="grid-column:1;max-width:460px;margin-top:140px">
+        <h3 class="t-title">Where things went</h3>
+        <table class="map"><tr><th>Before</th><th>Now</th></tr>
+          <tr><td>Agents</td><td>Crew, a top-level page</td></tr>
+          <tr><td>More: Projects</td><td>Sidebar header, Manage</td></tr>
+          <tr><td>More: Usage</td><td>Usage strip, Open Usage</td></tr>
+          <tr><td>More: Agent tools</td><td>Settings, Installed CLIs</td></tr>
+          <tr><td>More: Layouts</td><td>Sessions toolbar</td></tr>
+          <tr><td>Grid, Board, Dim others, text size</td><td>Sessions toolbar</td></tr></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="first-run">
+  <div class="sec-head">
+    <div>
+      <h2 class="t-page">Empty app and first run</h2>
+      <p><b>What changed.</b> Onboarding is one dialog in the shared shell with three steps you can read: done, current and upcoming steps all pass 4.5:1 instead of fading to 2:1, and the disabled Start button says why <span class="ref">(11, 15)</span>. The empty app uses the one empty-state pattern: title, one sentence, one primary action and the shortcut.</p>
+    </div>
+    <div class="befores">
+      <a class="before" data-img="A-01-onboarding" target="_blank" rel="noopener"><img alt="Current onboarding" loading="lazy"><span>Before: onboarding</span></a>
+      <a class="before" data-img="A-02-empty-app" target="_blank" rel="noopener"><img alt="Current empty app" loading="lazy"><span>Before: empty app</span></a>
+    </div>
+  </div>
+  <div class="app mid" id="frame-first">
+    <div class="tb"><span class="logo">D</span><div class="tabs"><button class="tab" aria-selected="true">Sessions</button><button class="tab" aria-selected="false">Crew</button><button class="tab" aria-selected="false">Files</button><button class="tab" aria-selected="false">Work</button><button class="tab" aria-selected="false">Skills</button></div><span class="grow"></span><button class="btn btn-primary"><i class="icon">add</i>New session</button></div>
+    <div class="app-body"><aside class="sb"><div class="sb-head"><span class="sb-title">Projects</span></div><div class="sb-empty"><span>No projects yet.</span></div></aside><div class="empty-main"></div></div>
+    <div class="scrim"></div>
+    <div class="fr-center">
+      <div class="dialog wide" role="dialog" aria-label="Set up Dawsha">
+        <div class="dialog-head"><h2>Set up Dawsha</h2><button class="btn btn-ghost btn-icon btn-sm" aria-label="Close"><i class="icon">close</i></button></div>
+        <div class="dialog-body">
+          <div class="steps">
+            <div class="step now"><span class="n">1</span><div><b>Add a project</b><p>Pick a folder with your code. Sessions start there.</p></div><button class="btn btn-primary">Choose folder</button></div>
+            <div class="step"><span class="n">2</span><div><b>Check your agents</b><p>Dawsha found these on this computer.</p><div class="chips"><span class="chip chip-accent"><i class="icon sm">check</i>Claude Code</span><span class="chip chip-accent"><i class="icon sm">check</i>Codex</span><span class="chip chip-warn">Gemini not found</span></div></div><button class="btn btn-ghost">Install Gemini</button></div>
+            <div class="step"><span class="n">3</span><div><b>Start a session</b><p>Try one of these, or write your own.</p><div class="chips"><span class="chip" role="button" tabindex="0">Explain this codebase</span><span class="chip" role="button" tabindex="0">Find and fix a failing test</span><span class="chip" role="button" tabindex="0">Write a README</span></div></div></div>
+          </div>
+          <p class="t-meta" style="margin:16px 0 0">Everything stays on this computer.</p>
+        </div>
+        <div class="dialog-foot"><button class="btn btn-ghost left">Skip for now</button><span class="t-meta">Add a project first</span><button class="btn btn-primary" disabled>Start a session</button></div>
+      </div>
+    </div>
+  </div>
+  <div style="height:var(--sp-4)"></div>
+  <div class="app mid" id="frame-empty">
+    <div class="tb"><span class="logo">D</span><div class="tabs"><button class="tab" aria-selected="true">Sessions</button><button class="tab" aria-selected="false">Crew</button><button class="tab" aria-selected="false">Files</button><button class="tab" aria-selected="false">Work</button><button class="tab" aria-selected="false">Skills</button></div><span class="grow"></span><button class="btn btn-primary"><i class="icon">add</i>New session</button></div>
+    <div class="app-body">
+      <aside class="sb"><div class="sb-head"><span class="sb-title">Projects</span></div>
+        <div class="sb-empty"><span>Projects you add show here with their sessions.</span><button class="btn"><i class="icon">add</i>Add project</button></div></aside>
+      <div class="app-main"><div class="st"><div class="tabs"><button class="tab" aria-selected="true"><i class="icon">grid_view</i>Grid</button><button class="tab" aria-selected="false"><i class="icon">view_kanban</i>Board</button></div></div>
+        <div class="empty-main"><div class="empty"><div class="empty-icon"><i class="icon">terminal</i></div><h3>No sessions yet</h3><p>Start a session in a project to watch Claude, Codex and Gemini side by side.</p><div class="actions"><button class="btn btn-primary btn-lg"><i class="icon">add</i>New session</button><button class="btn btn-ghost btn-lg">Add project</button></div><div class="hint">or press <span class="kbd">Ctrl N</span></div></div></div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<script src="core.js"></script>
+</body>
+</html>

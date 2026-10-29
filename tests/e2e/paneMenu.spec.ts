@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp } from './helpers'
+import { closeApp, createSandbox, launchApp, openTerminalPicker } from './helpers'
 
 const SCREENS = 'test-results/screens'
 
@@ -63,7 +63,6 @@ test('pane header menus close on a second click of their button, including Move 
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
     const actions = page.locator('.pane').getByRole('button', { name: 'Pane actions' })
-    const add = page.locator('.pane').getByRole('button', { name: /^New terminal in/ })
 
     await actions.click()
     await expect(page.getByRole('menu', { name: 'Pane actions' })).toBeVisible()
@@ -78,9 +77,9 @@ test('pane header menus close on a second click of their button, including Move 
     await actions.click()
     await expect(page.getByRole('menu')).toHaveCount(0)
 
-    await add.click()
+    await openTerminalPicker(page.locator('.pane').first())
     await expect(page.getByRole('menuitem', { name: 'Shell' })).toBeVisible()
-    await add.click()
+    await page.keyboard.press('Escape')
     await expect(page.getByRole('menu')).toHaveCount(0)
   } finally {
     await closeApp(app)

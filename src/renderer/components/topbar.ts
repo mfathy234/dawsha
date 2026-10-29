@@ -9,7 +9,8 @@ import {
   toggleLayouts,
   toggleThemePicker,
   toggleUpdatePopover,
-  zoomAll
+  zoomAll,
+  openPalette
 } from '../actions'
 import { pillLabel, showUpdatePill } from '../../shared/updates'
 import { AGENTS, AGENT_NAMES, agentLabel } from '../../shared/agents'
@@ -80,6 +81,10 @@ export class TopBarComponent {
   )
   private agentMenu: HTMLElement | null = null
   private readonly bell = new NotificationBell()
+  private readonly search = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'search-button', 'aria-label': 'Search', title: 'Search', onClick: () => openPalette() },
+    h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.search)),
+    h('span', { class: 'utility-label' }, 'Search')
+  )
   readonly themeButton = h(
     'button',
     { class: 'btn ghost topbar-tool', type: 'button', id: 'theme-button', 'aria-label': 'Theme', title: 'Theme', 'aria-haspopup': 'dialog', onClick: () => toggleThemePicker() },
@@ -91,6 +96,8 @@ export class TopBarComponent {
   private readonly crewStrip = h('div', { class: 'crew-strip', id: 'crew-strip', role: 'group', 'aria-label': 'Who is on a job', hidden: true })
   private crewStripSignature = ''
   private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
+  private readonly work = h('button', { class: 'btn ghost', type: 'button', id: 'work-button', onClick: () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work') }, 'Work')
+  private readonly skills = h('button', { class: 'btn ghost', type: 'button', id: 'skills-button', onClick: () => showView(this.skills.getAttribute('aria-pressed') === 'true' ? 'grid' : 'skills') }, 'Skills')
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')
   private readonly more = h(
@@ -100,7 +107,7 @@ export class TopBarComponent {
     h('span', { class: 'more-chevron', 'aria-hidden': 'true' }, icon(ICONS.chevronDown)),
     this.moreDot
   )
-  readonly layoutsButton = this.more
+  readonly layoutsButton = h('button', { class: 'btn ghost sessions-layouts-button', type: 'button', id: 'layouts-button', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onClick: () => toggleLayouts() }, 'Layouts')
   private moreMenu: HTMLElement | null = null
   private moreItems: Record<MoreView, HTMLElement> | null = null
   private agentUpdates = false
@@ -117,6 +124,19 @@ export class TopBarComponent {
   private readonly summary = h('div', { class: 'topbar-count', role: 'status', 'aria-live': 'polite' })
   private summarySignature = ''
   private readonly zoomValue = h('span', { class: 'zoom-value', title: 'Terminal text size of the focused pane' }, '15px')
+  private readonly zoomControl = h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
+    h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: `Smaller text in every pane (${ZOOM_MOD}+- for the focused pane only)`, onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
+    this.zoomValue,
+    h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane (${ZOOM_MOD}+= for the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
+  )
+  readonly sessionsToolbar = h('div', { class: 'sessions-toolbar', 'aria-label': 'Sessions tools' },
+    h('div', { class: 'layout-switch', role: 'group', 'aria-label': 'Sessions layout' }, this.gridMode, this.boardMode),
+    this.layoutsButton,
+    this.dimSwitch,
+    this.crewStrip,
+    this.summary,
+    this.zoomControl
+  )
   readonly updatePill = h('button', {
     class: 'update-pill',
     type: 'button',
@@ -157,21 +177,15 @@ export class TopBarComponent {
         this.sessions,
         this.background,
         this.files,
+        this.work,
+        this.skills,
         this.more
       ),
       this.updatePill,
       h('span', { class: 'spacer' }),
-      h('div', { class: 'layout-switch', role: 'group', 'aria-label': 'Sessions layout' }, this.gridMode, this.boardMode),
-      this.dimSwitch,
-      this.crewStrip,
-      this.summary,
       this.limits,
       h('div', { class: 'topbar-tools' },
-        h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: `Smaller text in every pane (${ZOOM_MOD}+- for the focused pane only)`, onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
-          this.zoomValue,
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane (${ZOOM_MOD}+= for the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
-        ),
+        this.search,
         this.bell.el,
         this.themeButton,
         this.settings
@@ -188,6 +202,8 @@ export class TopBarComponent {
     this.dimSwitch.setAttribute('aria-pressed', String(dim))
     this.background.setAttribute('aria-pressed', String(state.view === 'crew'))
     this.files.setAttribute('aria-pressed', String(state.view === 'files'))
+    this.work.setAttribute('aria-pressed', String(state.view === 'work'))
+    this.skills.setAttribute('aria-pressed', String(state.view === 'skills'))
     this.updateCrewStrip(state)
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
     this.agentUpdates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
@@ -243,10 +259,12 @@ export class TopBarComponent {
   }
 
   private updateMore(state: AppState): void {
-    this.activeMore = state.layoutsOpen ? 'layouts' : MORE_VIEWS.some((item) => item.view === state.view) ? (state.view as MoreView) : null
+    this.activeMore = MORE_VIEWS.some((item) => item.view === state.view && item.view !== 'work' && item.view !== 'skills') ? (state.view as MoreView) : null
     const label = moreLabel(this.activeMore ?? '')
     this.more.setAttribute('aria-pressed', String(this.activeMore !== null))
-    this.more.setAttribute('aria-expanded', String(this.moreMenu !== null || state.layoutsOpen))
+    this.more.setAttribute('aria-expanded', String(this.moreMenu !== null))
+    this.layoutsButton.setAttribute('aria-pressed', String(state.layoutsOpen))
+    this.layoutsButton.setAttribute('aria-expanded', String(state.layoutsOpen))
     this.more.setAttribute('aria-label', this.agentUpdates ? `${label}, agent updates available` : label)
     this.moreText.textContent = 'More'
     this.moreDot.hidden = !this.agentUpdates
@@ -442,7 +460,7 @@ export class TopBarComponent {
       this.closeMoreMenu()
       return
     }
-    const entries = MORE_VIEWS.map(({ view, label }) => {
+    const entries = MORE_VIEWS.filter(({ view }) => view !== 'work' && view !== 'skills' && view !== 'layouts').map(({ view, label }) => {
       const item = h(
         'button',
         { class: 'menu-item more-item', type: 'button', role: 'menuitem', id: `${view}-menu-item`, 'data-view': view, onClick: () => this.openMore(view) },

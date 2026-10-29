@@ -300,12 +300,12 @@ aside.sidebar.rail { width: 56px; }
   color: var(--text);
   font: inherit;
   font-size: var(--fs-ui);
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 .rail-btn.rail-mono:hover { background: var(--hover); }
 .rail-btn.rail-mono.selected { background: color-mix(in srgb, var(--accent) 22%, var(--raised)); }
-.rail-btn .rail-badge { top: -4px; right: -4px; color: var(--muted); font-size: var(--fs-status); font-weight: 700; }
+.rail-btn .rail-badge { top: -4px; right: -4px; color: var(--muted); font-size: var(--fs-status); font-weight: 600; }
 .rail-btn .rail-badge.needs { color: var(--state-needs); }
 .rail-spacer { flex: 1; }
 

@@ -12,6 +12,7 @@ export interface StripHandlers {
   onReviewFiles(): void
   onOpenChanges(): void
   bridgeInstalled: boolean
+  showLiveInfo: boolean
   onEnableBridge(): void
 }
 
@@ -39,7 +40,7 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
         )
       )
     )
-  } else if (info.agent === 'claude') {
+  } else if (info.agent === 'claude' && handlers.showLiveInfo) {
     items.push(
       handlers.bridgeInstalled
         ? h('span', { class: 'info-context unavailable', title: 'Waiting for Claude Code to report. Send a prompt and the context bar appears here.' }, 'ctx waiting')

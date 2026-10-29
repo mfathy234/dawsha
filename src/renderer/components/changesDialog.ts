@@ -306,7 +306,7 @@ export function openChangesDialog(options: ChangesOptions): Promise<void> {
   const showChanges = h('button', { class: 'cbtn', type: 'button', hidden: true }, 'Show changes') as HTMLButtonElement
   const copyPath = h('button', { class: 'cbtn', type: 'button', disabled: true }, 'Copy path') as HTMLButtonElement
   const openViewed = h('button', { class: 'cbtn', type: 'button', disabled: true }, 'Open in editor') as HTMLButtonElement
-  const viewArea = h('div', { class: 'changes-diff files-view' })
+  const viewArea = h('div', { class: 'changes-diff files-view diff' })
   const filesBody = h(
     'div',
     { class: 'changes-body', hidden: true },

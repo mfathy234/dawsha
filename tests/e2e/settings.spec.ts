@@ -31,6 +31,11 @@ test('Settings opens from the top bar and with Ctrl+comma, and every section ren
     await expect(page.locator('#settings-button')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.settings-view h1')).toHaveText('Settings')
     await expect(page.locator('#settings-tab-remote')).toHaveCount(1)
+    await page.getByRole('searchbox', { name: 'Search settings' }).fill('Remote')
+    await expect(page.locator('#settings-tab-remote')).toBeVisible()
+    await expect(page.locator('#settings-tab-general')).toHaveCount(0)
+    await page.getByRole('searchbox', { name: 'Search settings' }).clear()
+    await expect(page.locator('#settings-tab-general')).toBeVisible()
     await page.locator('#settings-button').click()
     await expect(page.locator('.settings-view')).toBeHidden()
 

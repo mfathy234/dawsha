@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp } from './helpers'
+import { closeApp, createSandbox, launchApp, openTerminalPicker } from './helpers'
 
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 const CLAUDE_ID = '11111111-2222-4333-8444-555555555555'
@@ -41,7 +41,7 @@ test('closing an agent session offers Reopen for a few seconds and brings it bac
     await expect(page.locator('.pane').first().locator('.chip-resumed')).toBeVisible()
 
     // A shell terminal has no session to come back to: closing it shows no Reopen.
-    await page.locator('.pane').nth(1).getByRole('button', { name: /^New terminal in/ }).first().click()
+    await openTerminalPicker(page.locator('.pane').nth(1))
     await page.getByRole('menuitem', { name: 'Shell' }).click()
     await expect(page.locator('.pane').nth(1).locator('.tabs [role="tab"]')).toHaveCount(2)
     await page.locator('.pane').nth(1).getByRole('button', { name: /^Close terminal/ }).click()

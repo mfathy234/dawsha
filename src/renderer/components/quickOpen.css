@@ -18,7 +18,7 @@
 .qo-name { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .qo-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--fs-ui); }
 .qo-match { background: transparent; color: var(--accent); }
-.qo-badge { flex: none; font-family: var(--font-mono); font-size: var(--fs-status); font-weight: 700; }
+.qo-badge { flex: none; font-family: var(--font-mono); font-size: var(--fs-status); font-weight: 600; }
 .qo-badge.b-M { color: var(--busy); }
 .qo-badge.b-A { color: var(--accent); }
 .qo-badge.b-D { color: var(--danger); }

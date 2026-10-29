@@ -76,16 +76,18 @@ test('the surface ladder: dark tokens and the plane colours that paint', async (
   }
 })
 
-test('nav: Sessions, Agents, Files and More, the rest live under More', async () => {
+test('nav: Sessions, Agents, Files, Work and Skills, the rest live under More', async () => {
   const sandbox = createSandbox()
   withTheme(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
     const labels = await page.locator('.topbar-nav .btn').allTextContents()
-    expect(labels.map((text) => text.replace(/\s+/g, ' ').trim())).toEqual(['Sessions', 'Agents', 'Files', 'More'])
+    expect(labels.map((text) => text.replace(/\s+/g, ' ').trim())).toEqual(['Sessions', 'Agents', 'Files', 'Work', 'Skills', 'More'])
     await page.locator('#more-button').click()
     const items = await page.locator('.more-item').allTextContents()
-    expect(items.map((text) => text.replace(/\s+/g, ' ').trim())).toEqual(expect.arrayContaining(['Projects', 'Usage', 'Work', 'Agent tools', 'Skills', 'Layouts']))
+    expect(items.map((text) => text.replace(/\s+/g, ' ').trim())).toEqual(expect.arrayContaining(['Projects', 'Usage', 'Agent tools']))
+    expect(items).not.toEqual(expect.arrayContaining(['Work', 'Skills']))
+    await expect(page.locator('#layouts-button')).toBeVisible()
     await page.keyboard.press('Escape')
     await openMore(page, 'usage')
     await expect(page.locator('#more-button')).toHaveAttribute('aria-pressed', 'true')
@@ -160,7 +162,7 @@ for (const [mode, themeId] of THEMES) {
 
       const header = await focused.locator('.pane-header').evaluate((el) => getComputedStyle(el).backgroundColor)
       expect(header).toBe(rgb(mode === 'dark' ? '#1d222c' : '#ffffff'))
-      expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('700')
+      expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600')
       expect(await idle.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600')
       expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el, '::before').content)).toBe('none')
 
@@ -285,7 +287,7 @@ for (const [mode, themeId] of THEMES) {
       await page.locator('#layout-grid').click()
 
       await openSettings(page, 'general')
-      const nav = await style(page, '.settings-nav', ['background-color'])
+      const nav = await style(page, '.settings-rail', ['background-color'])
       expect(nav['background-color']).toBe(rgb(mode === 'dark' ? '#0f1217' : '#edf0ee'))
       expect(await page.locator('.settings-view input[type="checkbox"]').first().evaluate((el) => getComputedStyle(el).width)).toBe('30px')
       await shot(page, `${mode}-settings`)

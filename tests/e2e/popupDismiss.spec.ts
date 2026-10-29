@@ -62,8 +62,7 @@ test('palettes, pickers and popovers each close with their Dismiss button', asyn
     await dismiss(page, '.resume-picker').click()
     await expect(resume).toHaveCount(0)
 
-    await page.locator('#more-button').click()
-    await page.locator('#layouts-menu-item').click()
+    await page.locator('#layouts-button').click()
     const layouts = page.getByRole('dialog', { name: 'Saved layouts' })
     await expect(layouts).toBeVisible()
     await shot(page, 'layouts')

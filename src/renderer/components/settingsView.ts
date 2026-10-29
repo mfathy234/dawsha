@@ -104,6 +104,7 @@ const COLOR_LABELS: Record<HighlightColor, string> = { red: 'Red', amber: 'Amber
 export class SettingsViewComponent {
   readonly el = h('main', { class: 'settings-view', 'aria-label': 'Settings' })
   private readonly nav = h('div', { class: 'settings-nav', role: 'tablist', 'aria-orientation': 'vertical', 'aria-label': 'Settings sections' })
+  private readonly search = h('input', { class: 'text-input settings-search', type: 'search', placeholder: 'Search settings', 'aria-label': 'Search settings', onInput: () => this.refresh() })
   private readonly panel = h('div', { class: 'settings-panel', role: 'tabpanel' })
   private readonly title = h('h2', { class: 'settings-section-title' })
   private readonly lede = h('p', { class: 'lede' })
@@ -152,7 +153,7 @@ export class SettingsViewComponent {
     })
     this.el.append(
       h('div', { class: 'settings-head' }, h('h1', {}, 'Settings'), h('p', { class: 'lede' }, 'Preferences for Dawsha. Theme and background image stay in the Theme menu.')),
-      h('div', { class: 'settings-body' }, this.nav, h('div', { class: 'settings-content' }, this.title, this.lede, this.panel))
+      h('div', { class: 'settings-body' }, h('aside', { class: 'settings-rail' }, this.search, this.nav), h('div', { class: 'settings-content' }, this.title, this.lede, this.panel))
     )
   }
 
@@ -206,10 +207,14 @@ export class SettingsViewComponent {
     const focusedId = (document.activeElement as HTMLElement | null)?.id
     const sections = visibleSections(state)
     const section = sections.find((s) => s.id === state.settingsSection) ?? sections[0]
-    const navKey = `${section.id}|${sections.length}`
+    const query = this.search.value.trim().toLocaleLowerCase()
+    const filteredSections = query ? sections.filter((item) => `${item.label} ${item.lede}`.toLocaleLowerCase().includes(query)) : sections
+    const navKey = `${section.id}|${sections.length}|${query}`
     if (this.navSection !== navKey) {
       this.navSection = navKey
-      this.nav.replaceChildren(...sections.map((s) => this.tab(s, s.id === section.id)))
+      this.nav.replaceChildren(...(filteredSections.length
+        ? filteredSections.map((s) => this.tab(s, s.id === section.id))
+        : [h('p', { class: 'settings-no-match', role: 'status' }, 'No matching settings sections')]))
     }
     this.title.replaceChildren(section.label)
     if (section.id === 'remote') {

@@ -106,7 +106,7 @@
 .files-twist .icon svg { width: 11px; height: 11px; }
 .files-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .files-count { color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
-.files-badge { flex: none; width: 14px; text-align: center; font-size: var(--fs-status); font-weight: 700; font-family: var(--font-mono); }
+.files-badge { flex: none; width: 14px; text-align: center; font-size: var(--fs-status); font-weight: 600; font-family: var(--font-mono); }
 .files-badge.b-M { color: var(--busy); }
 .files-badge.b-A { color: var(--accent); }
 .files-badge.b-D { color: var(--danger); }
@@ -130,7 +130,7 @@
   font-family: var(--font-mono); cursor: pointer;
 }
 .files-search-opt:hover { color: var(--text); background: var(--hover); }
-.files-search-opt[aria-pressed='true'] { background: var(--raised); color: var(--text); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.files-search-opt[aria-pressed='true'] { background: var(--raised); color: var(--text); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .files-search-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 .files-search-summary { padding: var(--s-1) var(--s-1); color: var(--muted); font-size: var(--fs-status); flex: none; }
 .files-search-results { display: flex; flex-direction: column; gap: var(--s-1); }
@@ -170,6 +170,8 @@
 .files-review-foot .btn, .files-review-steps .btn { border-color: transparent; background: var(--hover); color: var(--text); height: 28px; }
 .files-review-foot .btn:hover:not(:disabled), .files-review-steps .btn:hover:not(:disabled) { background: var(--press); }
 .files-review-foot .btn.primary { background: var(--accent); color: var(--on-accent, #06130d); font-weight: 600; }
+.files-review-foot .btn.danger { margin-inline-start: auto; border-color: color-mix(in srgb, var(--danger) 55%, transparent); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--danger); }
+.files-review-foot .btn.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 20%, var(--surface)); }
 .files-review-foot .btn:disabled, .files-review-steps .btn:disabled { opacity: 0.5; }
 
 /* Commit dialog */
@@ -294,12 +296,20 @@
 .files-compare-tag.right { right: var(--s-2); }
 
 /* Review comments and blame inside the diff */
+.diff .cm-mergeView { border: 1px solid var(--line); border-radius: var(--r-1); overflow: hidden; }
+.diff .cm-changedLine { background: color-mix(in srgb, var(--st-working) 8%, transparent); }
+.diff .cm-insertedLine { background: color-mix(in srgb, var(--st-done) 14%, transparent); }
+.diff .cm-deletedLine { background: color-mix(in srgb, var(--st-error) 12%, transparent); }
+.diff .cm-insertedText { background: color-mix(in srgb, var(--st-done) 28%, transparent); }
+.diff .cm-deletedText { background: color-mix(in srgb, var(--st-error) 28%, transparent); }
+.diff .cm-changedLineGutter { background: color-mix(in srgb, var(--st-done) 12%, var(--well)); }
+.diff .cm-deletedLineGutter { background: color-mix(in srgb, var(--st-error) 12%, var(--well)); }
 .cm-review-gutter { width: 18px; }
 .cm-review-gutter .cm-gutterElement { display: flex; align-items: center; justify-content: center; }
 .cm-review-add { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 3px; color: var(--muted); font-family: var(--font-mono); font-size: 13px; line-height: 1; cursor: pointer; }
 .cm-review-add:hover { background: var(--hover); color: var(--accent); }
 .cm-blame-gutter { width: 18px; }
-.cm-blame-mark { display: inline-block; width: 16px; text-align: center; color: var(--muted); font-size: 10px; font-weight: 700; cursor: help; }
+.cm-blame-mark { display: inline-block; width: 16px; text-align: center; color: var(--muted); font-size: 10px; font-weight: 600; cursor: help; }
 .cm-blame-mark.estimated { opacity: .55; }
 .cm-blame-mark .agent-mark { display: inline-grid; place-items: center; width: 12px; height: 12px; font-size: 11px; vertical-align: -2px; }
 .cm-blame-mark .agent-mark svg { width: 11px; height: 11px; }

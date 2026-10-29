@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { execFile, spawn } from 'node:child_process'
-import { _electron as electron, expect, type ElectronApplication, type Page } from '@playwright/test'
+import { _electron as electron, expect, type ElectronApplication, type Locator, type Page } from '@playwright/test'
 
 export interface Sandbox {
   root: string
@@ -17,6 +17,11 @@ export interface Sandbox {
   notifyLog: string
   quitLog: string
   pipe: string
+}
+
+export async function openTerminalPicker(pane: Locator): Promise<void> {
+  await pane.getByRole('button', { name: 'Pane actions' }).click()
+  await pane.getByRole('menuitem', { name: 'New terminal', exact: true }).click()
 }
 
 export const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')).version as string

@@ -48,7 +48,7 @@ export class ReviewPanel {
   })
   private readonly send = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-send', disabled: true, onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send comments to agent')
   private readonly commit = h('button', { class: 'btn small', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
-  private readonly discard = h('button', { class: 'btn small', type: 'button', id: 'files-review-discard', disabled: true, onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
+  private readonly discard = h('button', { class: 'btn small danger', type: 'button', id: 'files-review-discard', disabled: true, onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
   private current: string | null = null
 
   constructor(private readonly hooks: ReviewHooks) {

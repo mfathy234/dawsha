@@ -65,6 +65,15 @@ const RESUMED_CHIP_MS = 60_000
 const RECAP_REFRESH_MS = 2_500
 const RECAP_SCREEN_ROWS = 60
 
+function approvalDetail(prompt: string): { tool: string; target: string } | null {
+  if (!prompt) return null
+  const tool = prompt.match(/\b(Bash|Read|Edit|Write|Glob|Grep|NotebookEdit|WebFetch|WebSearch)\b/i)?.[1]
+  const target = prompt.match(/(?:command|file|path|url)\s*[:=]\s*["']?(.+?)["']?$/i)?.[1]?.trim()
+    ?? prompt.match(/\b(?:Bash|Read|Edit|Write|Glob|Grep)\s*\((.+)\)/i)?.[1]?.trim()
+    ?? ''
+  return tool ? { tool, target } : { tool: 'Requested action', target: prompt }
+}
+
 export class PaneComponent {
   readonly el: HTMLElement
   private readonly mark = h('span', { class: 'slot' })
@@ -96,6 +105,7 @@ export class PaneComponent {
   private recapAt = 0
   private readonly permission = h('div', { class: 'pane-permission', role: 'alert', hidden: true })
   private permissionSignature = ''
+  private permissionCommand = ''
   private readonly tabAdd = h('span', { class: 'pane-tab-add-slot', hidden: true })
   private readonly info = h('div', { class: 'pane-info', hidden: true })
   private readonly foot = h('div', { class: 'pane-foot', hidden: true })
@@ -208,7 +218,7 @@ export class PaneComponent {
     this.branch.title = view.sync ? `Git actions. ${describeSync(view.sync)} of ${view.branch ?? 'the upstream'}` : 'Git actions'
     const state = sessionState({ status: view.status, attention: view.attention })
     this.updateState(view, state)
-    this.updateInfo(view, maximized)
+    this.updateInfo(view, maximized, focused)
     this.foot.hidden = this.info.hidden && this.branch.hidden
     this.updateRecap(view)
     this.recap.hidden = !store.state.settings.showRecap || this.recapText === ''
@@ -265,20 +275,27 @@ export class PaneComponent {
 
   private updatePermission(view: PaneView, state: SessionState): void {
     const needs = state === 'needs'
-    const command = needs && store.state.waiting[this.paneId] ? permissionPromptText(permissionTail(this.paneId)) : ''
-    const signature = needs ? JSON.stringify([view.agent, command]) : ''
+    const command = needs ? permissionPromptText(permissionTail(this.paneId)) : ''
+    if (command) this.permissionCommand = command
+    const detailCommand = needs ? this.permissionCommand : ''
+    const signature = needs ? JSON.stringify([view.agent, detailCommand]) : ''
     if (signature === this.permissionSignature) return
     this.permissionSignature = signature
     this.permission.hidden = !needs
-    if (!needs) return this.permission.replaceChildren()
+    if (!needs) {
+      this.permissionCommand = ''
+      return this.permission.replaceChildren()
+    }
     const name = AGENT_NAMES[view.agent]
+    const detail = approvalDetail(detailCommand)
     const key = (label: string): HTMLElement => h('kbd', { class: 'pane-permission-key' }, label)
     this.permission.replaceChildren(
       h(
         'div',
         { class: 'pane-permission-text' },
-        h('span', { class: 'pane-permission-title' }, `${name} is waiting for your answer`),
-        command ? h('code', { class: 'pane-permission-command', title: command }, command) : null
+        h('span', { class: 'pane-permission-title' }, `${name} is asking to proceed`),
+        detail ? h('span', { class: 'pane-permission-detail' }, detail.tool) : null,
+        detail?.target ? h('code', { class: 'pane-permission-command', title: detailCommand }, detail.target) : detailCommand ? h('code', { class: 'pane-permission-command', title: detailCommand }, detailCommand) : null
       ),
       h(
         'button',
@@ -301,10 +318,10 @@ export class PaneComponent {
     if (pane && folder) openReviewInFiles({ projectId: pane.projectId, folder })
   }
 
-  private updateInfo(view: PaneView, maximized: boolean): void {
+  private updateInfo(view: PaneView, maximized: boolean, focused: boolean): void {
     this.info.classList.toggle('clickable', maximized)
     const bridgeInstalled = store.state.bridge.installed
-    const signature = JSON.stringify([view.info, view.title, view.now, bridgeInstalled])
+    const signature = JSON.stringify([view.info, view.title, view.now, bridgeInstalled, focused])
     if (signature === this.infoSignature) return
     this.infoSignature = signature
     const items = paneInfoStrip(view.info, {
@@ -312,6 +329,7 @@ export class PaneComponent {
       now: view.now,
       onOpenChanges: () => void openChanges(this.paneId),
       bridgeInstalled,
+      showLiveInfo: focused && !bridgeInstalled,
       onEnableBridge: () => void enableBridge(),
       onReviewFiles: () => this.reviewInFiles()
     })
@@ -524,7 +542,14 @@ export class PaneComponent {
     this.actionsMenu = h(
       'div',
       { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Pane actions' },
+      h('div', { class: 'menu-heading', role: 'presentation' }, 'Pane'),
       maximizeItem,
+      item('Previous pane', () => focusRelative(-1), ICONS.prev),
+      item('Next pane', () => focusRelative(1), ICONS.next),
+      item('Close pane', () => closePane(this.paneId), ICONS.close),
+      h('div', { class: 'menu-separator', role: 'separator' }),
+      h('div', { class: 'menu-heading', role: 'presentation' }, 'Open and review'),
+      item('New terminal', () => this.openTerminalPicker(), ICONS.plus),
       first,
       studioItem,
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),
@@ -534,6 +559,8 @@ export class PaneComponent {
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
+      h('div', { class: 'menu-separator', role: 'separator' }),
+      h('div', { class: 'menu-heading', role: 'presentation' }, 'Session tools'),
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
       item('Replay session', () => replayPane(this.paneId), ICONS.replay, 'pane.replay'),
       pauseItem,
@@ -712,6 +739,12 @@ export class PaneComponent {
     placeNearAnchor(this.menu, anchor)
     first.focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
+  }
+
+  private openTerminalPicker(): void {
+    const anchor = this.el.querySelector<HTMLElement>('.pane-actions')
+    this.closeActions()
+    if (anchor) this.toggleMenu(anchor)
   }
 
   private readonly outside = (event: Event): void => {

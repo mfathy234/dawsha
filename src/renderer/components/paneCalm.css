@@ -31,7 +31,7 @@
   color: var(--bg);
 }
 .pane .pane-permission .btn.primary:hover { filter: brightness(1.08); }
-:root[data-kind='light'] .pane.calm:not(:hover):not(:focus-within) .pane-body { filter: brightness(0.86) saturate(0.8); transition-delay: 60ms; }
+:root[data-kind='light'] .pane.calm:not(:hover):not(:focus-within) .pane-body { filter: none; transition-delay: 0ms; }
 
 /* Pane header: the session name keeps at least 9em; project, tag and "new session" go first on narrow panes and move into the tooltip. */
 .pane-header {
@@ -39,7 +39,7 @@
   padding: 0 var(--s-2) 0 var(--s-4); background: transparent; cursor: grab;
 }
 .pane.focused .pane-header { background: var(--raised); }
-.pane.focused .pane-title { font-weight: 700; }
+.pane.focused .pane-title { font-weight: 600; }
 .pane-header > .icon-btn { flex: none; }
 .pane-title { flex: 0 1 auto; min-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-body); font-weight: 600; color: var(--text); }
 .pane-project { flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-ui); color: var(--muted); }

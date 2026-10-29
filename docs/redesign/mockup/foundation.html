@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dawsha foundation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .page { max-width: 1360px; margin: 0 auto; padding: var(--sp-7) var(--sp-6) 96px; }
+  .top { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-6); padding-bottom: var(--sp-6); }
+  .top p { margin: var(--sp-2) 0 0; max-width: 62ch; color: var(--text-2); }
+  .top a { color: var(--accent-ink); }
+  section.block { padding-top: var(--sp-7); }
+  section.block > header { margin-bottom: var(--sp-4); }
+  section.block h2 { margin: 0; }
+  .rules { margin: var(--sp-1) 0 0; padding: 0; list-style: none; color: var(--text-2); display: grid; gap: var(--sp-1); max-width: 92ch; }
+  .rules li::before { content: '-'; margin-inline-end: var(--sp-2); color: var(--text-3); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  .panel { background: var(--bg); color: var(--text); border-radius: var(--r-3); padding: var(--sp-5); box-shadow: 0 0 0 1px var(--line-strong); min-width: 0; }
+  .panel > .ptag { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-4); color: var(--text-3); font-size: var(--fs-1); }
+  .stack { display: grid; gap: var(--sp-4); }
+  .row { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+  .surf { background: var(--surface); border-radius: var(--r-2); padding: var(--sp-4); box-shadow: var(--e1); }
+  .ladder { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--sp-2); }
+  .ladder div { height: 56px; border-radius: var(--r-1); box-shadow: inset 0 0 0 1px var(--line-strong); padding: var(--sp-2); font-size: var(--fs-1); color: var(--text-2); display: flex; align-items: flex-end; }
+  .sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--sp-2); }
+  .sw div { border-radius: var(--r-1); padding: var(--sp-2); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-size: var(--fs-1); }
+  .sw b { display: block; width: 100%; height: 6px; border-radius: 3px; margin-bottom: var(--sp-2); }
+  .scale > div { display: flex; align-items: baseline; gap: var(--sp-4); padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
+  .scale small { width: 124px; flex: none; color: var(--text-3); font-size: var(--fs-1); }
+  .space i { display: block; height: 12px; background: var(--accent); border-radius: 2px; }
+  .space > div { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-1); color: var(--text-2); padding: 2px 0; }
+  .space span { width: 56px; }
+  .elev { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-5); padding: var(--sp-4); background: var(--bg); }
+  .elev div { height: 72px; background: var(--pop); border-radius: var(--r-2); display: grid; place-items: center; font-size: var(--fs-1); color: var(--text-2); }
+  .term { background: var(--well); color: var(--term-fg); border-radius: var(--r-2); padding: var(--sp-3) var(--sp-4); font: var(--fs-term)/var(--lh-term) var(--font-mono); box-shadow: inset 0 0 0 1px var(--line); }
+  .term .d { color: var(--term-dim); } .term .a { color: var(--term-add); } .term .r { color: var(--term-del); } .term .w { color: var(--term-warn); } .term .c { color: var(--term-cmd); } .term .p { color: var(--term-prompt); }
+  .static-menu { position: static; animation: none; display: inline-block; }
+  .static-pop { position: static; animation: none; }
+  .static-toast { animation: none; }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-2); }
+  table.tbl th { text-align: start; font-weight: var(--w-medium); color: var(--text-3); font-size: var(--fs-1); padding: var(--sp-2) var(--sp-3) var(--sp-2) 0; }
+  table.tbl td { padding: var(--sp-2) var(--sp-3) var(--sp-2) 0; border-top: 1px solid var(--line); color: var(--text-2); vertical-align: top; }
+  .nav { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+  .nav a { color: var(--text-2); text-decoration: none; padding: var(--sp-1) 0; }
+  .nav a:hover { color: var(--text); }
+  @media (max-width: 1100px) { .pair { grid-template-columns: 1fr; } }
+  .demo-anim { width: 40px; height: 40px; border-radius: var(--r-1); background: var(--accent); }
+  .bar-anim { width: 100%; height: 40px; background: var(--raised); border-radius: var(--r-1); position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div>
+      <h1 class="t-display" style="margin:0">Dawsha foundation</h1>
+      <p>One token file, one component skin per job. Everything below is rendered straight from <span class="mono">tokens.css</span> in dark (default) and light. Screens are on <a href="core.html">core.html</a>.</p>
+    </div>
+    <nav class="nav" aria-label="Sections">
+      <a href="#type">Type</a><a href="#space">Space and shape</a><a href="#elev">Elevation and layers</a><a href="#motion">Motion</a><a href="#colour">Colour</a><a href="#states">States</a><a href="#controls">Controls</a><a href="#surfaces">Menus and dialogs</a><a href="#patterns">Patterns</a>
+    </nav>
+  </div>
+  <div id="root"></div>
+</div>
+
+<script>
+const SECTIONS = [
+{
+  id: 'type', title: 'Type',
+  rules: [
+    'Five UI sizes only: 11 caption, 13 body, 15 title, 20 page, 28 display. Two terminal sizes: 13 focused, 12 dense grids. Nothing below 11 or 12 in a terminal.',
+    'Three weights: 400 reading, 500 interactive and labels, 600 titles. A level of hierarchy is a size step of 2px or more plus a weight step, never colour alone.',
+    'Geist for the UI. JetBrains Mono only where text is code: terminal, paths, branch names, shortcuts. Numbers in tables and meters stay in Geist with tabular figures.',
+    'IBM Plex Sans Arabic is next in both stacks, so Arabic glyphs always come from one face at the same weights.'
+  ],
+  body: () => `<div class="scale">
+    <div><small>28 / 34 · 600 display</small><span class="t-display">Nothing needs you right now</span></div>
+    <div><small>20 / 28 · 600 page</small><span class="t-page">Billing API</span></div>
+    <div><small>15 / 22 · 600 title</small><span class="t-title">Approve this command</span></div>
+    <div><small>13 / 20 · 400 body</small><span>Claude wants to run a migration on staging.</span></div>
+    <div><small>13 / 20 · 500 label</small><span style="font-weight:500">Add retry with backoff</span></div>
+    <div><small>11 / 16 · 400 caption</small><span class="t-meta">Billing API · feature/retry-backoff · 2 min ago</span></div>
+    <div><small>Arabic 13 / 20</small><span dir="rtl" style="font-weight:500">مراجعة صفحة تسجيل الدخول</span></div>
+    <div><small>Mono 13 terminal</small><span class="mono">npm run migrate -- --env staging</span></div>
+  </div>`
+},
+{
+  id: 'space', title: 'Space and shape',
+  rules: [
+    'Spacing is a 4px ladder: 4, 8, 12, 16, 20, 24, 32, 48. Inside a control 8 to 12, between controls 8, between groups 16 to 24, page gutters 24 (one value for every page).',
+    'Three radii. 6 for controls and chips, 10 for panes, cards and popovers, 14 for dialogs. Nested radius = outer minus padding. Fully round only for dots, toggles and avatars.',
+    'Three control heights. 24 inside dense chrome (pane header, chips, menus in lists), 28 default, 32 for primary actions and forms. Nothing interactive is any other height.'
+  ],
+  body: () => `<div class="stack">
+    <div class="space">${[4,8,12,16,20,24,32,48].map((n,i)=>`<div><span>--sp-${i+1}</span><i style="width:${n*3}px"></i><span>${n}px</span></div>`).join('')}</div>
+    <div class="row">
+      <div class="surf" style="border-radius:var(--r-1)">r-1 · 6<br><span class="t-meta">control, chip</span></div>
+      <div class="surf" style="border-radius:var(--r-2)">r-2 · 10<br><span class="t-meta">pane, card, popover</span></div>
+      <div class="surf" style="border-radius:var(--r-3)">r-3 · 14<br><span class="t-meta">dialog</span></div>
+    </div>
+    <div class="row">
+      <button class="btn btn-sm">24 sm</button><button class="btn">28 md</button><button class="btn btn-lg">32 lg</button>
+      <button class="btn btn-primary btn-sm">24</button><button class="btn btn-primary">28</button><button class="btn btn-primary btn-lg">32</button>
+    </div>
+  </div>`
+},
+{
+  id: 'elev', title: 'Elevation and layers',
+  rules: [
+    'Three shadows. e1 resting (panes, cards, selected tab thumb), e2 floating (menus, popovers, toasts), e3 modal (dialogs). Each includes a 1px edge so light mode never depends on a faint shadow.',
+    'Depth also comes from the surface ladder: window, sidebar, pane, raised control, popover. Dialogs and menus sit on the lightest step in light mode and the highest in dark.',
+    'Layers are named, not numbered: pane-overlay 10, sticky 20, panel 30, pop 40, scrim 50, dialog 60, toast 70, tip 80.'
+  ],
+  body: () => `<div class="stack">
+    <div class="ladder">
+      <div style="background:var(--bg)">bg</div><div style="background:var(--sidebar)">sidebar</div><div style="background:var(--surface)">surface</div>
+      <div style="background:var(--raised)">raised</div><div style="background:var(--pop)">pop</div><div style="background:var(--well)">well</div>
+    </div>
+    <div class="elev"><div style="box-shadow:var(--e1)">e1 resting</div><div style="box-shadow:var(--e2)">e2 floating</div><div style="box-shadow:var(--e3)">e3 modal</div></div>
+    <table class="tbl"><tr><th>Layer</th><th>Used for</th></tr>
+      <tr><td class="mono">pane-overlay 10</td><td>approval card, find bar</td></tr>
+      <tr><td class="mono">sticky 20 · panel 30</td><td>top bar · slide-over panels</td></tr>
+      <tr><td class="mono">pop 40 · scrim 50 · dialog 60</td><td>menus, popovers · scrim · dialogs</td></tr>
+      <tr><td class="mono">toast 70 · tip 80</td><td>toasts · tooltips</td></tr></table>
+  </div>`
+},
+{
+  id: 'motion', title: 'Motion',
+  rules: [
+    'Four durations: 100 press, 160 hover, 220 menus and attention, 320 slide-overs and dialogs. Ease-out for anything entering, ease-in-out for things moving on screen, linear only for spinners.',
+    'No animation on keyboard-initiated actions repeated all day (focus move, Ctrl+1..9, palette toggle). Menus and panels animate on pointer open only.',
+    'Reduced motion: durations collapse to 1ms, spinners stop, the needs-you pulse becomes a static thick edge. Colour and opacity changes still happen.'
+  ],
+  body: () => `<div class="stack">
+    <table class="tbl"><tr><th>Token</th><th>ms</th><th>Use</th></tr>
+      <tr><td class="mono">--dur-1</td><td>100</td><td>press scale .97, kbd feedback</td></tr>
+      <tr><td class="mono">--dur-2</td><td>160</td><td>hover, colour, row highlight</td></tr>
+      <tr><td class="mono">--dur-3</td><td>220</td><td>menu, popover, needs-you pulse</td></tr>
+      <tr><td class="mono">--dur-4</td><td>320</td><td>slide-over panel, dialog, toast</td></tr></table>
+    <div class="row"><button class="btn" onclick="this.classList.remove('flash');void this.offsetWidth;this.classList.add('flash')">Press me</button><span class="t-meta">scale .97 on :active, 100ms ease-out</span></div>
+  </div>`
+},
+{
+  id: 'colour', title: 'Colour',
+  rules: [
+    'Green is the only accent and always means "yours to act on or good": primary buttons, focus, done. Orange is reserved for needs-you, blue for working, red for error and destructive.',
+    'Every text token passes 4.5:1 on all six surfaces, and every state colour passes on its own 14% tint. Disabled text is text-3, not 40% opacity, so it stays readable.',
+    'Purple belongs to Gemini and nothing else. Agent marks are letter tiles, so they work without brand art.'
+  ],
+  body: () => `<div class="stack">
+    <div class="sw">
+      <div><b style="background:var(--text)"></b>text</div><div><b style="background:var(--text-2)"></b>text-2</div><div><b style="background:var(--text-3)"></b>text-3</div>
+      <div><b style="background:var(--accent)"></b>accent</div><div><b style="background:var(--accent-ink)"></b>accent-ink</div>
+      <div><b style="background:var(--st-working)"></b>working</div><div><b style="background:var(--st-needs)"></b>needs</div><div><b style="background:var(--st-done)"></b>done</div><div><b style="background:var(--st-idle)"></b>idle</div><div><b style="background:var(--st-error)"></b>error</div>
+    </div>
+    <div class="row"><span class="mark" data-a="claude">C</span><span class="mark" data-a="codex">X</span><span class="mark" data-a="gemini">G</span><span class="t-meta">agent marks</span>
+      <span class="avatar">MA</span><span class="t-meta">crew avatar</span></div>
+    <div class="term"><span class="p">$</span> npm test<br><span class="a">+ const delay = Math.min(30_000, 500 * 2 ** n)</span><br><span class="r">- await send(payload)</span><br><span class="d">Read 84 lines</span> <span class="w">warning</span> <span class="c">src/sender.ts</span></div>
+  </div>`
+},
+{
+  id: 'states', title: 'Session states',
+  rules: [
+    'Five states, one shape: icon + word + colour, always together. Working spins, needs-you is a hand, done a check, idle a ring, error a cross.',
+    'The same .state markup is used in pane headers, sidebar rows, the top-bar chip, notifications and the board. Only the size of its container changes.'
+  ],
+  body: () => `<div class="stack">
+    <div class="row">
+      ${[['working','progress_activity','Working'],['needs','front_hand','Needs you'],['done','check_circle','Done'],['idle','radio_button_unchecked','Idle'],['error','cancel','Error']].map(([s,i,w])=>`<span class="state state-chip" data-s="${s}"><i class="icon">${i}</i>${w}</span>`).join('')}
+    </div>
+    <div class="row">
+      ${[['working','progress_activity','Working'],['needs','front_hand','Needs you'],['done','check_circle','Done'],['idle','radio_button_unchecked','Idle'],['error','cancel','Error']].map(([s,i,w])=>`<span class="state" data-s="${s}"><i class="icon">${i}</i>${w}</span>`).join('')}
+    </div>
+  </div>`
+},
+{
+  id: 'controls', title: 'Buttons, chips, tabs, fields, toggle',
+  rules: [
+    'One primary per surface. Secondary is the default button, ghost for tertiary and toolbar actions, danger only on the confirm of a destructive dialog (and it names the item).',
+    'One tab skin for navigation, view switches and panel tabs. Selected = raised thumb with e1. One toggle for every on/off setting, never a checkbox.',
+    'Label above, helper below. Placeholder is never the label.'
+  ],
+  body: () => `<div class="stack">
+    <div class="row"><button class="btn btn-primary"><i class="icon">add</i>New session</button><button class="btn">Review changes</button><button class="btn btn-ghost">Cancel</button><button class="btn btn-danger">Close "Run migration"</button><button class="btn" disabled>Disabled</button><button class="btn btn-icon btn-ghost" aria-label="More"><i class="icon">more_horiz</i></button></div>
+    <div class="row"><span class="chip">feature/retry-backoff</span><span class="chip chip-accent">+42</span><span class="chip chip-warn">2 files</span><span class="chip chip-error">Folder missing</span><span class="chip" role="button" tabindex="0">Opus 5.5<i class="icon sm">expand_more</i></span></div>
+    <div class="row">
+      <div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="true">Grid</button><button class="tab" role="tab" aria-selected="false">Board</button></div>
+      <div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="false">Info</button><button class="tab" role="tab" aria-selected="true">Changes <span class="count">2</span></button><button class="tab" role="tab" aria-selected="false">Timeline</button></div>
+      <button class="toggle" role="switch" aria-checked="true" aria-label="Recap"></button><button class="toggle" role="switch" aria-checked="false" aria-label="Dim others"></button>
+    </div>
+    <div class="row" style="align-items:flex-start">
+      <div class="field" style="flex:1;min-width:160px"><label>Session name</label><input class="input" value="Add retry with backoff"><span class="help">Shown in the sidebar and pane header.</span></div>
+      <div class="field" style="flex:1;min-width:160px"><label>Agent</label><select class="select"><option>Claude Code</option><option>Codex</option></select><span class="help">Model follows the agent.</span></div>
+    </div>
+    <div class="row"><div class="input-wrap" style="flex:1"><i class="icon">search</i><input class="input" placeholder="Search sessions and files"><span class="kbd">Ctrl K</span></div></div>
+  </div>`
+},
+{
+  id: 'surfaces', title: 'Menu, popover, dialog, toast',
+  rules: [
+    'One menu skin: icon, label, right-aligned shortcut, group labels, danger group last. Anchored to its trigger with the origin at the trigger (modals stay centred).',
+    'One dialog shell: title and close at the top, content, footer right-aligned with the primary last. Destructive dialogs name the item in the message and on the button.',
+    'Toasts are for transient confirmation with at most one action; anything the user must answer lives in the pane or the Waiting on you list.'
+  ],
+  body: () => `<div class="stack">
+    <div class="row" style="align-items:flex-start">
+      <div class="menu static-menu"><div class="menu-label">Open</div>
+        <button class="menu-item"><i class="icon">code</i><span>Open in editor</span><span class="kbd">Ctrl E</span></button>
+        <button class="menu-item"><i class="icon">folder_open</i><span>Show in Files</span></button>
+        <div class="menu-sep"></div>
+        <button class="menu-item"><i class="icon">edit</i><span>Rename</span><span class="kbd">F2</span></button>
+        <button class="menu-item" aria-disabled="true"><i class="icon">terminal</i><span>Open in Visual Studio</span></button>
+        <div class="menu-sep"></div>
+        <button class="menu-item danger"><i class="icon">close</i><span>Close session</span><span class="kbd">Ctrl W</span></button>
+      </div>
+      <div class="popover static-pop" style="width:240px"><div class="popover-head">Popover<button class="btn btn-ghost btn-icon btn-sm" aria-label="Close"><i class="icon sm">close</i></button></div><div class="popover-body t-2">Same radius and elevation as a menu, free content inside.</div></div>
+    </div>
+    <div class="dialog" style="width:100%;position:static"><div class="dialog-head"><h2>Close "Run migration on staging"?</h2><button class="btn btn-ghost btn-icon btn-sm" aria-label="Close"><i class="icon">close</i></button></div>
+      <div class="dialog-body">This session is waiting for you. Closing it stops the agent and discards the pending approval.</div>
+      <div class="dialog-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-danger">Close "Run migration"</button></div></div>
+    <div class="toast static-toast"><i class="icon">check_circle</i><span class="grow">Session closed.</span><button class="btn btn-ghost btn-sm">Undo</button></div>
+  </div>`
+},
+{
+  id: 'patterns', title: 'Empty state, kbd, card, meter',
+  rules: [
+    'One empty state: icon, title, one sentence, one primary plus at most one ghost, optional shortcut hint. Never two stacked sentences in bold plus muted.',
+    'Cards are flat by default and only lift (e1) when they float over content. No card inside a card.'
+  ],
+  body: () => `<div class="stack">
+    <div class="card" style="display:flex"><div class="empty" style="padding:var(--sp-5)"><div class="empty-icon"><i class="icon">terminal</i></div><h3>No sessions yet</h3><p>Start a session in a project to watch several agents side by side.</p><div class="actions"><button class="btn btn-primary">New session</button><button class="btn btn-ghost">Add project</button></div><div class="hint">or press <span class="kbd">Ctrl N</span></div></div></div>
+    <div class="row"><div class="card card-lift" style="flex:1;min-width:200px"><div class="t-meta">Claude, 5 hour</div><div class="row" style="margin-top:var(--sp-2)"><div class="meter" style="--v:62;width:120px"></div><span class="num">62%</span></div></div>
+    <div class="card card-lift" style="flex:1;min-width:200px"><div class="t-meta">Codex, week</div><div class="row" style="margin-top:var(--sp-2)"><div class="meter warn" style="--v:88;width:120px"></div><span class="num">88%</span></div></div></div>
+  </div>`
+}
+];
+
+const root = document.getElementById('root');
+root.innerHTML = SECTIONS.map(s => `
+  <section class="block" id="${s.id}">
+    <header><h2 class="t-page">${s.title}</h2><ul class="rules">${s.rules.map(r => `<li>${r}</li>`).join('')}</ul></header>
+    <div class="pair">
+      ${['dark','light'].map(t => `<div class="panel" data-theme="${t}"><div class="ptag">${t === 'dark' ? 'Dark (default)' : 'Light'}</div>${s.body()}</div>`).join('')}
+    </div>
+  </section>`).join('');
+</script>
+<style>.flash { animation: none; } </style>
+</body>
+</html>

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, QUIT_BUDGET_MS } from './helpers'
+import { closeApp, createSandbox, launchApp, openTerminalPicker, QUIT_BUDGET_MS } from './helpers'
 
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 
@@ -199,7 +199,7 @@ test('drags a pane by its header onto another pane to reorder, and Esc cancels',
     await openPanes(page, 3)
     const ids = await paneIds(page)
     const pane = (index: number): Locator => page.locator(`.pane[data-pane-id="${ids[index]}"]`)
-    await pane(0).getByRole('button', { name: /New terminal in/ }).click()
+    await openTerminalPicker(pane(0))
     await page.getByRole('menuitem', { name: 'Shell' }).click()
     await expect(pane(0).locator('.tabs [role="tab"]')).toHaveCount(2)
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.length).toBe(2)
@@ -244,7 +244,7 @@ test('drags terminal tabs to reorder them inside a pane and keeps the active tab
     const { page } = first
     await openPanes(page, 1)
     for (const name of ['Shell', 'Codex session']) {
-      await page.getByRole('button', { name: /New terminal in/ }).click()
+      await openTerminalPicker(page.locator('.pane').first())
       await page.getByRole('menuitem', { name }).click()
     }
     const tabs = page.locator('.tabs [role="tab"]')

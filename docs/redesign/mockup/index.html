@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dawsha redesign</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+body { min-width: 1100px; }
+.bar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--sp-5); height: 48px; padding: 0 var(--sp-6); background: color-mix(in srgb, var(--sidebar) 92%, transparent); backdrop-filter: blur(12px); box-shadow: 0 1px 0 var(--line); }
+.bar .brand { display: flex; align-items: center; gap: var(--sp-2); font-weight: var(--w-semi); font-size: var(--fs-3); letter-spacing: var(--tr-tight); }
+.logo { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--r-1); background: var(--accent); color: var(--on-accent); font-weight: var(--w-semi); }
+.bar .grow { flex: 1; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: var(--sp-8) var(--sp-6) 96px; }
+.intro { max-width: 70ch; }
+.intro h1 { margin: 0 0 var(--sp-3); font-size: var(--fs-5); line-height: var(--lh-5); font-weight: var(--w-semi); letter-spacing: var(--tr-tight); }
+.intro p { margin: 0 0 var(--sp-3); color: var(--text-2); font-size: var(--fs-3); line-height: var(--lh-3); }
+.cards { display: grid; grid-template-columns: 1fr 1.25fr 1.25fr; gap: var(--sp-4); margin: var(--sp-7) 0 var(--sp-8); }
+.pcard { display: flex; flex-direction: column; border-radius: var(--r-2); background: var(--surface); box-shadow: var(--e1); overflow: hidden; text-decoration: none; color: inherit; transition: transform var(--dur-3) var(--ease-out), box-shadow var(--dur-3) var(--ease-out); }
+.pcard:hover { transform: translateY(-2px); box-shadow: var(--e2); }
+.pcard img { display: block; width: 100%; height: 190px; object-fit: cover; object-position: top left; background: var(--well); }
+.pcard .b { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-1); }
+.pcard h2 { margin: 0; font-size: var(--fs-3); line-height: var(--lh-3); font-weight: var(--w-semi); letter-spacing: var(--tr-tight); display: flex; align-items: center; gap: var(--sp-2); }
+.pcard h2 .icon { margin-inline-start: auto; color: var(--text-3); }
+.pcard p { margin: 0; color: var(--text-2); }
+h2.sec { margin: 0 0 var(--sp-2); font-size: var(--fs-4); line-height: var(--lh-4); font-weight: var(--w-semi); letter-spacing: var(--tr-tight); }
+p.lede { margin: 0 0 var(--sp-4); color: var(--text-2); max-width: 70ch; }
+table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--r-2); overflow: hidden; box-shadow: var(--e1); }
+th { text-align: start; color: var(--text-3); font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-medium); padding: var(--sp-3) var(--sp-4); background: var(--raised); }
+td { padding: var(--sp-3) var(--sp-4); vertical-align: top; box-shadow: 0 -1px 0 var(--line); color: var(--text-2); }
+td.n { width: 44px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+td.p { width: 31%; color: var(--text); font-weight: var(--w-medium); }
+td a { color: var(--accent-ink); text-decoration: none; font-weight: var(--w-medium); white-space: nowrap; }
+td a:hover { text-decoration: underline; }
+td .sep { color: var(--text-3); margin: 0 var(--sp-1); }
+.done { display: inline-flex; align-items: center; gap: var(--sp-1); color: var(--st-done); font-size: var(--fs-1); font-weight: var(--w-medium); }
+.foot { margin-top: var(--sp-7); color: var(--text-3); font-size: var(--fs-1); }
+</style>
+</head>
+<body>
+<header class="bar">
+  <span class="brand"><span class="logo">D</span>Dawsha redesign</span>
+  <span class="grow"></span>
+  <div class="tabs" role="tablist" aria-label="Theme">
+    <button class="tab" role="tab" data-theme="dark" aria-selected="true"><i class="icon">dark_mode</i>Dark</button>
+    <button class="tab" role="tab" data-theme="light" aria-selected="false"><i class="icon">light_mode</i>Light</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="intro">
+    <h1>A calmer Dawsha, built once and used everywhere</h1>
+    <p>Three pages make up the mockup. The foundation holds the tokens and shared components, the core page rebuilds the sessions loop (grid, pane, sidebar, top bar, first run), and the screens page covers every other surface on the same shell: crew, files and review, the board, replay, skills, projects, usage, settings, the phone page, eleven overlays and the Arabic rule.</p>
+    <p>Every page switches between dark and light, and the choice is remembered across all three.</p>
+  </div>
+
+  <div class="cards">
+    <a class="pcard" href="foundation.html"><img data-shot="foundation-1" alt="Foundation page" loading="lazy"><div class="b"><h2>Foundation<i class="icon">arrow_outward</i></h2><p>Type scale, colour ladder, states, controls, motion and the contrast table.</p></div></a>
+    <a class="pcard" href="core.html"><img data-shot="1440-grid-A3" alt="Core sessions screens" loading="lazy"><div class="b"><h2>Core screens<i class="icon">arrow_outward</i></h2><p>Sessions grid in two directions, pane anatomy, sidebar, top bar and first run.</p></div></a>
+    <a class="pcard" href="screens.html"><img data-shot="1440-crew-A-overview" alt="All other screens" loading="lazy"><div class="b"><h2>All other screens<i class="icon">arrow_outward</i></h2><p>Twelve sections with a before image, the change and the audit items it fixes.</p></div></a>
+  </div>
+
+  <h2 class="sec">Audit top 15, and where each is fixed</h2>
+  <p class="lede">Numbers match section 5 of the audit. Each row names the screens that carry the fix.</p>
+  <table>
+    <thead><tr><th>#</th><th>Problem</th><th>Where it is fixed</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td class="p">Allow and Deny hide what is being approved</td><td>Approval card with tool, command, file and Allow always<br><a href="core.html#grid">Core: grid</a><span class="sep">·</span><a href="screens.html#board">Board peek</a><span class="sep">·</span><a href="screens.html#phone">Phone</a></td></tr>
+      <tr><td class="n">2</td><td class="p">Needs you is visually weak</td><td>Orange edge, tinted header, slow pulse, top-bar chip and sidebar block<br><a href="core.html#grid">Core: grid</a><span class="sep">·</span><a href="core.html#sidebar">Sidebar</a><span class="sep">·</span><a href="screens.html#overlays">Notifications</a></td></tr>
+      <tr><td class="n">3</td><td class="p">Five-pane grid is unreadable</td><td>Calm focus and Mission control layouts that reflow around the pane that needs you<br><a href="core.html#grid">Core: grid, 5 panes</a></td></tr>
+      <tr><td class="n">4</td><td class="p">Pane header overloaded, changes with focus</td><td>Same four slots in every pane, 12-item grouped menu, slide-over panels<br><a href="core.html#pane">Core: pane anatomy</a></td></tr>
+      <tr><td class="n">5</td><td class="p">Light theme state colours fail contrast</td><td>Every state token themed and checked at 4.5:1 on all surfaces<br><a href="foundation.html">Foundation</a><span class="sep">·</span>light mode of every page</td></tr>
+      <tr><td class="n">6</td><td class="p">Three diff looks, Discard beside Commit</td><td>One <span style="font-family:var(--font-mono)">.diff</span> component, inline or side by side, Discard apart with a named confirm<br><a href="screens.html#files">Files and review</a></td></tr>
+      <tr><td class="n">7</td><td class="p">Navigation is fragmented</td><td>Five pages in the top bar, Agents renamed Crew, Projects under the sidebar, parent as crumb on detail pages<br><a href="core.html#topbar">Core: top bar</a><span class="sep">·</span><a href="screens.html#header">Page header</a><span class="sep">·</span><a href="screens.html#crew">Crew</a></td></tr>
+      <tr><td class="n">8</td><td class="p">Top bar density and a usage meter that disagrees with the Usage page</td><td>11 targets, one usage strip and a popover with the same numbers as the page<br><a href="core.html#topbar">Core: top bar</a><span class="sep">·</span><a href="screens.html#usage">Usage</a></td></tr>
+      <tr><td class="n">9</td><td class="p">Type scale has no hierarchy</td><td>Five sizes with 2px steps and three weights; mono only for code<br><a href="foundation.html">Foundation</a><span class="sep">·</span><a href="screens.html#usage">Usage tables and chart</a></td></tr>
+      <tr><td class="n">10</td><td class="p">Uncontrolled heights and component variants</td><td>One button, tab, chip, menu, toggle and field skin at 24, 28 and 32px<br><a href="foundation.html">Foundation</a><span class="sep">·</span><a href="screens.html#settings">Settings</a><span class="sep">·</span><a href="screens.html#replay">Replay</a></td></tr>
+      <tr><td class="n">11</td><td class="p">Disabled and dimmed states unreadable</td><td>Disabled controls at 4.5:1 with a stated reason<br><a href="core.html#first-run">Core: first run</a><span class="sep">·</span><a href="foundation.html">Foundation</a></td></tr>
+      <tr><td class="n">12</td><td class="p">Sidebar rows lack identity</td><td>Title plus live activity, missing folder flagged with Locate, project right-click menu<br><a href="core.html#sidebar">Core: sidebar</a><span class="sep">·</span><a href="screens.html#projects">Projects</a><span class="sep">·</span><a href="screens.html#overlays">Context menu</a></td></tr>
+      <tr><td class="n">13</td><td class="p">Sub-pages differ in gutter and header; Settings repeats itself</td><td>One page header at 32px gutter, sectioned and searchable Settings with no repeated labels<br><a href="screens.html#header">Page header</a><span class="sep">·</span><a href="screens.html#settings">Settings</a></td></tr>
+      <tr><td class="n">14</td><td class="p">Board with peek is clipped</td><td>Rail sidebar and a collapsed empty column keep three readable columns beside a 360px peek<br><a href="screens.html#board">Board with peek</a></td></tr>
+      <tr><td class="n">15</td><td class="p">No shared dialog and popover shell; What's new is a run-on</td><td>One dialog, popover and menu shell, parsed changelog, confirm that names the item<br><a href="screens.html#overlays">Overlays</a><span class="sep">·</span><a href="screens.html#rtl">RTL rule</a></td></tr>
+    </tbody>
+  </table>
+  <p class="foot">Generic data only. Before images link to the captured build in ../current.</p>
+</main>
+<script>
+(function () {
+  var root = document.documentElement;
+  function set(t) {
+    root.setAttribute('data-theme', t);
+    try { localStorage.setItem('dawsha-mock-theme', t); } catch (e) {}
+    Array.prototype.forEach.call(document.querySelectorAll('[data-theme][role=tab]'), function (b) { b.setAttribute('aria-selected', b.dataset.theme === t); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-shot]'), function (i) {
+      var s = i.dataset.shot;
+      i.src = 'shots/' + (/^foundation/.test(s) ? s : t + '-' + s.replace(/^1440-crew-A-overview$/, '1440-crew-A-overview')) + '.png';
+      if (/^1440-crew/.test(s)) i.src = 'shots/screens-' + t + '-' + s + '.png';
+    });
+  }
+  var t = 'dark';
+  try { t = localStorage.getItem('dawsha-mock-theme') || 'dark'; } catch (e) {}
+  set(t);
+  document.addEventListener('click', function (e) { var b = e.target.closest('[role=tab][data-theme]'); if (b) set(b.dataset.theme); });
+})();
+</script>
+</body>
+</html>

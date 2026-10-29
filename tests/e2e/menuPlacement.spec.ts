@@ -54,9 +54,9 @@ test('the main menus and popovers open aligned to their trigger and inside the 1
     await more.click()
     await expectPlaced(page, more, 'top bar More menu')
 
-    await more.click()
-    await page.locator('#layouts-menu-item').click()
-    await expectPlaced(page, more, 'layouts popover')
+    const layouts = page.locator('#layouts-button')
+    await layouts.click()
+    await expectPlaced(page, layouts, 'layouts popover')
 
     const pane = page.getByRole('button', { name: 'Pane actions' })
     await pane.click()
