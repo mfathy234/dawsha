@@ -17,7 +17,6 @@ import { SettingsStore } from './settingsStore'
 import { StatusWatcher } from './statusWatcher'
 import { OpsWatcher } from './opsWatcher'
 import { bridgeDirs, claudeSettingsPath, legacyUserDataDir, opsDirs } from './paths'
-import { applyPendingPaneonImport } from './paneonImport'
 import { platformExecutableDirs, resolveExecutable } from './executables'
 import { migrateLegacyUserData } from './userDataMigration'
 import { CliRunner } from './cliRunner'
@@ -25,6 +24,7 @@ import { startCliServer } from './cliServer'
 import { setupUpdates } from './updates'
 import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
+import { killAppUtilityChildren } from './childProcesses'
 import { createQuitLog } from './quitLog'
 import { startQuitWatchdog } from './quitWatchdog'
 import { requestCloseCheck } from './closeCheck'
@@ -87,6 +87,7 @@ function askMayClose(): Promise<boolean> {
 }
 
 function terminateProcess(code: number): void {
+  killAppUtilityChildren(app.getAppMetrics(), process.pid, quitLog)
   exitProcess(code, { exit: (value) => app.exit(value), log: quitLog })
 }
 
@@ -190,11 +191,9 @@ app.whenReady().then(async () => {
         nodePath: resolveExecutable(process.platform === 'win32' ? 'node.exe' : 'node', platformExecutableDirs())
       })
     : null
-  let importNote: string | null = null
-  try { importNote = applyPendingPaneonImport(userData) } catch (error) { importNote = `Paneon import was not applied: ${(error as Error).message}` }
   const store = new SettingsStore(join(userData, 'settings.json'))
   const loaded = store.load()
-  const warning = [migration?.note, importNote, loaded.warning].filter(Boolean).join(' ') || null
+  const warning = [migration?.note, loaded.warning].filter(Boolean).join(' ') || null
   const remoteTerminals = isRemoteControlBuild
     ? new (await import('./remoteTerminalState')).RemoteTerminalState()
     : null
@@ -310,7 +309,10 @@ app.whenReady().then(async () => {
       void runQuit(shutdownDeps)
     })
   })
-  app.on('will-quit', () => quitLog('will-quit'))
+  app.on('will-quit', () => {
+    quitLog('will-quit')
+    killAppUtilityChildren(app.getAppMetrics(), process.pid, quitLog)
+  })
   app.on('quit', () => quitLog('quit'))
 })
 

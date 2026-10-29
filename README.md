@@ -75,7 +75,6 @@
 - **Replay.** Recorded terminals play back like a video, with markers for prompts and permission requests, search inside the recording, 4x and 16x speed and skipping of idle time. **Recording is opt-in**: it is off until you turn it on in Settings, recordings stay on your computer, you choose how many days and how many megabytes to keep, and you can pause recording per pane. Open Replay from the pane header, the timeline, the board or the palette.
 - **Phone approvals (beta).** The Remote Control page has an Approvals tab that lists the sessions waiting on you. Allow once, or Deny with a reason the agent reads. Notifications arrive while the page is open. Only a plain "Yes" can be allowed from the phone; edits to CI, config, `.git` and `.claude` files can only be denied by default.
 - **Back up and move.** Settings > Back up and move exports your settings to one JSON file, without remote-access secrets, and imports it on another computer with Merge or Replace.
-- **Paneon settings import.** If Paneon settings are found, Settings > General offers an import. Dawsha backs up its current settings and applies Paneon projects, layouts and preferences the next time you open Dawsha; Paneon remains untouched.
 - **Settings in one place.** A Settings view (Ctrl+,) for the palette shortcut, notifications and live session info, full access per agent, updates, the full changelog and where your data lives.
 - **Themes.** Seven themes (Dawsha, Dawsha Cards, Graphite Cards, Dawsha Daylight, Nord, Catppuccin Mocha, GitHub Light) with contrast checks, plus an optional background image. The Cards and Daylight themes draw each pane as a card. In Dawsha Cards the terminal sits flush, the focused session has a soft neutral ring and a session that needs you an orange one.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
@@ -434,7 +433,7 @@ Everything is in the Electron user-data folder: `%APPDATA%\Dawsha` on Windows or
 - `usage-history.json`: the last cost of each Claude Code session that reported one and the 5 hour and weekly limit readings, for the Usage view (written only when the live session info is on).
 - `bin\` and `status\`: the status-line script and the saved status payloads (only when the live toggle was used; files older than 7 days are removed).
 
-Dawsha has no telemetry and makes no network calls except the Agents view looking up the latest CLI versions (`npm view`, or the npm registry when npm is missing). Agent session files are only read. Dawsha uses its own `%APPDATA%\Dawsha` folder, separate from Paneon and Claude Grid. An explicit `DAWSHA_LEGACY_USER_DATA` path can import settings from an earlier installation.
+Dawsha has no telemetry and makes no network calls except the Agents view looking up the latest CLI versions (`npm view`, or the npm registry when npm is missing). Agent session files are only read. Dawsha uses its own `%APPDATA%\Dawsha` folder, separate from Claude Grid. An explicit `DAWSHA_LEGACY_USER_DATA` path can import settings from an earlier installation.
 
 ## Build from source
 

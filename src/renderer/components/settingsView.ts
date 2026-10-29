@@ -46,9 +46,6 @@ import { releaseTagUrl } from '../../shared/markdown'
 import { h } from '../dom'
 import { api } from '../api'
 import { createRemoteAccessView } from './remoteAccessView'
-import type { PaneonImportPreview } from '../../shared/paneonImport'
-import { confirmDialog } from './dialogs'
-import { toast } from './toast'
 import { CHANGELOG_ENTRIES } from '../changelog'
 import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
@@ -117,7 +114,6 @@ export class SettingsViewComponent {
   private editDraft: RuleDraft = emptyDraft()
   private editError: string | null = null
   private readonly highlightPreviewEl = h('div', { class: 'hl-preview', id: 'highlight-preview', role: 'group', 'aria-label': 'Preview of highlighted terminal lines' })
-  private paneonImport: PaneonImportPreview | null = null
   private remoteAccess: RemoteAccessState | null = null
   private remoteError: string | null = null
   private remoteBusy = false
@@ -136,7 +132,6 @@ export class SettingsViewComponent {
   })
 
   constructor() {
-    void api.paneonImportPreview().then((preview) => { this.paneonImport = preview; this.refresh() }).catch(() => undefined)
     if (isRemoteControlBuild) {
       void this.loadRemoteAccess().then(() => this.verifyRemote(true))
       window.addEventListener('focus', () => {
@@ -396,39 +391,8 @@ export class SettingsViewComponent {
           h('button', { class: 'btn ghost small', type: 'button', id: 'export-settings', onClick: () => void exportSettingsFromUi() }, 'Export settings…'),
           h('button', { class: 'btn ghost small', type: 'button', id: 'import-settings', onClick: () => void importSettingsFromUi() }, 'Import settings…')),
         h('p', { class: 'hint' }, 'Save your projects, layouts, highlight rules and preferences to one file to move Dawsha to another PC. Remote Access, open sessions and usage history are never included.')
-      ),
-      ...(this.paneonImport?.available ? [row(
-        'Paneon settings',
-        h('button', {
-          class: 'btn ghost small', type: 'button', id: 'import-paneon-settings',
-          disabled: this.paneonImport.pending || this.paneonImport.error !== null,
-          onClick: () => void this.importPaneonSettings()
-        }, 'Import Paneon settings'),
-        h('p', { class: 'hint', id: 'paneon-import-summary' },
-          this.paneonImport.pending
-            ? 'Import queued; close and reopen Dawsha to apply it.'
-            : this.paneonImport.error ?? `${this.paneonImport.projects} project${this.paneonImport.projects === 1 ? '' : 's'}, ${this.paneonImport.layouts} layout${this.paneonImport.layouts === 1 ? '' : 's'} found. Your current Dawsha settings will be backed up.`
-        )
-      )] : [])
+      )
     ]
-  }
-
-  private async importPaneonSettings(): Promise<void> {
-    const confirmed = await confirmDialog({
-      title: 'Import Paneon settings?',
-      body: 'This replaces Dawsha settings on the next launch. A backup of the current Dawsha settings will be saved. Paneon stays untouched; close and reopen Dawsha to apply the import.',
-      confirmLabel: 'Import Paneon settings',
-      danger: false
-    })
-    if (!confirmed) return
-    try {
-      await api.queuePaneonImport()
-      this.paneonImport = { ...this.paneonImport!, pending: true }
-      this.refresh()
-      toast('Paneon import queued. Close and reopen Dawsha to apply it.', 'info')
-    } catch (error) {
-      toast((error as Error).message || 'Paneon settings could not be imported.')
-    }
   }
 
   private commitShortcut(text: string): void {

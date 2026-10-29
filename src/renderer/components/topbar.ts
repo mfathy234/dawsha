@@ -168,9 +168,9 @@ export class TopBarComponent {
       this.limits,
       h('div', { class: 'topbar-tools' },
         h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: `Smaller text in every pane (${ZOOM_MOD}+- for the focused pane only)`, onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
+          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: `Smaller text in every pane, from the focused pane's size (${ZOOM_MOD}+- changes the focused pane only)`, onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
           this.zoomValue,
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane (${ZOOM_MOD}+= for the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
+          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane, from the focused pane's size (${ZOOM_MOD}+= changes the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
         ),
         this.bell.el,
         this.themeButton,

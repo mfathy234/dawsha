@@ -23,16 +23,19 @@ test('top bar text size buttons resize every pane, and the label follows the foc
     await expect(label).toHaveText('17px')
 
     await expect(page.getByRole('button', { name: 'Increase font size' })).toHaveAttribute('title', /every pane/)
+    // Two quick clicks build on each other: the base is the focused pane (17), so every pane lands on 19.
     await page.getByRole('button', { name: 'Increase font size' }).click()
-    await expect.poll(sizes).toEqual([18, 16, 16])
+    await page.getByRole('button', { name: 'Increase font size' }).click()
+    await expect.poll(sizes).toEqual([19, 19, 19])
+    await expect(label).toHaveText('19px')
+
+    await page.getByRole('button', { name: 'Decrease font size' }).click()
+    await expect.poll(sizes).toEqual([18, 18, 18])
     await expect(label).toHaveText('18px')
 
-    await page.getByRole('button', { name: 'Decrease font size' }).click()
-    await page.getByRole('button', { name: 'Decrease font size' }).click()
-    await expect.poll(sizes).toEqual([16, 14, 14])
-
     await page.locator('.pane').nth(2).locator('.term-host.active').click()
-    await expect(label).toHaveText('14px')
+    await expect(label).toHaveText('18px')
+    await expect.poll(sizes).toEqual([18, 18, 18])
   } finally {
     await closeApp(app)
   }

@@ -25,10 +25,14 @@ async function safe(read: () => Promise<AgentAccount>): Promise<AgentAccount> {
 function claudeConfigPaths(): string[] {
   const configDir = process.env.DAWSHA_CLAUDE_HOME ? undefined : process.env.CLAUDE_CONFIG_DIR
   const home = claudeHome()
-  return [...(configDir ? [join(configDir, '.claude.json')] : []), join(home, '.claude.json'), join(dirname(home), '.claude.json')]
+  return [
+    ...(configDir ? [join(configDir, '.claude.json')] : []),
+    join(dirname(home), '.claude.json'),
+    join(home, '.claude.json')
+  ]
 }
 
-async function readClaude(): Promise<AgentAccount> {
+export async function readClaudeAccount(): Promise<AgentAccount> {
   for (const path of claudeConfigPaths()) {
     const account = claudeAccount(await readJson(path))
     if (account.kind !== 'none') return account
@@ -38,7 +42,7 @@ async function readClaude(): Promise<AgentAccount> {
 
 export async function readAgentAccounts(): Promise<AgentAccounts> {
   const [claude, codex, gemini] = await Promise.all([
-    safe(readClaude),
+    safe(readClaudeAccount),
     safe(async () => codexAccount(await readJson(join(codexHome(), 'auth.json')))),
     safe(async () => geminiAccount(await readJson(join(geminiHome(), 'google_accounts.json'))))
   ])

@@ -52,6 +52,7 @@ import { closedSessionsFor, insertKept, keptSessionKey, REOPEN_CONFIRM_OVER, ren
 import { cleanSessionName, type SessionTag } from '../shared/sessionTags'
 import { derivePanes, matchAll, primaryTab, sessionIdOf, workFolderOfPane } from './derive'
 import { nextFrame } from './dom'
+import { sharedZoomState } from './sharedZoom'
 import {
   AGENTS_PROJECT_ID,
   mapPane,
@@ -837,14 +838,7 @@ export function zoomPane(paneId: string, delta: number): void {
 }
 
 export function zoomAll(delta: number): void {
-  store.set((s) => {
-    let next = s
-    for (const pane of s.panes) {
-      const fontSize = clampFontSize(pane.fontSize + delta)
-      next = updateProjectFont(mapPane(next, pane.id, (p) => ({ ...p, fontSize })), pane.projectId, fontSize)
-    }
-    return next
-  })
+  store.set((s) => sharedZoomState(s, delta))
   saveProjects()
   persistWorkspace()
 }

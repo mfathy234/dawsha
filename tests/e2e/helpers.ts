@@ -94,7 +94,6 @@ export async function launchApp(
       DAWSHA_SHELL: 'cmd.exe',
       DAWSHA_SESSIONS_DIR: sandbox.sessionsDir,
       DAWSHA_CLAUDE_HOME: sandbox.claudeHome,
-      DAWSHA_PANEON_USER_DATA: join(sandbox.root, 'Paneon'),
       DAWSHA_OPS_DIR: sandbox.opsDir,
       DAWSHA_OPEN_LOG: sandbox.openLog,
       DAWSHA_NOTIFY_LOG: sandbox.notifyLog,

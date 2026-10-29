@@ -27,7 +27,6 @@ import type { RecordingStats, RecordingSummary } from './recordings'
 import type { ProcessActivity } from './processActivity'
 import type { BulkSkillExport, SkillEntry } from './skills'
 import type { CrewSourceFile } from './crewSources'
-import type { PaneonImportPreview } from './paneonImport'
 import type { SettingsExportResult, SettingsImportRead } from './settingsTransfer'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
@@ -89,8 +88,6 @@ export interface GridApi {
     onRun(listener: (id: string, request: { memberId: string; projectId: string; choice: string; fields: Record<string, string>; deadline: number }) => void): () => void
     reply(id: string, result: { ok: true; runId: string } | { ok: false; error: string }): void
   }
-  paneonImportPreview(): Promise<PaneonImportPreview>
-  queuePaneonImport(): Promise<void>
   pickFolder(): Promise<string | null>
   pickImage(): Promise<string | null>
   pathForFile(file: File): string

@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -18,17 +18,67 @@ describe('skill inventory', () => {
     ])
   })
 
-  it('does not follow symlinks or resolve an unlisted ID', () => {
+  it('lists a linked direct child only when its target is a skill, and never resolves an unlisted ID', () => {
     const root = mkdtempSync(join(tmpdir(), 'dawsha-skills-'))
     const claude = join(root, '.claude')
     const outside = join(root, 'outside')
+    const notASkill = join(root, 'plain')
     mkdirSync(join(claude, 'skills'), { recursive: true })
     mkdirSync(outside)
-    writeFileSync(join(outside, 'SKILL.md'), '# secret')
+    mkdirSync(notASkill)
+    writeFileSync(join(outside, 'SKILL.md'), '# linked')
     symlinkSync(outside, join(claude, 'skills', 'Escape'), 'junction')
+    symlinkSync(notASkill, join(claude, 'skills', 'Plain'), 'junction')
+    symlinkSync(join(claude, 'skills'), join(claude, 'skills', 'Loop'), 'junction')
     const locations = { claude, codex: join(root, '.codex'), gemini: join(root, '.gemini'), shared: join(root, '.agents'), projects: [] }
-    expect(listSkills(locations)).toEqual([])
+    expect(listSkills(locations).map(({ name, linked }) => [name, linked])).toEqual([['Escape', true]])
     expect(resolveSkill(locations, 'arbitrary path')).toBeNull()
+  })
+
+  it('lists a junction child of the user skill root as a linked skill with its target', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dawsha-skills-'))
+    const claude = join(root, '.claude')
+    const sync = join(root, 'sync', 'Review')
+    mkdirSync(join(claude, 'skills'), { recursive: true })
+    mkdirSync(sync, { recursive: true })
+    writeFileSync(join(sync, 'SKILL.md'), '# Review')
+    symlinkSync(sync, join(claude, 'skills', 'Review'), 'junction')
+    const locations = { claude, codex: join(root, '.codex'), gemini: join(root, '.gemini'), shared: join(root, '.agents'), projects: [] }
+    const [skill] = listSkills(locations)
+    expect(skill).toMatchObject({ name: 'Review', agent: 'claude', scope: 'user', linked: true, linkTarget: realpathSync(sync) })
+    expect(skill.path).toBe(join(claude, 'skills', 'Review'))
+    expect(resolveSkill(locations, skill.id)?.name).toBe('Review')
+  })
+
+  it('does not follow a link nested inside a skill or inside a linked skill', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dawsha-skills-'))
+    const claude = join(root, '.claude')
+    const linkedTarget = join(root, 'sync', 'Linked')
+    const nestedTarget = join(root, 'sync', 'Nested')
+    mkdirSync(join(claude, 'skills', 'Outer'), { recursive: true })
+    mkdirSync(linkedTarget, { recursive: true })
+    mkdirSync(nestedTarget, { recursive: true })
+    writeFileSync(join(claude, 'skills', 'Outer', 'SKILL.md'), '# Outer')
+    writeFileSync(join(linkedTarget, 'SKILL.md'), '# Linked')
+    writeFileSync(join(nestedTarget, 'SKILL.md'), '# Nested')
+    symlinkSync(nestedTarget, join(claude, 'skills', 'Outer', 'Inner'), 'junction')
+    symlinkSync(linkedTarget, join(claude, 'skills', 'Linked'), 'junction')
+    symlinkSync(nestedTarget, join(linkedTarget, 'Deeper'), 'junction')
+    const locations = { claude, codex: join(root, '.codex'), gemini: join(root, '.gemini'), shared: join(root, '.agents'), projects: [] }
+    expect(listSkills(locations).map(({ name }) => name).sort()).toEqual(['Linked', 'Outer'])
+  })
+
+  it('lists a shared target once when several links or a real copy point to it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dawsha-skills-'))
+    const claude = join(root, '.claude')
+    const target = join(root, 'sync', 'Shared')
+    mkdirSync(join(claude, 'skills'), { recursive: true })
+    mkdirSync(target, { recursive: true })
+    writeFileSync(join(target, 'SKILL.md'), '# Shared')
+    symlinkSync(target, join(claude, 'skills', 'Alpha'), 'junction')
+    symlinkSync(target, join(claude, 'skills', 'Beta'), 'junction')
+    const locations = { claude, codex: join(root, '.codex'), gemini: join(root, '.gemini'), shared: join(root, '.agents'), projects: [] }
+    expect(listSkills(locations)).toHaveLength(1)
   })
 
   it('lists installed agent files from user and project roots, preferring native Codex TOML', () => {

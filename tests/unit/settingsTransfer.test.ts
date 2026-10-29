@@ -7,6 +7,7 @@ import {
   buildEnvelope,
   buildTransferData,
   folderKey,
+  importDialogOptions,
   importToastText,
   parseTransfer,
   planImport,
@@ -329,5 +330,15 @@ describe('planImport replace', () => {
     expect(Object.keys(plan.patch)).not.toContain('remoteAccess')
     expect(Object.keys(plan.patch)).not.toContain('fullAccess')
     expect(importToastText(plan.summary)).toContain('Imported')
+  })
+})
+
+describe('importDialogOptions', () => {
+  it('opens a JSON file picker in the given folder', () => {
+    const options = importDialogOptions('C:\\Users\\me\\Desktop')
+    expect(options.defaultPath).toBe('C:\\Users\\me\\Desktop')
+    expect(options.properties).toEqual(['openFile'])
+    expect(options.filters).toEqual([{ name: 'Dawsha settings', extensions: ['json'] }])
+    expect(options.title).toBe('Import settings')
   })
 })

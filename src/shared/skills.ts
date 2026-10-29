@@ -14,4 +14,6 @@ export interface SkillEntry {
   scope: 'user' | 'project'
   path: string
   project?: string
+  linked?: boolean
+  linkTarget?: string
 }

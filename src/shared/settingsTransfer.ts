@@ -94,6 +94,13 @@ export function buildEnvelope(settings: Settings, appVersion: string, now: Date)
 
 const pad = (value: number): string => String(value).padStart(2, '0')
 
+export const importDialogOptions = (defaultDir: string) => ({
+  title: 'Import settings',
+  defaultPath: defaultDir,
+  properties: ['openFile' as const],
+  filters: [{ name: 'Dawsha settings', extensions: ['json'] }]
+})
+
 export const transferFileName = (now: Date): string =>
   `dawsha-settings-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.json`
 

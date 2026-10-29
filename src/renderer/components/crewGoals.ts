@@ -19,6 +19,7 @@ import { clear, h } from '../dom'
 import { store, type AppState } from '../state'
 import { confirmDialog } from './dialogs'
 import { crewAvatar } from './crewAvatar'
+import { selectMenu, syncSelectMenu } from './selectMenu'
 
 const MODEL_CHOICES: RunChoice[] = ['default', 'fable', 'sonnet', 'codex']
 
@@ -86,8 +87,8 @@ export class CrewGoalsPage {
       h(
         'div',
         { class: 'crew-goal-row' },
-        this.project,
-        this.model,
+        selectMenu(this.project),
+        selectMenu(this.model),
         h('span', { class: 'crew-spacer' }),
         h('label', { class: 'crew-check', for: 'crew-goal-plan-first' }, this.planFirst, h('span', {}, 'Show me the plan first')),
         this.go
@@ -124,6 +125,7 @@ export class CrewGoalsPage {
       for (const project of projects) this.project.append(h('option', { value: project.id }, project.name))
       const focused = state.panes.find((pane) => pane.id === state.focusedId)?.projectId
       this.project.value = projects.some((p) => p.id === keep) ? keep : projects.some((p) => p.id === focused) ? focused! : (projects[0]?.id ?? '')
+      syncSelectMenu(this.project)
     }
     const lead = leadMember()
     const modelSig = lead ? `${lead.runner}:${lead.model}` : ''
@@ -133,6 +135,7 @@ export class CrewGoalsPage {
       clear(this.model)
       for (const choice of MODEL_CHOICES) this.model.append(h('option', { value: choice }, leadChoiceLabel(choice, lead)))
       this.model.value = MODEL_CHOICES.includes(keep as RunChoice) ? keep : 'default'
+      syncSelectMenu(this.model)
     }
     const rule = state.settings.lead.rules.planFirst
     if (this.ruleSeen !== rule) {
