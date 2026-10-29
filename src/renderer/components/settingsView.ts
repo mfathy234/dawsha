@@ -57,7 +57,6 @@ import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { dictationRows } from './dictationSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
-import { orchestratorSettingsRows } from './orch/orchSettings'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
@@ -65,7 +64,6 @@ const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
   { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
   { id: 'highlights', label: 'Highlights', lede: 'Tint terminal lines that contain the words you care about.' },
-  { id: 'orchestrator', label: 'Orchestrator', lede: 'Plans, agent profiles, effort and prices for the orchestrator.' },
   { id: 'changelog', label: 'Changelog', lede: 'Every released version, newest first.' },
   { id: 'about', label: 'About', lede: 'Version, links and where your data lives.' }
 ]
@@ -163,7 +161,6 @@ export class SettingsViewComponent {
       state.settings.autoUpdateCheck,
       state.settings.highlights,
       state.settings.recordings,
-      state.settings.orchestrator,
       this.remoteAccess,
       this.remoteError,
       this.remoteBusy,
@@ -259,8 +256,6 @@ export class SettingsViewComponent {
         return this.highlights(state)
       case 'remote':
         return this.remoteAccessBody()
-      case 'orchestrator':
-        return orchestratorSettingsRows(state, () => this.refresh())
       case 'changelog':
         return this.changelog(state)
       default:

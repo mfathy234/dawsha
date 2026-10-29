@@ -2,7 +2,6 @@ import { installUsageSnapshot } from './usageSnapshot'
 import { installBackgroundAgents } from './backgroundAgents'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
-import './orchestrator.css'
 import './components/controls.css'
 import {
   flushWorkspace,
@@ -34,8 +33,6 @@ import { runCliCommand } from './cliHost'
 import { installBuiltinCommands } from './commands/builtin'
 import { installDictationPill } from './dictation/dictationPill'
 import { installCompareCommands } from './commands/compare'
-import { installOrchestratorCommands } from './commands/orchestrator'
-import { closeOrchPane, openOrchPane, refreshOrch } from './orchActions'
 import { installHandoffCommands } from './commands/handoff'
 import { installClosedSessionCommands } from './commands/closedSessions'
 import { installLayoutCommands } from './commands/layouts'
@@ -130,17 +127,12 @@ async function boot(): Promise<void> {
   installClosedSessionCommands()
   installReplayCommands()
   installSettingsTransferCommands()
-  installOrchestratorCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)
   initWhatsNew()
   api.onFlushRequest(flushWorkspace)
   api.onCloseCheck(confirmQuitWithUnsavedFiles)
   api.onCliRun(runCliCommand)
-  api.onOrchOpenPane(openOrchPane)
-  api.onOrchClosePane(closeOrchPane)
-  api.onOrchChanged(() => void refreshOrch())
-  void refreshOrch()
   api.onCliNotice((text, ok) => toast(text, ok ? 'info' : 'error'))
   if (loaded.warning) toast(loaded.warning, 'info')
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()

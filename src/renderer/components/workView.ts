@@ -3,7 +3,6 @@ import { filterWorkReport, workProjectOptions } from '../../shared/workSearch'
 import { agentLabel } from '../../shared/agents'
 import { api } from '../api'
 import { resumeInNewPane } from '../actions'
-import { refreshOrch, showOrch } from '../orchActions'
 import { h } from '../dom'
 import { agentMark } from './agentMark'
 import type { AppState } from '../state'
@@ -180,13 +179,13 @@ export class WorkViewComponent {
     if (report.total === 0) {
       this.el.append(h('p', { class: 'usage-empty', role: 'status' }, this.search.trim()
         ? `No matches for “${this.search.trim()}”. Clear the search to see more work.`
-        : this.projectId ? 'No work for this project in this period.' : 'No work in this period. Sessions in your Dawsha projects and orchestrator runs appear here.'))
+        : this.projectId ? 'No work for this project in this period.' : 'No work in this period. Sessions in your Dawsha projects appear here.'))
       if (searched.total) this.el.append(this.projects(searched))
       return
     }
     if (this.period !== 'today') this.el.append(this.chart(report))
     this.el.append(this.projects(searched), this.items(report), h('p', { class: 'usage-local muted' },
-      'One item per session or orchestrator run, counted on its last activity day. Time spent is active time in this period (breaks over 5 minutes do not count). The type comes from the branch and your own commits.'))
+      'One item per session, counted on its last activity day. Time spent is active time in this period (breaks over 5 minutes do not count). The type comes from the branch and your own commits.'))
   }
 
   private setProject(id: string | null): void {
@@ -262,16 +261,13 @@ export class WorkViewComponent {
     return h('li', {}, h('button', { class: 'work-item', type: 'button', onClick: () => void this.open(item) },
       h('span', { class: 'work-item-main' }, h('strong', {}, item.title), h('span', { class: `work-chip work-${item.type}` }, WORK_LABELS[item.type]),
         !this.projectId ? h('span', { class: 'work-project-chip' }, item.project) : null, item.ticket ? h('span', { class: 'work-ticket' }, item.ticket) : null),
-      h('span', { class: 'work-item-meta' }, item.project, ' · ', item.agent === 'orchestrator' ? null : agentMark(item.agent), item.agent === 'orchestrator' ? 'Orchestrator' : agentLabel(item.agent), ' · ', item.branch ?? 'Unknown branch',
+      h('span', { class: 'work-item-meta' }, item.project, ' · ', agentMark(item.agent), agentLabel(item.agent), ' · ', item.branch ?? 'Unknown branch',
         ' · ', new Date(item.endedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), ' · ', duration(this.itemTime(item)))))
   }
 
   private async open(item: WorkItem): Promise<void> {
     try {
-      if (item.agent === 'orchestrator') {
-        await refreshOrch()
-        showOrch('runs', item.id)
-      } else if (item.session) await resumeInNewPane(item.session)
+      if (item.session) await resumeInNewPane(item.session)
     } catch {
       this.error = 'Could not open this item. Its project may no longer be available.'
       this.render()
