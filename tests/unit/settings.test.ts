@@ -28,15 +28,21 @@ describe('migrateSettings', () => {
     expect(new SettingsStore(file).load().settings.filesLayout).toEqual(layout)
     expect(migrateSettings({ filesLayout: 'nope' }).filesLayout.panel.minimised).toBe(true)
   })
-  it('persists bounded, boolean agent fold choices through a settings reload', () => {
-    const file = tempFile()
-    const store = new SettingsStore(file)
-    store.update({ agentFolds: { 'claude:busy': false, 'codex:done': true } })
-    expect(new SettingsStore(file).load().settings.agentFolds).toEqual({ 'claude:busy': false, 'codex:done': true })
-    expect(migrateSettings({ agentFolds: { good: false, bad: 'yes' } }).agentFolds).toEqual({ good: false })
-    const many = Object.fromEntries(Array.from({ length: 420 }, (_, i) => [`s${i}`, false]))
-    expect(Object.keys(migrateSettings({ agentFolds: many }).agentFolds)).toHaveLength(400)
-    expect(migrateSettings({ agentFolds: [] }).agentFolds).toEqual({})
+  it('loads legacy agentFolds settings and drops them on the next save', () => {
+    // Compatibility: earlier versions persisted fold choices for the retired view.
+    for (const agentFolds of [{ 'claude:busy': false, 'codex:done': true }, 'invalid', [], null]) {
+      const file = tempFile()
+      writeFileSync(file, JSON.stringify({ ...defaultSettings(), paletteShortcut: 'Alt+Space', agentFolds }))
+      const store = new SettingsStore(file)
+      const loaded = store.load()
+      expect(loaded.warning).toBeNull()
+      expect(loaded.settings.paletteShortcut).toBe('Alt+Space')
+      expect(loaded.settings).not.toHaveProperty('agentFolds')
+      expect(defaultSettings()).not.toHaveProperty('agentFolds')
+      store.update({ showRecap: false })
+      expect(JSON.parse(readFileSync(file, 'utf8'))).not.toHaveProperty('agentFolds')
+      expect(new SettingsStore(file).load().settings.showRecap).toBe(false)
+    }
   })
   it('loads old settings while dropping retired feature settings and profiles', () => {
     // Compatibility fixture: old files stored orchestrator settings and an experimental flag.

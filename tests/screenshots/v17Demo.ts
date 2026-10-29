@@ -4,7 +4,7 @@ import { expect, type Page } from '@playwright/test'
 import { createSandbox, feedTerminal, launchApp } from '../e2e/helpers'
 import { PROJECTS, demoEnv, folder, resize, seed, writeClaudeSession, writeCodex, writeGemini, writeOps } from './harness'
 import { writeActiveTranscript } from './v1Fixtures'
-import { makeAcmeWeb, makeRepo, writeSubagents } from './v17Fixtures'
+import { makeAcmeWeb, makeRepo } from './v17Fixtures'
 
 export const SITE = process.env.DAWSHA_SHOTS_OUT ?? resolve(__dirname, '../../site/assets')
 const PERMISSION = ['  npm run migrate -- --env dev', 'Do you want to run this command?', ' ❯ 1. Yes', '   2. No, and tell Claude what to do differently', ''].join('\r\n')
@@ -46,7 +46,6 @@ export async function launchDemo(settingsPatch: Record<string, unknown>) {
   const stored = JSON.parse(readFileSync(settingsPath, 'utf8'))
   writeFileSync(settingsPath, JSON.stringify({ ...stored, onboardingDismissed: true, recordings: { enabled: false, keepDays: 14, maxMegabytes: 1024 }, ...settingsPatch }), 'utf8')
   writeActiveTranscript(sandbox, folder('acme-web'))
-  writeSubagents(sandbox, folder)
   const launched = await launchApp(sandbox, demoEnv())
   await resize(launched.app)
   const { page } = launched

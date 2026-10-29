@@ -17,7 +17,7 @@ test('generates the Files view, quick open and tag colour screenshots from fake 
     writeFileSync(join(SITE, site), png)
   }
   try {
-    await expect(page.locator('.sidebar .tag-word').first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator('.pane-tag .tag-word').first()).toBeVisible({ timeout: 30_000 })
 
     await page.locator('.pane-title', { hasText: 'Add dark mode toggle' }).click()
     await page.locator('.pane').first().locator('.term-host').first().click()
@@ -40,8 +40,9 @@ test('generates the Files view, quick open and tag colour screenshots from fake 
     await page.locator('.files-row[data-path="src/legacy"]').click()
     await page.locator('.files-row[data-path="src/context/theme.tsx"]').dblclick()
     await expect(page.locator('.files-editor:not([hidden]) .cm-content')).toContainText('ThemeProvider')
-    await expect(page.locator('#files-sessions .files-side-row').first()).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('#files-outline .files-side-row').first()).toBeVisible()
+    await page.getByRole('tab', { name: 'Activity', exact: true }).click()
+    await expect(page.locator('#files-activity .files-side-row.activity').first()).toBeVisible({ timeout: 20_000 })
     await settle(page, 1200)
     await both('files.png', 'files-view.png')
     await page.locator('#files-button').click()
@@ -57,7 +58,7 @@ test('generates the Files view, quick open and tag colour screenshots from fake 
 
     await page.locator('#layout-grid').click()
     await page.locator('#background-button').click()
-    await expect(page.locator('.agents-view, .bg-view, [aria-label="Agents"]').first()).toBeVisible()
+    await expect(page.locator('.crew-view')).toBeVisible()
     await settle(page, 1500)
     writeFileSync(join(DOCS, 'agents-tab.png'), await page.screenshot())
   } finally {

@@ -5618,7 +5618,7 @@ body.dragging-ui {
   flex-shrink: 0;
 }
 
-button.info-running, button.info-review { height: 20px; padding: 0 var(--s-1); font-size: var(--fs-status); }
+button.info-review { height: 20px; padding: 0 var(--s-1); font-size: var(--fs-status); }
 .pane-foot .info-review { margin-inline-start: auto; }
 
 @container pane-foot (max-width: 980px) {
@@ -5632,8 +5632,7 @@ button.info-running, button.info-review { height: 20px; padding: 0 var(--s-1); f
 @container pane-foot (max-width: 780px) {
   .pane-foot .info-elapsed,
   .pane-foot .info-files,
-  .pane-foot .info-gemini-tool,
-  .pane-foot .info-letters {
+  .pane-foot .info-gemini-tool {
     display: none;
   }
 
@@ -5644,7 +5643,6 @@ button.info-running, button.info-review { height: 20px; padding: 0 var(--s-1); f
 
 @container pane-foot (max-width: 620px) {
   .pane-foot [data-pane-limit='seven_day'],
-  .pane-foot .info-running,
   .pane-foot .info-cost {
     display: none;
   }
@@ -7015,8 +7013,7 @@ button.tl-event:hover { background: var(--raised); }
 
 .tl-result-meta .agent-mark,
 .work-item-meta .agent-mark,
-.chip-from .agent-mark,
-.bg-sub-agent .agent-mark {
+.chip-from .agent-mark {
   display: inline-flex;
   width: 14px;
   height: 14px;
@@ -7026,13 +7023,7 @@ button.tl-event:hover { background: var(--raised); }
 
 .tl-result-meta .agent-mark svg,
 .work-item-meta .agent-mark svg,
-.chip-from .agent-mark svg,
-.bg-sub-agent .agent-mark svg {
+.chip-from .agent-mark svg {
   width: 13px;
   height: 13px;
-}
-
-.bg-sub-agent {
-  display: inline-flex;
-  align-items: center;
 }

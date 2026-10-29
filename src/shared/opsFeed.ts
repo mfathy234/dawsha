@@ -228,18 +228,6 @@ export function opsModelLabel(model: string | null): string | null {
   return version ? `${name} ${version}` : name
 }
 
-const LETTERS: Record<ModelFamily, string> = {
-  opus: 'O',
-  sonnet: 'S',
-  haiku: 'H',
-  fable: 'F',
-  codex: 'C',
-  gemini: 'G',
-  other: '?'
-}
-
-export const modelLetter = (family: ModelFamily): string => LETTERS[family]
-
 export function runningFamilies(snapshot: OpsSnapshot): ModelFamily[] {
   return snapshot.agents.filter((a) => a.status === 'running').map((a) => a.family ?? 'other')
 }

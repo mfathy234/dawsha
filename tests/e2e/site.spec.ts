@@ -237,7 +237,7 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
   for (const toggle of await page.locator('.demo-toggle').all()) await expect(toggle).toBeHidden()
 })
 
-const releaseRows = ['files-review', 'agents-details', 'dawsha-cards', 'projects-sidebar']
+const releaseRows = ['files-review', 'dawsha-cards', 'projects-sidebar']
 
 test('the hero is three text elements with a readable crop of the app and no pill or platform row', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -272,7 +272,7 @@ test('New in 1.7.4 leads the page with sized lazy screenshots and no run of thre
   await expect(page.locator('#new-h')).toHaveText('New in 1.7.4')
   await expect(page.locator('#new #files-review h3')).toHaveText('Search and review in Files')
   await expect(page.locator('#new #files-review')).toContainText('Send to agent types every comment')
-  await expect(page.locator('#new #agents-details')).toContainText('Timeline shows which agents ran side by side')
+  await expect(page.locator('#new #agents-details, #features img[src*="agents-drawer"]')).toHaveCount(0)
   await expect(page.locator('#new #dawsha-cards')).toContainText('solid orange ring')
   await expect(page.locator('#new #projects-sidebar')).toContainText('Waiting on you')
   const order = await page.locator('#new .wrap > div').evaluateAll((nodes) => nodes.map((n) => n.id))
@@ -338,7 +338,6 @@ test('the Arabic page translates the 1.7.4 section, the earlier releases and the
   await page.goto(arabicUrl)
   await expect(page.locator('#new-h')).toHaveText('الجديد في 1.7.4')
   await expect(page.locator('#files-review h3')).toHaveText('البحث والمراجعة في الملفات')
-  await expect(page.locator('#agents-details h3')).toHaveText('تفاصيل الوكيل وخط زمني')
   await expect(page.locator('#dawsha-cards h3')).toContainText('الصقل')
   await expect(page.locator('#projects-sidebar h3')).toHaveText('شريط جانبي مبني حولك')
   await expect(page.locator('#files-review img').first()).toHaveAttribute('alt', /وضع المراجعة/)

@@ -57,7 +57,6 @@ export const paneLimits = (tab: TermState, live: StatusInfo | null, snapshot: Op
 export interface PaneOpsInfo {
   plan: { done: number; total: number } | null
   running: ModelFamily[]
-  sessionId: string
 }
 
 export interface PaneView {
@@ -221,8 +220,7 @@ function opsInfoFor(snapshot: OpsSnapshot | null, live: boolean): PaneOpsInfo | 
   if (!snapshot || !live) return null
   return {
     plan: snapshot.plan ? { done: snapshot.plan.done, total: snapshot.plan.total } : null,
-    running: runningFamilies(snapshot),
-    sessionId: snapshot.sessionId
+    running: runningFamilies(snapshot)
   }
 }
 

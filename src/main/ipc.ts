@@ -36,8 +36,7 @@ import { trashProjectPath } from './filesTrash'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
-import { bridgeDirs, claudeHome, claudeProjectsDir, claudeSettingsPath } from './paths'
-import { codexHome } from './agentLaunch'
+import { bridgeDirs, claudeHome, claudeSettingsPath } from './paths'
 import { createAgentAccountsReader } from './agentAccounts'
 import { createCodexLimitsReader } from './codexLimits'
 import { readLinked, scanSources } from './crewSources'
@@ -64,10 +63,6 @@ import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
 import { WorkService } from './workDashboard'
-import { BackgroundAgentScanner } from './backgroundAgents'
-import { revealAgentFile } from './backgroundAgentsReveal'
-import { DEFAULT_BG_RANGE, isBgRange } from '../shared/backgroundAgents'
-import { priceLookupFor } from '../shared/agentCosts'
 import { MAX_STEPS_BACK, type WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
@@ -368,11 +363,6 @@ export function registerIpc(
     const steps = typeof offset === 'number' && Number.isInteger(offset) && offset <= 0 && offset >= -MAX_STEPS_BACK ? offset : 0
     return work.report(valid, settings.get().projects, steps)
   })
-  const agentScanner = new BackgroundAgentScanner(() => ({ claudeProjects: claudeProjectsDir(), codex: codexHome() }))
-  ipcMain.handle(IPC.backgroundAgents, (_event, range: unknown) =>
-    agentScanner.list(isBgRange(range) ? range : DEFAULT_BG_RANGE, settings.get().projects, priceLookupFor()))
-  ipcMain.handle(IPC.backgroundAgentsReveal, (_event, kind: unknown, id: unknown) =>
-    revealAgentFile(typeof id === 'string' && (kind === 'claude' || kind === 'codex') ? agentScanner.pathOf(kind, id) : null, [claudeHome(), codexHome()], kind))
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
   ipcMain.handle(IPC.handoffTranscript, (_event, request: unknown) => writeHandoffTranscript(settings.get().projects, join(app.getPath('userData'), 'handoffs'), request))
   ipcMain.handle(IPC.handoffReveal, (_event, path: unknown) => revealHandoff(join(app.getPath('userData'), 'handoffs'), path))

@@ -23,7 +23,7 @@
 - **Three agents, one workflow.** Pick a project and its default agent starts in that folder without a prompt. Switch agent per session with the split **New session** button (Claude / Codex / Gemini) or Tab in the quick-pick.
 - **Arabic in every session.** Replies and prompts in Arabic show joined letters in right-to-left order in Claude Code, Codex, Gemini and shell sessions and in Replay, with numbers and English words kept in place. Copy, transcripts and find use normal reading order, and the terminal text itself is never changed. A bundled Arabic font and right-to-left text boxes make Arabic look the same on every computer.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
-- **Activity per pane.** Native child-process activity works for Claude, Codex and Gemini without a mod. An optional Claude ops feed adds plan progress and sub-agent details. Context and any available 5-hour/weekly limits stay with their own pane.
+- **Activity per pane.** Native child-process activity works for Claude, Codex and Gemini without a mod. An optional Claude ops feed adds plan progress, files and checks. Context and any available 5-hour/weekly limits stay with their own pane.
 - **Files view.** A light editor beside your sessions (Ctrl+Shift+E). One button at the top shows the project, branch and worktree. The explorer has Files, Search and Review modes with foldable Changes and Open in sessions sections, read-only files with a Changes toggle, small edits saved with Ctrl+S, and an inspector with the outline and the agents and commits that touched the file. Added lines carry a mark for the session that wrote them. **Send to agent** lists the project's live sessions, or starts a new one with the file, or copies an `@mention`. Markdown and HTML open as previews, images get Compare with main.
 - **Search in Files.** Ctrl+Shift+F searches the selected checkout, skips files Git ignores, and supports match case, whole word, regular expression and an include pattern. Results are grouped by file and open at the line.
 - **Review agent changes.** Step through the changed files, click a `+` line to comment, and **Send to agent** types every comment, with file and line, into that session's prompt without sending it. Commit… drafts a message with file selection, and Discard file… asks first.
@@ -39,7 +39,7 @@
 - **A sidebar built around you.** A Waiting on you section lists sessions blocked on you across projects. Projects show their branch and a quiet "2 live" or "needs you", with sort, a search filter (Ctrl+Shift+O), and a narrow rail with a flyout. The usage meter names its agent, and a click shows Claude, Codex and Gemini limits.
 - **Resize the Projects panel.** Drag its edge or focus the divider and use the arrow keys; Dawsha remembers the width between launches.
 - **Task history.** The Projects > Tasks tab groups related sessions, a task goal, notes and commit references in a dated history that remains after sessions close.
-- **Gemini tool activity.** Gemini panes show the latest tool from the agent's saved chat, with recent tool calls in the activity drawer when available.
+- **Gemini tool activity.** Gemini panes show the latest tool from the agent's saved chat.
 - **Keyboard shortcuts sheet.** **Ctrl+/** lists every shortcut, grouped and searchable.
 - **A command palette.** **Ctrl+K** searches your open sessions, actions, projects and layouts in one list and runs what you pick from the keyboard.
 - **Saved layouts.** Save the current panes under a name and bring the same setup back later, resuming each agent's session, from the **Layouts** menu, the palette or `dawsha open <layout>`.
@@ -61,7 +61,6 @@
 - **A `dawsha` command.** Run `dawsha .` in any folder to add it as a project and start its agent, `dawsha resume --last` to pick up the newest session, `dawsha open <layout>` to bring a saved layout back, or `dawsha ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
 - **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab. Choose per agent whether sessions start with full access, on by default for Claude Code and Codex.
-- **Agents view.** One All, Running, Failed and Done filter, a details pane with the agent's task, live tool calls or result, files touched (click to open in Files), tokens, cost and model, a Timeline of which agents ran side by side, and Export as Markdown.
 - **Skills and agents inventory.** The **Skills** tab separates installed skills from agent definitions across user, plugin and project locations. Filter by AI provider, then open, copy a path or export an item to a folder you choose.
 - **Sessions board.** Switch the Sessions view from Grid to Board (Ctrl+Shift+B) for four columns: Needs you, Working, Done to review and Reviewed. Cards move by themselves as sessions change. Allow or Deny a permission prompt on the card, drag a finished session to Reviewed, click a card to peek at its live terminal and send a reply, and filter by project and agent.
 - **Session timeline.** Ctrl+Shift+T lists every prompt, edit, command, test run and approval of a session, with filters, search, insights (files touched most, commands run, test runs) and a Markdown export. **Ctrl+Alt+F** searches the timelines of all your sessions, including closed ones, and opens a match read only at the exact point.
@@ -89,9 +88,9 @@
 |---|---|
 | ![A recorded session in Replay stopped at a permission prompt](docs/screenshots/replay.png) | ![The Remote Control Approvals tab on a phone](docs/screenshots/remote-approvals.png) |
 
-| Focus a pane and open its details | Sub-agents drawer |
-|---|---|
-| ![A maximized pane with the details panel open](docs/screenshots/focus-details.png) | ![A pane with the sub-agents drawer open](docs/screenshots/agents-drawer.png) |
+| Focus a pane and open its details |
+|---|
+| ![A maximized pane with the details panel open](docs/screenshots/focus-details.png) |
 
 | Projects | Agents |
 |---|---|
@@ -101,9 +100,9 @@
 |---|---|
 | ![Files in Changes mode with agent marks on added lines and the inspector on the right](docs/screenshots/files.png) | ![Review mode with a comment on an added line](docs/screenshots/files-review.png) |
 
-| Search in Files | Agents with details |
-|---|---|
-| ![Search mode with results grouped by file](docs/screenshots/files-search.png) | ![The Agents view with an agent selected and its details pane open](docs/screenshots/agents-tab.png) |
+| Search in Files |
+|---|
+| ![Search mode with results grouped by file](docs/screenshots/files-search.png) |
 
 | Projects sidebar |
 |---|
@@ -393,7 +392,7 @@ Both are optional and off until you turn them on.
 
 **Live session info (status-line bridge).** Claude Code runs a status-line command with the session as JSON on stdin. The Theme popover toggle **Show live session info** installs a small script (`bin/statusline-bridge.js` inside Dawsha's user-data folder, run with `node`) as `statusLine` in `~/.claude/settings.json`. It first shows a confirmation naming that file and your current status line. The previous value is kept in `bin/bridge-state.json` and a full copy in `settings.json.dawsha-backup`; turning the toggle off restores it (a status line you changed after install is left alone). The script saves each payload to `status/<session_id>.json` and then runs your previous status line with the same input, so it keeps working. A settings file that is not valid JSON is reported and never touched. This is the only file Dawsha edits outside its own folder.
 
-**Activity and optional ops feed.** Each live pane discovers activity from its own app-launched process tree, so the activity drawer works for Claude, Codex and Gemini without a mod. A Claude Code mod can additionally write a snapshot to `ops/<sessionId>.json` inside Dawsha's user-data folder (the legacy Claude Grid ops folder is read too). Dawsha only reads these files: it polls every second, keeps the last good parse of a file that is mid-write, ignores unknown fields and needs only `v`, `sessionId` and `updatedAt`. A snapshot belongs only to the pane whose Claude session ID matches and adds plan and sub-agent detail. Context and available rate limits are displayed per pane; unavailable limits are not borrowed from another agent.
+**Activity and optional ops feed.** Each live pane discovers activity from its own app-launched process tree, so pane activity works for Claude, Codex and Gemini without a mod. A Claude Code mod can additionally write a snapshot to `ops/<sessionId>.json` inside Dawsha's user-data folder (the legacy Claude Grid ops folder is read too). Dawsha only reads these files: it polls every second, keeps the last good parse of a file that is mid-write, ignores unknown fields and needs only `v`, `sessionId` and `updatedAt`. A snapshot belongs only to the pane whose Claude session ID matches and adds plan progress, files and checks. Context and available rate limits are displayed per pane; unavailable limits are not borrowed from another agent.
 
 ### Recording and Replay
 
