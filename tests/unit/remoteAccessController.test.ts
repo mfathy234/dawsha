@@ -298,7 +298,7 @@ describe('Remote Access tunnel health', () => {
 
   it('stays dropped, logs the give-up and offers Reconnect when every capped attempt fails', async () => {
     let calls = 0
-    const context = await enabled([false, false], async () => ++calls === 1, { reconnectDelaysMs: [0, 0] })
+    const context = await enabled([false, false], async () => ++calls === 1, { reconnectDelaysMs: [0, 0], minReconnectIntervalMs: 0 })
     await context.controller.verify()
     await vi.waitFor(() => expect(readFileSync(join(context.userDataDir, 'remote-access.log'), 'utf8')).toContain('reconnect-gave-up'))
     const state = await context.controller.getState()
