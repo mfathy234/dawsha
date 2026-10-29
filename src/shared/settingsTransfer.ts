@@ -1,5 +1,5 @@
 import { migrateSettings, MAX_LAYOUTS } from './settingsSchema'
-import type { CrewSettings } from './crew'
+import type { CrewMember, CrewSettings } from './crew'
 import type { Project, SavedLayout, Settings } from './types'
 
 export const TRANSFER_APP = 'dawsha'
@@ -192,6 +192,8 @@ export interface ImportSummary {
   preferences: string[]
   removedProjects: string[]
   replacedLayouts: number
+  fullAccessMembers: string[]
+  keepFullAccess: boolean
 }
 
 export interface ImportPlan {
@@ -205,6 +207,7 @@ export interface PlanInput {
   mode: TransferMode
   missingFolders: ReadonlySet<string>
   newId: () => string
+  keepFullAccess?: boolean
 }
 
 const PREFERENCE_LABELS: [keyof TransferData, string][] = [
@@ -231,20 +234,32 @@ export function preferenceLabels(data: Partial<TransferData>): string[] {
   return [...new Set(labels)]
 }
 
-function mergeCrew(current: CrewSettings, incoming: CrewSettings, mode: TransferMode): CrewSettings {
-  if (mode === 'replace') return incoming
+/** Members from the file that this PC does not have yet: all of them in Replace, the new ones in Merge. */
+function addedMembers(current: CrewSettings, incoming: CrewSettings, mode: TransferMode): CrewMember[] {
+  if (mode === 'replace') return incoming.members
   const names = new Set(current.members.map((member) => member.name.trim().toLowerCase()))
   const ids = new Set(current.members.map((member) => member.id))
-  const added = incoming.members.filter((member) => !names.has(member.name.trim().toLowerCase()) && !ids.has(member.id))
+  return incoming.members.filter((member) => !names.has(member.name.trim().toLowerCase()) && !ids.has(member.id))
+}
+
+/** A shared file must not hand out full access; it is kept only when the user ticks the box. */
+const limitAccess = (member: CrewMember, keepFullAccess: boolean): CrewMember =>
+  member.permissions === 'full' && !keepFullAccess ? { ...member, permissions: 'ask' } : member
+
+const fullAccessNames = (members: CrewMember[]): string[] => members.filter((member) => member.permissions === 'full').map((member) => member.name)
+
+function mergeCrew(current: CrewSettings, incoming: CrewSettings, mode: TransferMode, keepFullAccess: boolean): CrewSettings {
+  const added = addedMembers(current, incoming, mode).map((member) => limitAccess(member, keepFullAccess))
+  if (mode === 'replace') return { members: added, hidden: incoming.hidden }
   return { members: [...current.members, ...added], hidden: [...new Set([...current.hidden, ...incoming.hidden])] }
 }
 
-function preferencePatch(current: Settings, data: Partial<TransferData>, mode: TransferMode): Partial<Settings> {
+function preferencePatch(current: Settings, data: Partial<TransferData>, mode: TransferMode, keepFullAccess: boolean): Partial<Settings> {
   const patch: Partial<Settings> = {}
   for (const key of INCLUDED_KEYS) {
     if (key === 'projects' || key === 'layouts' || data[key] === undefined) continue
     if (key === 'theme') patch.theme = { ...current.theme, id: data.theme!.id }
-    else if (key === 'crew') patch.crew = mergeCrew(current.crew, data.crew!, mode)
+    else if (key === 'crew') patch.crew = mergeCrew(current.crew, data.crew!, mode, keepFullAccess)
     else Object.assign(patch, { [key]: data[key] })
   }
   return patch
@@ -327,7 +342,8 @@ function planLayouts(input: PlanInput, idMap: Map<string, string>): { layouts: S
 
 export function planImport(input: PlanInput): ImportPlan {
   const { current, data, mode } = input
-  const patch = preferencePatch(current, data, mode)
+  const keepFullAccess = input.keepFullAccess ?? false
+  const patch = preferencePatch(current, data, mode, keepFullAccess)
   const outcome = planProjects(input)
   const layouts = planLayouts(input, outcome.idMap)
   const touchesProjects = data.projects !== undefined
@@ -348,9 +364,18 @@ export function planImport(input: PlanInput): ImportPlan {
       skippedLayouts: layouts.skipped,
       preferences: preferenceLabels(data),
       removedProjects,
-      replacedLayouts: mode === 'replace' ? current.layouts.length : 0
+      replacedLayouts: mode === 'replace' ? current.layouts.length : 0,
+      fullAccessMembers: data.crew ? fullAccessNames(addedMembers(current.crew, data.crew, mode)) : [],
+      keepFullAccess
     }
   }
+}
+
+function fullAccessLine(summary: ImportSummary): string {
+  const names = summary.fullAccessMembers.join(', ')
+  return summary.keepFullAccess
+    ? `Keeping full access for ${names}`
+    : `Full access for ${names} will be set to ask. Tick "Keep full access for these agents" to keep it.`
 }
 
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? '' : 's'}`
@@ -366,6 +391,7 @@ export function previewLines(summary: ImportSummary): string[] {
   }
   if (summary.layoutsTotal > 0) lines.push(`${plural(summary.layoutsTotal, 'layout')} (${summary.layoutsNew} new)`)
   if (summary.preferences.length > 0) lines.push(`Preferences: ${summary.preferences.join(', ')}`)
+  if (summary.fullAccessMembers.length > 0) lines.push(fullAccessLine(summary))
   return lines
 }
 
@@ -375,7 +401,8 @@ export function replaceWarning(summary: ImportSummary, openSessions: number): st
     plural(summary.replacedLayouts, 'layout')
   ]
   const closing = openSessions > 0 ? ` ${plural(openSessions, 'open session')} in removed projects will be closed.` : ''
-  return `This replaces your current projects and layouts with the ones in the file. Not in the file and removed: ${parts.join(', ')}.${closing} Folders on disk are not touched. This cannot be undone.`
+  const access = summary.fullAccessMembers.length > 0 ? ` ${fullAccessLine(summary)}.` : ''
+  return `This replaces your current projects and layouts with the ones in the file. Not in the file and removed: ${parts.join(', ')}.${closing}${access} Folders on disk are not touched. This cannot be undone.`
 }
 
 /** The Replace button names what it removes, as the warning above it does. */
