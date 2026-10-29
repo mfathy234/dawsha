@@ -64,7 +64,7 @@ function writeOps(sandbox: Sandbox, extra: Record<string, unknown> = {}): void {
   writeFileSync(join(sandbox.opsDir, `${SESSION}.json`), JSON.stringify(snapshot), 'utf8')
 }
 
-test('ops feed: strip, agents drawer, details panel, updates, stale and ended', async () => {
+test('ops feed: strip, details panel, updates, stale and ended', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
@@ -80,9 +80,8 @@ test('ops feed: strip, agents drawer, details panel, updates, stale and ended', 
     await expect(page.locator('.info-model')).toHaveClass(/fam-opus/)
     await expect(page.locator('.info-gauge')).toHaveText('41%')
     await expect(page.locator('.info-gauge .charge')).toHaveAttribute('data-filled', '4')
-    await expect(page.locator('.info-letters .agent-letter')).toHaveText(['S', 'H'])
-    await expect(page.locator('.info-letters .agent-letter').first()).toHaveClass(/fam-sonnet/)
-    await expect(page.locator('.info-letters .agent-letter').last()).toHaveClass(/fam-haiku/)
+    await expect(strip.locator('.info-running, .info-letters')).toHaveCount(0)
+    await expect(strip).not.toContainText('running')
     await expect(page.locator('[data-limit="five_hour"]')).toContainText('5h 62%')
     await expect(page.locator('.topbar-limits .charge')).toHaveCount(3)
     await expect(page.locator('[data-limit="seven_day_fable"] .limit-label')).toHaveText('fable')
@@ -90,13 +89,6 @@ test('ops feed: strip, agents drawer, details panel, updates, stale and ended', 
 
     await expect(page.locator('.agents-toggle')).toHaveCount(0)
     await expect(page.locator('.agents-drawer')).toHaveCount(0)
-    const running = page.locator('.pane-info button.info-running')
-    await expect(running).toHaveText('2 running')
-    await running.click()
-    await expect(page.locator('#bg-clear')).toBeVisible()
-    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
-    await expect(page.locator('.pane')).toHaveCount(1)
-
     await page.getByRole('button', { name: 'Maximize pane' }).click()
     await expect(page.locator('.pane.maximized')).toHaveCount(1)
     await expect(page.locator('.pane-details')).toBeHidden()
@@ -140,7 +132,7 @@ test('ops feed: strip, agents drawer, details panel, updates, stale and ended', 
     await expect(details).toBeHidden()
 
     writeOps(sandbox, { ended: true })
-    await expect(page.locator('.info-letters')).toHaveCount(0, { timeout: 15_000 })
+    await expect(page.locator('.info-plan')).toHaveCount(0, { timeout: 15_000 })
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
