@@ -219,6 +219,7 @@ export class FilesViewComponent {
     }
     if (!await this.activateTarget(target)) return
     if (request?.path) void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
+    if (request?.review) this.explorer.setMode('review')
     void this.refreshTouches()
     this.touchTimer = window.setInterval(() => void this.refreshTouches(), TOUCH_REFRESH_MS)
   }
@@ -245,6 +246,7 @@ export class FilesViewComponent {
       if (!await this.activateTarget(request)) return
     }
     if (request.path) void this.openFile(request.path, { pin: request.pin, focus: true, line: request.line })
+    if (request.review) this.explorer.setMode('review')
   }
 
   private async activateTarget(requested: FilesTarget): Promise<boolean> {

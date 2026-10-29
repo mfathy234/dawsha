@@ -52,7 +52,6 @@ export interface SavedTab {
   label: string
   titleHint?: string
   sessionId?: string
-  agentsOpen?: boolean
   from?: AgentKind
   baseline?: SessionBaseline
   /** The orchestrator agent this pane runs; it reconnects with a fresh token when restored. */

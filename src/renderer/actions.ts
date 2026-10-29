@@ -755,11 +755,6 @@ export function restoreGrid(): void {
   }
 }
 
-export function toggleAgents(termId: string): void {
-  store.set((s) => mapTerm(s, termId, (t) => ({ ...t, agentsOpen: t.agentsOpen !== true })))
-  persistWorkspace()
-}
-
 export function openDetails(paneId: string): void {
   if (!paneById(store.state, paneId)) return
   leaveBoard()
@@ -1211,7 +1206,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, agentsOpen: tab.agentsOpen, from: tab.from, baseline: tab.baseline, orchAgentId: tab.orchAgentId, name: tab.name, tag: tab.tag })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, from: tab.from, baseline: tab.baseline, orchAgentId: tab.orchAgentId, name: tab.name, tag: tab.tag })
   }
   return {
     id: newId(),
