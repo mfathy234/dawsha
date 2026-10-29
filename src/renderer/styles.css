@@ -4346,8 +4346,9 @@ body.dragging-ui {
 .ra-away { display: flex; align-items: center; gap: var(--s-2); }
 .remote-away-minutes { width: 72px; }
 
-.ra-email-control { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s-2); }
-.ra-email-control .text-input { width: 240px; }
+.ra-email-control { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: var(--s-2); min-width: 0; }
+.ra-email-control .text-input { flex: 1 1 240px; width: auto; max-width: 240px; min-width: 0; }
+.ra-email-control > .btn { flex: none; }
 .ra-email-value { color: var(--text); font-size: var(--fs-body); overflow-wrap: anywhere; }
 .ra-email-error { margin: var(--s-1) 0 0; color: var(--danger); font-size: var(--fs-status); text-align: right; }
 
