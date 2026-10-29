@@ -62,7 +62,9 @@ export function placeNearAnchor(menu: HTMLElement, anchor: Element | null, gap =
   menu.classList.add('floating')
   menu.style.maxHeight = ''
   // Layout size, not the drawn box: an opening scale animation would make the menu look smaller than it ends up.
-  const placed = placeMenu(a, menu.offsetWidth, menu.offsetHeight, window.innerWidth, window.innerHeight, gap)
+  // The button's own area decides which way the menu opens: a trailing ⋯ in a pane opens inward, not over its neighbour.
+  const area = anchor.closest('.pane, .sidebar, .topbar, .files-view, [data-menu-bounds]')?.getBoundingClientRect()
+  const placed = placeMenu(a, menu.offsetWidth, menu.offsetHeight, window.innerWidth, window.innerHeight, gap, area)
   menu.style.left = `${placed.left}px`
   menu.style.top = `${placed.top}px`
   menu.style.right = 'auto'
