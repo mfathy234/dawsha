@@ -10,6 +10,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **Problems tab in Files.** Errors from your runs show as clickable `file:line` rows, grouped by file. It reads TypeScript, ESLint, `dotnet build`, and Vitest or Jest failures. Send one problem, or all of them, to an agent's prompt without sending it.
 - **Review from a session.** A "Review N files" button in a session's footer opens Files in Review mode on exactly what that session changed.
 - **Drag projects in the sidebar in any sort order.** Dropping a project switches to your own order, starting from the order you saw. Pinned projects stay on top. Alt+Up and Alt+Down move the focused project, and the narrow rail can be reordered too.
+- **Codex limits.** Codex's 5-hour and weekly limits now show in the usage meter and its popover. Dawsha reads them from Codex's own session files, so they show even with no Codex session open.
+- **Limits without a session.** The popover lists every agent's last known limits with their age ("updated 2h ago"), and windows that have already reset are marked as reset. With no agent session focused, the meter shows the agent closest to its limit.
+- **Which account each agent uses.** The limits popover shows the signed-in email and plan under each agent, for example "you@example.com · Max", or "API key" or "Not signed in". Dawsha reads only the email and plan name, never your login tokens, and calls no online service for this.
 - **`npm run release:check`** checks a release in one go: the version and changelog, the tag, every download, the release build and the website.
 
 ### Changed
