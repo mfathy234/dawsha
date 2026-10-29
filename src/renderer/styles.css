@@ -7557,3 +7557,27 @@ button.tl-event:hover { background: var(--raised); }
   overflow-wrap: anywhere;
 }
 
+
+.tl-result-meta .agent-mark,
+.work-item-meta .agent-mark,
+.chip-from .agent-mark,
+.bg-sub-agent .agent-mark {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  margin-inline: 2px;
+  vertical-align: -3px;
+}
+
+.tl-result-meta .agent-mark svg,
+.work-item-meta .agent-mark svg,
+.chip-from .agent-mark svg,
+.bg-sub-agent .agent-mark svg {
+  width: 13px;
+  height: 13px;
+}
+
+.bg-sub-agent {
+  display: inline-flex;
+  align-items: center;
+}

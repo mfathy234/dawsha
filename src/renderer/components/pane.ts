@@ -200,7 +200,7 @@ export class PaneComponent {
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
     const origin = view.pane.tabs.find((t) => t.id === view.primaryTabId)?.from
     this.fromChip.hidden = !origin
-    this.fromChip.textContent = origin ? `from ${AGENT_NAMES[origin]}` : ''
+    this.fromChip.replaceChildren(...(origin ? ['from ', agentMark(origin) ?? '', ` ${AGENT_NAMES[origin]}`] : []))
     const link = view.pane.compare
     this.compareChip.hidden = !link
     this.compareChip.textContent = link ? link.slot.toUpperCase() : ''

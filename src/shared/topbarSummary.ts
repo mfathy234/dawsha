@@ -37,6 +37,21 @@ export function limitText(window: RateLimitWindow, now: number): string {
   return reset ? `${formatPercent(window.percent)} · ${reset}` : formatPercent(window.percent)
 }
 
+/** The window closest to its cap: the one the compact meter shows. Earlier windows win a tie. */
+export function urgentWindow(windows: RateLimitWindow[]): RateLimitWindow | null {
+  let best: RateLimitWindow | null = null
+  for (const window of windows) if (best === null || window.percent > best.percent) best = window
+  return best
+}
+
+/** Row label in the limits popover: a model-family window reads "Opus week", others keep their own label. */
+export function limitRowLabel(window: RateLimitWindow): string {
+  if (!window.family) return window.label
+  const family = window.family.charAt(0).toUpperCase() + window.family.slice(1)
+  const period = window.label.replace(new RegExp(String.raw`\s*${window.family}\s*`, 'i'), ' ').trim()
+  return period ? `${family} ${period}` : family
+}
+
 /** "needs you · 2m": the lowercase state word plus how long since the last activity when known. */
 /** "needs you · 2m"; the suffix is time in that state (see formatTimeInState), empty to omit. */
 export function stateWord(state: SessionState, inState: string): string {
