@@ -68,6 +68,10 @@ export interface CrewRun {
   costUsd: number | null
   paneId: string
   termId: string
+  /** The Lead's goal this run belongs to. */
+  goalId?: string
+  /** True for the Lead's own session. */
+  lead?: boolean
 }
 
 export interface CrewIdentity {
@@ -86,6 +90,8 @@ export interface CrewLaunch {
   effort: CrewEffort
   permissions: CrewPermissions
   startup: CrewStartup
+  /** Claude tool rules that run without asking, for example Bash(dawsha crew:*). */
+  allow?: string
 }
 
 export const MAX_CREW_RUNS = 100
@@ -233,6 +239,7 @@ export function sanitizeCrewRuns(value: unknown): CrewRun[] {
     const id = text(item.id, 20).replace(/[^\w-]/g, '')
     if (id === '' || seen.has(id) || !isAgent(item.runner)) continue
     seen.add(id)
+    const goalId = text(item.goalId, 20).replace(/[^\w-]/g, '')
     runs.push({
       id,
       memberId: text(item.memberId, 60),
@@ -247,7 +254,9 @@ export function sanitizeCrewRuns(value: unknown): CrewRun[] {
       outcome: OUTCOMES.includes(item.outcome as CrewOutcome) ? (item.outcome as CrewOutcome) : 'closed',
       costUsd: finite(item.costUsd),
       paneId: text(item.paneId, 80),
-      termId: text(item.termId, 80)
+      termId: text(item.termId, 80),
+      ...(goalId !== '' ? { goalId } : {}),
+      ...(item.lead === true ? { lead: true } : {})
     })
   }
   return runs.sort((a, b) => b.startedAt - a.startedAt).slice(0, MAX_CREW_RUNS)
@@ -397,6 +406,7 @@ export function isCrewLaunch(value: unknown): value is CrewLaunch {
     typeof value.model === 'string' &&
     isEffort(value.effort) &&
     isPermissions(value.permissions) &&
-    isStartup(value.startup)
+    isStartup(value.startup) &&
+    (value.allow === undefined || (typeof value.allow === 'string' && value.allow.length <= 200))
   )
 }

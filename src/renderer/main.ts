@@ -26,6 +26,7 @@ import { CODEX_MARK, GEMINI_MARK } from '../shared/agents'
 import { api } from './api'
 import { installAttention } from './attention'
 import { installCrewLive } from './crewLive'
+import { installLead } from './crewLead'
 import { guardWindowDrops } from './fileDrop'
 import { installOps } from './ops'
 import { installProcessActivity } from './processActivity'
@@ -155,6 +156,7 @@ async function boot(): Promise<void> {
   void clearLegacyModelCache(loaded.settings.legacyModelCacheCleared)
   await restoreWorkspace()
   installCrewLive()
+  installLead()
   api.cliReady()
   document.documentElement.dataset.ready = 'true'
 }

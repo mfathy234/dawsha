@@ -17,6 +17,7 @@ import { defaultRecordings, sanitizeRecordings } from './recordings'
 import { defaultCapabilities, sanitizeCapabilities } from './remoteCapabilities'
 import { BUILTIN_IDS } from './crewBuiltins'
 import { defaultCrew, sanitizeCrew, sanitizeCrewRuns, sanitizeIdentity } from './crew'
+import { defaultLead, sanitizeGoals, sanitizeLead } from './crewLead'
 import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from './sessionTags'
 import {
   DEFAULT_FONT_SIZE,
@@ -105,6 +106,8 @@ export const defaultSettings = (): Settings => ({
   recordings: defaultRecordings(),
   crew: defaultCrew(),
   crewRuns: [],
+  lead: defaultLead(),
+  crewGoals: [],
   legacyModelCacheCleared: false
 })
 
@@ -402,6 +405,8 @@ export function migrateSettings(raw: unknown): Settings {
     recordings: sanitizeRecordings(raw.recordings),
     crew: sanitizeCrew(raw.crew, BUILTIN_IDS),
     crewRuns: sanitizeCrewRuns(raw.crewRuns),
+    lead: sanitizeLead(raw.lead),
+    crewGoals: sanitizeGoals(raw.crewGoals),
     legacyModelCacheCleared: raw.legacyModelCacheCleared === true
   }
 }

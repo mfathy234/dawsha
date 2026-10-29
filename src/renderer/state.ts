@@ -26,6 +26,7 @@ import type { SessionBaseline } from '../shared/gitStatus'
 import type { SessionTag } from '../shared/sessionTags'
 import type { CrewIdentity, CrewLaunch } from '../shared/crew'
 import type { AvatarState } from '../shared/crewLive'
+import type { GoalLive } from '../shared/crewLead'
 
 export interface TermState {
   id: string
@@ -128,6 +129,8 @@ export interface AppState {
   attention: Record<string, Attention>
   /** The live state of each crew run's avatar, by pane id. */
   crewStates: Record<string, AvatarState>
+  /** What each active goal shows right now: the plan, the open question and Maya's notes. */
+  goalLive: Record<string, GoalLive>
   waiting: Record<string, boolean>
   contextDismissed: Record<string, number>
   bridge: BridgeState
@@ -178,6 +181,7 @@ export const initialState = (): AppState => ({
   usage: emptySnapshot(),
   attention: {},
   crewStates: {},
+  goalLive: {},
   waiting: {},
   contextDismissed: {},
   bridge: { installed: false, busy: false, error: null, note: null },

@@ -12,6 +12,7 @@ import {
 } from './actions'
 import { openLayoutByName } from './layoutActions'
 import { currentMembers, runMember } from './crewActions'
+import { goalQueue, leadHost } from './crewLead'
 import { crewRunResult, crewRunStatuses } from './crewLive'
 import { store } from './state'
 
@@ -55,11 +56,13 @@ export function runCliCommand(command: CliCommand): Promise<CliReply> {
     updateAgents,
     crewMembers: currentMembers,
     crewRun: async (request) => {
-      const result = await runMember({ member: request.member, projectId: request.project.id, choice: request.choice, fields: request.fields, background: request.background })
+      const result = await runMember({ member: request.member, projectId: request.project.id, choice: request.choice, fields: request.fields, background: request.background, goalId: request.goal })
       return result.ok ? { ok: true, runId: result.runId } : result
     },
     crewRuns: () => crewRunStatuses(store.state),
-    crewResult: (run) => crewRunResult(store.state, run)
+    crewResult: (run) => crewRunResult(store.state, run),
+    lead: leadHost
   }
+  if (command.kind === 'crew-run' && command.goal) return goalQueue(command.goal, () => runCli(command, host))
   return runCli(command, host)
 }

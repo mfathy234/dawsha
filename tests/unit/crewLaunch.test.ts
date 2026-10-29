@@ -251,3 +251,16 @@ describe('launchSpec for a crew run', () => {
     expect(shell.args.join(' ')).not.toContain('append-system-prompt')
   })
 })
+
+describe('the Lead tool allowance', () => {
+  const launch = { instructions: 'Lead', model: 'opus', effort: 'high' as const, permissions: 'ask' as const, startup: 'lean' as const }
+
+  it('lets Claude run dawsha crew without asking, before the instructions flag', () => {
+    const args = crewArgs('claude', { ...launch, allow: 'Bash(dawsha crew:*)' }, { emptyMcpConfig: 'e.json' })
+    expect(args.slice(-4)).toEqual(['--allowedTools', 'Bash(dawsha crew:*)', '--append-system-prompt', 'Lead'])
+  })
+
+  it('adds nothing without an allowance', () => {
+    expect(crewArgs('claude', launch, { emptyMcpConfig: 'e.json' })).not.toContain('--allowedTools')
+  })
+})

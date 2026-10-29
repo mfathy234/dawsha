@@ -72,7 +72,7 @@ describe('crew command parsing', () => {
   })
 
   it('rejects bad input with a plain message', () => {
-    expect(parse('crew')).toEqual({ ok: false, error: 'crew needs list, run, status or result.' })
+    expect(parse('crew')).toEqual({ ok: false, error: 'crew needs list, run, status, result, plan, ask or note.' })
     expect(parse('crew', 'jump')).toMatchObject({ ok: false, error: expect.stringContaining("Unknown crew command 'jump'") })
     expect(parse('crew', 'run')).toEqual({ ok: false, error: 'crew run needs a member name.' })
     expect(parse('crew', 'run', 'sami')).toEqual({ ok: false, error: 'crew run needs --project <name|path>.' })
@@ -104,7 +104,7 @@ describe('crew commands', () => {
     const out = (await run({ kind: 'crew-list' })).out.split('\n')
     expect(out[0]).toMatch(/^NAME\s+ROLE\s+MODEL\s+FIELDS$/)
     expect(out.join('\n')).toMatch(/Sami\s+Code reviewer\s+claude Sonnet\s+target/)
-    expect(out.join('\n')).toMatch(/Maya\s+Lead\s+claude Opus\s+coming next/)
+    expect(out.join('\n')).toMatch(/Maya\s+Lead\s+claude Opus\s+goal/)
     expect(out.join('\n')).not.toContain('Hana')
   })
 
@@ -132,7 +132,7 @@ describe('crew commands', () => {
   it('refuses an unknown member, the Lead, an unknown project and a folder that is not a project', async () => {
     const h = host()
     expect((await run(runCmd({ member: 'nobody' }), h)).out).toBe("No crew member named 'nobody'. Run dawsha crew list.")
-    expect((await run(runCmd({ member: 'Maya' }), h)).out).toMatch(/Lead is not available yet/)
+    expect((await run(runCmd({ member: 'Maya' }), h)).out).toMatch(/is the Lead and takes goals from the Agents page/)
     expect((await run(runCmd({ project: 'nope' }), h)).out).toBe("No project named 'nope'. Run dawsha ls.")
     expect((await run(runCmd({ project: null, path: 'C:\\elsewhere' }), h)).out).toBe('C:\\elsewhere is not a project. Run dawsha add <path> first.')
     expect(h.crewRun).not.toHaveBeenCalled()

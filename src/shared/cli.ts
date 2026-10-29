@@ -2,7 +2,18 @@ import { AGENT_NAMES, isAgent } from './agents'
 import { formatAge } from './statusLine'
 import { normalizePath } from './sessionMatch'
 import { layoutProjectNames, paneCountText } from './layouts'
-import { FIELD_VALUE_MAX, RUN_CHOICES, inScope, isRunChoice, modelLabel, runFields, type CrewMember, type RunChoice } from './crew'
+import { FIELD_VALUE_MAX, RUN_CHOICES, inScope, isRunChoice, modelLabel, resolveRun, runFields, type CrewMember, type RunChoice } from './crew'
+import {
+  MAX_OPTIONS,
+  NOTE_MAX,
+  OPTION_MAX,
+  QUESTION_MAX,
+  checkRun,
+  validatePlan,
+  type LeadPlan,
+  type LeadSettings,
+  type RunLoad
+} from './crewLead'
 import type { AgentKind, Project, ResumeQuery, ResumeSession, SavedLayout } from './types'
 
 export type LayoutMode = 'replace' | 'add'
@@ -26,7 +37,11 @@ export type CliCommand =
       choice: RunChoice
       fields: Record<string, string>
       background: boolean
+      goal?: string
     }
+  | { kind: 'crew-plan'; goal: string; file: string; text?: string }
+  | { kind: 'crew-ask'; goal: string; question: string; options: string[] }
+  | { kind: 'crew-note'; goal: string; text: string }
   | { kind: 'crew-status'; run: string | null }
   | { kind: 'crew-result'; run: string }
   | { kind: 'help' }
@@ -62,9 +77,12 @@ export const HELP_TEXT = [
   '  update-agents                          Update installed agents',
   '  crew list                              List crew members and the fields they ask for',
   '  crew run <member> --project <name|path> [--model fable|opus|sonnet|haiku|codex|gemini]',
-  '      [--field key=value ...] [--background]   Run a member and print the run id',
+  '      [--field key=value ...] [--background] [--goal <id>]   Run a member and print the run id',
   "  crew status [run]                      Print a run's state: working, needs, done, failed, idle or closed",
   '  crew result <run>                      Print what a run last said',
+  '  crew plan --goal <id> --file <plan.json>   Show the Lead plan and wait: approved (0), changes (3), cancelled (2)',
+  '  crew ask --goal <id> "<question>" --option "<a>" --option "<b>"   Ask the human and print the answer',
+  '  crew note --goal <id> "<text>"          Post a short note on the goal board',
   '  --version                              Print the version'
 ].join('\n')
 
@@ -82,6 +100,9 @@ interface Flags {
   model?: RunChoice
   fields: Record<string, string>
   background: boolean
+  goal?: string
+  file?: string
+  options: string[]
   error?: string
 }
 
@@ -90,6 +111,12 @@ function readCrewFlag(flags: Flags, key: string, value: string | undefined, fiel
     flags.error = `${key} needs a value.`
   } else if (key === '--project') {
     flags.project = value
+  } else if (key === '--goal') {
+    flags.goal = value
+  } else if (key === '--file') {
+    flags.file = value
+  } else if (key === '--option') {
+    flags.options.push(value)
   } else if (key === '--model') {
     if (isRunChoice(value) && value !== 'default') flags.model = value
     else flags.error = `Unknown model '${value}'. Use ${RUN_CHOICES.filter((c) => c !== 'default').join(', ')}.`
@@ -103,13 +130,13 @@ function readCrewFlag(flags: Flags, key: string, value: string | undefined, fiel
 }
 
 function readFlags(args: string[], crew = false): Flags {
-  const flags: Flags = { positional: [], here: false, last: false, replace: false, alongside: false, fields: {}, background: false }
+  const flags: Flags = { positional: [], here: false, last: false, replace: false, alongside: false, fields: {}, background: false, options: [] }
   const fields = new Map<string, string>()
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]
     const [key, inline] = arg.startsWith('--') ? arg.split(/=(.*)/s, 2) : [arg, undefined]
     if (crew && key === '--background') flags.background = true
-    else if (crew && (key === '--project' || key === '--model' || key === '--field')) readCrewFlag(flags, key, inline ?? args[(i += 1)], fields)
+    else if (crew && (key === '--project' || key === '--model' || key === '--field' || key === '--goal' || key === '--file' || key === '--option')) readCrewFlag(flags, key, inline ?? args[(i += 1)], fields)
     else if (key === '--here') flags.here = true
     else if (key === '--last') flags.last = true
     else if (key === '--replace') flags.replace = true
@@ -136,33 +163,54 @@ function parseOpen(rest: string[]): CliParse {
   return { ok: true, command: { kind: 'open-layout', name: flags.positional.join(' '), mode } }
 }
 
+function parseLead(sub: 'plan' | 'ask' | 'note', flags: Flags, resolvePath: (path: string) => string): CliParse {
+  const fail = (error: string): CliParse => ({ ok: false, error })
+  const rest = flags.positional.slice(1)
+  if (!flags.goal) return fail(`crew ${sub} needs --goal <id>.`)
+  if (sub === 'plan') {
+    if (!flags.file) return fail('crew plan needs --file <plan.json>.')
+    if (rest.length > 0) return fail(`Unexpected argument '${rest[0]}'.`)
+    return { ok: true, command: { kind: 'crew-plan', goal: flags.goal, file: resolvePath(flags.file) } }
+  }
+  const body = rest.join(' ').trim()
+  if (sub === 'note') {
+    if (body === '') return fail('crew note needs the text of the note.')
+    return { ok: true, command: { kind: 'crew-note', goal: flags.goal, text: body } }
+  }
+  if (body === '') return fail('crew ask needs the question.')
+  if (flags.options.length < 2) return fail('crew ask needs at least two --option values.')
+  return { ok: true, command: { kind: 'crew-ask', goal: flags.goal, question: body, options: flags.options } }
+}
+
 function parseCrew(rest: string[], resolvePath: (path: string) => string): CliParse {
   const flags = readFlags(rest, true)
   if (flags.error) return { ok: false, error: flags.error }
   const [sub, first, extra] = flags.positional
   const fail = (error: string): CliParse => ({ ok: false, error })
-  if (sub === undefined) return fail('crew needs list, run, status or result.')
+  if (sub === undefined) return fail('crew needs list, run, status, result, plan, ask or note.')
+  if (sub === 'plan' || sub === 'ask' || sub === 'note') return parseLead(sub, flags, resolvePath)
   if (sub === 'list') return first ? fail(`Unexpected argument '${first}'.`) : { ok: true, command: { kind: 'crew-list' } }
   if (sub === 'status') return extra ? fail(`Unexpected argument '${extra}'.`) : { ok: true, command: { kind: 'crew-status', run: first ?? null } }
   if (sub === 'result') {
     if (!first) return fail('crew result needs a run id.')
     return extra ? fail(`Unexpected argument '${extra}'.`) : { ok: true, command: { kind: 'crew-result', run: first } }
   }
-  if (sub !== 'run') return fail(`Unknown crew command '${sub}'. Use list, run, status or result.`)
+  if (sub !== 'run') return fail(`Unknown crew command '${sub}'. Use list, run, status, result, plan, ask or note.`)
   if (!first) return fail('crew run needs a member name.')
   if (extra) return fail(`Unexpected argument '${extra}'.`)
-  if (!flags.project) return fail('crew run needs --project <name|path>.')
-  const byPath = looksLikePath(flags.project)
+  if (!flags.project && !flags.goal) return fail('crew run needs --project <name|path>.')
+  const byPath = flags.project !== undefined && looksLikePath(flags.project)
   return {
     ok: true,
     command: {
       kind: 'crew-run',
       member: first,
-      project: byPath ? null : flags.project,
-      path: byPath ? resolvePath(flags.project) : null,
+      project: byPath ? null : (flags.project ?? null),
+      path: byPath && flags.project ? resolvePath(flags.project) : null,
       choice: flags.model ?? 'default',
       fields: flags.fields,
-      background: flags.background
+      background: flags.background,
+      ...(flags.goal ? { goal: flags.goal } : {})
     }
   }
 }
@@ -245,6 +293,27 @@ export interface CliHost {
   crewRun(request: CrewRunRequest): Promise<{ ok: true; runId: string } | { ok: false; error: string }>
   crewRuns(): CrewRunStatus[]
   crewResult(run: string): Promise<string | null>
+  lead?: LeadHost
+}
+
+export interface LeadGoalInfo {
+  id: string
+  projectId: string
+  projectName: string
+  planFirst: boolean
+  approved: boolean
+}
+
+export type PlanDecision = { kind: 'approved' } | { kind: 'changed'; note: string } | { kind: 'cancelled' }
+
+export interface LeadHost {
+  settings(): LeadSettings
+  /** An active goal, or null when there is no such goal or its Lead has ended. */
+  goal(id: string): LeadGoalInfo | null
+  load(goalId: string): RunLoad
+  plan(goalId: string, plan: LeadPlan): Promise<PlanDecision>
+  ask(goalId: string, question: string, options: string[]): Promise<{ ok: true; answer: string } | { ok: false; error: string }>
+  note(goalId: string, text: string): void
 }
 
 export interface CrewRunRequest {
@@ -253,6 +322,7 @@ export interface CrewRunRequest {
   choice: RunChoice
   fields: Record<string, string>
   background: boolean
+  goal?: string
 }
 
 export interface CrewRunStatus {
@@ -346,7 +416,7 @@ function runCrewList(host: CliHost): CliReply {
     member.name,
     member.role,
     `${member.runner} ${modelLabel(member.runner, member.model)}`,
-    member.lead ? 'coming next' : runFields(member).join(', ')
+    runFields(member).join(', ')
   ])
   return success(table(['NAME', 'ROLE', 'MODEL', 'FIELDS'], rows))
 }
@@ -355,21 +425,80 @@ async function runCrewRun(command: Extract<CliCommand, { kind: 'crew-run' }>, ho
   const wanted = command.member.trim().toLowerCase()
   const member = host.crewMembers().find((m) => m.id.toLowerCase() === wanted || m.name.toLowerCase() === wanted)
   if (!member) return failure(`No crew member named '${command.member}'. Run dawsha crew list.`)
-  if (member.lead) return failure(`${member.name} the Lead is not available yet. Run a member instead.`)
-  const project = findProject(host.projects, command.project, command.path)
+  if (member.lead) return failure(`${member.name} is the Lead and takes goals from the Agents page. Run a member instead.`)
+  let goal: LeadGoalInfo | null = null
+  if (command.goal) {
+    const found = leadGoal(host, command.goal)
+    if ('ok' in found) return found
+    goal = found
+  }
+  const project =
+    goal && !command.project && !command.path
+      ? host.projects.find((p) => p.id === goal!.projectId)
+      : findProject(host.projects, command.project, command.path)
   if (!project) {
     return failure(
       command.project ? `No project named '${command.project}'. Run dawsha ls.` : `${command.path} is not a project. Run dawsha add <path> first.`
     )
   }
+  if (goal && project.id !== goal.projectId) return failure(`Goal ${goal.id} is for project ${goal.projectName}, not ${project.name}.`)
   if (!inScope(member, project.name)) return failure(`${member.name} is limited to ${member.projects.join(', ')}, not ${project.name}.`)
   const fields = runFields(member)
   const unknown = Object.keys(command.fields).find((key) => !fields.includes(key))
   if (unknown) return failure(`${member.name} has no field '${unknown}'. Fields: ${fields.join(', ')}.`)
   const missing = fields.filter((key) => (command.fields[key] ?? '').trim() === '')
   if (missing.length > 0) return failure(`${member.name} needs ${missing.map((key) => `--field ${key}=...`).join(' ')}.`)
-  const result = await host.crewRun({ member, project, choice: command.choice, fields: command.fields, background: command.background })
+  if (goal && host.lead) {
+    const { runner, model } = resolveRun(member, command.choice)
+    const refusal = checkRun({ member, runner, model, lead: host.lead.settings(), goal, load: host.lead.load(goal.id) })
+    if (refusal) return failure(refusal)
+  }
+  const result = await host.crewRun({ member, project, choice: command.choice, fields: command.fields, background: command.background, ...(goal ? { goal: goal.id } : {}) })
   return result.ok ? success(result.runId) : failure(result.error)
+}
+
+function leadGoal(host: CliHost, id: string): LeadGoalInfo | CliReply {
+  if (!host.lead) return failure('The Lead is not available.')
+  return host.lead.goal(id) ?? failure(`No active goal '${id}'. Use the goal id from your first message.`)
+}
+
+async function runCrewPlan(command: Extract<CliCommand, { kind: 'crew-plan' }>, host: CliHost): Promise<CliReply> {
+  const goal = leadGoal(host, command.goal)
+  if ('ok' in goal) return goal
+  if (!host.lead) return failure('The Lead is not available.')
+  if (command.text === undefined) return failure(`Could not read ${command.file}.`)
+  let raw: unknown
+  try {
+    raw = JSON.parse(command.text)
+  } catch {
+    return failure(`${command.file} is not valid JSON.`)
+  }
+  const result = validatePlan(raw, { members: host.crewMembers(), lead: host.lead.settings(), projectName: goal.projectName })
+  if (!result.ok) return failure(result.error)
+  const decision = await host.lead.plan(goal.id, result.plan)
+  if (decision.kind === 'approved') return success('approved')
+  if (decision.kind === 'changed') return { ok: false, exit: 3, out: decision.note === '' ? 'The human wants changes to the plan.' : decision.note }
+  return { ok: false, exit: 2, out: 'cancelled' }
+}
+
+async function runCrewAsk(command: Extract<CliCommand, { kind: 'crew-ask' }>, host: CliHost): Promise<CliReply> {
+  const goal = leadGoal(host, command.goal)
+  if ('ok' in goal) return goal
+  if (!host.lead) return failure('The Lead is not available.')
+  if (command.question.length > QUESTION_MAX) return failure(`The question is longer than ${QUESTION_MAX} characters.`)
+  if (command.options.length > MAX_OPTIONS) return failure(`Give at most ${MAX_OPTIONS} options.`)
+  if (command.options.some((option) => option.length > OPTION_MAX)) return failure(`Each option must be ${OPTION_MAX} characters or fewer.`)
+  const answer = await host.lead.ask(goal.id, command.question, command.options)
+  return answer.ok ? success(answer.answer) : failure(answer.error)
+}
+
+function runCrewNote(command: Extract<CliCommand, { kind: 'crew-note' }>, host: CliHost): CliReply {
+  const goal = leadGoal(host, command.goal)
+  if ('ok' in goal) return goal
+  if (!host.lead) return failure('The Lead is not available.')
+  if (command.text.length > NOTE_MAX) return failure(`The note is longer than ${NOTE_MAX} characters.`)
+  host.lead.note(goal.id, command.text)
+  return success('noted')
 }
 
 function runCrewStatus(command: Extract<CliCommand, { kind: 'crew-status' }>, host: CliHost): CliReply {
@@ -422,6 +551,12 @@ export async function runCli(command: CliCommand, host: CliHost): Promise<CliRep
       return runCrewList(host)
     case 'crew-run':
       return runCrewRun(command, host)
+    case 'crew-plan':
+      return runCrewPlan(command, host)
+    case 'crew-ask':
+      return runCrewAsk(command, host)
+    case 'crew-note':
+      return runCrewNote(command, host)
     case 'crew-status':
       return runCrewStatus(command, host)
     case 'crew-result': {

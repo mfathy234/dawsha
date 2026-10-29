@@ -94,8 +94,8 @@ export function colourSwatches(current: CrewColour, disabled: boolean, onPick: (
   return wrap
 }
 
-function textInput(label: string, value: string, readOnly: boolean, max: number, onInput: (value: string) => void, width?: string): HTMLInputElement {
-  const input = h('input', { class: 'text-input', type: 'text', 'aria-label': label, maxlength: String(max), autocomplete: 'off', spellcheck: 'false', ...(width ? { style: `width:${width}` } : {}) })
+function textInput(label: string, value: string, readOnly: boolean, max: number, onInput: (value: string) => void, size?: string): HTMLInputElement {
+  const input = h('input', { class: `text-input${size ? ` crew-in-${size}` : ''}`, type: 'text', 'aria-label': label, maxlength: String(max), autocomplete: 'off', spellcheck: 'false' })
   input.value = value
   input.readOnly = readOnly
   input.addEventListener('input', () => onInput(input.value))
@@ -192,11 +192,11 @@ export function buildSetup(member: CrewMember, handlers: SetupHandlers): HTMLEle
     const now = handlers.current()
     handlers.change({ name: value, ...(now.initials === initialsOf(now.name) ? { initials: initialsOf(value) } : {}) })
     initialsInput.value = handlers.current().initials
-  }, '170px')
-  const roleInput = textInput('Role', member.role, locked, 60, (value) => handlers.change({ role: value }), '220px')
-  const initialsInput = textInput('Initials', member.initials, locked, 3, (value) => handlers.change({ initials: value.toUpperCase() }), '64px')
+  }, 'name')
+  const roleInput = textInput('Role', member.role, locked, 60, (value) => handlers.change({ role: value }), 'role')
+  const initialsInput = textInput('Initials', member.initials, locked, 3, (value) => handlers.change({ initials: value.toUpperCase() }), 'initials')
   initialsInput.classList.add('crew-initials')
-  const promptArea = textArea('Prompt', member.prompt, 3, locked, true, (value) => {
+  const promptArea = textArea('Prompt', member.prompt, 4, locked, true, (value) => {
     handlers.change({ prompt: value })
     clear(varsHost)
     varsHost.append(fieldChips(value))
@@ -206,7 +206,7 @@ export function buildSetup(member: CrewMember, handlers: SetupHandlers): HTMLEle
     ...row('Name · role', h('div', { class: 'crew-idrow' }, nameInput, roleInput, initialsInput)),
     ...row('Colour', colourSwatches(member.colour, locked, (colour) => { handlers.change({ colour }); handlers.rebuild() })),
     group('Job'),
-    ...row('Instructions', textArea('Instructions', member.instructions, 5, locked, true, (value) => handlers.change({ instructions: value })), locked ? 'Built in. Duplicate to change the instructions.' : member.source.linked ? 'Linked: the file wins each time this member runs.' : undefined),
+    ...row('Instructions', textArea('Instructions', member.instructions, 8, locked, true, (value) => handlers.change({ instructions: value })), locked ? 'Built in. Duplicate to change the instructions.' : member.source.linked ? 'Linked: the file wins each time this member runs.' : undefined),
     ...row('Prompt', h('div', {}, promptArea, varsHost), 'Use {{fields}} for what a run asks you for. Without any, a run asks for a task.'),
     ...row('Projects', textInput('Projects', member.projects.join(', '), locked, 200, (value) => handlers.change({ projects: value.split(',').map((p) => p.trim()).filter(Boolean) })), 'Project names, separated by commas. Empty means any project.'),
     ...row('Paste to run', pasteEditor(member, locked, handlers)),

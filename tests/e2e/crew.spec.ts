@@ -46,7 +46,7 @@ async function openAgents(page: Page): Promise<void> {
   await expect(page.locator('.crew-view')).toBeVisible()
 }
 
-test('the Agents tab is the crew: built-ins in sections, Maya coming next, and the old badge gone', async () => {
+test('the Agents tab is the crew: built-ins in sections, Maya taking goals, and the old badge gone', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox, fakeEnv(sandbox))
   try {
@@ -56,10 +56,11 @@ test('the Agents tab is the crew: built-ins in sections, Maya coming next, and t
     await expect(page.locator('#background-button .count-badge')).toHaveCount(0)
     await expect(page.locator('.crew-sec span:first-child')).toHaveText(['Lead', 'Built in', 'Yours'])
     await expect(page.locator('.crew-item')).toHaveCount(8)
-    await expect(page.locator('.crew-item[data-member="maya"]')).toContainText('Coming next: give Maya a goal')
+    await expect(page.locator('.crew-item[data-member="maya"]')).toContainText('Give her a goal')
     for (const name of ['Sami', 'Tarek', 'Omar', 'Hana', 'Lina', 'Nour', 'Yara']) await expect(page.locator(`.crew-item[data-member="${name.toLowerCase()}"]`)).toContainText(name)
     await page.locator('.crew-item[data-member="maya"]').click()
-    await expect(page.locator('[data-coming-next]')).toContainText('Coming next')
+    await expect(page.locator('.crew-goalbox')).toBeVisible()
+    await expect(page.locator('#crew-goal-go')).toHaveText('Hand it to Maya')
     await page.locator('.crew-item[data-member="sami"]').click()
     await expect(page.locator('.crew-dh h2')).toHaveText('Sami')
     await expect(page.locator('.crew-form input[aria-label="Name"]')).toHaveJSProperty('readOnly', true)
@@ -338,7 +339,7 @@ test('the dawsha crew commands list, run and report on members', async () => {
       expect(result.out).toContain('READY claude')
     }).toPass({ timeout: 30_000 })
     expect((await runCli(sandbox, ['crew', 'result', 'zzzzzz'])).code).toBe(1)
-    expect((await runCli(sandbox, ['crew', 'run', 'maya', '--project', 'Smoke', '--field', 'goal=x'])).err).toContain('not available yet')
+    expect((await runCli(sandbox, ['crew', 'run', 'maya', '--project', 'Smoke', '--field', 'goal=x'])).err).toContain('is the Lead and takes goals from the Agents page')
     const gemini = await runCli(sandbox, ['crew', 'run', 'nour', '--project', 'Smoke', '--field', 'version=1.7.6'])
     expect(gemini.code).toBe(1)
     expect(gemini.err).toContain('Gemini is not signed in')

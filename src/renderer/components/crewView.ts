@@ -18,13 +18,15 @@ import { store, type AppState } from '../state'
 import { confirmDialog } from './dialogs'
 import { crewAvatar } from './crewAvatar'
 import { openImportDialog, openRunDialog } from './crewDialogs'
+import { CrewGoalsPage } from './crewGoals'
+import { buildLeadSettings } from './crewLeadSettings'
 import { buildSetup, refreshPreview } from './crewSetup'
 import { toast } from './toast'
 import './crew.css'
 
-type Tab = 'setup' | 'runs'
+type Tab = 'goals' | 'setup' | 'runs'
 
-const NEXT_NOTE = 'Coming next: give Maya a goal'
+const LEAD_NOTE = 'Give her a goal; she picks who works on it'
 
 function stateWord(state: AvatarState): string {
   return AVATAR_LABELS[state]
@@ -46,7 +48,8 @@ export class CrewViewComponent {
     onInput: () => this.refresh(store.state, true)
   })
   private selectedId = 'maya'
-  private tab: Tab = 'setup'
+  private tab: Tab = 'goals'
+  private readonly goals = new CrewGoalsPage()
   private listSig = ''
   private headSig = ''
   private bodySig = ''
@@ -103,6 +106,7 @@ export class CrewViewComponent {
       this.renderHead(selected, state)
     }
     const runs = state.settings.crewRuns.filter((run) => run.memberId === selected.id)
+    if (selected.lead && this.tab === 'goals' && !force) this.goals.update(state)
     const bodySig = JSON.stringify([selected.id, this.tab, this.tab === 'runs' ? runs : '', selected.hidden])
     if (force || bodySig !== this.bodySig) {
       this.bodySig = bodySig
@@ -122,7 +126,7 @@ export class CrewViewComponent {
 
   private select(id: string): void {
     this.selectedId = id
-    this.tab = 'setup'
+    this.tab = this.members(store.state).find((member) => member.id === id)?.lead ? 'goals' : 'setup'
     this.refresh(store.state, true)
   }
 
@@ -150,8 +154,8 @@ export class CrewViewComponent {
   }
 
   private metaLine(member: CrewMember, state: AppState): Node {
-    if (member.lead) return h('span', { class: 'crew-muted' }, NEXT_NOTE)
     const live = memberStateNow(state, member.id)
+    if (member.lead && live === 'idle') return h('span', { class: 'crew-muted' }, LEAD_NOTE)
     if (live !== 'idle') {
       const run = this.liveTitle(state, member.id)
       return h('span', {}, h('span', { class: `crew-state state-${live === 'needs' ? 'needs' : live === 'working' ? 'working' : live === 'done' ? 'done' : 'failed'}` }, stateWord(live)), run ? h('span', { class: 'crew-muted' }, ` · ${run}`) : null)
@@ -226,7 +230,7 @@ export class CrewViewComponent {
       ...(source ? [source] : [])
     )
     clear(this.tabs)
-    const tabs: [Tab, string][] = member.lead ? [['setup', 'How she leads']] : [['setup', 'Setup'], ['runs', `Runs ${runsOf(member.id).length}`]]
+    const tabs: [Tab, string][] = member.lead ? [['goals', 'Goals'], ['setup', 'How she leads']] : [['setup', 'Setup'], ['runs', `Runs ${runsOf(member.id).length}`]]
     for (const [id, label] of tabs) {
       const button = h('button', { class: 'crew-tab', type: 'button', role: 'tab', 'aria-selected': String(this.tab === id), 'data-tab': id }, label)
       button.addEventListener('click', () => {
@@ -240,7 +244,8 @@ export class CrewViewComponent {
   private renderBody(member: CrewMember, runs: CrewRun[], state: AppState): void {
     clear(this.body)
     if (member.lead) {
-      this.body.append(this.leadPage(member), buildSetup(member, this.handlers(member)))
+      this.body.append(this.tab === 'goals' ? this.goals.el : buildLeadSettings(member, () => this.duplicate(member)))
+      if (this.tab === 'goals') this.goals.update(state)
       return
     }
     if (this.tab === 'runs') {
@@ -248,15 +253,6 @@ export class CrewViewComponent {
       return
     }
     this.body.append(buildSetup(member, this.handlers(member)))
-  }
-
-  private leadPage(member: CrewMember): HTMLElement {
-    return h(
-      'div',
-      { class: 'crew-lead-note', 'data-coming-next': '' },
-      crewAvatar(member, 'idle', 32),
-      h('div', {}, h('p', {}, h('b', {}, 'Coming next: '), 'give Maya a goal. She will plan who does what, on which model and at what estimated cost, and run the members she needs.'), h('p', { class: 'crew-muted' }, 'Until then, every member can be run directly with Run. The dawsha crew command is ready for her.'))
-    )
   }
 
   private runsPage(runs: CrewRun[], state: AppState): HTMLElement {
