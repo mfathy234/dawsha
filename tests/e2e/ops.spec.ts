@@ -35,7 +35,6 @@ function writeOps(sandbox: Sandbox, extra: Record<string, unknown> = {}): void {
     updatedAt: now,
     ended: false,
     model: 'claude-opus-5-5',
-    orchestrate: true,
     plan: { title: 'Allow editing own messages', done: 3, total: 6 },
     agents: [
       { id: 'a1', description: 'Read existing edit handlers', type: 'worker', model: 'claude-haiku-4-5', status: 'done', startedAt: now - 60_000, finishedAt: now - 46_000, tokens: 12_000, tools: 3 },

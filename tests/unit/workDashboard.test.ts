@@ -112,16 +112,13 @@ describe('tickets', () => {
       // A chat on a base branch is not a ticket; commits on it are their own ticket.
       item('s5', { branch: 'main', type: 'conversation' }),
       item('s6', { branch: 'main', type: 'bug', title: 'Hotfix on main' }),
-      item('s7', { branch: null, type: 'conversation' }),
-      // A run is its own ticket.
-      item('run_1', { agent: 'orchestrator', branch: 'orch/abc/run', type: 'feature', title: 'Run' })
+      item('s7', { branch: null, type: 'conversation' })
     ], 0, stamp(17, 0))
     expect(tickets.map((t) => [t.project, t.ticket, t.type, t.items.map((i) => i.id)])).toEqual([
       ['Alpha', '#18550', 'bug', ['s2', 's1']],
       ['Alpha', '#26412', 'feature', ['s3']],
       ['Beta', '#26412', 'feature', ['s4']],
-      ['Alpha', null, 'bug', ['s6']],
-      ['Alpha', null, 'feature', ['run_1']]
+      ['Alpha', null, 'bug', ['s6']]
     ].sort(() => 0))
     const fix = tickets.find((t) => t.ticket === '#18550')!
     expect(fix.title).toBe('Look at login')

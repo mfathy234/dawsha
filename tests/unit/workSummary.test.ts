@@ -11,7 +11,7 @@ const item = (id: string, extra: Partial<WorkItem> = {}): WorkItem => ({
 const report = aggregateWork([
   item('a'), item('b', { startedAt: start + 20 * 60_000, endedAt: start + 30 * 60_000 }),
   item('chat', { type: 'conversation', branch: 'main', ticket: null, title: 'Private chat topic' }),
-  item('other', { projectId: 'd', project: 'dawsha', type: 'feature', branch: 'feature/orchestrator', ticket: null, title: 'Orchestrator' })
+  item('other', { projectId: 'd', project: 'dawsha', type: 'feature', branch: 'feature/dashboard', ticket: null, title: 'Dashboard' })
 ], 'today', now, start)
 const notes = { 'branch:p:fix/18550': { name: 'Login crash on expired token', link: 'https://issues.example/18550' } }
 
@@ -20,7 +20,7 @@ it('groups tickets before counted conversations, uses saved names and links, and
     'Work · Fri, Oct 16 (Yesterday)', '', 'Platforms',
     '- Bug #18550 Login crash on expired token (fix/18550) · 20m · 2 sessions',
     '  https://issues.example/18550', '- 1 conversation · 10m', '', 'dawsha',
-    '- Feature Orchestrator (feature/orchestrator) · 10m', '', 'Total: 2 tickets, 1 conversation · 40m'
+    '- Feature Dashboard (feature/dashboard) · 10m', '', 'Total: 2 tickets, 1 conversation · 40m'
   ].join('\n'))
 })
 
