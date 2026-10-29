@@ -704,14 +704,16 @@ export function focusNextAttention(): boolean {
  * The screen is checked again first, because attention lags the terminal and a stray Enter would
  * send whatever is in the prompt box.
  */
-export function answerPermission(paneId: string, allow: boolean): boolean {
+/** `true` accepts the highlighted choice, `false` denies, and a number picks that numbered option (Allow always). */
+export function answerPermission(paneId: string, choice: boolean | number): boolean {
   if (store.state.attention[paneId] !== 'needs') return false
   const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
   const tail = tabId ? (getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '') : ''
   if (!tabId || !detectPermissionPrompt(tail)) return false
+  const allow = choice !== false
   recordApproval(paneId, allow, tail, Date.now())
   void api.remoteAccess?.recordApproval(tabId, allow, tail).catch(() => undefined)
-  api.write(tabId, allow ? '\r' : '\x1b')
+  api.write(tabId, choice === true ? '\r' : choice === false ? '\x1b' : String(choice))
   return true
 }
 

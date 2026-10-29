@@ -4,6 +4,7 @@ import { defaultLayout, parseLayout } from './filesLayout'
 import { sanitizeRunOverrides } from './runCommands'
 import { isAgent } from './agents'
 import { isSessionsLayout } from './board'
+import { DEFAULT_GRID_STYLE, isGridStyle } from './gridStyle'
 import { isSidebarSort } from './sidebarModel'
 import { sanitizeBaseline } from './gitStatus'
 import { DEFAULT_THEME_ID, resolveThemeId } from './themes'
@@ -83,6 +84,7 @@ export const defaultSettings = (): Settings => ({
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   othersCollapsed: false,
   sessionsLayout: 'grid',
+  gridStyle: DEFAULT_GRID_STYLE,
   sessionInfo: { notifications: true, sound: false },
   onboardingDismissed: false,
   workspace: { panes: [], focusedIndex: 0 },
@@ -378,6 +380,7 @@ export function migrateSettings(raw: unknown): Settings {
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,
     sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
+    gridStyle: isGridStyle(raw.gridStyle) ? raw.gridStyle : DEFAULT_GRID_STYLE,
     sessionInfo: {
       notifications: typeof info.notifications === 'boolean' ? info.notifications : defaults.sessionInfo.notifications,
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound

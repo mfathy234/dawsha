@@ -1,0 +1,315 @@
+/* Sessions grid and pane anatomy: calm focus, mission control, the header, footer, needs-you state and approval card. */
+
+/* The hidden attribute must win over the display rules below, so an empty footer or info strip takes no space. */
+.pane [hidden] {
+  display: none !important;
+}
+
+.grid {
+  gap: var(--s-3);
+  padding: var(--s-3);
+}
+
+.grid.focus-style,
+.grid.tiles {
+  align-items: stretch;
+}
+
+.pane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--ring), var(--shadow-hairline);
+  overflow: hidden;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+
+.pane.focused {
+  box-shadow: var(--pane-focus-ring), var(--shadow-lift);
+}
+
+/* Needs you: a 2px needs-colour edge, a tinted header and a slow halo that stops under reduced motion. */
+.pane.needs-you {
+  outline-color: var(--state-needs);
+  animation: needs-pulse 2.4s var(--ease-in-out) infinite;
+}
+
+.pane.needs-you .pane-header {
+  background: color-mix(in srgb, var(--state-needs) 12%, var(--surface));
+}
+
+@keyframes needs-pulse {
+  0%,
+  100% {
+    box-shadow: var(--ring), 0 0 0 0 color-mix(in srgb, var(--state-needs) 0%, transparent), var(--shadow-hairline);
+  }
+  50% {
+    box-shadow: var(--ring), 0 0 0 5px color-mix(in srgb, var(--state-needs) 24%, transparent), var(--shadow-hairline);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pane.needs-you {
+    animation: none;
+    box-shadow: var(--ring), 0 0 0 4px color-mix(in srgb, var(--state-needs) 22%, transparent), var(--shadow-hairline);
+  }
+}
+
+/* Calm focus: siblings are quieter, with a shorter header and no footer unless they are done or need you. */
+.pane.quiet .pane-header {
+  height: 34px;
+}
+
+.pane.quiet .pane-project {
+  display: none;
+}
+
+.pane.quiet:not([data-state='done']):not([data-state='needs']) .pane-foot {
+  display: none;
+}
+
+.pane.quiet .pane-work {
+  opacity: 0.8;
+}
+
+.pane-header {
+  container: pane-header / inline-size;
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 40px;
+  padding: 0 var(--s-2) 0 var(--s-3);
+  background: var(--surface);
+  cursor: grab;
+}
+
+.pane-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pane-title {
+  min-width: min(9em, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--text);
+}
+
+.pane-project {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-ui);
+  line-height: 14px;
+  color: var(--muted);
+}
+
+.pane-header > .state-pill {
+  flex: none;
+}
+
+.pane-header > .pane-state {
+  flex: none;
+}
+
+.pane-header .pane-panel,
+.pane-header .pane-actions,
+.pane-header .maximize {
+  flex: none;
+}
+
+.pane-header .pane-tag,
+.pane-header .pane-fresh,
+.pane-header .chip-from,
+.pane-header .chip-resumed {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+@container pane-header (max-width: 560px) {
+  .pane-header .pane-tag,
+  .pane-header .pane-fresh,
+  .pane-header .chip-from {
+    display: none;
+  }
+}
+
+@container pane-header (max-width: 420px) {
+  .pane-header .pane-pin,
+  .pane-header .chip-compare {
+    display: none;
+  }
+}
+
+.pane-body,
+.pane-work {
+  min-height: 0;
+}
+
+.pane-foot {
+  container: pane-foot / inline-size;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 34px;
+  padding: 0 var(--s-2) 0 var(--s-3);
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-ui);
+  box-shadow: inset 0 1px 0 var(--seam);
+}
+
+.pane-foot .pane-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  overflow: hidden;
+}
+
+.pane-foot .pane-info .spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.pane-foot .chip-branch {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+}
+
+.pane-foot .info-review {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+@container pane-foot (max-width: 520px) {
+  .pane-foot .info-tokens,
+  .pane-foot .info-cost,
+  .pane-foot .info-age,
+  .pane-foot .info-elapsed,
+  .pane-foot .info-gemini-tool,
+  .pane-foot .info-plan {
+    display: none;
+  }
+}
+
+.pane-permission {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+  margin: 0 var(--s-2) var(--s-2);
+  padding: var(--s-3);
+  border-radius: var(--r-card);
+  background: var(--raised);
+  color: var(--text);
+  font-size: var(--fs-ui);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--state-needs) 55%, transparent), var(--shadow-hairline);
+  position: relative;
+  z-index: 1;
+}
+
+.pane-permission[hidden] {
+  display: none;
+}
+
+.pane-permission-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.pane-permission-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.pane-permission-tool {
+  flex: none;
+  color: var(--state-needs);
+}
+
+.pane-permission-command {
+  display: block;
+  max-height: 5.4em;
+  overflow: auto;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-control);
+  background: var(--well);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pane-permission-prompt {
+  color: var(--accent);
+  margin-inline-end: var(--s-1);
+}
+
+.pane-permission-meta {
+  color: var(--muted);
+  font-size: var(--fs-ui);
+}
+
+.pane-permission-project {
+  color: var(--text);
+}
+
+.pane-permission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.pane-permission-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: none;
+}
+
+.pane-permission-actions .btn.primary {
+  background: var(--state-needs);
+  border-color: var(--state-needs);
+  color: var(--bg);
+}
+
+.pane-permission-actions .btn.ghost {
+  margin-inline-start: auto;
+}
+
+.pane-permission-key {
+  margin-inline-start: var(--s-1);
+  font-size: var(--fs-status);
+  font-weight: 400;
+  opacity: 0.7;
+}

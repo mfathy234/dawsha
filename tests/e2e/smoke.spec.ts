@@ -114,7 +114,8 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await expect(page.locator('.theme-picker')).toHaveCount(0)
 
     // A session that is not working closes without asking (closeConfirm.spec covers a working one).
-    await page.getByRole('button', { name: 'Close pane' }).click()
+    await page.getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Close pane' }).click()
     await expect(page.getByRole('alertdialog')).toHaveCount(0)
     await expect(page.locator('.pane')).toHaveCount(0)
     await expect(page.locator('.empty h2')).toHaveText('No sessions yet')
@@ -202,7 +203,7 @@ test('projects view validates folders and confirms removal by name', async () =>
   }
 })
 
-test('names panes from Claude session files and lays three panes out with a tall first pane', async () => {
+test('names panes from Claude session files and lays three panes out with a tall focused pane', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
@@ -212,8 +213,8 @@ test('names panes from Claude session files and lays three panes out with a tall
     await add.click()
     await expect(page.locator('.pane')).toHaveCount(3)
     const boxes = await page.locator('.pane').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()))
-    expect(boxes[0].height).toBeGreaterThan(boxes[1].height * 1.8)
-    expect(boxes[2].top).toBeGreaterThan(boxes[1].bottom - 1)
+    expect(boxes[2].height).toBeGreaterThan(boxes[1].height * 1.8)
+    expect(boxes[0].left).toBeGreaterThan(boxes[2].left)
 
     const now = Date.now()
     writeFileSync(
@@ -260,7 +261,7 @@ test('reorders panes from the move menu and the keyboard, and opens pane menus n
     await expect(menu).toBeVisible()
     const paneBox = (await left.boundingBox())!
     const menuBox = (await menu.boundingBox())!
-    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(paneBox.x + paneBox.width + 1)
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual((await page.evaluate(() => window.innerWidth)) + 1)
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
 

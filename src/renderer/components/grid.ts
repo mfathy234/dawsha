@@ -7,9 +7,10 @@ import { clear, h, iconButton } from '../dom'
 import { ICONS } from '../icons'
 import { pairOf } from '../../shared/compare'
 import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
-import { layoutForCount } from '../../shared/layout'
-import { resolveSplit, withSplit } from '../../shared/splits'
-import type { CompareLink, GridSplits } from '../../shared/types'
+import { layoutForCount, type GridLayout } from '../../shared/layout'
+import { focusLayout, promotedRows, tileLayout, type GridStyle } from '../../shared/gridStyle'
+import { equalSizes, resolveSplit, shapeKey, withSplit } from '../../shared/splits'
+import type { CompareLink, GridSplit, GridSplits } from '../../shared/types'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
 import { agentMark } from './agentMark'
@@ -77,10 +78,12 @@ export class GridComponent {
     const elements = this.syncUnits(units)
     const maximized = state.maximizedId !== null && views.some((v) => v.pane.id === state.maximizedId)
     this.splits = state.splits
-    this.layout(units, elements, views, maximized ? state.maximizedId : null)
+    const focusUnit = Math.max(0, units.findIndex((unit) => paneIds(unit).includes(state.focusedId ?? '')))
+    this.layout(units, elements, views, state, maximized ? state.maximizedId : null, focusUnit)
+    const quiet = this.quietPanes(units, state.settings.gridStyle, focusUnit, maximized)
     for (const view of views) {
       const isMax = maximized && view.pane.id === state.maximizedId
-      this.panes.get(view.pane.id)?.update(view, view.pane.id === state.focusedId, isMax)
+      this.panes.get(view.pane.id)?.update(view, view.pane.id === state.focusedId, isMax, quiet.has(view.pane.id))
     }
     this.updateStrip(views, state, maximized)
     const visible = new Set(views.filter((view) => this.panes.get(view.pane.id)?.el.hidden === false).map((view) => view.pane.id))
@@ -135,7 +138,7 @@ export class GridComponent {
     return pair.el
   }
 
-  private layout(units: Unit[], elements: HTMLElement[], views: PaneView[], maximizedId: string | null): void {
+  private layout(units: Unit[], elements: HTMLElement[], views: PaneView[], state: AppState, maximizedId: string | null, focusUnit: number): void {
     const style = this.grid.style
     this.grid.classList.toggle('maximized', maximizedId !== null)
     this.el.classList.toggle('focus-view', maximizedId !== null)
@@ -150,13 +153,14 @@ export class GridComponent {
       component.el.classList.remove('pinned-side')
     }
     this.grid.classList.remove('with-pinned')
-    const layout = layoutForCount(units.length)
-    const split = resolveSplit(this.splits, layout.cols, layout.rows, layout.variant)
+    const tiles = units.length > 1 && state.settings.gridStyle === 'tiles'
+    this.grid.classList.toggle('tiles', tiles)
+    this.grid.classList.toggle('focus-style', units.length > 1 && !tiles)
+    const layout = this.planLayout(units.length, tiles, focusUnit)
+    const split = tiles ? { cols: equalSizes(layout.cols), rows: equalSizes(layout.rows) } : this.focusSplit(layout, units, views, focusUnit)
     const track = (sizes: number[]): string => sizes.map((size) => `minmax(0, ${size}fr)`).join(' ')
-    style.gridTemplateColumns = layout.scrolls ? `repeat(${layout.cols}, minmax(0, 1fr))` : track(split.cols)
-    style.gridTemplateRows = layout.scrolls
-      ? `repeat(${layout.rows}, minmax(${MIN_ROW_HEIGHT}, 1fr))`
-      : track(split.rows)
+    style.gridTemplateColumns = track(split.cols)
+    style.gridTemplateRows = layout.scrolls ? `repeat(${layout.rows}, minmax(${MIN_ROW_HEIGHT}, 1fr))` : track(split.rows)
     this.grid.classList.toggle('scrolls', layout.scrolls)
     const spanned = new Set<number>()
     elements.forEach((element, index) => {
@@ -171,7 +175,7 @@ export class GridComponent {
     this.shape = { cols: layout.cols, rows: layout.rows, variant: layout.variant }
     this.gutters.update({
       grid: this.grid,
-      enabled: !layout.scrolls && units.length > 1,
+      enabled: !layout.scrolls && units.length > 1 && !tiles,
       cols: layout.cols,
       rows: layout.rows,
       rowsFrom: layout.rowsFrom,
@@ -179,6 +183,36 @@ export class GridComponent {
       sizes: split,
       spanned
     })
+  }
+
+  private planLayout(count: number, tiles: boolean, focusUnit: number): GridLayout {
+    if (count <= 1) return layoutForCount(count)
+    return tiles ? tileLayout(count) : focusLayout(count, focusUnit)
+  }
+
+  /** The focus column's split; a sibling that needs you is taller until the user drags a row gutter. */
+  private focusSplit(layout: GridLayout, units: Unit[], views: PaneView[], focusUnit: number): GridSplit {
+    const split = resolveSplit(this.splits, layout.cols, layout.rows, layout.variant)
+    if (units.length < 2 || this.splits[shapeKey(layout.cols, layout.rows, layout.variant)]) return split
+    const needs = units.filter((_, index) => index !== focusUnit).map((unit) => this.unitNeeds(unit, views))
+    return { ...split, rows: promotedRows(layout.rows, needs) }
+  }
+
+  private unitNeeds(unit: Unit, views: PaneView[]): boolean {
+    return paneIds(unit).some((id) => {
+      const view = views.find((candidate) => candidate.pane.id === id)
+      return view !== undefined && sessionState({ status: view.status, attention: view.attention }) === 'needs'
+    })
+  }
+
+  /** In calm focus every sibling is quiet; mission control tiles are all equal. */
+  private quietPanes(units: Unit[], gridStyle: GridStyle, focusUnit: number, maximized: boolean): Set<string> {
+    const quiet = new Set<string>()
+    if (maximized || gridStyle !== 'focus' || units.length < 2) return quiet
+    units.forEach((unit, index) => {
+      if (index !== focusUnit) for (const id of paneIds(unit)) quiet.add(id)
+    })
+    return quiet
   }
 
   private layoutMaximized(units: Unit[], elements: HTMLElement[], views: PaneView[], maximizedId: string): void {

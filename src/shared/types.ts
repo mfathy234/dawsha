@@ -1,5 +1,6 @@
 import type { SessionBaseline } from './gitStatus'
 import type { SessionsLayout } from './board'
+import type { GridStyle } from './gridStyle'
 import type { HighlightSettings } from './highlights'
 import type { RecordingSettings } from './recordings'
 import type { RemoteActivityEntry } from './remoteActivity'
@@ -138,6 +139,8 @@ export interface Settings {
   sidebarWidth: number
   othersCollapsed: boolean
   sessionsLayout: SessionsLayout
+  /** How the sessions grid arranges panes: calm focus (one large pane) or mission control (equal tiles). */
+  gridStyle: GridStyle
   sessionInfo: SessionInfoSettings
   onboardingDismissed: boolean
   workspace: Workspace
