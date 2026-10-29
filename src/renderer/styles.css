@@ -156,7 +156,7 @@ input {
   font-family: inherit;
 }
 
-/* Arabic typed or dictated into a text box reads right-to-left and aligns right, English stays left. */
+/* Arabic typed into a text box reads right-to-left and aligns right, English stays left. */
 input,
 textarea {
   unicode-bidi: plaintext;
@@ -7088,110 +7088,6 @@ button.tl-event:hover { background: var(--raised); }
 .import-mode { display: flex; gap: var(--s-3); align-items: flex-start; padding: var(--s-3) var(--s-3); border-radius: var(--r-control); background: var(--bg); cursor: pointer; }
 .import-mode:has(input:checked) { background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
 .import-mode > span { display: grid; gap: 2px; }
-
-.pane-mic.recording {
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 18%, transparent);
-  animation: dictation-pulse 1.2s var(--ease-out) infinite;
-}
-
-.pane-mic.busy {
-  color: var(--accent);
-  opacity: 0.8;
-}
-
-.pane-dictation {
-  flex: none;
-  display: flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 var(--s-4);
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
-  font-size: var(--fs-ui);
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pane-dictation[hidden],
-.dictation-pill[hidden] {
-  display: none;
-}
-
-.pane-dictation,
-.dictation-pill {
-  gap: var(--s-3);
-}
-
-.dictation-pill {
-  display: flex;
-  align-items: center;
-}
-
-.dictation-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dictation-meter {
-  flex: none;
-  width: 56px;
-  height: 6px;
-  border-radius: var(--r-control);
-  overflow: hidden;
-  background: color-mix(in srgb, var(--text) 14%, transparent);
-}
-
-.dictation-meter[hidden] {
-  display: none;
-}
-
-.dictation-meter-fill {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  transform-origin: left center;
-  transform: scaleX(0);
-  transition: transform var(--t-feedback) linear;
-}
-
-.dictation-meter.quiet {
-  outline: 1px solid var(--busy);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dictation-meter-fill { transition: none; }
-}
-
-.dictation-pill {
-  position: fixed;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
-  z-index: 2000;
-  padding: var(--s-2) var(--s-4);
-  border-radius: var(--r-pop);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-size: var(--fs-body);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 35%);
-}
-
-.dictation-pill.recording {
-  border-color: var(--danger);
-}
-
-@keyframes dictation-pulse {
-  50% { opacity: 0.55; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pane-mic.recording { animation: none; }
-}
 
 /* Session titles: the name picks its own direction and stays isolated from the number and project beside it. */
 .pane-title bdi,

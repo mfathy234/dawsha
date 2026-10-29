@@ -55,7 +55,6 @@ import { CHANGELOG_ENTRIES } from '../changelog'
 import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
-import { dictationRows } from './dictationSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
 import { orchestratorSettingsRows } from './orch/orchSettings'
 
@@ -568,8 +567,6 @@ export class SettingsViewComponent {
         h('button', { class: 'btn ghost small', type: 'button', id: 'getting-started', onClick: () => openOnboarding() }, 'Getting started…'),
         h('p', { class: 'hint' }, 'Reopen the setup guide for projects, agents and session info.')
       ),
-      h('h3', { class: 'set-subhead', id: 'dictation-heading' }, 'Voice dictation'),
-      ...dictationRows(state),
       h('h3', { class: 'set-subhead', id: 'recordings-heading' }, 'Recordings'),
       ...recordingRows(state, () => this.refresh()),
       h('h3', { class: 'set-subhead', id: 'transfer-heading' }, 'Back up and move'),

@@ -163,7 +163,7 @@ export interface Settings {
   remoteAccess: RemoteAccessSettings
   highlights: HighlightSettings
   recordings: RecordingSettings
-  dictation: import('./dictation').DictationSettings
+  legacyModelCacheCleared: boolean
   experimental: ExperimentalSettings
   orchestrator: OrchSettings
 }

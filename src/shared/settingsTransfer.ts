@@ -14,7 +14,6 @@ export const INCLUDED_KEYS = [
   'paletteShortcut',
   'sessionsLayout',
   'recordings',
-  'dictation',
   'sessionInfo',
   'autoUpdateCheck',
   'sidebarCollapsed',
@@ -47,6 +46,8 @@ export const EXCLUDED_KEYS = [
   'onboardingDismissed',
   // Experimental features are switched on per PC, on purpose.
   'experimental',
+  // Tracks this PC's local model cache, so it is never carried to another PC.
+  'legacyModelCacheCleared',
   // Never carried between PCs: a shared file must not be able to switch agents to skipping permission prompts.
   'fullAccess'
 ] as const satisfies readonly (keyof Settings)[]
@@ -105,7 +106,7 @@ export type ParseResult = { ok: true; transfer: ParsedTransfer } | { ok: false; 
 const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
-const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'dictation', 'sessionInfo'] as const
+const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo'] as const
 const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'colorSessionsByTag', 'othersCollapsed'] as const
 
 function checkShapes(data: Raw): string | null {
@@ -209,7 +210,6 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['paletteShortcut', 'Palette shortcut'],
   ['sessionsLayout', 'Sessions view'],
   ['recordings', 'Recording settings'],
-  ['dictation', 'Dictation settings'],
   ['sessionInfo', 'Notifications'],
   ['autoUpdateCheck', 'Update checks'],
   ['sidebarCollapsed', 'Sidebar'],
