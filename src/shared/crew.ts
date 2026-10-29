@@ -261,7 +261,16 @@ export function sanitizeCrewRuns(value: unknown): CrewRun[] {
       ...(item.lead === true ? { lead: true } : {})
     })
   }
-  return runs.sort((a, b) => b.startedAt - a.startedAt).slice(0, MAX_CREW_RUNS)
+  return keepRuns(runs.sort((a, b) => b.startedAt - a.startedAt))
+}
+
+/** Keeps the newest MAX_CREW_RUNS runs, but never a run of a goal whose Lead is still working, so that goal's spend stays counted. */
+export function keepRuns(runs: readonly CrewRun[]): CrewRun[] {
+  const active = new Set(runs.filter((run) => run.lead && run.outcome === 'running' && run.goalId).map((run) => run.goalId))
+  const held = (run: CrewRun): boolean => run.goalId !== undefined && active.has(run.goalId)
+  const rest = runs.filter((run) => !held(run))
+  const room = new Set(rest.slice(0, Math.max(0, MAX_CREW_RUNS - (runs.length - rest.length))))
+  return runs.filter((run) => held(run) || room.has(run))
 }
 
 export function sanitizeIdentity(value: unknown): CrewIdentity | undefined {
