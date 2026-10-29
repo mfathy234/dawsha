@@ -470,6 +470,42 @@ describe('private remote HTTP API', () => {
     } finally { socket?.terminate(); await context.server.stop() }
   })
 
+  it('ends a live output stream at once when Full output is turned off, without waiting for the heartbeat', async () => {
+    const context = await setup(undefined, undefined, undefined, Date.now, 60_000)
+    let socket: WebSocket | undefined
+    let closeCode: number | undefined
+    const frames: string[] = []
+    try {
+      socket = new WebSocket(`ws://127.0.0.1:${context.server.port}/dawsha/api/terminal/output?id=term-1`, { headers: { ...context.headers, host: 'device.trycloudflare.com' } })
+      socket.on('message', (value) => frames.push(value.toString()))
+      socket.on('close', (code) => { closeCode = code })
+      await new Promise<void>((resolve, reject) => { socket!.once('open', resolve); socket!.once('error', reject) })
+      await vi.waitFor(() => expect(frames.some((frame) => frame.includes('"event":"snapshot"'))).toBe(true))
+      context.auth.setPermissions({ fullOutput: false })
+      context.server.enforcePermissions()
+      await vi.waitFor(() => expect(socket!.readyState).toBe(WebSocket.CLOSED), { timeout: 500, interval: 10 })
+      expect(closeCode).toBe(1008)
+      expect(frames.some((frame) => frame.includes('"event":"denied"'))).toBe(true)
+      expect(context.outputListeners.size).toBe(0)
+    } finally { socket?.terminate(); await context.server.stop() }
+  })
+
+  it('keeps a live output stream open when a permission change leaves Full output on', async () => {
+    const context = await setup(undefined, undefined, undefined, Date.now, 60_000)
+    let socket: WebSocket | undefined
+    const frames: string[] = []
+    try {
+      socket = new WebSocket(`ws://127.0.0.1:${context.server.port}/dawsha/api/terminal/output?id=term-1`, { headers: { ...context.headers, host: 'device.trycloudflare.com' } })
+      socket.on('message', (value) => frames.push(value.toString()))
+      await new Promise<void>((resolve, reject) => { socket!.once('open', resolve); socket!.once('error', reject) })
+      await vi.waitFor(() => expect(frames.some((frame) => frame.includes('"event":"snapshot"'))).toBe(true))
+      context.auth.setPermissions({ messages: true })
+      context.server.enforcePermissions()
+      expect(socket.readyState).toBe(WebSocket.OPEN)
+      expect(frames.some((frame) => frame.includes('"event":"denied"'))).toBe(false)
+    } finally { socket?.terminate(); await context.server.stop() }
+  })
+
   it('ends a live stream when its paired token expires', async () => {
     let now = 1000
     const context = await setup(undefined, undefined, undefined, () => now, 5)

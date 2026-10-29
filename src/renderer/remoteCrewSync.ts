@@ -1,9 +1,9 @@
 import { api } from './api'
 import { currentMembers, memberById, runMember } from './crewActions'
-import { liveRuns, memberStateNow } from './crewLive'
+import { crewRunStatuses, liveRuns, memberStateNow } from './crewLive'
 import { store, type AppState } from './state'
 import { isRunChoice } from '../shared/crew'
-import type { RemoteCrewSnapshot } from '../shared/remoteCrew'
+import { createPhoneRunGate, type PhoneRunInput, type RemoteCrewSnapshot } from '../shared/remoteCrew'
 
 export function remoteCrewSnapshot(state: AppState): RemoteCrewSnapshot {
   const states: RemoteCrewSnapshot['states'] = {}
@@ -54,14 +54,28 @@ export function installRemoteCrew(): void {
   }
   store.subscribe(publish)
   publish(store.state)
+  const phoneRuns = createPhoneRunGate()
   remote.onRun((id, request) => {
     const member = memberById(request.memberId)
     if (!member || !isRunChoice(request.choice)) {
       remote.reply(id, { ok: false, error: 'That agent is not available.' })
       return
     }
+    const input: PhoneRunInput = { memberId: request.memberId, projectId: request.projectId, fields: request.fields, deadline: request.deadline }
+    const decision = phoneRuns.check(input, Date.now(), runStates(store.state))
+    if (decision.kind === 'refuse') return remote.reply(id, { ok: false, error: decision.error })
+    if (decision.kind === 'duplicate') return remote.reply(id, { ok: true, runId: decision.runId })
+    const ticket = phoneRuns.begin(input, Date.now())
     void runMember({ member, projectId: request.projectId, choice: request.choice, fields: request.fields, background: true })
-      .then((result) => remote.reply(id, result.ok ? { ok: true, runId: result.runId } : { ok: false, error: result.error }))
-      .catch(() => remote.reply(id, { ok: false, error: 'Could not start the run.' }))
+      .then((result) => {
+        ticket.finish(result.ok ? result.runId : null)
+        remote.reply(id, result.ok ? { ok: true, runId: result.runId } : { ok: false, error: result.error })
+      })
+      .catch(() => {
+        ticket.finish(null)
+        remote.reply(id, { ok: false, error: 'Could not start the run.' })
+      })
   })
 }
+
+const runStates = (state: AppState): Map<string, string> => new Map(crewRunStatuses(state).map((run) => [run.id, run.state]))

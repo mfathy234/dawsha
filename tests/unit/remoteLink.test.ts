@@ -62,6 +62,82 @@ describe('Remote Access link state machine', () => {
     expect(link.snapshot().phase).toBe('on')
   })
 
+  it('keeps the backoff across a link that comes up and drops again within two minutes', () => {
+    let clock = 0
+    const link = createLinkMachine(() => clock)
+    link.start()
+    link.up()
+    clock = 1_000
+    link.drop()
+    link.reconnecting()
+    link.attemptFailed()
+    link.reconnecting()
+    expect(link.up()).toBe(true)
+    expect(link.snapshot().attempt).toBe(1)
+    clock = 60_000
+    link.drop()
+    expect(link.snapshot()).toMatchObject({ phase: 'dropped', attempt: 1 })
+  })
+
+  it('starts the backoff over once the link has stayed up for two minutes', () => {
+    let clock = 0
+    const link = createLinkMachine(() => clock)
+    link.start()
+    link.up()
+    clock = 1_000
+    link.drop()
+    link.reconnecting()
+    link.attemptFailed()
+    link.reconnecting()
+    link.up()
+    clock = 1_000 + 120_000
+    link.drop()
+    expect(link.snapshot()).toMatchObject({ phase: 'dropped', attempt: 0 })
+  })
+
+  it('keeps the backoff when a short drop recovers without reconnecting', () => {
+    let clock = 0
+    const link = createLinkMachine(() => clock)
+    link.start()
+    link.up()
+    clock = 1_000
+    link.drop()
+    link.reconnecting()
+    link.attemptFailed()
+    link.recovered()
+    clock = 2_000
+    link.drop()
+    expect(link.snapshot()).toMatchObject({ phase: 'dropped', attempt: 1 })
+  })
+
+  it('leaves a minimum gap between reconnect attempts, however short the schedule says to wait', () => {
+    let clock = 0
+    const link = createLinkMachine(() => clock, 5_000)
+    link.start()
+    link.up()
+    clock = 100
+    link.drop()
+    expect(link.gapMs()).toBe(0)
+    link.reconnecting()
+    link.attemptFailed()
+    clock = 1_100
+    expect(link.gapMs()).toBe(4_000)
+    clock = 5_100
+    expect(link.gapMs()).toBe(0)
+  })
+
+  it('starts the schedule again after it has been used up, so the next drop is handled', () => {
+    const link = createLinkMachine()
+    link.start()
+    link.up()
+    link.drop()
+    link.reconnecting()
+    link.attemptFailed()
+    link.attemptFailed()
+    link.restartSchedule()
+    expect(link.snapshot().attempt).toBe(0)
+  })
+
   it('goes off from anywhere and forgets the history', () => {
     const link = createLinkMachine()
     link.start()

@@ -63,7 +63,7 @@ export class CliRunner {
   }
 
   async execute(request: CliRequest): Promise<CliReply> {
-    const parsed = parseCli(request.args, request.cwd, (path) => resolve(request.cwd, path))
+    const parsed = parseCli(request.args, request.cwd, (path) => resolve(request.cwd, path), { leadGoal: request.leadGoal })
     if (!parsed.ok) return { ok: false, exit: 2, out: `dawsha: ${parsed.error}` }
     const { command } = parsed
     if (command.kind === 'help') return { ok: true, exit: 0, out: HELP_TEXT }

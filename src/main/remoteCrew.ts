@@ -54,17 +54,19 @@ export function createRemoteCrewBridge(options: { getWindow(): BridgeWindow | nu
       const window = options.getWindow()
       if (!window || window.isDestroyed()) return Promise.resolve({ ok: false, error: NO_WINDOW })
       const id = randomUUID()
+      const waitMs = options.timeoutMs ?? RUN_TIMEOUT_MS
       return new Promise((resolve) => {
         const timer = setTimeout(() => {
           pending.delete(id)
           resolve({ ok: false, error: 'Dawsha did not answer in time.' })
-        }, options.timeoutMs ?? RUN_TIMEOUT_MS)
+        }, waitMs)
         pending.set(id, (result) => { clearTimeout(timer); resolve(result) })
         window.webContents.send(IPC.remoteCrewRun, id, {
           memberId: request.member.id,
           projectId: request.project.id,
           choice: request.choice,
-          fields: request.fields
+          fields: request.fields,
+          deadline: Date.now() + waitMs
         })
       })
     },

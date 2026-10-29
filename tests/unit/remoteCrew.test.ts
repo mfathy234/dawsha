@@ -121,7 +121,27 @@ describe('crew bridge and host', () => {
     const context = setup((id) => context.ipc.listeners.get(IPC.remoteCrewRunResult)!({}, id, { ok: true, runId: 'run42' }))
     const result = await context.host.run(body)
     expect(result).toEqual({ ok: true, runId: 'run42', member: 'Rami', project: 'Platforms' })
-    expect(context.send).toHaveBeenCalledWith(IPC.remoteCrewRun, expect.any(String), { memberId: 'rami', projectId: 'p1', choice: 'default', fields: { pr: '1', focus: 'x' } })
+    expect(context.send).toHaveBeenCalledWith(IPC.remoteCrewRun, expect.any(String), { memberId: 'rami', projectId: 'p1', choice: 'default', fields: { pr: '1', focus: 'x' }, deadline: expect.any(Number) })
+  })
+
+  it('sends the desktop a deadline matching how long the phone waits', async () => {
+    const before = Date.now()
+    const context = setup(undefined, 5_000)
+    void context.host.run(body)
+    await vi.waitFor(() => expect(context.send).toHaveBeenCalled())
+    const sent = context.send.mock.calls[0][2] as { deadline: number }
+    expect(sent.deadline).toBeGreaterThanOrEqual(before + 5_000)
+    expect(sent.deadline).toBeLessThanOrEqual(Date.now() + 5_000)
+  })
+
+  it('ignores a desktop answer that arrives after the phone gave up', async () => {
+    const context = setup(undefined, 20)
+    const result = await context.host.run(body)
+    expect(result).toMatchObject({ ok: false, error: expect.stringMatching(/in time/) })
+    const id = context.send.mock.calls[0][1] as string
+    expect(() => context.ipc.listeners.get(IPC.remoteCrewRunResult)!({}, id, { ok: true, runId: 'late' })).not.toThrow()
+    expect(await context.host.run(body)).toMatchObject({ ok: false })
+    expect(context.send).toHaveBeenCalledTimes(2)
   })
 
   it('never reaches the desktop window for an invalid run', async () => {

@@ -45,6 +45,8 @@ const RATE_WINDOW_MS = 60_000
 
 export interface RemoteServerHandle {
   port: number
+  /** Ends the live streams whose capability is now off. Call it after a permission change. */
+  enforcePermissions(): void
   stop(): Promise<void>
 }
 
@@ -194,6 +196,7 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
   const streams = new Set<WebSocket>()
   const approvalStreams = new Set<WebSocket>()
   const cleanups = new Map<WebSocket, () => void>()
+  const outputPermissionChecks = new Set<() => void>()
   const rateLimits = new Map<string, Map<string, { windowStarted: number; count: number }>>()
   let stopped = false
 
@@ -658,7 +661,15 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         }
       }, options.heartbeatIntervalMs ?? 15000)
       heartbeat.unref()
-      const cleanup = (): void => { clearInterval(heartbeat); cleanupBase(); removeRevoke(); streams.delete(ws); cleanups.delete(ws) }
+      const enforceFullOutput = (): void => {
+        try {
+          if (!options.auth.can(token, 'fullOutput')) { send('denied', {}); ws.close(1008, 'Full output is turned off') }
+        } catch {
+          if (ws.readyState === WebSocket.OPEN) ws.close(1011, 'Authorization check failed')
+        }
+      }
+      outputPermissionChecks.add(enforceFullOutput)
+      const cleanup = (): void => { clearInterval(heartbeat); cleanupBase(); removeRevoke(); outputPermissionChecks.delete(enforceFullOutput); streams.delete(ws); cleanups.delete(ws) }
       cleanups.set(ws, cleanup)
       ws.on('message', () => ws.close(1008, 'Output socket does not accept commands'))
       ws.on('close', cleanup)
@@ -734,6 +745,9 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
 
   return {
     port,
+    enforcePermissions(): void {
+      for (const check of [...outputPermissionChecks]) check()
+    },
     async stop(): Promise<void> {
       if (stopped) return
       stopped = true

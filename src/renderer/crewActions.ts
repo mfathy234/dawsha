@@ -16,7 +16,7 @@ import {
 import { BUILTIN_IDS, crewMembers } from '../shared/crewBuiltins'
 import { mergeLinked, parseSourceFile } from '../shared/crewImport'
 import { composeInstructions, crewFullAccess } from '../shared/crewLaunch'
-import { MAX_CREW_RUNS } from '../shared/crew'
+import { keepRuns } from '../shared/crew'
 import { api } from './api'
 import { saveSettings, startCrewSession } from './actions'
 import { projectById, store } from './state'
@@ -72,7 +72,7 @@ export function duplicateById(id: string): CrewMember | null {
 export const runsOf = (memberId: string): CrewRun[] => store.state.settings.crewRuns.filter((run) => run.memberId === memberId)
 
 export function patchRuns(change: (runs: CrewRun[]) => CrewRun[]): void {
-  const crewRuns = change(store.state.settings.crewRuns).slice(0, MAX_CREW_RUNS)
+  const crewRuns = keepRuns(change(store.state.settings.crewRuns))
   store.set((state) => ({ ...state, settings: { ...state.settings, crewRuns } }))
   void saveSettings({ crewRuns })
 }

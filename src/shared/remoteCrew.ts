@@ -147,3 +147,74 @@ export function checkRemoteRun(input: unknown, members: readonly CrewMember[], p
 }
 
 export const jobStateWord = (state: AvatarState): string => AVATAR_LABELS[state]
+
+export const PHONE_RUNS_AT_ONCE = 3
+export const DUPLICATE_RUN_MS = 30_000
+export const PHONE_START_GRACE_MS = 15_000
+
+export interface PhoneRunInput {
+  memberId: string
+  projectId: string
+  fields: Record<string, string>
+  /** When the phone stops waiting, in epoch milliseconds. A run that starts after it is refused. */
+  deadline: number
+}
+
+export type PhoneRunDecision = { kind: 'start' } | { kind: 'duplicate'; runId: string } | { kind: 'refuse'; error: string }
+
+export interface PhoneRunTicket {
+  /** Records the run the phone started, or null when it did not start, so the slot is freed. */
+  finish(runId: string | null): void
+}
+
+export interface PhoneRunGate {
+  check(input: PhoneRunInput, now: number, states: ReadonlyMap<string, string>): PhoneRunDecision
+  begin(input: PhoneRunInput, now: number): PhoneRunTicket
+}
+
+interface PhoneRunEntry {
+  key: string
+  runId: string | null
+  at: number
+}
+
+const runKey = (input: PhoneRunInput): string =>
+  JSON.stringify([input.memberId, input.projectId, Object.entries(input.fields).sort(([a], [b]) => a.localeCompare(b))])
+
+/** A run is working while its crew state says so. One that has only just started counts for a short grace, before its state shows. */
+function isPhoneRunActive(entry: PhoneRunEntry, now: number, states: ReadonlyMap<string, string>): boolean {
+  const state = entry.runId === null ? undefined : states.get(entry.runId)
+  if (state === 'working' || state === 'needs') return true
+  return now - entry.at < PHONE_START_GRACE_MS && (state === undefined || state === 'idle')
+}
+
+/** Keeps the phone's runs in check: a late request starts nothing, a repeat within 30 s gets the run it already started, and at most three phone runs work at once. */
+export function createPhoneRunGate(): PhoneRunGate {
+  let entries: PhoneRunEntry[] = []
+  return {
+    check(input, now, states) {
+      if (now > input.deadline) return { kind: 'refuse', error: 'That run came too late, so Dawsha did not start it.' }
+      entries = entries.filter((entry) => entry.runId === null || now - entry.at <= DUPLICATE_RUN_MS || isPhoneRunActive(entry, now, states))
+      const key = runKey(input)
+      const repeat = entries.find((entry) => entry.key === key && (entry.runId === null || now - entry.at <= DUPLICATE_RUN_MS))
+      if (repeat?.runId === null) return { kind: 'refuse', error: 'That run is already starting.' }
+      if (repeat) return { kind: 'duplicate', runId: repeat.runId as string }
+      const working = entries.filter((entry) => isPhoneRunActive(entry, now, states)).length
+      if (working >= PHONE_RUNS_AT_ONCE) {
+        return { kind: 'refuse', error: `Dawsha already runs ${PHONE_RUNS_AT_ONCE} agents from the phone at once. Wait for one to finish, then run this one.` }
+      }
+      return { kind: 'start' }
+    },
+    begin(input, now) {
+      const entry: PhoneRunEntry = { key: runKey(input), runId: null, at: now }
+      entries = [...entries, entry]
+      return {
+        finish(runId) {
+          entries = runId === null
+            ? entries.filter((candidate) => candidate !== entry)
+            : entries.map((candidate) => (candidate === entry ? { ...candidate, runId } : candidate))
+        }
+      }
+    }
+  }
+}

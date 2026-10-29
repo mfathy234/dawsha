@@ -100,6 +100,7 @@ export interface RemoteAccessControllerOptions {
   healthIntervalMs?: number
   recheckMs?: number
   reconnectDelaysMs?: readonly number[]
+  minReconnectIntervalMs?: number
   notify?(title: string, body: string): void
 }
 
@@ -127,7 +128,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   let reconnecting = false
   let notice: string | null = null
   let lastHealthy = true
-  const link = createLinkMachine()
+  const link = createLinkMachine(Date.now, options.minReconnectIntervalMs)
   const activity: RemoteActivityLog = createActivityLog()
   let roundTripMs: number | null = null
   let checkedAt: number | null = null
@@ -339,12 +340,17 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
 
   async function recoverLoop(reason: HealthReason | 'manual', manual: boolean): Promise<void> {
     const delays = manual ? [0] : options.reconnectDelaysMs ?? RECONNECT_DELAYS_MS
-    for (let attempt = 0; ; attempt++) {
+    for (let attempt = manual ? 0 : link.snapshot().attempt; ; attempt++) {
       const delay = reconnectDelay(attempt, delays)
-      if (delay === null) { log('reconnect-gave-up', { attempts: attempt, host: hostname }); return }
-      if (delay > 0) {
-        log('reconnect-wait', { attempt: attempt + 1, delayMs: delay })
-        await pause(delay)
+      if (delay === null) {
+        log('reconnect-gave-up', { attempts: attempt, host: hostname })
+        link.restartSchedule()
+        return
+      }
+      const wait = Math.max(delay, link.gapMs())
+      if (wait > 0) {
+        log('reconnect-wait', { attempt: attempt + 1, delayMs: wait })
+        await pause(wait)
       }
       if (!server || stopping || disabling) return
       if (link.snapshot().phase === 'on') return
@@ -615,6 +621,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     remoteAccess.approvalsAwayMinutes = clampAwayMinutes(remoteAccess.approvalsAwayMinutes, 3)
     options.settings.update({ remoteAccess })
     auth.setPermissions(remoteAccess.capabilities)
+    server?.enforcePermissions()
     if (remoteAccess.autoReconnect && !current.autoReconnect && link.snapshot().phase === 'dropped') void startRecovery('manual', false)
     return getState()
   }

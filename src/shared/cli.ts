@@ -52,6 +52,12 @@ export type CliParse = { ok: true; command: CliCommand } | { ok: false; error: s
 export interface CliRequest {
   args: string[]
   cwd: string
+  /** Set when the command runs in a Lead pane: the goal that pane works for. */
+  leadGoal?: string
+}
+
+export interface CliCaller {
+  leadGoal?: string
 }
 
 export interface CliReply {
@@ -182,7 +188,7 @@ function parseLead(sub: 'plan' | 'ask' | 'note', flags: Flags, resolvePath: (pat
   return { ok: true, command: { kind: 'crew-ask', goal: flags.goal, question: body, options: flags.options } }
 }
 
-function parseCrew(rest: string[], resolvePath: (path: string) => string): CliParse {
+function parseCrew(rest: string[], resolvePath: (path: string) => string, caller: CliCaller): CliParse {
   const flags = readFlags(rest, true)
   if (flags.error) return { ok: false, error: flags.error }
   const [sub, first, extra] = flags.positional
@@ -198,6 +204,7 @@ function parseCrew(rest: string[], resolvePath: (path: string) => string): CliPa
   if (sub !== 'run') return fail(`Unknown crew command '${sub}'. Use list, run, status, result, plan, ask or note.`)
   if (!first) return fail('crew run needs a member name.')
   if (extra) return fail(`Unexpected argument '${extra}'.`)
+  if (caller.leadGoal && flags.goal !== caller.leadGoal) return fail(`The Lead must run members with --goal ${caller.leadGoal}.`)
   if (!flags.project && !flags.goal) return fail('crew run needs --project <name|path>.')
   const byPath = flags.project !== undefined && looksLikePath(flags.project)
   return {
@@ -215,13 +222,13 @@ function parseCrew(rest: string[], resolvePath: (path: string) => string): CliPa
   }
 }
 
-export function parseCli(args: string[], cwd: string, resolvePath: (path: string) => string): CliParse {
+export function parseCli(args: string[], cwd: string, resolvePath: (path: string) => string, caller: CliCaller = {}): CliParse {
   const [first, ...rest] = args
   if (first === undefined) return { ok: true, command: { kind: 'open' } }
   if (first === 'open') return parseOpen(rest)
   if (first === '--help' || first === '-h' || first === 'help') return { ok: true, command: { kind: 'help' } }
   if (first === '--version' || first === '-v') return { ok: true, command: { kind: 'version' } }
-  if (first === 'crew') return parseCrew(rest, resolvePath)
+  if (first === 'crew') return parseCrew(rest, resolvePath, caller)
   const flags = readFlags(rest)
   if (flags.error) return { ok: false, error: flags.error }
   const fail = (error: string): CliParse => ({ ok: false, error })
