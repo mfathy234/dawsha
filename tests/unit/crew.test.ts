@@ -119,6 +119,8 @@ describe('crew members', () => {
 
   it('makes initials, ids and copies', () => {
     expect(initialsOf('Zaid')).toBe('ZA')
+    expect(initialsOf('zaid')).toBe('ZA')
+    expect(initialsOf('mary ann')).toBe('MA')
     expect(initialsOf('Mary Ann')).toBe('MA')
     expect(initialsOf('  ')).toBe('??')
     expect(uniqueMemberId([{ id: 'rami' }, { id: 'rami-2' }], 'Rami')).toBe('rami-3')
