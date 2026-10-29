@@ -12,7 +12,7 @@ function fixture(waitForHostname: (host: string, o: { timeoutMs: number }) => Pr
   const store = { get: () => settings, update: (patch: Partial<Settings>) => (settings = { ...settings, ...patch }) }
   const tunnelHandle = { url: 'https://brisk-fox.trycloudflare.com', stop: vi.fn(async () => undefined), onExit: vi.fn(() => () => undefined) }
   const tunnel = { start: vi.fn(async () => tunnelHandle) }
-  const server = { port: 41234, stop: vi.fn(async () => undefined) }
+  const server = { port: 41234, enforcePermissions: vi.fn(), stop: vi.fn(async () => undefined) }
   const createServer = vi.fn(async (_options: RemoteServerOptions) => server)
   const remoteIds = new Set<string>()
   const kill = vi.fn((id: string) => { remoteIds.delete(id) })
@@ -171,6 +171,15 @@ describe('Remote Access controller', () => {
     const state = await context.controller.setPermissions({ capabilities: { messages: true } })
     expect(state.permissions).toMatchObject({ allowedEmail: 'new@example.com', capabilities: { messages: true, sessions: false, commands: false, answers: false, crew: false, fullOutput: false } })
     expect(context.settings().remoteAccess).toEqual(state.permissions)
+  })
+
+  it('tells the running server at once when a permission changes, so a live stream closes', async () => {
+    const context = fixture()
+    await context.controller.enable()
+    await context.controller.setPermissions({ capabilities: { fullOutput: true } })
+    expect(context.server.enforcePermissions).toHaveBeenCalledTimes(1)
+    await context.controller.setPermissions({ capabilities: { fullOutput: false } })
+    expect(context.server.enforcePermissions).toHaveBeenCalledTimes(2)
   })
 
   it('stores the approval settings, keeps them off by default and clamps the idle minutes', async () => {

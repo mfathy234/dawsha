@@ -615,6 +615,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     remoteAccess.approvalsAwayMinutes = clampAwayMinutes(remoteAccess.approvalsAwayMinutes, 3)
     options.settings.update({ remoteAccess })
     auth.setPermissions(remoteAccess.capabilities)
+    server?.enforcePermissions()
     if (remoteAccess.autoReconnect && !current.autoReconnect && link.snapshot().phase === 'dropped') void startRecovery('manual', false)
     return getState()
   }
