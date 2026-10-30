@@ -91,7 +91,7 @@ test('full access starts on for Claude and Codex, off for Gemini, and the choice
     await expect(row(page, 'codex').getByLabel('Start with full access')).toBeChecked()
     await expect(row(page, 'gemini').getByLabel('Start with full access')).not.toBeChecked()
     await expect(row(page, 'codex')).toContainText('--dangerously-bypass-approvals-and-sandbox')
-    await expect(row(page, 'claude').locator('.agent-mark svg')).toHaveCount(1)
+    await expect(row(page, 'claude').locator('.agent-mark')).toHaveText('C')
 
     await row(page, 'codex').getByLabel('Start with full access').uncheck()
     await row(page, 'gemini').getByLabel('Start with full access').check()

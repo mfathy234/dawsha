@@ -116,6 +116,7 @@ export class PaneComponent {
   private actionsAnchor: HTMLElement | null = null
   private readonly restart = h('button', { class: 'btn small pane-restart', type: 'button' }, 'Restart')
   private readonly maxButton = h('span', { class: 'slot pane-maximize-slot' })
+  private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'pane-body' })
   private tabSignature = ''
@@ -142,7 +143,8 @@ export class PaneComponent {
       this.restart,
       iconButton('Details panel', ICONS.info, () => toggleDetailsPanel(paneId), 'pane-panel'),
       this.maxButton,
-      iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions')
+      iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
+      this.closeButton
     )
     header.addEventListener('dblclick', (event) => {
       if ((event.target as HTMLElement).closest('button')) return
@@ -171,7 +173,12 @@ export class PaneComponent {
     this.foot.append(this.info, this.branch)
     this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, content, this.permission, this.foot)
     this.watchFileDrops()
-    this.el.addEventListener('pointerdown', () => focusPane(paneId, true), true)
+    // Header buttons (menu, details, maximize, close) act on this pane without making it the focused one,
+    // which in Calm focus would also move it into the large slot.
+    this.el.addEventListener('pointerdown', (event) => {
+      if ((event.target as HTMLElement).closest('.pane-header button')) return
+      focusPane(paneId, true)
+    }, true)
     this.el.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape' || store.state.detailsPaneId !== paneId) return
       event.stopPropagation()

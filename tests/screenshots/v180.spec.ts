@@ -39,6 +39,21 @@ test('captures the redesigned shell and grid in dark and light themes', async ()
       await expect(page.locator('.skills-view')).toBeVisible()
       await page.screenshot({ path: resolve(OUT, `skills-${name}.png`) })
 
+      await page.locator('#work-button').click()
+      await expect(page.locator('.work-view')).toBeVisible()
+      await page.screenshot({ path: resolve(OUT, `work-${name}.png`) })
+
+      await page.locator('#more-button').click()
+      await page.getByRole('menuitem', { name: /^Projects/ }).click()
+      await expect(page.locator('.projects-view')).toBeVisible()
+      await page.screenshot({ path: resolve(OUT, `projects-${name}.png`) })
+
+      await page.locator('#sessions-button').click().catch(() => undefined)
+      await page.locator('#layouts-button').click()
+      await expect(page.locator('.layouts-popover')).toBeVisible()
+      await page.locator('.layouts-popover').screenshot({ path: resolve(OUT, `layouts-${name}.png`) })
+      await page.keyboard.press('Escape')
+
       await page.locator('#more-button').click()
       await page.locator('#usage-menu-item').click()
       await expect(page.locator('.usage-view')).toBeVisible()

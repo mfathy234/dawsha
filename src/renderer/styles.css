@@ -167,6 +167,9 @@
 
 :root[data-kind='light'] {
   color-scheme: light;
+  --ag-claude-bg: #b94b25; --ag-claude-fg: #ffffff;
+  --ag-codex-bg: #2b3340; --ag-codex-fg: #f1f3f7;
+  --ag-gemini-bg: #6544d4; --ag-gemini-fg: #ffffff;
   --text-2: #414c5c;
   --text-3: #52607a;
   --line: rgb(21 27 35 / .12);
@@ -1628,59 +1631,25 @@ input[type='checkbox'] {
   display: none;
 }
 
+/* Agent marks are letter tiles, as in the 1.8.0 mockup: C for Claude, X for Codex, G for Gemini. */
 .agent-mark {
+  --bg-m: var(--text-2); --fg-m: var(--bg);
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--r-1);
-  font-family: var(--font-mono);
-  font-size: var(--fs-1);
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--bg-m);
+  color: var(--fg-m);
+  font-family: var(--font-ui);
+  font-size: 11px;
   font-weight: var(--w-semi);
   line-height: 1;
 }
-
-.agent-mark.claude {
-  color: var(--accent);
-  border: 1px solid var(--accent);
-}
-
-.agent-mark.codex {
-  color: var(--codex-fg);
-  background: var(--codex-bg);
-  border: 1px solid var(--muted);
-}
-
-.agent-mark.gemini {
-  color: var(--gemini-fg);
-  background: var(--gemini-bg);
-  border: 1px solid var(--muted);
-}
-
-.agent-mark.brand {
-  border: none;
-  background: transparent;
-}
-
-.agent-mark.brand svg {
-  width: 15px;
-  height: 15px;
-  fill: currentColor;
-}
-
-.agent-mark.brand.claude {
-  color: var(--ag-claude-bg);
-}
-
-.agent-mark.brand.codex {
-  color: var(--text);
-}
-
-.agent-mark.brand.gemini {
-  color: var(--ag-gemini-bg);
-}
+.agent-mark.claude { --bg-m: var(--ag-claude-bg); --fg-m: var(--ag-claude-fg); }
+.agent-mark.codex { --bg-m: var(--ag-codex-bg); --fg-m: var(--ag-codex-fg); }
+.agent-mark.gemini { --bg-m: var(--ag-gemini-bg); --fg-m: var(--ag-gemini-fg); }
 
 .slot:empty {
   display: none;
@@ -2826,33 +2795,67 @@ input[type='checkbox'] {
   margin: 0;
 }
 
-.layouts-grid-style {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  min-height: var(--h-lg);
-  font-size: var(--fs-2);
+.layouts-section-label {
+  color: var(--muted);
+  font-size: var(--fs-1);
+  font-weight: var(--w-medium);
 }
 
-.layouts-grid-label {
-  flex: none;
-  color: var(--muted);
-  white-space: nowrap;
+.layouts-grid-style {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
 }
 
 .layouts-segment {
-  flex: 1;
-  min-width: 0;
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-2);
 }
 
-.layouts-segment > .layouts-grid-option {
+.layouts-grid-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
   min-width: 0;
-  padding-inline: var(--sp-2);
-  white-space: nowrap;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-1);
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out);
 }
+
+.layouts-grid-option:hover { border-color: var(--line-strong); background: var(--raised); }
+.layouts-grid-option:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--focus-ring); }
+.layouts-grid-option[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--text);
+}
+
+.layouts-grid-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.layouts-grid-text strong { font-size: var(--fs-2); font-weight: var(--w-semi); color: var(--text); }
+.layouts-grid-text span { font-size: var(--fs-1); color: var(--muted); line-height: 1.35; }
+
+/* The layout drawing: 30x22, three cells. */
+.layouts-sketch {
+  flex: none;
+  display: grid;
+  width: 30px;
+  height: 22px;
+  gap: 2px;
+}
+.layouts-sketch.focus { grid-template-columns: 3fr 2fr; grid-template-rows: 1fr 1fr; }
+.layouts-sketch.focus i:first-child { grid-row: 1 / 3; }
+.layouts-sketch.tiles { grid-template-columns: repeat(3, 1fr); }
+.layouts-sketch i { border-radius: 2px; background: var(--line-strong); }
+.layouts-grid-option[aria-pressed='true'] .layouts-sketch i:first-child { background: var(--accent); }
+
+.layouts-divider { height: 1px; margin: var(--sp-1) 0; background: var(--line); }
 
 .layouts-list {
   display: flex;
@@ -3349,12 +3352,16 @@ button.info-changes:hover {
   color: var(--text);
 }
 
+/* Diff colours belong to the theme, so every diff (Changes, Files, commit details) uses them. */
+:root {
+  --c-add: color-mix(in srgb, var(--accent) 14%, transparent);
+  --c-add-strong: color-mix(in srgb, var(--accent) 34%, transparent);
+  --c-del: color-mix(in srgb, var(--danger) 14%, transparent);
+  --c-del-strong: color-mix(in srgb, var(--danger) 34%, transparent);
+}
+
 .changes-dialog {
   --c-radius: 4px;
-  --c-add: color-mix(in srgb, var(--accent) 11%, transparent);
-  --c-add-strong: color-mix(in srgb, var(--accent) 32%, transparent);
-  --c-del: color-mix(in srgb, var(--danger) 11%, transparent);
-  --c-del-strong: color-mix(in srgb, var(--danger) 32%, transparent);
   width: min(1480px, calc(100vw - 48px));
   max-width: none;
   height: calc(100vh - 48px);
@@ -4752,11 +4759,12 @@ body.dragging-ui {
   background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
-.skills-view { overflow: auto; padding: var(--s-5); height: 100%; }
-.skill-kinds { display: flex; gap: var(--sp-1); margin-top: var(--sp-6); box-shadow: var(--e1); }
-.skill-kind { padding: var(--sp-2) var(--sp-3); border: 0; border-radius: var(--r-1) var(--r-1) 0 0; background: none; color: var(--muted); font: inherit; font-size: var(--fs-2); cursor: pointer; }
+.skills-view { overflow: auto; padding: 0 0 var(--sp-6); height: 100%; }
+.skills-view > :not(.page-header) { margin-inline: var(--sp-7); }
+.skill-kinds { display: inline-flex; align-self: flex-start; width: fit-content; margin-top: var(--sp-5); }
+.skill-kind { padding: 0 var(--sp-3); cursor: pointer; }
 .skill-kind:hover { color: var(--text); }
-.skill-kind[aria-pressed='true'] { background: var(--raised); color: var(--text); font-weight: var(--w-semi); }
+
 .skill-kind:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .skill-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: var(--sp-6) 0; }
 .skill-filters [aria-pressed="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }

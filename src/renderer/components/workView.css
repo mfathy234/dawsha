@@ -48,7 +48,7 @@
 .work-step-label { min-width: 120px; text-align: center; font-size: var(--fs-body); font-weight: 600; white-space: nowrap; }
 
 /* Work page: the shared page header carries search, project and period; the body shares its 32px gutter. */
-.work-body { padding: var(--s-5) var(--s-7) var(--s-6); }
+.work-body { padding: var(--s-5) var(--sp-7) var(--s-6); }
 .work-view > .page-header .page-actions { flex-wrap: wrap; justify-content: flex-end; }
 .work-view .work-filters { margin: 0; flex-wrap: nowrap; }
 .work-view .work-search { flex: 0 1 220px; max-width: 220px; }
@@ -69,3 +69,17 @@
 .work-view .work-item { padding: var(--s-3) var(--s-2); }
 .work-view .work-item-main strong { font-weight: 500; }
 .work-view .work-items li + li { border-top: 1px solid var(--line); }
+
+/* Review fixes: tabs left and filters right on one toolbar row; the table keeps numbers in fixed columns
+   instead of spreading them across a wide window; nothing in the page is wider than the window. */
+.work-view { overflow-x: hidden; }
+.work-body { max-width: 1280px; }
+.work-view > .page-header .page-actions { flex-wrap: wrap; row-gap: var(--sp-2); }
+.work-toolbar { flex-wrap: wrap; row-gap: var(--sp-2); }
+.work-toolbar > .spacer { flex: 1; }
+.work-toolbar .work-filters { margin: 0; flex-wrap: nowrap; }
+.work-toolbar .work-search { flex: 0 1 240px; max-width: 240px; }
+.work-toolbar .work-filters > .select-menu { flex: 0 0 200px; width: 200px; }
+.usage-table.work-table { table-layout: fixed; width: 100%; }
+.usage-table.work-table th:first-child, .usage-table.work-table td:first-child { width: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usage-table.work-table th.num, .usage-table.work-table td.num { width: 112px; }

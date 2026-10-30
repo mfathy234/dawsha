@@ -73,7 +73,7 @@ export class LayoutsPopoverComponent {
     const head = h(
       'div',
       { class: 'layouts-head' },
-      h('h2', { class: 'popover-title' }, 'Saved layouts'),
+      h('h2', { class: 'popover-title' }, 'Layouts'),
       h('span', { class: 'muted' }, `${layouts.length} saved`),
       popupDismissButton(() => {
         toggleLayouts(false)
@@ -107,26 +107,33 @@ export class LayoutsPopoverComponent {
       save,
       h('span', { class: 'muted' }, 'From a terminal: ', h('code', {}, `dawsha open ${example}`))
     )
-    return [head, this.gridStyleRow(state.settings.gridStyle), list, foot]
+    const savedLabel = h('span', { class: 'layouts-section-label' }, 'Saved layouts')
+    return [head, this.gridStyleRow(state.settings.gridStyle), h('div', { class: 'layouts-divider' }), savedLabel, list, foot]
   }
 
   private gridStyleRow(current: GridStyle): HTMLElement {
+    const hints: Record<GridStyle, string> = { focus: 'One large session, the rest beside it', tiles: 'Every session the same size' }
+    // A tiny drawing of the layout: three cells, the first one large in Calm focus.
+    const sketch = (style: GridStyle): HTMLElement =>
+      h('span', { class: `layouts-sketch ${style}`, 'aria-hidden': 'true' }, h('i'), h('i'), h('i'))
     const option = (style: GridStyle): HTMLElement =>
       h(
         'button',
         {
           class: 'layouts-grid-option',
           type: 'button',
+          'aria-label': GRID_STYLE_LABELS[style],
           'aria-pressed': String(current === style),
           onClick: () => setGridStyle(style)
         },
-        GRID_STYLE_LABELS[style]
+        sketch(style),
+        h('span', { class: 'layouts-grid-text' }, h('strong', {}, GRID_STYLE_LABELS[style]), h('span', {}, hints[style]))
       )
     return h(
       'div',
       { class: 'layouts-grid-style' },
-      h('span', { class: 'layouts-grid-label' }, 'Sessions grid'),
-      h('div', { class: 'segmented layouts-segment', role: 'group', 'aria-label': 'Sessions grid' }, option('focus'), option('tiles'))
+      h('span', { class: 'layouts-section-label' }, 'Sessions grid'),
+      h('div', { class: 'layouts-segment', role: 'group', 'aria-label': 'Sessions grid' }, option('focus'), option('tiles'))
     )
   }
 

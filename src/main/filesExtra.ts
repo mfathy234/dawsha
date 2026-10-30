@@ -150,14 +150,16 @@ export async function fileCommitDetails(folder: string, hash: unknown): Promise<
   if (!validCommitHash(hash)) return { ok: false, error: 'That commit hash is not valid.' }
   const root = await repoRoot(folder)
   if (!root) return { ok: false, error: 'This folder is not a Git repository.' }
-  const [show, statuses, refs] = await Promise.all([
+  const [show, statuses, refs, branches] = await Promise.all([
     git(root, ['show', '--first-parent', '--no-color', '--format=%H%x1f%an%x1f%ae%x1f%at%x1f%cn%x1f%ce%x1f%ct%x1f%P%x1f%s%x1f%b%x1e', '--numstat', '-z', hash, '--']),
     git(root, ['diff-tree', '--first-parent', '--root', '--no-commit-id', '--name-status', '-r', '-z', hash]),
-    git(root, ['for-each-ref', '--format=%(refname:short)', '--points-at', hash, 'refs/heads', 'refs/tags'])
+    git(root, ['for-each-ref', '--format=%(refname:short)', '--points-at', hash, 'refs/heads', 'refs/tags']),
+    git(root, ['branch', '--contains', hash, '--format=%(refname:short)'])
   ])
   if (!show.ok) return { ok: false, error: show.message || 'Could not read this commit. It may be missing from a shallow clone.' }
   const parsed = parseCommitShow(show.stdout, statuses.ok ? statuses.stdout : '')
-  return { ok: true, details: { ...parsed, refs: refs.ok ? refs.stdout.split('\n').map((ref) => ref.trim()).filter(Boolean) : [] } }
+  const lines = (out: typeof refs): string[] => (out.ok ? out.stdout.split('\n').map((line) => line.trim()).filter(Boolean) : [])
+  return { ok: true, details: { ...parsed, refs: lines(refs), branches: lines(branches) } }
 }
 
 /** The selected commit file diff and read-only snapshot used by the preview action. */

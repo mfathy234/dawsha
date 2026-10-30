@@ -1,6 +1,6 @@
 /* Projects page: the shared header, then a body with the same 32px gutter; one grid row per project, worktrees beneath it. */
 .projects-view { flex: 1; min-width: 0; padding: 0; overflow-y: auto; }
-.projects-body { display: flex; flex-direction: column; gap: var(--s-4); padding: var(--s-4) var(--s-7) var(--s-6); }
+.projects-body { display: flex; flex-direction: column; gap: var(--s-4); padding: var(--s-4) var(--sp-7) var(--s-6); }
 .projects-view > .page-header .pv-filter { width: 220px; max-width: 220px; }
 .projects-view .pv-list { border-top: 0; }
 .projects-view .pv-head,

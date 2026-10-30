@@ -7,6 +7,8 @@ import { present } from '../components/dialogs'
 import { toast } from '../components/toast'
 
 const MAX_ROWS = 4000
+// The branches that contain the commit: up to three by name, then a count.
+const branchText = (branches: string[]): string => branches.length === 0 ? 'Not on a local branch' : branches.length <= 3 ? branches.join(', ') : `${branches.slice(0, 3).join(', ')} and ${branches.length - 3} more`
 const layoutKey = 'dawsha.diffLayout'
 type Layout = 'split' | 'unified'
 const relative = (at: number): string => {
@@ -40,7 +42,7 @@ function splitPane(rows: SplitRow[], side: 'left' | 'right'): HTMLElement {
     const kind = line?.kind === 'del' ? 'dv-del' : line?.kind === 'add' ? 'dv-add' : line?.kind === 'context' ? 'dv-context' : ''
     return h('tr', { class: kind }, ...rowCells(line))
   })
-  scroller.append(h('table', { class: 'dv-table dv-unified' }, h('tbody', {}, ...tableRows)))
+  scroller.append(h('table', { class: 'dv-table dv-unified' }, h('colgroup', {}, h('col', { class: 'dv-col-no' }), h('col', {})), h('tbody', {}, ...tableRows)))
   return scroller
 }
 
@@ -51,7 +53,7 @@ export async function openCommitDetails(folder: string, commit: FileCommit, pref
   const meta = h('div', { class: 'commit-details-meta' }, 'Loading commit details…')
   const message = h('pre', { class: 'commit-details-message' })
   const files = h('nav', { class: 'commit-details-files', 'aria-label': 'Changed files' })
-  const diffArea = h('div', { class: 'changes-diff files-view diff commit-details-diff', tabindex: '-1' })
+  const diffArea = h('div', { class: 'changes-diff diff commit-details-diff', tabindex: '-1' })
   const preview = h('pre', { class: 'commit-details-preview', hidden: true })
   const fileTitle = h('strong', { class: 'commit-details-file-title' })
   let layout: Layout = (() => { try { return localStorage.getItem(layoutKey) === 'unified' ? 'unified' : 'split' } catch { return 'split' } })()
@@ -95,7 +97,7 @@ export async function openCommitDetails(folder: string, commit: FileCommit, pref
     } else {
       const allRows = hunks.flatMap((hunk) => rowsFor(splitRows(hunk)))
       const visibleRows = fullDiff ? allRows : allRows.slice(0, MAX_ROWS)
-      diffArea.replaceChildren(h('table', { class: 'dv-table dv-unified' }, h('tbody', {}, ...visibleRows)))
+      diffArea.replaceChildren(h('table', { class: 'dv-table dv-unified' }, h('colgroup', {}, h('col', { class: 'dv-col-no' }), h('col', { class: 'dv-col-no' }), h('col', {})), h('tbody', {}, ...visibleRows)))
       if (loaded.truncated || (!fullDiff && allRows.length > MAX_ROWS)) diffArea.append(h('p', { class: 'commit-details-truncated' }, 'This diff is shortened to keep the view responsive.'))
     }
   }
@@ -147,6 +149,7 @@ export async function openCommitDetails(folder: string, commit: FileCommit, pref
       ...(details.committer !== details.author || details.committerEmail !== details.email ? [definition('Committer', `${details.committer} <${details.committerEmail}> · ${stamp(details.committerAt)}`)] : []),
       definition('Date', stamp(details.authorAt)),
       definition('Parents', details.parents.length ? details.parents.join(', ') : 'None'),
+      definition('Branch', branchText(details.branches ?? [])),
       definition('Refs', details.refs.length ? details.refs.join(', ') : 'None'),
       h('div', { class: 'commit-details-definition' }, h('dt', {}, 'Hash'), h('dd', { class: 'commit-details-hash' }, h('code', {}, details.hash), h('button', { class: 'btn secondary small', type: 'button', onClick: () => void api.writeClipboard(details.hash).then(() => toast('Commit hash copied', 'info'), () => toast('Could not copy the commit hash.')) }, 'Copy')))))
     title.textContent = details.subject

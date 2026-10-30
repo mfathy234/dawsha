@@ -470,7 +470,7 @@ aside.sidebar.rail { width: 56px; }
   color: var(--needs-ink);
 }
 
-@container (max-width: 240px) {
+@container (max-width: 300px) {
   .needs-group .sidebar-kbd { display: none; }
 }
 
@@ -500,3 +500,78 @@ aside.sidebar.rail { width: 56px; }
   flex: 1;
   min-width: 0;
 }
+
+/* 1.8.0 review: the sidebar follows mockup direction A, a flat project tree.
+   Projects are plain headers (name, branch beside it, count or needs mark at the right), with no card behind them.
+   Sessions sit under their project: the agent mark as a small tile, the title with its time at the right,
+   and one quiet line under it with the state and tag. */
+.proj-group.card {
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.proj-group.card .proj-row { margin: 0; padding-top: 0; }
+.proj-group.card .kept-session-row { margin-inline: 0; }
+.proj-group { margin-bottom: var(--sp-2); }
+
+.proj-list .proj-row { min-height: 30px; padding-inline: var(--sp-2); border-radius: var(--r-1); }
+.proj-list .proj-text { flex-direction: row; align-items: baseline; gap: var(--sp-2); min-width: 0; }
+.proj-list .proj-text .proj-title { flex: 0 1 auto; min-width: 0; }
+.proj-list .proj-text .proj-name { font-size: var(--fs-2); font-weight: var(--w-semi); color: var(--text); }
+.proj-list .proj-sub { flex: 1 1 auto; min-width: 0; margin: 0; }
+.proj-list .proj-sub .proj-branch {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--text-3);
+}
+/* Token totals live in Usage; the tree stays about the work. */
+.proj-list .proj-today,
+.proj-list .proj-branch + .proj-today::before { display: none; }
+.proj-list .proj-count { font-size: var(--fs-1); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.proj-list .proj-count.tone-needs { color: var(--state-needs); font-weight: var(--w-semi); }
+
+/* Session rows: indented under the project header. */
+.proj-group .kept-session-row { margin-inline-start: var(--sp-3); }
+.kept-session-row .sess-row { align-items: flex-start; gap: var(--sp-2); padding: 6px var(--sp-2); border-radius: var(--r-1); }
+.kept-session-row .sess-row:hover { background: var(--hover); }
+.kept-session-row.selected .sess-row,
+.kept-session-row .sess-row.selected { background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); }
+.kept-session-row .sess-row > .agent-mark {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.kept-session-row .sess-row > .crew-id { flex: none; margin-top: 1px; }
+.kept-session-row .sess-row > .agent-mark svg { width: 14px; height: 14px; }
+.kept-session-row .sess-line { display: flex; align-items: baseline; gap: var(--sp-2); min-width: 0; }
+.kept-session-row .sess-line .sess-name { flex: 1 1 auto; min-width: 0; font-size: var(--fs-2); font-weight: var(--w-medium); color: var(--text); }
+.kept-session-row .sess-line .sess-age,
+.kept-session-row .sess-line .sess-ago { flex: none; font-size: var(--fs-1); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.kept-session-row .sess-meta { font-size: var(--fs-1); color: var(--text-3); }
+.kept-session-row .sess-meta .sess-state.state-needs { color: var(--state-needs); }
+.kept-session-row.closed .sess-row { opacity: 1; }
+.kept-session-row.closed .sess-name { color: var(--text-2); font-weight: var(--w-regular); }
+.sess-closed-word { color: var(--text-3); }
+
+/* The closed list toggle reads as a quiet line under the sessions, aligned with them. */
+.proj-group .closed-toggle { margin-inline-start: var(--sp-3); padding-inline-start: var(--sp-2); font-size: var(--fs-1); color: var(--text-3); }
+
+/* Zone labels ("Active", "No sessions") become small section labels like the mockup's group spacing. */
+.side-sec { padding-inline: var(--sp-3); font-size: var(--fs-1); color: var(--text-3); }
+
+/* The project name keeps its room; the branch takes what is left and truncates first. */
+.proj-list .proj-text .proj-title { flex: 0 1 auto; max-width: 70%; }
+.proj-list .proj-sub { flex: 1 1 0; }
+/* Sessions line up under the project name, past the chevron. */
+.proj-group .kept-session-row { margin-inline-start: 22px; }
+.proj-group .closed-toggle { margin-inline-start: 22px; }
+/* Session rows sit directly in the list, not inside the group element, so indent them there. */
+.proj-list .kept-session-row:not(.waiting-row) { margin-inline-start: 22px; }
+.proj-list .closed-toggle { margin-inline-start: 22px; }

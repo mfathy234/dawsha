@@ -18,6 +18,8 @@ export interface CommitDetails {
   subject: string
   body: string
   refs: string[]
+  /** Local branches that contain the commit (git branch --contains); empty when none or unknown. */
+  branches?: string[]
   files: CommitFileChange[]
   added: number
   removed: number

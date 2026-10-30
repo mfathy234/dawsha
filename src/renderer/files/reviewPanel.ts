@@ -50,13 +50,17 @@ export class ReviewPanel {
   private readonly commit = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
   private readonly discard = h('button', { class: 'btn small danger', type: 'button', id: 'files-review-discard', disabled: true, title: 'Select a changed file to discard it', onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
   private current: string | null = null
+  private readonly steps = h('div', { class: 'files-review-steps' })
+  private readonly foot = h('div', { class: 'files-review-foot' })
 
   constructor(private readonly hooks: ReviewHooks) {
     this.el.append(
       this.progress,
-      h('div', { class: 'files-review-steps' }, this.prev, this.next),
+      this.steps,
       this.list,
-      h('div', { class: 'files-review-foot' }, h('div', { class: 'files-review-note-row' }, this.note, this.send), h('div', { class: 'files-review-more' }, this.discard, this.commit)))
+      this.foot)
+    this.steps.append(this.prev, this.next)
+    this.foot.append(h('div', { class: 'files-review-note-row' }, this.note, this.send), h('div', { class: 'files-review-more' }, this.discard, this.commit))
     this.list.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
       const rows = [...this.list.querySelectorAll<HTMLElement>('.files-review-open')]
@@ -77,6 +81,9 @@ export class ReviewPanel {
     const total = model.files.length
     const done = model.files.filter((file) => model.viewed.has(file.path)).length
     this.progress.textContent = total === 0 ? 'Nothing to review. The agents have not changed any files yet.' : `${done} of ${total} viewed`
+    // With nothing to review, the stepping buttons and the note, commit and discard controls have nothing to act on.
+    this.steps.hidden = total === 0
+    this.foot.hidden = total === 0
     this.prev.disabled = total === 0
     this.next.disabled = total === 0
     this.commit.disabled = total === 0

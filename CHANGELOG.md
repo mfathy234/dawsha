@@ -12,11 +12,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **Agent pages.** Each agent opens as its own page, with its purpose, model, last run and a Run button, and a Live tab while it runs.
 - **Locate a missing folder.** When a project's folder has moved, the sidebar and Projects offer Locate instead of leaving it broken.
 - **Settings search.** Find any setting from the search box at the top of Settings, which is now split into sections.
+- **Commit details.** In Files > Activity, click a commit to see its author, date, branch, full message and changed files, with each file's diff inline or side by side, and open a file as it was at that commit.
 - **Linked skills in Skills.** Skills show their descriptions, and skills kept in a linked folder (a symlink or junction into a synced folder) are now listed, marked Linked.
 
 ### Changed
 
 - **A new look.** Dawsha has a new type, colour and spacing system, with Geist and JetBrains Mono bundled so text looks the same on every computer. Buttons, tabs, menus, dialogs, toggles and dropdowns share one style. The light theme is readable, with terminal text at least 4.5:1 against its background.
+- **Agent marks are letter tiles.** Claude, Codex and Gemini show as small C, X and G tiles in their colours everywhere in the app.
+- **Work and Projects count worktrees under their project,** and Projects lists each project's worktrees beneath it.
 - **A top bar with the pages in it.** Sessions, Agents, Files, Work and Skills sit in the top bar, with the page you are on highlighted, next to one usage strip. The More menu is gone; the secondary pages are in the Dawsha menu.
 - **Cleaner panes.** Each pane has a clean header and a grouped menu of 13 items. Other actions are in the command palette. Footers appear only when they have something to show, and the details panel slides over the terminal instead of pushing it aside.
 - **A sidebar built around your work.** The project tree lists sessions by their task, with a Waiting on you block at the top. Resizing the sidebar works again.
@@ -32,6 +35,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Diffs outside the Changes dialog show their added and removed lines in colour again.
+- A compare diff shows its output in the pane instead of waiting at git's pager.
+- The Claude plan shown with your account matches the account (Team, Max or Pro).
+- Clicking a button in a pane header no longer moves that pane into the large slot.
 - The account shown is the one you are signed in with after you switch Claude accounts.
 - The top-bar text size buttons (− and +) set one size for every pane.
 - Quitting Dawsha closes all of its own background processes, so none is left running after it exits.

@@ -148,7 +148,6 @@ export class WorkViewComponent {
 
   private header(): HTMLElement {
     return pageHeader({ title: 'Work', subtitle: `What got done · ${this.periodLabel()}`, actions: [
-      this.filters(),
       h('div', { class: 'rp-tabs work-periods', role: 'tablist', 'aria-label': 'Work period' }, ...PERIODS.map(p => h('button', {
         class: `rp-tab${this.period === p.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.period === p.value),
         onClick: () => this.changePeriod(p.value)
@@ -199,7 +198,9 @@ export class WorkViewComponent {
       h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Count by' }, ...MODES.map(m => h('button', {
         class: `rp-tab${this.mode === m.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.mode === m.value), id: `work-mode-${m.value}`,
         onClick: () => { this.mode = m.value; this.render() }
-      }, m.label))))
+      }, m.label))),
+      h('span', { class: 'spacer' }),
+      this.filters())
   }
 
   private stats(report: WorkReport): HTMLElement {

@@ -28,7 +28,7 @@ export class SkillsViewComponent {
   private readonly rows = h('div', { class: 'skill-list' })
   private readonly status = h('p', { class: 'skill-status', role: 'status' })
   private readonly filters = h('div', { class: 'skill-filters', role: 'group', 'aria-label': 'Filter by AI provider' })
-  private readonly kinds = h('div', { class: 'skill-kinds', role: 'group', 'aria-label': 'Inventory type' })
+  private readonly kinds = h('div', { class: 'segmented skill-kinds', role: 'group', 'aria-label': 'Inventory type' })
   private readonly search = h('input', {
     class: 'skill-search',
     type: 'search',

@@ -569,11 +569,12 @@ export class SidebarComponent {
           },
           identityMark(view),
           h('span', { class: 'sess-body' },
-            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, sessionLabel(view))),
+            h('span', { class: 'sess-line' },
+              h('span', { class: 'sess-name', dir: 'auto' }, sessionLabel(view)),
+              h('span', { class: 'sess-age', 'aria-label': `active ${age}` }, age)),
             h('span', { class: 'sess-meta' },
               h('span', { class: `sess-state state-${sessionStateName}` }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, status)),
-              view.tag ? sidebarTagWord(view.tag, view.tagAuto) : null,
-              h('span', { class: 'sess-age', 'aria-label': `active ${age}` }, age)))
+              view.tag ? sidebarTagWord(view.tag, view.tagAuto) : null))
         )
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}` },
       main,
@@ -647,9 +648,11 @@ export class SidebarComponent {
       : h('button', { class: 'sess-row', type: 'button', title: [`Resume ${session.title} (closed ${closedOn})`, closedUsageTooltip(usage), tagLine].filter(Boolean).join('\n'), 'data-nav': key, 'data-agent': session.agent, 'data-session-id': session.sessionId, onClick: click },
           agentMark(session.agent),
           h('span', { class: 'sess-body' },
-            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, session.title)),
+            h('span', { class: 'sess-line' },
+              h('span', { class: 'sess-name', dir: 'auto' }, session.title),
+              h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now))),
             h('span', { class: 'sess-meta' },
-              h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now)),
+              h('span', { class: 'sess-closed-word' }, 'Closed'),
               closedTag ? sidebarTagWord(closedTag, closedSource) : null,
               used ?h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))
     return h('div', { class: 'kept-session-row closed' },

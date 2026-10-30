@@ -305,7 +305,7 @@ test('starts Codex from the quick-pick with Tab, shows the OpenAI mark and adds 
 
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.quickpick')).toHaveCount(0)
-    await expect(page.locator('.pane-header .agent-mark.codex svg')).toHaveCount(1)
+    await expect(page.locator('.pane-header .agent-mark.codex')).toHaveText('X')
     await expect(page.locator('.tabs .agent-mark.codex')).toHaveCount(1)
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['codex'])
     const codexId = await activeTermId(page)
@@ -360,7 +360,7 @@ test('cycles Claude, Codex, Gemini with Tab, shows the Gemini mark and stores a 
     await page.keyboard.press('Enter')
 
     await expect(page.locator('.pane')).toHaveCount(1)
-    await expect(page.locator('.pane-header .agent-mark.gemini svg')).toHaveCount(1)
+    await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveText('G')
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['gemini'])
     const first = await activeTermId(page)
     await expect.poll(() => bufferText(page, first), { timeout: 20_000 }).toContain('Smoke Project')

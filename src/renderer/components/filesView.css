@@ -491,3 +491,8 @@
 @media (prefers-reduced-motion: reduce) {
   .files-spinner, .files-skel-row { animation: none; }
 }
+.files-placeholder { background: var(--canvas); }
+/* Inline commit diff: two narrow number columns, the code column takes the rest and scrolls sideways instead of wrapping. */
+.commit-details-diff > .dv-unified { width: max-content; min-width: 100%; table-layout: auto; }
+.commit-details-diff > .dv-unified .dv-no { width: 5ch; min-width: 5ch; padding-inline: var(--s-2); }
+.commit-details-diff > .dv-unified .dv-code { white-space: pre; overflow-wrap: normal; padding-inline: var(--s-2); }

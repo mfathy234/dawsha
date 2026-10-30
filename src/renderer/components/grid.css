@@ -128,7 +128,8 @@
 
 .pane-header .pane-panel,
 .pane-header .pane-actions,
-.pane-header .maximize {
+.pane-header .maximize,
+.pane-header .close-pane {
   flex: none;
 }
 
