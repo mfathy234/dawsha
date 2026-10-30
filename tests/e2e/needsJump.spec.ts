@@ -53,12 +53,16 @@ test('Ctrl+Shift+J jumps to the next pane that needs you, cycles through them, a
     await expect(page.locator('.pane').nth(0)).toHaveClass(/focused/)
 
     await page.locator('.pane').nth(2).locator('.pane-title, .term-host').first().click()
-    await askPermission(page, 1)
-    await page.keyboard.press('Control+k')
-    await page.locator('#palette-input').fill('next pane that needs you')
-    await expect(page.getByRole('option', { name: /Jump to the next pane that needs you/ })).toContainText('Ctrl+Shift+J')
-    await page.keyboard.press('Enter')
-    await expect(page.locator('.pane').nth(1)).toHaveClass(/focused/)
+    // Promoting the needs-you pane resizes its terminal, and the test shell redraws over the fed prompt a moment later,
+    // so the prompt and the jump are retried together.
+    await expect(async () => {
+      await askPermission(page, 1)
+      await page.keyboard.press('Control+k')
+      await page.locator('#palette-input').fill('next pane that needs you')
+      await expect(page.getByRole('option', { name: /Jump to the next pane that needs you/ })).toContainText('Ctrl+Shift+J')
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.pane').nth(1)).toHaveClass(/focused/, { timeout: 2000 })
+    }).toPass({ timeout: 60_000 })
 
     await page.keyboard.press('Control+/')
     const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
