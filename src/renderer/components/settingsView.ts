@@ -53,6 +53,8 @@ import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
 import { pageHeader } from './pageHeader'
+import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
+import { setGridStyle } from '../sessionsLayout'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
@@ -84,10 +86,11 @@ function row(title: string, control: HTMLElement | null, ...notes: (HTMLElement 
 }
 
 function checkbox(id: string, label: string, checked: boolean, disabled: boolean, onChange: (value: boolean) => void): HTMLElement {
-  const input = h('input', { type: 'checkbox', id, disabled })
-  input.checked = checked
-  input.addEventListener('change', () => onChange(input.checked))
-  return h('label', { class: 'check', for: id }, input, label)
+  return h('button', {
+    class: 'toggle', type: 'button', id, role: 'switch', 'aria-label': label,
+    'aria-checked': String(checked), disabled,
+    onClick: (event: Event) => onChange((event.currentTarget as HTMLButtonElement).getAttribute('aria-checked') !== 'true')
+  })
 }
 
 interface RuleDraft {
@@ -259,7 +262,10 @@ export class SettingsViewComponent {
       case 'general':
         return this.general(state)
       case 'appearance':
-        return [h('div', { class: 'settings-appearance' }, h('p', {}, 'Theme and background image'), h('button', { class: 'btn', type: 'button', id: 'settings-theme-picker', onClick: () => toggleThemePicker() }, 'Choose theme'))]
+        return [
+          row('Theme', h('button', { class: 'btn', type: 'button', id: 'settings-theme-picker', onClick: () => toggleThemePicker() }, 'Choose theme'), h('p', { class: 'hint' }, 'Choose a theme and terminal background.')),
+          row('Sessions grid', this.gridStyles(state.settings.gridStyle), h('p', { class: 'hint' }, 'Choose between one focused session and a grid of equal tiles.'))
+        ]
       case 'import':
         return [h('div', { class: 'settings-import' },
           h('p', {}, 'Choose a settings file to preview its projects and preferences before importing.'),
@@ -283,6 +289,15 @@ export class SettingsViewComponent {
       default:
         return [...this.about(state), ...this.changelog(state)]
     }
+  }
+
+  private gridStyles(selected: GridStyle): HTMLElement {
+    return h('div', { class: 'segmented settings-grid-style', role: 'group', 'aria-label': 'Sessions grid style' },
+      ...(['focus', 'tiles'] as const).map((style) => h('button', {
+        class: 'tab', type: 'button', 'aria-pressed': String(style === selected),
+        onClick: () => setGridStyle(style)
+      }, GRID_STYLE_LABELS[style]))
+    )
   }
 
   private async loadRemoteAccess(): Promise<void> {
@@ -394,10 +409,10 @@ export class SettingsViewComponent {
           : `Ctrl or Alt plus a key, such as ${DEFAULT_PALETTE_SHORTCUT} or Alt+Space. Ctrl+Shift+P always works too.`),
         this.shortcutError ? h('p', { class: 'field-error', id: 'palette-shortcut-error', role: 'alert' }, this.shortcutError) : null
       ),
-      row('Sessions', checkbox('dim-other-panes', "Dim sessions you're not working in", state.settings.dimOtherPanes, false, setDimOtherPanes)),
-      row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag)),
-      row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap)),
-      row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed)),
+      row('Sessions', checkbox('dim-other-panes', "Dim sessions you're not working in", state.settings.dimOtherPanes, false, setDimOtherPanes), h('p', { class: 'hint' }, 'Keep the focused session clear while the others stay visible.')),
+      row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag), h('p', { class: 'hint' }, 'Use a tag colour on each session pane.')),
+      row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
+      row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),
       row(
         'Getting started',
         h('button', { class: 'btn ghost small', type: 'button', id: 'getting-started', onClick: () => openOnboarding() }, 'Getting started…'),
@@ -452,7 +467,8 @@ export class SettingsViewComponent {
             setSessionInfo({ notifications: value })
           ),
           checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) => setSessionInfo({ sound: value }))
-        )
+        ),
+        h('p', { class: 'hint' }, 'Choose which session updates Dawsha announces.')
       )
     ]
   }
@@ -494,7 +510,7 @@ export class SettingsViewComponent {
     if (update.status === 'error' && update.error) statusNotes.push(h('p', { class: 'hint', role: 'alert' }, update.error))
     return [
       row('Current version', h('span', { class: 'set-value mono', id: 'settings-version' }, info.version || 'unknown')),
-      row('Automatic checks', checkbox('auto-update-toggle', 'Check for updates automatically', settings.autoUpdateCheck, false, setAutoUpdateCheck)),
+      row('Automatic checks', checkbox('auto-update-toggle', 'Check for updates automatically', settings.autoUpdateCheck, false, setAutoUpdateCheck), h('p', { class: 'hint' }, 'Check for new Dawsha versions in the background.')),
       row(
         'Status',
         h('div', { class: 'set-inline update-settings-actions' }, ...controls),

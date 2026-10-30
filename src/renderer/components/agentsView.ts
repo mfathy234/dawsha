@@ -16,6 +16,7 @@ import type { AgentKind } from '../../shared/types'
 import { clear, h } from '../dom'
 import { agentMark } from './agentMark'
 import type { AppState } from '../state'
+import { pageHeader } from './pageHeader'
 
 type NodeInfo = NonNullable<AppState['agents']['report']>['node']
 
@@ -44,18 +45,7 @@ export class AgentsViewComponent {
 
   constructor() {
     this.el.append(
-      h(
-        'div',
-        { class: 'agents-head' },
-        h(
-          'div',
-          { class: 'agents-title' },
-          h('h1', {}, 'Agent tools'),
-          h('p', { class: 'lede' }, 'Install or update the command-line agents this app runs. Commands run in a visible shell tab.')
-        ),
-        this.check,
-        this.updateAll
-      ),
+      pageHeader({ title: 'Agent tools', subtitle: 'Install or update the command-line agents this app runs. Commands run in a visible shell tab.', actions: [this.check, this.updateAll] }),
       this.rows
     )
   }

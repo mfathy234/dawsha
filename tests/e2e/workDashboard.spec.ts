@@ -72,9 +72,14 @@ test('work dashboard counts agent sessions, filters projects, resumes and suppor
     mkdirSync(SHOTS, { recursive: true })
     for (const theme of ['dark', 'light']) {
       if (theme === 'light') {
-        await page.locator('#theme-button').click()
+        await page.locator('#settings-button').click()
+        await page.locator('#settings-tab-appearance').click()
+        await page.locator('#settings-theme-picker').click()
         await page.locator('#theme-dawsha-daylight').click()
         await page.keyboard.press('Escape')
+        await page.locator('#settings-button').click()
+        await page.locator('#work-button').click()
+        await expect(view).toBeVisible()
       }
       for (const period of ['Today', 'This week']) {
         await view.getByRole('tab', { name: period, exact: true }).click()
@@ -132,7 +137,7 @@ test('the Tickets tab counts a branch once and keeps the name and link the user 
     await expect(row.getByLabel('Ticket name')).toHaveValue('Login crash on expired token')
     await row.getByLabel('Ticket link').fill('dev.azure.com/MicrotecEgypt/_workitems/edit/')
     // A refresh (as the 30-second timer does, without moving focus) keeps the caret in the editor.
-    await page.locator('.work-view .usage-head button', { hasText: 'Refresh' }).dispatchEvent('click')
+    await page.locator('.work-view .page-header button', { hasText: 'Refresh' }).dispatchEvent('click')
     await expect(page.locator('.work-view')).toHaveAttribute('aria-busy', 'false')
     await expect(row.getByLabel('Ticket link')).toBeFocused()
     await page.keyboard.type('18550')
@@ -271,9 +276,14 @@ test('searches work, synchronizes project filters, preserves them across tabs an
     mkdirSync(SHOTS, { recursive: true })
     for (const theme of ['dark', 'light']) {
       if (theme === 'light') {
-        await page.locator('#theme-button').click()
+        await page.locator('#settings-button').click()
+        await page.locator('#settings-tab-appearance').click()
+        await page.locator('#settings-theme-picker').click()
         await page.locator('#theme-dawsha-daylight').click()
         await page.keyboard.press('Escape')
+        await page.locator('#settings-button').click()
+        await page.locator('#work-button').click()
+        await expect(view).toBeVisible()
       }
       await page.screenshot({ path: join(SHOTS, `search-${theme}-tickets.png`), animations: 'disabled' })
       await search.press('Escape')

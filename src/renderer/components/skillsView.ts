@@ -10,6 +10,7 @@ import { crewAvatar } from './crewAvatar'
 import { openConvertDialog } from './crewDialogs'
 import './crew.css'
 import './pages.css'
+import { pageHeader } from './pageHeader'
 
 const norm = (path: string): string => path.replace(/\\/g, '/').toLowerCase()
 const convertible = (entry: SkillEntry): boolean => entry.kind === 'skill' || /\.md$/i.test(entry.path)
@@ -60,10 +61,7 @@ export class SkillsViewComponent {
       }, filter === 'all' ? 'All' : filter[0].toUpperCase() + filter.slice(1)))
     }
     this.el.append(
-      h('div', { class: 'skills-head' },
-        h('div', {}, h('h1', {}, 'Skills'), h('p', { class: 'lede' }, 'Skills and agent definitions installed on this machine or in your projects.')),
-        h('button', { class: 'btn ghost', type: 'button', onClick: () => void this.refresh() }, 'Refresh')
-      ),
+      pageHeader({ title: 'Skills', subtitle: 'Skills and agent definitions installed on this machine or in your projects.', actions: h('button', { class: 'btn ghost', type: 'button', onClick: () => void this.refresh() }, 'Refresh') }),
       this.kinds,
       h('div', { class: 'skill-toolbar' }, this.filters, this.search, this.exportShown, this.exportStatus),
       this.status,

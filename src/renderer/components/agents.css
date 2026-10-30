@@ -17,6 +17,21 @@
   padding: var(--s-3) var(--s-5) 0;
 }
 
+.crew-lead-line { padding: 0 var(--s-5); }
+.crew-lead-line:empty { display: none; }
+.crew-lead-line .crew-item {
+  min-height: 48px;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+}
+.crew-lead-line .crew-card-top { flex: 1; align-items: center; }
+.crew-lead-line .crew-av { width: 28px !important; height: 28px !important; }
+.crew-lead-line .crew-purpose, .crew-lead-line .crew-card-model { display: none; }
+.crew-lead-line .crew-foot { width: auto; margin: 0; padding: 0; border: 0; }
+.crew-lead-line .crew-meta { max-width: 38ch; }
+
 .crew-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));

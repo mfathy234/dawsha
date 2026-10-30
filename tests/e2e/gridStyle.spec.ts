@@ -60,6 +60,14 @@ test('the sessions grid switches between calm focus and mission control, and the
     const again = (await page.locator('.grid > .pane.focused').boundingBox())!
     expect(again.width).toBeGreaterThan(siblings[0].width * 1.2)
     await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).gridStyle).toBe('focus')
+
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-appearance').click()
+    const settingsGrid = page.locator('.settings-grid-style')
+    await expect(settingsGrid.getByRole('button', { name: 'Calm focus' })).toHaveAttribute('aria-pressed', 'true')
+    await settingsGrid.getByRole('button', { name: 'Mission control' }).click()
+    await expect(page.locator('.grid.tiles')).toHaveCount(1)
+    await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).gridStyle).toBe('tiles')
   } finally {
     await closeApp(app)
   }

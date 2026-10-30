@@ -69,12 +69,15 @@ test('palettes, pickers and popovers each close with their Dismiss button', asyn
     await dismiss(page, '.layouts-popover').click()
     await expect(layouts).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Theme' }).click()
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-appearance').click()
+    await page.locator('#settings-theme-picker').click()
     const theme = page.getByRole('dialog', { name: 'Theme' })
     await expect(theme).toBeVisible()
     await shot(page, 'theme')
     await dismiss(page, '.theme-picker').click()
     await expect(theme).toHaveCount(0)
+    await page.locator('#settings-button').click()
   } finally {
     await closeApp(app)
   }

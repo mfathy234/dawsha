@@ -244,7 +244,7 @@ test('turning off automatic checks stops the schedule, Check now still works', a
     await openSettings(page, 'updates')
     await expect(page.locator('#auto-update-toggle')).toBeChecked()
     await expect(page.locator('#update-status')).toContainText('up to date · checked')
-    await page.locator('#auto-update-toggle').uncheck()
+    await page.locator('#auto-update-toggle').click()
     await expect.poll(() => readSettings(sandbox).autoUpdateCheck).toBe(false)
     await page.waitForTimeout(500)
     const settled = await hookCall<number>(app, 'hook.checks')
@@ -253,7 +253,7 @@ test('turning off automatic checks stops the schedule, Check now still works', a
 
     await page.locator('#check-now').click()
     await expect.poll(() => hookCall<number>(app, 'hook.checks')).toBe(settled + 1)
-    await page.locator('#auto-update-toggle').check()
+    await page.locator('#auto-update-toggle').click()
     await expect.poll(() => readSettings(sandbox).autoUpdateCheck).toBe(true)
     await expect.poll(() => hookCall<number>(app, 'hook.checks')).toBeGreaterThan(settled + 1)
   } finally {

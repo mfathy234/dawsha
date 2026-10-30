@@ -180,10 +180,10 @@ test('recording is off by default; turning it on records new sessions and turnin
     expect(castFiles(sandbox)).toHaveLength(0)
 
     await openSettings(page, 'general')
-    await expect(page.locator('#recordings-enabled')).not.toBeChecked()
+    await expect(page.locator('#recordings-enabled')).toHaveAttribute('aria-checked', 'false')
     await expect(page.locator('#recordings-days')).toHaveValue('14')
     await expect(page.locator('#recordings-size')).toHaveValue('1024')
-    await page.locator('#recordings-enabled').check()
+    await page.locator('#recordings-enabled').click()
     await expect
       .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.enabled, { timeout: SLOW })
       .toBe(true)
@@ -217,7 +217,7 @@ test('recording is off by default; turning it on records new sessions and turnin
     await expect.poll(() => castFiles(sandbox).length, { timeout: SLOW }).toBe(1)
 
     await openSettings(page, 'general')
-    await page.locator('#recordings-enabled').uncheck()
+    await page.locator('#recordings-enabled').click()
     await expect
       .poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).recordings?.enabled, { timeout: SLOW })
       .toBe(false)

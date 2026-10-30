@@ -12,6 +12,7 @@ import { BoardPeek } from './boardPeek'
 import { FilterMenu } from './filterMenu'
 import { stateIcon } from './stateIcon'
 import './pages.css'
+import { pageHeader } from './pageHeader'
 
 const PREVIEW_MS = 1500
 
@@ -57,7 +58,7 @@ export class BoardComponent {
       h('span', { class: 'board-spacer' }),
       h('span', { class: 'board-hint' }, 'Cards move by themselves as sessions change. Drag a Done card to Reviewed.')
     )
-    this.el.append(h('div', { class: 'board-main' }, filters, columns), this.peek.el)
+    this.el.append(pageHeader({ title: 'Board' }), h('div', { class: 'board-main' }, filters, columns), this.peek.el)
   }
 
   update(state: AppState, showing: boolean): void {

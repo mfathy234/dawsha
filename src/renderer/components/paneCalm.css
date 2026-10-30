@@ -21,7 +21,7 @@
 }
 
 .pane.calm:not(:hover):not(:focus-within) .pane-body {
-  filter: brightness(0.72) saturate(0.8);
+  filter: brightness(0.86) saturate(0.8);
   transition-delay: 60ms;
 }
 

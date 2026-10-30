@@ -65,7 +65,7 @@ for (const [mode, themeId] of THEMES) {
       await expect(page.locator('#needs-chip')).toContainText('1 needs you')
       await expect(page.locator('.topbar-count')).toContainText('idle')
       await expect(page.locator('.pane.calm')).toHaveCount(2)
-      await expect(page.locator('.pane.calm .pane-body').first()).toHaveCSS('filter', mode === 'dark' ? 'brightness(0.72) saturate(0.8)' : 'none')
+      await expect(page.locator('.pane.calm .pane-body').first()).toHaveCSS('filter', mode === 'dark' ? 'brightness(0.86) saturate(0.8)' : 'none')
       // The needs-you sibling promotes itself to a taller card in the column.
       const promoted = (await boxes(page))[0]!
       const other = (await boxes(page))[1]!
@@ -132,14 +132,14 @@ test('the recap setting hides the one-line recap', async () => {
     }).toPass({ timeout: 30_000 })
     await expect(pane.locator('.pane-recap')).toBeVisible()
     await page.locator('#settings-button').click()
-    const toggle = page.getByRole('checkbox', { name: 'Show a one-line recap in each session' })
+    const toggle = page.getByRole('switch', { name: 'Show a one-line recap in each session' })
     await expect(toggle).toBeChecked()
-    await toggle.uncheck()
+    await toggle.click()
     await page.getByRole('button', { name: 'Sessions', exact: true }).click()
     await expect(pane).toBeVisible()
     await expect(pane.locator('.pane-recap')).toBeHidden()
     await page.locator('#settings-button').click()
-    await page.getByRole('checkbox', { name: 'Show a one-line recap in each session' }).check()
+    await page.getByRole('switch', { name: 'Show a one-line recap in each session' }).click()
     await page.getByRole('button', { name: 'Sessions', exact: true }).click()
     await expect(async () => {
       await feedTerminal(page, termId, '\r\n\u203b recap: Import script fixed; waiting on the dev migration before re-importing.\r\n')

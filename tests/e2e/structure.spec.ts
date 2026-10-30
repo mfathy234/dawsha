@@ -158,7 +158,7 @@ for (const [mode, themeId] of THEMES) {
       expect(needsRing.shadow).toContain(`${rgb(mode === 'dark' ? '#f08a3c' : '#c2620a')} 0px 0px 0px 1px`)
       await expect(needs.locator('.pane-header .state-pill-text')).toHaveText('Needs you')
       expect(await idle.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none')
-      expect(await idle.evaluate((el) => getComputedStyle(el).boxShadow)).not.toContain('0.24')
+      expect(await idle.evaluate((el) => getComputedStyle(el).boxShadow)).not.toContain('rgba(255, 255, 255, 0.24)')
 
       const header = await focused.locator('.pane-header').evaluate((el) => getComputedStyle(el).backgroundColor)
       expect(header).toBe(rgb(mode === 'dark' ? '#1b212a' : '#edf0f4'))
@@ -172,7 +172,7 @@ for (const [mode, themeId] of THEMES) {
       expect(body.seam).toBe('1px')
       expect(body.bg).toBe(rgb(mode === 'dark' ? '#0a0c10' : '#f1f4f8'))
       expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el, '::after').content)).toBe('none')
-      expect(await idle.locator('.xterm-screen').first().evaluate((el) => getComputedStyle(el).opacity)).toBe(mode === 'dark' ? '0.86' : '0.9')
+      expect(await idle.locator('.xterm-screen').first().evaluate((el) => getComputedStyle(el).opacity)).toBe(mode === 'dark' ? '0.86' : '1')
       expect(await focused.locator('.xterm-screen').first().evaluate((el) => getComputedStyle(el).opacity)).toBe('1')
       expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el).filter)).toBe('none')
       expect(await focused.locator('.pane-body').evaluate((el) => getComputedStyle(el).filter)).toBe('none')
@@ -291,7 +291,7 @@ for (const [mode, themeId] of THEMES) {
       await openSettings(page, 'general')
       const nav = await style(page, '.settings-rail', ['background-color'])
       expect(nav['background-color']).toBe(rgb(mode === 'dark' ? '#0e1116' : '#eaedf2'))
-      expect(await page.locator('.settings-view input[type="checkbox"]').first().evaluate((el) => getComputedStyle(el).width)).toBe('30px')
+      expect(await page.getByRole('switch').first().evaluate((el) => getComputedStyle(el).width)).toBe('36px')
       await shot(page, `${mode}-settings`)
       await page.locator('#settings-button').click()
 

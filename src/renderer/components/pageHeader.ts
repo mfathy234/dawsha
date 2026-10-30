@@ -13,6 +13,6 @@ export function pageHeader({ title, subtitle, actions }: PageHeaderOptions): HTM
     'header',
     { class: 'page-header' },
     h('div', { class: 'page-header-copy' }, h('h1', { class: 'page-title' }, title), subtitle !== undefined ? h('p', { class: 'page-subtitle' }, subtitle) : null),
-    actionNodes.length ? h('div', { class: 'page-header-actions' }, ...actionNodes) : null
+    actionNodes.length ? h('div', { class: 'page-actions' }, ...actionNodes) : null
   )
 }

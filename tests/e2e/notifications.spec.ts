@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox } from './helpers'
+import { APP_VERSION, closeApp, closePaneViaActions, createSandbox, feedTerminal, launchApp, type Sandbox } from './helpers'
 
 const CLAUDE_ID = '11111111-2222-4333-8444-555555555555'
 const PROMPT = ['  npm test -- invoices', 'Do you want to run this command?', ' ❯ 1. Yes', '   2. No, and tell Claude what to do differently', ''].join('\r\n')
@@ -27,7 +27,7 @@ async function closeFirstPane(page: Page): Promise<void> {
   await expect(page.locator('.pane')).toHaveCount(1)
   await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
   await expect(page.locator('.pane')).toHaveCount(2)
-  await page.locator('.pane').first().getByRole('button', { name: 'Close pane' }).click()
+  await closePaneViaActions(page.locator('.pane').first())
   await expect(page.locator('.pane')).toHaveCount(1)
 }
 

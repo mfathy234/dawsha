@@ -23,8 +23,8 @@ test('Agent tools view shows versions, installs and updates in a visible tab and
   const { env } = fakeEnv({ claude: '2.1.294', codex: '0.156.1', gemini: null })
   const { app, page } = await launchApp(createSandbox(), env)
   try {
-    await expect(page.locator('#more-button .update-dot')).toBeVisible()
     await page.locator('#more-button').click()
+    await expect(page.locator('#agents-menu-item .update-dot')).toBeVisible()
     await page.locator('#agents-menu-item').click()
     await expect(page.locator('.agents-view')).toBeVisible()
 
@@ -56,10 +56,10 @@ test('Agent tools view shows versions, installs and updates in a visible tab and
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['install gemini', 'update claude'])
     await expect(page.locator('.toast.info').last()).toContainText('Claude Code updated to 2.1.301.', { timeout: 30_000 })
     await page.locator('#more-button').click()
+    await expect(page.locator('#agents-menu-item .update-dot')).toBeHidden()
     await page.locator('#agents-menu-item').click()
     await expect(row(page, 'claude').locator('.tool-flag.current')).toBeVisible()
     await expect(page.locator('#agents-update-all')).toBeDisabled()
-    await expect(page.locator('#more-button .update-dot')).toBeHidden()
   } finally {
     await closeApp(app)
   }

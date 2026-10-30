@@ -143,7 +143,7 @@ test('sidebar and notification toggles persist, and Getting started opens from G
   const { app, page } = await launchApp(sandbox)
   try {
     await openSettings(page, 'general')
-    await page.locator('#sidebar-collapsed').check()
+    await page.locator('#sidebar-collapsed').click()
     await expect.poll(() => readSettings(sandbox.userData).sidebarCollapsed).toBe(true)
     await page.locator('#getting-started').click()
     await expect(page.getByRole('dialog', { name: 'Set up Dawsha' })).toBeVisible()
@@ -192,8 +192,8 @@ test('full access toggles in Settings and the Agent tools view stay in sync', as
     await openSettings(page, 'agents')
     await expect(page.locator('#settings-full-access-claude')).toBeChecked()
     await expect(page.locator('#settings-full-access-gemini')).not.toBeChecked()
-    await page.locator('#settings-full-access-claude').uncheck()
-    await page.locator('#settings-full-access-gemini').check()
+    await page.locator('#settings-full-access-claude').click()
+    await page.locator('#settings-full-access-gemini').click()
     await expect.poll(() => readSettings(sandbox.userData).fullAccess, { timeout: 30_000 }).toEqual({ claude: false, codex: true, gemini: true })
 
     await page.locator('#settings-manage-agents').click()

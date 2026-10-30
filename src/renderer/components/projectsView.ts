@@ -11,6 +11,7 @@ import { agentMark } from './agentMark'
 import { InstructionsPanelComponent } from './instructionsPanel'
 import { stateIcon } from './stateIcon'
 import { TasksPanelComponent } from './tasksPanel'
+import { pageHeader } from './pageHeader'
 
 const MAC = navigator.platform.toLowerCase().includes('mac')
 const FILE_MANAGER = MAC ? 'Finder' : 'Explorer'
@@ -60,7 +61,7 @@ export class ProjectsViewComponent {
     this.instructions.el.id = 'panel-instructions'
     this.tasks.el.setAttribute('role', 'tabpanel')
     this.tasks.el.id = 'panel-tasks'
-    this.el.append(h('h1', {}, 'Projects'), this.tabBar(), this.projectsPanel, this.tasks.el, this.instructions.el)
+    this.el.append(pageHeader({ title: 'Projects' }), this.tabBar(), this.projectsPanel, this.tasks.el, this.instructions.el)
   }
 
   private tabBar(): HTMLElement {

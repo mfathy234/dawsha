@@ -353,7 +353,10 @@ test('the Agents Setup form is readable at 1024 and 1440 wide', async () => {
     expect(detail!.width).toBeGreaterThan(440)
     await backToAgents(page)
     await expect(page.locator('.crew-detail')).toBeHidden()
-    await expect.poll(() => page.locator('.crew-body').evaluate((node) => node.scrollTop)).toBeGreaterThanOrEqual(rosterScroll)
+    await expect.poll(() => page.locator('.crew-body').evaluate((node, savedScroll) => {
+      const body = node as HTMLElement
+      return body.scrollTop >= Math.min(savedScroll, body.scrollHeight - body.clientHeight)
+    }, rosterScroll)).toBe(true)
     await page.locator('.crew-item[data-member="sami"]').click()
     const stackedLabel = await page.locator('.crew-form .crew-label').first().boundingBox()
     const stackedControl = await page.locator('.crew-form .crew-control').first().boundingBox()

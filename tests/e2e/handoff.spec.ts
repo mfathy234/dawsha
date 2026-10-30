@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, utimesSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { activeTermId, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
@@ -9,6 +9,14 @@ const FAKE = resolve(__dirname, '../support/fakeAgent.cjs')
 const SESSION = 'sess-handoff-1'
 
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
+
+async function chooseHandoff(page: Page, agent: 'Claude' | 'Codex' | 'Gemini'): Promise<void> {
+  await page.keyboard.press('Control+k')
+  await expect(page.locator('#palette-input')).toBeFocused()
+  await page.locator('#palette-input').fill(`Continue in ${agent}`)
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog', { name: `Continue in ${agent}` })).toBeVisible()
+}
 
 function git(cwd: string, ...args: string[]): void {
   const identity = ['-c', 'core.autocrlf=false', '-c', 'user.name=Test User', '-c', 'user.email=test@example.invalid']
@@ -110,9 +118,10 @@ test('continues a session in another agent with an editable summary and a from c
     await expect(page.locator('.info-plan')).toHaveText('▸ 3/6', { timeout: 20_000 })
     await feedTerminal(page, sourceId, '\x1b[31mError: timeout waiting for #dashboard\x1b[0m\r\n')
 
-    await page.getByRole('button', { name: 'Pane actions' }).click()
-    await expect(page.getByRole('menuitem', { name: /Continue in/ })).toHaveText(['Continue in Codex', 'Continue in Gemini'])
-    await page.getByRole('menuitem', { name: 'Continue in Codex' }).click()
+    await page.keyboard.press('Control+k')
+    await page.locator('#palette-input').fill('Continue in')
+    await expect(page.locator('.palette-row')).toHaveText(['Continue in Codex', 'Continue in Gemini'])
+    await page.locator('.palette-row', { hasText: 'Continue in Codex' }).click()
     const dialog = page.getByRole('dialog', { name: 'Continue in Codex' })
     await expect(dialog).toBeVisible()
     const summary = dialog.getByLabel('Handoff summary')
@@ -150,8 +159,7 @@ test('continues a session in another agent with an editable summary and a from c
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
 
-    await page.getByRole('button', { name: 'Pane actions' }).click()
-    await page.getByRole('menuitem', { name: 'Continue in Codex' }).click()
+    await chooseHandoff(page, 'Codex')
     const again = page.getByRole('dialog', { name: 'Continue in Codex' })
     const edited = `${await again.getByLabel('Handoff summary').inputValue()}\nPlease keep the "fixed wait" fix & rerun %PATH% checks.`
     await again.getByLabel('Handoff summary').fill(edited)
@@ -172,14 +180,12 @@ test('continues a session in another agent with an editable summary and a from c
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[1]?.tabs?.[0]?.from).toBe('claude')
     await page.screenshot({ path: join(SCREENS, '51-handoff-pane.png') })
 
-    await page.locator('.pane').nth(1).getByRole('button', { name: 'Pane actions' }).click()
-    await expect(page.getByRole('menuitem', { name: /Continue in/ })).toHaveText(['Continue in Claude', 'Continue in Gemini'])
-    await page.keyboard.press('Escape')
-
-    await expect(page.locator('.pane').nth(1).getByRole('button', { name: 'Pane actions' })).toBeFocused()
+    await page.locator('.pane').nth(1).getByRole('button', { name: 'Pane actions' }).focus()
     await page.keyboard.press('Control+k')
     await expect(page.locator('#palette-input')).toBeFocused()
-    await page.keyboard.type('continue in gem')
+    await page.locator('#palette-input').fill('Continue in')
+    await expect(page.locator('.palette-row')).toHaveText(['Continue in Claude', 'Continue in Gemini'])
+    await page.locator('#palette-input').fill('continue in gem')
     await expect(page.locator('.palette-row')).toHaveText(['Continue in Gemini'])
     await page.keyboard.press('Enter')
     await expect(page.getByRole('dialog', { name: 'Continue in Gemini' })).toBeVisible()
@@ -196,8 +202,7 @@ test('summarises an unnamed session outside a git repository and says what it do
   const { app, page } = await launchApp(sandbox)
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
-    await page.getByRole('button', { name: 'Pane actions' }).click()
-    await page.getByRole('menuitem', { name: 'Continue in Gemini' }).click()
+    await chooseHandoff(page, 'Gemini')
     const summary = page.getByRole('dialog', { name: 'Continue in Gemini' }).getByLabel('Handoff summary')
     const dialog = page.getByRole('dialog', { name: 'Continue in Gemini' })
     await expect(dialog.locator('.handoff-note')).toContainText('No saved conversation was found')

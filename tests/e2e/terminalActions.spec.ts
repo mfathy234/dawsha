@@ -81,8 +81,9 @@ test('prompt markers, copy last reply, copy prompt, save selection and clear scr
     await expect.poll(() => clipboardText(app), { timeout: SLOW }).toBe('zzz')
     for (let i = 0; i < 3; i += 1) await page.keyboard.press('Backspace')
 
-    await page.getByRole('button', { name: 'Pane actions' }).first().click()
-    await page.getByRole('menuitem', { name: 'Clear scrollback' }).click()
+    await page.keyboard.press('Control+k')
+    await page.locator('#palette-input').fill('Clear the terminal scrollback')
+    await page.locator('.palette-row[data-command="terminal.clear-scrollback"]').click()
     await expect(page.locator('.toast', { hasText: 'Scrollback cleared' })).toBeVisible()
     await expect.poll(() => promptMarkers(page, id)).toBe(0)
     await expect.poll(() => bufferText(page, id)).not.toContain('pad-30')

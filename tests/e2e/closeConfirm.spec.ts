@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { closeApp, closePaneViaActions, createSandbox, launchApp, type Sandbox } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -27,7 +27,7 @@ test('asks before closing only while the session is working, with a short title 
     writeSession(sandbox, 'busy')
     await expect(pane.locator('.pane-state')).toContainText('Working', { timeout: 15_000 })
 
-    await page.getByRole('button', { name: 'Close pane' }).click()
+    await closePaneViaActions(pane)
     const dialog = page.getByRole('alertdialog')
     const heading = dialog.getByRole('heading')
     await expect(heading).toHaveText('Close “Refactor the invoice export so that…”?')
@@ -48,7 +48,7 @@ test('asks before closing only while the session is working, with a short title 
 
     writeSession(sandbox, 'idle')
     await expect(pane.locator('.pane-state')).not.toContainText('Working', { timeout: 15_000 })
-    await page.getByRole('button', { name: 'Close pane' }).click()
+    await closePaneViaActions(pane)
     await expect(page.getByRole('alertdialog')).toHaveCount(0)
     await expect(pane).toHaveCount(0)
   } finally {

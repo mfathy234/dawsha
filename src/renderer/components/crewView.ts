@@ -25,6 +25,7 @@ import { buildSetup, refreshPreview } from './crewSetup'
 import { toast } from './toast'
 import './crew.css'
 import './agents.css'
+import { pageHeader } from './pageHeader'
 
 type Tab = 'setup' | 'runs' | 'live'
 
@@ -43,6 +44,7 @@ export class CrewViewComponent {
   private readonly body = h('div', { class: 'crew-detail-body' })
   private readonly detail = h('section', { class: 'crew-detail', 'aria-label': 'Member' }, this.head, this.tabs, this.body)
   private readonly roster = h('div', { class: 'crew-roster' })
+  private readonly leadLine = h('div', { class: 'crew-lead-line' })
   private readonly pageBody = h('div', { class: 'crew-body' }, this.roster, this.detail)
   private mode: 'roster' | 'detail' = 'roster'
   private rosterScroll = 0
@@ -63,19 +65,10 @@ export class CrewViewComponent {
 
   constructor() {
     this.el.append(
-      h(
-        'div',
-        { class: 'crew-top' },
-        h('h1', {}, 'Agents'),
-        this.count,
-        h('span', { class: 'crew-spacer' }),
-        this.search,
-        h('button', { class: 'btn', type: 'button', id: 'crew-import', onClick: () => void this.importMembers() }, 'Import…'),
-        h('button', { class: 'btn primary', type: 'button', id: 'crew-new', onClick: () => this.newMember() }, '+ New agent')
-      ),
+      pageHeader({ title: 'Agents', subtitle: 'A roster for the agents you can run.', actions: [this.count, this.search, h('button', { class: 'btn', type: 'button', id: 'crew-import', onClick: () => void this.importMembers() }, 'Import…'), h('button', { class: 'btn primary', type: 'button', id: 'crew-new', onClick: () => this.newMember() }, '+ New agent')] }),
       this.pageBody
     )
-    this.roster.append(this.goals.el, this.list)
+    this.roster.append(this.goals.el, this.leadLine, this.list)
   }
 
   update(state: AppState): void {
@@ -157,8 +150,9 @@ export class CrewViewComponent {
   private renderList(all: CrewMember[], query: string, state: AppState, selectedId: string): void {
     clear(this.list)
     const shown = all.filter((member) => matchesQuery(member, query))
+    const lead = shown.find((member) => member.lead && !member.hidden)
+    this.leadLine.replaceChildren(...(lead ? [this.item(lead, state, lead.id === selectedId)] : []))
     const sections: { title: string; members: CrewMember[]; count: boolean }[] = [
-      { title: '', members: shown.filter((m) => m.lead && !m.hidden), count: false },
       { title: 'Your agents', members: shown.filter((m) => !m.builtin), count: true },
       { title: 'Built in', members: shown.filter((m) => m.builtin && !m.lead && !m.hidden), count: true },
       { title: 'Hidden', members: shown.filter((m) => m.builtin && m.hidden), count: true }

@@ -4,6 +4,11 @@ import { join, resolve } from 'node:path'
 import { execFile, spawn } from 'node:child_process'
 import { _electron as electron, expect, type ElectronApplication, type Locator, type Page } from '@playwright/test'
 
+export async function closePaneViaActions(pane: Locator): Promise<void> {
+  await pane.getByRole('button', { name: 'Pane actions' }).click()
+  await pane.getByRole('menuitem', { name: 'Close pane' }).click()
+}
+
 export interface Sandbox {
   root: string
   userData: string
@@ -272,7 +277,11 @@ export async function backToAgents(page: Page): Promise<void> {
 
 /** Opens a view that lives under the top bar's More menu (Projects, Usage, Work, Agent tools, Skills, Layouts). */
 export async function openMore(page: Page, view: MoreMenuView): Promise<void> {
-  if (view === 'skills' || view === 'work') return page.locator(`#${view}-button`).click()
+  if (view === 'skills' || view === 'work') {
+    const button = page.locator(`#${view}-button`)
+    if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click()
+    return
+  }
   await page.locator('#more-button').click()
   await page.locator(`#${view}-menu-item`).click()
 }

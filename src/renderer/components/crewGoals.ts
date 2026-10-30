@@ -65,7 +65,7 @@ export class CrewGoalsPage {
   private readonly goalText = h('textarea', { class: 'text-input crew-goal-text', rows: '3', 'aria-label': 'Goal for Maya', placeholder: 'What should Maya get done? For example: the login test fails about 1 in 7 CI runs. Find out why, fix it and get it ready for a PR.' })
   private readonly project = h('select', { class: 'text-input crew-goal-project', 'aria-label': 'Project' })
   private readonly model = h('select', { class: 'text-input crew-goal-model', 'aria-label': 'Lead model' })
-  private readonly planFirst = h('input', { type: 'checkbox', id: 'crew-goal-plan-first', checked: true })
+  private readonly planFirst = h('button', { class: 'toggle', type: 'button', id: 'crew-goal-plan-first', role: 'switch', 'aria-label': 'Show me the plan first', 'aria-checked': 'true', onClick: () => this.planFirst.setAttribute('aria-checked', String(this.planFirst.getAttribute('aria-checked') !== 'true')) })
   private readonly error = h('div', { class: 'crew-goal-error', role: 'alert', hidden: true })
   private readonly go = h('button', { class: 'btn primary', type: 'button', id: 'crew-goal-go', onClick: () => void this.start() }, 'Hand it to Maya')
   private readonly live = h('div', { class: 'crew-goal-live' })
@@ -85,13 +85,12 @@ export class CrewGoalsPage {
       { class: 'crew-goalbox' },
       h('div', { class: 'crew-goal-head' }, h('h3', { class: 'crew-goal-title' }, 'Give Maya a goal'), h('span', { class: 'crew-muted' }, 'She plans first. Nothing runs until you approve.')),
       this.goalText,
-      h(
-        'div',
-        { class: 'crew-goal-row' },
-        selectMenu(this.project),
-        selectMenu(this.model),
-        h('span', { class: 'crew-spacer' }),
-        h('label', { class: 'crew-check', for: 'crew-goal-plan-first' }, this.planFirst, h('span', {}, 'Show me the plan first')),
+      h('div', { class: 'crew-goal-selects' },
+        h('label', { class: 'crew-goal-field' }, h('span', {}, 'Project'), selectMenu(this.project)),
+        h('label', { class: 'crew-goal-field' }, h('span', {}, 'Model'), selectMenu(this.model))
+      ),
+      h('div', { class: 'crew-goal-actions' },
+        h('div', { class: 'crew-check' }, this.planFirst, h('span', {}, 'Show me the plan first')),
         this.go
       ),
       this.error
@@ -141,7 +140,7 @@ export class CrewGoalsPage {
     const rule = state.settings.lead.rules.planFirst
     if (this.ruleSeen !== rule) {
       this.ruleSeen = rule
-      this.planFirst.checked = rule
+      this.planFirst.setAttribute('aria-checked', String(rule))
     }
   }
 
@@ -160,7 +159,7 @@ export class CrewGoalsPage {
   private async start(): Promise<void> {
     this.error.hidden = true
     this.go.disabled = true
-    const result = await startGoal({ text: this.goalText.value, projectId: this.project.value, choice: this.model.value as RunChoice, planFirst: this.planFirst.checked })
+    const result = await startGoal({ text: this.goalText.value, projectId: this.project.value, choice: this.model.value as RunChoice, planFirst: this.planFirst.getAttribute('aria-checked') === 'true' })
     this.go.disabled = false
     if (!result.ok) {
       this.error.textContent = result.error

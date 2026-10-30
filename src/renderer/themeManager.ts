@@ -1,6 +1,6 @@
 import type { ITheme } from '@xterm/xterm'
 import { contrastRatio, shadowRgb, withAlpha } from '../shared/contrast'
-import { findTheme, hasLightTerminal, type Theme } from '../shared/themes'
+import { findTheme, type Theme } from '../shared/themes'
 import { EDITOR_COLORS } from '../shared/syntaxPalette'
 import { needsColours } from '../shared/themeLadder'
 import type { ThemeSettings } from '../shared/types'
@@ -19,6 +19,10 @@ const listeners = new Set<Listener>()
 let current: ThemeBundle = buildBundle({ id: 'grid-dark', image: { enabled: false, path: null, dim: 60, blur: 0 } })
 let imageVersion = 0
 
+export function minimumContrastRatioForTheme(theme: Theme): number {
+  return theme.kind === 'light' ? 9 : 4.5
+}
+
 function foundationTheme(theme: Theme): Theme {
   if (theme.id === 'grid-dark') {
     return {
@@ -31,7 +35,7 @@ function foundationTheme(theme: Theme): Theme {
     return {
       ...theme,
       app: { ...theme.app, background: '#dde2e9', sidebar: '#eaedf2', surface: '#f8f9fb', raised: '#edf0f4', overlay: '#fdfdfe', well: '#f1f4f8', border: '#aeb8c5', text: '#141a22', muted: '#414c5c', accent: '#0b7a52', onAccent: '#ffffff', busy: '#8c4300', idle: '#4a5870', exited: '#a8231b', danger: '#a8231b', onDanger: '#ffffff' },
-      term: theme.id === 'dawsha-daylight' ? { ...theme.term, background: '#f1f4f8', foreground: '#1a212b', cursor: '#0b7a52', cursorAccent: '#f1f4f8', red: '#a8231b', green: '#0a6a40', yellow: '#8a5600', blue: '#1a5cb0', white: '#1a212b', brightBlack: '#566377', brightRed: '#a8231b', brightGreen: '#0a6a40', brightYellow: '#8a5600', brightBlue: '#1a5cb0' } : theme.term
+      term: theme.id === 'dawsha-daylight' ? { ...theme.term, background: '#f1f4f8', foreground: '#1a212b', cursor: '#0b7a52', cursorAccent: '#f1f4f8', red: '#a8231b', green: '#0a6a40', yellow: '#765000', blue: '#1a5cb0', white: '#1a212b', brightBlack: '#1a212b', brightRed: '#a8231b', brightGreen: '#0a6a40', brightYellow: '#765000', brightBlue: '#1a5cb0', brightMagenta: '#7043a0', brightCyan: '#14616d', brightWhite: '#566377' } : theme.term
     }
   }
   return theme
@@ -70,7 +74,7 @@ function buildBundle(settings: ThemeSettings): ThemeBundle {
     xterm: { ...theme.term, background },
     hostBackground: imageActive ? 'transparent' : theme.term.background,
     imageActive,
-    minimumContrastRatio: hasLightTerminal(theme) ? 4.5 : 1
+    minimumContrastRatio: minimumContrastRatioForTheme(theme)
   }
 }
 

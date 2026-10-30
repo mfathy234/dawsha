@@ -1,7 +1,7 @@
 .count-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-2); margin: 0 0 var(--s-5); color: var(--muted); font-size: var(--fs-body); }
 .count-value { color: var(--text); font-size: var(--fs-title); font-weight: 600; font-variant-numeric: tabular-nums; }
 .count-sep { color: var(--muted); }
-.work-view .usage-head { flex-wrap: wrap; }
+.work-view > .page-header { flex-wrap: wrap; }
 .work-filters { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); margin-bottom: var(--s-5); }
 .work-search { position: relative; flex: 1 1 240px; max-width: 480px; }
 .work-filters > .select-menu { flex: 0 0 240px; width: 240px; }

@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { bufferText, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox, openQuietProject } from './helpers'
+import { bufferText, closeApp, closePaneViaActions, createSandbox, feedTerminal, launchApp, type Sandbox, openQuietProject } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -166,7 +166,7 @@ test('the project menu works from the keyboard and focus returns to the project 
 
 // A Gemini pane counts as working while it prints, so closing it may ask first.
 async function closeFirstPane(page: Page): Promise<void> {
-  await page.locator('.pane').first().getByRole('button', { name: 'Close pane' }).click()
+  await closePaneViaActions(page.locator('.pane').first())
   const confirm = page.getByRole('alertdialog').locator('[data-confirm]')
   if (await confirm.waitFor({ state: 'visible', timeout: 1500 }).then(() => true, () => false)) await confirm.click()
 }

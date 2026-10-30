@@ -92,7 +92,9 @@ test('starts a session from the sidebar without any prompt and drives the grid',
 
     const host = page.locator('.term-host.active')
     const before = await host.evaluate((el) => getComputedStyle(el).backgroundColor)
-    await page.getByRole('button', { name: 'Theme' }).click()
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-appearance').click()
+    await page.locator('#settings-theme-picker').click()
     await page.getByRole('radio', { name: /Nord/ }).click()
     await expect.poll(() => host.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before)
     await expect(host).toHaveAttribute('data-term-background', '#262b35')
@@ -103,7 +105,7 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     // Daylight has a light terminal by default, so the light-terminal hint shows; its dark-terminal twin hides it.
     await page.locator('#theme-dawsha-daylight').click()
     await expect(page.locator('html')).toHaveAttribute('data-kind', 'light')
-    await expect(host).toHaveAttribute('data-term-background', '#f6f8f7')
+    await expect(host).toHaveAttribute('data-term-background', '#f1f4f8')
     await expect(page.locator('.note')).toContainText('run /theme and pick light')
     await page.locator('#theme-dawsha-daylight-dark').click()
     await expect(host).toHaveAttribute('data-term-background', '#16191f')
@@ -112,6 +114,7 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await expect(page.locator('html')).toHaveAttribute('data-kind', 'dark')
     await page.keyboard.press('Escape')
     await expect(page.locator('.theme-picker')).toHaveCount(0)
+    await page.locator('#settings-button').click()
 
     // A session that is not working closes without asking (closeConfirm.spec covers a working one).
     await page.getByRole('button', { name: 'Pane actions' }).click()

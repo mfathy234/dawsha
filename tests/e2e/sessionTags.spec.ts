@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox, openQuietProject } from './helpers'
+import { closeApp, closePaneViaActions, createSandbox, launchApp, type Sandbox, openQuietProject } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -18,7 +18,7 @@ const focusedNav = (page: Page): Promise<string | undefined> => page.evaluate(()
 
 // A Gemini pane counts as working while it prints, so closing it may ask first.
 async function closeFirstPane(page: Page): Promise<void> {
-  await page.locator('.pane').first().getByRole('button', { name: 'Close pane' }).click()
+  await closePaneViaActions(page.locator('.pane').first())
   const confirm = page.getByRole('alertdialog').locator('[data-confirm]')
   if (await confirm.waitFor({ state: 'visible', timeout: 1500 }).then(() => true, () => false)) await confirm.click()
 }
@@ -176,9 +176,12 @@ for (const [theme, name] of [['dawsha-night', 'dark'], ['dawsha-daylight', 'ligh
     try {
       await openQuietProject(page)
       if (theme === 'dawsha-daylight') {
-        await page.locator('#theme-button').click()
+        await page.locator('#settings-button').click()
+        await page.locator('#settings-tab-appearance').click()
+        await page.locator('#settings-theme-picker').click()
         await page.locator('#theme-dawsha-daylight').click()
         await page.keyboard.press('Escape')
+        await page.locator('#settings-button').click()
       }
       await startGemini(page)
       await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Feature')
