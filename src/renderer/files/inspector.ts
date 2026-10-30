@@ -13,6 +13,7 @@ export interface InspectorHooks {
   focusSession(paneId: string): void
   hide(): void
   retryCommits(): void
+  openCommit(commit: FileCommit): void
 }
 
 /** The commits of a file: still loading (null), could not be read, or the list. */
@@ -89,7 +90,7 @@ export class Inspector {
     else if (commits.length === 0) out.push(h('p', { class: 'files-side-empty' }, 'No commits touch this file yet.'))
     else {
       for (const commit of commits) {
-        out.push(h('div', { class: 'files-side-row commit', title: `${commit.short} ${commit.subject}\n${commit.author}` },
+        out.push(h('button', { class: 'files-side-row commit', type: 'button', title: `${commit.short} ${commit.subject}\n${commit.author}`, onClick: () => this.hooks.openCommit(commit) },
           h('span', { class: 'files-side-name' }, commit.subject), h('span', { class: 'files-side-meta' }, `${commit.short} · ${ago(commit.at)}`)))
       }
     }

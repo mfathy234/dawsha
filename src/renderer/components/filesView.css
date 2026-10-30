@@ -359,7 +359,7 @@
   display: flex; align-items: center; gap: var(--s-2); min-height: 26px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: transparent;
   color: var(--text); font: inherit; font-size: var(--fs-ui); text-align: left; cursor: pointer;
 }
-.files-side-row.commit { cursor: default; }
+.files-side-row.commit { cursor: pointer; }
 .files-side-row:hover { background: var(--hover); }
 .files-side-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .files-side-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -367,6 +367,32 @@
 .files-side-row.outline.k-class .files-side-name { font-weight: 600; }
 .files-side-row.outline.k-heading .files-side-name { font-weight: 500; }
 .files-side-empty { margin: 0; padding: var(--s-1) var(--s-2); color: var(--muted); font-size: var(--fs-ui); }
+
+.commit-details-dialog { width: min(1180px, 96vw); height: min(850px, 92vh); display: flex; flex-direction: column; overflow: hidden; }
+.commit-details-head { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3); border-bottom: 1px solid var(--line); flex: none; }
+.commit-details-title { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-h3); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.commit-details-body { display: grid; grid-template-columns: minmax(210px, 270px) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); min-height: 0; flex: 1; }
+.commit-details-summary { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(240px, .8fr) minmax(220px, 1fr); gap: var(--s-3); padding: var(--s-3); border-bottom: 1px solid var(--line); max-height: 210px; overflow: auto; }
+.commit-details-meta { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; color: var(--muted); font-size: var(--fs-ui); overflow-wrap: anywhere; }
+.commit-details-meta b { color: var(--text); font-weight: 600; }
+.commit-details-hash { display: flex; align-items: center; gap: var(--s-2); }
+.commit-details-hash code { min-width: 0; overflow-wrap: anywhere; color: var(--text); }
+.commit-details-message { margin: 0; color: var(--text); font: inherit; font-size: var(--fs-ui); white-space: pre-wrap; overflow-wrap: anywhere; }
+.commit-details-file-list { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); overflow: hidden; }
+.commit-details-file-heading, .commit-details-total { padding: var(--s-2) var(--s-3); color: var(--muted); font-size: var(--fs-status); border-bottom: 1px solid var(--line); }
+.commit-details-files { display: flex; flex-direction: column; gap: 1px; padding: var(--s-1); overflow: auto; }
+.commit-details-file { display: flex; align-items: center; gap: var(--s-1); min-height: 30px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text); text-align: left; font: inherit; font-size: var(--fs-status); cursor: pointer; }
+.commit-details-file:hover, .commit-details-file[aria-current='true'] { background: var(--hover); }
+.commit-details-status { flex: none; width: 16px; color: var(--accent); font-family: var(--font-mono); }
+.commit-details-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.commit-details-counts { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+.commit-details-file-view { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.commit-details-file-bar { display: flex; align-items: center; gap: var(--s-1); min-height: 38px; padding: var(--s-1) var(--s-2); border-bottom: 1px solid var(--line); }
+.commit-details-file-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: var(--fs-status); }
+.commit-details-diff { flex: 1; min-height: 0; overflow: auto; }
+.commit-details-preview { margin: 0; padding: var(--s-3); overflow: auto; white-space: pre; font-family: var(--font-mono); font-size: var(--fs-status); }
+.commit-details-truncated { padding: var(--s-2); color: var(--muted); font-size: var(--fs-ui); }
+@media (max-width: 800px) { .commit-details-body { grid-template-columns: 180px minmax(0, 1fr); } .commit-details-summary { grid-template-columns: 1fr; max-height: 250px; } .commit-details-file-bar { flex-wrap: wrap; } }
 
 @container files-main (max-width: 640px) {
   .files-bar .files-seg { padding: 0 var(--s-2); }

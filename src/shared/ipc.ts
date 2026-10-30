@@ -80,6 +80,8 @@ export const IPC = {
   filesTrash: 'files:trash',
   filesSearch: 'files:search',
   filesLog: 'files:log',
+  filesCommitDetails: 'files:commit-details',
+  filesCommitFile: 'files:commit-file',
   filesImage: 'files:image',
   filesPreviewUrl: 'files:preview-url',
   filesOpenBrowser: 'files:open-browser',

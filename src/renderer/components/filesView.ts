@@ -30,6 +30,7 @@ import type { EditorTheme } from '../files/editor'
 import { Explorer } from '../files/explorer'
 import { FilesBar } from '../files/filesBar'
 import { Inspector, type CommitsState } from '../files/inspector'
+import { openCommitDetails } from '../files/commitDetails'
 import { InFlight, LatestGate } from '../files/asyncGuard'
 import { errorNote, loadingNote } from '../files/loadNote'
 import { BottomPanel } from '../files/bottomPanel'
@@ -183,7 +184,8 @@ export class FilesViewComponent {
     jump: (item) => this.active()?.editor?.reveal(item.from),
     focusSession: (paneId) => focusPane(paneId),
     hide: () => this.toggleInspector(),
-    retryCommits: () => this.retryCommits()
+    retryCommits: () => this.retryCommits(),
+    openCommit: (commit) => { if (this.set) void openCommitDetails(this.set.folder, commit, this.active()?.path ?? null) }
   })
 
   constructor() {

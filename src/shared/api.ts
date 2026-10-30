@@ -139,6 +139,8 @@ export interface GridApi {
   trashProjectPath(folder: string, path: string): Promise<import('./filesWorkspace').FilesTrashResult>
   searchFiles(folder: string, request: import('./fileSearch').SearchRequest): Promise<import('./fileSearch').SearchResult>
   fileLog(folder: string, path: string): Promise<import('./filePreview').FileLogResult>
+  fileCommitDetails(folder: string, hash: string): Promise<import('./commitDetails').CommitDetailsResult>
+  fileCommitFile(folder: string, hash: string, path: string, full?: boolean): Promise<import('./commitDetails').CommitFileResult>
   filePreviewUrl(folder: string, path: string, text: string | null): Promise<{ ok: true; url: string } | { ok: false; error: string }>
   fileImage(folder: string, path: string, base: boolean): Promise<import('./filePreview').FileImageResult>
   openFileInBrowser(folder: string, path: string): Promise<{ ok: true } | { ok: false; error: string }>

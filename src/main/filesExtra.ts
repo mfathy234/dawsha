@@ -11,6 +11,7 @@ import { dedupeRoots, folderName, isAbsolutePath, type LinkedRepo } from '../sha
 import { git, repoRoot } from './gitCommit'
 import { mergeBase, resolveProjectFile, resolveProjectPath } from './gitWorkspace'
 import { knownProjectFolder } from './knownFolder'
+import { parseCommitShow, type CommitDetailsResult, type CommitFileResult } from '../shared/commitDetails'
 
 const GREP_MS = 20_000
 const MAX_BUFFER = 16 * 1024 * 1024
@@ -139,6 +140,42 @@ export async function fileLog(folder: string, path: unknown): Promise<FileLogRes
     return { hash, short, author, at: Number(at) * 1000, subject: subject ?? '' }
   })
   return { ok: true, commits }
+}
+
+const validCommitHash = (hash: unknown): hash is string => typeof hash === 'string' && /^[a-f\d]{7,40}$/i.test(hash)
+const validRepoPath = (path: unknown): path is string => typeof path === 'string' && path.length > 0 && !path.includes('\0') && !path.startsWith('/') && !/^[a-z]:/i.test(path) && !path.split(/[\\/]/).includes('..')
+
+/** Full metadata is fetched only after a user opens a commit. */
+export async function fileCommitDetails(folder: string, hash: unknown): Promise<CommitDetailsResult> {
+  if (!validCommitHash(hash)) return { ok: false, error: 'That commit hash is not valid.' }
+  const root = await repoRoot(folder)
+  if (!root) return { ok: false, error: 'This folder is not a Git repository.' }
+  const [show, statuses, refs] = await Promise.all([
+    git(root, ['show', '--first-parent', '--no-color', '--format=%H%x1f%an%x1f%ae%x1f%at%x1f%cn%x1f%ce%x1f%ct%x1f%P%x1f%s%x1f%b%x1e', '--numstat', '-z', hash, '--']),
+    git(root, ['diff-tree', '--first-parent', '--root', '--no-commit-id', '--name-status', '-r', '-z', hash]),
+    git(root, ['for-each-ref', '--format=%(refname:short)', '--points-at', hash, 'refs/heads', 'refs/tags'])
+  ])
+  if (!show.ok) return { ok: false, error: show.message || 'Could not read this commit. It may be missing from a shallow clone.' }
+  const parsed = parseCommitShow(show.stdout, statuses.ok ? statuses.stdout : '')
+  return { ok: true, details: { ...parsed, refs: refs.ok ? refs.stdout.split('\n').map((ref) => ref.trim()).filter(Boolean) : [] } }
+}
+
+/** The selected commit file diff and read-only snapshot used by the preview action. */
+export async function fileCommitFile(folder: string, hash: unknown, path: unknown, full = false): Promise<CommitFileResult> {
+  if (!validCommitHash(hash)) return { ok: false, error: 'That commit hash is not valid.' }
+  if (!validRepoPath(path)) return { ok: false, error: 'That file path is not valid.' }
+  const root = await repoRoot(folder)
+  if (!root) return { ok: false, error: 'This folder is not a Git repository.' }
+  const [diff, snapshot] = await Promise.all([
+    git(root, ['show', '--no-color', '--format=', '--no-ext-diff', '--unified=3', hash, '--', path]),
+    git(root, ['show', `${hash}:${path}`])
+  ])
+  if (!diff.ok && !diff.stdout) return { ok: false, error: diff.message || 'Could not read this file diff.' }
+  const maxChars = 4 * 1024 * 1024
+  const rawDiff = diff.stdout
+  const truncated = rawDiff.length > maxChars
+  const text = snapshot.ok && snapshot.stdout.length <= 1024 * 1024 ? snapshot.stdout : null
+  return { ok: true, diff: truncated && !full ? rawDiff.slice(0, maxChars) : rawDiff, text, truncated: truncated && !full, binary: rawDiff.includes('Binary files ') || rawDiff.includes('GIT binary patch') }
 }
 
 function showBytes(root: string, spec: string): Promise<Buffer | 'large' | null> {
