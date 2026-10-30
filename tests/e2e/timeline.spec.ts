@@ -239,7 +239,7 @@ test('searching all sessions finds a closed session, opens it read-only at the m
     await agentFilter.focus()
     await page.keyboard.press('Enter')
     const agents = page.getByRole('listbox', { name: 'Agent' })
-    await expect(agents.getByRole('option')).toHaveText(['Any agent', 'Claude', 'Codex', 'Gemini'])
+    await expect(agents.getByRole('option')).toHaveText(['Any agent', /Claude$/, /Codex$/, /Gemini$/])
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('Enter')

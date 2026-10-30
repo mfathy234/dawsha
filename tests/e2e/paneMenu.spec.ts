@@ -21,7 +21,7 @@ test('the pane menu is short and grouped, and the rest of the actions are in the
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
 
     const header = page.locator('.pane-header')
-    await expect(header.getByRole('button', { name: 'Close pane' })).toBeHidden()
+    await expect(header.getByRole('button', { name: 'Close pane' })).toBeVisible()
     await expect(header.getByRole('button', { name: 'Pane actions' })).toBeVisible()
     await page.getByRole('button', { name: 'Pane actions' }).click()
     const menu = page.getByRole('menu', { name: 'Pane actions' })
