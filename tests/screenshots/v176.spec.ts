@@ -2,7 +2,7 @@ import { createServer, type Server } from 'node:http'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium, expect, test, type Page } from '@playwright/test'
-import { closeApp, feedTerminal, runCli, type Sandbox } from '../e2e/helpers'
+import { backToAgents, closeApp, feedTerminal, runCli, type Sandbox } from '../e2e/helpers'
 import { DEMO_ROOT, OUT as DOCS, folder, settle, writeClaudeSession } from './harness'
 import { SITE, launchDemo, termIdOfPane } from './v17Demo'
 import { makeRepo } from './v17Fixtures'
@@ -69,6 +69,7 @@ test('generates the Agents, Run dialog and agent panes screenshots', async () =>
   try {
     await openAgents(page)
     await addOwnAgent(page)
+    await backToAgents(page)
     await page.locator('.crew-item[data-member="sami"] .crew-runbtn').click({ force: true })
     const dialog = page.getByRole('dialog', { name: /^Run Sami/i })
     await expect(dialog).toBeVisible()
@@ -126,7 +127,6 @@ test('generates the Maya plan and board screenshots', async () => {
   const { app, page, sandbox } = await launchDemo({}, { panes: false })
   try {
     await openAgents(page)
-    await page.locator('.crew-item[data-member="maya"]').click()
     await page.getByLabel('Goal for Maya').fill('The login test fails about 1 in 7 CI runs. Find out why, fix it and get it ready for a PR.')
     await page.locator('.crew-goal-project').selectOption({ label: 'billing-api' })
     await page.locator('#crew-goal-go').click()
@@ -163,7 +163,7 @@ test('generates the Maya plan and board screenshots', async () => {
     expect((await runCli(sandbox, ['crew', 'note', '--goal', id, 'Omar is waiting for your OK to run the login tests. Hana is running the suite. Sami reviews when it passes.'])).code).toBe(0)
     const asked = runCli(sandbox, ['crew', 'ask', '--goal', id, 'Omar and Hana are on the fix. Once it passes 20 of 20 runs, should I push the branch and open a PR?', '--option', 'Push and open the PR', '--option', 'Keep it local'])
     await expect(page.locator('.crew-question')).toBeVisible()
-    await page.locator('.crew-detail').evaluate((node) => (node.scrollTop = node.scrollHeight))
+    await page.locator('.crew-body').evaluate((node) => (node.scrollTop = node.scrollHeight))
     await settle(page, 800)
     await save(page, [site('lead-board.png')], await spanOf(page, '.crew-board', '.crew-lead-notes'))
     await page.locator('.crew-question').getByRole('button', { name: 'Keep it local' }).click()

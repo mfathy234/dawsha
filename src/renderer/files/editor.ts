@@ -178,6 +178,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
     },
     showChanges(baseText) {
       showingChanges = true
+      view.dom.classList.add('diff')
       view.dispatch({
         effects: [
           merge.reconfigure(unifiedMergeView({ original: baseText ?? '', mergeControls: false, highlightChanges: false, gutter: true, syntaxHighlightDeletions: true })),
@@ -187,6 +188,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
     },
     showFile() {
       showingChanges = false
+      view.dom.classList.remove('diff')
       view.dispatch({ effects: [merge.reconfigure([]), access.reconfigure(accessFor(readOnly))] })
     },
     annotate(extension) {

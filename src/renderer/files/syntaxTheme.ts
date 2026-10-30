@@ -75,7 +75,7 @@ export function highlightStyleFor(kind: SyntaxKind): HighlightStyle {
     tag,
     ...(look.role ? { color: colors[look.role] } : {}),
     ...(look.italic ? { fontStyle: 'italic' } : {}),
-    ...(look.bold ? { fontWeight: '700' } : {}),
+    ...(look.bold ? { fontWeight: '600' } : {}),
     ...(look.underline ? { textDecoration: 'underline' } : {}),
     ...(look.strike ? { textDecoration: 'line-through' } : {})
   })))

@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { closeApp, createSandbox, feedTerminal, launchApp, openMore, runCli, type Sandbox } from './helpers'
+import { closeApp, createSandbox, feedTerminal, launchApp, openMore, runCli, backToAgents, type Sandbox } from './helpers'
 
 const FAKE = resolve(__dirname, '../support/fakeAgent.cjs')
 const SESSION = '55555555-6666-4777-8888-999999999999'
@@ -54,17 +54,17 @@ test('the Agents tab is the crew: built-ins in sections, Maya taking goals, and 
     await expect(page.getByRole('heading', { name: 'Agents', level: 1 })).toBeVisible()
     await expect(page.locator('#background-button')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('#background-button .count-badge')).toHaveCount(0)
-    await expect(page.locator('.crew-sec span:first-child')).toHaveText(['Lead', 'Built in', 'Yours'])
+    await expect(page.locator('.crew-sec span:first-child')).toHaveText(['Your agents', 'Built in'])
     await expect(page.locator('.crew-item')).toHaveCount(8)
     await expect(page.locator('.crew-item[data-member="maya"]')).toContainText('Give her a goal')
     for (const name of ['Sami', 'Tarek', 'Omar', 'Hana', 'Lina', 'Nour', 'Yara']) await expect(page.locator(`.crew-item[data-member="${name.toLowerCase()}"]`)).toContainText(name)
-    await page.locator('.crew-item[data-member="maya"]').click()
     await expect(page.locator('.crew-goalbox')).toBeVisible()
     await expect(page.locator('#crew-goal-go')).toHaveText('Hand it to Maya')
     await page.locator('.crew-item[data-member="sami"]').click()
     await expect(page.locator('.crew-dh h2')).toHaveText('Sami')
     await expect(page.locator('.crew-form input[aria-label="Name"]')).toHaveJSProperty('readOnly', true)
     await expect(page.locator('[data-crew-preview]')).toContainText('--permission-mode plan')
+    await backToAgents(page)
     await page.locator('.crew-item[data-member="tarek"]').click()
     await expect(page.locator('.crew-form')).toContainText('Codex runs with full access on this PC')
     await page.screenshot({ path: join(sandbox.root, 'crew-list.png') })
@@ -88,14 +88,18 @@ test('creates a member, duplicates a built-in, hides one and deletes with the na
     await page.locator('.crew-radio[data-value="read"]').click()
     await expect(page.locator('[data-crew-preview]')).toContainText('--permission-mode plan')
     await expect.poll(() => readSettings(sandbox).crew?.members?.[0]).toMatchObject({ name: 'Zed', role: 'Release checker', colour: 'cyan', permissions: 'read', prompt: 'Check {{version}} on {{env}}' })
+    await backToAgents(page)
     await expect(page.locator('.crew-item[data-member="new-agent"]')).toContainText('Release checker')
-    await expect(page.locator('.crew-sec', { hasText: 'Yours' })).toContainText('1')
+    await expect(page.locator('.crew-sec', { hasText: 'Your agents' })).toContainText('1')
 
     await page.locator('.crew-item[data-member="hana"]').click()
     await page.locator('#crew-hide').click()
+    await backToAgents(page)
     await expect(page.locator('.crew-sec', { hasText: 'Hidden' })).toBeVisible()
     await expect.poll(() => readSettings(sandbox).crew.hidden).toEqual(['hana'])
+    await page.locator('.crew-item[data-member="hana"]').click()
     await page.locator('#crew-hide').click()
+    await backToAgents(page)
     await expect(page.locator('.crew-sec', { hasText: 'Hidden' })).toHaveCount(0)
 
     await page.locator('.crew-item[data-member="sami"]').click()
@@ -274,6 +278,7 @@ test('imports agent files, and paste to run suggests the member with the fields 
     await dialog.locator('#crew-import-go').click()
     await expect.poll(() => readSettings(sandbox).crew?.members?.[0]).toMatchObject({ colour: 'orange', model: 'opus', permissions: 'read', source: { kind: 'agent', linked: true } })
     const imported$ = readSettings(sandbox).crew.members[0]
+    await backToAgents(page)
     await page.locator(`.crew-item[data-member="${imported$.id}"]`).click()
     await expect(page.locator('.crew-src')).toContainText('pr-review.md')
     writeFileSync(join(sandbox.claudeHome, 'agents', 'pr-review.md'), '---\nname: pr-review\ndescription: Reviews changes against house standards.\nmodel: opus\n---\nNever edit anything. Updated on disk.\n')

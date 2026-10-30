@@ -48,15 +48,15 @@ test('the main menus and popovers open aligned to their trigger and inside the 1
 
     const chevron = page.locator('#new-session-agent')
     await chevron.click()
-    await expectPlaced(page, page.locator('.topbar .split'), 'New session menu')
+    await expectPlaced(page, page.locator('#new-session'), 'New session menu')
 
     const more = page.locator('#more-button')
     await more.click()
     await expectPlaced(page, more, 'top bar More menu')
 
-    await more.click()
-    await page.locator('#layouts-menu-item').click()
-    await expectPlaced(page, more, 'layouts popover')
+    const layouts = page.locator('#layouts-button')
+    await layouts.click()
+    await expectPlaced(page, layouts, 'layouts popover')
 
     const pane = page.getByRole('button', { name: 'Pane actions' })
     await pane.click()

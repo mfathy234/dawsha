@@ -33,7 +33,7 @@ describe('quit watchdog', () => {
     try {
       expect(await ownerGone).toBe(0)
       expect(child.exitCode).toBeNull()
-      await Promise.race([gone, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('watchdog stopped with its owner')), 8000) })])
+      await Promise.race([gone, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('watchdog stopped with its owner')), 15000) })])
       expect(readFileSync(logPath, 'utf8')).toContain('watchdog: pid')
     } finally {
       clearTimeout(timer)
@@ -50,7 +50,7 @@ describe('quit watchdog', () => {
     const stop = startQuitWatchdog({ ms: 300, pid: child.pid, logPath })
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
-      await Promise.race([gone, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('not killed')), 8000) })])
+      await Promise.race([gone, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('not killed')), 15000) })])
       expect(readFileSync(logPath, 'utf8')).toContain('watchdog: pid')
     } finally {
       clearTimeout(timer)

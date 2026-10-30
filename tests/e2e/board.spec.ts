@@ -142,7 +142,7 @@ test('sessions board: columns follow state, answer, review, peek, reply, filter 
     await expect(page.locator('.board-card')).toHaveAttribute('data-pane-id', (await page.locator('.pane').nth(2).getAttribute('data-pane-id')) ?? '')
 
     await agentChip.click()
-    await expect(page.getByRole('listbox', { name: 'Agent' }).getByRole('option', { selected: true })).toHaveText('Codex')
+    await expect(page.getByRole('listbox', { name: 'Agent' }).getByRole('option', { selected: true })).toHaveText(/Codex$/)
     await page.keyboard.press('Home')
     await page.keyboard.press('Enter')
     await expect(agentChip).toHaveText('Agent: All')

@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS, openMore, openQuietProject } from './helpers'
+import { closeApp, closePaneViaActions, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS, openMore, openQuietProject } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -134,7 +134,7 @@ test('resume entry points: split-button menu, project filter and the empty state
   seed(sandbox)
   const { app, page } = await launchApp(sandbox)
   try {
-    await page.getByRole('button', { name: 'Choose agent', exact: true }).click()
+    await page.locator('#new-session-agent').click()
     await page.getByRole('menuitem', { name: /Resume a session/ }).click()
     await expect(page.locator('.resume-picker')).toBeVisible()
     await expect(page.locator('#rp-project')).toHaveValue('')
@@ -161,7 +161,7 @@ test('closed sessions stay under their project until removed there', async () =>
     await page.keyboard.press('Control+Shift+R')
     await page.locator('.rp-row', { hasText: 'Add dark mode toggle' }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
-    await page.getByRole('button', { name: 'Close pane' }).click()
+    await closePaneViaActions(page.locator('.pane').first())
     await expect(page.locator('.pane')).toHaveCount(0)
     await expect(page.locator('.kept-session-row')).toContainText('Add dark mode toggle')
     const closedToast = page.locator('.toast', { hasText: 'Closed' })

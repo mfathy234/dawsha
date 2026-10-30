@@ -1,7 +1,7 @@
 .count-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-2); margin: 0 0 var(--s-5); color: var(--muted); font-size: var(--fs-body); }
 .count-value { color: var(--text); font-size: var(--fs-title); font-weight: 600; font-variant-numeric: tabular-nums; }
 .count-sep { color: var(--muted); }
-.work-view .usage-head { flex-wrap: wrap; }
+.work-view > .page-header { flex-wrap: wrap; }
 .work-filters { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); margin-bottom: var(--s-5); }
 .work-search { position: relative; flex: 1 1 240px; max-width: 480px; }
 .work-filters > .select-menu { flex: 0 0 240px; width: 240px; }
@@ -40,9 +40,46 @@
 .work-ticket-sessions summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .work-ticket-sessions .work-items { margin-top: var(--s-1); }
 @media (max-width: 900px) {
-  .work-view { padding: var(--s-5); }
+  .work-body { padding: var(--s-4) var(--s-4) var(--s-5); }
   .work-view .usage-legend { flex-wrap: wrap; }
 }
 .work-step { display: inline-flex; align-items: center; gap: var(--s-1); }
 .work-step-btn { min-width: 32px; padding: 0 var(--s-2); font-size: var(--fs-title); line-height: 1; }
 .work-step-label { min-width: 120px; text-align: center; font-size: var(--fs-body); font-weight: 600; white-space: nowrap; }
+
+/* Work page: the shared page header carries search, project and period; the body shares its 32px gutter. */
+.work-body { padding: var(--s-5) var(--sp-7) var(--s-6); }
+.work-view > .page-header .page-actions { flex-wrap: wrap; justify-content: flex-end; }
+.work-view .work-filters { margin: 0; flex-wrap: nowrap; }
+.work-view .work-search { flex: 0 1 220px; max-width: 220px; }
+.work-view .work-filters > .select-menu { flex: 0 0 200px; width: 200px; }
+.work-view .work-periods { flex: none; }
+.work-toolbar { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); }
+.work-filter-bar { margin-bottom: var(--s-4); }
+.work-stats { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-5); }
+.work-stat { display: inline-flex; align-items: baseline; gap: var(--s-1); padding: 4px var(--s-3); border-radius: var(--r-round, 999px); background: var(--raised); color: var(--muted); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.work-stat .count-value { color: var(--text); font-size: var(--fs-body); font-weight: 600; }
+.work-stat.total { box-shadow: inset 0 0 0 1px var(--line-strong, var(--line)); }
+.usage-table.work-table th { color: var(--muted); font-size: var(--fs-ui); font-weight: 500; letter-spacing: 0; text-transform: none; white-space: nowrap; }
+.usage-table.work-table td { padding: var(--s-3) var(--s-2); }
+.usage-table.work-table .num { font-family: inherit; font-variant-numeric: tabular-nums; }
+.usage-table.work-table th.num, .usage-table.work-table td.num { text-align: right; }
+.work-project-button { padding: 0; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; text-align: left; }
+.work-project-button:hover, .work-project-button[aria-pressed='true'] { color: var(--accent); text-decoration: underline; }
+.work-view .work-item { padding: var(--s-3) var(--s-2); }
+.work-view .work-item-main strong { font-weight: 500; }
+.work-view .work-items li + li { border-top: 1px solid var(--line); }
+
+/* Review fixes: tabs left and filters right on one toolbar row; the table keeps numbers in fixed columns
+   instead of spreading them across a wide window; nothing in the page is wider than the window. */
+.work-view { overflow-x: hidden; }
+.work-body { max-width: 1280px; }
+.work-view > .page-header .page-actions { flex-wrap: wrap; row-gap: var(--sp-2); }
+.work-toolbar { flex-wrap: wrap; row-gap: var(--sp-2); }
+.work-toolbar > .spacer { flex: 1; }
+.work-toolbar .work-filters { margin: 0; flex-wrap: nowrap; }
+.work-toolbar .work-search { flex: 0 1 240px; max-width: 240px; }
+.work-toolbar .work-filters > .select-menu { flex: 0 0 200px; width: 200px; }
+.usage-table.work-table { table-layout: fixed; width: 100%; }
+.usage-table.work-table th:first-child, .usage-table.work-table td:first-child { width: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usage-table.work-table th.num, .usage-table.work-table td.num { width: 112px; }

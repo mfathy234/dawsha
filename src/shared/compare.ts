@@ -83,9 +83,9 @@ export function diffCommand(
   if (!link.sides) return null
   const { a, b } = link.sides
   if (statusA.dirtyFiles > 0 || statusB.dirtyFiles > 0) {
-    return `git diff --no-index -- ${quote(a.path)} ${quote(b.path)}`
+    return `git --no-pager diff --no-index -- ${quote(a.path)} ${quote(b.path)}`
   }
-  return `git diff ${a.branch} ${b.branch}`
+  return `git --no-pager diff ${a.branch} ${b.branch}`
 }
 
 export function quoteForShell(path: string, shellCommand: string): string {

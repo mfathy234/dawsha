@@ -67,7 +67,7 @@ export class AppShell {
   private resizeWidth = DEFAULT_SIDEBAR_WIDTH
 
   constructor() {
-    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.files.el, this.agents.el, this.crew.el, this.skills.el, this.usage.el, this.work.el, this.settings.el, this.replay.el)
+    const main = h('div', { class: 'main' }, this.topbar.sessionsToolbar, this.grid.el, this.board.el, this.projects.el, this.files.el, this.agents.el, this.crew.el, this.skills.el, this.usage.el, this.work.el, this.settings.el, this.replay.el)
     this.sidebarResize.addEventListener('pointerdown', this.onResizeStart)
     this.sidebarResize.addEventListener('pointermove', this.onResizeMove)
     this.sidebarResize.addEventListener('pointerup', this.onResizeEnd)
@@ -137,6 +137,7 @@ export class AppShell {
     this.sidebar.el.hidden = state.view === 'files'
     this.sidebarResize.hidden = isSidebarCollapsed(state) || state.view === 'files'
     const boardShown = state.view === 'grid' && state.settings.sessionsLayout === 'board'
+    this.topbar.sessionsToolbar.hidden = state.view !== 'grid'
     this.grid.el.hidden = state.view !== 'grid' || boardShown
     this.projects.el.hidden = state.view !== 'projects'
     if (state.view === 'projects' && this.lastView !== 'projects') this.projects.show(state)

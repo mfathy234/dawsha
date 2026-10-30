@@ -63,6 +63,12 @@ describe('parseChangelog', () => {
     ])
   })
 
+  it('keeps indented release note bullets as separate list items', () => {
+    const entry = parseChangelog('## [1.0.0] - 2026-01-01\n\n### Added\n\n- Parent.\n  - Child one.\n  - Child two.\n')[0]
+    expect(entry.sections[0].items).toEqual(['Parent.', 'Child one.', 'Child two.'])
+    expect(entryToMarkdown(entry)).toContain('- Child one.\n- Child two.')
+  })
+
   it('sorts a changelog written in the wrong order', () => {
     const shuffled = '## [0.1.0] - a\n\n### Added\n\n- x\n\n## [0.2.0] - b\n\n### Added\n\n- y\n'
     expect(parseChangelog(shuffled).map((e) => e.version)).toEqual(['0.2.0', '0.1.0'])

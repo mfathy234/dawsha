@@ -14,19 +14,20 @@ test('top bar shows the brand and the split New session button picks the agent',
     await expect(page.locator('.app-title')).toHaveText('Dawsha')
     await expect(page.locator('.app-logo svg')).toBeVisible()
 
-    const chevron = page.getByRole('button', { name: 'Choose agent', exact: true })
-    await expect(chevron).toHaveAttribute('aria-haspopup', 'menu')
-    await expect(chevron).toHaveAttribute('aria-expanded', 'false')
+    const chevron = page.locator('#new-session-agent')
+    const newSession = page.locator('#new-session')
+    await expect(newSession).toHaveAttribute('aria-haspopup', 'menu')
+    await expect(newSession).toHaveAttribute('aria-expanded', 'false')
     await chevron.click()
-    await expect(chevron).toHaveAttribute('aria-expanded', 'true')
-    await expect(page.getByRole('menuitem')).toHaveText(['Claude session', 'Codex session', 'Gemini session', 'Resume a session…Ctrl+Shift+R', 'Ask two agents…Ctrl+Shift+A', 'Hand a job to an agent…'])
+    await expect(newSession).toHaveAttribute('aria-expanded', 'true')
+    await expect(page.getByRole('menuitem')).toHaveText([/Claude session$/, /Codex session$/, /Gemini session$/, 'Resume a session…Ctrl+Shift+R', 'Ask two agents…Ctrl+Shift+A', 'Hand a job to an agent…'])
     await expect(page.getByRole('menuitem', { name: /Claude session/ })).toBeFocused()
 
     await page.keyboard.press('ArrowDown')
     await expect(page.getByRole('menuitem', { name: /Codex session/ })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('menu')).toHaveCount(0)
-    await expect(chevron).toHaveAttribute('aria-expanded', 'false')
+    await expect(newSession).toHaveAttribute('aria-expanded', 'false')
 
     await chevron.click()
     await page.getByRole('menuitem', { name: /Gemini session/ }).click()
@@ -43,21 +44,23 @@ test('top bar shows the brand and the split New session button picks the agent',
   }
 })
 
-test('compact header keeps New session, zoom, Settings and Theme usable at 960px', async () => {
+test('compact header keeps New session, zoom and Settings usable at 960px', async () => {
   const { app, page } = await launchApp(createSandbox())
   try {
     await page.setViewportSize({ width: 960, height: 600 })
     const newSession = page.getByRole('button', { name: 'New session, Ctrl+N' })
     await expect(newSession).toContainText('New session')
-    for (const name of ['Decrease font size', 'Increase font size', 'Settings', 'Theme']) {
+    for (const name of ['Decrease font size', 'Increase font size', 'Settings']) {
       await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
     }
     expect(await page.locator('.topbar').evaluate((bar) => bar.scrollWidth <= bar.clientWidth)).toBe(true)
-    await page.getByRole('button', { name: 'Theme', exact: true }).click()
+    await page.getByRole('button', { name: 'Settings', exact: true }).click()
+    await expect(page.locator('.settings-view')).toBeVisible()
+    await page.locator('#settings-tab-appearance').click()
+    await page.locator('#settings-theme-picker').click()
     await expect(page.locator('.theme-picker')).toBeVisible()
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
-    await expect(page.locator('.settings-view')).toBeVisible()
     await newSession.click()
     await expect(page.locator('.quickpick')).toBeVisible()
   } finally {

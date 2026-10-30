@@ -223,6 +223,7 @@ test('Ctrl+P opens quick open from a terminal, opens files in Files and adds the
     await expect.poll(() => lastInput(page, id)).toBe('@src/util/helpers.ts ')
 
     // Esc closes the overlay
+    await page.locator('.term-host.active').click()
     await page.keyboard.press('Control+p')
     await expect(page.locator('#quick-open-input')).toBeVisible()
     await page.keyboard.press('Escape')

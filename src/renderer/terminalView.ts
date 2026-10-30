@@ -41,6 +41,7 @@ export class TerminalView {
   private readonly highlights: TerminalHighlights
   private readonly fileLinks: FileLinks
   private readonly arabic: TerminalArabic
+  private webgl: WebglAddon | null = null
   private opened = false
   private frame = 0
   private lent: HTMLElement | null = null
@@ -244,7 +245,10 @@ export class TerminalView {
   setVisible(visible: boolean): void {
     const shown = visible || this.lent !== null
     this.el.classList.toggle('active', shown)
-    if (shown) this.scheduleFit()
+    if (shown) {
+      this.loadWebgl()
+      this.scheduleFit()
+    }
   }
 
   setFontSize(size: number): void {
@@ -260,6 +264,12 @@ export class TerminalView {
     this.el.style.background = bundle.hostBackground
     this.el.dataset.termBackground = String(bundle.xterm.background)
     this.bundleTerm = bundle.theme.term
+    if (bundle.theme.kind === 'light') {
+      this.webgl?.dispose()
+      this.webgl = null
+    } else if (this.opened) {
+      this.loadWebgl()
+    }
     this.arabic.setTheme(bundle.theme.term)
   }
 
@@ -290,11 +300,20 @@ export class TerminalView {
   }
 
   private loadWebgl(): void {
+    if (!this.opened || this.webgl) return
+    // xterm's WebGL renderer applies 50% opacity to SGR dim text after its
+    // contrast correction, which makes dim text fail contrast on light panes.
+    if (document.documentElement.dataset.kind === 'light') return
     try {
       const webgl = new WebglAddon()
-      webgl.onContextLoss(() => webgl.dispose())
+      this.webgl = webgl
+      webgl.onContextLoss(() => {
+        webgl.dispose()
+        if (this.webgl === webgl) this.webgl = null
+      })
       this.term.loadAddon(webgl)
     } catch (error) {
+      this.webgl = null
       console.warn('WebGL renderer unavailable, using the DOM renderer', error)
     }
   }

@@ -9,6 +9,7 @@ import { ICONS } from '../icons'
 import { api } from '../api'
 import { confirmDialog } from './dialogs'
 import { toast } from './toast'
+import { pageHeader } from './pageHeader'
 
 export interface RemoteAccessHost {
   state(): RemoteAccessState | null
@@ -314,6 +315,7 @@ export function createRemoteAccessView(host: RemoteAccessHost) {
       if (!api.remoteAccess) return []
       const state = host.state()
       const parts = [
+        pageHeader({ title: 'Remote access', subtitle: 'Pair a phone and manage its access.' }),
         ...statusCard(state),
         h('div', { class: 'ra-grid' }, connectCard(state), connectionCard(state)),
         h('div', { class: 'ra-grid' }, phonesCard(state), capabilitiesCard(state)),

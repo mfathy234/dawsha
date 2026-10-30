@@ -79,7 +79,7 @@ test('a Claude pane shows time, tokens and cost and the sidebar totals today for
     await expect(rows).toHaveCount(1, { timeout: 20_000 })
     await expect(rows).toHaveText('$1.84 today')
     await expect(rows).toHaveAttribute('aria-label', 'today $1.84 · 1.0K')
-    await rows.hover()
+    await expect(rows).toBeHidden()
     await expect(rows).toHaveAttribute('title', 'Today\nClaude: $1.84 · 1.0K tokens')
 
     await page.getByRole('button', { name: NEW_CLAUDE }).click()

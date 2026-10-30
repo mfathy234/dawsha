@@ -2,7 +2,12 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { execFile, spawn } from 'node:child_process'
-import { _electron as electron, expect, type ElectronApplication, type Page } from '@playwright/test'
+import { _electron as electron, expect, type ElectronApplication, type Locator, type Page } from '@playwright/test'
+
+export async function closePaneViaActions(pane: Locator): Promise<void> {
+  await pane.getByRole('button', { name: 'Pane actions' }).click()
+  await pane.getByRole('menuitem', { name: 'Close pane' }).click()
+}
 
 export interface Sandbox {
   root: string
@@ -17,6 +22,11 @@ export interface Sandbox {
   notifyLog: string
   quitLog: string
   pipe: string
+}
+
+export async function openTerminalPicker(pane: Locator): Promise<void> {
+  await pane.getByRole('button', { name: 'Pane actions' }).click()
+  await pane.getByRole('menuitem', { name: 'New terminal', exact: true }).click()
 }
 
 export const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')).version as string
@@ -94,7 +104,6 @@ export async function launchApp(
       DAWSHA_SHELL: 'cmd.exe',
       DAWSHA_SESSIONS_DIR: sandbox.sessionsDir,
       DAWSHA_CLAUDE_HOME: sandbox.claudeHome,
-      DAWSHA_PANEON_USER_DATA: join(sandbox.root, 'Paneon'),
       DAWSHA_OPS_DIR: sandbox.opsDir,
       DAWSHA_OPEN_LOG: sandbox.openLog,
       DAWSHA_NOTIFY_LOG: sandbox.notifyLog,
@@ -241,14 +250,15 @@ export function runCli(sandbox: Sandbox, args: string[], cwd: string = sandbox.r
   })
 }
 
-export type SettingsSectionId = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
+export type SettingsSectionId = 'general' | 'appearance' | 'notifications' | 'agents' | 'import' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
 
 export async function openSettings(page: Page, section: SettingsSectionId = 'general'): Promise<void> {
   const button = page.locator('#settings-button')
+  const tab = section === 'highlights' ? 'notifications' : section === 'changelog' ? 'about' : section
   if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click()
   await expect(page.locator('.settings-view')).toBeVisible()
-  await page.locator(`#settings-tab-${section}`).click()
-  await expect(page.locator(`#settings-tab-${section}`)).toHaveAttribute('aria-selected', 'true')
+  await page.locator(`#settings-tab-${tab}`).click()
+  await expect(page.locator(`#settings-tab-${tab}`)).toHaveAttribute('aria-selected', 'true')
 }
 
 export async function closeSettings(page: Page): Promise<void> {
@@ -259,8 +269,19 @@ export async function closeSettings(page: Page): Promise<void> {
 
 export type MoreMenuView = 'projects' | 'usage' | 'work' | 'agents' | 'skills' | 'layouts'
 
+/** Leaves an agent's page for the Agents roster (the breadcrumb). */
+export async function backToAgents(page: Page): Promise<void> {
+  await page.locator('.crew-crumb-link').click()
+  await expect(page.locator('.crew-roster')).toBeVisible()
+}
+
 /** Opens a view that lives under the top bar's More menu (Projects, Usage, Work, Agent tools, Skills, Layouts). */
 export async function openMore(page: Page, view: MoreMenuView): Promise<void> {
+  if (view === 'skills' || view === 'work') {
+    const button = page.locator(`#${view}-button`)
+    if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click()
+    return
+  }
   await page.locator('#more-button').click()
   await page.locator(`#${view}-menu-item`).click()
 }

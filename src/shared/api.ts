@@ -8,6 +8,7 @@ import type { FileRef } from './filePaths'
 import type { InstructionRead, InstructionWriteRequest, InstructionWriteResult } from './instructions'
 import type { WorktreeStatus } from './compare'
 import type { BranchListResult, GitQuickRequest, GitQuickResult, SyncCounts } from './gitBranches'
+import type { ProjectGroup } from './worktreeGroups'
 import type {
   CommitRequest,
   DiscardRequest,
@@ -27,7 +28,6 @@ import type { RecordingStats, RecordingSummary } from './recordings'
 import type { ProcessActivity } from './processActivity'
 import type { BulkSkillExport, SkillEntry } from './skills'
 import type { CrewSourceFile } from './crewSources'
-import type { PaneonImportPreview } from './paneonImport'
 import type { SettingsExportResult, SettingsImportRead } from './settingsTransfer'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
@@ -89,13 +89,12 @@ export interface GridApi {
     onRun(listener: (id: string, request: { memberId: string; projectId: string; choice: string; fields: Record<string, string>; deadline: number }) => void): () => void
     reply(id: string, result: { ok: true; runId: string } | { ok: false; error: string }): void
   }
-  paneonImportPreview(): Promise<PaneonImportPreview>
-  queuePaneonImport(): Promise<void>
   pickFolder(): Promise<string | null>
   pickImage(): Promise<string | null>
   pathForFile(file: File): string
   checkFolder(path: string): Promise<FolderCheck>
   gitBranch(folder: string): Promise<string | null>
+  projectGroups(): Promise<Record<string, ProjectGroup>>
   listSessions(): Promise<SessionFile[]>
   onSessions(listener: (sessions: SessionFile[]) => void): () => void
   listCodexSessions(): Promise<CodexSession[]>
@@ -142,6 +141,8 @@ export interface GridApi {
   trashProjectPath(folder: string, path: string): Promise<import('./filesWorkspace').FilesTrashResult>
   searchFiles(folder: string, request: import('./fileSearch').SearchRequest): Promise<import('./fileSearch').SearchResult>
   fileLog(folder: string, path: string): Promise<import('./filePreview').FileLogResult>
+  fileCommitDetails(folder: string, hash: string): Promise<import('./commitDetails').CommitDetailsResult>
+  fileCommitFile(folder: string, hash: string, path: string, full?: boolean): Promise<import('./commitDetails').CommitFileResult>
   filePreviewUrl(folder: string, path: string, text: string | null): Promise<{ ok: true; url: string } | { ok: false; error: string }>
   fileImage(folder: string, path: string, base: boolean): Promise<import('./filePreview').FileImageResult>
   openFileInBrowser(folder: string, path: string): Promise<{ ok: true } | { ok: false; error: string }>

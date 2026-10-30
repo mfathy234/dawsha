@@ -2,6 +2,11 @@ import { addProject, removeProject, showProjectsTab, startSession, updateProject
 import { api } from '../api'
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
 import { countSessionStates, sessionState, type SessionState } from '../../shared/sessionState'
+import { closedSessionsFor } from '../../shared/keptSessions'
+import { dataAge } from '../../shared/agentLimits'
+import { projectBranches } from '../../shared/projectTree'
+import { truncateMiddle } from '../../shared/pathText'
+import type { ProjectGroup } from '../../shared/worktreeGroups'
 import type { AgentKind, Project } from '../../shared/types'
 import { derivePanes } from '../derive'
 import { clear, h, icon, iconButton, placeNearAnchor, leave } from '../dom'
@@ -11,20 +16,29 @@ import { agentMark } from './agentMark'
 import { InstructionsPanelComponent } from './instructionsPanel'
 import { stateIcon } from './stateIcon'
 import { TasksPanelComponent } from './tasksPanel'
+import { pageHeader } from './pageHeader'
+import './projectsView.css'
 
 const MAC = navigator.platform.toLowerCase().includes('mac')
 const FILE_MANAGER = MAC ? 'Finder' : 'Explorer'
+const PATH_CHARS = 46
+
+interface RowCells {
+  branch: HTMLElement
+  sessions: HTMLElement
+  last: HTMLElement
+}
 
 export class ProjectsViewComponent {
   readonly el = h('main', { class: 'projects-view', 'aria-label': 'Projects' })
   private readonly rows = h('div', { class: 'pv-list' })
   private readonly errors = new Map<string, string>()
-  private readonly metas = new Map<string, HTMLElement>()
+  private readonly metas = new Map<string, RowCells>()
   private readonly filterInput = h('input', {
     class: 'text-input pv-filter',
     type: 'search',
     id: 'projects-view-filter',
-    placeholder: 'Filter projects',
+    placeholder: 'Search projects',
     'aria-label': 'Filter projects',
     autocomplete: 'off'
   })
@@ -34,6 +48,9 @@ export class ProjectsViewComponent {
   private menuAnchor: HTMLElement | null = null
   private signature = ''
   private current: AppState | null = null
+  /** Which project each configured project counts under: a worktree of another project is listed beneath it. */
+  private groups: Record<string, ProjectGroup> = {}
+  private groupsKey = ''
 
   private readonly tasks = new TasksPanelComponent()
   private readonly instructions = new InstructionsPanelComponent()
@@ -46,21 +63,16 @@ export class ProjectsViewComponent {
       this.signature = ''
       if (this.current) this.update(this.current)
     })
-    this.projectsPanel.append(
-      h('p', { class: 'lede' }, "Each project maps to a folder. Starting a session opens the project's default agent there."),
-      h(
-        'div',
-        { class: 'pv-toolbar' },
-        this.filterInput,
-        h('button', { class: 'btn ghost', type: 'button', id: 'add-project', onClick: () => void this.add() }, 'Add project')
-      ),
-      this.rows
-    )
+    this.projectsPanel.append(this.rows)
     this.instructions.el.setAttribute('role', 'tabpanel')
     this.instructions.el.id = 'panel-instructions'
     this.tasks.el.setAttribute('role', 'tabpanel')
     this.tasks.el.id = 'panel-tasks'
-    this.el.append(h('h1', {}, 'Projects'), this.tabBar(), this.projectsPanel, this.tasks.el, this.instructions.el)
+    const add = h('button', { class: 'btn ghost', type: 'button', id: 'add-project', onClick: () => void this.add() }, 'Add project')
+    this.el.append(
+      pageHeader({ title: 'Projects', subtitle: 'Folders your sessions run in. Add, locate or remove them here.', actions: [this.filterInput, add] }),
+      h('div', { class: 'projects-body' }, this.tabBar(), this.projectsPanel, this.tasks.el, this.instructions.el)
+    )
   }
 
   private tabBar(): HTMLElement {
@@ -104,8 +116,9 @@ export class ProjectsViewComponent {
     this.tasks.update(state)
     this.instructions.update(state)
     if (state.view !== 'projects') this.closeMenu()
+    this.refreshGroups(state.settings.projects)
     this.updateMeta(state)
-    const signature = JSON.stringify([state.settings.projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent]), this.filter, this.renaming])
+    const signature = JSON.stringify([state.settings.projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent]), this.filter, this.renaming, this.groups])
     if (signature === this.signature) return
     this.signature = signature
     this.rebuild(state)
@@ -117,6 +130,19 @@ export class ProjectsViewComponent {
     this.update(state)
   }
 
+  /** Worktree groups come from the main process (git), once per change to the project folders. */
+  private refreshGroups(projects: Project[]): void {
+    const key = JSON.stringify(projects.map((p) => [p.id, p.folder]))
+    if (key === this.groupsKey) return
+    this.groupsKey = key
+    void api.projectGroups().then((groups) => {
+      if (key !== this.groupsKey) return
+      this.groups = groups
+      this.signature = ''
+      if (this.current) this.update(this.current)
+    }).catch((error: unknown) => console.warn('Could not read the worktrees of the projects', error))
+  }
+
   private matches(project: Project): boolean {
     const needle = this.filter.trim().toLowerCase()
     return needle === '' || project.name.toLowerCase().includes(needle)
@@ -125,32 +151,41 @@ export class ProjectsViewComponent {
   private updateMeta(state: AppState): void {
     if (this.metas.size === 0) return
     const views = derivePanes(state)
+    const now = state.now
     for (const project of state.settings.projects) {
-      const meta = this.metas.get(project.id)
-      if (!meta) continue
-      const states: SessionState[] = views.filter((view) => view.pane.projectId === project.id).map((view) => sessionState(view))
-      const agent = agentOf(project)
-      const branch = state.branches[project.folder]
-      const children: Node[] = [h('span', { class: 'pv-agent', title: 'Default agent' }, agentMark(agent), AGENT_NAMES[agent])]
-      if (branch) children.push(h('span', { class: 'pv-branch', title: `Branch ${branch}` }, icon(ICONS.branch), branch))
-      children.push(this.sessionsLine(states))
-      meta.replaceChildren(...children)
+      const cells = this.metas.get(project.id)
+      if (!cells) continue
+      const live = views.filter((view) => view.pane.projectId === project.id)
+      const closed = closedSessionsFor(state.settings.keptSessions, project.id, new Set())
+      const branch = state.branches[project.folder] ?? null
+      const lastClosed = closed[0]?.closedAt ?? null
+      cells.branch.replaceChildren(this.branchCell(branch))
+      cells.sessions.replaceChildren(this.sessionsCell(live.map((view) => sessionState(view)), closed.length))
+      cells.last.replaceChildren(this.lastCell(live.length > 0, lastClosed, now))
     }
   }
 
-  private sessionsLine(states: SessionState[]): HTMLElement {
+  private branchCell(branch: string | null): HTMLElement {
+    if (!branch) return h('span', { class: 'pv-cell pv-branch-cell muted' }, 'No branch')
+    return h('span', { class: 'pv-cell pv-branch-cell', title: `Branch ${branch}` }, icon(ICONS.branch), h('span', { class: 'pv-branch-name' }, branch))
+  }
+
+  private sessionsCell(states: SessionState[], closed: number): HTMLElement {
     const counts = countSessionStates(states)
-    if (counts.total === 0) return h('span', { class: 'pv-sessions muted' }, 'No sessions')
     const part = (state: SessionState, count: number, label: string): HTMLElement | null =>
       count > 0 ? h('span', { class: `pv-state state-${state}`, title: `${count} ${label}` }, stateIcon(state), String(count)) : null
-    return h(
-      'span',
-      { class: 'pv-sessions' },
-      `${counts.total} session${counts.total === 1 ? '' : 's'}`,
+    return h('span', { class: 'pv-cell pv-sessions-cell' },
+      h('span', { class: 'pv-live', title: `${counts.total} open` }, `${counts.total} live`),
       part('needs', counts.needs, 'need you'),
       part('working', counts.working, 'working'),
-      part('done', counts.done, 'done')
+      h('span', { class: 'pv-closed muted' }, `${closed} closed`)
     )
+  }
+
+  private lastCell(live: boolean, closedAt: number | null, now: number): HTMLElement {
+    if (live) return h('span', { class: 'pv-cell pv-last-cell' }, 'Now')
+    if (closedAt === null) return h('span', { class: 'pv-cell pv-last-cell muted' }, 'Never')
+    return h('span', { class: 'pv-cell pv-last-cell', title: new Date(closedAt).toLocaleString() }, dataAge(closedAt, now))
   }
 
   private rebuild(state: AppState): void {
@@ -161,12 +196,20 @@ export class ProjectsViewComponent {
       this.rows.append(h('p', { class: 'proj-empty' }, 'No projects yet. Add one to start a session.'))
       return
     }
-    const shown = all.filter((project) => this.matches(project))
+    const shown = projectBranches(all, this.groups).flatMap((branch) => {
+      const rootHit = this.matches(branch.project)
+      const worktrees = branch.worktrees.filter((worktree) => rootHit || this.matches(worktree))
+      return rootHit || worktrees.length > 0 ? [{ project: branch.project, worktrees }] : []
+    })
     if (shown.length === 0) {
       this.rows.append(h('p', { class: 'proj-empty' }, `No project matches "${this.filter.trim()}".`))
       return
     }
-    for (const project of shown) this.rows.append(this.row(project))
+    this.rows.append(this.head())
+    for (const branch of shown) {
+      this.rows.append(this.row(branch.project, false))
+      for (const worktree of branch.worktrees) this.rows.append(this.row(worktree, true))
+    }
     this.updateMeta(state)
     if (this.renaming) {
       const input = this.rows.querySelector<HTMLInputElement>('.pv-rename')
@@ -177,30 +220,43 @@ export class ProjectsViewComponent {
     }
   }
 
-  private row(project: Project): HTMLElement {
-    const error = h('p', { class: 'field-error', id: `error-${project.id}`, role: 'alert', hidden: !this.errors.has(project.id) }, this.errors.get(project.id) ?? '')
-    const meta = h('div', { class: 'pv-meta' })
-    this.metas.set(project.id, meta)
+  private head(): HTMLElement {
+    return h('div', { class: 'pv-head', 'aria-hidden': 'true' },
+      h('span', {}, 'Project'), h('span', {}, 'Branch'), h('span', {}, 'Sessions'), h('span', {}, 'Last active'), h('span', {}))
+  }
+
+  private row(project: Project, worktree: boolean): HTMLElement {
+    const missing = this.errors.has(project.id)
+    const error = h('p', { class: 'field-error', id: `error-${project.id}`, role: 'alert', hidden: !missing }, this.errors.get(project.id) ?? '')
+    const cells: RowCells = {
+      branch: h('span', { class: 'pv-cell pv-branch-cell' }),
+      sessions: h('span', { class: 'pv-cell pv-sessions-cell' }),
+      last: h('span', { class: 'pv-cell pv-last-cell' })
+    }
+    this.metas.set(project.id, cells)
     const more = iconButton(`More for ${project.name}`, ICONS.more, () => this.toggleMenu(project, more), 'pv-more')
     more.setAttribute('aria-haspopup', 'menu')
+    const open = iconButton(`Open the folder of ${project.name}`, ICONS.folder, () => void api.quickOpen('explorer', project.folder), 'pv-open')
+    open.hidden = missing
     return h(
       'div',
-      { class: 'pv-row', 'data-project-id': project.id },
+      { class: `pv-row${worktree ? ' pv-worktree' : ''}${missing ? ' missing' : ''}`, 'data-project-id': project.id },
       h(
         'div',
         { class: 'pv-main' },
-        this.renaming === project.id ? this.renameInput(project) : h('div', { class: 'pv-name' }, project.name),
-        h('div', { class: `pv-folder${this.errors.has(project.id) ? ' invalid' : ''}`, title: project.folder }, project.folder)
+        this.renaming === project.id ? this.renameInput(project) : h('div', { class: 'pv-name' }, worktree ? h('span', { class: 'pv-worktree-mark' }, 'Worktree') : null, project.name),
+        h('div', { class: `pv-folder${missing ? ' invalid' : ''}`, title: project.folder }, truncateMiddle(project.folder, PATH_CHARS)),
+        h('span', { class: 'pv-missing', hidden: !missing }, 'Folder not found')
       ),
-      meta,
+      cells.branch,
+      cells.sessions,
+      cells.last,
       h(
         'div',
         { class: 'pv-actions' },
-        h(
-          'button',
-          { class: 'btn small', type: 'button', 'aria-label': `New session in ${project.name}`, onClick: () => void startSession(project.id) },
-          'New session'
-        ),
+        h('button', { class: 'btn small', type: 'button', 'aria-label': `New session in ${project.name}`, onClick: () => void startSession(project.id) }, 'New session'),
+        h('button', { class: 'btn small pv-locate', type: 'button', hidden: !missing, 'aria-label': `Locate the folder for ${project.name}`, onClick: () => void this.changeFolder(project) }, 'Locate…'),
+        open,
         more
       ),
       error
@@ -255,6 +311,15 @@ export class ProjectsViewComponent {
     error.textContent = message ?? ''
     error.hidden = message === null
     row.querySelector(field === 'folder' ? '.pv-folder' : '.pv-rename')?.classList.toggle('invalid', message !== null)
+    if (field === 'folder') {
+      row.classList.toggle('missing', message !== null)
+      const missing = row.querySelector<HTMLElement>('.pv-missing')
+      if (missing) missing.hidden = message === null
+      const locate = row.querySelector<HTMLButtonElement>('.pv-locate')
+      if (locate) locate.hidden = message === null
+      const open = row.querySelector<HTMLButtonElement>('.pv-open')
+      if (open) open.hidden = message !== null
+    }
   }
 
   private toggleMenu(project: Project, anchor: HTMLElement): void {

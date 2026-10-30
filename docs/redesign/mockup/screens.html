@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dawsha screens</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="core.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<header class="mbar">
+  <span class="brand"><span class="logo">D</span>Dawsha redesign</span>
+  <span class="grow"></span>
+  <span class="links"><a href="index.html">Overview</a><a href="foundation.html">Foundation</a><a href="core.html">Core</a></span>
+  <div class="tabs" role="tablist" aria-label="Theme">
+    <button class="tab" role="tab" data-a="theme" data-v="dark" aria-selected="true"><i class="icon">dark_mode</i>Dark</button>
+    <button class="tab" role="tab" data-a="theme" data-v="light" aria-selected="false"><i class="icon">light_mode</i>Light</button>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="index" aria-label="Screens">
+  <a href="#header" class="on">Page header</a>
+  <a href="#crew">Crew</a>
+  <a href="#files">Files and review</a>
+  <a href="#board">Board and peek</a>
+  <a href="#replay">Replay and timeline</a>
+  <a href="#skills">Skills</a>
+  <a href="#projects">Projects</a>
+  <a href="#usage">Usage</a>
+  <a href="#settings">Settings</a>
+  <a href="#phone">Phone</a>
+  <a href="#overlays">Overlays</a>
+  <a href="#rtl">Arabic and RTL</a>
+</nav>
+
+<main class="col-main">
+
+<section class="sec" id="header">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Page header pattern</h2>
+    <p><b>What changed.</b> Every page below the top bar uses one header: title at 32px from the left and 24px from the top, one line of subtitle, actions on the right, then an optional tab row in the same place. Six different headers, gutters of 24 and 40px and titles between y 83 and 96 become one <span class="ref">(13, 7)</span>. Detail pages keep the title slot and put the parent in it as a crumb.</p>
+  </div><div class="befores"><a class="before" data-img="38-projects-view" target="_blank" rel="noopener"><img alt="Current Projects header" loading="lazy"><span>Before: Projects</span></a><a class="before" data-img="42-work-view" target="_blank" rel="noopener"><img alt="Current Work header" loading="lazy"><span>Before: Work</span></a></div></div>
+  <div class="hdr-demo" id="f-header"></div>
+</section>
+
+<section class="sec" id="crew">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Crew</h2>
+    <p><b>What changed.</b> "Never run" on every row is gone: each agent shows its purpose, model and last result, with Run in reach <span class="ref">(7)</span>. The 12-row form is grouped into Identity, Brief, Prompt, Runner, Permissions, Startup, Projects and Paste triggers, and built-in agents are read-only until you duplicate them. A running agent has a live page, the run history is one table, and a pasted correlation id fills the prompt and environment before you run <span class="ref">(9, 10)</span>. Maya's goal box uses the shared fields and toggle <span class="ref">(10)</span>. Pick a direction and a view; click cards, rows and Run.</p>
+  </div><div class="befores"><a class="before" data-img="30-crew-agents-list" target="_blank" rel="noopener"><img alt="Current Agents list" loading="lazy"><span>Before: list</span></a><a class="before" data-img="32-crew-member-detail" target="_blank" rel="noopener"><img alt="Current agent detail" loading="lazy"><span>Before: detail</span></a><a class="before" data-img="34-crew-run-dialog" target="_blank" rel="noopener"><img alt="Current run dialog" loading="lazy"><span>Before: run</span></a></div></div>
+  <div class="ctrls">
+    <div class="tabs tabs-lg" role="tablist" aria-label="Direction"><button class="tab" role="tab" data-a="crew-dir" data-v="A" aria-selected="true">A Roster grid</button><button class="tab" role="tab" data-a="crew-dir" data-v="B" aria-selected="false">B List and detail</button></div>
+    <div class="tabs tabs-lg" role="tablist" aria-label="View"><button class="tab" role="tab" data-a="crew-view" data-v="overview" aria-selected="true">Overview and lead</button><button class="tab" role="tab" data-a="crew-view" data-v="setup" aria-selected="false">Setup</button><button class="tab" role="tab" data-a="crew-view" data-v="running" aria-selected="false">Running</button><button class="tab" role="tab" data-a="crew-view" data-v="runs" aria-selected="false">Run history</button><button class="tab" role="tab" data-a="crew-view" data-v="runid" aria-selected="false">Run from a pasted id</button></div>
+  </div>
+  <p class="dirnote" id="note-A"><b>A, Roster grid.</b> Cards show what each agent is for and how its last run went. Best when the crew is small and you pick by purpose. Detail opens as a full page.</p>
+  <p class="dirnote" id="note-B" hidden><b>B, List and detail.</b> A scannable list with state, and the setup, live view and history in a split on the right. Best when the crew grows past ten and you hop between agents.</p>
+  <div class="app scr tall" id="f-crew"></div>
+</section>
+
+<section class="sec" id="files">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Files and review</h2>
+    <p><b>What changed.</b> One diff look is used in the Files tab, in Review and in the pane's Changes panel, with a single inline or side-by-side toggle <span class="ref">(6)</span>. Review groups changes by the session and agent that made them. Commit is the only primary action; Discard sits apart as a danger action and its confirmation names the files <span class="ref">(6)</span>. Two segmented controls collapsed into one, the right rail is gone, and tabs, search and badges use the shared skins <span class="ref">(10)</span>. Switch views, flip the diff, press Discard.</p>
+  </div><div class="befores"><a class="before" data-img="47-files-diff-changes" target="_blank" rel="noopener"><img alt="Current Files diff" loading="lazy"><span>Before: diff</span></a><a class="before" data-img="48-files-review" target="_blank" rel="noopener"><img alt="Current review" loading="lazy"><span>Before: review</span></a><a class="before" data-img="21-panel-changes-dialog" target="_blank" rel="noopener"><img alt="Current Changes dialog" loading="lazy"><span>Before: dialog</span></a></div></div>
+  <div class="ctrls">
+    <div class="tabs tabs-lg" role="tablist" aria-label="View"><button class="tab" role="tab" data-a="files-view" data-v="browse" aria-selected="true">Browse</button><button class="tab" role="tab" data-a="files-view" data-v="review" aria-selected="false">Review</button><button class="tab" role="tab" data-a="files-view" data-v="search" aria-selected="false">Search</button></div>
+    <span class="note"><i class="icon sm">keyboard</i>N and P move between files in Review</span>
+  </div>
+  <div class="app scr tall" id="f-files"></div>
+</section>
+
+<section class="sec" id="board">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Board with the peek open</h2>
+    <p><b>What changed.</b> The board is the Board layout of Sessions. Opening a card collapses the sidebar to its rail and the empty column to a counter, so three columns keep readable cards beside a 360px peek and nothing is cut off or scrolls sideways <span class="ref">(14)</span>. The permanent hint text moved behind a help button and empty columns shrink to one quiet line instead of two sentences. The peek shows the approval with its command, so you can answer in place <span class="ref">(1)</span>.</p>
+  </div><div class="befores"><a class="before" data-img="29-board-peek" target="_blank" rel="noopener"><img alt="Current board peek" loading="lazy"><span>Before: peek</span></a><a class="before" data-img="28-board-layout" target="_blank" rel="noopener"><img alt="Current board" loading="lazy"><span>Before: board</span></a></div></div>
+  <div class="ctrls"><button class="btn btn-lg" data-a="peek"><i class="icon">right_panel_open</i><span id="peek-lbl">Close peek</span></button><span class="note"><i class="icon sm">touch_app</i>Click any card to open its peek</span></div>
+  <div class="app scr" id="f-board"></div>
+</section>
+
+<section class="sec" id="replay">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Replay and timeline</h2>
+    <p><b>What changed.</b> The player opens on a populated canvas at the first prompt, and the prompt, approval and end markers sit on the track itself instead of under the transport <span class="ref">(10)</span>. The timeline starts with one filter row; Insights summarise where time went; and search across all sessions is a page of its own with grouped matches. Click an event to seek.</p>
+  </div><div class="befores"><a class="before" data-img="53-replay-view" target="_blank" rel="noopener"><img alt="Current replay" loading="lazy"><span>Before: replay</span></a><a class="before" data-img="18-panel-timeline" target="_blank" rel="noopener"><img alt="Current timeline" loading="lazy"><span>Before: timeline</span></a></div></div>
+  <div class="ctrls"><div class="tabs tabs-lg" role="tablist" aria-label="View"><button class="tab" role="tab" data-a="replay-view" data-v="player" aria-selected="true">Player</button><button class="tab" role="tab" data-a="replay-view" data-v="insights" aria-selected="false">Timeline insights</button><button class="tab" role="tab" data-a="replay-view" data-v="search" aria-selected="false">Search all sessions</button></div></div>
+  <div class="app scr" id="f-replay"></div>
+</section>
+
+<section class="sec" id="skills">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Skills</h2>
+    <p><b>What changed.</b> Eight real skills instead of an empty sentence. Each row says whether it is linked from a shared folder or local to a project, which CLIs load it and which crew members rely on it, so removing one is no surprise <span class="ref">(7, 13)</span>. The detail pane shows the file the agents actually read.</p>
+  </div><div class="befores"><a class="before" data-img="37-skills-view" target="_blank" rel="noopener"><img alt="Current Skills" loading="lazy"><span>Before: Skills</span></a></div></div>
+  <div class="app scr" id="f-skills"></div>
+</section>
+
+<section class="sec" id="projects">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Projects</h2>
+    <p><b>What changed.</b> Same header and tabs as every page. The missing folder is flagged in the row with a Locate action, matching the sidebar <span class="ref">(12)</span>, and rows show what you need: branch, live sessions and the agents used.</p>
+  </div><div class="befores"><a class="before" data-img="38-projects-view" target="_blank" rel="noopener"><img alt="Current Projects" loading="lazy"><span>Before: Projects</span></a><a class="before" data-img="39-projects-tasks" target="_blank" rel="noopener"><img alt="Current Tasks" loading="lazy"><span>Before: Tasks</span></a></div></div>
+  <div class="app scr short2" id="f-projects"></div>
+</section>
+
+<section class="sec" id="usage">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Usage</h2>
+    <p><b>What changed.</b> The limit cards use the same rows, meters and reset times as the top-bar popover, so "Reset time not reported" no longer contradicts the strip <span class="ref">(8)</span>. Four hero KPIs became one sentence over a cost-per-day chart whose legend sits next to its title; unreported tokens read "Not reported" instead of a row that says 0 tokens and $4.25 <span class="ref">(9)</span>. Click the usage strip to open the popover.</p>
+  </div><div class="befores"><a class="before" data-img="41-usage-view" target="_blank" rel="noopener"><img alt="Current Usage" loading="lazy"><span>Before: Usage</span></a><a class="before" data-img="10-topbar-limits-popover" target="_blank" rel="noopener"><img alt="Current limits popover" loading="lazy"><span>Before: popover</span></a></div></div>
+  <div class="app scr tall" id="f-usage"></div>
+</section>
+
+<section class="sec" id="settings">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Settings</h2>
+    <p><b>What changed.</b> A searchable section list and one page header. The section name appears once, there is no lede, and every row is a label with its help text plus one control, so nothing reads twice <span class="ref">(13)</span>. Theme now lives in Settings under Appearance as well as in the quick popover. Import has a file field, a Browse button and a preview of what will change. Remote access shows the on state with the QR code, the connected phone and Revoke <span class="ref">(10, 11)</span>. Click sections, Browse, Revoke.</p>
+  </div><div class="befores"><a class="before" data-img="55-settings-general" target="_blank" rel="noopener"><img alt="Current Settings" loading="lazy"><span>Before: General</span></a><a class="before" data-img="63-settings-remote" target="_blank" rel="noopener"><img alt="Current Remote" loading="lazy"><span>Before: Remote</span></a><a class="before" data-img="64-theme-picker" target="_blank" rel="noopener"><img alt="Current theme picker" loading="lazy"><span>Before: theme</span></a></div></div>
+  <div class="app scr tall" id="f-settings"></div>
+</section>
+
+<section class="sec" id="phone">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Remote Access on the phone</h2>
+    <p><b>What changed.</b> No phone page existed in the audit, only the desktop tab. This one answers the single question a phone is for: what needs me. A needs-you card sits first with the command and 44px Allow and Deny buttons, then sessions with the shared state chips, then an Agents tab to start a crew member <span class="ref">(1, 2)</span>. Tap the bottom tabs.</p>
+  </div><div class="befores"><a class="before" data-img="63-settings-remote" target="_blank" rel="noopener"><img alt="Current Remote tab" loading="lazy"><span>Before: desktop tab only</span></a></div></div>
+  <div class="phones" id="f-phone"></div>
+</section>
+
+<section class="sec" id="overlays">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Overlays</h2>
+    <p><b>What changed.</b> Eleven overlays share one shell: dialogs at 14px radius with title and close in the header and Cancel left of the primary; popovers and menus at 10px with one elevation <span class="ref">(15)</span>. Notifications has one way to dismiss; What's new is parsed into Added, Improved and Fixed with a lead phrase per item instead of a 200-word bullet; the update popover has three clear actions; the destructive confirm names the item on its button <span class="ref">(15)</span>. Choose an overlay to open it.</p>
+  </div><div class="befores"><a class="before" data-img="W-01-whats-new" target="_blank" rel="noopener"><img alt="Current What's new" loading="lazy"><span>Before: What's new</span></a><a class="before" data-img="11-palette" target="_blank" rel="noopener"><img alt="Current palette" loading="lazy"><span>Before: palette</span></a><a class="before" data-img="27-notifications-bell" target="_blank" rel="noopener"><img alt="Current notifications" loading="lazy"><span>Before: bell</span></a><a class="before" data-img="46-files-context-menu" target="_blank" rel="noopener"><img alt="Current context menu" loading="lazy"><span>Before: menu</span></a></div></div>
+  <div class="ctrls ovtabs" id="ov-tabs"></div>
+  <div class="app scr" id="f-overlays"></div>
+</section>
+
+<section class="sec" id="rtl">
+  <div class="sec-head"><div>
+    <h2 class="t-page">Arabic and RTL</h2>
+    <p><b>What changed.</b> A written rule instead of partial mirroring <span class="ref">(15)</span>. Layout follows the app language; text follows its own script. Left shows an English app with Arabic content, right shows the app set to Arabic.</p>
+  </div><div class="befores"><a class="before" data-img="05-sidebar-expanded" target="_blank" rel="noopener"><img alt="Current sidebar" loading="lazy"><span>Before: sidebar</span></a></div></div>
+  <div class="rtl-rule card"><b>The rule</b>
+    <ol>
+      <li>Chrome mirrors only when the app language is Arabic: <span class="mono">dir="rtl"</span> on the window, logical properties everywhere, and icons that point (chevrons, back, panel toggles) flip. Logos, play and media icons do not.</li>
+      <li>User content decides its own direction: every title, prompt and note uses <span class="mono">dir="auto"</span>, so an Arabic session title aligns right inside an LTR sidebar and truncates at its own end.</li>
+      <li>The terminal grid stays LTR. Arabic lines are shaped by the terminal, with Latin identifiers, paths and numbers kept intact.</li>
+      <li>Numerals stay Western and tabular. Arabic text uses IBM Plex Sans Arabic at the same size steps.</li>
+    </ol>
+  </div>
+  <div class="rtl-pair" id="f-rtl"></div>
+</section>
+
+</main>
+</div>
+<script src="screens.js"></script>
+<script src="screens-crew.js"></script>
+<script src="screens-files.js"></script>
+<script src="screens-work.js"></script>
+<script src="screens-misc.js"></script>
+</body>
+</html>

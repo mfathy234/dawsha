@@ -81,14 +81,16 @@ export function recordingRows(state: AppState, refresh: () => void): HTMLElement
       () => undefined
     )
   }
-  const input = h('input', { type: 'checkbox', id: 'recordings-enabled' })
-  input.checked = settings.enabled
-  input.addEventListener('change', () => setRecordings({ enabled: input.checked }))
+  const input = h('button', {
+    class: 'toggle', type: 'button', id: 'recordings-enabled', role: 'switch',
+    'aria-label': 'Record every terminal so it can be replayed', 'aria-checked': String(settings.enabled),
+    onClick: (event: Event) => setRecordings({ enabled: (event.currentTarget as HTMLButtonElement).getAttribute('aria-checked') !== 'true' })
+  })
   const usage = stats ? `${stats.count} ${stats.count === 1 ? 'recording' : 'recordings'} using ${formatBytes(stats.bytes)}.` : 'Checking saved recordings…'
   return [
     row(
       'Record sessions',
-      h('label', { class: 'check', for: 'recordings-enabled' }, input, 'Record every terminal so it can be replayed'),
+      input,
       h('p', { class: 'hint' }, 'Off by default. Recordings keep everything a terminal prints, including secrets you display, in plain text on this PC. Pause one terminal from its pane menu.')
     ),
     row(

@@ -30,6 +30,7 @@ import type { EditorTheme } from '../files/editor'
 import { Explorer } from '../files/explorer'
 import { FilesBar } from '../files/filesBar'
 import { Inspector, type CommitsState } from '../files/inspector'
+import { openCommitDetails } from '../files/commitDetails'
 import { InFlight, LatestGate } from '../files/asyncGuard'
 import { errorNote, loadingNote } from '../files/loadNote'
 import { BottomPanel } from '../files/bottomPanel'
@@ -45,6 +46,7 @@ import { confirmDialog } from './dialogs'
 import { toast } from './toast'
 import { toggleQuickOpen } from './quickOpen'
 import { RunCommandsPanel } from './runCommandsPanel'
+import { pageHeader } from './pageHeader'
 import './filesView.css'
 
 const TOUCH_REFRESH_MS = 8000
@@ -122,6 +124,8 @@ export class FilesViewComponent {
   private linkedKey = ''
   private readonly commits = new Map<string, FileCommit[]>()
   private readonly fits = window.matchMedia(`(min-width: ${INSPECTOR_MIN_WIDTH}px)`)
+  // The subtitle names the project and checkout shown, like the other pages' headers.
+  private readonly header = pageHeader({ title: 'Files', subtitle: '' })
   private readonly worktreeNote = h('div', { class: 'files-worktree', id: 'files-live-note', role: 'status', hidden: true }, 'Live updates are off for this folder')
   private readonly explorer = new Explorer({
     tree: {
@@ -182,12 +186,13 @@ export class FilesViewComponent {
     jump: (item) => this.active()?.editor?.reveal(item.from),
     focusSession: (paneId) => focusPane(paneId),
     hide: () => this.toggleInspector(),
-    retryCommits: () => this.retryCommits()
+    retryCommits: () => this.retryCommits(),
+    openCommit: (commit) => { if (this.set) void openCommitDetails(this.set.folder, commit, this.active()?.path ?? null) }
   })
 
   constructor() {
     this.stage.append(this.empty, this.preview.el)
-    this.el.append(this.explorer.el, h('div', { class: 'files-main' }, this.tabs, this.bar.el, this.conflict, this.stage, this.panel.el, this.status), this.inspector.el)
+    this.el.append(this.header, this.explorer.el, h('div', { class: 'files-main' }, this.tabs, this.bar.el, this.conflict, this.stage, this.panel.el, this.status), this.inspector.el)
     this.el.addEventListener('keydown', (event) => this.onKey(event))
     this.tabs.addEventListener('keydown', (event) => this.onTabKey(event))
     api.onFilesChanged((key, paths) => this.onDiskChange(key, paths))
@@ -1379,9 +1384,18 @@ export class FilesViewComponent {
     this.empty.replaceChildren(h('p', {}, text), ...(detail ? [h('p', { class: 'files-limits' }, detail)] : []), ...(withCode ? [h('button', { class: 'btn small', type: 'button', onClick: () => this.openActiveInCode() }, 'Open in VS Code')] : []))
   }
 
+  private renderHeaderWhere(checkout: ReturnType<FilesViewComponent['currentCheckout']>): void {
+    const subtitle = this.header.querySelector('.page-subtitle')
+    if (!subtitle) return
+    const project = this.target ? projectById(store.state, this.target.projectId) : null
+    const text = project ? [project.name, checkout ? checkoutLabel(checkout) : null].filter(Boolean).join(' · ') : 'Pick a project to browse its files.'
+    if (subtitle.textContent !== text) subtitle.textContent = text
+  }
+
   private renderStatus(): void {
     const doc = this.active()
     const checkout = this.currentCheckout()
+    this.renderHeaderWhere(checkout)
     const running = runningSummary(this.runPanel.runList, this.target?.folder ?? null)
     const runEl = running ? h('span', { class: 'files-status-run', id: 'files-status-run', title: 'A run command is running in this checkout' }, runningText(running)) : null
     this.status.hidden = !doc && !checkout && !running

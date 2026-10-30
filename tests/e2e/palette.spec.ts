@@ -35,6 +35,11 @@ test('the command palette opens with Ctrl+K, filters across groups and runs comm
     await expect(palette).toHaveCount(0)
     await expect(page.locator('.term-host.active .xterm-helper-textarea')).toBeFocused()
 
+    await page.locator('#search-button').click()
+    await expect(palette).toBeVisible()
+    await page.keyboard.press('Escape')
+    await page.locator('.term-host.active').click()
+
     await page.keyboard.press('Control+Shift+p')
     await expect(palette).toBeVisible()
     await page.keyboard.press('Control+k')

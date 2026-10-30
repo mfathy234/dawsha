@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { QUIT_BUDGET_MS, activeTermId, bufferText, closeApp, closeBounded, createSandbox, fontSize, lastInput, launchApp, openMore } from './helpers'
+import { QUIT_BUDGET_MS, activeTermId, bufferText, closeApp, closeBounded, createSandbox, fontSize, lastInput, launchApp, openMore, openTerminalPicker } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -53,7 +53,7 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await expect.poll(() => bufferText(page, claudeId), { timeout: 20_000 }).toContain('Smoke Project')
     await page.screenshot({ path: join(SCREENS, '1-single.png') })
 
-    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await openTerminalPicker(page.locator('.pane').first())
     await page.getByRole('menuitem', { name: 'Shell' }).click()
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['claude', 'shell'])
     await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('shell')
@@ -92,7 +92,9 @@ test('starts a session from the sidebar without any prompt and drives the grid',
 
     const host = page.locator('.term-host.active')
     const before = await host.evaluate((el) => getComputedStyle(el).backgroundColor)
-    await page.getByRole('button', { name: 'Theme' }).click()
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-appearance').click()
+    await page.locator('#settings-theme-picker').click()
     await page.getByRole('radio', { name: /Nord/ }).click()
     await expect.poll(() => host.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before)
     await expect(host).toHaveAttribute('data-term-background', '#262b35')
@@ -103,7 +105,7 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     // Daylight has a light terminal by default, so the light-terminal hint shows; its dark-terminal twin hides it.
     await page.locator('#theme-dawsha-daylight').click()
     await expect(page.locator('html')).toHaveAttribute('data-kind', 'light')
-    await expect(host).toHaveAttribute('data-term-background', '#f6f8f7')
+    await expect(host).toHaveAttribute('data-term-background', '#f1f4f8')
     await expect(page.locator('.note')).toContainText('run /theme and pick light')
     await page.locator('#theme-dawsha-daylight-dark').click()
     await expect(host).toHaveAttribute('data-term-background', '#16191f')
@@ -112,9 +114,11 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await expect(page.locator('html')).toHaveAttribute('data-kind', 'dark')
     await page.keyboard.press('Escape')
     await expect(page.locator('.theme-picker')).toHaveCount(0)
+    await page.locator('#settings-button').click()
 
     // A session that is not working closes without asking (closeConfirm.spec covers a working one).
-    await page.getByRole('button', { name: 'Close pane' }).click()
+    await page.getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Close pane' }).click()
     await expect(page.getByRole('alertdialog')).toHaveCount(0)
     await expect(page.locator('.pane')).toHaveCount(0)
     await expect(page.locator('.empty h2')).toHaveText('No sessions yet')
@@ -142,7 +146,7 @@ test('opens panes from the quick pick with the keyboard and reopens them on the 
     await expect(first.page.locator('.quickpick')).toHaveCount(1)
     await first.page.keyboard.press('Enter')
     await expect(first.page.locator('.pane')).toHaveCount(2)
-    await first.page.getByRole('button', { name: /New terminal in/ }).first().click()
+    await openTerminalPicker(first.page.locator('.pane').first())
     await first.page.getByRole('menuitem', { name: 'Shell' }).click()
     await expect(first.page.locator('.pane').first().locator('.tabs [role="tab"]')).toHaveCount(2)
     await first.page.screenshot({ path: join(SCREENS, '6-two-panes.png') })
@@ -202,7 +206,7 @@ test('projects view validates folders and confirms removal by name', async () =>
   }
 })
 
-test('names panes from Claude session files and lays three panes out with a tall first pane', async () => {
+test('names panes from Claude session files and lays three panes out with a tall focused pane', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
@@ -212,8 +216,8 @@ test('names panes from Claude session files and lays three panes out with a tall
     await add.click()
     await expect(page.locator('.pane')).toHaveCount(3)
     const boxes = await page.locator('.pane').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()))
-    expect(boxes[0].height).toBeGreaterThan(boxes[1].height * 1.8)
-    expect(boxes[2].top).toBeGreaterThan(boxes[1].bottom - 1)
+    expect(boxes[2].height).toBeGreaterThan(boxes[1].height * 1.8)
+    expect(boxes[0].left).toBeGreaterThan(boxes[2].left)
 
     const now = Date.now()
     writeFileSync(
@@ -260,7 +264,7 @@ test('reorders panes from the move menu and the keyboard, and opens pane menus n
     await expect(menu).toBeVisible()
     const paneBox = (await left.boundingBox())!
     const menuBox = (await menu.boundingBox())!
-    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(paneBox.x + paneBox.width + 1)
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual((await page.evaluate(() => window.innerWidth)) + 1)
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
 
@@ -294,24 +298,24 @@ test('starts Codex from the quick-pick with Tab, shows the OpenAI mark and adds 
     await expect(page.locator('.quickpick')).toBeVisible()
     await expect(page.locator('.quickpick .popover-foot')).toContainText('Tab switches agent')
     await page.keyboard.type('smo')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Claude')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText(/Claude$/)
     await page.keyboard.press('Tab')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Codex')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText(/Codex$/)
     await page.keyboard.press('Enter')
 
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.quickpick')).toHaveCount(0)
-    await expect(page.locator('.pane-header .agent-mark.codex svg')).toHaveCount(1)
+    await expect(page.locator('.pane-header .agent-mark.codex')).toHaveText('X')
     await expect(page.locator('.tabs .agent-mark.codex')).toHaveCount(1)
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['codex'])
     const codexId = await activeTermId(page)
     await expect.poll(() => bufferText(page, codexId), { timeout: 20_000 }).toContain('Smoke Project')
 
-    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await openTerminalPicker(page.locator('.pane').first())
     await page.getByRole('menuitem', { name: 'Codex session' }).click()
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['codex', 'codex 2'])
     await expect(page.locator('.tabs .agent-mark.codex')).toHaveCount(2)
-    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await openTerminalPicker(page.locator('.pane').first())
     await page.getByRole('menuitem', { name: 'Claude session' }).click()
     await expect(page.locator('.tabs .agent-mark.claude')).toHaveCount(1)
     await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('claude')
@@ -329,7 +333,7 @@ test('starts Codex from the quick-pick with Tab, shows the OpenAI mark and adds 
     await page.screenshot({ path: join(SCREENS, '10-codex-tabs.png') })
 
     await page.keyboard.press('Control+Shift+N')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Codex')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText(/Codex$/)
     await page.keyboard.press('Escape')
     await expect(page.locator('.quickpick')).toHaveCount(0)
   } finally {
@@ -344,24 +348,24 @@ test('cycles Claude, Codex, Gemini with Tab, shows the Gemini mark and stores a 
     await page.keyboard.press('Control+n')
     await page.keyboard.type('smo')
     const agent = page.locator('.quickpick .option.selected .option-agent')
-    await expect(agent).toHaveText('Claude')
+    await expect(agent).toHaveText(/Claude$/)
     await page.keyboard.press('Tab')
-    await expect(agent).toHaveText('Codex')
+    await expect(agent).toHaveText(/Codex$/)
     await page.keyboard.press('Tab')
-    await expect(agent).toHaveText('Gemini')
+    await expect(agent).toHaveText(/Gemini$/)
     await page.keyboard.press('Tab')
-    await expect(agent).toHaveText('Claude')
+    await expect(agent).toHaveText(/Claude$/)
     await page.keyboard.press('Tab')
     await page.keyboard.press('Tab')
     await page.keyboard.press('Enter')
 
     await expect(page.locator('.pane')).toHaveCount(1)
-    await expect(page.locator('.pane-header .agent-mark.gemini svg')).toHaveCount(1)
+    await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveText('G')
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['gemini'])
     const first = await activeTermId(page)
     await expect.poll(() => bufferText(page, first), { timeout: 20_000 }).toContain('Smoke Project')
 
-    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await openTerminalPicker(page.locator('.pane').first())
     await page.getByRole('menuitem', { name: 'Gemini session' }).click()
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['gemini', 'gemini 2'])
     await expect(page.locator('.tabs .agent-mark.gemini')).toHaveCount(2)
@@ -374,7 +378,7 @@ test('cycles Claude, Codex, Gemini with Tab, shows the Gemini mark and stores a 
     expect(new Set(ids).size).toBe(2)
 
     await page.keyboard.press('Control+Shift+N')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Codex')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText(/Codex$/)
     await page.keyboard.press('Escape')
   } finally {
     await closeBounded(app)
@@ -390,7 +394,7 @@ test('project default agent is set in the Projects view and used by the sidebar'
     await more.click()
     const menu = first.page.getByRole('menu', { name: 'More for Smoke' })
     await expect(menu.getByRole('menuitemradio', { name: 'Claude' })).toHaveAttribute('aria-checked', 'true')
-    await expect(menu.getByRole('menuitemradio')).toHaveText(['Claude', 'Codex', 'Gemini'])
+    await expect(menu.getByRole('menuitemradio')).toHaveText([/Claude$/, /Codex$/, /Gemini$/])
     await menu.getByRole('menuitemradio', { name: 'Codex' }).click()
     await expect.poll(() => readSettings(sandbox.userData).projects[0].defaultAgent).toBe('codex')
     await more.click()
@@ -433,7 +437,7 @@ test('names and status of a Codex pane come from Codex rollout files', async () 
   const { app, page } = await launchApp(sandbox)
   try {
     await page.keyboard.press('Control+Shift+N')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Codex')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText(/Codex$/)
     await page.keyboard.type('smo')
     await page.keyboard.press('Enter')
     await expect(page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)

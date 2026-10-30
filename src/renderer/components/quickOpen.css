@@ -3,6 +3,7 @@
   width: min(900px, calc(100vw - 32px)); height: min(520px, calc(100vh - 120px)); display: flex; flex-direction: column; overflow: hidden;
   background: var(--overlay); border-radius: var(--r-pop); box-shadow: var(--shadow-pop);
 }
+.qo-head > .select-menu { flex: 0 1 180px; width: auto; }
 .qo-head { display: flex; align-items: center; gap: var(--s-3); flex: none; height: 54px; padding: 0 var(--s-3) 0 var(--s-5); color: var(--muted); }
 .qo-input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--fs-title); }
 .qo-input:focus-visible { outline: none; }
@@ -18,7 +19,7 @@
 .qo-name { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .qo-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--fs-ui); }
 .qo-match { background: transparent; color: var(--accent); }
-.qo-badge { flex: none; font-family: var(--font-mono); font-size: var(--fs-status); font-weight: 700; }
+.qo-badge { flex: none; font-family: var(--font-mono); font-size: var(--fs-status); font-weight: 600; }
 .qo-badge.b-M { color: var(--busy); }
 .qo-badge.b-A { color: var(--accent); }
 .qo-badge.b-D { color: var(--danger); }

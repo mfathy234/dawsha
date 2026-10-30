@@ -33,7 +33,7 @@
   display: inline-grid;
   place-items: center;
   font-family: var(--font-ui);
-  font-weight: 700;
+  font-weight: 600;
   font-size: calc(var(--size) * .38);
   line-height: 1;
   letter-spacing: .02em;
@@ -67,7 +67,7 @@
   place-items: center;
   background: var(--pane);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   box-shadow: 0 0 0 2px var(--pane);
 }
 

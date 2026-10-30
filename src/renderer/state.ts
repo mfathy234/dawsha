@@ -76,7 +76,7 @@ export interface ReplayRef {
   returnView: View
 }
 
-export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
+export type SettingsSection = 'general' | 'appearance' | 'notifications' | 'agents' | 'import' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
 
 export type ProjectsTab = 'projects' | 'tasks' | 'instructions'
 
@@ -117,6 +117,8 @@ export interface AppState {
   codexSessions: CodexSession[]
   geminiSessions: GeminiSession[]
   branches: Record<string, string | null>
+  /** Ids of projects whose folder no longer exists on disk. */
+  missingProjects: string[]
   gitSync: Record<string, SyncCounts | null>
   statusInfo: Record<string, StatusInfo>
   opsInfo: Record<string, OpsSnapshot>
@@ -170,6 +172,7 @@ export const initialState = (): AppState => ({
   codexSessions: [],
   geminiSessions: [],
   branches: {},
+  missingProjects: [],
   gitSync: {},
   statusInfo: {},
   opsInfo: {},

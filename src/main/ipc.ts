@@ -31,7 +31,7 @@ import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
 import { PreviewServer } from './filePreviewServer'
 import { registerPreviewProtocol } from './previewProtocol'
-import { fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
+import { fileCommitDetails, fileCommitFile, fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { trashProjectPath } from './filesTrash'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
@@ -41,8 +41,6 @@ import { createAgentAccountsReader } from './agentAccounts'
 import { createCodexLimitsReader } from './codexLimits'
 import { readLinked, scanSources } from './crewSources'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
-  import { previewPaneonImport, queuePaneonImport } from './paneonImport'
-  import { paneonUserDataDir } from './paths'
 import { listAllSessions } from './sessionIndex'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
 import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type BridgeLocations } from './statusBridge'
@@ -63,6 +61,7 @@ import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
 import { WorkService } from './workDashboard'
+import { projectWorktreeGroups } from './worktreeRoots'
 import { MAX_STEPS_BACK, type WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
@@ -145,10 +144,9 @@ export function registerIpc(
     ipcMain.handle(IPC.remoteApprovalAnswered, (_event, terminalId: string, allowed: boolean, tail?: string) => remoteAccess.recordDesktopApproval(terminalId, allowed, tail))
     ipcMain.handle(IPC.remoteAccessRevoke, (_event, id: string) => remoteResult(() => remoteAccess.revoke(id)))
   }
-  ipcMain.handle(IPC.paneonImportPreview, () => previewPaneonImport(paneonUserDataDir(), app.getPath('userData')))
-  ipcMain.handle(IPC.paneonImportQueue, () => queuePaneonImport(paneonUserDataDir(), app.getPath('userData')))
   ipcMain.handle(IPC.checkFolder, (_event, path: string) => checkFolder(path))
   ipcMain.handle(IPC.gitBranch, (_event, folder: string) => currentBranch(folder))
+  ipcMain.handle(IPC.projectGroups, async () => Object.fromEntries(await projectWorktreeGroups(settings.get().projects)))
   ipcMain.handle(IPC.sessionsList, () => readSessions())
   ipcMain.handle(IPC.codexList, () => readCodexSessions())
   ipcMain.handle(IPC.geminiList, () => readGeminiSessions())
@@ -272,6 +270,14 @@ export function registerIpc(
   ipcMain.handle(IPC.filesLog, async (_event, folder: unknown, path: unknown) => {
     const root = await known(folder)
     return root ? fileLog(root, path) : refused
+  })
+  ipcMain.handle(IPC.filesCommitDetails, async (_event, folder: unknown, hash: unknown) => {
+    const root = await known(folder)
+    return root ? fileCommitDetails(root, hash) : refused
+  })
+  ipcMain.handle(IPC.filesCommitFile, async (_event, folder: unknown, hash: unknown, path: unknown, full: unknown) => {
+    const root = await known(folder)
+    return root ? fileCommitFile(root, hash, path, full === true) : refused
   })
   const previews = new PreviewServer(known)
   registerPreviewProtocol(previews)

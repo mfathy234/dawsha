@@ -1,11 +1,11 @@
-import { AGENT_NAMES, agentOf } from '../../shared/agents'
+import { AGENT_NAMES, agentLabel, agentOf } from '../../shared/agents'
 import { SIDEBAR_FILTER_EVENT, hideEmptyProjects, isFolded, monogram, projectSummary, railBadge, SIDEBAR_SORTS, sessionAge, sessionStatusLine, sidebarZones, sortProjects, waitingOnYou, type SidebarZones, type SidebarSort } from '../../shared/sidebarModel'
 import { canDropProject, canMoveProject, orderProjects, seedOrder } from '../../shared/projectOrder'
 import { projectStatus, projectStatusLabel } from '../../shared/projectStatus'
 import { filterSidebar, type SidebarEntry } from '../../shared/sidebarFilter'
 import { projectTodayLabel, projectTodayShort, projectTodayTooltip } from '../../shared/sessionCost'
 import type { AgentKind, KeptSession, Project } from '../../shared/types'
-import { addProject, clearClosedSessions, closePane, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeKeptSession, removeProject, renameKeptSession, renameSession, reopenKeptSessions, reorderProjectFromDisplay, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagKeptSession, tagSession, toggleClosedSessions, toggleClosedShowAll, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
+import { addProject, clearClosedSessions, closePane, locateProject, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeKeptSession, removeProject, renameKeptSession, renameSession, reopenKeptSessions, reorderProjectFromDisplay, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagKeptSession, tagSession, toggleClosedSessions, toggleClosedShowAll, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
 import { CLOSED_PREVIEW_COUNT, closedAgoShort, closedDayLabel, closedUsageShort, closedUsageTooltip, groupClosedByDay, reopenGroupLabel } from '../../shared/keptSessions'
 import { autoTag, autoTagSource, cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
 import type { PaneView } from '../derive'
@@ -17,7 +17,7 @@ import { crewSignature, identityMark } from './crewAvatar'
 import { openFolderInFiles } from '../files/filesActions'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
-import { tagMenuItems, tagTooltip } from './sessionTagUi'
+import { sidebarTagWord, tagMenuItems, tagTooltip } from './sessionTagUi'
 import { confirmDialog, promptDialog } from './dialogs'
 import { lastOutputAt } from '../ptyActivity'
 import './sidebar.css'
@@ -39,6 +39,9 @@ const NAV_SELECTOR = '.proj-toggle, .sess-row, .closed-toggle, .closed-more'
 type ProjectZone = 'active' | 'pinned' | 'quiet' | 'all'
 
 const viewState =(view: PaneView) => sessionState({ status: view.status, attention: view.attention })
+
+// A session with no name yet shows its agent and number, not the project name its siblings share.
+const sessionLabel = (view: PaneView): string => (view.named ? view.title : `${view.agent === 'shell' ? 'Terminal' : agentLabel(view.agent)} session ${view.index + 1}`)
 
 export class SidebarComponent {
   readonly el = h('aside', { class: 'sidebar', 'aria-label': 'Projects' })
@@ -237,7 +240,7 @@ export class SidebarComponent {
       state.view,
       focusedView?.pane.projectId,
       state.focusedId,
-      projects.map((p) => [p.id, p.name, p.defaultAgent, p.pinned === true, state.branches[p.folder] ?? null]),
+      projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent, p.pinned === true, state.branches[p.folder] ?? null, state.missingProjects.includes(p.id)]),
       state.settings.foldedProjects,
       state.settings.sidebarSort,
       state.settings.sidebarHideEmpty,
@@ -447,15 +450,25 @@ export class SidebarComponent {
     this.render(this.lastState, this.lastViews)
   }
 
-  private projectRows(state: AppState, { project, views: own, closed }: SidebarEntry<PaneView>, filtering: boolean, zone: ProjectZone): HTMLElement[] {
+  // A project whose folder is gone keeps its row and place in the list, with Locate to point it at the moved folder.
+  private projectRows(state: AppState, entry: SidebarEntry<PaneView>, filtering: boolean, zone: ProjectZone): HTMLElement[] {
+    const rows = this.projectRowsBody(state, entry, filtering, zone)
+    if (!state.missingProjects.includes(entry.project.id)) return rows
+    const project = entry.project
+    rows[0].classList.add('proj-missing')
+    const locate = h('button', { class: 'btn small', type: 'button', 'aria-label': `Locate the folder for ${project.name}`, onClick: () => void locateProject(project.id) }, 'Locate…')
+    return [rows[0], h('div', { class: 'proj-missing-line' }, icon(ICONS.folder), h('span', { class: 'proj-missing-text' }, 'Folder not found'), locate), ...rows.slice(1)]
+  }
+
+  private projectRowsBody(state: AppState, { project, views: own, closed }: SidebarEntry<PaneView>, filtering: boolean, zone: ProjectZone): HTMLElement[] {
     const quiet = zone === 'quiet'
     const compact = quiet && !this.quietOpen.has(project.id)
     const collapsed = quiet ? compact : isFolded(state.settings.foldedProjects, project.id, filtering)
     const summary = projectSummary(own.map(viewState))
-    const branch = state.branches[project.folder] ?? null
+    const branch = state.branches[project.folder]?.trim() || null
     const today = this.todayTotal(state, project.id)
     const branchEl = branch ? h('span', { class: 'proj-branch', dir: 'auto', title: `Branch ${branch}` }, branch) : null
-    const sub = branch || today.length > 0 ? h('span', { class: 'proj-sub' }, branchEl, ...today.map((el) => (branch ? this.withDot(el) : el))) : null
+    const sub = branch || today.length > 0 ? h('span', { class: 'proj-sub' }, branchEl, ...today) : null
     const toggle = h(
       'button',
       {
@@ -541,7 +554,7 @@ export class SidebarComponent {
     const sessionStateName = viewState(view)
     const status = sessionStatusLine(sessionStateName, view.info.ops?.running.length ?? 0)
     const age = sessionAge(viewActivity(view), state.now)
-    const tip = [view.title, status, view.tag ? tagTooltip(view.tag, view.tagAuto) : ''].filter(Boolean).join('\n')
+    const tip = [sessionLabel(view), status, view.tag ? tagTooltip(view.tag, view.tagAuto) : ''].filter(Boolean).join('\n')
     const main = this.edit?.key === key
       ? this.renameField(key, view.title, view.agent, selected)
       : h(
@@ -556,10 +569,12 @@ export class SidebarComponent {
           },
           identityMark(view),
           h('span', { class: 'sess-body' },
-            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title)),
+            h('span', { class: 'sess-line' },
+              h('span', { class: 'sess-name', dir: 'auto' }, sessionLabel(view)),
+              h('span', { class: 'sess-age', 'aria-label': `active ${age}` }, age)),
             h('span', { class: 'sess-meta' },
               h('span', { class: `sess-state state-${sessionStateName}` }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, status)),
-              h('span', { class: 'sess-age', 'aria-label': `active ${age}` }, age)))
+              view.tag ? sidebarTagWord(view.tag, view.tagAuto) : null))
         )
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}` },
       main,
@@ -633,10 +648,13 @@ export class SidebarComponent {
       : h('button', { class: 'sess-row', type: 'button', title: [`Resume ${session.title} (closed ${closedOn})`, closedUsageTooltip(usage), tagLine].filter(Boolean).join('\n'), 'data-nav': key, 'data-agent': session.agent, 'data-session-id': session.sessionId, onClick: click },
           agentMark(session.agent),
           h('span', { class: 'sess-body' },
-            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, session.title)),
+            h('span', { class: 'sess-line' },
+              h('span', { class: 'sess-name', dir: 'auto' }, session.title),
+              h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now))),
             h('span', { class: 'sess-meta' },
-              h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now)),
-              used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))
+              h('span', { class: 'sess-closed-word' }, 'Closed'),
+              closedTag ? sidebarTagWord(closedTag, closedSource) : null,
+              used ?h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))
     return h('div', { class: 'kept-session-row closed' },
       main,
       this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag), 'Remove', () => void this.confirmRemoveClosed(session.agent, session.sessionId)),
@@ -705,26 +723,22 @@ export class SidebarComponent {
           {
             class: `sess-row needs-row${selected ? ' selected' : ''}`,
             type: 'button',
-            title: project ? `${view.title}\n${project.name} · Needs you` : view.title,
-            'aria-label': `${view.title}${project ? ` in ${project.name}` : ''}, needs you`,
+            title: project ? `${sessionLabel(view)}\n${project.name} · Needs you` : sessionLabel(view),
+            'aria-label': `${sessionLabel(view)}${project ? ` in ${project.name}` : ''}, needs you`,
             'data-nav': `n:${view.pane.id}`,
             onClick: () => focusPane(view.pane.id)
           },
           identityMark(view),
           h('span', { class: 'sess-body' },
-            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, view.title), h('span', { class: 'sess-age' }, age)),
+            h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, sessionLabel(view)), h('span', { class: 'sess-age' }, age)),
             h('span', { class: 'sess-meta' },
               h('span', { class: 'sess-state state-needs' }, stateIcon('needs'), h('span', { class: 'sess-state-word' }, 'Needs you')),
               project ? h('span', { class: 'needs-project' }, project.name) : null))
         )
       )
     })
-    return [h('section', { class: 'needs-group', 'aria-label': 'Waiting on you' }, h('div', { class: 'side-sec needs' }, h('span', { class: 'side-sec-label' }, 'Waiting on you'), h('span', { class: 'side-sec-count' }, String(waiting.length))), ...rows)]
-  }
-
-  private withDot(el: HTMLElement): HTMLElement {
-    el.prepend('· ')
-    return el
+    const hint = h('kbd', { class: 'kbd sidebar-kbd', title: 'Jump to the next session that needs you' }, 'Ctrl Shift J')
+    return [h('section', { class: 'needs-group', 'aria-label': 'Waiting on you' }, h('div', { class: 'side-sec needs' }, h('span', { class: 'side-sec-label' }, 'Waiting on you'), h('span', { class: 'side-sec-count' }, String(waiting.length)), hint), ...rows)]
   }
 
   private todayTotal(state: AppState, projectId: string): HTMLElement[] {
@@ -782,7 +796,7 @@ export class SidebarComponent {
         { class: 'menu-item fly-session', type: 'button', role: 'menuitem', title: `${view.title}\n${status}`, onClick: () => { this.popup.close(); focusPane(view.pane.id) } },
         identityMark(view),
         h('span', { class: 'fly-body' },
-          h('span', { class: 'fly-title', dir: 'auto' }, view.title),
+          h('span', { class: 'fly-title', dir: 'auto' }, sessionLabel(view)),
           h('span', { class: `sess-state state-${name}` }, stateIcon(name), h('span', { class: 'sess-state-word' }, status)))
       )
     })

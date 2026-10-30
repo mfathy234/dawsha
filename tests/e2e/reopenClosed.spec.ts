@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp } from './helpers'
+import { closeApp, closePaneViaActions, createSandbox, launchApp, openTerminalPicker } from './helpers'
 
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 const CLAUDE_ID = '11111111-2222-4333-8444-555555555555'
@@ -28,7 +28,7 @@ test('closing an agent session offers Reopen for a few seconds and brings it bac
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.[0]?.sessionId).toBe(CLAUDE_ID)
     const secondId = await page.locator('.pane').nth(1).getAttribute('data-pane-id')
 
-    await page.locator('.pane').first().getByRole('button', { name: 'Close pane' }).click()
+    await closePaneViaActions(page.locator('.pane').first())
     await expect(page.locator('.pane')).toHaveCount(1)
     const toast = page.locator('.toast')
     await expect(toast).toHaveText('Closed SmokeReopen')
@@ -41,7 +41,7 @@ test('closing an agent session offers Reopen for a few seconds and brings it bac
     await expect(page.locator('.pane').first().locator('.chip-resumed')).toBeVisible()
 
     // A shell terminal has no session to come back to: closing it shows no Reopen.
-    await page.locator('.pane').nth(1).getByRole('button', { name: /^New terminal in/ }).first().click()
+    await openTerminalPicker(page.locator('.pane').nth(1))
     await page.getByRole('menuitem', { name: 'Shell' }).click()
     await expect(page.locator('.pane').nth(1).locator('.tabs [role="tab"]')).toHaveCount(2)
     await page.locator('.pane').nth(1).getByRole('button', { name: /^Close terminal/ }).click()

@@ -49,20 +49,14 @@ test('focus view strip keeps long session names on one line and closes a session
     await expect(tabs.first().locator('.strip-name')).toHaveText(NAMES[0])
     expect(await tabs.first().locator('.strip-label').evaluate((el) => getComputedStyle(el).textTransform)).toBe('none')
 
-    // Small window: the header title and the strip stay on one line, and the X sits right after the name.
+    // Small window: the header title and the strip stay on one line.
     for (const [width, height] of [[960, 600], [1280, 720]]) {
       await app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(size[0], size[1]), [width, height])
       // The window will not go below its 960px outer minimum, which is a few pixels of frame more inside.
       await expect.poll(async () => Math.abs((await page.evaluate(() => window.innerWidth)) - width)).toBeLessThanOrEqual(20)
       const title = page.locator('.pane.maximized .pane-title')
-      const close = page.locator('.pane.maximized .close-pane')
       const box = (await title.boundingBox())!
-      const closeBox = (await close.boundingBox())!
-      const paneBox = (await page.locator('.pane.maximized').boundingBox())!
       expect(box.height).toBeLessThanOrEqual(24)
-      expect(closeBox.x).toBeGreaterThanOrEqual(box.x + box.width - 1)
-      expect(closeBox.x - (box.x + box.width)).toBeLessThanOrEqual(40)
-      expect(closeBox.x + closeBox.width).toBeLessThanOrEqual(paneBox.x + paneBox.width)
       await expect(title).toHaveAttribute('title', NAMES[NAMES.length - 1])
       expect((await strip.boundingBox())!.height).toBeLessThanOrEqual(24)
       await page.screenshot({ path: join(SCREENS, `focus-full-mode-${width}.png`) })

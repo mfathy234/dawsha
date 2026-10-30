@@ -1,3 +1,4 @@
+import type { GridStyle } from '../shared/gridStyle'
 import type { SessionsLayout } from '../shared/board'
 import { api } from './api'
 import { toast } from './components/toast'
@@ -22,4 +23,11 @@ export const boardShowing = (state = store.state): boolean => state.view === 'gr
 /** Actions that open a pane in the grid (focus, maximize, timeline) leave the board first. */
 export function leaveBoard(): void {
   if (store.state.settings.sessionsLayout === 'board') setSessionsLayout('grid')
+}
+
+/** Calm focus or mission control. Used by the Layouts popover, the palette and the Settings page. */
+export function setGridStyle(gridStyle: GridStyle): void {
+  if (store.state.settings.gridStyle === gridStyle) return
+  store.set((state) => ({ ...state, settings: { ...state.settings, gridStyle } }))
+  api.updateSettings({ gridStyle }).catch((error: unknown) => toast((error as Error).message || 'Could not save settings.'))
 }

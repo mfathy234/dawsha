@@ -62,10 +62,12 @@
   opacity: 1;
 }
 
-.kept-session-row:hover .sess-row,
-.kept-session-row:focus-within .sess-row,
-.kept-session-row:has(.sess-more[aria-expanded='true']) .sess-row {
-  padding-inline-end: 64px;
+/* The hover actions overlay the row's right end: the text fades under them and never re-wraps, so the row height holds. */
+.kept-session-row:hover .sess-body,
+.kept-session-row:focus-within .sess-body,
+.kept-session-row:has(.sess-more[aria-expanded='true']) .sess-body {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 64px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 64px), transparent);
 }
 
 .sess-row.editing {
@@ -191,8 +193,6 @@
 .sess-age { flex: none; margin-inline-start: auto; color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
 
 .kept-session-row.waiting-row { padding-inline-end: 0; }
-.kept-session-row.waiting-row:hover .sess-row,
-.kept-session-row.waiting-row:focus-within .sess-row { padding-inline-end: var(--s-2); }
 .needs-row { width: 100%; }
 .waiting-row .needs-project { max-width: 55%; }
 
@@ -300,12 +300,12 @@ aside.sidebar.rail { width: 56px; }
   color: var(--text);
   font: inherit;
   font-size: var(--fs-ui);
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 .rail-btn.rail-mono:hover { background: var(--hover); }
 .rail-btn.rail-mono.selected { background: color-mix(in srgb, var(--accent) 22%, var(--raised)); }
-.rail-btn .rail-badge { top: -4px; right: -4px; color: var(--muted); font-size: var(--fs-status); font-weight: 700; }
+.rail-btn .rail-badge { top: -4px; right: -4px; color: var(--muted); font-size: var(--fs-status); font-weight: 600; }
 .rail-btn .rail-badge.needs { color: var(--state-needs); }
 .rail-spacer { flex: 1; }
 
@@ -341,7 +341,8 @@ aside.sidebar.rail { width: 56px; }
 .side-sec.quiet-sec { margin-top: var(--s-3); }
 
 .proj-today { white-space: nowrap; }
-.proj-sub .proj-branch { flex: 0 1 auto; }
+.proj-sub .proj-branch { flex: 0 1 auto; max-width: 60%; }
+.proj-branch + .proj-today::before { content: '·'; margin-inline-end: var(--s-1); }
 
 /* Quiet projects: one line, bold name then the branch. */
 .proj-list .proj-row.quiet-row { min-height: 30px; margin-top: 0; margin-inline: var(--s-1); }
@@ -364,7 +365,14 @@ aside.sidebar.rail { width: 56px; }
 .kept-session-row .sess-row { align-items: flex-start; }
 .kept-session-row .sess-row .agent-mark { margin-top: 2px; }
 .kept-session-row:not(.waiting-row) .sess-meta .sess-age { flex: none; margin-inline-start: 0; }
-.kept-session-row .sess-state + .sess-age::before { content: '·'; margin-inline-end: var(--s-1); }
+.kept-session-row .sess-state + .sess-age::before,
+.kept-session-row .sess-tag + .sess-age::before { content: '·'; margin-inline-end: var(--s-1); }
+
+/* The session's tag as a small word in its tag colour; the colour setting mutes it. */
+.kept-session-row .sess-tag { flex: none; color: var(--tag); white-space: nowrap; }
+.kept-session-row .sess-tag::before { content: '·'; margin-inline-end: var(--s-1); color: var(--muted); }
+:root[data-tag-colors='off'] .kept-session-row .sess-tag { color: var(--muted); }
+.kept-session-row .sess-tag + .sess-cost::before { content: '·'; margin-inline-end: var(--s-1); }
 
 /* "36 closed": a small, faint row at the bottom of its project. */
 .closed-head { margin-top: 2px; }
@@ -377,3 +385,193 @@ aside.sidebar.rail { width: 56px; }
 }
 .closed-toggle svg { width: 11px; height: 11px; }
 .closed-toggle:hover { background: var(--hover); color: var(--muted); }
+
+/* Dawsha 1.8 sidebar (mockup Direction A, project tree). The resize handle sits above the sessions toolbar (z-sticky), so its drag target is never covered. */
+.sidebar {
+  width: var(--sidebar-width, 248px);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+  background: var(--chrome);
+  box-shadow: 1px 0 0 var(--seam);
+  overflow: hidden;
+}
+
+.sidebar-resize-handle {
+  position: relative;
+  z-index: var(--z-panel);
+  width: 5px;
+  flex: none;
+  margin-left: -2px;
+  margin-right: -3px;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.sidebar-resize-handle::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 1px;
+  background: transparent;
+  content: '';
+}
+
+.sidebar-resize-handle:hover::after,
+.sidebar-resize-handle:focus-visible::after,
+.sidebar-resize-handle.dragging::after {
+  background: var(--accent);
+}
+
+.sidebar-resize-handle:focus-visible::after {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.needs-group {
+  margin: 0 var(--s-2) var(--s-2);
+  padding: var(--s-2);
+  border-radius: var(--r-card);
+  background: color-mix(in srgb, var(--needs) 12%, var(--chrome));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--needs) 40%, transparent);
+}
+
+.needs-group .side-sec {
+  padding: 0 var(--s-1) var(--s-1);
+  color: var(--needs-ink);
+  font-weight: 600;
+}
+
+.needs-group .side-sec.needs {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.needs-group .side-sec-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.needs-group .side-sec-count {
+  flex: none;
+  margin-inline-start: var(--s-2);
+}
+
+.needs-group .sidebar-kbd {
+  flex: none;
+  margin-inline-start: auto;
+  padding-inline: 4px;
+  border-color: color-mix(in srgb, var(--needs) 40%, transparent);
+  background: transparent;
+  color: var(--needs-ink);
+}
+
+@container (max-width: 300px) {
+  .needs-group .sidebar-kbd { display: none; }
+}
+
+.proj-row.proj-missing {
+  color: var(--muted);
+}
+
+.proj-row.proj-missing .proj-name {
+  color: var(--text-2);
+}
+
+.proj-missing-line {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-2) var(--s-2) var(--s-6);
+  color: var(--danger);
+  font-size: var(--fs-1);
+  line-height: var(--lh-1);
+}
+
+.proj-missing-line .icon {
+  flex: none;
+}
+
+.proj-missing-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 1.8.0 review: the sidebar follows mockup direction A, a flat project tree.
+   Projects are plain headers (name, branch beside it, count or needs mark at the right), with no card behind them.
+   Sessions sit under their project: the agent mark as a small tile, the title with its time at the right,
+   and one quiet line under it with the state and tag. */
+.proj-group.card {
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.proj-group.card .proj-row { margin: 0; padding-top: 0; }
+.proj-group.card .kept-session-row { margin-inline: 0; }
+.proj-group { margin-bottom: var(--sp-2); }
+
+.proj-list .proj-row { min-height: 30px; padding-inline: var(--sp-2); border-radius: var(--r-1); }
+.proj-list .proj-text { flex-direction: row; align-items: baseline; gap: var(--sp-2); min-width: 0; }
+.proj-list .proj-text .proj-title { flex: 0 1 auto; min-width: 0; }
+.proj-list .proj-text .proj-name { font-size: var(--fs-2); font-weight: var(--w-semi); color: var(--text); }
+.proj-list .proj-sub { flex: 1 1 auto; min-width: 0; margin: 0; }
+.proj-list .proj-sub .proj-branch {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--text-3);
+}
+/* Token totals live in Usage; the tree stays about the work. */
+.proj-list .proj-today,
+.proj-list .proj-branch + .proj-today::before { display: none; }
+.proj-list .proj-count { font-size: var(--fs-1); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.proj-list .proj-count.tone-needs { color: var(--state-needs); font-weight: var(--w-semi); }
+
+/* Session rows: indented under the project header. */
+.proj-group .kept-session-row { margin-inline-start: var(--sp-3); }
+.kept-session-row .sess-row { align-items: flex-start; gap: var(--sp-2); padding: 6px var(--sp-2); border-radius: var(--r-1); }
+.kept-session-row .sess-row:hover { background: var(--hover); }
+.kept-session-row.selected .sess-row,
+.kept-session-row .sess-row.selected { background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); }
+.kept-session-row .sess-row > .agent-mark {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.kept-session-row .sess-row > .crew-id { flex: none; margin-top: 1px; }
+.kept-session-row .sess-row > .agent-mark svg { width: 14px; height: 14px; }
+.kept-session-row .sess-line { display: flex; align-items: baseline; gap: var(--sp-2); min-width: 0; }
+.kept-session-row .sess-line .sess-name { flex: 1 1 auto; min-width: 0; font-size: var(--fs-2); font-weight: var(--w-medium); color: var(--text); }
+.kept-session-row .sess-line .sess-age,
+.kept-session-row .sess-line .sess-ago { flex: none; font-size: var(--fs-1); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.kept-session-row .sess-meta { font-size: var(--fs-1); color: var(--text-3); }
+.kept-session-row .sess-meta .sess-state.state-needs { color: var(--state-needs); }
+.kept-session-row.closed .sess-row { opacity: 1; }
+.kept-session-row.closed .sess-name { color: var(--text-2); font-weight: var(--w-regular); }
+.sess-closed-word { color: var(--text-3); }
+
+/* The closed list toggle reads as a quiet line under the sessions, aligned with them. */
+.proj-group .closed-toggle { margin-inline-start: var(--sp-3); padding-inline-start: var(--sp-2); font-size: var(--fs-1); color: var(--text-3); }
+
+/* Zone labels ("Active", "No sessions") become small section labels like the mockup's group spacing. */
+.side-sec { padding-inline: var(--sp-3); font-size: var(--fs-1); color: var(--text-3); }
+
+/* The project name keeps its room; the branch takes what is left and truncates first. */
+.proj-list .proj-text .proj-title { flex: 0 1 auto; max-width: 70%; }
+.proj-list .proj-sub { flex: 1 1 0; }
+/* Sessions line up under the project name, past the chevron. */
+.proj-group .kept-session-row { margin-inline-start: 22px; }
+.proj-group .closed-toggle { margin-inline-start: 22px; }
+/* Session rows sit directly in the list, not inside the group element, so indent them there. */
+.proj-list .kept-session-row:not(.waiting-row) { margin-inline-start: 22px; }
+.proj-list .closed-toggle { margin-inline-start: 22px; }

@@ -4,6 +4,8 @@ import { toggleLayouts } from '../actions'
 import { deleteLayout, openLayoutFromUi, renameLayout, saveCurrentLayout } from '../layoutActions'
 import { h, leave } from '../dom'
 import { projectById, type AppState } from '../state'
+import { setGridStyle } from '../sessionsLayout'
+import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
 import { agentMark } from './agentMark'
 import { popupDismissButton } from './popupDismiss'
 
@@ -58,7 +60,7 @@ export class LayoutsPopoverComponent {
   private render(state: AppState): void {
     if (!this.root) return
     const { layouts } = state.settings
-    const signature = JSON.stringify([layouts, state.settings.projects.map((p) => [p.id, p.name]), state.panes.length])
+    const signature = JSON.stringify([layouts, state.settings.projects.map((p) => [p.id, p.name]), state.panes.length, state.settings.gridStyle])
     if (signature === this.signature) return
     this.signature = signature
     const hadFocus = this.root.contains(document.activeElement)
@@ -71,7 +73,7 @@ export class LayoutsPopoverComponent {
     const head = h(
       'div',
       { class: 'layouts-head' },
-      h('h2', { class: 'popover-title' }, 'Saved layouts'),
+      h('h2', { class: 'popover-title' }, 'Layouts'),
       h('span', { class: 'muted' }, `${layouts.length} saved`),
       popupDismissButton(() => {
         toggleLayouts(false)
@@ -105,7 +107,34 @@ export class LayoutsPopoverComponent {
       save,
       h('span', { class: 'muted' }, 'From a terminal: ', h('code', {}, `dawsha open ${example}`))
     )
-    return [head, list, foot]
+    const savedLabel = h('span', { class: 'layouts-section-label' }, 'Saved layouts')
+    return [head, this.gridStyleRow(state.settings.gridStyle), h('div', { class: 'layouts-divider' }), savedLabel, list, foot]
+  }
+
+  private gridStyleRow(current: GridStyle): HTMLElement {
+    const hints: Record<GridStyle, string> = { focus: 'One large session, the rest beside it', tiles: 'Every session the same size' }
+    // A tiny drawing of the layout: three cells, the first one large in Calm focus.
+    const sketch = (style: GridStyle): HTMLElement =>
+      h('span', { class: `layouts-sketch ${style}`, 'aria-hidden': 'true' }, h('i'), h('i'), h('i'))
+    const option = (style: GridStyle): HTMLElement =>
+      h(
+        'button',
+        {
+          class: 'layouts-grid-option',
+          type: 'button',
+          'aria-label': GRID_STYLE_LABELS[style],
+          'aria-pressed': String(current === style),
+          onClick: () => setGridStyle(style)
+        },
+        sketch(style),
+        h('span', { class: 'layouts-grid-text' }, h('strong', {}, GRID_STYLE_LABELS[style]), h('span', {}, hints[style]))
+      )
+    return h(
+      'div',
+      { class: 'layouts-grid-style' },
+      h('span', { class: 'layouts-section-label' }, 'Sessions grid'),
+      h('div', { class: 'layouts-segment', role: 'group', 'aria-label': 'Sessions grid' }, option('focus'), option('tiles'))
+    )
   }
 
   private row(state: AppState, layout: SavedLayout): HTMLElement {

@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { APP_VERSION, bufferText, closeApp, createSandbox, feedTerminal, launchApp, selectAllText } from './helpers'
+import { APP_VERSION, bufferText, closeApp, createSandbox, feedTerminal, launchApp, openTerminalPicker, selectAllText } from './helpers'
 
 const ARABIC = 'مرحبا بالعالم'
 const SCREENS = resolve(__dirname, '../../test-results/screens')
@@ -10,7 +10,7 @@ test('Arabic rows are drawn as shaped right-to-left text while the buffer stays 
   const { app, page } = await launchApp(createSandbox())
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
-    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await openTerminalPicker(page.locator('.pane').first())
     await page.getByRole('menuitem', { name: 'Shell' }).click()
     await expect(page.locator('.tabs [role="tab"]')).toHaveCount(2)
     await expect(page.locator('.tabs [role="tab"]').nth(1)).toHaveAttribute('aria-selected', 'true')

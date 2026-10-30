@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, realpathSync } from 'node:fs'
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import type { BulkSkillExport, SkillEntry } from '../shared/skills'
 
@@ -17,6 +17,7 @@ interface Root {
   kind: SkillEntry['kind']
   scope: SkillEntry['scope']
   project?: string
+  followLinks?: boolean
 }
 
 function pluginRoots(home: string, agent: SkillEntry['agent'], kind: SkillEntry['kind'] = 'skill'): Root[] {
@@ -41,10 +42,10 @@ function pluginRoots(home: string, agent: SkillEntry['agent'], kind: SkillEntry[
 
 function roots(locations: SkillLocations): Root[] {
   const user: Root[] = [
-    { path: join(locations.shared, 'skills'), agent: 'shared', kind: 'skill', scope: 'user' },
-    { path: join(locations.claude, 'skills'), agent: 'claude', kind: 'skill', scope: 'user' },
-    { path: join(locations.codex, 'skills'), agent: 'codex', kind: 'skill', scope: 'user' },
-    { path: join(locations.gemini, 'skills'), agent: 'gemini', kind: 'skill', scope: 'user' }
+    { path: join(locations.shared, 'skills'), agent: 'shared', kind: 'skill', scope: 'user', followLinks: true },
+    { path: join(locations.claude, 'skills'), agent: 'claude', kind: 'skill', scope: 'user', followLinks: true },
+    { path: join(locations.codex, 'skills'), agent: 'codex', kind: 'skill', scope: 'user', followLinks: true },
+    { path: join(locations.gemini, 'skills'), agent: 'gemini', kind: 'skill', scope: 'user', followLinks: true }
   ]
   const projects = locations.projects.slice(0, 100).flatMap((project): Root[] =>
     ([['.agents', 'shared'], ['.claude', 'claude'], ['.codex', 'codex'], ['.gemini', 'gemini']] as const).map(([folder, agent]) => ({
@@ -70,8 +71,41 @@ function isDirectory(path: string): boolean {
   try { return lstatSync(path).isDirectory() } catch { return false }
 }
 
+function isDirectoryFollowingLinks(path: string): boolean {
+  try { return statSync(path).isDirectory() } catch { return false }
+}
+
 function isFile(path: string): boolean {
   try { return lstatSync(path).isFile() } catch { return false }
+}
+
+// A user skill root may hold junctions or symlinks into a sync folder. Only such a direct child is followed,
+// and only when its real target holds a SKILL.md; nothing below it is followed through a link.
+function skillFolder(path: string, followLinks: boolean): { linked: boolean; target: string } | null {
+  try {
+    const info = lstatSync(path)
+    const linked = info.isSymbolicLink()
+    if (linked ? !followLinks : !info.isDirectory()) return null
+    const target = realpathSync(path)
+    return isFile(join(target, 'SKILL.md')) ? { linked, target } : null
+  } catch {
+    return null
+  }
+}
+
+// The one-line description from SKILL.md frontmatter, or the first prose line when there is no frontmatter.
+export function descriptionOf(path: string): string | undefined {
+  try {
+    const file = isFile(path) ? path : join(path, 'SKILL.md')
+    const text = readFileSync(file, 'utf8').slice(0, 4096)
+    const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
+    const keyed = front ? /^description:\s*(.+)$/m.exec(front[1]) : null
+    const line = keyed ? keyed[1] : text.split(/\r?\n/).find((item) => item.trim() !== '' && !item.startsWith('#') && !item.startsWith('---'))
+    const value = line?.trim().replace(/^["']|["']$/g, '').slice(0, 240)
+    return value ? value : undefined
+  } catch {
+    return undefined
+  }
 }
 
 function idFor(path: string): string {
@@ -82,7 +116,7 @@ export function listSkills(locations: SkillLocations): SkillEntry[] {
   const found: SkillEntry[] = []
   const seen = new Set<string>()
   for (const root of roots(locations)) {
-    if (!isDirectory(root.path)) continue
+    if (!(root.followLinks ? isDirectoryFollowingLinks(root.path) : isDirectory(root.path))) continue
     let entries: string[]
     try { entries = readdirSync(root.path).slice(0, 500) } catch { continue }
     const agentNames = new Set<string>()
@@ -91,17 +125,19 @@ export function listSkills(locations: SkillLocations): SkillEntry[] {
     }
     for (const name of entries) {
       const path = join(root.path, name)
-      if (root.kind === 'skill' && (!isDirectory(path) || !existsSync(join(path, 'SKILL.md')))) continue
       if (root.kind === 'agent' && (!/\.(md|toml)$/i.test(name) || !isFile(path))) continue
+      const folder = root.kind === 'skill' ? skillFolder(path, root.followLinks === true) : null
+      if (root.kind === 'skill' && !folder) continue
       try {
-        if (root.kind === 'skill' && !lstatSync(join(path, 'SKILL.md')).isFile()) continue
         const displayName = root.kind === 'agent' ? name.replace(/\.(md|toml)$/i, '') : name
         if (root.kind === 'agent' && agentNames.has(displayName.toLowerCase())) continue
-        const canonical = realpathSync(path).toLowerCase()
+        const canonical = (folder ? folder.target : realpathSync(path)).toLowerCase()
         if (seen.has(canonical)) continue
         seen.add(canonical)
         if (root.kind === 'agent') agentNames.add(displayName.toLowerCase())
-        found.push({ id: idFor(canonical), name: displayName, kind: root.kind, agent: root.agent, scope: root.scope, path, project: root.project })
+        const link = folder?.linked ? { linked: true, linkTarget: folder.target } : {}
+        const description = descriptionOf(path)
+        found.push({ id: idFor(canonical), name: displayName, kind: root.kind, agent: root.agent, scope: root.scope, path, project: root.project, ...(description ? { description } : {}), ...link })
       } catch { /* Unreadable skill; leave it out of the inventory. */ }
     }
   }

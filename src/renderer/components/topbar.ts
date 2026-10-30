@@ -9,7 +9,8 @@ import {
   toggleLayouts,
   toggleThemePicker,
   toggleUpdatePopover,
-  zoomAll
+  zoomAll,
+  openPalette
 } from '../actions'
 import { pillLabel, showUpdatePill } from '../../shared/updates'
 import { AGENTS, AGENT_NAMES, agentLabel } from '../../shared/agents'
@@ -20,7 +21,7 @@ import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
 import type { PaneView } from '../derive'
 import { countSessionStates, sessionState } from '../../shared/sessionState'
-import { MORE_VIEWS, formatResetIn, limitRowLabel, limitText, moreLabel, urgentWindow, type MoreView } from '../../shared/topbarSummary'
+import { MORE_VIEWS, formatResetIn, limitRowLabel, limitText, urgentWindow, type MoreView } from '../../shared/topbarSummary'
 import { api } from '../api'
 import type { AgentAccount, AgentAccounts } from '../../shared/agentAccounts'
 import { allAgentLimits, dataAge, meterLimits, recordLimits, type AgentLimitStore, type AgentLimits } from '../../shared/agentLimits'
@@ -57,29 +58,26 @@ export class TopBarComponent {
       class: 'split-main',
       type: 'button',
       id: 'new-session',
-      'aria-haspopup': 'listbox',
+      'aria-haspopup': 'menu',
       'aria-label': `New session, ${formatShortcut(bind('Ctrl+N'))}`,
-      onClick: () => openQuickPick()
+      'aria-expanded': 'false',
+      onClick: (event: Event) => {
+        if ((event.target as Element).closest('#new-session-agent')) this.toggleAgentMenu()
+        else openQuickPick()
+      }
     },
     h('span', { class: 'new-session-icon', 'aria-hidden': 'true' }, icon(ICONS.plus)),
     h('span', { class: 'new-session-label' }, 'New session'),
-    h('span', { class: 'new-session-kbd', 'aria-hidden': 'true' }, formatShortcut(bind('Ctrl+N')))
+    h('span', { class: 'new-session-kbd', 'aria-hidden': 'true' }, formatShortcut(bind('Ctrl+N'))),
+    h('span', { class: 'split-chevron', id: 'new-session-agent', 'aria-hidden': 'true', title: 'Choose agent' }, icon(ICONS.chevronDown))
   )
-  private readonly chevron = h(
-    'button',
-    {
-      class: 'split-chevron',
-      type: 'button',
-      id: 'new-session-agent',
-      'aria-label': 'Choose agent',
-      'aria-haspopup': 'menu',
-      'aria-expanded': 'false',
-      onClick: () => this.toggleAgentMenu()
-    },
-    icon(ICONS.chevronDown)
-  )
+  private readonly chevron = this.newSession.querySelector<HTMLElement>('#new-session-agent')!
   private agentMenu: HTMLElement | null = null
   private readonly bell = new NotificationBell()
+  private readonly search = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'search-button', 'aria-label': 'Search', title: 'Search', onClick: () => openPalette() },
+    h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.search)),
+    h('span', { class: 'utility-label' }, 'Search')
+  )
   readonly themeButton = h(
     'button',
     { class: 'btn ghost topbar-tool', type: 'button', id: 'theme-button', 'aria-label': 'Theme', title: 'Theme', 'aria-haspopup': 'dialog', onClick: () => toggleThemePicker() },
@@ -91,6 +89,8 @@ export class TopBarComponent {
   private readonly crewStrip = h('div', { class: 'crew-strip', id: 'crew-strip', role: 'group', 'aria-label': 'Who is on a job', hidden: true })
   private crewStripSignature = ''
   private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
+  private readonly work = h('button', { class: 'btn ghost', type: 'button', id: 'work-button', onClick: () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work') }, 'Work')
+  private readonly skills = h('button', { class: 'btn ghost', type: 'button', id: 'skills-button', onClick: () => showView(this.skills.getAttribute('aria-pressed') === 'true' ? 'grid' : 'skills') }, 'Skills')
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')
   private readonly more = h(
@@ -100,7 +100,7 @@ export class TopBarComponent {
     h('span', { class: 'more-chevron', 'aria-hidden': 'true' }, icon(ICONS.chevronDown)),
     this.moreDot
   )
-  readonly layoutsButton = this.more
+  readonly layoutsButton = h('button', { class: 'btn ghost sessions-layouts-button', type: 'button', id: 'layouts-button', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onClick: () => toggleLayouts() }, 'Layouts')
   private moreMenu: HTMLElement | null = null
   private moreItems: Record<MoreView, HTMLElement> | null = null
   private agentUpdates = false
@@ -117,6 +117,19 @@ export class TopBarComponent {
   private readonly summary = h('div', { class: 'topbar-count', role: 'status', 'aria-live': 'polite' })
   private summarySignature = ''
   private readonly zoomValue = h('span', { class: 'zoom-value', title: 'Terminal text size of the focused pane' }, '15px')
+  private readonly zoomControl = h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
+    h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: `Smaller text in every pane, from the focused pane's size (${ZOOM_MOD}+- changes the focused pane only)`, onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
+    this.zoomValue,
+    h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane, from the focused pane's size (${ZOOM_MOD}+= changes the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
+  )
+  readonly sessionsToolbar = h('div', { class: 'sessions-toolbar', 'aria-label': 'Sessions tools' },
+    h('div', { class: 'layout-switch', role: 'group', 'aria-label': 'Sessions layout' }, this.gridMode, this.boardMode),
+    this.layoutsButton,
+    this.dimSwitch,
+    this.crewStrip,
+    this.summary,
+    this.zoomControl
+  )
   readonly updatePill = h('button', {
     class: 'update-pill',
     type: 'button',
@@ -143,6 +156,9 @@ export class TopBarComponent {
   }
 
   constructor() {
+    this.more.classList.add('app-logo', 'app-logo-menu')
+    this.more.setAttribute('aria-label', 'Dawsha menu')
+    this.more.replaceChildren(icon(faviconSvg), h('span', { class: 'app-title' }, 'Dawsha'))
     this.settings.addEventListener('click', () => {
       if (this.settings.getAttribute('aria-pressed') === 'true') showView('grid')
       else openSettings()
@@ -150,32 +166,23 @@ export class TopBarComponent {
     this.el = h(
       'header',
       { class: 'topbar' },
-      h('span', { class: 'app-logo', 'aria-hidden': 'true' }, icon(faviconSvg)),
-      h('span', { class: 'app-title' }, 'Dawsha'),
-      h('div', { class: 'split' }, this.newSession, this.chevron),
+      this.more,
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
         this.sessions,
         this.background,
         this.files,
-        this.more
+        this.work,
+        this.skills
       ),
       this.updatePill,
       h('span', { class: 'spacer' }),
-      h('div', { class: 'layout-switch', role: 'group', 'aria-label': 'Sessions layout' }, this.gridMode, this.boardMode),
-      this.dimSwitch,
-      this.crewStrip,
-      this.summary,
       this.limits,
       h('div', { class: 'topbar-tools' },
-        h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: `Smaller text in every pane (${ZOOM_MOD}+- for the focused pane only)`, onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
-          this.zoomValue,
-          h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane (${ZOOM_MOD}+= for the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
-        ),
+        this.search,
         this.bell.el,
-        this.themeButton,
         this.settings
-      )
+      ),
+      this.newSession
     )
   }
 
@@ -188,6 +195,12 @@ export class TopBarComponent {
     this.dimSwitch.setAttribute('aria-pressed', String(dim))
     this.background.setAttribute('aria-pressed', String(state.view === 'crew'))
     this.files.setAttribute('aria-pressed', String(state.view === 'files'))
+    this.work.setAttribute('aria-pressed', String(state.view === 'work'))
+    this.skills.setAttribute('aria-pressed', String(state.view === 'skills'))
+    for (const [button, active] of [[this.sessions, state.view === 'grid'], [this.background, state.view === 'crew'], [this.files, state.view === 'files'], [this.work, state.view === 'work'], [this.skills, state.view === 'skills']] as const) {
+      if (active) button.setAttribute('aria-current', 'page')
+      else button.removeAttribute('aria-current')
+    }
     this.updateCrewStrip(state)
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
     this.agentUpdates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
@@ -243,12 +256,14 @@ export class TopBarComponent {
   }
 
   private updateMore(state: AppState): void {
-    this.activeMore = state.layoutsOpen ? 'layouts' : MORE_VIEWS.some((item) => item.view === state.view) ? (state.view as MoreView) : null
-    const label = moreLabel(this.activeMore ?? '')
+    this.activeMore = MORE_VIEWS.some((item) => item.view === state.view && item.view !== 'work' && item.view !== 'skills') ? (state.view as MoreView) : null
+    const label = 'Dawsha menu'
     this.more.setAttribute('aria-pressed', String(this.activeMore !== null))
-    this.more.setAttribute('aria-expanded', String(this.moreMenu !== null || state.layoutsOpen))
+    this.more.setAttribute('aria-expanded', String(this.moreMenu !== null))
+    this.layoutsButton.setAttribute('aria-pressed', String(state.layoutsOpen))
+    this.layoutsButton.setAttribute('aria-expanded', String(state.layoutsOpen))
     this.more.setAttribute('aria-label', this.agentUpdates ? `${label}, agent updates available` : label)
-    this.moreText.textContent = 'More'
+    this.moreText.textContent = 'Dawsha'
     this.moreDot.hidden = !this.agentUpdates
     for (const { view } of MORE_VIEWS) this.markMoreItem(view)
   }
@@ -316,7 +331,7 @@ export class TopBarComponent {
     document.removeEventListener('pointerdown', this.outside, true)
     leave(this.agentMenu)
     this.agentMenu = null
-    this.chevron.setAttribute('aria-expanded', 'false')
+    this.newSession.setAttribute('aria-expanded', 'false')
   }
 
   private toggleAgentMenu(): void {
@@ -390,7 +405,7 @@ export class TopBarComponent {
       ...items
     )
     this.agentMenu.addEventListener('keydown', (event) => this.onMenuKey(event, items))
-    this.chevron.setAttribute('aria-expanded', 'true')
+    this.newSession.setAttribute('aria-expanded', 'true')
     document.body.appendChild(this.agentMenu)
     placeNearAnchor(this.agentMenu, this.chevron.parentElement ?? this.newSession, 6)
     items[0].focus()
@@ -403,7 +418,7 @@ export class TopBarComponent {
       event.preventDefault()
       event.stopPropagation()
       this.closeAgentMenu()
-      this.chevron.focus()
+      this.newSession.focus()
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       const step = event.key === 'ArrowDown' ? 1 : -1
@@ -413,7 +428,7 @@ export class TopBarComponent {
       items[event.key === 'Home' ? 0 : items.length - 1].focus()
     } else if (event.key === 'Tab') {
       // Move focus back to the anchor before the menu leaves the DOM, so Tab continues from there.
-      this.chevron.focus()
+      this.newSession.focus()
       this.closeAgentMenu()
     }
   }
@@ -442,7 +457,7 @@ export class TopBarComponent {
       this.closeMoreMenu()
       return
     }
-    const entries = MORE_VIEWS.map(({ view, label }) => {
+    const entries = MORE_VIEWS.filter(({ view }) => view !== 'work' && view !== 'skills' && view !== 'layouts').map(({ view, label }) => {
       const item = h(
         'button',
         { class: 'menu-item more-item', type: 'button', role: 'menuitem', id: `${view}-menu-item`, 'data-view': view, onClick: () => this.openMore(view) },
@@ -524,21 +539,29 @@ export class TopBarComponent {
   }
 
   private renderLimits(focused: AgentLimits | null, items: { window: RateLimitWindow; text: string; title: string }[]): void {
-    this.limits.hidden = focused === null
+    const summaries = (['claude', 'codex'] as const).map((agent) => {
+      const entry = meterLimits(this.limitStore, agent, this.limitsNow)
+      if (!entry || entry.state === 'none' || entry.windows.length === 0) return null
+      const rows = entry.windows.map((window) => ({ window, text: limitText(window, this.limitsNow), title: resetText(window) }))
+      return h('span', { class: `limits-inline-agent limits-agent${entry.state === 'stale' ? ' stale' : ''}`, 'data-agent': agent, 'aria-label': `${agentLabel(agent)} ${rows.map((row) => row.title).join(', ')}` },
+        agentMark(agent), h('span', { class: 'limits-inline-agent-name limits-agent-name' }, agent === 'claude' ? 'Claude' : 'Codex'),
+        h('span', { class: 'limits-inline-windows' }, ...rows.map((row) => limitItem(row.window, row.text, row.title)))
+      )
+    }).filter((item): item is HTMLElement => item !== null)
+    this.limits.hidden = summaries.length === 0 && focused === null
     this.limits.classList.toggle('stale', focused?.state === 'stale')
-    if (!focused) return
-    const name = agentLabel(focused.agent)
+    if (!focused && summaries.length === 0) return
+    const name = focused ? agentLabel(focused.agent) : 'Agent'
     const summary = items.map((item) => item.title).join('; ')
-    this.limits.setAttribute('aria-label', focused.state === 'none' ? `${name}: no limits reported. Show limits for every agent` : `${name} limits${focused.state === 'stale' ? ' (stale)' : ''}: ${summary}. Show limits for every agent`)
-    this.limits.title = focused.state === 'none' ? `${name}: no limits reported` : `${name} limits${focused.state === 'stale' ? ' (stale)' : ''}: ${summary}`
+    const visibleSummary = summaries.map((item) => item.getAttribute('aria-label')).filter(Boolean).join('; ')
+    this.limits.setAttribute('aria-label', `${name} limits${focused?.state === 'stale' ? ' (stale)' : ''}: ${summary || visibleSummary}. Show limits for every agent`)
+    this.limits.title = visibleSummary || `${name} limits${focused?.state === 'stale' ? ' (stale)' : ''}: ${summary}`
     const urgent = urgentWindow(items.map((item) => item.window))
     this.limits.replaceChildren(
-      h('span', { class: 'limits-agent' }, agentMark(focused.agent), h('span', { class: 'limits-agent-name' }, name)),
-      focused.state === 'none'
-        ? h('span', { class: 'limits-none' }, 'no limits reported')
-        : h('span', { class: 'limits-windows' }, ...items.map((item) => limitItem(item.window, item.text, item.title))),
-      ...(urgent && focused.state !== 'none' ? [h('span', { class: `limits-compact stage-${gaugeStage(urgent.percent)}`, 'data-limit-compact': urgent.key }, formatPercent(urgent.percent))] : []),
-      ...(focused.state === 'stale' ? [h('span', { class: 'limits-note' }, 'stale')] : [])
+      ...summaries,
+      ...(summaries.length === 0 && focused ? [h('span', { class: 'limits-agent' }, agentMark(focused.agent), h('span', { class: 'limits-agent-name' }, name)), focused.state === 'none' ? h('span', { class: 'limits-none' }, 'no limits reported') : h('span', { class: 'limits-windows' }, ...items.map((item) => limitItem(item.window, item.text, item.title)))] : []),
+      ...(urgent && focused?.state !== 'none' ? [h('span', { class: `limits-compact stage-${gaugeStage(urgent.percent)}`, 'data-limit-compact': urgent.key }, formatPercent(urgent.percent))] : []),
+      ...(focused?.state === 'stale' ? [h('span', { class: 'limits-note' }, 'stale')] : [])
     )
   }
 
@@ -581,9 +604,9 @@ export class TopBarComponent {
     const focused = this.focusedAgent
     const now = this.limitsNow
     const sections = allAgentLimits(this.limitStore, now).map((entry) => limitsSection(entry, entry.agent === focused, now, this.accounts))
-    const link = h('button', { class: 'link limits-usage-link', type: 'button', onClick: () => { this.closeLimitsPopover(); showView('usage') } }, 'Open Usage')
+    const link = h('button', { class: 'btn ghost small limits-usage-link', type: 'button', onClick: () => { this.closeLimitsPopover(); showView('usage') } }, 'Open Usage')
     const keep = popover.contains(document.activeElement) && document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('limits-usage-link')
-    popover.replaceChildren(h('div', { class: 'popover-title' }, 'Limits by agent'), ...sections, h('div', { class: 'popover-foot' }, link))
+    popover.replaceChildren(h('div', { class: 'popover-title' }, 'Limits by agent'), ...sections, h('div', { class: 'popover-foot limits-foot' }, link))
     if (keep) link.focus()
   }
 

@@ -17,7 +17,8 @@ import {
   setShowRecap,
   setSidebarCollapsed,
   showSettingsSection,
-  showView
+  showView,
+  toggleThemePicker
 } from '../actions'
 import { AGENTS, AGENT_NAMES, FULL_ACCESS_FLAGS } from '../../shared/agents'
 import {
@@ -46,25 +47,25 @@ import { releaseTagUrl } from '../../shared/markdown'
 import { h } from '../dom'
 import { api } from '../api'
 import { createRemoteAccessView } from './remoteAccessView'
-import type { PaneonImportPreview } from '../../shared/paneonImport'
-import { confirmDialog } from './dialogs'
-import { toast } from './toast'
 import { CHANGELOG_ENTRIES } from '../changelog'
 import { store, type AppState, type SettingsSection } from '../state'
 import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
+import { pageHeader } from './pageHeader'
+import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
+import { setGridStyle } from '../sessionsLayout'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
-  { id: 'notifications', label: 'Notifications & session info', lede: 'What Dawsha shows and tells you while sessions run.' },
+  { id: 'appearance', label: 'Appearance', lede: 'Choose a theme and terminal background.' },
+  { id: 'notifications', label: 'Notifications', lede: 'What Dawsha shows and tells you while sessions run.' },
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
+  { id: 'import', label: 'Import', lede: 'Bring settings from another Dawsha installation.' },
+  ...(isRemoteControlBuild ? [{ id: 'remote' as const, label: 'Remote access', lede: 'Reach this Dawsha installation from your own devices.' }] : []),
   { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
-  { id: 'highlights', label: 'Highlights', lede: 'Tint terminal lines that contain the words you care about.' },
-  { id: 'changelog', label: 'Changelog', lede: 'Every released version, newest first.' },
   { id: 'about', label: 'About', lede: 'Version, links and where your data lives.' }
 ]
-if (isRemoteControlBuild) SECTIONS.push({ id: 'remote', label: 'Remote Access', lede: 'Reach this Dawsha installation from your own devices.' })
 
 const visibleSections = (_state: AppState): typeof SECTIONS => SECTIONS
 
@@ -85,10 +86,11 @@ function row(title: string, control: HTMLElement | null, ...notes: (HTMLElement 
 }
 
 function checkbox(id: string, label: string, checked: boolean, disabled: boolean, onChange: (value: boolean) => void): HTMLElement {
-  const input = h('input', { type: 'checkbox', id, disabled })
-  input.checked = checked
-  input.addEventListener('change', () => onChange(input.checked))
-  return h('label', { class: 'check', for: id }, input, label)
+  return h('button', {
+    class: 'toggle', type: 'button', id, role: 'switch', 'aria-label': label,
+    'aria-checked': String(checked), disabled,
+    onClick: (event: Event) => onChange((event.currentTarget as HTMLButtonElement).getAttribute('aria-checked') !== 'true')
+  })
 }
 
 interface RuleDraft {
@@ -104,10 +106,12 @@ const COLOR_LABELS: Record<HighlightColor, string> = { red: 'Red', amber: 'Amber
 export class SettingsViewComponent {
   readonly el = h('main', { class: 'settings-view', 'aria-label': 'Settings' })
   private readonly nav = h('div', { class: 'settings-nav', role: 'tablist', 'aria-orientation': 'vertical', 'aria-label': 'Settings sections' })
+  private readonly search = h('input', { class: 'text-input settings-search', type: 'search', placeholder: 'Search settings', 'aria-label': 'Search settings', onInput: () => this.refresh() })
   private readonly panel = h('div', { class: 'settings-panel', role: 'tabpanel' })
   private readonly title = h('h2', { class: 'settings-section-title' })
   private readonly lede = h('p', { class: 'lede' })
   private signature = ''
+  private importPath = ''
   private navSection: string | null = null
   private shortcutDraft: string | null = null
   private shortcutError: string | null = null
@@ -117,7 +121,6 @@ export class SettingsViewComponent {
   private editDraft: RuleDraft = emptyDraft()
   private editError: string | null = null
   private readonly highlightPreviewEl = h('div', { class: 'hl-preview', id: 'highlight-preview', role: 'group', 'aria-label': 'Preview of highlighted terminal lines' })
-  private paneonImport: PaneonImportPreview | null = null
   private remoteAccess: RemoteAccessState | null = null
   private remoteError: string | null = null
   private remoteBusy = false
@@ -136,7 +139,6 @@ export class SettingsViewComponent {
   })
 
   constructor() {
-    void api.paneonImportPreview().then((preview) => { this.paneonImport = preview; this.refresh() }).catch(() => undefined)
     if (isRemoteControlBuild) {
       void this.loadRemoteAccess().then(() => this.verifyRemote(true))
       window.addEventListener('focus', () => {
@@ -151,8 +153,8 @@ export class SettingsViewComponent {
       openUpdateLink(link.href)
     })
     this.el.append(
-      h('div', { class: 'settings-head' }, h('h1', {}, 'Settings'), h('p', { class: 'lede' }, 'Preferences for Dawsha. Theme and background image stay in the Theme menu.')),
-      h('div', { class: 'settings-body' }, this.nav, h('div', { class: 'settings-content' }, this.title, this.lede, this.panel))
+  pageHeader({ title: 'Settings', subtitle: 'Preferences for Dawsha.' }),
+      h('div', { class: 'settings-body' }, h('aside', { class: 'settings-rail' }, this.search, this.nav), h('div', { class: 'settings-content' }, this.title, this.lede, this.panel))
     )
   }
 
@@ -205,13 +207,20 @@ export class SettingsViewComponent {
   private render(state: AppState): void {
     const focusedId = (document.activeElement as HTMLElement | null)?.id
     const sections = visibleSections(state)
-    const section = sections.find((s) => s.id === state.settingsSection) ?? sections[0]
-    const navKey = `${section.id}|${sections.length}`
+    const route = state.settingsSection === 'highlights' ? 'notifications' : state.settingsSection === 'changelog' ? 'about' : state.settingsSection
+    const section = sections.find((s) => s.id === route) ?? sections[0]
+    const query = this.search.value.trim().toLocaleLowerCase()
+    const filteredSections = query ? sections.filter((item) => `${item.label} ${item.lede}`.toLocaleLowerCase().includes(query)) : sections
+    const navKey = `${section.id}|${sections.length}|${query}`
     if (this.navSection !== navKey) {
       this.navSection = navKey
-      this.nav.replaceChildren(...sections.map((s) => this.tab(s, s.id === section.id)))
+      this.nav.replaceChildren(...(filteredSections.length
+        ? filteredSections.map((s) => this.tab(s, s.id === section.id))
+        : [h('p', { class: 'settings-no-match', role: 'status' }, 'No matching settings sections')]))
     }
     this.title.replaceChildren(section.label)
+    this.title.hidden = section.id === 'remote'
+    this.lede.hidden = section.id === 'remote'
     if (section.id === 'remote') {
       this.title.append(h('span', { id: 'remote-settings-beta', class: 'beta-badge' }, 'Beta'))
     }
@@ -252,8 +261,21 @@ export class SettingsViewComponent {
     switch (section) {
       case 'general':
         return this.general(state)
+      case 'appearance':
+        return [
+          row('Theme', h('button', { class: 'btn', type: 'button', id: 'settings-theme-picker', onClick: () => toggleThemePicker() }, 'Choose theme'), h('p', { class: 'hint' }, 'Choose a theme and terminal background.')),
+          row('Sessions grid', this.gridStyles(state.settings.gridStyle), h('p', { class: 'hint' }, 'Choose between one focused session and a grid of equal tiles.'))
+        ]
+      case 'import':
+        return [h('div', { class: 'settings-import' },
+          h('p', {}, 'Choose a settings file to preview its projects and preferences before importing.'),
+          h('div', { class: 'set-inline' },
+            h('input', { class: 'text-input settings-import-path', id: 'settings-import-path', type: 'text', readonly: true, value: this.importPath, placeholder: 'No file selected', 'aria-label': 'Settings file' }),
+            h('button', { class: 'btn', type: 'button', id: 'import-settings', onClick: () => void importSettingsFromUi((path) => { this.importPath = path; this.refresh() }) }, 'Browse'),
+            h('button', { class: 'btn', type: 'button', id: 'export-settings', onClick: () => void exportSettingsFromUi() }, 'Export settings')
+          ))]
       case 'notifications':
-        return this.notifications(state)
+        return [...this.notifications(state), ...this.highlights(state)]
       case 'agents':
         return this.agents(state)
       case 'updates':
@@ -263,10 +285,19 @@ export class SettingsViewComponent {
       case 'remote':
         return this.remoteAccessBody()
       case 'changelog':
-        return this.changelog(state)
+        return [...this.about(state), ...this.changelog(state)]
       default:
-        return this.about(state)
+        return [...this.about(state), ...this.changelog(state)]
     }
+  }
+
+  private gridStyles(selected: GridStyle): HTMLElement {
+    return h('div', { class: 'segmented settings-grid-style', role: 'group', 'aria-label': 'Sessions grid style' },
+      ...(['focus', 'tiles'] as const).map((style) => h('button', {
+        class: 'tab', type: 'button', 'aria-pressed': String(style === selected),
+        onClick: () => setGridStyle(style)
+      }, GRID_STYLE_LABELS[style]))
+    )
   }
 
   private async loadRemoteAccess(): Promise<void> {
@@ -378,10 +409,10 @@ export class SettingsViewComponent {
           : `Ctrl or Alt plus a key, such as ${DEFAULT_PALETTE_SHORTCUT} or Alt+Space. Ctrl+Shift+P always works too.`),
         this.shortcutError ? h('p', { class: 'field-error', id: 'palette-shortcut-error', role: 'alert' }, this.shortcutError) : null
       ),
-      row('Sessions', checkbox('dim-other-panes', "Dim sessions you're not working in", state.settings.dimOtherPanes, false, setDimOtherPanes)),
-      row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag)),
-      row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap)),
-      row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed)),
+      row('Sessions', checkbox('dim-other-panes', "Dim sessions you're not working in", state.settings.dimOtherPanes, false, setDimOtherPanes), h('p', { class: 'hint' }, 'Keep the focused session clear while the others stay visible.')),
+      row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag), h('p', { class: 'hint' }, 'Use a tag colour on each session pane.')),
+      row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
+      row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),
       row(
         'Getting started',
         h('button', { class: 'btn ghost small', type: 'button', id: 'getting-started', onClick: () => openOnboarding() }, 'Getting started…'),
@@ -389,46 +420,7 @@ export class SettingsViewComponent {
       ),
       h('h3', { class: 'set-subhead', id: 'recordings-heading' }, 'Recordings'),
       ...recordingRows(state, () => this.refresh()),
-      h('h3', { class: 'set-subhead', id: 'transfer-heading' }, 'Back up and move'),
-      row(
-        'Settings file',
-        h('div', { class: 'set-inline' },
-          h('button', { class: 'btn ghost small', type: 'button', id: 'export-settings', onClick: () => void exportSettingsFromUi() }, 'Export settings…'),
-          h('button', { class: 'btn ghost small', type: 'button', id: 'import-settings', onClick: () => void importSettingsFromUi() }, 'Import settings…')),
-        h('p', { class: 'hint' }, 'Save your projects, layouts, highlight rules and preferences to one file to move Dawsha to another PC. Remote Access, open sessions and usage history are never included.')
-      ),
-      ...(this.paneonImport?.available ? [row(
-        'Paneon settings',
-        h('button', {
-          class: 'btn ghost small', type: 'button', id: 'import-paneon-settings',
-          disabled: this.paneonImport.pending || this.paneonImport.error !== null,
-          onClick: () => void this.importPaneonSettings()
-        }, 'Import Paneon settings'),
-        h('p', { class: 'hint', id: 'paneon-import-summary' },
-          this.paneonImport.pending
-            ? 'Import queued; close and reopen Dawsha to apply it.'
-            : this.paneonImport.error ?? `${this.paneonImport.projects} project${this.paneonImport.projects === 1 ? '' : 's'}, ${this.paneonImport.layouts} layout${this.paneonImport.layouts === 1 ? '' : 's'} found. Your current Dawsha settings will be backed up.`
-        )
-      )] : [])
     ]
-  }
-
-  private async importPaneonSettings(): Promise<void> {
-    const confirmed = await confirmDialog({
-      title: 'Import Paneon settings?',
-      body: 'This replaces Dawsha settings on the next launch. A backup of the current Dawsha settings will be saved. Paneon stays untouched; close and reopen Dawsha to apply the import.',
-      confirmLabel: 'Import Paneon settings',
-      danger: false
-    })
-    if (!confirmed) return
-    try {
-      await api.queuePaneonImport()
-      this.paneonImport = { ...this.paneonImport!, pending: true }
-      this.refresh()
-      toast('Paneon import queued. Close and reopen Dawsha to apply it.', 'info')
-    } catch (error) {
-      toast((error as Error).message || 'Paneon settings could not be imported.')
-    }
   }
 
   private commitShortcut(text: string): void {
@@ -475,7 +467,8 @@ export class SettingsViewComponent {
             setSessionInfo({ notifications: value })
           ),
           checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) => setSessionInfo({ sound: value }))
-        )
+        ),
+        h('p', { class: 'hint' }, 'Choose which session updates Dawsha announces.')
       )
     ]
   }
@@ -517,7 +510,7 @@ export class SettingsViewComponent {
     if (update.status === 'error' && update.error) statusNotes.push(h('p', { class: 'hint', role: 'alert' }, update.error))
     return [
       row('Current version', h('span', { class: 'set-value mono', id: 'settings-version' }, info.version || 'unknown')),
-      row('Automatic checks', checkbox('auto-update-toggle', 'Check for updates automatically', settings.autoUpdateCheck, false, setAutoUpdateCheck)),
+      row('Automatic checks', checkbox('auto-update-toggle', 'Check for updates automatically', settings.autoUpdateCheck, false, setAutoUpdateCheck), h('p', { class: 'hint' }, 'Check for new Dawsha versions in the background.')),
       row(
         'Status',
         h('div', { class: 'set-inline update-settings-actions' }, ...controls),

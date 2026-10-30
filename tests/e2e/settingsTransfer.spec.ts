@@ -34,7 +34,7 @@ test('exports settings without remote access data and imports them into a fresh 
   const file = join(source.root, 'dawsha-settings-test.json')
   const first = await launchApp(source, { DAWSHA_SAVE_PATH: file })
   try {
-    await openSettings(first.page)
+    await openSettings(first.page, 'import')
     await first.page.locator('#export-settings').click()
     await expect(first.page.locator('.toast').last()).toContainText('Settings saved to', { timeout: 20_000 })
   } finally {
@@ -55,7 +55,7 @@ test('exports settings without remote access data and imports them into a fresh 
   const second = await launchApp(target, { DAWSHA_OPEN_PATH: file })
   const { page } = second
   try {
-    await openSettings(page)
+    await openSettings(page, 'import')
     await page.locator('#import-settings').click()
     const dialog = page.getByRole('dialog', { name: 'Import settings' })
     await expect(dialog).toContainText('2 projects (2 new, 0 already here)')
@@ -70,7 +70,7 @@ test('exports settings without remote access data and imports them into a fresh 
     expect(merged.sessionsLayout).toBe('board')
     expect(merged.remoteAccess?.allowedEmail ?? '').toBe('')
 
-    await openSettings(page)
+    await openSettings(page, 'import')
     await page.locator('#import-settings').click()
     const again = page.getByRole('dialog', { name: 'Import settings' })
     await expect(again).toContainText('2 projects (0 new, 2 already here)')
@@ -102,7 +102,7 @@ test('importing a file that is not a Dawsha settings export changes nothing and 
   const { app, page } = await launchApp(sandbox, { DAWSHA_OPEN_PATH: bad })
   try {
     const before = readSettings(sandbox.userData).projects.length
-    await openSettings(page)
+    await openSettings(page, 'import')
     await page.locator('#import-settings').click()
     await expect(page.locator('.toast').last()).toContainText('version 9')
     await expect(page.getByRole('dialog', { name: 'Import settings' })).toHaveCount(0)

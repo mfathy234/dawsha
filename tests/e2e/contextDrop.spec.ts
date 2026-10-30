@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, lastInput, QUIT_BUDGET_MS, type Sandbox } from './helpers'
+import { closeApp, createSandbox, launchApp, lastInput, openTerminalPicker, QUIT_BUDGET_MS, type Sandbox } from './helpers'
 
 const SESSION = 'sess-ctx-1'
 
@@ -97,7 +97,7 @@ test('dropping files types their paths into the terminal under the drop', async 
   const { app, page } = await launchApp(createSandbox())
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
-    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await openTerminalPicker(page.locator('.pane').first())
     await page.getByRole('menuitem', { name: 'Shell' }).click()
     const id = (await page.locator('.term-host.active').getAttribute('data-term-id'))!
     const host = `.term-host[data-term-id="${id}"]`
@@ -128,7 +128,7 @@ test('dropping files on a Gemini pane types @ references', async () => {
   const { app, page } = await launchApp(createSandbox())
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
-    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await openTerminalPicker(page.locator('.pane').first())
     await page.getByRole('menuitem', { name: 'Gemini session' }).click()
     await expect(page.locator('.tabs .tab')).toHaveCount(2, { timeout: 20_000 })
     await expect(page.locator('.tabs .tab.active')).toContainText(/gemini/i, { timeout: 20_000 })

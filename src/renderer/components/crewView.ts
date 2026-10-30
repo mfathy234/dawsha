@@ -17,14 +17,17 @@ import { clear, h } from '../dom'
 import { store, type AppState } from '../state'
 import { confirmDialog } from './dialogs'
 import { crewAvatar } from './crewAvatar'
+import { agentMark } from './agentMark'
 import { openImportDialog, openRunDialog } from './crewDialogs'
 import { CrewGoalsPage } from './crewGoals'
 import { buildLeadSettings } from './crewLeadSettings'
 import { buildSetup, refreshPreview } from './crewSetup'
 import { toast } from './toast'
 import './crew.css'
+import './agents.css'
+import { pageHeader } from './pageHeader'
 
-type Tab = 'goals' | 'setup' | 'runs'
+type Tab = 'setup' | 'runs' | 'live'
 
 const LEAD_NOTE = 'Give her a goal; she picks who works on it'
 
@@ -40,6 +43,11 @@ export class CrewViewComponent {
   private readonly tabs = h('div', { class: 'crew-tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'crew-detail-body' })
   private readonly detail = h('section', { class: 'crew-detail', 'aria-label': 'Member' }, this.head, this.tabs, this.body)
+  private readonly roster = h('div', { class: 'crew-roster' })
+  private readonly leadLine = h('div', { class: 'crew-lead-line' })
+  private readonly pageBody = h('div', { class: 'crew-body' }, this.roster, this.detail)
+  private mode: 'roster' | 'detail' = 'roster'
+  private rosterScroll = 0
   private readonly search = h('input', {
     class: 'text-input crew-search',
     type: 'search',
@@ -48,7 +56,7 @@ export class CrewViewComponent {
     onInput: () => this.refresh(store.state, true)
   })
   private selectedId = 'maya'
-  private tab: Tab = 'goals'
+  private tab: Tab = 'setup'
   private readonly goals = new CrewGoalsPage()
   private listSig = ''
   private headSig = ''
@@ -57,18 +65,10 @@ export class CrewViewComponent {
 
   constructor() {
     this.el.append(
-      h(
-        'div',
-        { class: 'crew-top' },
-        h('h1', {}, 'Agents'),
-        this.count,
-        h('span', { class: 'crew-spacer' }),
-        this.search,
-        h('button', { class: 'btn', type: 'button', id: 'crew-import', onClick: () => void this.importMembers() }, 'Import…'),
-        h('button', { class: 'btn primary', type: 'button', id: 'crew-new', onClick: () => this.newMember() }, '+ New agent')
-      ),
-      h('div', { class: 'crew-body' }, this.list, this.detail)
+      pageHeader({ title: 'Agents', subtitle: 'A roster for the agents you can run.', actions: [this.count, this.search, h('button', { class: 'btn', type: 'button', id: 'crew-import', onClick: () => void this.importMembers() }, 'Import…'), h('button', { class: 'btn primary', type: 'button', id: 'crew-new', onClick: () => this.newMember() }, '+ New agent')] }),
+      this.pageBody
     )
+    this.roster.append(this.goals.el, this.leadLine, this.list)
   }
 
   update(state: AppState): void {
@@ -99,14 +99,16 @@ export class CrewViewComponent {
       this.listSig = listSig
       this.renderList(all, query, state, selected.id)
     }
-    this.count.textContent = `${all.filter((m) => !m.hidden).length} · ${all.filter((m) => m.builtin).length} built in`
+    this.count.textContent = `${all.filter((m) => !m.hidden).length} agents · ${all.filter((m) => m.builtin && !m.lead && !m.hidden).length} built in`
+    this.roster.hidden = this.mode !== 'roster'
+    this.detail.hidden = this.mode !== 'detail'
+    if (this.mode === 'roster' && !force) this.goals.update(state)
     const headSig = JSON.stringify([selected.id, selected.name, selected.role, selected.initials, selected.colour, selected.builtin, selected.hidden, stateOf(selected), selected.description, selected.source, this.tab])
     if (force || headSig !== this.headSig) {
       this.headSig = headSig
       this.renderHead(selected, state)
     }
     const runs = state.settings.crewRuns.filter((run) => run.memberId === selected.id)
-    if (selected.lead && this.tab === 'goals' && !force) this.goals.update(state)
     const bodySig = JSON.stringify([selected.id, this.tab, this.tab === 'runs' ? runs : '', selected.hidden])
     if (force || bodySig !== this.bodySig) {
       this.bodySig = bodySig
@@ -125,32 +127,49 @@ export class CrewViewComponent {
   }
 
   private select(id: string): void {
+    this.openDetail(id, 'setup')
+  }
+
+  private openDetail(id: string, tab: Tab): void {
+    this.rosterScroll = this.pageBody.scrollTop
     this.selectedId = id
-    this.tab = this.members(store.state).find((member) => member.id === id)?.lead ? 'goals' : 'setup'
+    this.tab = tab
+    this.mode = 'detail'
+    this.pageBody.scrollTop = 0
     this.refresh(store.state, true)
+  }
+
+  private showRoster(): void {
+    this.mode = 'roster'
+    this.refresh(store.state, true)
+    this.goals.update(store.state)
+    this.pageBody.scrollTop = this.rosterScroll
+    requestAnimationFrame(() => { this.pageBody.scrollTop = this.rosterScroll })
   }
 
   private renderList(all: CrewMember[], query: string, state: AppState, selectedId: string): void {
     clear(this.list)
     const shown = all.filter((member) => matchesQuery(member, query))
+    const lead = shown.find((member) => member.lead && !member.hidden)
+    this.leadLine.replaceChildren(...(lead ? [this.item(lead, state, lead.id === selectedId)] : []))
     const sections: { title: string; members: CrewMember[]; count: boolean }[] = [
-      { title: 'Lead', members: shown.filter((m) => m.lead && !m.hidden), count: false },
+      { title: 'Your agents', members: shown.filter((m) => !m.builtin), count: true },
       { title: 'Built in', members: shown.filter((m) => m.builtin && !m.lead && !m.hidden), count: true },
-      { title: 'Yours', members: shown.filter((m) => !m.builtin), count: true },
       { title: 'Hidden', members: shown.filter((m) => m.builtin && m.hidden), count: true }
     ]
     for (const section of sections) {
       if (section.title === 'Hidden' && section.members.length === 0) continue
-      if (section.title === 'Yours' && section.members.length === 0 && query === '') {
-        this.list.append(h('div', { class: 'crew-sec' }, h('span', {}, 'Yours'), h('span', {}, '0')))
+      if (section.title === 'Your agents' && section.members.length === 0 && query === '') {
+        this.list.append(h('div', { class: 'crew-sec' }, h('span', {}, 'Your agents'), h('span', {}, '0')))
         this.list.append(h('p', { class: 'crew-empty-note' }, 'Make one with New agent, import your agent files, or turn a skill into one from the Skills page.'))
         continue
       }
       if (section.members.length === 0) continue
-      this.list.append(h('div', { class: 'crew-sec' }, h('span', {}, section.title), section.count ? h('span', {}, String(section.members.length)) : null))
+      if (section.title) this.list.append(h('div', { class: 'crew-sec' }, h('span', {}, section.title), section.count ? h('span', {}, String(section.members.length)) : null))
       for (const member of section.members) this.list.append(this.item(member, state, member.id === selectedId))
     }
     if (shown.length === 0) this.list.append(h('p', { class: 'crew-empty-note' }, 'No agent matches that search.'))
+    this.list.append(h('button', { class: 'crew-card-new', type: 'button', onClick: () => this.newMember() }, h('span', { class: 'crew-card-plus', 'aria-hidden': 'true' }, '+'), h('span', { class: 'crew-card-title' }, 'New agent'), h('span', { class: 'crew-muted' }, 'or import a file')))
   }
 
   private metaLine(member: CrewMember, state: AppState): Node {
@@ -158,7 +177,7 @@ export class CrewViewComponent {
     if (member.lead && live === 'idle') return h('span', { class: 'crew-muted' }, LEAD_NOTE)
     if (live !== 'idle') {
       const run = this.liveTitle(state, member.id)
-      return h('span', {}, h('span', { class: `crew-state state-${live === 'needs' ? 'needs' : live === 'working' ? 'working' : live === 'done' ? 'done' : 'failed'}` }, stateWord(live)), run ? h('span', { class: 'crew-muted' }, ` · ${run}`) : null)
+      return h('span', {}, h('span', { class: `crew-state state-${live === 'needs' ? 'needs' : live === 'working' ? 'working' : live === 'done' ? 'done' : 'failed'}` }, live === 'working' ? 'Running' : stateWord(live)), run ? h('span', { class: 'crew-muted' }, ` · ${run}`) : null)
     }
     const last = runsOf(member.id)[0]
     return h('span', { class: 'crew-muted' }, last ? `Last job ${formatAge(Math.max(0, state.now - last.startedAt))} ago` : 'Never run')
@@ -172,21 +191,36 @@ export class CrewViewComponent {
 
   private item(member: CrewMember, state: AppState, selected: boolean): HTMLElement {
     const live = memberStateNow(state, member.id)
+    const running = live === 'working'
+    const startedRun = state.settings.crewRuns.find((run) => run.memberId === member.id && run.outcome === 'running')
+    const elapsed = running && startedRun ? formatSpan(Math.max(0, state.now - startedRun.startedAt)) : ''
+    const action = member.lead || member.hidden
+      ? h('span', {})
+      : running
+        ? h('button', { class: 'btn small crew-viewbtn', type: 'button', 'aria-label': `View ${member.name}`, onClick: (event: Event) => { event.stopPropagation(); this.openDetail(member.id, 'live') } }, 'View')
+        : h('button', { class: 'btn small crew-runbtn', type: 'button', 'aria-label': `Run ${member.name}`, onClick: (event: Event) => { event.stopPropagation(); void openRunDialog(member) } }, 'Run')
     const item = h(
       'div',
       {
-        class: `crew-item${member.lead ? ' lead-item' : ''}${selected ? ' sel' : ''}${member.hidden ? ' is-hidden' : ''}`,
+        class: `crew-item${member.lead ? ' lead-item' : ''}${selected ? ' sel' : ''}${member.hidden ? ' is-hidden' : ''}${running ? ' is-running' : ''}`,
         role: 'option',
         'aria-selected': String(selected),
         tabindex: '0',
         'data-member': member.id
       },
-      crewAvatar(member, live, 32),
-      h('span', { class: 'crew-nm' }, h('b', {}, member.name), h('span', { class: 'crew-role' }, ` · ${member.role}`)),
-      member.lead || member.hidden
-        ? h('span', {})
-        : h('button', { class: 'btn small crew-runbtn', type: 'button', 'aria-label': `Run ${member.name}`, onClick: (event: Event) => { event.stopPropagation(); void openRunDialog(member) } }, 'Run'),
-      h('span', { class: 'crew-meta' }, this.metaLine(member, state))
+      h('span', { class: 'crew-card-top' },
+        crewAvatar(member, live, 40),
+        h('span', { class: 'crew-id' },
+          h('span', { class: 'crew-nm' }, h('b', {}, member.name), h('span', { class: 'crew-role' }, ` · ${member.role}`))
+        ),
+        member.builtin ? h('span', { class: 'crew-badge' }, 'Built in') : h('span', {})
+      ),
+      member.description ? h('span', { class: 'crew-purpose' }, member.description) : h('span', {}),
+      h('span', { class: 'crew-card-model' }, agentMark(member.runner), h('span', {}, modelLabel(member.runner, member.model))),
+      h('span', { class: 'crew-foot' },
+        h('span', { class: 'crew-meta' }, this.metaLine(member, state), elapsed ? h('span', { class: 'crew-muted' }, ` · ${elapsed}`) : null),
+        action
+      )
     )
     item.addEventListener('click', () => this.select(member.id))
     item.addEventListener('keydown', (event) => {
@@ -212,6 +246,7 @@ export class CrewViewComponent {
     if (!member.lead && !member.hidden) actions.push(h('button', { class: 'btn primary', type: 'button', id: 'crew-run-main', onClick: () => void openRunDialog(member) }, 'Run'))
     const source = member.source.kind === 'dawsha' ? null : h('div', { class: 'crew-src' }, `${member.source.linked ? 'Linked to' : 'Imported from'} ${member.source.path}${member.source.linked ? ' · edits stay in sync' : ''}`)
     this.head.append(
+      h('nav', { class: 'crew-crumb', 'aria-label': 'Breadcrumb' }, h('button', { class: 'crew-crumb-link', type: 'button', onClick: () => this.showRoster() }, 'Agents'), h('span', { class: 'crew-crumb-sep', 'aria-hidden': 'true' }, '›'), h('span', {}, member.name)),
       h(
         'div',
         { class: 'crew-dh' },
@@ -230,7 +265,9 @@ export class CrewViewComponent {
       ...(source ? [source] : [])
     )
     clear(this.tabs)
-    const tabs: [Tab, string][] = member.lead ? [['goals', 'Goals'], ['setup', 'How she leads']] : [['setup', 'Setup'], ['runs', `Runs ${runsOf(member.id).length}`]]
+    const tabs: [Tab, string][] = member.lead
+      ? [['setup', 'How she leads']]
+      : [['setup', 'Setup'], ['runs', `Runs ${runsOf(member.id).length}`], ...(live !== 'idle' ? [['live', 'Live'] as [Tab, string]] : [])]
     for (const [id, label] of tabs) {
       const button = h('button', { class: 'crew-tab', type: 'button', role: 'tab', 'aria-selected': String(this.tab === id), 'data-tab': id }, label)
       button.addEventListener('click', () => {
@@ -244,15 +281,30 @@ export class CrewViewComponent {
   private renderBody(member: CrewMember, runs: CrewRun[], state: AppState): void {
     clear(this.body)
     if (member.lead) {
-      this.body.append(this.tab === 'goals' ? this.goals.el : buildLeadSettings(member, () => this.duplicate(member)))
-      if (this.tab === 'goals') this.goals.update(state)
+      this.body.append(buildLeadSettings(member, () => this.duplicate(member)))
       return
     }
     if (this.tab === 'runs') {
       this.body.append(this.runsPage(runs, state))
       return
     }
+    if (this.tab === 'live') {
+      this.body.append(this.liveBody(member, state))
+      return
+    }
     this.body.append(buildSetup(member, this.handlers(member)))
+  }
+
+  private liveBody(member: CrewMember, state: AppState): HTMLElement {
+    const run = state.settings.crewRuns.find((item) => item.memberId === member.id && item.outcome === 'running')
+    if (!run) return h('div', { class: 'crew-empty' }, 'Nothing is running for this agent.')
+    const pane = paneOfRun(run.id)
+    const doing = this.liveTitle(state, member.id) || 'Working on the job'
+    return h('div', { class: 'crew-live', 'data-live-run': run.id },
+      h('p', { class: 'crew-live-line' }, `${memberStateNow(state, member.id) === 'working' ? 'Running' : stateWord(memberStateNow(state, member.id))} · ${doing} · ${formatSpan(Math.max(0, state.now - run.startedAt))}`),
+      h('p', { class: 'crew-muted' }, `${run.projectName} · ${run.title}`),
+      pane ? h('button', { class: 'btn primary', type: 'button', id: 'crew-live-go', onClick: () => { acknowledgeRun(run.id, pane.id); focusPane(pane.id) } }, 'Go to session') : null
+    )
   }
 
   private runsPage(runs: CrewRun[], state: AppState): HTMLElement {
@@ -307,18 +359,14 @@ export class CrewViewComponent {
   private newMember(): void {
     const blank = blankMember(this.members(store.state), 'New agent')
     const [saved] = addMembers([blank])
-    this.selectedId = saved.id
-    this.tab = 'setup'
-    this.refresh(store.state, true)
+    this.openDetail(saved.id, 'setup')
     this.body.querySelector<HTMLInputElement>('input[aria-label="Name"]')?.select()
   }
 
   private duplicate(member: CrewMember): void {
     const copy = duplicateById(member.id)
     if (!copy) return
-    this.selectedId = copy.id
-    this.tab = 'setup'
-    this.refresh(store.state, true)
+    this.openDetail(copy.id, 'setup')
     toast(`${member.name} was copied as ${copy.name}. The copy can be edited.`, 'info')
   }
 
@@ -338,15 +386,14 @@ export class CrewViewComponent {
     store.set((s) => ({ ...s, settings: { ...s.settings, crewRuns: s.settings.crewRuns.filter((run) => run.memberId !== member.id) } }))
     void import('../actions').then(({ saveSettings }) => saveSettings({ crewRuns: store.state.settings.crewRuns }))
     this.selectedId = 'maya'
+    this.mode = 'roster'
     this.refresh(store.state, true)
   }
 
   private async importMembers(): Promise<void> {
     const added = await openImportDialog()
     if (added.length === 0) return
-    this.selectedId = added[0].id
-    this.tab = 'setup'
-    this.refresh(store.state, true)
+    this.openDetail(added[0].id, 'setup')
     toast(`${added.length === 1 ? added[0].name : `${added.length} members`} was added to your agents.`, 'info')
   }
 }

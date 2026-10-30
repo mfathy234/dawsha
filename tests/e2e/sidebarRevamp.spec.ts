@@ -259,7 +259,8 @@ test('projects with sessions sit on cards, the rest in a quiet list, and session
     expect(nameBox.height).toBeGreaterThan(lineHeight * 1.5)
     expect(nameBox.height).toBeLessThan(lineHeight * 2.5)
     await expect(page.locator('.kept-session-row:not(.closed) .sess-row').first()).toHaveAttribute('title', new RegExp(`^${longName}`))
-    await expect(page.locator('.kept-session-row:not(.closed) .sess-meta').first()).toHaveText(/^(Working|Idle|Done|Needs you).*(now|\d+m)$/)
+    await expect(page.locator('.kept-session-row:not(.closed) .sess-meta').first()).toHaveText(/^(Working|Idle|Done|Needs you)/)
+    await expect(page.locator('.kept-session-row:not(.closed) .sess-line .sess-age').first()).toHaveText(/^(now|\d+m)$/)
   } finally {
     await closeApp(app)
   }

@@ -11,8 +11,11 @@ import { BoardCard, drag, type BoardEntry } from './boardCard'
 import { BoardPeek } from './boardPeek'
 import { FilterMenu } from './filterMenu'
 import { stateIcon } from './stateIcon'
+import './pages.css'
+import { pageHeader } from './pageHeader'
 
 const PREVIEW_MS = 1500
+const BOARD_HELP = 'Cards move by themselves as sessions change. Drag a Done card to Reviewed.'
 
 interface Column {
   id: BoardColumn
@@ -48,15 +51,9 @@ export class BoardComponent {
       columns.append(column.el)
     }
     columns.addEventListener('keydown', (event) => this.onKey(event))
-    const filters = h(
-      'div',
-      { class: 'board-filters' },
-      this.projectFilter.el,
-      this.agentFilter.el,
-      h('span', { class: 'board-spacer' }),
-      h('span', { class: 'board-hint' }, 'Cards move by themselves as sessions change. Drag a Done card to Reviewed.')
-    )
-    this.el.append(h('div', { class: 'board-main' }, filters, columns), this.peek.el)
+    const filters = h('div', { class: 'board-filters' }, this.projectFilter.el, this.agentFilter.el)
+    const header = pageHeader({ title: 'Board', subtitle: BOARD_HELP, actions: filters })
+    this.el.append(h('div', { class: 'board-main' }, header, columns), this.peek.el)
   }
 
   update(state: AppState, showing: boolean): void {

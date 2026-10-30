@@ -17,7 +17,7 @@ import { primaryModifierPressed } from '../../shared/shortcuts'
 import { confirmDialog } from './dialogs'
 import { InstructionsSharedComponent, type FileSnap } from './instructionsShared'
 import { toast } from './toast'
-import { selectMenu } from './selectMenu'
+import { selectMenu, syncSelectMenu } from './selectMenu'
 
 interface OpenFile {
   name: InstructionFileName
@@ -136,6 +136,7 @@ export class InstructionsPanelComponent {
     if (wanted && wanted.id !== this.project?.id) void this.load(wanted)
     else if (becameVisible && this.project) void this.reloadAll()
     if (this.project) this.select.value = this.project.id
+    syncSelectMenu(this.select)
   }
 
   private wantedProject(state: AppState): Project | null {
@@ -151,6 +152,7 @@ export class InstructionsPanelComponent {
     if (id === this.project?.id) return
     if (!(await this.confirmDiscard())) {
       this.select.value = this.project?.id ?? ''
+      syncSelectMenu(this.select)
       return
     }
     store.patch({ instructionsProject: id })

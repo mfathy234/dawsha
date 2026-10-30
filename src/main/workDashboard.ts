@@ -4,6 +4,7 @@ import { aggregateWork, classifyWork, shiftAnchor, ticketFromBranch, workWindow,
 import type { Project, ResumeSession } from '../shared/types'
 import { listSessionSources } from './sessionIndex'
 import { WorkSpanReader } from './workSpans'
+import { mainCheckoutOf, projectWorktreeGroups } from './worktreeRoots'
 
 const TTL = 10_000
 const commitCache = new Map<string, { at: number; job: Promise<string[]> }>()
@@ -42,8 +43,10 @@ export const workCommits: CommitReader = (folder, branch, start, end) => {
   return job
 }
 
-export async function sessionWorkItems(sessions: readonly ResumeSession[], projects: readonly Project[], commits: CommitReader = workCommits): Promise<WorkItem[]> {
+/** Sessions in a git worktree of a project count under that project, with the worktree shown on the item. */
+export async function sessionWorkItems(sessions: readonly ResumeSession[], projects: readonly Project[], commits: CommitReader = workCommits, mainOf: (folder: string) => Promise<string | null> = mainCheckoutOf): Promise<WorkItem[]> {
   const byId = new Map(projects.map(p => [p.id, p]))
+  const groups = await projectWorktreeGroups(projects, mainOf)
   const seen = new Set<string>()
   const candidates = sessions.filter(s => {
     const key = `${s.agent}:${s.id}`
@@ -58,10 +61,12 @@ export async function sessionWorkItems(sessions: readonly ResumeSession[], proje
     while (next < candidates.length) {
       const s = candidates[next++]
       const project = byId.get(s.projectId)!
+      const group = groups.get(project.id) ?? { rootId: project.id, worktree: null }
+      const root = byId.get(group.rootId) ?? project
       const branch = s.workBranch ?? null
       const endedAt = s.lastActivityAt ?? s.modifiedAt
       const subjects = await commits(project.folder, branch, s.startedAt, endedAt)
-      items.push({ id: `${s.agent}:${s.id}`, title: s.title, projectId: project.id, project: project.name,
+      items.push({ id: `${s.agent}:${s.id}`, title: s.title, projectId: root.id, project: root.name, ...(group.worktree ? { worktree: group.worktree } : {}),
         agent: s.agent, branch, ticket: ticketFromBranch(branch), type: classifyWork(branch, subjects), startedAt: s.startedAt, endedAt, ...(s.activeSpans ? { spans: s.activeSpans } : {}), session: s })
     }
   }))

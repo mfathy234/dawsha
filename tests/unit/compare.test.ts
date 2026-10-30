@@ -124,12 +124,12 @@ describe('diffCommand and quoting', () => {
   const quote = (path: string): string => quoteForShell(path, 'pwsh.exe')
 
   it('diffs the two branches when nothing is uncommitted', () => {
-    expect(diffCommand(link(), clean, { ...clean, commits: 2 }, quote)).toBe('git diff compare/x7k2p9-a compare/x7k2p9-b')
+    expect(diffCommand(link(), clean, { ...clean, commits: 2 }, quote)).toBe('git --no-pager diff compare/x7k2p9-a compare/x7k2p9-b')
   })
 
   it('diffs the two working trees when either side has uncommitted files', () => {
     expect(diffCommand(link(), clean, dirty, quote)).toBe(
-      "git diff --no-index -- 'C:\\work\\acme-web-compare-x7k2p9-a' 'C:\\work\\acme-web-compare-x7k2p9-b'"
+      "git --no-pager diff --no-index -- 'C:\\work\\acme-web-compare-x7k2p9-a' 'C:\\work\\acme-web-compare-x7k2p9-b'"
     )
   })
 

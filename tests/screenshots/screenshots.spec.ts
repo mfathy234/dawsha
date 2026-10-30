@@ -80,7 +80,8 @@ test('generates the README screenshots from fake projects only', async () => {
 
     const first = page.locator('.pane').first()
     await first.getByRole('button', { name: 'Maximize pane' }).click()
-    await page.locator('.pane-info').first().click({ position: { x: 4, y: 10 } })
+    await first.getByRole('button', { name: 'Pane actions' }).click()
+    await page.getByRole('menuitem', { name: 'Details', exact: true }).click()
     await expect(page.locator('.pane-details:visible')).toHaveCount(1)
     await settle(page)
     await page.screenshot({ path: join(OUT, 'focus-details.png') })
@@ -90,8 +91,7 @@ test('generates the README screenshots from fake projects only', async () => {
 
     await settle(page, 1200)
 
-    await page.locator('#more-button').click()
-    await page.locator('#skills-menu-item').click()
+    await openMore(page, 'skills')
     await expect(page.locator('.skill-row')).toHaveCount(3)
     await settle(page, 800)
     await page.screenshot({ path: join(OUT, 'skills.png') })
@@ -118,7 +118,9 @@ test('generates the README screenshots from fake projects only', async () => {
     await page.keyboard.press('Escape')
     await expect(page.locator('.resume-picker')).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Theme' }).click()
+    await page.locator('#settings-button').click()
+    await page.locator('#settings-tab-appearance').click()
+    await page.locator('#settings-theme-picker').click()
     await page.locator('#theme-dawsha-daylight').click()
     await expect(page.locator('.theme-picker')).toBeVisible()
     await settle(page, 1200)
@@ -126,6 +128,8 @@ test('generates the README screenshots from fake projects only', async () => {
     await page.locator('#theme-grid-dark').click()
     await page.keyboard.press('Escape')
     await expect(page.locator('.theme-picker')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
+    await expect(page.locator('.pane')).toHaveCount(4)
 
     const runs: CliRun[] = []
     const demoCwd = folder('acme-web')
@@ -158,8 +162,7 @@ test('generates the README screenshots from fake projects only', async () => {
   })
   try {
     await resize(launched.app)
-    await launched.page.locator('#more-button').click()
-    await launched.page.locator('#agents-menu-item').click()
+    await openMore(launched.page, 'agents')
     await expect(launched.page.locator('.tool-flag.update')).toBeVisible()
     await launched.page.locator('.tool-block[data-agent="gemini"]').getByRole('button', { name: 'Show command' }).click()
     await settle(launched.page, 800)
@@ -206,6 +209,7 @@ test('generates the update and what is new screenshots', async () => {
   seed(sandbox, true)
   const { app, page } = await launchApp(sandbox, {
     ...demoEnv(),
+    DAWSHA_APP_VERSION: '1.7.6',
     DAWSHA_TEST_UPDATER: 'fake',
     DAWSHA_TEST_UPDATER_SCRIPT: script,
     DAWSHA_UPDATE_START_DELAY_MS: '200'

@@ -1,4 +1,5 @@
 import { migrateSettings, MAX_LAYOUTS } from './settingsSchema'
+import { isGridStyle } from './gridStyle'
 import type { CrewMember, CrewSettings } from './crew'
 import type { Project, SavedLayout, Settings } from './types'
 
@@ -14,6 +15,7 @@ export const INCLUDED_KEYS = [
   'theme',
   'paletteShortcut',
   'sessionsLayout',
+  'gridStyle',
   'recordings',
   'crew',
   'sessionInfo',
@@ -94,6 +96,13 @@ export function buildEnvelope(settings: Settings, appVersion: string, now: Date)
 
 const pad = (value: number): string => String(value).padStart(2, '0')
 
+export const importDialogOptions = (defaultDir: string) => ({
+  title: 'Import settings',
+  defaultPath: defaultDir,
+  properties: ['openFile' as const],
+  filters: [{ name: 'Dawsha settings', extensions: ['json'] }]
+})
+
 export const transferFileName = (now: Date): string =>
   `dawsha-settings-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.json`
 
@@ -128,6 +137,7 @@ function checkShapes(data: Raw): string | null {
   if (data.sessionsLayout !== undefined && data.sessionsLayout !== 'grid' && data.sessionsLayout !== 'board') {
     return '"sessionsLayout" must be grid or board.'
   }
+  if (data.gridStyle !== undefined && !isGridStyle(data.gridStyle)) return '"gridStyle" must be focus or tiles.'
   if (data.sidebarWidth !== undefined && (typeof data.sidebarWidth !== 'number' || !Number.isFinite(data.sidebarWidth))) {
     return '"sidebarWidth" must be a number.'
   }
@@ -215,6 +225,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['highlights', 'Highlight rules'],
   ['paletteShortcut', 'Palette shortcut'],
   ['sessionsLayout', 'Sessions view'],
+  ['gridStyle', 'Sessions grid'],
   ['recordings', 'Recording settings'],
   ['crew', 'Crew members'],
   ['sessionInfo', 'Notifications'],
@@ -425,6 +436,6 @@ export type SettingsExportResult =
   | { status: 'error'; message: string }
 
 export type SettingsImportRead =
-  | { status: 'ok'; transfer: ParsedTransfer }
+  | { status: 'ok'; path: string; transfer: ParsedTransfer }
   | { status: 'cancelled' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; path?: string }

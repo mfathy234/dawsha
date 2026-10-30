@@ -52,6 +52,7 @@ import { closedSessionsFor, insertKept, keptSessionKey, REOPEN_CONFIRM_OVER, ren
 import { cleanSessionName, type SessionTag } from '../shared/sessionTags'
 import { derivePanes, matchAll, primaryTab, sessionIdOf, workFolderOfPane } from './derive'
 import { nextFrame } from './dom'
+import { sharedZoomState } from './sharedZoom'
 import {
   AGENTS_PROJECT_ID,
   mapPane,
@@ -703,14 +704,16 @@ export function focusNextAttention(): boolean {
  * The screen is checked again first, because attention lags the terminal and a stray Enter would
  * send whatever is in the prompt box.
  */
-export function answerPermission(paneId: string, allow: boolean): boolean {
+/** `true` accepts the highlighted choice, `false` denies, and a number picks that numbered option (Allow always). */
+export function answerPermission(paneId: string, choice: boolean | number): boolean {
   if (store.state.attention[paneId] !== 'needs') return false
   const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
   const tail = tabId ? (getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '') : ''
   if (!tabId || !detectPermissionPrompt(tail)) return false
+  const allow = choice !== false
   recordApproval(paneId, allow, tail, Date.now())
   void api.remoteAccess?.recordApproval(tabId, allow, tail).catch(() => undefined)
-  api.write(tabId, allow ? '\r' : '\x1b')
+  api.write(tabId, choice === true ? '\r' : choice === false ? '\x1b' : String(choice))
   return true
 }
 
@@ -837,14 +840,7 @@ export function zoomPane(paneId: string, delta: number): void {
 }
 
 export function zoomAll(delta: number): void {
-  store.set((s) => {
-    let next = s
-    for (const pane of s.panes) {
-      const fontSize = clampFontSize(pane.fontSize + delta)
-      next = updateProjectFont(mapPane(next, pane.id, (p) => ({ ...p, fontSize })), pane.projectId, fontSize)
-    }
-    return next
-  })
+  store.set((s) => sharedZoomState(s, delta))
   saveProjects()
   persistWorkspace()
 }
@@ -1146,6 +1142,11 @@ export function initWhatsNew(): void {
   }
 }
 
+async function findMissingProjects(projects: Project[]): Promise<string[]> {
+  const checks = await Promise.all(projects.map(async (project) => ((await api.checkFolder(project.folder)).ok ? null : project.id)))
+  return checks.filter((id): id is string => id !== null)
+}
+
 export async function refreshBranches(): Promise<void> {
   const state = store.state
   const folders = new Set<string>()
@@ -1158,6 +1159,8 @@ export async function refreshBranches(): Promise<void> {
   const entries = await Promise.all([...branchFolders].map(async (f) => [f, await api.gitBranch(f)] as const))
   const changed = entries.some(([folder, branch]) => store.state.branches[folder] !== branch)
   if (changed) store.set((s) => ({ ...s, branches: { ...s.branches, ...Object.fromEntries(entries) } }))
+  const missing = await findMissingProjects(store.state.settings.projects)
+  if (missing.join('\n') !== store.state.missingProjects.join('\n')) store.set((s) => ({ ...s, missingProjects: missing }))
   const syncs = await Promise.all([...folders].map(async (f) => [f, await api.gitSync(f)] as const))
   const known = store.state.gitSync
   if (syncs.some(([folder, value]) => JSON.stringify(known[folder] ?? null) !== JSON.stringify(value))) {
@@ -1199,6 +1202,13 @@ export function updateProject(
   const projects = store.state.settings.projects.map((p) => (p.id === projectId ? { ...p, ...change } : p))
   store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
   saveProjects()
+}
+
+export async function locateProject(projectId: string): Promise<void> {
+  const folder = await api.pickFolder()
+  if (!folder) return
+  updateProject(projectId, { folder })
+  await refreshBranches()
 }
 
 export function pinProject(projectId: string, pinned: boolean): void {

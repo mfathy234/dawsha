@@ -13,7 +13,7 @@ import { TicketsPanel } from './workTickets'
 import { selectMenu } from './selectMenu'
 import { formatWorkSummary } from '../../shared/workSummary'
 import { toast } from './toast'
-import { countLine } from './countLine'
+import { pageHeader } from './pageHeader'
 import './workView.css'
 
 type WorkMode = 'sessions' | 'tickets'
@@ -143,9 +143,12 @@ export class WorkViewComponent {
 
   private renderContent(): void {
     this.el.setAttribute('aria-busy', String(this.loading))
-    this.el.replaceChildren(h('div', { class: 'usage-head' },
-      h('h1', {}, 'Work'),
-      h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Work period' }, ...PERIODS.map(p => h('button', {
+    this.el.replaceChildren(this.header(), h('div', { class: 'work-body' }, ...this.bodyNodes()))
+  }
+
+  private header(): HTMLElement {
+    return pageHeader({ title: 'Work', subtitle: `What got done · ${this.periodLabel()}`, actions: [
+      h('div', { class: 'rp-tabs work-periods', role: 'tablist', 'aria-label': 'Work period' }, ...PERIODS.map(p => h('button', {
         class: `rp-tab${this.period === p.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.period === p.value),
         onClick: () => this.changePeriod(p.value)
       }, p.label))),
@@ -153,39 +156,57 @@ export class WorkViewComponent {
         h('button', { class: 'btn ghost work-step-btn', type: 'button', id: 'work-prev', 'aria-label': `Previous ${UNIT[this.period]}`, title: `Previous ${UNIT[this.period]}`, disabled: this.loading && !this.report, onClick: () => this.step(-1) }, '‹'),
         h('span', { class: 'work-step-label', id: 'work-period-label', 'aria-live': 'polite' }, this.periodLabel()),
         h('button', { class: 'btn ghost work-step-btn', type: 'button', id: 'work-next', 'aria-label': `Next ${UNIT[this.period]}`, title: `Next ${UNIT[this.period]}`, disabled: this.offset === 0, onClick: () => this.step(1) }, '›')),
-      h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Count by' }, ...MODES.map(m => h('button', {
-        class: `rp-tab${this.mode === m.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.mode === m.value), id: `work-mode-${m.value}`,
-        onClick: () => { this.mode = m.value; this.render() }
-      }, m.label))), h('span', { class: 'spacer' }),
       h('button', { class: 'btn ghost', type: 'button', disabled: this.loading || !this.report, onClick: () => void this.copySummary() }, 'Copy summary'),
-      h('button', { class: 'btn ghost', type: 'button', disabled: this.loading, onClick: () => void this.load() }, 'Refresh')))
-    this.el.append(this.filters())
-    if (this.error) this.el.append(h('p', { class: 'field-error', role: 'alert' }, this.error))
+      h('button', { class: 'btn ghost', type: 'button', disabled: this.loading, onClick: () => void this.load() }, 'Refresh')
+    ] })
+  }
+
+  private bodyNodes(): Node[] {
+    const nodes: Node[] = [this.toolbar()]
+    if (this.projectId) nodes.push(this.selectedProject())
+    if (this.error) nodes.push(h('p', { class: 'field-error', role: 'alert' }, this.error))
     const source = this.report
     if (!source) {
-      if (this.loading) this.el.append(h('p', { class: 'usage-empty', role: 'status' }, 'Reading your work history…'))
-      return
+      if (this.loading) nodes.push(h('p', { class: 'usage-empty', role: 'status' }, 'Reading your work history…'))
+      return nodes
     }
     if (this.mode === 'tickets') {
-      this.el.append(...this.tickets.render(source, {
+      nodes.push(...this.tickets.render(source, {
         notes: this.notes, query: this.search, projectId: this.projectId, window: this.shownWindow(), duration,
         renderItem: (item) => this.item(item), setProject: (id) => this.setProject(id), rerender: () => this.render()
       }))
-      return
+      return nodes
     }
     const searched = filterWorkReport(source, this.search, null, this.shownWindow().end)
     const report = filterWorkReport(source, this.search, this.projectId, this.shownWindow().end)
-    this.el.append(countLine([...WORK_TYPES.map((type) => ({ id: `work-${type}`, count: report.counts[type], ...WORK_NOUNS[type] })), { id: 'work-total', count: report.total, one: 'total', many: 'total' }], 'Work summary'))
+    nodes.push(this.stats(report))
     if (report.total === 0) {
-      this.el.append(h('p', { class: 'usage-empty', role: 'status' }, this.search.trim()
+      nodes.push(h('p', { class: 'usage-empty', role: 'status' }, this.search.trim()
         ? `No matches for “${this.search.trim()}”. Clear the search to see more work.`
         : this.projectId ? 'No work for this project in this period.' : 'No work in this period. Sessions in your Dawsha projects appear here.'))
-      if (searched.total) this.el.append(this.projects(searched))
-      return
+      if (searched.total) nodes.push(this.projects(searched))
+      return nodes
     }
-    if (this.period !== 'today') this.el.append(this.chart(report))
-    this.el.append(this.projects(searched), this.items(report), h('p', { class: 'usage-local muted' },
+    if (this.period !== 'today') nodes.push(this.chart(report))
+    nodes.push(this.projects(searched), this.items(report), h('p', { class: 'usage-local muted' },
       'One item per session, counted on its last activity day. Time spent is active time in this period (breaks over 5 minutes do not count). The type comes from the branch and your own commits.'))
+    return nodes
+  }
+
+  private toolbar(): HTMLElement {
+    return h('div', { class: 'work-toolbar' },
+      h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Count by' }, ...MODES.map(m => h('button', {
+        class: `rp-tab${this.mode === m.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.mode === m.value), id: `work-mode-${m.value}`,
+        onClick: () => { this.mode = m.value; this.render() }
+      }, m.label))),
+      h('span', { class: 'spacer' }),
+      this.filters())
+  }
+
+  private stats(report: WorkReport): HTMLElement {
+    const parts = [...WORK_TYPES.map((type) => ({ id: `work-${type}`, count: report.counts[type], ...WORK_NOUNS[type] })), { id: 'work-total', count: report.total, one: 'total', many: 'total' }]
+    return h('div', { class: 'work-stats', role: 'group', 'aria-label': 'Work summary' }, ...parts.map(part => h('span', { class: `work-stat${part.id === 'work-total' ? ' total' : ''}`, id: part.id },
+      h('span', { class: 'count-value' }, String(part.count)), ` ${part.count === 1 ? part.one : part.many}`)))
   }
 
   private setProject(id: string | null): void {
@@ -198,6 +219,11 @@ export class WorkViewComponent {
     this.search = ''
     this.render()
     this.el.querySelector<HTMLInputElement>('#work-search')?.focus()
+  }
+
+  private selectedProject(): HTMLElement {
+    return h('div', { class: 'work-filter-bar' }, h('span', { class: 'work-selected-project' }, this.projectLabel,
+      h('button', { class: 'btn ghost', type: 'button', 'aria-label': 'Remove project filter', onClick: () => this.setProject(null) }, '×')))
   }
 
   private filters(): HTMLElement {
@@ -225,9 +251,7 @@ export class WorkViewComponent {
     return h('div', { class: 'work-filters', role: 'group', 'aria-label': 'Search and project filters' },
       h('div', { class: 'work-search' }, input,
         this.search ? h('button', { class: 'btn ghost work-search-clear', type: 'button', 'aria-label': 'Clear search', onClick: () => this.clearSearch() }, '×') : null),
-      selectMenu(select),
-      this.projectId ? h('span', { class: 'work-selected-project' }, this.projectLabel,
-        h('button', { class: 'btn ghost', type: 'button', 'aria-label': 'Remove project filter', onClick: () => this.setProject(null) }, '×')) : null)
+      selectMenu(select))
   }
 
   private chart(report: WorkReport): HTMLElement {
@@ -243,10 +267,10 @@ export class WorkViewComponent {
 
   private projects(report: WorkReport): HTMLElement {
     return h('section', { class: 'usage-panel work-projects', 'aria-label': 'Per project' }, h('h2', {}, 'Per project'),
-      h('div', { class: 'work-table-scroll' }, h('table', { class: 'usage-table', id: 'work-by-project' },
+      h('div', { class: 'work-table-scroll' }, h('table', { class: 'usage-table work-table', id: 'work-by-project' },
         h('thead', {}, h('tr', {}, ...['Project', ...WORK_TYPES.map(t => WORK_LABELS[t]), 'Total', 'Time spent'].map((text, i) => h('th', { scope: 'col', class: i ? 'num' : '' }, text)))),
         h('tbody', {}, ...report.projects.map(row => h('tr', { 'data-project': row.projectId },
-          h('td', {}, h('button', { class: 'usage-sort', type: 'button', 'aria-label': `Filter by ${row.project}`, 'aria-pressed': String(this.projectId === row.projectId), onClick: () => this.setProject(this.projectId === row.projectId ? null : row.projectId) }, row.project)),
+          h('td', {}, h('button', { class: 'usage-sort work-project-button', type: 'button', 'aria-label': `Filter by ${row.project}`, 'aria-pressed': String(this.projectId === row.projectId), onClick: () => this.setProject(this.projectId === row.projectId ? null : row.projectId) }, row.project)),
           ...WORK_TYPES.map(t => h('td', { class: 'num' }, String(row.counts[t]))), h('td', { class: 'num' }, String(row.total)), h('td', { class: 'num' }, duration(row.durationMs))))))))
   }
 
@@ -261,7 +285,8 @@ export class WorkViewComponent {
     return h('li', {}, h('button', { class: 'work-item', type: 'button', onClick: () => void this.open(item) },
       h('span', { class: 'work-item-main' }, h('strong', {}, item.title), h('span', { class: `work-chip work-${item.type}` }, WORK_LABELS[item.type]),
         !this.projectId ? h('span', { class: 'work-project-chip' }, item.project) : null, item.ticket ? h('span', { class: 'work-ticket' }, item.ticket) : null),
-      h('span', { class: 'work-item-meta' }, item.project, ' · ', agentMark(item.agent), agentLabel(item.agent), ' · ', item.branch ?? 'Unknown branch',
+      h('span', { class: 'work-item-meta' }, agentMark(item.agent), agentLabel(item.agent), ' · ',
+        item.worktree ? `${item.worktree} · ` : '', item.branch ?? 'Unknown branch',
         ' · ', new Date(item.endedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), ' · ', duration(this.itemTime(item)))))
   }
 

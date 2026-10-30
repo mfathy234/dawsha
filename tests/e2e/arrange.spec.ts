@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, QUIT_BUDGET_MS } from './helpers'
+import { closeApp, createSandbox, launchApp, openTerminalPicker, QUIT_BUDGET_MS } from './helpers'
 
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 
@@ -50,42 +50,42 @@ test('resizes columns with a draggable gutter, keeps the size, and resets on dou
     await expect(gutter).toHaveCount(1)
     await expect(gutter).toHaveAttribute('role', 'separator')
     await expect(gutter).toHaveAttribute('aria-orientation', 'vertical')
-    await expect(gutter).toHaveAttribute('aria-valuenow', '50')
+    await expect(gutter).toHaveAttribute('aria-valuenow', '57')
     await expect(page.locator('.gutter[data-axis="rows"]')).toHaveCount(0)
-    const equalWidth = await widthOf(panes.first())
+    const equalWidth = await widthOf(panes.last())
 
     const start = await center(gutter)
     await drag(page, start, { x: start.x + 80, y: start.y })
-    await expect.poll(async () => widthOf(panes.first())).toBeGreaterThan(equalWidth + 50)
-    await expect(gutter).not.toHaveAttribute('aria-valuenow', '50')
+    await expect.poll(async () => widthOf(panes.last())).toBeGreaterThan(equalWidth + 50)
+    await expect(gutter).not.toHaveAttribute('aria-valuenow', '57')
     await expect
-      .poll(() => readSettings(sandbox.userData).workspace?.splits?.['2x1']?.cols?.[0] ?? 0)
+      .poll(() => readSettings(sandbox.userData).workspace?.splits?.['2x1b']?.cols?.[0] ?? 0)
       .toBeGreaterThan(0.55)
 
     const now = await center(gutter)
     await drag(page, now, { x: now.x + 3000, y: now.y })
-    await expect.poll(async () => widthOf(panes.nth(1))).toBeGreaterThanOrEqual(255)
-    expect(await widthOf(panes.nth(1))).toBeLessThan(300)
+    await expect.poll(async () => widthOf(panes.first())).toBeGreaterThanOrEqual(255)
+    expect(await widthOf(panes.first())).toBeLessThan(300)
 
     await gutter.dblclick()
-    await expect.poll(async () => Math.abs((await widthOf(panes.first())) - equalWidth)).toBeLessThan(3)
-    await expect(gutter).toHaveAttribute('aria-valuenow', '50')
+    await expect.poll(async () => Math.abs((await widthOf(panes.last())) - equalWidth)).toBeLessThan(3)
+    await expect(gutter).toHaveAttribute('aria-valuenow', '57')
     await expect.poll(() => readSettings(sandbox.userData).workspace?.splits).toBeUndefined()
 
     await gutter.focus()
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('ArrowRight')
-    await expect.poll(async () => (await widthOf(panes.first())) - equalWidth).toBeGreaterThan(30)
+    await expect.poll(async () => (await widthOf(panes.last())) - equalWidth).toBeGreaterThan(30)
     await page.keyboard.press('ArrowLeft')
-    expect(Number(await gutter.getAttribute('aria-valuenow'))).toBeGreaterThan(50)
+    expect(Number(await gutter.getAttribute('aria-valuenow'))).toBeGreaterThan(57)
     await expect
-      .poll(() => readSettings(sandbox.userData).workspace?.splits?.['2x1']?.cols?.[0] ?? 0)
+      .poll(() => readSettings(sandbox.userData).workspace?.splits?.['2x1b']?.cols?.[0] ?? 0)
       .toBeGreaterThan(0.5)
-    savedWidth = await widthOf(panes.first())
+    savedWidth = await widthOf(panes.last())
 
-    await panes.first().locator('.maximize').click()
+    await panes.last().locator('.maximize').click()
     await expect(page.locator('.gutters')).toBeHidden()
-    await panes.first().locator('.maximize').click()
+    await panes.last().locator('.maximize').click()
     await expect(page.locator('.gutters')).toBeVisible()
   } finally {
     expect(await closeApp(first.app)).toBeLessThan(QUIT_BUDGET_MS)
@@ -95,7 +95,7 @@ test('resizes columns with a draggable gutter, keeps the size, and resets on dou
   try {
     const panes = second.page.locator('.pane')
     await expect(panes).toHaveCount(2, { timeout: 20_000 })
-    await expect.poll(async () => Math.abs((await widthOf(panes.first())) - savedWidth)).toBeLessThan(4)
+    await expect.poll(async () => Math.abs((await widthOf(panes.last())) - savedWidth)).toBeLessThan(4)
   } finally {
     expect(await closeApp(second.app)).toBeLessThan(QUIT_BUDGET_MS)
   }
@@ -105,10 +105,11 @@ test('resizes rows in a two by two grid and shows no gutters in the scrolling la
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
+    await page.setViewportSize({ width: 1440, height: 900 })
     await openPanes(page, 4)
     const panes = page.locator('.pane')
-    const rowGutter = page.locator('.gutter[data-axis="rows"]')
-    await expect(rowGutter).toHaveCount(1)
+    const rowGutter = page.locator('.gutter[data-axis="rows"]').first()
+    await expect(page.locator('.gutter[data-axis="rows"]')).toHaveCount(2)
     await expect(rowGutter).toHaveAttribute('aria-orientation', 'horizontal')
     await expect(page.locator('.gutter[data-axis="cols"]')).toHaveCount(1)
     const equalHeight = await heightOf(panes.first())
@@ -116,10 +117,8 @@ test('resizes rows in a two by two grid and shows no gutters in the scrolling la
     await drag(page, start, { x: start.x, y: start.y + 90 })
     await expect.poll(async () => heightOf(panes.first())).toBeGreaterThan(equalHeight + 60)
     await expect
-      .poll(() => readSettings(sandbox.userData).workspace?.splits?.['2x2']?.rows?.[0] ?? 0)
-      .toBeGreaterThan(0.55)
-    await openPanes(page, 3)
-    await expect(page.locator('.gutter')).toHaveCount(0)
+      .poll(() => readSettings(sandbox.userData).workspace?.splits?.['2x3b']?.rows?.[0] ?? 0)
+      .toBeGreaterThan(0.36)
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
@@ -199,7 +198,7 @@ test('drags a pane by its header onto another pane to reorder, and Esc cancels',
     await openPanes(page, 3)
     const ids = await paneIds(page)
     const pane = (index: number): Locator => page.locator(`.pane[data-pane-id="${ids[index]}"]`)
-    await pane(0).getByRole('button', { name: /New terminal in/ }).click()
+    await openTerminalPicker(pane(0))
     await page.getByRole('menuitem', { name: 'Shell' }).click()
     await expect(pane(0).locator('.tabs [role="tab"]')).toHaveCount(2)
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.length).toBe(2)
@@ -244,7 +243,7 @@ test('drags terminal tabs to reorder them inside a pane and keeps the active tab
     const { page } = first
     await openPanes(page, 1)
     for (const name of ['Shell', 'Codex session']) {
-      await page.getByRole('button', { name: /New terminal in/ }).click()
+      await openTerminalPicker(page.locator('.pane').first())
       await page.getByRole('menuitem', { name }).click()
     }
     const tabs = page.locator('.tabs [role="tab"]')

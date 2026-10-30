@@ -2,12 +2,15 @@ import { api } from '../api'
 import { toast } from './toast'
 import { clear, h } from '../dom'
 import { filterSkills, skillExportLabel, skillExportSummary } from '../../shared/skillSearch'
+import { agentLabel } from '../../shared/agents'
 import type { SkillEntry } from '../../shared/skills'
 import { currentMembers } from '../crewActions'
 import { store } from '../state'
 import { crewAvatar } from './crewAvatar'
 import { openConvertDialog } from './crewDialogs'
 import './crew.css'
+import './pages.css'
+import { pageHeader } from './pageHeader'
 
 const norm = (path: string): string => path.replace(/\\/g, '/').toLowerCase()
 const convertible = (entry: SkillEntry): boolean => entry.kind === 'skill' || /\.md$/i.test(entry.path)
@@ -25,7 +28,7 @@ export class SkillsViewComponent {
   private readonly rows = h('div', { class: 'skill-list' })
   private readonly status = h('p', { class: 'skill-status', role: 'status' })
   private readonly filters = h('div', { class: 'skill-filters', role: 'group', 'aria-label': 'Filter by AI provider' })
-  private readonly kinds = h('div', { class: 'skill-kinds', role: 'group', 'aria-label': 'Inventory type' })
+  private readonly kinds = h('div', { class: 'segmented skill-kinds', role: 'group', 'aria-label': 'Inventory type' })
   private readonly search = h('input', {
     class: 'skill-search',
     type: 'search',
@@ -58,10 +61,7 @@ export class SkillsViewComponent {
       }, filter === 'all' ? 'All' : filter[0].toUpperCase() + filter.slice(1)))
     }
     this.el.append(
-      h('div', { class: 'skills-head' },
-        h('div', {}, h('h1', {}, 'Skills'), h('p', { class: 'lede' }, 'Skills and agent definitions installed on this machine or in your projects.')),
-        h('button', { class: 'btn ghost', type: 'button', onClick: () => void this.refresh() }, 'Refresh')
-      ),
+      pageHeader({ title: 'Skills', subtitle: 'Skills and agent definitions installed on this machine or in your projects.', actions: h('button', { class: 'btn ghost', type: 'button', onClick: () => void this.refresh() }, 'Refresh') }),
       this.kinds,
       h('div', { class: 'skill-toolbar' }, this.filters, this.search, this.exportShown, this.exportStatus),
       this.status,
@@ -160,9 +160,13 @@ export class SkillsViewComponent {
     return h('article', { class: 'skill-row', 'data-agent': entry.agent, 'data-kind': entry.kind },
       h('span', { class: 'skill-pick' }, pick),
       h('div', { class: 'skill-details' },
-        h('strong', {}, entry.name),
-        h('span', { class: 'skill-meta' }, `${entry.agent} · ${entry.scope}${entry.project ? ` · ${entry.project}` : ''}`),
-        h('span', { class: 'skill-path', title: entry.path }, entry.path)
+        h('span', { class: 'skill-head' },
+          h('strong', {}, entry.name),
+          entry.linked ? h('span', { class: 'skill-badge', title: entry.linkTarget ? `Linked to ${entry.linkTarget}` : 'Linked' }, 'Linked') : null
+        ),
+        entry.description ? h('span', { class: 'skill-desc' }, entry.description) : null,
+        h('span', { class: 'skill-meta' }, `${entry.agent === 'shared' ? 'Shared' : agentLabel(entry.agent)} · ${entry.project ?? (entry.scope === 'user' ? 'Your computer' : entry.scope)}`),
+        h('span', { class: 'skill-path', title: entry.linkTarget ? `${entry.path} → ${entry.linkTarget}` : entry.path }, entry.path)
       ),
       h('div', { class: 'skill-actions' },
         make,

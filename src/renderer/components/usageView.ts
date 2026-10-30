@@ -23,6 +23,7 @@ import { clear, h } from '../dom'
 import type { AppState } from '../state'
 import { agentMark } from './agentMark'
 import { buildBars, buildLegend, type ChartMode } from './usageChart'
+import { pageHeader } from './pageHeader'
 
 const REFRESH_MS = 30_000
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -162,14 +163,11 @@ export class UsageViewComponent {
         },
         label
       )
-    return h(
-      'div',
-      { class: 'usage-head' },
-      h('h1', {}, 'Usage'),
-      h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Range' }, ...USAGE_RANGES.map((entry) => tab(entry.value, entry.label))),
-      h('span', { class: 'spacer' }),
-      h('span', { class: 'muted usage-local' }, "Read from your agents' folders. Nothing leaves this computer.")
-    )
+    return pageHeader({
+      title: 'Usage',
+      subtitle: "Read from your agents' folders. Nothing leaves this computer.",
+      actions: h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Range' }, ...USAGE_RANGES.map((entry) => tab(entry.value, entry.label)))
+    })
   }
 
   private tiles(report: UsageReport): HTMLElement {

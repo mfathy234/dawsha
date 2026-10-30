@@ -8,6 +8,7 @@ import type {
   RunSnapshot,
   RunTarget
 } from '../../shared/runCommands'
+import { selectMenu, syncSelectMenu } from './selectMenu'
 import './runCommandsPanel.css'
 
 function element<K extends keyof HTMLElementTagNameMap>(
@@ -104,7 +105,7 @@ export class RunCommandsPanel {
       this.edit(this.currentCommand())
     )
     toolbar.append(
-      this.commands,
+      selectMenu(this.commands),
       this.startButton,
       this.restartButton,
       this.stopButton,
@@ -116,7 +117,7 @@ export class RunCommandsPanel {
       button('run-refresh', 'Refresh', () => {
         void this.refresh()
       }),
-      this.manager
+      selectMenu(this.manager)
     )
     this.display.id = 'run-display'
     this.cwd.id = 'run-cwd'
@@ -220,6 +221,7 @@ export class RunCommandsPanel {
     this.target = target ? { ...target } : null
     this.config = undefined
     this.manager.value = ''
+    syncSelectMenu(this.manager)
     this.discovery = null
     this.editor.hidden = true
     this.epoch++
@@ -299,6 +301,7 @@ export class RunCommandsPanel {
       }
       if (result.commands.some((c) => c.id === previous))
         this.commands.value = previous
+      syncSelectMenu(this.commands)
       this.message.textContent = [
         result.commands.length
           ? ''

@@ -28,6 +28,7 @@ import { store } from '../state'
 import { crewAvatar } from './crewAvatar'
 import { colourSwatches } from './crewSetup'
 import { nextDialogId, present } from './dialogs'
+import { selectMenu } from './selectMenu'
 import { toast } from './toast'
 import './crew.css'
 
@@ -78,7 +79,7 @@ export async function openRunDialog(member: CrewMember, preset: RunPreset = {}):
   }
   const project = projectSelect(member, preset.projectId)
   project.id = `crew-project-${id}`
-  grid.append(h('label', { for: project.id }, 'Project'), project)
+  grid.append(h('label', { for: project.id }, 'Project'), selectMenu(project))
   let choice: RunChoice = 'default'
   let where: RunWhere = 'pane'
   const chips = h('div', { class: 'crew-chips', role: 'radiogroup', 'aria-label': 'Model for this run' })
@@ -195,7 +196,7 @@ export function openHandDialog(): void {
     h('h2', {}, 'Hand a job to an agent'),
     h('p', { class: 'dialog-hint' }, 'Paste what you have. Dawsha suggests who should take it and fills in the fields. Enter runs the first suggestion.'),
     area,
-    h('div', { class: 'crew-dlg-grid crew-hand-project' }, h('label', {}, 'Project'), project),
+    h('div', { class: 'crew-dlg-grid crew-hand-project' }, h('label', {}, 'Project'), selectMenu(project)),
     list,
     error,
     h('div', { class: 'dialog-actions' }, cancel)

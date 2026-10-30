@@ -23,36 +23,29 @@
 
 .btn-hint { margin-inline-start: var(--s-2); font-size: var(--fs-status); font-weight: 400; opacity: .7; }
 
-input[type='checkbox'] {
-  appearance: none; position: relative; flex: none; width: 16px; height: 16px; margin: 0; border-radius: var(--r-control);
-  background: color-mix(in srgb, var(--text) 14%, transparent); cursor: pointer;
-  transition: background-color var(--t-feedback) var(--ease-out);
+/* One checkbox and radio skin. The generic input rule in styles.css gives every field a 32px min-height, so this skin resets its own size. */
+input[type='checkbox'],
+input[type='radio'] {
+  appearance: none; position: relative; flex: none; box-sizing: border-box; width: 16px; height: 16px; min-width: 16px; min-height: 16px;
+  margin: 0; padding: 0; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--well); cursor: pointer;
+  transition: background-color var(--t-feedback) var(--ease-out), border-color var(--t-feedback) var(--ease-out);
 }
-input[type='checkbox']:hover:not(:disabled) { background: color-mix(in srgb, var(--text) 22%, transparent); }
-input[type='checkbox']:checked { background: var(--accent); }
+input[type='radio'] { border-radius: 50%; }
+input[type='checkbox']:hover:not(:disabled),
+input[type='radio']:hover:not(:disabled) { border-color: var(--text-3); }
+input[type='checkbox']:focus-visible,
+input[type='radio']:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+input[type='checkbox']:checked,
+input[type='radio']:checked { background: var(--accent); border-color: var(--accent); }
 input[type='checkbox']:checked::before {
   content: ''; position: absolute; inset: 0; background: var(--on-accent);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
 }
-input[type='checkbox']:disabled { opacity: .5; cursor: default; }
-
-/* In Settings every checkbox is a real switch. */
-.settings-view input[type='checkbox'] {
-  width: 30px; height: 18px; border-radius: var(--r-full);
-  background: color-mix(in srgb, var(--muted) 30%, var(--pane));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--muted) 70%, transparent);
-}
-.settings-view input[type='checkbox']:hover:not(:disabled) { background: color-mix(in srgb, var(--muted) 42%, var(--pane)); }
-.settings-view input[type='checkbox']::before {
-  content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
-  background: var(--text); transition: transform var(--t-feedback) var(--ease-out);
-}
-.settings-view input[type='checkbox']:checked { background: var(--accent); box-shadow: none; }
-.settings-view input[type='checkbox']:checked::before {
-  inset: auto; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--on-accent);
-  -webkit-mask: none; mask: none; transform: translateX(12px);
-}
+input[type='radio']:checked { background: var(--well); border-color: var(--accent); }
+input[type='radio']:checked::before { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
+input[type='checkbox']:disabled,
+input[type='radio']:disabled { opacity: .5; cursor: not-allowed; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
