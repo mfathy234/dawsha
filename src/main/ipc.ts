@@ -31,7 +31,7 @@ import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
 import { PreviewServer } from './filePreviewServer'
 import { registerPreviewProtocol } from './previewProtocol'
-import { fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
+import { fileCommitDetails, fileCommitFile, fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { trashProjectPath } from './filesTrash'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
@@ -268,6 +268,14 @@ export function registerIpc(
   ipcMain.handle(IPC.filesLog, async (_event, folder: unknown, path: unknown) => {
     const root = await known(folder)
     return root ? fileLog(root, path) : refused
+  })
+  ipcMain.handle(IPC.filesCommitDetails, async (_event, folder: unknown, hash: unknown) => {
+    const root = await known(folder)
+    return root ? fileCommitDetails(root, hash) : refused
+  })
+  ipcMain.handle(IPC.filesCommitFile, async (_event, folder: unknown, hash: unknown, path: unknown, full: unknown) => {
+    const root = await known(folder)
+    return root ? fileCommitFile(root, hash, path, full === true) : refused
   })
   const previews = new PreviewServer(known)
   registerPreviewProtocol(previews)
