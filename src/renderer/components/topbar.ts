@@ -167,7 +167,6 @@ export class TopBarComponent {
       'header',
       { class: 'topbar' },
       this.more,
-      this.newSession,
       h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
         this.sessions,
         this.background,
@@ -182,7 +181,8 @@ export class TopBarComponent {
         this.search,
         this.bell.el,
         this.settings
-      )
+      ),
+      this.newSession
     )
   }
 

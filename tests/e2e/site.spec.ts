@@ -237,7 +237,7 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
   for (const toggle of await page.locator('.demo-toggle').all()) await expect(toggle).toBeHidden()
 })
 
-const releaseRows = ['agents-crew', 'agent-states', 'lead-maya', 'phone-agents', 'from-1-7-5']
+const releaseRows = ['redesign', 'grid-styles', 'settings-sections', 'agent-roster', 'agents-crew', 'agent-states', 'lead-maya', 'phone-agents', 'from-1-7-5']
 
 test('the hero is three text elements with a readable crop of the app and no pill or platform row', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -265,11 +265,17 @@ test('the page has no em or en dashes, no uppercase labels and no decorative bad
   }
 })
 
-test('New in 1.7.6 leads the page with sized lazy screenshots and no run of three splits', async ({ page }) => {
+test('New in 1.8.0 leads the page with sized lazy screenshots and no run of three splits', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
-  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.7.6')
-  await expect(page.locator('#new-h')).toHaveText('New in 1.7.6')
+  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.8.0')
+  await expect(page.locator('#new-h')).toHaveText('New in 1.8.0')
+  await expect(page.locator('#new #redesign h3').first()).toHaveText('A new look, one style')
+  await expect(page.locator('#new #redesign')).toContainText('Geist and JetBrains Mono')
+  await expect(page.locator('#new #grid-styles')).toContainText('Mission control')
+  await expect(page.locator('#new #redesign')).toContainText('Allow always')
+  await expect(page.locator('#new #agent-roster')).toContainText('Live tab')
+  await expect(page.locator('#new #settings-sections')).toContainText('Desktop')
   await expect(page.locator('#new #agents-crew h3')).toHaveText('Agents you keep')
   await expect(page.locator('#new #agents-crew')).toContainText('about 40% cheaper')
   await expect(page.locator('#new #agent-states')).toContainText('flashes when it needs you')
@@ -341,9 +347,9 @@ test('the remote section keeps its phone screenshots and says Remote Control is 
   }
 })
 
-test('the Arabic page translates the 1.7.6 section, the earlier releases and the demo, and neither page scrolls sideways at 375px', async ({ page }) => {
+test('the Arabic page translates the 1.8.0 section, the earlier releases and the demo, and neither page scrolls sideways at 375px', async ({ page }) => {
   await page.goto(arabicUrl)
-  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.7.6')
+  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.8.0')
   await expect(page.locator('#agents-crew h3')).toHaveText('وكلاء تحتفظ بهم')
   await expect(page.locator('#agent-states h3')).toHaveText('اعرف من يعمل')
   await expect(page.locator('#lead-maya h3')).toContainText('القائدة')

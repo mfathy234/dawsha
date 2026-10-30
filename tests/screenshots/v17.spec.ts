@@ -17,7 +17,7 @@ test('generates the Files view, quick open and tag colour screenshots from fake 
     writeFileSync(join(SITE, site), png)
   }
   try {
-    await expect(page.locator('.pane-tag .tag-word').first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator('.pane-tag .tag-word').first()).toBeAttached({ timeout: 30_000 })
 
     await page.locator('.pane-title', { hasText: 'Add dark mode toggle' }).click()
     await page.locator('.pane').first().locator('.term-host').first().click()

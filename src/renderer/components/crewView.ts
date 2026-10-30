@@ -99,7 +99,7 @@ export class CrewViewComponent {
       this.listSig = listSig
       this.renderList(all, query, state, selected.id)
     }
-    this.count.textContent = `${all.filter((m) => !m.hidden).length} agents · ${all.filter((m) => m.builtin).length} built in`
+    this.count.textContent = `${all.filter((m) => !m.hidden).length} agents · ${all.filter((m) => m.builtin && !m.lead && !m.hidden).length} built in`
     this.roster.hidden = this.mode !== 'roster'
     this.detail.hidden = this.mode !== 'detail'
     if (this.mode === 'roster' && !force) this.goals.update(state)

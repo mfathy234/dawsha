@@ -102,8 +102,10 @@ test('generates the palette, layouts, handoff and usage screenshots from fake pr
     await page.keyboard.press('Escape')
     await expect(page.locator('.palette')).toHaveCount(0)
 
-    await page.locator('.pane').first().getByRole('button', { name: 'Pane actions' }).click()
-    await page.getByRole('menuitem', { name: 'Continue in Codex' }).click()
+    await page.locator('.pane').first().locator('.term-host').first().click()
+    await page.keyboard.press('Control+k')
+    await page.locator('#palette-input').fill('Continue in Codex')
+    await page.keyboard.press('Enter')
     await expect(page.getByLabel('Handoff summary')).toHaveValue(/Files touched \(3\)/)
     await settle(page, 1000)
     await page.screenshot({ path: join(OUT, 'handoff.png') })

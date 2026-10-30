@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.7.6</a>
+      <a href="#new">New in 1.8.0</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,8 +97,52 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.7.6</h2>
-      <p class="section-lead">1.7.6 turns the Agents tab into a crew you keep, adds Maya to lead it, and puts your agents on your phone. It also carries the 1.7.5 changes: a much smaller app, a clearer sidebar, Codex limits and a Problems tab.</p>
+      <h2 id="new-h">New in 1.8.0</h2>
+      <p class="section-lead">1.8.0 is a full redesign: one type, colour and spacing system, one style for every control, a top bar with the pages in it, two ways to lay out sessions, and an approval card that shows what an agent is asking. It also carries the 1.7.6 and 1.7.5 changes.</p>
+      <div class="feat-row" id="redesign">
+        <div class="feat-copy">
+          <h3>A new look, one style</h3>
+          <p>Buttons, tabs, menus, dialogs, toggles and dropdowns share one style, set in Geist and JetBrains Mono, which are bundled with the app so text looks the same on every computer.</p>
+          <ul><li>The top bar holds Sessions, Agents, Files, Work and Skills, with the page you are on highlighted, next to one usage strip.</li><li>New session sits at the right end with its agent menu and its Ctrl+N hint.</li><li>The light theme is readable: terminal text is at least 4.5:1 against its background.</li></ul>
+          <h3>An approval card that says what it wants</h3>
+          <p>A session that needs you gets an orange edge and a card with the tool, the command and the project, so you can decide without reading the whole terminal.</p>
+          <ul><li>Allow, Allow always (when the agent offers it) and Deny are on the card, with Enter and Esc shown on the buttons.</li><li>Each pane's menu is grouped into 13 items. The other actions are in the command palette.</li><li>Panes show a footer only when it has something to show.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/calm-focus.png" width="1600" height="1000" alt="Calm focus: one large focused Claude Code session with an approval card asking to run a migration, and three smaller sessions beside it">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="grid-styles">
+        <div class="feat-copy">
+          <h3>Two ways to see your sessions</h3>
+          <p>Calm focus, the default, gives one large session the room while the others wait beside it. Mission control gives every session an equal tile.</p>
+          <ul><li>Switch in Settings, under Appearance, or from the Layouts button beside Grid and Board.</li><li>Both styles keep the same approval cards, status and edges, so nothing that needs you is hidden.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/mission-control.png" width="1600" height="1000" alt="Mission control: four equal session tiles with an approval card on one of them that needs you">
+        </figure>
+      </div>
+      <div class="feat-wide" id="settings-sections">
+        <div class="feat-copy">
+          <h3>Settings in sections</h3>
+          <p>Settings is split into sections with a search box, and Import opens a file picker at your Desktop.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/settings-appearance.png" width="1600" height="1000" alt="Settings open on Appearance, with the theme and the sessions grid style, Calm focus or Mission control, and a search box for settings">
+        </figure>
+        <ul class="feat-cols"><li>Linked skills are marked Linked in Skills, and every skill shows its description.</li><li>Projects can Locate a folder that has moved, and the sidebar resizes reliably.</li><li>Files shows one diff look, with Discard kept apart from Commit. What's new lists each release by section.</li></ul>
+      </div>
+      <div class="feat-row" id="agent-roster">
+        <div class="feat-copy">
+          <h3>Agents, each on its own page</h3>
+          <p>Maya's goal box sits on top, and every agent is a card with its purpose, model, last run and a Run button.</p>
+          <ul><li>Open an agent to see it on its own page, with a Live tab while it runs.</li><li>Maya the Lead is shown on her own, so the counter at the top matches the sections.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/agents-roster.png" width="1600" height="1000" alt="The Agents page with Maya's goal box on top, then the built-in agent cards, each with its purpose, model, last run and a Run button">
+        </figure>
+      </div>
+      <h2 class="quiet-h" id="from-1-7-6-h">From 1.7.6 and 1.7.5</h2>
       <div class="feat-row" id="agents-crew">
         <div class="feat-copy">
           <h3>Agents you keep</h3>

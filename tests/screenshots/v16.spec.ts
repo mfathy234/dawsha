@@ -118,7 +118,8 @@ test('generates the native Arabic screenshot: Arabic session titles and a right-
     await resize(app)
     for (const name of names) await page.getByRole('button', { name: `New Claude session in ${name}`, exact: true }).click()
     await expect(page.locator('.pane')).toHaveCount(names.length)
-    await page.locator('#project-filter').first().fill('ال')
+    await page.getByRole('button', { name: 'Filter projects and sessions' }).click()
+    await page.locator('#sidebar-project-filter').fill('ال')
     await settle(page, 2000)
     writeFileSync(join(OUT, 'arabic-native.png'), await shrinkTo(await page.screenshot(), 1600, 1000))
   } finally {
