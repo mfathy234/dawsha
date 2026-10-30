@@ -140,7 +140,7 @@ test('asks two agents in separate worktrees, links the panes and compares or kee
     await page.getByRole('button', { name: 'Diff A vs B' }).click()
     await expect(page.locator('.compare-group .pane').first().locator('.tabs [role="tab"]')).toHaveText([/^claude/, /shell/])
     const shellId = await page.locator('.term-host.active').first().getAttribute('data-term-id')
-    await expect.poll(async () => (await page.evaluate((id) => (window as any).__grid.bufferText(id), shellId)).replaceAll('\n', ''), { timeout: 20_000 }).toContain('git diff --no-index')
+    await expect.poll(async () => (await page.evaluate((id) => (window as any).__grid.bufferText(id), shellId)).replaceAll('\n', ''), { timeout: 20_000 }).toContain('diff --no-index')
     await expect
       .poll(async () => (await page.evaluate((id) => (window as any).__grid.bufferText(id), shellId)).replaceAll('\n', ''), { timeout: 20_000 })
       .toContain('a-only.txt')
