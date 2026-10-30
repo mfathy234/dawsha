@@ -114,7 +114,7 @@ textarea.crew-area { width: 100%; resize: vertical; line-height: 1.55; min-heigh
 .crew-strip-btn:hover { background: var(--hover); }
 .crew-strip-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 
-.skill-pick { display: flex; align-items: center; margin-inline-end: var(--s-3); }
+.skill-pick { display: flex; align-items: center; justify-content: center; width: 16px; }
 .skill-bulk { display: flex; align-items: center; gap: var(--s-3); margin: 0 0 var(--s-3); color: var(--muted); font-size: var(--fs-ui); }
 .skill-bulk[hidden] { display: none; }
 .skill-member { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--muted); font-size: var(--fs-ui); }

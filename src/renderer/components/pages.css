@@ -1,15 +1,11 @@
 /* Dawsha 1.8 page contents: Board, with the peek panel sharing the width instead of covering the filter row. */
+/* Project and Agent filters sit in the shared page header's actions. */
 .board-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s-2);
-  padding: var(--s-3) var(--s-4) 0;
   min-width: 0;
-}
-
-.board-filters .board-hint {
-  flex: 1 1 200px;
 }
 
 .board-peek {
@@ -22,23 +18,13 @@
   box-shadow: -1px 0 0 var(--seam);
 }
 
-/* Four columns fit beside the peek without a horizontal scroll, and the footer "+ New session" stays inside the Reviewed column. */
-.board-col {
-  min-width: 132px;
-}
-
+/* The footer "+ New session" stays inside its column. */
 .board-new {
   width: 100%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Reviewed keeps room for its "Close all" link and card titles beside the peek. */
-.board-col-reviewed {
-  min-width: 150px;
-  flex-grow: 1.2;
 }
 
 /* Skills: name, one-line description, source and a Linked badge; the path stays underneath. */
