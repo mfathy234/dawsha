@@ -46,9 +46,9 @@ export class ReviewPanel {
     class: 'files-review-note', id: 'files-review-note', rows: '2', placeholder: 'Overall note (optional)', 'aria-label': 'Overall note for the agent',
     onInput: (event: Event) => this.hooks.note((event.target as HTMLTextAreaElement).value)
   })
-  private readonly send = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-send', disabled: true, onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send comments to agent')
-  private readonly commit = h('button', { class: 'btn small', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
-  private readonly discard = h('button', { class: 'btn small danger', type: 'button', id: 'files-review-discard', disabled: true, onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
+  private readonly send = h('button', { class: 'btn small secondary', type: 'button', id: 'files-review-send', disabled: true, onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send comments to agent')
+  private readonly commit = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
+  private readonly discard = h('button', { class: 'btn small danger', type: 'button', id: 'files-review-discard', disabled: true, title: 'Select a changed file to discard it', onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
   private current: string | null = null
 
   constructor(private readonly hooks: ReviewHooks) {
@@ -56,7 +56,7 @@ export class ReviewPanel {
       this.progress,
       h('div', { class: 'files-review-steps' }, this.prev, this.next),
       this.list,
-      h('div', { class: 'files-review-foot' }, this.note, this.send, h('div', { class: 'files-review-more' }, this.commit, this.discard)))
+      h('div', { class: 'files-review-foot' }, h('div', { class: 'files-review-note-row' }, this.note, this.send), h('div', { class: 'files-review-more' }, this.discard, this.commit)))
     this.list.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
       const rows = [...this.list.querySelectorAll<HTMLElement>('.files-review-open')]
@@ -81,6 +81,7 @@ export class ReviewPanel {
     this.next.disabled = total === 0
     this.commit.disabled = total === 0
     this.discard.disabled = !model.current || !model.files.some((file) => file.path === model.current)
+    this.discard.title = this.discard.disabled ? 'Select a changed file to discard it' : `Discard changes to ${split(model.current ?? '').name}`
     this.discard.textContent = model.current && !this.discard.disabled ? `Discard ${split(model.current).name}…` : 'Discard file…'
     this.send.disabled = model.commentTotal === 0 && model.note.trim() === ''
     this.send.textContent = model.commentTotal > 0 ? `Send ${model.commentTotal} comment${model.commentTotal === 1 ? '' : 's'} to agent` : 'Send note to agent'
