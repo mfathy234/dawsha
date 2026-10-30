@@ -283,7 +283,7 @@ for (const [mode, themeId] of THEMES) {
       await expect(page.locator('.board-view')).toBeVisible()
       const card = page.locator('.board-card.attention').first()
       await expect(card).toBeVisible()
-      expect(await card.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('dashed')
+      expect(await card.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid')
       expect(await page.locator('.board-col').first().evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
       await shot(page, `${mode}-board`)
       await page.locator('#layout-grid').click()
