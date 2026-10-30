@@ -105,6 +105,7 @@ test('resizes rows in a two by two grid and shows no gutters in the scrolling la
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
+    await page.setViewportSize({ width: 1440, height: 900 })
     await openPanes(page, 4)
     const panes = page.locator('.pane')
     const rowGutter = page.locator('.gutter[data-axis="rows"]').first()

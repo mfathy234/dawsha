@@ -16,6 +16,7 @@
 }
 
 .pane {
+  container: pane / inline-size;
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -77,7 +78,6 @@
 }
 
 .pane-header {
-  container: pane-header / inline-size;
   position: relative;
   flex: none;
   display: flex;
@@ -142,7 +142,7 @@
   overflow: hidden;
 }
 
-@container pane-header (max-width: 560px) {
+@container pane (max-width: 560px) {
   .pane-header .pane-tag,
   .pane-header .pane-fresh,
   .pane-header .chip-from {
@@ -150,9 +150,19 @@
   }
 }
 
-@container pane-header (max-width: 420px) {
-  .pane-header .pane-pin,
+@container pane (max-width: 420px) {
   .pane-header .chip-compare {
+    display: none;
+  }
+}
+
+@container pane (max-width: 360px) {
+  .pane-header {
+    gap: var(--s-1);
+    padding: 0 var(--s-1) 0 var(--s-2);
+  }
+
+  .pane-header .pane-panel {
     display: none;
   }
 }

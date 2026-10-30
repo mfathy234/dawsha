@@ -55,21 +55,23 @@ for (const [mode, themeId] of THEMES) {
       const first = page.locator('.pane').first()
       const termId = (await first.locator('.term-host').first().getAttribute('data-term-id')) ?? ''
       // ConPTY redraws the screen when a pane is resized, so feed again until both lines are showing.
+      // Promoting the needs-you sibling resizes its terminal, and the shell redraws over the fed prompt a moment later,
+      // so the checks for the waiting state run in the same retry as the feed.
       await expect(async () => {
         await feedTerminal(page, termId, '\r\n※ recap: Import script fixed; waiting on the dev migration before re-importing.\r\n' + PROMPT)
         await expect(first).toHaveAttribute('data-state', 'needs', { timeout: 1500 })
         await expect(first.locator('.pane-recap')).toContainText('Import script fixed', { timeout: 3500 })
+        await expect(first.locator('.pane-permission')).toBeVisible({ timeout: 1500 })
+        await expect(first.locator('.pane-permission').getByRole('button', { name: /^Allow/ })).toBeVisible()
+        await expect(page.locator('#needs-chip')).toContainText('1 needs you')
+        await expect(page.locator('.topbar-count')).toContainText('idle')
+        // The needs-you sibling promotes itself to a taller card in the column.
+        const promoted = (await boxes(page))[0]!
+        const other = (await boxes(page))[1]!
+        expect(promoted.height).toBeGreaterThan(other.height * 1.8)
       }).toPass({ timeout: 30_000 })
-      await expect(first.locator('.pane-permission')).toBeVisible()
-      await expect(first.locator('.pane-permission').getByRole('button', { name: /^Allow/ })).toBeVisible()
-      await expect(page.locator('#needs-chip')).toContainText('1 needs you')
-      await expect(page.locator('.topbar-count')).toContainText('idle')
       await expect(page.locator('.pane.calm')).toHaveCount(2)
       await expect(page.locator('.pane.calm .pane-body').first()).toHaveCSS('filter', mode === 'dark' ? 'brightness(0.86) saturate(0.8)' : 'none')
-      // The needs-you sibling promotes itself to a taller card in the column.
-      const promoted = (await boxes(page))[0]!
-      const other = (await boxes(page))[1]!
-      expect(promoted.height).toBeGreaterThan(other.height * 1.8)
       await shot(page, `${mode}-3-panes`)
 
       await addPanes(page, 4)

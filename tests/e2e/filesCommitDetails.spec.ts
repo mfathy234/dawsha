@@ -18,6 +18,7 @@ test('Files Activity opens commit details and the selected file diff', async () 
   git(repo, 'commit', '-q', '-am', 'Update notes\n\nExplain the change')
   const { app, page } = await launchApp(sandbox)
   try {
+    await page.setViewportSize({ width: 1440, height: 900 })
     await page.locator('#files-button').click()
     await expect(page.locator('#files-view')).toBeVisible()
     await page.locator('.files-row[data-path="notes.txt"]').click()
