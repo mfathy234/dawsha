@@ -45,12 +45,23 @@ export function decodeJwtPayload(token: unknown): Record<string, unknown> | null
   }
 }
 
+const SEAT_PLANS = ['Team', 'Enterprise']
+
+/**
+ * The plan of the signed-in Claude account, read only from its own oauthAccount fields: a team or enterprise
+ * organization wins, then the subscription, then the rate-limit tier. Nothing from any other account.
+ */
+export function claudePlan(oauth: Record<string, unknown>): string | null {
+  const seat = planName(oauth.organizationType)
+  if (seat && SEAT_PLANS.includes(seat)) return seat
+  return [oauth.subscriptionType, oauth.userRateLimitTier, oauth.organizationType].map(planName).find((name) => name !== null) ?? null
+}
+
 export function claudeAccount(config: unknown): AgentAccount {
   const oauth = asRecord(asRecord(config)?.oauthAccount)
   const email = text(oauth?.emailAddress)
   if (!oauth || !email) return NO_ACCOUNT
-  const plan = [oauth.userRateLimitTier, oauth.seatTier, oauth.organizationType].map(planName).find((name) => name !== null) ?? null
-  return { email, plan, kind: 'account' }
+  return { email, plan: claudePlan(oauth), kind: 'account' }
 }
 
 export function codexAccount(auth: unknown): AgentAccount {

@@ -16,6 +16,8 @@ export interface WorkItem {
   title: string
   projectId: string
   project: string
+  /** The folder name of the git worktree the session ran in, when it is not the project folder. */
+  worktree?: string
   type: WorkType
   agent: AgentKind
   branch: string | null

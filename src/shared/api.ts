@@ -8,6 +8,7 @@ import type { FileRef } from './filePaths'
 import type { InstructionRead, InstructionWriteRequest, InstructionWriteResult } from './instructions'
 import type { WorktreeStatus } from './compare'
 import type { BranchListResult, GitQuickRequest, GitQuickResult, SyncCounts } from './gitBranches'
+import type { ProjectGroup } from './worktreeGroups'
 import type {
   CommitRequest,
   DiscardRequest,
@@ -93,6 +94,7 @@ export interface GridApi {
   pathForFile(file: File): string
   checkFolder(path: string): Promise<FolderCheck>
   gitBranch(folder: string): Promise<string | null>
+  projectGroups(): Promise<Record<string, ProjectGroup>>
   listSessions(): Promise<SessionFile[]>
   onSessions(listener: (sessions: SessionFile[]) => void): () => void
   listCodexSessions(): Promise<CodexSession[]>

@@ -21,6 +21,7 @@ export const IPC = {
   pickImage: 'dialog:pick-image',
   checkFolder: 'fs:check-folder',
   gitBranch: 'git:branch',
+  projectGroups: 'projects:groups',
   sessionsList: 'sessions:list',
   sessionsUpdate: 'sessions:update',
   codexList: 'codex:list',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { claudeAccount, codexAccount, decodeJwtPayload, geminiAccount, planName } from '../../src/shared/agentAccounts'
+import { claudeAccount, claudePlan, codexAccount, decodeJwtPayload, geminiAccount, planName } from '../../src/shared/agentAccounts'
 
 const jwt = (payload: unknown): string => `h.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.s`
 
@@ -35,6 +35,32 @@ describe('claudeAccount', () => {
     expect(claudeAccount({ oauthAccount: { emailAddress: 'you@example.com', organizationType: 'weird' } }).plan).toBeNull()
     expect(claudeAccount({}).kind).toBe('none')
     expect(claudeAccount(null).kind).toBe('none')
+  })
+  it('reports a team account as Team even when its rate-limit tier is a Max tier', () => {
+    const team = { oauthAccount: { emailAddress: 'team@example.com', organizationType: 'claude_team', userRateLimitTier: 'default_claude_max_5x' } }
+    expect(claudeAccount(team)).toEqual({ email: 'team@example.com', plan: 'Team', kind: 'account' })
+  })
+  it('reports a max account from its subscription or rate-limit tier', () => {
+    const max = { oauthAccount: { emailAddress: 'max@example.com', organizationType: 'claude_max', userRateLimitTier: 'default_claude_max_20x' } }
+    expect(claudeAccount(max)).toEqual({ email: 'max@example.com', plan: 'Max', kind: 'account' })
+    expect(claudeAccount({ oauthAccount: { emailAddress: 'max@example.com', subscriptionType: 'max' } }).plan).toBe('Max')
+  })
+  it('reports a pro account as Pro', () => {
+    const pro = { oauthAccount: { emailAddress: 'pro@example.com', organizationType: 'claude_pro', userRateLimitTier: 'default_claude_pro' } }
+    expect(claudeAccount(pro)).toEqual({ email: 'pro@example.com', plan: 'Pro', kind: 'account' })
+  })
+  it('prefers the seat over the subscription, and an enterprise seat over a team one', () => {
+    expect(claudeAccount({ oauthAccount: { emailAddress: 'e@example.com', organizationType: 'claude_enterprise', subscriptionType: 'pro' } }).plan).toBe('Enterprise')
+    expect(claudeAccount({ oauthAccount: { emailAddress: 't@example.com', organizationType: 'claude_team', subscriptionType: 'pro' } }).plan).toBe('Team')
+  })
+})
+
+describe('claudePlan', () => {
+  it('falls back to the rate-limit tier when the organization is not a team or enterprise', () => {
+    expect(claudePlan({ organizationType: 'claude_max', userRateLimitTier: 'default_claude_pro' })).toBe('Pro')
+  })
+  it('returns null for an account with no plan fields', () => {
+    expect(claudePlan({ displayName: 'Someone' })).toBeNull()
   })
 })
 

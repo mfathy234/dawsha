@@ -61,6 +61,7 @@ import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
 import { WorkService } from './workDashboard'
+import { projectWorktreeGroups } from './worktreeRoots'
 import { MAX_STEPS_BACK, type WorkPeriod } from '../shared/workDashboard'
 import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
@@ -145,6 +146,7 @@ export function registerIpc(
   }
   ipcMain.handle(IPC.checkFolder, (_event, path: string) => checkFolder(path))
   ipcMain.handle(IPC.gitBranch, (_event, folder: string) => currentBranch(folder))
+  ipcMain.handle(IPC.projectGroups, async () => Object.fromEntries(await projectWorktreeGroups(settings.get().projects)))
   ipcMain.handle(IPC.sessionsList, () => readSessions())
   ipcMain.handle(IPC.codexList, () => readCodexSessions())
   ipcMain.handle(IPC.geminiList, () => readGeminiSessions())
