@@ -62,10 +62,12 @@
   opacity: 1;
 }
 
-.kept-session-row:hover .sess-row,
-.kept-session-row:focus-within .sess-row,
-.kept-session-row:has(.sess-more[aria-expanded='true']) .sess-row {
-  padding-inline-end: 64px;
+/* The hover actions overlay the row's right end: the text fades under them and never re-wraps, so the row height holds. */
+.kept-session-row:hover .sess-body,
+.kept-session-row:focus-within .sess-body,
+.kept-session-row:has(.sess-more[aria-expanded='true']) .sess-body {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 64px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 64px), transparent);
 }
 
 .sess-row.editing {
@@ -191,8 +193,6 @@
 .sess-age { flex: none; margin-inline-start: auto; color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
 
 .kept-session-row.waiting-row { padding-inline-end: 0; }
-.kept-session-row.waiting-row:hover .sess-row,
-.kept-session-row.waiting-row:focus-within .sess-row { padding-inline-end: var(--s-2); }
 .needs-row { width: 100%; }
 .waiting-row .needs-project { max-width: 55%; }
 
@@ -341,7 +341,8 @@ aside.sidebar.rail { width: 56px; }
 .side-sec.quiet-sec { margin-top: var(--s-3); }
 
 .proj-today { white-space: nowrap; }
-.proj-sub .proj-branch { flex: 0 1 auto; }
+.proj-sub .proj-branch { flex: 0 1 auto; max-width: 60%; }
+.proj-branch + .proj-today::before { content: '·'; margin-inline-end: var(--s-1); }
 
 /* Quiet projects: one line, bold name then the branch. */
 .proj-list .proj-row.quiet-row { min-height: 30px; margin-top: 0; margin-inline: var(--s-1); }
@@ -364,7 +365,14 @@ aside.sidebar.rail { width: 56px; }
 .kept-session-row .sess-row { align-items: flex-start; }
 .kept-session-row .sess-row .agent-mark { margin-top: 2px; }
 .kept-session-row:not(.waiting-row) .sess-meta .sess-age { flex: none; margin-inline-start: 0; }
-.kept-session-row .sess-state + .sess-age::before { content: '·'; margin-inline-end: var(--s-1); }
+.kept-session-row .sess-state + .sess-age::before,
+.kept-session-row .sess-tag + .sess-age::before { content: '·'; margin-inline-end: var(--s-1); }
+
+/* The session's tag as a small word in its tag colour; the colour setting mutes it. */
+.kept-session-row .sess-tag { flex: none; color: var(--tag); white-space: nowrap; }
+.kept-session-row .sess-tag::before { content: '·'; margin-inline-end: var(--s-1); color: var(--muted); }
+:root[data-tag-colors='off'] .kept-session-row .sess-tag { color: var(--muted); }
+.kept-session-row .sess-tag + .sess-cost::before { content: '·'; margin-inline-end: var(--s-1); }
 
 /* "36 closed": a small, faint row at the bottom of its project. */
 .closed-head { margin-top: 2px; }
@@ -384,6 +392,7 @@ aside.sidebar.rail { width: 56px; }
   flex: none;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
   background: var(--chrome);
   box-shadow: 1px 0 0 var(--seam);
   overflow: hidden;
@@ -435,15 +444,34 @@ aside.sidebar.rail { width: 56px; }
   font-weight: 600;
 }
 
+.needs-group .side-sec.needs {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.needs-group .side-sec-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .needs-group .side-sec-count {
+  flex: none;
   margin-inline-start: var(--s-2);
 }
 
 .needs-group .sidebar-kbd {
+  flex: none;
   margin-inline-start: auto;
+  padding-inline: 4px;
   border-color: color-mix(in srgb, var(--needs) 40%, transparent);
   background: transparent;
   color: var(--needs-ink);
+}
+
+@container (max-width: 240px) {
+  .needs-group .sidebar-kbd { display: none; }
 }
 
 .proj-row.proj-missing {

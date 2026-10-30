@@ -5,7 +5,7 @@
 .sum-needs { height: 28px; padding: 0 var(--s-2); border-radius: var(--r-control); color: var(--needs-ink); font-weight: 600; cursor: pointer; }
 .sum-needs:hover { background: var(--hover); }
 .sum-needs:active { background: var(--press); }
-.sum-needs .kbd { margin-left: var(--s-2); color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-status); font-weight: 400; }
+.sum-needs .kbd { margin-left: var(--s-2); border-color: var(--line); background: transparent; color: var(--muted); font-weight: 400; }
 
 /* Account limits: a seam, then 5h and week, each with a battery. */
 .topbar-limits { display: inline-flex; align-items: center; gap: var(--s-3); height: 28px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; font-family: inherit; color: var(--muted); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; cursor: pointer; }

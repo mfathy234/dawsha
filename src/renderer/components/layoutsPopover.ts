@@ -111,25 +111,22 @@ export class LayoutsPopoverComponent {
   }
 
   private gridStyleRow(current: GridStyle): HTMLElement {
-    const option = (style: GridStyle): HTMLElement => {
-      const selected = current === style
-      return h(
+    const option = (style: GridStyle): HTMLElement =>
+      h(
         'button',
         {
-          class: `btn small${selected ? ' primary' : ''}`,
+          class: 'layouts-grid-option',
           type: 'button',
-          'aria-pressed': selected ? 'true' : 'false',
+          'aria-pressed': String(current === style),
           onClick: () => setGridStyle(style)
         },
         GRID_STYLE_LABELS[style]
       )
-    }
     return h(
       'div',
-      { class: 'layouts-grid-style', role: 'group', 'aria-label': 'Sessions grid' },
-      h('span', { class: 'muted' }, 'Sessions grid'),
-      option('focus'),
-      option('tiles')
+      { class: 'layouts-grid-style' },
+      h('span', { class: 'layouts-grid-label' }, 'Sessions grid'),
+      h('div', { class: 'segmented layouts-segment', role: 'group', 'aria-label': 'Sessions grid' }, option('focus'), option('tiles'))
     )
   }
 
