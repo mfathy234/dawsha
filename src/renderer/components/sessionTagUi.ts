@@ -12,6 +12,11 @@ export function tagWord(tag: SessionTag, source: TagSource = null): HTMLElement 
   return h('span', { class: 'tag-word', 'data-tag': tag, title: tagTooltip(tag, source) }, SESSION_TAG_LABELS[tag].toLowerCase())
 }
 
+/** The tag as a small word on a sidebar session's meta line; its own class keeps `.tag-word` to the pane and board tags. */
+export function sidebarTagWord(tag: SessionTag, source: TagSource = null): HTMLElement {
+  return h('span', { class: 'sess-tag', 'data-tag': tag, title: tagTooltip(tag, source) }, SESSION_TAG_LABELS[tag].toLowerCase())
+}
+
 /** Menu entries to set or clear a session's tag; the caller closes its own menu in `pick`. */
 export function tagMenuItems(current: SessionTag | null, pick: (tag: SessionTag | null) => void): HTMLElement[] {
   const items = SESSION_TAGS.map((tag) =>

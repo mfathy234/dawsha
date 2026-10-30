@@ -17,7 +17,7 @@ import { crewSignature, identityMark } from './crewAvatar'
 import { openFolderInFiles } from '../files/filesActions'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
-import { tagMenuItems, tagTooltip } from './sessionTagUi'
+import { sidebarTagWord, tagMenuItems, tagTooltip } from './sessionTagUi'
 import { confirmDialog, promptDialog } from './dialogs'
 import { lastOutputAt } from '../ptyActivity'
 import './sidebar.css'
@@ -465,10 +465,10 @@ export class SidebarComponent {
     const compact = quiet && !this.quietOpen.has(project.id)
     const collapsed = quiet ? compact : isFolded(state.settings.foldedProjects, project.id, filtering)
     const summary = projectSummary(own.map(viewState))
-    const branch = state.branches[project.folder] ?? null
+    const branch = state.branches[project.folder]?.trim() || null
     const today = this.todayTotal(state, project.id)
     const branchEl = branch ? h('span', { class: 'proj-branch', dir: 'auto', title: `Branch ${branch}` }, branch) : null
-    const sub = branch || today.length > 0 ? h('span', { class: 'proj-sub' }, branchEl, ...today.map((el) => (branch ? this.withDot(el) : el))) : null
+    const sub = branch || today.length > 0 ? h('span', { class: 'proj-sub' }, branchEl, ...today) : null
     const toggle = h(
       'button',
       {
@@ -572,6 +572,7 @@ export class SidebarComponent {
             h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, sessionLabel(view))),
             h('span', { class: 'sess-meta' },
               h('span', { class: `sess-state state-${sessionStateName}` }, stateIcon(sessionStateName), h('span', { class: 'sess-state-word' }, status)),
+              view.tag ? sidebarTagWord(view.tag, view.tagAuto) : null,
               h('span', { class: 'sess-age', 'aria-label': `active ${age}` }, age)))
         )
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}` },
@@ -649,7 +650,8 @@ export class SidebarComponent {
             h('span', { class: 'sess-line' }, h('span', { class: 'sess-name', dir: 'auto' }, session.title)),
             h('span', { class: 'sess-meta' },
               h('span', { class: 'sess-ago', 'aria-label': `closed ${closedOn}` }, closedAgoShort(session.closedAt, state.now)),
-              used ? h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))
+              closedTag ? sidebarTagWord(closedTag, closedSource) : null,
+              used ?h('span', { class: 'sess-cost', 'aria-label': `used ${used}` }, used) : null)))
     return h('div', { class: 'kept-session-row closed' },
       main,
       this.sessionMenuButton(key, session.title, project, session.tag ?? null, (tag) => tagKeptSession(session.agent, session.sessionId, tag), 'Remove', () => void this.confirmRemoveClosed(session.agent, session.sessionId)),
@@ -734,11 +736,6 @@ export class SidebarComponent {
     })
     const hint = h('kbd', { class: 'kbd sidebar-kbd', title: 'Jump to the next session that needs you' }, 'Ctrl Shift J')
     return [h('section', { class: 'needs-group', 'aria-label': 'Waiting on you' }, h('div', { class: 'side-sec needs' }, h('span', { class: 'side-sec-label' }, 'Waiting on you'), h('span', { class: 'side-sec-count' }, String(waiting.length)), hint), ...rows)]
-  }
-
-  private withDot(el: HTMLElement): HTMLElement {
-    el.prepend('· ')
-    return el
   }
 
   private todayTotal(state: AppState, projectId: string): HTMLElement[] {
