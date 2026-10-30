@@ -54,6 +54,7 @@ const api: GridApi = {
   pathForFile: (file) => webUtils.getPathForFile(file),
   checkFolder: (path) => ipcRenderer.invoke(IPC.checkFolder, path),
   gitBranch: (folder) => ipcRenderer.invoke(IPC.gitBranch, folder),
+  projectGroups: () => ipcRenderer.invoke(IPC.projectGroups),
   listSessions: () => ipcRenderer.invoke(IPC.sessionsList),
   onSessions: (listener) => subscribe<[SessionFile[]]>(IPC.sessionsUpdate, listener),
   listCodexSessions: () => ipcRenderer.invoke(IPC.codexList),
