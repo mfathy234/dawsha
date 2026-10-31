@@ -88,6 +88,8 @@ describe('watchProject', () => {
     const batches: string[][] = []
     const stop = watchProject(dir, (paths) => batches.push(paths), 50)
     try {
+      // FSEvents (macOS) can drop events written in the first moments after the stream starts.
+      if (process.platform === 'darwin') await new Promise((r) => setTimeout(r, 500))
       writeFileSync(join(dir, 'node_modules', 'x.js'), '1')
       writeFileSync(join(dir, '.git', 'HEAD'), '1')
       writeFileSync(join(dir, 'a.txt'), '1')
