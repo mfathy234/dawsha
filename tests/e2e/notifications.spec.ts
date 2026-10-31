@@ -153,9 +153,11 @@ for (const theme of ['dawsha-night', 'dawsha-daylight']) {
     try {
       mkdirSync(SCREENS, { recursive: true })
       await closeFirstPane(page)
+      // Dismiss the Closed toast now: it times out on its own while the prompt below is being noticed.
+      await page.locator('.toast').getByRole('button', { name: 'Dismiss notification' }).click()
+      await expect(page.locator('.toast')).toHaveCount(0)
       await makeNeedYou(page)
       const bell = page.locator('#notifications-button')
-        await page.locator('.toast').getByRole('button', { name: 'Dismiss notification' }).click()
       await page.locator('.topbar').screenshot({ path: join(SCREENS, `162-notifications-bell-${name}.png`) })
       await bell.click()
       await expect(popover(page)).toBeVisible()
