@@ -161,3 +161,38 @@ export function pullSummary(output: string): string {
   const summary = lines.reverse().find((line) => /changed|insertion|deletion|create mode|delete mode/.test(line))
   return summary ? `Pulled. ${summary.trim()}` : 'Pulled.'
 }
+
+export const BRANCH_FILTER_MIN = 8
+
+export function branchAgo(stampSeconds: number, nowMs: number): string {
+  if (!stampSeconds) return ''
+  const minutes = Math.floor((nowMs - stampSeconds * 1000) / 60_000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 14) return `${days} d ago`
+  if (days < 60) return `${Math.floor(days / 7)} w ago`
+  if (days < 730) return `${Math.floor(days / 30)} mo ago`
+  return `${Math.floor(days / 365)} y ago`
+}
+
+export function filterBranches(list: BranchList, query: string): { local: BranchEntry[]; remote: BranchEntry[] } {
+  const needle = query.trim().toLowerCase()
+  const keep = (entry: BranchEntry): boolean => needle === '' || entry.name.toLowerCase().includes(needle)
+  return { local: list.local.filter(keep), remote: list.remote.filter(keep) }
+}
+
+export function needsBranchFilter(list: BranchList): boolean {
+  return list.local.length + list.remote.length > BRANCH_FILTER_MIN
+}
+
+export function switchConfirmText(branch: string, changed: number): { title: string; body: string; confirmLabel: string } {
+  const files = `${changed} changed ${changed === 1 ? 'file' : 'files'}`
+  return {
+    title: `Switch to ${branch}?`,
+    body: `You have ${files}; git will carry them over or refuse if they conflict.`,
+    confirmLabel: `Switch to ${branch}`
+  }
+}

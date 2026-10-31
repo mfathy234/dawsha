@@ -15,6 +15,7 @@ import type { PaneView } from '../derive'
 import { clear, h, icon, leave } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
+import { keycaps } from './keycaps'
 import { chargeBar } from './chargeBar'
 import { modeTabs } from './pickerTabs'
 import type { AppState } from '../state'
@@ -75,7 +76,7 @@ export class QuickPickComponent {
     const hint = h(
       'span',
       { class: 'rp-hint' },
-      h('span', { class: 'kbd' }, MAC ? 'Cmd+R' : 'Ctrl+R'),
+      keycaps(MAC ? 'Cmd+R' : 'Ctrl+R'),
       ' resume'
     )
     this.root = h(
@@ -96,7 +97,7 @@ export class QuickPickComponent {
       h(
         'div',
         { class: 'popover-foot nd-foot' },
-        h('span', { class: 'nd-hint' }, `Enter starts a session. Tab switches agent. ${MAC ? 'Cmd' : 'Ctrl'}+R resumes`),
+        h('span', { class: 'nd-hint' }, 'Enter starts a session. Tab switches agent. ', keycaps(MAC ? 'Cmd+R' : 'Ctrl+R'), ' resumes'),
         h('span', { class: 'spacer' }),
         h('button', { class: 'btn ghost', type: 'button', onClick: () => closeQuickPick() }, 'Cancel'),
         this.start

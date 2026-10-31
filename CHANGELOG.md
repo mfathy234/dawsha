@@ -3,6 +3,24 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.1] - 2026-10-31
+
+### Added
+
+- **Switch branches from Files.** A branch button next to the branch name lists your local branches, newest first, and the remote ones you have not checked out yet, with a filter when the list is long. Pick one to switch to it. If you have changes, Dawsha asks first and names the branch. Git is never forced, and if it refuses, Dawsha shows why and changes nothing. New branch… creates one from where you are, and Switch branch… is in the command palette.
+
+### Changed
+
+- **Quieter buttons.** One button style everywhere. Mint is kept for the main action on each screen, and the rest are grey or plain text. Hover is a soft step in the button's own shape, and a selected tab is a lighter surface instead of mint text or a mint ring.
+- **Needs you is said once.** A session waiting on you has a thin amber ring and the amber diamond, without a tinted header. The pulse runs three times, then holds still.
+- **A calmer approval card.** Allow is the light main button with its Enter key, Allow always is grey, and Deny is plain text with Esc.
+- **One-row pane headers.** The number, title, agent and session name sit on one line, with the state and buttons on the right.
+- **A flatter sidebar.** Projects are plain rows, the selected session is a lighter row without a border, and titles stay on one line.
+- **Shortcuts as keycaps.** Menus, the command palette and the New session picker show each key on its own small key.
+- **Usage reads cleaner.** Missing values show as a dash with one note under the table, column headings are no longer in capitals, and By project has a bar for each project.
+- **Agents without repeated labels.** The Built in label on every card is gone, roles sit under the name so they are not cut off, and Maya's goal form fits on one row.
+- **Fewer type sizes and weights.** Text uses six sizes and two weights, with no italics for emphasis and spacing on a 4px grid.
+
 ## [1.8.0] - 2026-10-30
 
 ### Added

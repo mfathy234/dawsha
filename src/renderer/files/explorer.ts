@@ -29,6 +29,8 @@ export interface ExplorerHooks {
   goToFile(): void
   /** The project button (projects first) or the branch control (worktrees first) was used. */
   openLocation(button: HTMLElement, worktreesFirst: boolean): void
+  /** The branches control next to the branch button was used. */
+  openBranches(button: HTMLElement): void
   hide(): void
   retryChanges(): void
   retryOpen(): void
@@ -62,6 +64,8 @@ export class Explorer {
     h('span', { class: 'files-loc-text' }, this.projectLine), icon(ICONS.chevronDown))
   private readonly branchButton = h('button', { class: 'files-branch', type: 'button', id: 'files-branch', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: 'Switch branch or worktree', hidden: true },
     icon(ICONS.branch), this.branchLineEl, this.worktreeCount, icon(ICONS.chevronDown))
+  private readonly branchesButton = h('button', { class: 'files-branches', type: 'button', id: 'files-branches', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'Switch branch', title: 'Switch branch', hidden: true },
+    icon(ICONS.chevronDown))
   private readonly hideButton = h('button', { class: 'icon-btn files-hide-explorer', type: 'button', id: 'files-explorer-hide', 'aria-label': 'Hide the file explorer', title: 'Hide the file explorer (Ctrl+Alt+E)', onClick: () => this.hooks.hide() }, icon(PANEL_LEFT))
   private readonly tabs = (['files', 'search', 'review'] as const).map((mode) => h('button', {
     class: 'files-mode', type: 'button', role: 'tab', id: `files-mode-${mode}`, 'aria-selected': 'false', tabindex: '-1', onClick: () => this.setMode(mode)
@@ -95,7 +99,8 @@ export class Explorer {
     this.location.addEventListener('click', () => hooks.openLocation(this.location, false))
     this.branchButton.addEventListener('click', () => hooks.openLocation(this.branchButton, true))
     this.tablist.addEventListener('keydown', (event) => this.onTabKey(event))
-    this.el.append(h('div', { class: 'files-loc' }, this.location, this.branchButton), h('div', { class: 'files-modes-row' }, this.tablist, this.hideButton), this.filesPane, this.search.el, this.review.el)
+    this.branchesButton.addEventListener('click', () => hooks.openBranches(this.branchesButton))
+    this.el.append(h('div', { class: 'files-loc' }, this.location, h('div', { class: 'files-branch-row' }, this.branchButton, this.branchesButton)), h('div', { class: 'files-modes-row' }, this.tablist, this.hideButton), this.filesPane, this.search.el, this.review.el)
     this.renderTabs()
     this.renderChanges()
     this.renderOpen()
@@ -130,12 +135,18 @@ export class Explorer {
     this.branchLineEl.textContent = branch
     this.worktreeCount.textContent = worktrees ? ` · ${worktrees}` : ''
     this.branchButton.hidden = branch === ''
+    this.branchesButton.hidden = branch === ''
+    this.branchesButton.setAttribute('aria-label', `Switch branch. Now on ${branch}`)
     this.branchButton.setAttribute('aria-label', `Switch branch or worktree. Now on ${branch}${worktrees ? `, ${worktrees}` : ''}`)
     this.location.title = title
   }
 
   setLocationOpen(open: boolean, button: HTMLElement | null = null): void {
-    for (const control of [this.location, this.branchButton]) control.setAttribute('aria-expanded', String(open && (button === null || control === button)))
+    for (const control of [this.location, this.branchButton, this.branchesButton]) control.setAttribute('aria-expanded', String(open && (button === null || control === button)))
+  }
+
+  branchesAnchor(): HTMLElement {
+    return this.branchesButton.hidden ? this.location : this.branchesButton
   }
 
   /** Moves focus to the branch control (the Ctrl+Alt+W shortcut and palette command use it as the menu's anchor). */

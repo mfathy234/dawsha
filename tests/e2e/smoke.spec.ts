@@ -236,8 +236,9 @@ test('names panes from Claude session files and lays three panes out with a tall
     )
     await expect(page.locator('.pane-title', { hasText: 'User avatars' })).toHaveCount(1, { timeout: 15_000 })
     await expect(page.locator('.pane-fresh:not([hidden])')).toHaveCount(2)
-    const widths = await page.locator('.pane-title').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width))
-    for (const width of widths) expect(width).toBeGreaterThanOrEqual(100)
+    // Titles are never cut off: the unnamed-session hint shrinks first.
+    const clipped = await page.locator('.pane-title').evaluateAll((els) => els.filter((el) => el.scrollWidth > el.clientWidth + 1).length)
+    expect(clipped).toBe(0)
     await expect(page.locator('.pane-state .state-pill.state-working')).toHaveCount(1)
     await expect(page.locator('.topbar-count')).toContainText('1 working')
     await page.screenshot({ path: join(SCREENS, '9-three-panes-named.png') })

@@ -38,6 +38,7 @@ import { api } from '../api'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
+import { keycaps } from './keycaps'
 import { tagMenuItems, tagWord, type TagSource } from './sessionTagUi'
 import { SESSION_TAG_LABELS, type SessionTag } from '../../shared/sessionTags'
 import { openBranchMenu } from './gitMenu'
@@ -132,10 +133,9 @@ export class PaneComponent {
       'div',
       { class: 'pane-header' },
       this.mark,
-      h('div', { class: 'pane-titles' }, this.index, this.projectName),
+      h('div', { class: 'pane-titles' }, this.index, this.projectName, this.fresh),
       this.pin,
       this.tagHost,
-      this.fresh,
       this.resumed,
       this.compareChip,
       this.fromChip,
@@ -523,7 +523,7 @@ export class PaneComponent {
         { class: 'menu-item menu-item-icon', type: 'button', role: 'menuitem', onClick: () => run(action) },
         h('span', { class: 'menu-icon', 'aria-hidden': 'true' }, svg ? icon(svg) : null),
         h('span', { class: 'menu-label' }, text),
-        shortcut ? h('kbd', { class: 'menu-kbd' }, shortcut) : null
+        shortcut ? keycaps(shortcut, 'menu-kbd') : null
       )
     }
     const first = item('Move pane…', () => this.openMove(), ICONS.layout)
@@ -573,7 +573,7 @@ export class PaneComponent {
       first,
       showDetails,
       pinItem,
-      item('Tag…', () => this.openTag(), ICONS.pin),
+      item('Tag…', () => this.openTag(), ICONS.tag),
       h('div', { class: 'menu-separator', role: 'separator' }),
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Session'),
       item('New terminal', () => this.openTerminalPicker(), ICONS.plus),

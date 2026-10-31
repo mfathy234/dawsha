@@ -218,7 +218,7 @@ test('the rail shows monograms and opens a flyout with the full session names', 
   }
 })
 
-test('projects with sessions sit on cards, the rest in a quiet list, and session titles wrap to two lines', async () => {
+test('projects with sessions sit on cards, the rest in a quiet list, and session titles stay on one line', async () => {
   const sandbox = createSandbox()
   const base = readSettings(sandbox.userData).projects as { id: string; name: string; folder: string }[]
   const extra = ['Alpha', 'Beta', 'Gamma'].map((name) => ({ id: name.toLowerCase(), name, folder: join(sandbox.root, name) }))
@@ -248,16 +248,15 @@ test('projects with sessions sit on cards, the rest in a quiet list, and session
 
     const row = page.locator('.kept-session-row:not(.closed) .sess-row').first()
     await row.dblclick()
-    const longName = 'Reworking the projects sidebar so every long session name stays readable on two lines'
+    const longName = 'Reworking the projects sidebar so every long session name stays readable on one line'
     await page.getByRole('textbox', { name: /^Rename/ }).fill(longName)
     await page.keyboard.press('Enter')
     const name = page.locator('.kept-session-row:not(.closed) .sess-name').first()
     await expect(name).toHaveText(longName)
-    await expect(name).toHaveCSS('-webkit-line-clamp', '2')
+    await expect(name).toHaveCSS('text-overflow', 'ellipsis')
     const nameBox = (await name.boundingBox())!
     const lineHeight = parseFloat(await name.evaluate((node) => getComputedStyle(node).lineHeight))
-    expect(nameBox.height).toBeGreaterThan(lineHeight * 1.5)
-    expect(nameBox.height).toBeLessThan(lineHeight * 2.5)
+    expect(nameBox.height).toBeLessThan(lineHeight * 1.5)
     await expect(page.locator('.kept-session-row:not(.closed) .sess-row').first()).toHaveAttribute('title', new RegExp(`^${longName}`))
     await expect(page.locator('.kept-session-row:not(.closed) .sess-meta').first()).toHaveText(/^(Working|Idle|Done|Needs you)/)
     await expect(page.locator('.kept-session-row:not(.closed) .sess-line .sess-age').first()).toHaveText(/^(now|\d+m)$/)

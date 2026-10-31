@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dawsha Unslop Pass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a review document. Direction and audit on top, then three screens,
+   each a scaled 1424x861 app frame with Before / After / Compare. */
+:root {
+  color-scheme: dark;
+  /* Dawsha's own dark ramp, kept (polish mode) */
+  --bg: #090b0f; --sidebar: #0e1116; --surface: #14181f; --raised: #1b212a; --pop: #232a35; --well: #0a0c10;
+  --text: #e8ebf1; --text-2: #aab3c3; --text-3: #8c96a8;
+  --line: rgb(255 255 255 / .08); --line-2: rgb(255 255 255 / .14);
+  --accent: #34d399; --on-accent: #04261b;
+  --needs: #ffa54f; --danger: #ff8080; --claude: #d97757;
+  --ui: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --red: #ff5a5f;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 400 14px/20px var(--ui); -webkit-font-smoothing: antialiased; }
+.num, td.n, .mono { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--mono); }
+svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- document ---------- */
+.doc { max-width: 1240px; margin: 0 auto; padding: 48px 24px 96px; }
+.doc h1 { margin: 0; font-size: 36px; line-height: 44px; font-weight: 500; letter-spacing: -.01em; text-wrap: balance; }
+.doc .lede { margin: 12px 0 0; max-width: 680px; color: var(--text-2); font-size: 16px; line-height: 24px; }
+.doc h2 { margin: 64px 0 8px; font-size: 22px; line-height: 28px; font-weight: 500; }
+.doc h2 + p { margin: 0 0 24px; color: var(--text-2); max-width: 720px; }
+.verdict { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 24px; padding: 16px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.verdict b { font-weight: 500; }
+.verdict span { color: var(--text-2); }
+
+.direction { display: grid; grid-template-columns: 140px 1fr; margin: 0; border-top: 1px solid var(--line); }
+.direction dt, .direction dd { margin: 0; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.direction dt { color: var(--text-3); }
+.direction dd { color: var(--text); }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+table.audit { width: 100%; border-collapse: collapse; min-width: 880px; }
+.audit th { text-align: left; font-weight: 500; color: var(--text-3); padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.audit td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--text-2); }
+.audit tr:last-child td { border-bottom: 0; }
+.audit td:first-child { color: var(--text-3); font-family: var(--mono); font-size: 12px; width: 40px; }
+.audit td:nth-child(2) { color: var(--text); width: 26%; }
+.audit code, .doc code { font-family: var(--mono); font-size: 12px; color: var(--text-2); background: var(--raised); padding: 1px 4px; border-radius: 4px; }
+.sev { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.sev::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); }
+.sev.hi::before { background: var(--red); } .sev.md::before { background: var(--needs); }
+
+/* ---------- screen block ---------- */
+.screen-block { margin-top: 24px; }
+.screen-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.screen-head h3 { margin: 0; font-size: 16px; font-weight: 500; }
+.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.seg button { font: inherit; font-size: 13px; color: var(--text-2); background: none; border: 0; padding: 4px 12px; border-radius: 6px; cursor: pointer; transition: background-color 150ms var(--ease), color 150ms var(--ease); }
+.seg button:hover { color: var(--text); }
+.seg button[aria-pressed="true"] { background: var(--pop); color: var(--text); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08); }
+.seg button:focus-visible, .range:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.frame { position: relative; width: 100%; aspect-ratio: 1424 / 861; overflow: hidden; border-radius: 14px; border: 1px solid var(--line-2); background: var(--bg); }
+.layer { position: absolute; inset: 0; }
+.layer img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: top left; }
+.layer.after { clip-path: inset(0 0 0 var(--cut, 0%)); }
+.frame[data-mode="before"] .layer.after { display: none; }
+.frame[data-mode="after"] .layer.before { display: none; }
+.cut-line { position: absolute; top: 0; bottom: 0; left: var(--cut, 50%); width: 2px; margin-left: -1px; background: var(--text); display: none; pointer-events: none; }
+.frame[data-mode="compare"] .cut-line { display: block; }
+.tag { position: absolute; bottom: 12px; padding: 2px 8px; border-radius: 6px; font-size: 12px; background: rgb(9 11 15 / .85); border: 1px solid var(--line-2); color: var(--text-2); display: none; }
+.tag.l { left: 12px; } .tag.r { right: 12px; }
+.frame[data-mode="compare"] .tag { display: block; }
+.range { display: none; width: 100%; margin: 12px 0 0; accent-color: var(--text); }
+.screen-block:has(.frame[data-mode="compare"]) .range { display: block; }
+.app { width: 1424px; height: 861px; transform-origin: 0 0; transform: scale(var(--k, 1)); }
+
+.changes { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px 24px; margin: 16px 0 0; padding: 0; list-style: none; }
+.changes li { display: grid; grid-template-columns: 28px 1fr; color: var(--text-2); font-size: 13px; }
+.changes li b { font-family: var(--mono); font-weight: 400; color: var(--text-3); font-size: 12px; }
+.note { margin-top: 8px; color: var(--text-3); font-size: 12px; }
+
+.tokens { width: 100%; border-collapse: collapse; min-width: 640px; }
+.tokens th, .tokens td { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.tokens th { font-weight: 500; color: var(--text-3); background: var(--surface); }
+.tokens td { color: var(--text-2); }
+.tokens td:nth-child(3) { color: var(--text); }
+.credit { margin-top: 64px; color: var(--text-3); font-size: 12px; }
+.credit a { color: var(--text-2); }
+
+/* =====================================================================
+   THE APP, AFTER  (everything below is the proposed 1.9 look)
+   ===================================================================== */
+.app { --r-ctl: 8px; --r-card: 12px; --r-pane: 12px; font: 400 13px/20px var(--ui); color: var(--text); background: var(--bg); display: grid; grid-template-rows: 48px 1fr; }
+.app button { font: inherit; color: inherit; }
+.tb { display: flex; align-items: center; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--sidebar); }
+.logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; color: var(--on-accent); margin-right: 8px; }
+.logo svg { width: 16px; height: 16px; stroke-width: 2; }
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: var(--r-ctl); border: 1px solid var(--line); background: var(--raised); color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: transparent; color: var(--on-accent); box-shadow: inset 0 1px 0 rgb(255 255 255 / .25); }
+.btn.light { background: var(--text); border-color: transparent; color: #0b0d12; box-shadow: inset 0 1px 0 rgb(255 255 255 / .6); }
+.btn.ghost { background: none; border-color: transparent; color: var(--text-2); font-weight: 400; }
+.split { display: inline-flex; }
+.split .btn:first-child { border-radius: 8px 0 0 8px; }
+.split .btn:last-child { border-radius: 0 8px 8px 0; padding: 0 8px; border-left: 1px solid rgb(4 38 27 / .25); }
+.nav { display: flex; gap: 2px; margin-left: 12px; }
+.nav a { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px; border-radius: var(--r-ctl); color: var(--text-2); text-decoration: none; }
+.nav a.on { background: var(--raised); color: var(--text); box-shadow: inset 0 1px 0 rgb(255 255 255 / .06); }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 4px; color: var(--text-3); }
+.limits { display: inline-flex; align-items: center; gap: 8px; margin-right: 12px; font: 400 12px/16px var(--mono); color: var(--text-3); }
+.limits .sep { opacity: .5; }
+.icon-btn { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--r-ctl); color: var(--text-3); position: relative; }
+.icon-btn .count { position: absolute; top: 4px; right: 4px; min-width: 14px; height: 14px; padding: 0 4px; border-radius: 4px; background: var(--pop); color: var(--text); font: 500 10px/14px var(--mono); }
+.kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 4px; border: 1px solid rgb(0 0 0 / .18); border-bottom-width: 2px; font: 500 11px/1 var(--mono); }
+.btn .kbd { background: rgb(0 0 0 / .08); color: inherit; opacity: .8; }
+.kbd.dim { border-color: var(--line-2); color: var(--text-3); background: var(--surface); }
+
+.body { display: grid; grid-template-columns: 248px 1fr; min-height: 0; }
+.side { display: flex; flex-direction: column; background: var(--sidebar); border-right: 1px solid var(--line); min-height: 0; }
+.side-head { display: flex; align-items: center; height: 48px; padding: 0 8px 0 16px; }
+.side-head h4 { margin: 0; font-size: 14px; font-weight: 500; flex: 1; }
+.side-sec { padding: 0 8px; }
+.side-label { display: flex; align-items: center; justify-content: space-between; height: 24px; padding: 0 8px; margin-top: 16px; color: var(--text-3); font-size: 12px; }
+.side-label .num { font-family: var(--mono); }
+.side-label .num.needs { color: var(--needs); }
+.group { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; color: var(--text); font-weight: 500; margin-top: 4px; }
+.group svg { color: var(--text-3); }
+.group .num { margin-left: auto; font: 400 12px var(--mono); color: var(--text-3); }
+.row { display: grid; grid-template-columns: 16px 1fr auto; gap: 0 10px; align-items: center; padding: 6px 8px; border-radius: var(--r-ctl); margin-top: 2px; }
+.row.on { background: var(--raised); box-shadow: inset 0 1px 0 rgb(255 255 255 / .06); }
+.row .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .m { grid-column: 2 / 4; color: var(--text-3); font-size: 12px; line-height: 16px; }
+.row .ago { font: 400 11px var(--mono); color: var(--text-3); }
+.side-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 8px; border-top: 1px solid var(--line); }
+
+/* signature: the state lamp */
+.lamp { width: 16px; height: 16px; display: grid; place-items: center; flex: none; }
+.lamp::before { content: ""; width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box; border: 1.5px solid var(--text-3); }
+.lamp.needs::before { width: 8px; height: 8px; border: 0; border-radius: 1px; background: var(--needs); transform: rotate(45deg); }
+.lamp.work::before { border-color: var(--text-2); border-right-color: transparent; animation: spin 1s linear infinite; }
+.lamp.done::before { border: 0; width: 10px; height: 6px; border-radius: 0; border-left: 1.5px solid var(--accent); border-bottom: 1.5px solid var(--accent); transform: translateY(-1px) rotate(-45deg); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .lamp.work::before { animation: none; } }
+
+.main { display: grid; grid-template-rows: 40px 1fr; min-width: 0; min-height: 0; }
+.toolbar { display: flex; align-items: center; gap: 8px; padding: 0 8px; border-bottom: 1px solid var(--line); }
+.aseg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.aseg span { padding: 2px 10px; border-radius: 6px; color: var(--text-2); font-size: 13px; }
+.aseg span.on { background: var(--pop); color: var(--text); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08); }
+.toolbar .right { margin-left: auto; display: flex; align-items: center; gap: 12px; color: var(--text-2); }
+.zoom { display: inline-flex; align-items: center; gap: 4px; color: var(--text-3); font: 400 12px var(--mono); }
+
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 8px; min-height: 0; }
+.pane { display: grid; grid-template-rows: 40px 1fr auto; grid-template-columns: minmax(0, 1fr); min-height: 0; min-width: 0; border-radius: var(--r-pane); background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.pane.needs { box-shadow: 0 0 0 1px var(--needs); border-color: transparent; }
+.pane-h { display: flex; align-items: center; gap: 8px; padding: 0 4px 0 12px; border-bottom: 1px solid var(--line); }
+.pane-h .ix { font: 400 12px var(--mono); color: var(--text-3); width: 12px; }
+.pane-h .ti { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pane-h .ag { color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.pane-h .st { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.pane-h .st.needs { color: var(--needs); }
+.pane-h .icon-btn { width: 28px; height: 28px; }
+.term { padding: 12px 16px; font: 400 13px/21px var(--mono); color: #c9d1dc; background: var(--well); overflow: hidden; white-space: pre-wrap; }
+.term .u { color: var(--text); }
+.term .d { color: var(--text-3); }
+.term .g { color: #6fcf97; }
+.term .r { color: var(--danger); }
+.term .k { color: var(--claude); }
+.term .cur { display: inline-block; width: 8px; height: 16px; vertical-align: -3px; background: var(--text-2); }
+
+/* moment: the approval card */
+.ask { margin: 8px; padding: 12px; border-radius: 10px; background: var(--raised); border: 1px solid var(--line-2); display: grid; gap: 12px; }
+.ask-h { display: flex; align-items: center; gap: 8px; }
+.ask-h b { font-weight: 500; }
+.ask-h .tool { margin-left: auto; font: 400 12px var(--mono); color: var(--text-3); }
+.cmd { padding: 10px 12px; border-radius: 6px; background: var(--well); border: 1px solid var(--line); font: 400 13px/20px var(--mono); color: var(--text); }
+.cmd .p { color: var(--text-3); margin-right: 8px; }
+.cmd-meta { display: flex; gap: 16px; color: var(--text-3); font-size: 12px; margin-top: -4px; }
+.cmd-meta b { color: var(--text-2); font-weight: 400; font-family: var(--mono); }
+.ask-a { display: flex; align-items: center; gap: 8px; }
+.ask-a .deny { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); }
+
+/* pages */
+.page { padding: 24px 32px; overflow: hidden; min-width: 0; }
+.page-h { display: flex; align-items: center; gap: 16px; }
+.page-h h5 { margin: 0; font-size: 28px; line-height: 32px; font-weight: 500; }
+.page-h .meta { color: var(--text-3); font: 400 12px var(--mono); }
+.page-h .right { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 12px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 16px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); }
+.stat { padding: 12px 20px; border-left: 1px solid var(--line); }
+.stat:first-child { border-left: 0; }
+.stat .l { color: var(--text-3); font-size: 12px; }
+.stat .v { font-size: 28px; line-height: 32px; font-weight: 500; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.stat .c { color: var(--text-3); font-size: 12px; }
+.stat .c .up { color: var(--text-2); }
+.two { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-top: 12px; }
+.two .card { padding: 16px 20px; }
+.card { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); padding: 20px; min-width: 0; }
+.card-h { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.card-h b { font-weight: 500; font-size: 14px; }
+.card-h .right { margin-left: auto; display: flex; gap: 12px; color: var(--text-3); font-size: 12px; align-items: center; }
+.sw { display: inline-flex; align-items: center; gap: 6px; }
+.sw i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.chart text { font: 400 11px var(--mono); fill: var(--text-3); }
+.meter { margin-top: 12px; }
+.meter .top { display: flex; justify-content: space-between; font-size: 13px; }
+.meter .top span:last-child { font-family: var(--mono); color: var(--text-2); font-size: 12px; }
+.meter .bar { height: 6px; border-radius: 3px; background: var(--raised); margin-top: 6px; overflow: hidden; }
+.meter .bar i { display: block; height: 100%; border-radius: 3px; background: var(--text-2); }
+.meter .sub { color: var(--text-3); font-size: 12px; margin-top: 4px; }
+.rank { display: grid; gap: 10px; }
+.rank .r { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; }
+.rank .r span:last-child { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+.rank .r .b { grid-column: 1 / 3; height: 4px; border-radius: 2px; background: var(--raised); }
+.rank .r .b i { display: block; height: 100%; border-radius: 2px; background: var(--text-3); }
+.rank .r:first-child .b i { background: var(--text-2); }
+table.ut { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ut th { text-align: left; color: var(--text-3); font-weight: 400; font-size: 12px; padding: 0 0 8px; border-bottom: 1px solid var(--line); }
+.ut th.n, .ut td.n { text-align: right; }
+.ut td { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ut td.n { font-family: var(--mono); font-size: 12px; color: var(--text); }
+.ut td.n.dim { color: var(--text-3); }
+.ut tr:last-child td { border-bottom: 0; }
+.agent-cell { display: inline-flex; align-items: center; gap: 8px; }
+.foot { margin-top: 8px; color: var(--text-3); font-size: 12px; }
+
+/* agents page */
+.goal { margin-top: 24px; padding: 20px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); display: grid; gap: 12px; }
+.goal-h { display: flex; align-items: baseline; gap: 12px; }
+.goal-h b { font-weight: 500; font-size: 14px; }
+.goal-h span { color: var(--text-3); }
+.ta { height: 72px; padding: 10px 12px; border-radius: var(--r-ctl); border: 1px solid var(--line-2); background: var(--well); color: var(--text-3); }
+.goal-row { display: flex; gap: 8px; align-items: center; }
+.sel { display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; height: 32px; padding: 0 10px 0 12px; border-radius: var(--r-ctl); border: 1px solid var(--line); background: var(--raised); min-width: 180px; }
+.sel svg { color: var(--text-3); }
+.chk { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); margin-left: auto; }
+.chk i { width: 16px; height: 16px; border-radius: 4px; background: var(--text); display: grid; place-items: center; color: #0b0d12; }
+.chk i svg { width: 12px; height: 12px; stroke-width: 2.5; }
+.input { display: inline-flex; align-items: center; gap: 8px; height: 32px; width: 240px; padding: 0 12px; border-radius: var(--r-ctl); border: 1px solid var(--line); background: var(--surface); color: var(--text-3); }
+.sec-label { display: flex; justify-content: space-between; margin: 24px 0 8px; color: var(--text-3); font-size: 12px; }
+.sec-label .num { font-family: var(--mono); }
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.acard { padding: 16px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); display: grid; gap: 12px; align-content: start; }
+.acard.lead { grid-column: span 2; grid-template-columns: auto 1fr; column-gap: 16px; }
+.acard.lead .desc, .acard.lead .af { grid-column: 2; }
+.ah { display: flex; align-items: center; gap: 12px; }
+.av { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; font: 500 13px var(--ui); background: var(--raised); border: 1px solid var(--line); position: relative; }
+.av::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px var(--surface); }
+.an { font-weight: 500; }
+.ar { color: var(--text-3); font-size: 12px; line-height: 16px; }
+.desc { color: var(--text-2); font-size: 13px; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.af { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--line); color: var(--text-3); font: 400 12px var(--mono); }
+.af .run { font: 500 13px var(--ui); color: var(--text); }
+.empty { padding: 16px; border: 1px dashed var(--line-2); border-radius: var(--r-card); color: var(--text-2); display: flex; align-items: center; justify-content: space-between; }
+
+@media (max-width: 700px) {
+  .doc { padding: 32px 16px 64px; }
+  .doc h1 { font-size: 28px; line-height: 36px; }
+  .direction { grid-template-columns: 1fr; }
+  .direction dt { padding-bottom: 0; border-bottom: 0; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="i-max" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 24 24"><path d="M3 6h13M3 12h9M3 18h5M18 9v12M15 18l3 3 3-3"/></symbol>
+  <symbol id="i-collapse" viewBox="0 0 24 24"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-term" viewBox="0 0 24 24"><path d="m5 8 4 4-4 4M12 16h7"/></symbol>
+  <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></symbol>
+  <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18Z" fill="currentColor"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="g-claude" viewBox="0 0 24 24"><g stroke="#d97757" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></g></symbol>
+  <symbol id="g-codex" viewBox="0 0 24 24"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9Z" stroke="#aab3c3" stroke-width="1.6" fill="none"/><path d="m9 10 2 2-2 2M13 14h2" stroke="#aab3c3" stroke-width="1.6" fill="none" stroke-linecap="round"/></symbol>
+  <symbol id="g-gemini" viewBox="0 0 24 24"><path d="M12 2c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z" fill="#8fa8ff"/></symbol>
+</svg>
+
+<main class="doc">
+  <h1>Dawsha, unslopped</h1>
+  <p class="lede">The 1.8.0 build checked against the <a href="https://github.com/heydamir/unslop" style="color:var(--text-2)">unslop</a> guides: an audit of where the app still slips, then three screens redrawn with the fixes. Switch each screen between Before, After and Compare.</p>
+
+  <div class="verdict">
+    <div><b>Verdict</b> <span>Light slop. Polish mode</span></div>
+    <div><b>Kept</b> <span>Geist and JetBrains Mono, the near-black ramp, the mint brand color, every feature and layout</span></div>
+    <div><b>Changed</b> <span>Where color goes, weights and sizes, a few labels, the attention state</span></div>
+  </div>
+
+  <h2>Direction</h2>
+  <p>Five lines, taken from what Dawsha does. Every fix below follows from them.</p>
+  <dl class="direction">
+    <dt>Product</dt><dd>One window where a developer runs and watches several AI coding agents in readable terminals</dd>
+    <dt>Character</dt><dd>Watchful, exact, quiet until it needs you</dd>
+    <dt>World</dt><dd>A control room on the night shift. Terminals, status lamps and one light that comes on when someone has to act</dd>
+    <dt>Moments</dt><dd>The approval card, which shows what the agent wants to run, and the usage chart</dd>
+    <dt>Signature</dt><dd>The state lamp. A spinning ring for working, an amber diamond for needs you, a mint tick for done, a hollow dot for idle. Same glyph in pane headers, sidebar rows and the board, nowhere else</dd>
+  </dl>
+
+  <h2>Audit</h2>
+  <p>Every sign from <code>signs.md</code> found in the 1.8.0 build, with where it lives. File references are from <code>src/renderer</code>.</p>
+  <div class="tablewrap">
+  <table class="audit">
+    <thead><tr><th>#</th><th>Sign</th><th>Where</th><th>Fix</th><th>Weight</th></tr></thead>
+    <tbody>
+      <tr><td>01</td><td>Mint is on almost every control, so nothing leads</td><td>New session, the Layouts ring, selected tabs (<em style="font-style:normal">7 days</em>, <em style="font-style:normal">Tokens</em>), Maya's card border <code>components/agents.css:72</code>, the checkbox, Hand it to Maya, New agent</td><td>Mint on the one primary action per screen and on the done state. Selected tabs and toggles become a surface step with a hairline highlight</td><td><span class="sev hi">High</span></td></tr>
+      <tr><td>02</td><td>Needs you is said six times on one screen</td><td>Grid: brown pane header tint, orange ring, orange card border, orange Allow fill, orange sidebar heading, orange "needs you" on the project, orange chip in the toolbar</td><td>The pane keeps a 1px amber ring and the diamond lamp. Allow becomes the off-white primary. Sidebar heading goes back to muted text with an amber count</td><td><span class="sev hi">High</span></td></tr>
+      <tr><td>03</td><td>Heavy weights everywhere</td><td><code>font-weight: 600</code> 81 times, 650 16 times, 550 7 times. Bold project names in the sidebar, bold page titles</td><td>400 and 500. 600 only for rare emphasis. Hierarchy from size and color</td><td><span class="sev hi">High</span></td></tr>
+      <tr><td>04</td><td>Too many type sizes, half pixels</td><td>18 sizes, including 11.5, 12.5, 13.5 and 14.5px</td><td>12, 13, 14, 16, 20, 28. Terminal size stays user controlled</td><td><span class="sev md">Medium</span></td></tr>
+      <tr><td>05</td><td>Uppercase tracked mono table headers</td><td>Usage, By agent: AGENT, SESSIONS, TOKENS, CACHE READ, COST <code>styles.css:3252</code></td><td>Sentence case in the interface face, muted, 12px</td><td><span class="sev md">Medium</span></td></tr>
+      <tr><td>06</td><td>Colored numbers and wrapping placeholders</td><td>Usage table digits in blue mono, "not reported" breaking over two lines in every Cost cell</td><td>Primary text, tabular figures. An en dash for missing values with one footnote</td><td><span class="sev md">Medium</span></td></tr>
+      <tr><td>07</td><td>Italic for emphasis</td><td>"no limits reported" in the top bar <code>components/topbar.css:19</code>, failed run tabs <code>components/filesView.css:341</code>, <code>styles.css:1004</code>, <code>styles.css:2410</code></td><td>Muted color instead. The italic preview tab in Files stays, it is the editor convention people expect</td><td><span class="sev md">Medium</span></td></tr>
+      <tr><td>08</td><td>Colored glows on avatars</td><td>Crew avatar halos of 14 and 16px in amber and mint <code>components/crewAvatar.css:76</code>, <code>:78</code></td><td>A 2px ring in the state color, no blur</td><td><span class="sev md">Medium</span></td></tr>
+      <tr><td>09</td><td>Endless pulse on a waiting pane</td><td><code>needs-pulse</code> runs forever on the needs pane <code>components/grid.css:39</code></td><td>Pulse three times when the state arrives, then hold the static ring. Working keeps its spinner, that one is live</td><td><span class="sev md">Medium</span></td></tr>
+      <tr><td>10</td><td>Negative tracking on small text</td><td>Remote page brand 15px at -.02em, project name 18px at -.02em, dialog titles 22px at -.025em <code>remote/remote.css:60, 179, 234, 483</code>; file badges 10px at -.02em <code>files/fileIcons.css:4</code></td><td>Zero under 40px</td><td><span class="sev">Low</span></td></tr>
+      <tr><td>11</td><td>Uppercase accent eyebrow</td><td>Remote pairing card eyebrow, 11px, 650, tracked .08em, mint <code>remote/remote.css:76</code></td><td>Sentence case, 12px, muted</td><td><span class="sev">Low</span></td></tr>
+      <tr><td>12</td><td>Off-grid spacing</td><td><code>gap: 1px</code> 14 times, gaps of 7 and 9px, padding 3, 5, 11, 18, 26px, margin 22px</td><td>Steps of 4. 2px stays only inside small controls</td><td><span class="sev">Low</span></td></tr>
+      <tr><td>13</td><td>Sub-4px radii and pills</td><td><code>--r-micro: 2px</code>, <code>--r-nub: 1px</code>, 12 rules at 999px or 50%</td><td>Floor of 4px. Pills only for real toggles. Controls 8, cards 12, panes 12, popovers 14</td><td><span class="sev">Low</span></td></tr>
+      <tr><td>14</td><td>A badge that repeats its heading</td><td>Agents: a "Built in" pill on every card, under a section called Built in. Roles cut off ("Code revie…")</td><td>Drop the pill. Role moves under the name so it never truncates</td><td><span class="sev">Low</span></td></tr>
+      <tr><td>15</td><td>Rows that repeat the project name</td><td>Sidebar session rows titled "Smoke" with "Smoke" again as meta</td><td>The title is the task (first prompt or rename), the meta is state and time</td><td><span class="sev">Low</span></td></tr>
+      <tr><td>16</td><td>Empty states that read as broken</td><td>Usage with no data shows "not reported", "none yet", four bullet footnotes and a large empty band</td><td>Dashes in the stats, one line explaining where data comes from, the chart frame drawn with its grid</td><td><span class="sev">Low</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Screens</h2>
+  <p>Before is the 1.8.0 capture from <code>docs/redesign/built</code>. After is drawn in HTML at the same 1424 by 861 size. The After screens use example data so the layout reads as it would in use.</p>
+
+  <!-- ================= SCREEN 1: GRID ================= -->
+  <section class="screen-block">
+    <div class="screen-head">
+      <h3>Sessions grid, one pane asking</h3>
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" data-m="after" aria-pressed="true">After</button>
+        <button type="button" data-m="before" aria-pressed="false">Before</button>
+        <button type="button" data-m="compare" aria-pressed="false">Compare</button>
+      </div>
+    </div>
+    <div class="frame" data-mode="after">
+      <div class="layer before"><img src="../built/grid-tiles-3-dark.png" alt="Dawsha 1.8.0 sessions grid with three panes"></div>
+      <div class="layer after"><div class="app">
+        <header class="tb">
+          <span class="logo"><svg class="i"><use href="#i-term"/></svg></span>
+          <span class="split"><span class="btn primary"><svg class="i"><use href="#i-plus"/></svg>New session</span><span class="btn primary"><svg class="i"><use href="#i-down"/></svg></span></span>
+          <nav class="nav"><a class="on">Sessions</a><a>Agents</a><a>Files</a><a>Work</a><a>Skills</a><a>More<svg class="i" style="width:14px;height:14px"><use href="#i-down"/></svg></a></nav>
+          <div class="tb-right">
+            <span class="limits"><svg class="i" style="width:14px;height:14px"><use href="#g-claude"/></svg>5h 42%<span class="sep">·</span>week 18%</span>
+            <span class="icon-btn"><svg class="i"><use href="#i-search"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-bell"/></svg><span class="count">1</span></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-help"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-gear"/></svg></span>
+          </div>
+        </header>
+        <div class="body">
+          <aside class="side">
+            <div class="side-head"><h4>Projects</h4><span class="icon-btn"><svg class="i"><use href="#i-search"/></svg></span><span class="icon-btn"><svg class="i"><use href="#i-plus"/></svg></span><span class="icon-btn"><svg class="i"><use href="#i-collapse"/></svg></span></div>
+            <div class="side-sec">
+              <div class="side-label" style="margin-top:4px"><span>Waiting on you</span><span class="num needs">1</span></div>
+              <div class="row"><span class="lamp needs"></span><span class="t">Run migrations on dev</span><span class="ago">2m</span><span class="m">dawsha-api · Claude</span></div>
+              <div class="side-label" style="margin-top:24px"><span>Active</span><span class="num">4</span></div>
+              <div class="group"><svg class="i" style="width:14px;height:14px"><use href="#i-down"/></svg>dawsha-api<span class="num">3</span></div>
+              <div class="row"><span class="lamp needs"></span><span class="t">Run migrations on dev</span><span class="ago">2m</span><span class="m">Needs you</span></div>
+              <div class="row on"><span class="lamp work"></span><span class="t">Fix flaky login test</span><span class="ago">14m</span><span class="m">Working</span></div>
+              <div class="row"><span class="lamp done"></span><span class="t">Review PR #118</span><span class="ago">31m</span><span class="m">Done</span></div>
+              <div class="group"><svg class="i" style="width:14px;height:14px"><use href="#i-right"/></svg>SizeManager<span class="num">1</span></div>
+            </div>
+            <div class="side-foot"><span class="btn ghost"><svg class="i"><use href="#i-plus"/></svg>Add project</span><span class="btn ghost">Manage</span></div>
+          </aside>
+          <section class="main">
+            <div class="toolbar">
+              <span class="aseg"><span class="on">Grid</span><span>Board</span></span>
+              <span class="btn ghost"><svg class="i"><use href="#i-layout"/></svg>Layouts</span>
+              <span class="icon-btn"><svg class="i"><use href="#i-contrast"/></svg></span>
+              <div class="right">
+                <span style="display:inline-flex;align-items:center;gap:6px"><span class="lamp needs"></span>1 needs you</span>
+                <span class="zoom"><span class="icon-btn" style="width:24px;height:24px"><svg class="i" style="width:14px;height:14px"><use href="#i-minus"/></svg></span>15px<span class="icon-btn" style="width:24px;height:24px"><svg class="i" style="width:14px;height:14px"><use href="#i-plus"/></svg></span></span>
+              </div>
+            </div>
+            <div class="grid3">
+              <article class="pane needs">
+                <div class="pane-h"><span class="ix">1</span><span class="ti">Run migrations on dev</span><span class="ag">Claude · Opus</span><span class="st needs"><span class="lamp needs"></span>Needs you</span><span class="icon-btn"><svg class="i"><use href="#i-max"/></svg></span><span class="icon-btn"><svg class="i"><use href="#i-more"/></svg></span></div>
+<div class="term"><span class="u">&gt; run the pending migrations on dev and
+  tell me what changed</span>
+
+<span class="k">●</span> Checking what is pending first.
+
+<span class="k">●</span> Bash(npm run migrate:status -- --env dev)
+  <span class="d">⎿</span> 3 pending
+    <span class="d">0042_add_sessions_index</span>
+    <span class="d">0043_drop_legacy_tokens</span>
+    <span class="d">0044_usage_rollup</span>
+
+<span class="k">●</span> 0043 drops a column. Nothing in the
+  code reads it since #109, so it is safe.
+  Running all three now.</div>
+                <div class="ask">
+                  <div class="ask-h"><span class="lamp needs"></span><b>Claude wants to run a command</b><span class="tool">Bash</span></div>
+                  <div class="cmd"><span class="p">$</span>npm run migrate -- --env dev</div>
+                  <div class="cmd-meta"><span>in <b>dawsha-api</b></span><span>3 migrations, 1 drops a column</span></div>
+                  <div class="ask-a"><span class="btn light">Allow<span class="kbd">Enter</span></span><span class="btn">Allow always</span><span class="deny">Deny<span class="kbd dim">Esc</span></span></div>
+                </div>
+              </article>
+              <article class="pane">
+                <div class="pane-h"><span class="ix">2</span><span class="ti">Fix flaky login test</span><span class="ag">Claude · Sonnet</span><span class="st"><span class="lamp work"></span>Working</span><span class="icon-btn"><svg class="i"><use href="#i-max"/></svg></span><span class="icon-btn"><svg class="i"><use href="#i-more"/></svg></span></div>
+<div class="term"><span class="u">&gt; the login test fails about 1 in 7 CI
+  runs. find out why and fix it</span>
+
+<span class="k">●</span> Read(tests/e2e/login.spec.ts)
+<span class="k">●</span> Read(src/auth/session.ts)
+
+<span class="k">●</span> The test clicks Sign in before the
+  token refresh settles. It passes when
+  the refresh is fast and fails when not.
+
+<span class="k">●</span> Update(tests/e2e/login.spec.ts)
+  <span class="d">⎿</span> <span class="g">+ await page.waitForResponse(/token/)</span>
+    <span class="r">- await page.waitForTimeout(500)</span>
+
+<span class="k">●</span> Bash(npx playwright test login --repeat-each 20)
+  <span class="d">⎿</span> Running 20 tests…  <span class="d">14 / 20</span>
+<span class="cur"></span></div>
+              </article>
+              <article class="pane">
+                <div class="pane-h"><span class="ix">3</span><span class="ti">Review PR #118</span><span class="ag">Codex</span><span class="st"><span class="lamp done"></span>Done</span><span class="icon-btn"><svg class="i"><use href="#i-max"/></svg></span><span class="icon-btn"><svg class="i"><use href="#i-more"/></svg></span></div>
+<div class="term"><span class="u">&gt; review PR #118 for bugs</span>
+
+Reviewed 6 files, +214 −58.
+
+<span class="u">1.</span> src/usage/rollup.ts:41
+   Days are bucketed in UTC, so a session
+   at 01:00 Cairo time lands on the
+   previous day.
+
+<span class="u">2.</span> src/usage/rollup.ts:77
+   Cache reads are added to tokens twice
+   when a session resumes.
+
+<span class="u">3.</span> tests/rollup.test.ts
+   No test covers a resumed session.
+
+<span class="d">2 bugs, 1 missing test. No blockers
+outside rollup.ts.</span>
+
+<span class="d">›</span> <span class="cur"></span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div></div>
+      <span class="cut-line"></span><span class="tag l">Before</span><span class="tag r">After</span>
+    </div>
+    <input class="range" type="range" min="0" max="100" value="50" aria-label="Compare position" id="r1">
+    <ul class="changes">
+      <li><b>02</b><span>Needs you is the ring, the lamp and the card. The brown header tint and orange Allow are gone</span></li>
+      <li><b>01</b><span>Mint only on New session and the done tick. Layouts lost its mint ring</span></li>
+      <li><b>—</b><span>The approval card says what it asks, where, and what it will change. Allow is the off-white primary with its keycap</span></li>
+      <li><b>15</b><span>Sidebar rows named by task. Project groups are plain labels, not boxed cards</span></li>
+      <li><b>07</b><span>Top bar shows the Claude limits in mono instead of italic "no limits reported"</span></li>
+      <li><b>03</b><span>Pane titles and project names at 500, not bold</span></li>
+    </ul>
+  </section>
+
+  <!-- ================= SCREEN 2: USAGE ================= -->
+  <section class="screen-block" style="margin-top:56px">
+    <div class="screen-head">
+      <h3>Usage</h3>
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" data-m="after" aria-pressed="true">After</button>
+        <button type="button" data-m="before" aria-pressed="false">Before</button>
+        <button type="button" data-m="compare" aria-pressed="false">Compare</button>
+      </div>
+    </div>
+    <div class="frame" data-mode="after">
+      <div class="layer before"><img src="../built/pages-usage-dark.png" alt="Dawsha 1.8.0 usage page"></div>
+      <div class="layer after"><div class="app">
+        <header class="tb">
+          <span class="logo"><svg class="i"><use href="#i-term"/></svg></span>
+          <span class="split"><span class="btn primary"><svg class="i"><use href="#i-plus"/></svg>New session</span><span class="btn primary"><svg class="i"><use href="#i-down"/></svg></span></span>
+          <nav class="nav"><a>Sessions</a><a>Agents</a><a>Files</a><a>Work</a><a>Skills</a><a class="on">More<svg class="i" style="width:14px;height:14px"><use href="#i-down"/></svg></a></nav>
+          <div class="tb-right">
+            <span class="icon-btn"><svg class="i"><use href="#i-search"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-bell"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-help"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-gear"/></svg></span>
+          </div>
+        </header>
+        <div class="body">
+          <aside class="side">
+            <div class="side-head"><h4>Projects</h4><span class="icon-btn"><svg class="i"><use href="#i-search"/></svg></span><span class="icon-btn"><svg class="i"><use href="#i-plus"/></svg></span><span class="icon-btn"><svg class="i"><use href="#i-collapse"/></svg></span></div>
+            <div class="side-sec">
+              <div class="side-label" style="margin-top:4px"><span>All projects</span><span class="icon-btn" style="width:24px;height:24px"><svg class="i" style="width:14px;height:14px"><use href="#i-sort"/></svg></span></div>
+              <div class="group" style="font-weight:400">dawsha-api<span class="num">3</span></div>
+              <div class="group" style="font-weight:400">SizeManager<span class="num">1</span></div>
+              <div class="group" style="font-weight:400">Platforms<span class="num">0</span></div>
+              <div class="group" style="font-weight:400;color:var(--text-3)">agent-sync<span class="num">0</span></div>
+            </div>
+            <div class="side-foot"><span class="btn ghost"><svg class="i"><use href="#i-plus"/></svg>Add project</span><span class="btn ghost">Manage</span></div>
+          </aside>
+          <section class="page">
+            <div class="page-h">
+              <h5>Usage</h5>
+              <span class="aseg"><span>Today</span><span class="on">7 days</span><span>30 days</span></span>
+              <div class="right">Read from your agents' folders. Nothing leaves this computer</div>
+            </div>
+            <div class="stats">
+              <div class="stat"><div class="l">Spend</div><div class="v">$41.80</div><div class="c"><span class="up">+12%</span> vs previous 7 days</div></div>
+              <div class="stat"><div class="l">Tokens</div><div class="v">18.4M</div><div class="c"><span class="up">+3.1M</span> vs previous 7 days</div></div>
+              <div class="stat"><div class="l">Sessions</div><div class="v">63</div><div class="c">9 fewer vs previous 7 days</div></div>
+              <div class="stat"><div class="l">Busiest day</div><div class="v">Tue 28 Oct</div><div class="c">4.6M tokens</div></div>
+            </div>
+            <div class="two">
+              <div class="card">
+                <div class="card-h"><b>Tokens per day</b><span class="aseg"><span class="on">Tokens</span><span>Cost</span></span>
+                  <div class="right"><span class="sw"><i style="background:var(--claude)"></i>Claude</span><span class="sw"><i style="background:#5b6475"></i>Codex</span><span class="sw"><i style="background:#363d4a"></i>Gemini</span></div></div>
+                <svg class="chart" viewBox="0 0 860 300" width="100%" style="display:block;height:auto" role="img" aria-label="Tokens per day, Claude leads every day, Tuesday busiest">
+                  <g stroke="rgb(255 255 255 / .06)" stroke-width="1">
+                    <line x1="40" x2="852" y1="20" y2="20"/><line x1="40" x2="852" y1="80" y2="80"/><line x1="40" x2="852" y1="140" y2="140"/><line x1="40" x2="852" y1="200" y2="200"/><line x1="40" x2="852" y1="260" y2="260" stroke="rgb(255 255 255 / .14)"/>
+                  </g>
+                  <g text-anchor="end"><text x="32" y="24">5M</text><text x="32" y="84">3.75M</text><text x="32" y="144">2.5M</text><text x="32" y="204">1.25M</text><text x="32" y="264">0</text></g>
+                  <!-- scale: 48px per 1M, base y=260 -->
+                  <g>
+                    <!-- Sat 25: C1.4 X0.4 G0.1 -->
+                    <rect x="78" y="192.8" width="64" height="67.2" fill="#d97757"/><rect x="78" y="173.6" width="64" height="19.2" fill="#5b6475"/><rect x="78" y="168.8" width="64" height="4.8" rx="2" fill="#363d4a"/>
+                    <!-- Sun 26: C0.9 X0.2 -->
+                    <rect x="194" y="216.8" width="64" height="43.2" fill="#d97757"/><rect x="194" y="207.2" width="64" height="9.6" rx="2" fill="#5b6475"/>
+                    <!-- Mon 27: C2.6 X0.6 G0.2 -->
+                    <rect x="310" y="135.2" width="64" height="124.8" fill="#d97757"/><rect x="310" y="106.4" width="64" height="28.8" fill="#5b6475"/><rect x="310" y="96.8" width="64" height="9.6" rx="2" fill="#363d4a"/>
+                    <!-- Tue 28: C3.4 X0.9 G0.3 = 4.6 -->
+                    <rect x="426" y="96.8" width="64" height="163.2" fill="#d97757"/><rect x="426" y="53.6" width="64" height="43.2" fill="#5b6475"/><rect x="426" y="39.2" width="64" height="14.4" rx="2" fill="#363d4a"/>
+                    <!-- Wed 29: C2.9 X0.5 G0.2 -->
+                    <rect x="542" y="120.8" width="64" height="139.2" fill="#d97757"/><rect x="542" y="96.8" width="64" height="24" fill="#5b6475"/><rect x="542" y="87.2" width="64" height="9.6" rx="2" fill="#363d4a"/>
+                    <!-- Thu 30: C2.5 X0.6 -->
+                    <rect x="658" y="140" width="64" height="120" fill="#d97757"/><rect x="658" y="111.2" width="64" height="28.8" rx="2" fill="#5b6475"/>
+                    <!-- Fri 31 (today, partial): C1.5 X0.2 -->
+                    <rect x="774" y="188" width="64" height="72" fill="#d97757" opacity=".55"/><rect x="774" y="178.4" width="64" height="9.6" rx="2" fill="#5b6475" opacity=".55"/>
+                  </g>
+                  <g text-anchor="middle"><text x="110" y="284">Sat 25</text><text x="226" y="284">Sun 26</text><text x="342" y="284">Mon 27</text><text x="458" y="284" style="fill:var(--text)">Tue 28</text><text x="574" y="284">Wed 29</text><text x="690" y="284">Thu 30</text><text x="806" y="284">Today</text></g>
+                  <text x="458" y="30" text-anchor="middle" style="fill:var(--text)">4.6M</text>
+                </svg>
+              </div>
+              <div class="card">
+                <div class="card-h"><b>Claude limits right now</b></div>
+                <div class="meter"><div class="top"><span>5-hour window</span><span>42%</span></div><div class="bar"><i style="width:42%"></i></div><div class="sub">Resets at 19:40</div></div>
+                <div class="meter" style="margin-top:20px"><div class="top"><span>This week</span><span>18%</span></div><div class="bar"><i style="width:18%"></i></div><div class="sub">Resets Mon 3 Nov</div></div>
+                <div class="card-h" style="margin:32px 0 12px"><b>By project</b><span class="right">tokens</span></div>
+                <div class="rank">
+                  <div class="r"><span>dawsha-api</span><span>9.1M</span><span class="b"><i style="width:100%"></i></span></div>
+                  <div class="r"><span>SizeManager</span><span>4.2M</span><span class="b"><i style="width:46%"></i></span></div>
+                  <div class="r"><span>Platforms</span><span>3.8M</span><span class="b"><i style="width:42%"></i></span></div>
+                  <div class="r"><span>agent-sync</span><span>1.3M</span><span class="b"><i style="width:14%"></i></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="margin-top:12px;padding:12px 20px">
+              <table class="ut">
+                <thead><tr><th>Agent</th><th class="n">Sessions</th><th class="n">Tokens</th><th class="n">Cache read</th><th class="n">Cost</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="agent-cell"><svg class="i"><use href="#g-claude"/></svg>Claude Code</span></td><td class="n">48</td><td class="n">15.2M</td><td class="n">61.0M</td><td class="n">$41.80</td></tr>
+                  <tr><td><span class="agent-cell"><svg class="i"><use href="#g-codex"/></svg>Codex</span></td><td class="n">11</td><td class="n">2.6M</td><td class="n">8.4M</td><td class="n dim">–</td></tr>
+                  <tr><td><span class="agent-cell"><svg class="i"><use href="#g-gemini"/></svg>Gemini</span></td><td class="n">4</td><td class="n">0.6M</td><td class="n">1.1M</td><td class="n dim">–</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="foot">Cost shows for Claude Code while Show live session info is on. Codex and Gemini do not report cost</div>
+          </section>
+        </div>
+      </div></div>
+      <span class="cut-line"></span><span class="tag l">Before</span><span class="tag r">After</span>
+    </div>
+    <input class="range" type="range" min="0" max="100" value="50" aria-label="Compare position" id="r2">
+    <ul class="changes">
+      <li><b>—</b><span>One main chart owns the page. Claude leads in its own color, Codex and Gemini sit in neutral steps, the busiest day is labelled</span></li>
+      <li><b>—</b><span>Stats are a label, a figure and what it compares to. No icons, no sparklines</span></li>
+      <li><b>05</b><span>Table headers in sentence case. Numbers in primary text, tabular</span></li>
+      <li><b>06</b><span>Missing cost is a dash. One footnote replaces four bullets</span></li>
+      <li><b>—</b><span>Limits become two meters with reset times. By project becomes a ranked list, smaller and different in kind from the chart</span></li>
+      <li><b>01</b><span>The selected range and Tokens tab are a surface step, not mint text</span></li>
+    </ul>
+  </section>
+
+  <!-- ================= SCREEN 3: AGENTS ================= -->
+  <section class="screen-block" style="margin-top:56px">
+    <div class="screen-head">
+      <h3>Agents</h3>
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" data-m="after" aria-pressed="true">After</button>
+        <button type="button" data-m="before" aria-pressed="false">Before</button>
+        <button type="button" data-m="compare" aria-pressed="false">Compare</button>
+      </div>
+    </div>
+    <div class="frame" data-mode="after">
+      <div class="layer before"><img src="../built/agents-roster-dark.png" alt="Dawsha 1.8.0 agents roster"></div>
+      <div class="layer after"><div class="app">
+        <header class="tb">
+          <span class="logo"><svg class="i"><use href="#i-term"/></svg></span>
+          <span class="split"><span class="btn primary" style="background:var(--raised);color:var(--text);border-color:var(--line);box-shadow:none"><svg class="i"><use href="#i-plus"/></svg>New session</span><span class="btn" style="padding:0 8px;border-radius:0 8px 8px 0"><svg class="i"><use href="#i-down"/></svg></span></span>
+          <nav class="nav"><a>Sessions</a><a class="on">Agents</a><a>Files</a><a>Work</a><a>Skills</a><a>More<svg class="i" style="width:14px;height:14px"><use href="#i-down"/></svg></a></nav>
+          <div class="tb-right">
+            <span class="icon-btn"><svg class="i"><use href="#i-search"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-bell"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-help"/></svg></span>
+            <span class="icon-btn"><svg class="i"><use href="#i-gear"/></svg></span>
+          </div>
+        </header>
+        <div class="body">
+          <aside class="side">
+            <div class="side-head"><h4>Projects</h4><span class="icon-btn"><svg class="i"><use href="#i-search"/></svg></span><span class="icon-btn"><svg class="i"><use href="#i-plus"/></svg></span><span class="icon-btn"><svg class="i"><use href="#i-collapse"/></svg></span></div>
+            <div class="side-sec">
+              <div class="side-label" style="margin-top:4px"><span>All projects</span><span class="icon-btn" style="width:24px;height:24px"><svg class="i" style="width:14px;height:14px"><use href="#i-sort"/></svg></span></div>
+              <div class="group" style="font-weight:400">dawsha-api<span class="num">3</span></div>
+              <div class="group" style="font-weight:400">SizeManager<span class="num">1</span></div>
+              <div class="group" style="font-weight:400">Platforms<span class="num">0</span></div>
+            </div>
+            <div class="side-foot"><span class="btn ghost"><svg class="i"><use href="#i-plus"/></svg>Add project</span><span class="btn ghost">Manage</span></div>
+          </aside>
+          <section class="page">
+            <div class="page-h">
+              <h5>Agents</h5><span class="meta">8 agents · 7 built in</span>
+              <div class="right"><span class="input"><svg class="i"><use href="#i-search"/></svg>Search agents</span><span class="btn">Import</span><span class="btn"><svg class="i"><use href="#i-plus"/></svg>New agent</span></div>
+            </div>
+            <div class="goal">
+              <div class="goal-h"><b>Give Maya a goal</b><span>She plans first. Nothing runs until you approve</span></div>
+              <div class="ta">The login test fails about 1 in 7 CI runs. Find out why, fix it and get it ready for a PR</div>
+              <div class="goal-row">
+                <span class="sel">dawsha-api<svg class="i"><use href="#i-down"/></svg></span>
+                <span class="sel">Lead on Claude · Opus<svg class="i"><use href="#i-down"/></svg></span>
+                <span class="chk"><i><svg class="i"><use href="#i-check"/></svg></i>Show me the plan first</span>
+                <span class="btn primary">Hand it to Maya</span>
+              </div>
+            </div>
+            <div class="sec-label"><span>Lead</span></div>
+            <div class="cards">
+              <div class="acard lead">
+                <span class="av" style="--c:#b49cff">M</span>
+                <div><div class="an">Maya</div><div class="ar">Lead · takes a goal, plans who does what</div></div>
+                <div class="desc">Runs the members she needs, checks their work and brings you one result to approve</div>
+                <div class="af"><span style="display:inline-flex;gap:6px;align-items:center"><svg class="i" style="width:14px;height:14px"><use href="#g-claude"/></svg>Opus</span><span class="run">Give her a goal</span></div>
+              </div>
+              <div class="empty" style="grid-column: span 2"><span>Your agents · none yet. Make one, import agent files, or turn a skill into one</span><span class="btn">New agent</span></div>
+            </div>
+            <div class="sec-label"><span>Built in</span><span class="num">7</span></div>
+            <div class="cards">
+              <div class="acard"><div class="ah"><span class="av" style="--c:#ff8a8a">S</span><div><div class="an">Sami</div><div class="ar">Code reviewer</div></div></div><div class="desc">Reviews a diff, branch or PR for bugs, security and missed tests</div><div class="af"><span>Sonnet</span><span class="run">Run</span></div></div>
+              <div class="acard"><div class="ah"><span class="av" style="--c:#8fa8ff">T</span><div><div class="an">Tarek</div><div class="ar">Debugger</div></div></div><div class="desc">Reproduces a bug, failing test or error id and finds the cause</div><div class="af"><span>Opus</span><span class="run">Run</span></div></div>
+              <div class="acard"><div class="ah"><span class="av" style="--c:#6fcf97">O</span><div><div class="an">Omar</div><div class="ar">Builder</div></div></div><div class="desc">Implements a planned change in its own worktree</div><div class="af"><span>Sonnet</span><span class="run">Run</span></div></div>
+              <div class="acard"><div class="ah"><span class="av" style="--c:#e8c46a">H</span><div><div class="an">Hana</div><div class="ar">Tester</div></div></div><div class="desc">Writes or fixes tests for a change and runs the suite</div><div class="af"><span>Sonnet</span><span class="run">Run</span></div></div>
+            </div>
+          </section>
+        </div>
+      </div></div>
+      <span class="cut-line"></span><span class="tag l">Before</span><span class="tag r">After</span>
+    </div>
+    <input class="range" type="range" min="0" max="100" value="50" aria-label="Compare position" id="r3">
+    <ul class="changes">
+      <li><b>01</b><span>Hand it to Maya is the only mint button. New agent and New session step back to secondary here</span></li>
+      <li><b>—</b><span>Project, model, plan toggle and the action sit in one row instead of two stacked full-width selects</span></li>
+      <li><b>14</b><span>No "Built in" pill on each card. Roles sit under the name and never truncate</span></li>
+      <li><b>08</b><span>Avatars are a neutral tile with the agent's color as a small dot. No colored glow</span></li>
+      <li><b>01</b><span>Maya's card lost the mint border. She leads by size, spanning two columns</span></li>
+      <li><b>16</b><span>The empty Your agents state is one line with its action</span></li>
+    </ul>
+    <p class="note">The model names on the built-in cards are placeholders. Use whatever each agent is set to.</p>
+  </section>
+
+  <h2>Token changes</h2>
+  <p>What changes in <code>styles.css</code> and <code>src/shared/themes.ts</code>. Colors stay as they are, only where they are used changes.</p>
+  <div class="tablewrap">
+  <table class="tokens">
+    <thead><tr><th>Token or rule</th><th>Now</th><th>Proposed</th></tr></thead>
+    <tbody>
+      <tr><td>Font weights</td><td>400, 450, 500, 550, 600, 650</td><td>400 and 500, 600 for rare emphasis</td></tr>
+      <tr><td>Font sizes</td><td>18 sizes, 10 to 30px with half steps</td><td>12, 13, 14, 16, 20, 28</td></tr>
+      <tr><td><code>--accent</code> use</td><td>Primary buttons, selected tabs, active outlines, checkboxes, card borders</td><td>Primary action per screen, done state, focus ring</td></tr>
+      <tr><td>Selected tab or toggle</td><td>Mint text or mint ring</td><td><code>--surface-pop</code> fill, <code>inset 0 1px 0 rgb(255 255 255 / .08)</code></td></tr>
+      <tr><td>Needs you</td><td>Tinted header, ring, card border, filled Allow, headings</td><td>1px ring, diamond lamp, amber count. Pulse 3 times then hold</td></tr>
+      <tr><td>Approval Allow</td><td>Orange fill</td><td>Off-white <code>--text</code> fill, dark text</td></tr>
+      <tr><td><code>--r-micro</code>, <code>--r-nub</code></td><td>2px, 1px</td><td>Removed, 4px floor</td></tr>
+      <tr><td><code>--r-card</code></td><td>10px</td><td>12px, panes 12px, controls stay 8px</td></tr>
+      <tr><td>Avatar state halo</td><td>2px ring plus 14 to 16px colored blur</td><td>2px ring only</td></tr>
+      <tr><td>Table headers</td><td>Uppercase mono, tracked</td><td>Sentence case, Geist 12px, muted</td></tr>
+      <tr><td>Letter spacing under 40px</td><td>-.02 to -.035em in places</td><td>0</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p class="credit">Guides: unslop by Damir Sokolovsky (<a href="https://x.com/heydamir">@heydamir</a>), CC BY 4.0. Before images: Dawsha 1.8.0 captures in <code>docs/redesign/built</code></p>
+</main>
+
+<script>
+(function () {
+  function fit() {
+    document.querySelectorAll('.frame').forEach(function (f) {
+      var k = f.clientWidth / 1424;
+      f.querySelectorAll('.app').forEach(function (a) { a.style.setProperty('--k', k); });
+    });
+  }
+  window.addEventListener('resize', fit);
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(document.body);
+  fit();
+
+  document.querySelectorAll('.screen-block').forEach(function (block) {
+    var frame = block.querySelector('.frame');
+    var range = block.querySelector('.range');
+    function setCut(v) { frame.style.setProperty('--cut', v + '%'); }
+    block.querySelectorAll('.seg button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var m = b.getAttribute('data-m');
+        frame.setAttribute('data-mode', m);
+        block.querySelectorAll('.seg button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+        setCut(m === 'compare' ? range.value : 0);
+      });
+    });
+    range.addEventListener('input', function () { setCut(range.value); });
+  });
+})();
+</script>
+</body>
+</html>
