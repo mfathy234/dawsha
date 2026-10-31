@@ -4413,7 +4413,7 @@ body.dragging-ui {
 .remote-away-minutes { width: 72px; }
 
 .ra-email-control { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: var(--sp-2); min-width: 0; }
-.ra-email-control .text-input { flex: 1 1 240px; width: auto; max-width: 240px; min-width: 0; }
+.ra-email-control .text-input { flex: 1 1 200px; width: auto; max-width: 200px; min-width: 0; }
 .ra-email-control > .btn { flex: none; }
 .ra-email-value { color: var(--text); font-size: var(--fs-2); overflow-wrap: anywhere; }
 .ra-email-error { margin: var(--sp-1) 0 0; color: var(--danger); font-size: var(--fs-1); text-align: right; }
