@@ -73,9 +73,10 @@ describe('watchProject', () => {
     const batches: string[][] = []
     const stop = watchProject(dir, (paths) => batches.push(paths), 300, undefined, 5)
     try {
+      // FSEvents (macOS) can drop or split events written in the first moments after the stream starts.
+      if (process.platform === 'darwin') await new Promise((r) => setTimeout(r, 500))
       for (let i = 0; i < 20; i += 1) writeFileSync(join(dir, `f${i}.txt`), '1')
-      await vi.waitFor(() => expect(batches.length).toBeGreaterThan(0), { timeout: 8000 })
-      expect(batches.some((b) => b.length === 0)).toBe(true)
+      await vi.waitFor(() => expect(batches.some((b) => b.length === 0)).toBe(true), { timeout: 8000 })
     } finally {
       stop()
     }
