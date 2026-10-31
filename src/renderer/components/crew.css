@@ -125,13 +125,13 @@ textarea.crew-area { width: 100%; resize: vertical; line-height: 1.55; min-heigh
 .crew-goal-live:empty { display: none; }
 .crew-goalbox { padding: var(--s-3); border-radius: var(--r-card); background: var(--well); display: grid; gap: var(--s-3); }
 textarea.crew-goal-text { width: 100%; resize: vertical; min-height: 84px; line-height: 1.5; font-family: inherit; }
-.crew-goal-selects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.crew-goal-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-3); }
+.crew-goal-selects { display: grid; grid-template-columns: repeat(2, minmax(160px, 220px)); gap: var(--s-3); }
 .crew-goal-field { display: grid; min-width: 0; gap: var(--s-1); color: var(--muted); font-size: var(--fs-ui); }
 .crew-goal-field .select-menu { min-width: 0; width: 100%; }
 .crew-goal-field .select-menu-trigger { width: 100%; }
 .crew-goal-project, .crew-goal-model { min-width: 0; width: 100%; }
-.crew-goal-actions { display: flex; align-items: center; gap: var(--s-3); }
-.crew-goal-actions .crew-check { margin-inline-end: auto; }
+.crew-goal-actions { display: flex; align-items: center; gap: var(--s-3); margin-inline-start: auto; }
 .crew-goal-error { color: var(--danger); font-size: var(--fs-ui); }
 .crew-goal-error[hidden] { display: none; }
 .crew-check { display: inline-flex; gap: var(--s-2); align-items: center; color: var(--muted); cursor: pointer; }
@@ -194,5 +194,5 @@ textarea.crew-goal-text { width: 100%; resize: vertical; min-height: 84px; line-
   .crew-step { grid-template-columns: 18px auto minmax(0, 1fr); }
   .crew-step-model { grid-column: 3; white-space: normal; }
   .crew-step small { grid-column: 3; }
-  .crew-goal-selects { grid-template-columns: minmax(0, 1fr); }
+  .crew-goal-selects { grid-template-columns: minmax(0, 1fr); width: 100%; }
 }

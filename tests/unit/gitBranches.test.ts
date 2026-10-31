@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  branchAgo,
   branchNameProblem,
+  filterBranches,
+  needsBranchFilter,
+  switchConfirmText,
   formatSync,
   isDirtyRefusal,
   isDivergedPull,
@@ -145,5 +149,50 @@ describe('git message helpers', () => {
     const date = new Date('2026-10-09T10:30:00Z')
     expect(stashMessage(date)).toBe('Dawsha: 2026-10-09 10:30')
     expect(stashMessage(date, 'main')).toBe('Dawsha: main 2026-10-09 10:30')
+  })
+})
+
+describe('branch dropdown helpers', () => {
+  const NOW = 1_700_100_000_000
+
+  it('words the age of the last commit briefly', () => {
+    const at = (seconds: number): number => (NOW - seconds * 1000) / 1000
+    expect(branchAgo(at(20), NOW)).toBe('just now')
+    expect(branchAgo(at(5 * 60), NOW)).toBe('5 min ago')
+    expect(branchAgo(at(3 * 3600), NOW)).toBe('3 h ago')
+    expect(branchAgo(at(2 * 86400), NOW)).toBe('2 d ago')
+    expect(branchAgo(at(21 * 86400), NOW)).toBe('3 w ago')
+    expect(branchAgo(at(120 * 86400), NOW)).toBe('4 mo ago')
+    expect(branchAgo(at(800 * 86400), NOW)).toBe('2 y ago')
+    expect(branchAgo(0, NOW)).toBe('')
+  })
+
+  it('filters local and remote-only branches by name', () => {
+    const list = parseBranchRefs(REFS)
+    const shown = filterBranches(list, 'DOCS')
+    expect(shown.local).toEqual([])
+    expect(shown.remote.map((entry) => entry.name)).toEqual(['docs/readme'])
+    expect(filterBranches(list, '').local).toHaveLength(3)
+  })
+
+  it('shows the filter field only for long lists', () => {
+    const list = parseBranchRefs(REFS)
+    expect(needsBranchFilter(list)).toBe(false)
+    const many = Array.from({ length: 9 }, (_, index) => `refs/heads/b${index}\t \t${index + 1}`).join('\n')
+    expect(needsBranchFilter(parseBranchRefs(many))).toBe(true)
+  })
+
+  it('names the target branch in the confirmation', () => {
+    expect(switchConfirmText('dev', 3)).toEqual({
+      title: 'Switch to dev?',
+      body: 'You have 3 changed files; git will carry them over or refuse if they conflict.',
+      confirmLabel: 'Switch to dev'
+    })
+    expect(switchConfirmText('dev', 1).body).toContain('1 changed file;')
+  })
+
+  it('rejects names git would not accept', () => {
+    for (const bad of ['', '-x', 'a b', 'a..b', 'a/', 'x.lock', '@', 'a~1']) expect(branchNameProblem(bad)).not.toBeNull()
+    expect(branchNameProblem('feature/ok-1')).toBeNull()
   })
 })

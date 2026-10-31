@@ -27,7 +27,7 @@ import { pageHeader } from './pageHeader'
 
 const REFRESH_MS = 30_000
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const NOT_REPORTED = 'not reported'
+const NOT_REPORTED = '–'
 
 type ProjectKey = 'project' | 'sessions' | 'tokens' | 'cost' | 'agent'
 type AgentSortKey = 'agent' | 'sessions' | 'tokens' | 'cacheRead' | 'cost'
@@ -37,7 +37,7 @@ const LIMIT_METERS = [
   { key: 'seven_day', label: 'Weekly' }
 ]
 
-const muted = (text: string): HTMLElement => h('span', { class: 'usage-muted' }, text)
+const muted = (text: string): HTMLElement => h('span', { class: 'usage-muted', title: text === NOT_REPORTED ? 'Not reported' : undefined }, text)
 
 const cost = (value: number | null): Node | string => (value === null ? muted(NOT_REPORTED) : formatUsd(value))
 
@@ -50,6 +50,7 @@ function busiestLabel(key: string, hourly: boolean): string {
 
 function notesFor(report: UsageReport): string[] {
   const notes: string[] = []
+  notes.push(`${NOT_REPORTED} means not reported.`)
   for (const source of report.sources) {
     if (!source.found) notes.push(`No ${agentLabel(source.agent)} history found, so it is not counted.`)
   }
@@ -193,7 +194,7 @@ export class UsageViewComponent {
       tile('Sessions', String(totals.sessions), this.sessionsNote(report, totals), 'usage-tile-sessions'),
       tile(
         report.hourly ? 'Busiest hour' : 'Busiest day',
-        busiest ? busiestLabel(busiest.key, report.hourly) : muted('none yet'),
+        busiest ? busiestLabel(busiest.key, report.hourly) : muted('–'),
         busiest ? `${formatTokens(busiest.tokens)} tokens` : null,
         'usage-tile-busiest'
       )
@@ -336,13 +337,14 @@ export class UsageViewComponent {
   }
 
   private tables(report: UsageReport): HTMLElement {
+    const topTokens = Math.max(0, ...report.byProject.map((row) => row.tokens))
     const projectRows = sortRows(report.byProject, this.projectSort, (row, key) =>
       key === 'project' ? row.project : key === 'sessions' ? row.sessions : key === 'tokens' ? row.tokens : key === 'cost' ? row.costUsd : row.topAgent
     ).map((row) =>
       h(
         'tr',
         { 'data-project': row.project },
-        h('td', {}, row.project),
+        h('td', {}, row.project, h('span', { class: 'usage-rank', 'aria-hidden': 'true' }, h('span', { class: 'usage-rank-fill', style: `width:${topTokens > 0 ? Math.max(2, (row.tokens / topTokens) * 100).toFixed(1) : 0}%` }))),
         h('td', { class: 'num' }, String(row.sessions)),
         h('td', { class: 'num' }, formatTokens(row.tokens)),
         h('td', { class: 'num' }, cost(row.costUsd)),
@@ -407,6 +409,6 @@ export class UsageViewComponent {
   }
 
   private notes(report: UsageReport): HTMLElement {
-    return h('ul', { class: 'usage-notes' }, ...notesFor(report).map((note) => h('li', {}, note)))
+    return h('p', { class: 'usage-notes' }, notesFor(report).join(' '))
   }
 }

@@ -127,7 +127,7 @@ export function onFilesSearchRequest(listener: () => void): () => void {
   return () => searchListeners.delete(listener)
 }
 
-export type FilesCommand = 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree'
+export type FilesCommand = 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree' | 'switch-branch'
 
 const commandListeners = new Set<(command: FilesCommand) => void>()
 

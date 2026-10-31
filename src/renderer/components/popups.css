@@ -24,7 +24,7 @@
 :root .update-popover .update-title {
   margin: 0;
   font-size: var(--popup-title-size);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
   letter-spacing: 0;
   text-transform: none;

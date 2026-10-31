@@ -65,7 +65,7 @@ export class CrewViewComponent {
 
   constructor() {
     this.el.append(
-      pageHeader({ title: 'Agents', subtitle: 'A roster for the agents you can run.', actions: [this.count, this.search, h('button', { class: 'btn', type: 'button', id: 'crew-import', onClick: () => void this.importMembers() }, 'Import…'), h('button', { class: 'btn primary', type: 'button', id: 'crew-new', onClick: () => this.newMember() }, '+ New agent')] }),
+      pageHeader({ title: 'Agents', subtitle: 'A roster for the agents you can run.', actions: [this.count, this.search, h('button', { class: 'btn', type: 'button', id: 'crew-import', onClick: () => void this.importMembers() }, 'Import…'), h('button', { class: 'btn', type: 'button', id: 'crew-new', onClick: () => this.newMember() }, '+ New agent')] }),
       this.pageBody
     )
     this.roster.append(this.goals.el, this.leadLine, this.list)
@@ -211,9 +211,9 @@ export class CrewViewComponent {
       h('span', { class: 'crew-card-top' },
         crewAvatar(member, live, 40),
         h('span', { class: 'crew-id' },
-          h('span', { class: 'crew-nm' }, h('b', {}, member.name), h('span', { class: 'crew-role' }, ` · ${member.role}`))
-        ),
-        member.builtin ? h('span', { class: 'crew-badge' }, 'Built in') : h('span', {})
+          h('span', { class: 'crew-nm' }, h('b', {}, member.name)),
+          h('span', { class: 'crew-role' }, member.role)
+        )
       ),
       member.description ? h('span', { class: 'crew-purpose' }, member.description) : h('span', {}),
       h('span', { class: 'crew-card-model' }, agentMark(member.runner), h('span', {}, modelLabel(member.runner, member.model))),

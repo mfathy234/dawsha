@@ -96,7 +96,7 @@ test('nav: five primary destinations, secondary pages in the brand menu', async 
     await page.mouse.move(700, 500)
     await expect.poll(async () => (await style(page, '#sessions-button', ['background-color']))['background-color']).toBe(rgb('#1b212a'))
     const active = await style(page, '#sessions-button', ['font-weight', 'border-bottom-style', 'outline-style'])
-    expect(Number(active['font-weight'])).toBe(600)
+    expect(Number(active['font-weight'])).toBe(500)
     expect(active['border-bottom-style']).toBe('none')
     expect(active['outline-style']).toBe('none')
   } finally {
@@ -162,8 +162,8 @@ for (const [mode, themeId] of THEMES) {
 
       const header = await focused.locator('.pane-header').evaluate((el) => getComputedStyle(el).backgroundColor)
       expect(header).toBe(rgb(mode === 'dark' ? '#1b212a' : '#edf0f4'))
-      expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600')
-      expect(await idle.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600')
+      expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('500')
+      expect(await idle.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('500')
       expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el, '::before').content)).toBe('none')
 
       const body = await focused.locator('.pane-body').evaluate((el) => ({ margin: getComputedStyle(el).marginLeft, radius: getComputedStyle(el).borderTopLeftRadius, bg: getComputedStyle(el).backgroundColor, seam: getComputedStyle(el).borderTopWidth }))

@@ -81,3 +81,22 @@
 .pv-row.missing .pv-folder.invalid {
   color: var(--danger);
 }
+
+/* 1.8.1 unslop: Usage reads as label, figure, comparison; one footnote line; ranked projects with thin bars; neutral chart steps beside Claude's brand colour. */
+.usage-tile-label { font-weight: var(--w-regular); font-size: var(--fs-1); }
+.usage-tile-value { font-weight: var(--w-medium); }
+.usage-tile-value .usage-muted { font-size: inherit; }
+.usage-tile-note { font-size: var(--fs-1); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.usage-panel .seg-claude { background: var(--ag-claude-bg); }
+.usage-panel .seg-codex { background: var(--text-2); }
+.usage-panel .seg-gemini { background: color-mix(in srgb, var(--text-2) 50%, transparent); }
+.usage-axis,
+.usage-x { color: var(--text-3); font-family: var(--font-mono); font-size: var(--fs-1); }
+.usage-x { font-variant-numeric: tabular-nums; }
+
+.usage-rank { display: block; height: 2px; margin-top: 4px; border-radius: 1px; background: var(--line); overflow: hidden; }
+.usage-rank-fill { display: block; height: 100%; border-radius: 1px; background: var(--text-3); }
+.usage-table td:first-child { min-width: 96px; }
+
+p.usage-notes { margin: 0; padding: 0; color: var(--text-3); font-size: var(--fs-1); line-height: 1.5; }

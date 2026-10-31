@@ -42,7 +42,10 @@ import { reviewExtension, type DraftComment } from '../files/reviewEditor'
 import type { TreeTarget } from '../files/filesTree'
 import type { ReviewFile } from '../files/reviewPanel'
 import { openContextMenu, type ContextEntry } from './contextMenu'
-import { confirmDialog } from './dialogs'
+import { confirmDialog, promptDialog } from './dialogs'
+import { openBranchMenu, type BranchTarget } from '../files/branchMenu'
+import { branchNameProblem, switchConfirmText } from '../../shared/gitBranches'
+import { runQuick } from '../gitQuickActions'
 import { toast } from './toast'
 import { toggleQuickOpen } from './quickOpen'
 import { RunCommandsPanel } from './runCommandsPanel'
@@ -153,6 +156,7 @@ export class FilesViewComponent {
     },
     goToFile: () => toggleQuickOpen(),
     openLocation: (button, worktreesFirst) => this.openLocationMenu(button, worktreesFirst),
+    openBranches: (button) => void this.showBranchMenu(button),
     hide: () => this.toggleExplorer(),
     retryChanges: () => void this.retryTree(),
     retryOpen: () => void this.refreshTouches(),
@@ -440,6 +444,63 @@ export class FilesViewComponent {
     const late = await pending
     if (!menu.isConnected || menu.classList.contains('leaving') || !this.target) return
     this.locationMenu(button, worktreesFirst, late === 'failed' ? 'failed' : 'ready')
+  }
+
+  private async showBranchMenu(anchor: HTMLElement): Promise<void> {
+    const target = this.target
+    if (!target || !this.isGit) {
+      toast('This folder is not a git repository.')
+      return
+    }
+    const loaded = await api.gitBranches(target.folder).catch(() => ({ ok: false as const, error: 'Could not read the branches.' }))
+    if (!loaded.ok) {
+      toast(loaded.error)
+      return
+    }
+    if (this.target !== target) return
+    this.explorer.setLocationOpen(true, anchor)
+    openBranchMenu({
+      anchor, list: loaded.branches, now: Date.now(),
+      pick: (choice) => void this.switchBranch(target, choice),
+      create: () => void this.createBranch(target),
+      closed: (focusAnchor) => {
+        this.explorer.setLocationOpen(false)
+        if (focusAnchor) anchor.focus()
+      }
+    })
+  }
+
+  private async switchBranch(target: FilesTarget, choice: BranchTarget): Promise<void> {
+    const label = choice.mode === 'remote' ? choice.branch.slice(choice.branch.indexOf('/') + 1) : choice.branch
+    const changes = await api.gitChanges(target.folder).catch(() => null)
+    if (changes && changes.files > 0) {
+      const confirmed = await confirmDialog({ ...switchConfirmText(label, changes.files), danger: false })
+      if (!confirmed) return
+    }
+    await this.runBranchSwitch(target, choice)
+  }
+
+  private async createBranch(target: FilesTarget): Promise<void> {
+    const name = await promptDialog({
+      title: 'New branch', label: 'Branch name', hint: 'Created from the current commit and switched to.', confirmLabel: 'Create branch',
+      validate: (value) => branchNameProblem(value.trim())
+    })
+    if (name) await this.runBranchSwitch(target, { branch: name, mode: 'create' })
+  }
+
+  private async runBranchSwitch(target: FilesTarget, choice: BranchTarget): Promise<void> {
+    const result = await runQuick({ folder: target.folder, op: 'switch', branch: choice.branch, mode: choice.mode })
+    if (!result.ok) {
+      toast(result.error)
+      return
+    }
+    toast(result.message, 'info')
+    if (this.target !== target || !this.visible) return
+    void this.refreshCheckouts()
+    await this.loadTree()
+    this.checkOpenDocs()
+    void this.loadCommits()
+    void this.refreshTouches()
   }
 
   private watchMenuClose(done: () => void): void {
@@ -790,13 +851,14 @@ export class FilesViewComponent {
     else this.bar.focusExplorer()
   }
 
-  private runCommand(command: 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree'): void {
+  private runCommand(command: 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree' | 'switch-branch'): void {
     if (!this.visible) return
     if (command === 'toggle-inspector') this.toggleInspector()
     else if (command === 'toggle-explorer') this.toggleExplorer()
     else {
       if (!filesLayout().explorer.open) this.toggleExplorer()
-      this.openLocationMenu(this.explorer.branchAnchor(), true)
+      if (command === 'switch-branch') void this.showBranchMenu(this.explorer.branchesAnchor())
+      else this.openLocationMenu(this.explorer.branchAnchor(), true)
     }
   }
 

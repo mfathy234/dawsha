@@ -1,7 +1,7 @@
 .fi {
   --fi: var(--muted);
   flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 16px; color: var(--fi);
-  font: 700 10px/1 var(--font-mono); letter-spacing: -0.02em; font-variant-ligatures: none;
+  font: 700 10px/1 var(--font-mono); letter-spacing: 0; font-variant-ligatures: none;
 }
 .fi svg { display: block; }
 .fi-folder { --fi: #c09553; }

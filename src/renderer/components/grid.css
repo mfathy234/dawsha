@@ -33,14 +33,10 @@
   box-shadow: var(--pane-focus-ring), var(--shadow-lift);
 }
 
-/* Needs you: a 2px needs-colour edge, a tinted header and a slow halo that stops under reduced motion. */
+/* Needs you: a 1px amber ring that pulses three times and then holds; the header stays untinted. */
 .pane.needs-you {
   box-shadow: 0 0 0 1px var(--needs-ring), var(--shadow-hairline);
-  animation: needs-pulse 2.4s var(--ease-in-out) infinite;
-}
-
-.pane.needs-you .pane-header {
-  background: color-mix(in srgb, var(--state-needs) 12%, var(--surface));
+  animation: needs-pulse 2.4s var(--ease-in-out) 3;
 }
 
 @keyframes needs-pulse {
@@ -49,15 +45,30 @@
     box-shadow: 0 0 0 1px var(--needs-ring), 0 0 0 0 color-mix(in srgb, var(--state-needs) 0%, transparent), var(--shadow-hairline);
   }
   50% {
-    box-shadow: 0 0 0 1px var(--needs-ring), 0 0 0 5px color-mix(in srgb, var(--state-needs) 24%, transparent), var(--shadow-hairline);
+    box-shadow: 0 0 0 1px var(--needs-ring), 0 0 0 4px color-mix(in srgb, var(--state-needs) 18%, transparent), var(--shadow-hairline);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pane.needs-you {
     animation: none;
-    box-shadow: 0 0 0 1px var(--needs-ring), 0 0 0 4px color-mix(in srgb, var(--state-needs) 22%, transparent), var(--shadow-hairline);
   }
+}
+
+/* One state lamp everywhere: working is a neutral spinning ring, needs an amber diamond, done a mint tick, idle a hollow dot. */
+.state-icon.state-working,
+.state-pill.state-working {
+  color: var(--text-2);
+}
+
+.state-icon.state-done,
+.state-pill.state-done {
+  color: var(--accent);
+}
+
+.state-icon.state-idle,
+.state-pill.state-idle {
+  color: var(--text-3);
 }
 
 /* Calm focus: siblings are quieter, with a shorter header and no footer unless they are done or need you. */
@@ -234,7 +245,7 @@
   background: var(--raised);
   color: var(--text);
   font-size: var(--fs-ui);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--state-needs) 55%, transparent), var(--shadow-hairline);
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-hairline);
   position: relative;
   z-index: 1;
 }
@@ -256,12 +267,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .pane-permission-tool {
   flex: none;
-  color: var(--state-needs);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-status);
+  font-weight: 400;
 }
 
 .pane-permission-command {
@@ -290,7 +307,7 @@
 }
 
 .pane-permission-project {
-  color: var(--text);
+  color: var(--muted);
 }
 
 .pane-permission-actions {
@@ -308,18 +325,38 @@
 }
 
 .pane-permission-actions .btn.primary {
-  background: var(--state-needs);
-  border-color: var(--state-needs);
+  background: var(--text);
+  border-color: var(--text);
   color: var(--bg);
+  box-shadow: none;
+}
+
+.pane-permission-actions .btn:not(.primary):not(.ghost) {
+  background: var(--raised);
+  border-color: var(--line-strong);
+  color: var(--text);
 }
 
 .pane-permission-actions .btn.ghost {
   margin-inline-start: auto;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-2);
 }
 
 .pane-permission-key {
-  margin-inline-start: var(--s-1);
-  font-size: var(--fs-status);
-  font-weight: 400;
-  opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  opacity: 0.75;
 }

@@ -575,3 +575,58 @@ aside.sidebar.rail { width: 56px; }
 /* Session rows sit directly in the list, not inside the group element, so indent them there. */
 .proj-list .kept-session-row:not(.waiting-row) { margin-inline-start: 22px; }
 .proj-list .closed-toggle { margin-inline-start: 22px; }
+
+/* 1.8.1 unslop: no boxes, one amber signal (the lamp and the count), selected rows are a surface step. */
+.needs-group {
+  margin: 0 0 var(--s-2);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.needs-group .side-sec,
+.needs-group .side-sec.needs {
+  padding: 0 var(--sp-3);
+  color: var(--text-3);
+  font-size: var(--fs-1);
+  font-weight: var(--w-regular);
+}
+.needs-group .side-sec-count {
+  margin-inline-start: 0;
+  font-family: var(--font-mono);
+  color: var(--state-needs);
+}
+.needs-group .sidebar-kbd {
+  border-color: var(--line);
+  color: var(--text-3);
+}
+.proj-list .proj-text .proj-name { font-weight: var(--w-medium); }
+.proj-list .proj-count.tone-needs { color: var(--text-3); font-weight: var(--w-regular); }
+.waiting-row .needs-project { color: var(--text-3); }
+.kept-session-row .sess-meta .sess-state.state-needs .sess-state-word { color: var(--text-3); }
+.proj-list .proj-row { min-height: 32px; }
+.kept-session-row .sess-row { padding: 6px var(--sp-2); }
+.kept-session-row.selected .sess-row,
+.kept-session-row .sess-row.selected {
+  background: var(--surface-pop, var(--raised));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+:root[data-kind='light'] .kept-session-row.selected .sess-row,
+:root[data-kind='light'] .kept-session-row .sess-row.selected {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), inset 0 0 0 1px var(--line);
+}
+
+/* 1.8.1 unslop, part 2: the project group is a plain label row, the selected session a surface step, one line per title. */
+.proj-group.card { margin: 0 0 var(--s-2); padding: 0; border-radius: 0; background: transparent; }
+.proj-group.card .proj-row { margin: 0; }
+.proj-list .proj-text .proj-title { flex: 0 1 auto; max-width: none; min-width: 8ch; }
+.proj-list .proj-sub { flex: 0 4 auto; min-width: 0; }
+.proj-list .proj-sub .proj-branch { color: var(--text-3); font-size: var(--fs-12); }
+.kept-session-row:not(.waiting-row) .sess-name { display: block; -webkit-line-clamp: unset; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; line-height: 20px; }
+.kept-session-row .sess-line .sess-name { font-size: var(--fs-13); }
+.kept-session-row .sess-meta, .kept-session-row .sess-line .sess-age, .kept-session-row .sess-line .sess-ago { font-size: var(--fs-12); color: var(--text-3); }
+.kept-session-row .sess-row { align-items: center; }
+.kept-session-row.selected .sess-row,
+.kept-session-row .sess-row.selected,
+:root[data-kind='light'] .kept-session-row.selected .sess-row,
+:root[data-kind='light'] .kept-session-row .sess-row.selected { background: var(--surface-pop, var(--raised)); box-shadow: var(--sel-hl); }

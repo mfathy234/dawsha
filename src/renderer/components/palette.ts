@@ -10,6 +10,7 @@ import { store, type AppState } from '../state'
 import { getTerminal } from '../terminals'
 import { agentMark } from './agentMark'
 import { popupDismissButton } from './popupDismiss'
+import { keycaps } from './keycaps'
 
 const KEY_GLYPHS: Record<string, string> = { ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' }
 
@@ -77,7 +78,7 @@ export class PaletteComponent {
         { class: 'palette-head' },
         icon(ICONS.search),
         this.input,
-        h('span', { class: 'palette-kbd' }, paletteShortcutLabel(store.state)),
+        h('span', { class: 'palette-kbd' }, keycaps(paletteShortcutLabel(store.state))),
         popupDismissButton(() => this.dismiss())
       ),
       this.list,
@@ -197,7 +198,7 @@ export class PaletteComponent {
       lead ? h('span', { class: 'palette-lead' }, lead) : null,
       h('span', { class: 'palette-title' }, ...highlight(item.title, row.indexes)),
       item.hint ? h('span', { class: 'palette-hint' }, item.hint) : null,
-      item.shortcut ? h('span', { class: 'palette-kbd' }, shortcutGlyphs(item.shortcut)) : null
+      item.shortcut ? h('span', { class: 'palette-kbd' }, keycaps(item.shortcut, '', (key) => KEY_GLYPHS[key] ?? key)) : null
     )
     element.addEventListener('mousemove', () => {
       if (this.selected !== position) this.select(position)

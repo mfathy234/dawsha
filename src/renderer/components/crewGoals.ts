@@ -85,13 +85,15 @@ export class CrewGoalsPage {
       { class: 'crew-goalbox' },
       h('div', { class: 'crew-goal-head' }, h('h3', { class: 'crew-goal-title' }, 'Give Maya a goal'), h('span', { class: 'crew-muted' }, 'She plans first. Nothing runs until you approve.')),
       this.goalText,
-      h('div', { class: 'crew-goal-selects' },
-        h('label', { class: 'crew-goal-field' }, h('span', {}, 'Project'), selectMenu(this.project)),
-        h('label', { class: 'crew-goal-field' }, h('span', {}, 'Model'), selectMenu(this.model))
-      ),
-      h('div', { class: 'crew-goal-actions' },
-        h('div', { class: 'crew-check' }, this.planFirst, h('span', {}, 'Show me the plan first')),
-        this.go
+      h('div', { class: 'crew-goal-row' },
+        h('div', { class: 'crew-goal-selects' },
+          h('label', { class: 'crew-goal-field' }, h('span', {}, 'Project'), selectMenu(this.project)),
+          h('label', { class: 'crew-goal-field' }, h('span', {}, 'Model'), selectMenu(this.model))
+        ),
+        h('div', { class: 'crew-goal-actions' },
+          h('div', { class: 'crew-check' }, this.planFirst, h('span', {}, 'Show me the plan first')),
+          this.go
+        )
       ),
       this.error
     )

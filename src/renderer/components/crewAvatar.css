@@ -73,9 +73,9 @@
 
 .crew-av[data-state='working']::after { opacity: 1; box-shadow: 0 0 0 2px var(--crew-run); animation: crew-breathe 1.8s ease-in-out infinite; }
 .crew-av[data-state='working'] .crew-av-badge { display: grid; color: var(--crew-run); }
-.crew-av[data-state='needs']::after { opacity: 1; box-shadow: 0 0 0 2px var(--needs-ring), 0 0 14px 2px color-mix(in srgb, var(--needs-ring) 45%, transparent); animation: crew-flash .5s ease-in-out 3; }
+.crew-av[data-state='needs']::after { opacity: 1; box-shadow: 0 0 0 2px var(--needs-ring); animation: crew-flash .5s ease-in-out 3; }
 .crew-av[data-state='needs'] .crew-av-badge { display: grid; color: var(--needs-ink); }
-.crew-av[data-state='done']::after { box-shadow: 0 0 0 2px var(--done), 0 0 16px 3px color-mix(in srgb, var(--done) 45%, transparent); animation: crew-once 1.4s ease-out 1; }
+.crew-av[data-state='done']::after { box-shadow: 0 0 0 2px var(--done); animation: crew-once 1.4s ease-out 1; }
 .crew-av[data-state='done'] .crew-av-badge { display: grid; color: var(--done); }
 .crew-av[data-state='failed']::after { opacity: 1; box-shadow: 0 0 0 2px var(--danger); }
 .crew-av[data-state='failed'] .crew-av-badge { display: grid; color: var(--danger); }

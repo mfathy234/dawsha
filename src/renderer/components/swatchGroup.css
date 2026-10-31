@@ -39,5 +39,5 @@
   font-size: var(--fs-ui);
 }
 
-.hl-preview-line { padding: 1px var(--s-4); white-space: pre-wrap; overflow-wrap: anywhere; }
-.hl-preview-line.draft { font-style: italic; }
+.hl-preview-line { padding: 2px var(--s-4); white-space: pre-wrap; overflow-wrap: anywhere; }
+.hl-preview-line.draft { color: var(--muted); }

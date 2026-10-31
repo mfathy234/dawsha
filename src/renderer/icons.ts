@@ -29,6 +29,7 @@ export const ICONS = {
   search: svg(16, '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
   branch: svg(12, '<circle cx="6" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="9" r="2.5"/><path d="M6 7.5v9 M18 11.5c0 4-6 3-12 5.5"/>'),
   pin: svg(12, '<path d="M12 17v5"/><path d="M9 3h6l-1 6 3 4H7l3-4z"/>'),
+  tag: svg(16, '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1"/>'),
   more: svg(16, '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>', 2.5),
   history: svg(14, '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>'),
   chevronRight: svg(14, '<polyline points="9 18 15 12 9 6"/>'),

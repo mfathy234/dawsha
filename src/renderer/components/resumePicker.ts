@@ -8,6 +8,7 @@ import { api } from '../api'
 import { clear, h, icon, leave } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
+import { keycaps } from './keycaps'
 import { modeTabs } from './pickerTabs'
 import type { AppState } from '../state'
 import { popupDismissButton } from './popupDismiss'
@@ -89,7 +90,7 @@ export class ResumePickerComponent {
     this.list = h('div', { class: 'rp-list', id: 'rp-list', role: 'listbox', 'aria-label': 'Recent sessions' })
     this.preview = h('div', { class: 'rp-preview', 'aria-live': 'polite' })
     this.foot = h('div', { class: 'rp-foot' })
-    const hint = h('span', { class: 'rp-hint' }, `Tab switches agent · ${navigator.platform.toLowerCase().includes('mac') ? 'Cmd+R' : 'Ctrl+R'} toggles New/Resume`)
+    const hint = h('span', { class: 'rp-hint' }, 'Tab switches agent · ', keycaps(navigator.platform.toLowerCase().includes('mac') ? 'Cmd+R' : 'Ctrl+R'), ' toggles New/Resume')
     this.root = h(
       'div',
       { class: 'popover quickpick resume-picker', role: 'dialog', 'aria-label': 'Start or resume a session' },

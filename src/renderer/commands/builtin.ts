@@ -287,6 +287,14 @@ export function installBuiltinCommands(): void {
       enabled: (state) => state.view === 'files',
       run: () => requestFilesCommand('switch-worktree')
     },
+    {
+      id: 'files.branch',
+      title: 'Switch branch…',
+      group: 'Actions',
+      keywords: 'files git branch switch checkout remote new',
+      enabled: (state) => state.view === 'files',
+      run: () => requestFilesCommand('switch-branch')
+    },
     { id: 'view.quickopen', title: 'Find a file…', group: 'Actions', keywords: 'quick open ctrl p files search project fuzzy', ...withKeys('Ctrl+P'), run: () => toggleQuickOpen() },
     { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },
     { id: 'view.crew', title: 'Open Agents', group: 'Actions', keywords: 'agents crew members run lead maya', ...withKeys('Ctrl+Shift+L'), run: () => showView('crew') },
