@@ -1432,6 +1432,7 @@ export class FilesViewComponent {
       event.stopPropagation()
       const path = this.set?.review.current ?? this.set?.active
       if (path) this.toggleViewed(path, !this.set?.review.viewed.has(path))
+      this.explorer.review.focus()
       return
     }
     if (plain && event.key.toLowerCase() === 'e' && !target.closest('input, textarea, select')) {

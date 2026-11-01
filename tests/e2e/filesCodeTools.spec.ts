@@ -252,3 +252,95 @@ test('Side by side shows the file next to main in two panes and returns to one c
     await closeApp(app)
   }
 })
+
+test('sticky scroll keeps the class and method headers while their body scrolls by', async () => {
+  test.setTimeout(120_000)
+  const sandbox = createSandbox()
+  const body = Array.from({ length: 60 }, (_, index) => `    this.items.push(${index})`).join('\n')
+  put(sandbox.projectFolder, 'src/big.ts', `export class Big {\n  items: number[] = []\n\n  fill(): void {\n${body}\n  }\n}\n`)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await startFiles(page)
+    await openFile(page, 'src/big.ts')
+    await expect(page.locator('.cm-sticky-row')).toHaveCount(0)
+    await page.locator('.files-editor:not([hidden]) .cm-scroller').evaluate((node) => { node.scrollTop = 600 })
+    await expect(page.locator('.files-editor:not([hidden]) .cm-sticky-row')).toHaveCount(2)
+    await expect(page.locator('.files-editor:not([hidden]) .cm-sticky-row').first()).toContainText('export class Big')
+    await expect(page.locator('.files-editor:not([hidden]) .cm-sticky-row').last()).toContainText('fill(): void')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Review: F7 walks the changes across files, V marks the file viewed', async () => {
+  test.setTimeout(120_000)
+  const sandbox = createSandbox()
+  const root = sandbox.projectFolder
+  const base = Array.from({ length: 40 }, (_, index) => `row ${index + 1}`).join('\n') + '\n'
+  put(root, 'a.txt', base)
+  put(root, 'b.txt', base)
+  git(root, 'init', '-q', '-b', 'main')
+  git(root, 'config', 'core.autocrlf', 'false')
+  git(root, 'add', '.')
+  git(root, 'commit', '-q', '-m', 'first')
+  put(root, 'a.txt', base.replace('row 4\n', 'four\n').replace('row 30\n', 'thirty\n'))
+  put(root, 'b.txt', base.replace('row 10\n', 'ten\n'))
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.setViewportSize({ width: 1024, height: 728 })
+    await page.locator('#files-button').click()
+    await page.locator('#files-mode-review').click()
+    await page.locator('.files-review-row[data-path="a.txt"] .files-review-open').click()
+    await expect(page.locator('.files-editor:not([hidden]) .cm-changedLine').first()).toBeVisible()
+    await page.locator('.files-editor:not([hidden]) .cm-content').click()
+    await page.keyboard.press('Control+Home')
+    await page.keyboard.press('F7')
+    await expect(page.locator('#files-status-pos')).toContainText('Ln 4')
+    await page.keyboard.press('F7')
+    await expect(page.locator('#files-status-pos')).toContainText('Ln 30')
+    await page.keyboard.press('F7')
+    await expect(page.locator('.files-tab.active')).toContainText('b.txt')
+    await expect(page.locator('#files-status-pos')).toContainText('Ln 10')
+    await page.keyboard.press('Shift+F7')
+    await expect(page.locator('.files-tab.active')).toContainText('a.txt')
+    await expect(page.locator('#files-status-pos')).toContainText('Ln 30')
+
+    await page.locator('.files-review-row.current .files-review-open').focus()
+    await page.keyboard.press('v')
+    await expect(page.locator('#files-review-progress')).toHaveText('1 of 2 viewed')
+    await page.keyboard.press('v')
+    await expect(page.locator('#files-review-progress')).toHaveText('0 of 2 viewed')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('Call hierarchy lists the callers of the name under the caret', async () => {
+  test.setTimeout(180_000)
+  const sandbox = createSandbox()
+  makeProject(sandbox)
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await startFiles(page)
+    await openFile(page, 'src/store.ts')
+    const place = () => token(page, 'makeStore', 'export function').click()
+    await place()
+    const panel = page.locator('.call-panel')
+    for (let attempt = 0; attempt < 20 && !(await panel.locator('.call-row').count()); attempt += 1) {
+      await page.keyboard.press('Control+Shift+Alt+h')
+      await expect(panel).toBeVisible()
+      await panel.locator('.call-row').first().waitFor({ state: 'visible', timeout: 5000 }).catch(async () => {
+        await page.keyboard.press('Escape')
+        await page.waitForTimeout(1500)
+        await place()
+      })
+    }
+    await expect(panel).toContainText('Callers of makeStore')
+    await expect(panel.locator('.call-row').first()).toBeVisible()
+    await page.screenshot({ path: 'test-results/screens/183-call-hierarchy.png' })
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})

@@ -24,10 +24,14 @@ class Sticky implements Panel {
   }
 
   private readonly refresh = (): void => {
-    const view = this.view
-    const block = view.lineBlockAtHeight(view.scrollDOM.scrollTop)
-    const topLine = view.state.doc.lineAt(block.from).number
-    const headers = stickyHeaders(this.outline(), topLine)
+    this.view.requestMeasure({
+      key: this,
+      read: (view) => view.state.doc.lineAt(view.lineBlockAtHeight(view.scrollDOM.scrollTop).from).number,
+      write: (topLine) => this.show(stickyHeaders(this.outline(), topLine))
+    })
+  }
+
+  private show(headers: readonly OutlineItem[]): void {
     const signature = headers.map((item) => `${item.line}:${item.name}`).join('|')
     if (signature === this.signature) return
     this.signature = signature
