@@ -1,3 +1,4 @@
+import type { ToolKind } from './chatKind'
 import type { TabAgent } from './types'
 
 export type ChatView = 'terminal' | 'chat'
@@ -32,6 +33,19 @@ export function resolveChatView(choice: ChatViewChoice): ChatView {
   return choice.tabView ?? choice.remembered ?? choice.fallback
 }
 
+export type ChatAgent = 'claude' | 'codex'
+export type SessionViews = Record<ChatAgent, ChatView>
+
+/** The view new sessions of an agent open in; Gemini and shells have no chat to open in. */
+export const defaultViewFor = (views: SessionViews, agent: TabAgent): ChatView => (agent === 'claude' || agent === 'codex' ? views[agent] : DEFAULT_CHAT_VIEW)
+
+/** Each agent's default view; an older single default fills any agent that has none of its own. */
+export function sanitizeSessionViews(value: unknown, legacy?: unknown): SessionViews {
+  const own = typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+  const pick = (agent: ChatAgent): ChatView => (isChatView(own[agent]) ? own[agent] : isChatView(legacy) ? legacy : DEFAULT_CHAT_VIEW)
+  return { claude: pick('claude'), codex: pick('codex') }
+}
+
 export function sanitizeChatViews(value: unknown): Record<string, ChatView> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
   const entries = Object.entries(value as Record<string, unknown>).filter(
@@ -57,6 +71,7 @@ export interface ChatMessage {
 export interface ChatTool {
   kind: 'tool'
   id: string
+  activity: ToolKind
   verb: string
   target: string
   added?: number

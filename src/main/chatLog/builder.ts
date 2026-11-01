@@ -35,8 +35,6 @@ export class ChatBuilder {
 
   message(id: string, role: 'user' | 'agent', text: string, at?: number): void {
     const body = boundText(cleanText(text).trim(), CHAT_MESSAGE_MAX).text
-    const last = this.list[this.list.length - 1]
-    if (last?.kind === 'message' && last.role === role && last.text === body) return
     if (body !== '') this.push({ kind: 'message', id, role, text: body, at })
   }
 
@@ -50,6 +48,7 @@ export class ChatBuilder {
     const tool: ChatTool = {
       kind: 'tool',
       id,
+      activity: shape.kind,
       verb: shape.verb,
       target: shape.target,
       added: shape.added,

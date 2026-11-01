@@ -92,6 +92,6 @@ describe('ChatSession', () => {
     await session.refresh(path)
     const result = session.result()
     expect(result.status).toBe('failed')
-    expect(result.status === 'failed' && result.reason).toMatch(/recognise/)
+    expect(result.status === 'failed' && result.reason).toMatch(/format Dawsha doesn't know/)
   })
 })

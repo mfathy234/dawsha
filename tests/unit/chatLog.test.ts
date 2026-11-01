@@ -4,10 +4,12 @@ import {
   boundText,
   chatCapable,
   chatPhase,
+  defaultViewFor,
   foldLines,
   rememberChatView,
   resolveChatView,
   sanitizeChatViews,
+  sanitizeSessionViews,
   textDirection,
   type ChatItem
 } from '../../src/shared/chatLog'
@@ -53,6 +55,30 @@ describe('remembered views', () => {
     for (let i = 0; i < CHAT_VIEWS_MAX + 5; i += 1) views = rememberChatView(views, `claude:s${i}`, 'chat')
     expect(Object.keys(views)).toHaveLength(CHAT_VIEWS_MAX)
     expect(views['claude:s0']).toBeUndefined()
+  })
+})
+
+describe('default view per agent', () => {
+  it('uses the default stored for each agent', () => {
+    expect(sanitizeSessionViews({ claude: 'terminal', codex: 'chat' })).toEqual({ claude: 'terminal', codex: 'chat' })
+  })
+
+  it('moves an older single default to both agents', () => {
+    expect(sanitizeSessionViews(undefined, 'chat')).toEqual({ claude: 'chat', codex: 'chat' })
+    expect(sanitizeSessionViews({ codex: 'terminal' }, 'chat')).toEqual({ claude: 'chat', codex: 'terminal' })
+  })
+
+  it('falls back to the terminal when nothing valid is stored', () => {
+    expect(sanitizeSessionViews(undefined)).toEqual({ claude: 'terminal', codex: 'terminal' })
+    expect(sanitizeSessionViews({ claude: 'maybe', codex: 7 }, 'nope')).toEqual({ claude: 'terminal', codex: 'terminal' })
+    expect(sanitizeSessionViews([], null)).toEqual({ claude: 'terminal', codex: 'terminal' })
+  })
+
+  it('has no default for Gemini or a shell', () => {
+    const views = { claude: 'chat' as const, codex: 'chat' as const }
+    expect(defaultViewFor(views, 'codex')).toBe('chat')
+    expect(defaultViewFor(views, 'gemini')).toBe('terminal')
+    expect(defaultViewFor(views, 'shell')).toBe('terminal')
   })
 })
 

@@ -1,8 +1,10 @@
 import { classifyTool } from '../../shared/timelineParse'
+import { toolKind, type ToolKind } from '../../shared/chatKind'
 import { CHAT_OUTPUT_LINES, CHAT_OUTPUT_MAX, CHAT_TARGET_MAX, boundText } from '../../shared/chatLog'
 import { cleanText, flat, isRecord, toolArg, type Json } from '../../shared/transcript'
 
 export interface ToolShape {
+  kind: ToolKind
   verb: string
   target: string
   added?: number
@@ -37,6 +39,7 @@ function editShape(name: string, input: Json, edits: { path: string; added: numb
   const first = edits[0]
   const more = edits.length > 1 ? ` and ${edits.length - 1} more` : ''
   return {
+    kind: CREATE_TOOLS.has(name) ? 'create' : 'edit',
     verb: CREATE_TOOLS.has(name) ? 'Created' : 'Edited',
     target: `${first.path}${more}`,
     added: edits.reduce((sum, edit) => sum + edit.added, 0),
@@ -52,12 +55,12 @@ export function toolShape(rawName: unknown, rawInput: unknown): ToolShape {
   const tool = classifyTool(rawName, rawInput)
   if (tool?.kind === 'edit') return editShape(name, input, tool.edits)
   if (tool?.kind === 'read') {
-    return { verb: SEARCH_TOOLS.has(name) ? 'Searched' : 'Read', target: flat(tool.paths.join(', '), CHAT_TARGET_MAX), preview: '' }
+    return { kind: SEARCH_TOOLS.has(name) ? 'search' : 'read', verb: SEARCH_TOOLS.has(name) ? 'Searched' : 'Read', target: flat(tool.paths.join(', '), CHAT_TARGET_MAX), preview: '' }
   }
   if (tool?.kind === 'command') {
     const line = tool.command.split('\n')[0]
-    return { verb: 'Ran', target: flat(line, CHAT_TARGET_MAX), preview: tool.command.includes('\n') ? tool.command : '' }
+    return { kind: 'shell', verb: 'Ran', target: flat(line, CHAT_TARGET_MAX), preview: tool.command.includes('\n') ? tool.command : '' }
   }
   const label = flat(typeof rawName === 'string' && rawName !== '' ? rawName : 'tool', 60)
-  return { verb: label, target: toolArg(rawInput).slice(0, CHAT_TARGET_MAX), preview: '' }
+  return { kind: toolKind(rawName), verb: label, target: toolArg(rawInput).slice(0, CHAT_TARGET_MAX), preview: '' }
 }

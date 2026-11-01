@@ -47,6 +47,12 @@ describe('ClaudeChatReader', () => {
     expect(reader.items()[0]).toMatchObject({ done: true, failed: true, output: 'done', note: 'failed' })
   })
 
+  it('keeps a message the user sends twice in a row', () => {
+    const reader = new ClaudeChatReader()
+    reader.feed(lines({ type: 'user', uuid: 'u1', message: { content: 'continue' } }, block('a1', [{ type: 'text', text: 'ok' }]), { type: 'user', uuid: 'u2', message: { content: 'continue' } }, { type: 'user', uuid: 'u3', message: { content: 'continue' } }))
+    expect(reader.items().map((item) => (item as ChatMessage).text)).toEqual(['continue', 'ok', 'continue', 'continue'])
+  })
+
   it('waits for a half-written line and reads it once complete', () => {
     const reader = new ClaudeChatReader()
     const whole = JSON.stringify({ type: 'user', uuid: 'u', message: { content: 'hello' } })

@@ -9,7 +9,10 @@ import type { ToolShape } from './toolShape'
 const KNOWN = new Set(['session_meta', 'event_msg', 'response_item', 'turn_context'])
 const WRAPPER = /^(?:bash|sh|zsh|pwsh|powershell|cmd)(?:\.exe)?$/i
 const LIMIT_TEXT = /usage limit|rate limit|hit your limit/i
+const UNMATCHED_MAX = 6
 const str = (value: unknown): string => (typeof value === 'string' ? value : '')
+
+type MessageSource = 'event' | 'item'
 
 function itemText(content: unknown): string {
   if (!Array.isArray(content)) return ''
@@ -33,6 +36,7 @@ function changeShape(path: string, change: Json): ToolShape {
   if (diff !== '') {
     const lines = diff.split('\n')
     return {
+      kind: 'edit',
       verb: 'Edited',
       target: path,
       added: lines.filter((line) => line.startsWith('+') && !line.startsWith('+++')).length,
@@ -44,6 +48,7 @@ function changeShape(path: string, change: Json): ToolShape {
   const body = content.replace(/\n$/, '')
   const count = lineCount(content)
   return {
+    kind: kind === 'delete' ? 'edit' : 'create',
     verb: kind === 'delete' ? 'Deleted' : 'Created',
     target: path,
     added: kind === 'delete' ? 0 : count,
@@ -59,6 +64,7 @@ export class CodexChatReader implements ChatLineReader {
   private known = 0
   private counter = 0
   private limitHit = false
+  private unmatched: Record<MessageSource, string[]> = { event: [], item: [] }
 
   get stats(): ReaderStats {
     return { lines: this.lines, known: this.known }
@@ -98,17 +104,30 @@ export class CodexChatReader implements ChatLineReader {
     const at = asTime(record.timestamp)
     const kind = payload.type
     if (kind === 'item_completed' && isRecord(payload.item)) this.item(payload.item, at)
-    else if (kind === 'user_message') this.builder.message(this.nextId('u'), 'user', str(payload.message), at)
-    else if (kind === 'agent_message') this.builder.message(this.nextId('a'), 'agent', str(payload.message), at)
+    else if (kind === 'user_message') this.say('event', this.nextId('u'), 'user', str(payload.message), at)
+    else if (kind === 'agent_message') this.say('event', this.nextId('a'), 'agent', str(payload.message), at)
     else if (kind === 'turn_aborted') this.builder.notice(this.nextId('x'), 'interrupted', CHAT_TEXT.interrupted, at)
     else if (kind === 'error') this.failure(str(payload.message), at)
     else if (kind === 'token_count') this.limits(payload, at)
   }
 
+  /** One message can arrive as an event and as an item. The second is its twin and is skipped; a message said twice, one after the other, is kept. */
+  private say(source: MessageSource, id: string, role: 'user' | 'agent', text: string, at: number | undefined): void {
+    const key = `${role}\n${text.trim()}`
+    const other = source === 'event' ? 'item' : 'event'
+    const twin = this.unmatched[other].indexOf(key)
+    if (twin >= 0) {
+      this.unmatched[other] = this.unmatched[other].filter((_, index) => index !== twin)
+      return
+    }
+    this.unmatched[source] = [...this.unmatched[source], key].slice(-UNMATCHED_MAX)
+    this.builder.message(id, role, text, at)
+  }
+
   private item(item: Json, at: number | undefined): void {
     const id = this.nextId('i', item.id)
-    if (item.type === 'UserMessage') this.builder.message(id, 'user', itemText(item.content), at)
-    else if (item.type === 'AgentMessage') this.builder.message(id, 'agent', itemText(item.content), at)
+    if (item.type === 'UserMessage') this.say('item', id, 'user', itemText(item.content), at)
+    else if (item.type === 'AgentMessage') this.say('item', id, 'agent', itemText(item.content), at)
     else if (item.type === 'CommandExecution') this.command(id, item, at)
     else if (item.type === 'FileChange') this.fileChange(id, item, at)
     else if (item.type === 'McpToolCall') this.mcp(id, item, at)
@@ -117,7 +136,7 @@ export class CodexChatReader implements ChatLineReader {
   private command(id: string, item: Json, at: number | undefined): void {
     const command = commandOf(item)
     const preview = command.includes('\n') ? command : ''
-    this.builder.call(id, { verb: 'Ran', target: flat(command.split('\n')[0], CHAT_TARGET_MAX), preview }, at)
+    this.builder.call(id, { kind: 'shell', verb: 'Ran', target: flat(command.split('\n')[0], CHAT_TARGET_MAX), preview }, at)
     const code = typeof item.exit_code === 'number' ? item.exit_code : 0
     this.builder.result(id, { output: str(item.aggregated_output), failed: item.status === 'failed' || code !== 0 })
   }
@@ -133,7 +152,7 @@ export class CodexChatReader implements ChatLineReader {
     if (changes.length > 0 || str(item.patch) === '') return
     for (const part of parsePatch(str(item.patch))) {
       const key = `${id}:${part.path}`
-      this.builder.call(key, { verb: 'Edited', target: part.path, added: part.added, removed: part.removed, preview: '' }, at)
+      this.builder.call(key, { kind: 'edit', verb: 'Edited', target: part.path, added: part.added, removed: part.removed, preview: '' }, at)
       this.builder.result(key, { output: '' })
     }
   }
@@ -141,7 +160,7 @@ export class CodexChatReader implements ChatLineReader {
   private mcp(id: string, item: Json, at: number | undefined): void {
     const args = isRecord(item.arguments) ? item.arguments : {}
     const title = str(args.title) || `${str(item.server)}.${str(item.tool)}`
-    this.builder.call(id, { verb: 'Used', target: flat(title, CHAT_TARGET_MAX), preview: '' }, at)
+    this.builder.call(id, { kind: 'other', verb: 'Used', target: flat(title, CHAT_TARGET_MAX), preview: '' }, at)
     const result = isRecord(item.result) ? item.result : {}
     this.builder.result(id, { output: itemText(result.content), failed: result.isError === true || item.status === 'failed' })
   }
@@ -157,7 +176,7 @@ export class CodexChatReader implements ChatLineReader {
     const full = windows.find((window) => typeof window.used_percent === 'number' && window.used_percent >= 100)
     if (full && !this.limitHit) {
       const resets = typeof full.resets_at === 'number' ? full.resets_at * 1000 : undefined
-      this.builder.notice(this.nextId('l'), 'limit', 'Codex reached its usage limit.', at, resets)
+      this.builder.notice(this.nextId('l'), 'limit', CHAT_TEXT.codexLimit, at, resets)
     }
     this.limitHit = full !== undefined
   }

@@ -66,6 +66,16 @@ describe('CodexChatReader', () => {
     expect(reader.items().map((item) => (item as ChatMessage).text)).toEqual(['hello', 'hi there'])
   })
 
+  it('keeps a message sent twice in a row, even when each arrives both ways', () => {
+    const reader = new CodexChatReader()
+    const both = (id: string) => [{ type: 'event_msg', payload: { type: 'user_message', message: 'continue' } }, done({ type: 'UserMessage', id, content: [{ type: 'text', text: 'continue' }] })]
+    reader.feed(lines(...both('a'), ...both('b')))
+    expect(reader.items().map((item) => (item as ChatMessage).text)).toEqual(['continue', 'continue'])
+    const single = new CodexChatReader()
+    single.feed(lines(done({ type: 'UserMessage', id: 'a', content: [{ type: 'text', text: 'continue' }] }), done({ type: 'UserMessage', id: 'b', content: [{ type: 'text', text: 'continue' }] })))
+    expect(single.items()).toHaveLength(2)
+  })
+
   it('shows a usage limit once per time a window fills', () => {
     const reader = new CodexChatReader()
     const count = (used: number) => ({ type: 'event_msg', payload: { type: 'token_count', rate_limits: { primary: { used_percent: used, window_minutes: 300, resets_at: 1793067662 } } } })
