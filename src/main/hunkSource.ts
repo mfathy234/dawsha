@@ -5,14 +5,29 @@ import { containsProjectPath } from './projectContainment'
 
 export interface HunkTarget { full: string; path: string; absent: boolean }
 
+async function missingPath(scope: string, lexical: string): Promise<string | null> {
+  let directory = dirname(lexical)
+  const suffix = [basename(lexical)]
+  for (;;) {
+    const info = await lstat(directory).catch((error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return null; throw error })
+    if (info) {
+      const actual = await realpath(directory).catch(() => null)
+      return actual && containsProjectPath(scope, actual) ? join(actual, ...suffix) : null
+    }
+    const parent = dirname(directory)
+    if (parent === directory) return null
+    suffix.unshift(basename(directory))
+    directory = parent
+  }
+}
+
 export async function hunkTarget(folder: string, path: string): Promise<HunkTarget | null> {
   const target = await resolveProjectFile(folder, path)
   if (target.ok) return { full: target.full, path: target.realRel, absent: false }
   if (!target.missing) return null
-  const parent = await realpath(dirname(join(target.missing.root, path))).catch(() => null)
   const scope = await realpath(folder)
-  if (!parent || !containsProjectPath(scope, parent)) return null
-  const full = join(parent, basename(path))
+  const full = await missingPath(scope, join(target.missing.root, path))
+  if (!full) return null
   const info = await lstat(full).catch((error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return null; throw error })
   return info ? null : { full, path, absent: true }
 }

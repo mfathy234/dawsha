@@ -59,3 +59,7 @@ it('keeps generated-file discovery off the main thread and bounds its results', 
   expect(await Promise.race([Promise.resolve(discovery).then(() => 'blocked'), pulse])).toBe('responsive')
   expect(await discovery).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'f0', line: 1 })]))
 })
+it('recognizes C# method body changes with an opening brace on the next line', async () => {
+  const text = 'class Widget\n{\n  public void Paint()\n  {\n    Changed();\n  }\n}\n'
+  expect(await changedSymbols('a.cs', text, new Set([5]))).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'Paint', line: 3, column: 15 })]))
+})

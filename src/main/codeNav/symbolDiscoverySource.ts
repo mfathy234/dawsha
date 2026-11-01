@@ -29,7 +29,7 @@ function typescript() {
   visit(source);
 }
 function other() {
-  const declaration=/\b(?:class|interface|struct|record|enum|def|function)\s+([\p{L}_$][\p{L}\p{N}_$]*)|(?:^|\s)(?:[\w<>[\],?]+\s+)+([\p{L}_$][\p{L}\p{N}_$]*)\s*\([^;]*\)\s*(?:\{|=>)/u;
+  const declaration=/\b(?:class|interface|struct|record|enum|def|function)\s+([\p{L}_$][\p{L}\p{N}_$]*)|(?:^|\s)(?:[\w<>[\],?]+\s+)+([\p{L}_$][\p{L}\p{N}_$]*)\s*(?:<[^(){};]*>)?\([^;]*\)\s*(?:\{|=>|;|$)/u;
   for(let index=0;index<lines.length&&out.length<input.limit;index++) {
     const line=lines[index], match=declaration.exec(line), name=match&&(match[1]||match[2]);
     if(!name) continue;

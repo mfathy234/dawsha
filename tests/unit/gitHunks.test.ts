@@ -96,4 +96,18 @@ describe('one hunk', () => {
     expect(readFileSync(join(root, 'a.txt'), 'utf8')).toContain('line 2\n')
     expect(await changeHunk(root, hunk, 'revert')).toMatchObject({ ok: false, conflict: true })
   })
+  it('handles a deleted file whose empty parent directory is also gone', async () => {
+    const root = fixture()
+    mkdirSync(join(root, 'nested'))
+    writeFileSync(join(root, 'nested/only.txt'), 'original\n')
+    git(root, ['add', 'nested/only.txt'])
+    git(root, ['commit', '-qm', 'nested file'])
+    rmSync(join(root, 'nested'), { recursive: true })
+    const diff = git(root, ['diff', '--src-prefix=a/', '--dst-prefix=b/', '--unified=3', 'HEAD', '--', 'nested/only.txt'])
+    const selected = diffHunks(diff)[0]
+    const hunk = { path: 'nested/only.txt', ...selected.coordinates, expectedMtime: 0, expectedHunk: selected.text }
+    expect(await changeHunk(root, hunk, 'stage')).toEqual({ ok: true })
+    expect(await changeHunk(root, hunk, 'revert')).toEqual({ ok: true })
+    expect(readFileSync(join(root, 'nested/only.txt'), 'utf8')).toBe('original\n')
+  })
 })
