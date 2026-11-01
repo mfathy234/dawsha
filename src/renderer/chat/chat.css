@@ -25,15 +25,19 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  padding-inline: var(--sp-6);
 }
 
 .chat-thread {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-4);
-  max-width: 760px;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  min-height: 100%;
+  box-sizing: border-box;
+  max-width: 720px;
   margin: 0 auto;
-  padding: var(--sp-5) var(--sp-6);
+  padding: var(--sp-5) 0 var(--sp-4);
 }
 
 .chat-you {
@@ -43,6 +47,10 @@
   border-radius: var(--r-card);
   background: var(--raised);
   overflow-wrap: anywhere;
+}
+
+.chat-you:not(:first-child) {
+  margin-top: var(--sp-3);
 }
 
 .chat-say {
@@ -98,7 +106,7 @@
 .chat-tools {
   display: grid;
   gap: 1px;
-  margin-top: calc(var(--sp-2) * -0.75);
+  margin-top: calc(var(--sp-1) * -1);
 }
 
 .chat-tool {
@@ -117,6 +125,14 @@
   white-space: nowrap;
   overflow: hidden;
   cursor: pointer;
+}
+
+.chat-tool .icon {
+  color: var(--text-3);
+}
+
+.chat-tool:hover .icon {
+  color: var(--text-2);
 }
 
 .chat-tool:hover {
@@ -139,7 +155,7 @@
 }
 
 .chat-tool .n {
-  margin-inline-start: auto;
+  margin-inline-start: var(--sp-2);
   flex: none;
   font: var(--fs-1) var(--font-mono);
 }
@@ -265,14 +281,20 @@
 
 .chat-composer {
   flex: none;
-  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+  padding: 0 var(--sp-6) var(--sp-4);
+}
+
+.chat-composer .chat-quiet {
+  max-width: 720px;
+  margin: 0 auto var(--sp-2);
+  font-size: var(--fs-1);
 }
 
 .chat-box {
   display: flex;
   align-items: flex-end;
   gap: var(--sp-2);
-  max-width: 760px;
+  max-width: 720px;
   margin: 0 auto;
   padding: var(--sp-2) 10px;
   border-radius: var(--r-card);
@@ -342,9 +364,13 @@
 }
 
 @container pane (max-width: 520px) {
+  .chat-scroll,
+  .chat-composer {
+    padding-inline: var(--sp-3);
+  }
+
   .chat-thread {
-    gap: var(--sp-3);
-    padding: var(--sp-3) var(--sp-3);
+    padding-block: var(--sp-3);
   }
 
   .chat-you {
@@ -365,11 +391,4 @@
     padding: 0 6px;
     font-size: var(--fs-1);
   }
-}
-
-.nd-view {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-2) 0 0;
 }

@@ -73,6 +73,8 @@ import '../chat/chat.css'
 const RESUMED_CHIP_MS = 60_000
 const RECAP_REFRESH_MS = 2_500
 const RECAP_SCREEN_ROWS = 60
+// Session time and last activity alone are not worth a footer.
+const FOOT_FILLER = ['info-elapsed', 'info-age']
 
 /** The header's panel button: a slide-over over the terminal, without maximizing the pane. */
 function toggleDetailsPanel(paneId: string): void {
@@ -393,8 +395,8 @@ export class PaneComponent {
       onEnableBridge: () => void enableBridge(),
       onReviewFiles: () => this.reviewInFiles()
     })
-    // Session time alone is not worth a footer: it shows only next to model, changes, review or the others.
-    this.info.hidden = !items.some((item) => !item.classList.contains('info-elapsed'))
+    // Session time and age show only next to model, changes, review or the others.
+    this.info.hidden = !items.some((item) => !FOOT_FILLER.some((name) => item.classList.contains(name)))
     this.info.replaceChildren(...items)
   }
 

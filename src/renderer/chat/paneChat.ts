@@ -9,7 +9,7 @@ import { ChatThread } from './chatThread'
 export interface ChatHost {
   showTerminal(): void
   continueIn(to: AgentKind): void
-  send(text: string): void
+  send(text: string): { flattened: boolean }
   interrupt(): void
   menuOpen(): boolean
 }
@@ -39,7 +39,8 @@ export class PaneChat {
   private readonly feed: ChatFeed
   private readonly thread: ChatThread
   private readonly box = h('textarea', { class: 'chat-input', rows: 1, 'aria-label': 'Message', dir: 'auto', spellcheck: 'false' })
-  private readonly sendButton = h('button', { class: 'chat-btn', type: 'button' }, CHAT_TEXT.send)
+  private readonly sendButton = h('button', { class: 'chat-btn', type: 'button', hidden: true }, CHAT_TEXT.send)
+  private readonly note = h('p', { class: 'chat-quiet', role: 'status', hidden: true })
   private snapshot: FeedSnapshot = LOADING
   private input: ChatInput | null = null
   private phase: ChatPhase = 'empty'
@@ -64,10 +65,13 @@ export class PaneChat {
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
       this.scroller,
-      h('div', { class: 'chat-composer' }, h('div', { class: 'chat-box' }, this.box, this.sendButton))
+      h('div', { class: 'chat-composer' }, this.note, h('div', { class: 'chat-box' }, this.box, this.sendButton))
     )
     this.box.addEventListener('keydown', (event) => this.onKey(event))
-    this.box.addEventListener('input', () => this.growBox())
+    this.box.addEventListener('input', () => {
+      this.note.hidden = true
+      this.growBox()
+    })
     new ResizeObserver(() => this.input && this.updateComposer(this.input, this.phase)).observe(this.box)
     this.sendButton.addEventListener('click', () => this.submit())
     this.el.addEventListener('keydown', (event) => {
@@ -140,8 +144,8 @@ export class PaneChat {
       actions: { showTerminal: () => this.host.showTerminal(), continueIn: (to) => this.host.continueIn(to), dismissLimit: () => this.dismissLimit() }
     })
     this.updateComposer(input, phase)
-    if (this.stickBottom || wasNear) this.toBottom()
-    this.stickBottom = false
+    if (!force && (this.stickBottom || wasNear)) this.toBottom()
+    if (!force) this.stickBottom = false
   }
 
   private renderedSnapshot: FeedSnapshot | null = null
@@ -164,11 +168,24 @@ export class PaneChat {
   private updateComposer(input: ChatInput, phase: ChatPhase): void {
     const name = AGENT_NAMES[input.agent]
     const blocked = input.exited ? CHAT_TEXT.composerEnded : phase === 'approval' ? CHAT_TEXT.composerApproval : phase === 'menu' ? CHAT_TEXT.composerMenu : ''
+    const wasBlocked = this.box.disabled
     this.box.disabled = blocked !== ''
     this.sendButton.disabled = blocked !== ''
+    this.showSend()
+    if (wasBlocked && !this.box.disabled && this.active && this.focusIsFree()) this.focusComposer()
     const roomy = this.box.clientWidth >= LONG_HINT_MIN_PX
     this.box.placeholder = blocked || (roomy ? CHAT_TEXT.messagePlaceholderLong(name) : CHAT_TEXT.messagePlaceholder(name))
     this.box.title = blocked || CHAT_TEXT.messageHint
+  }
+
+  /** Allow and Deny remove the button that had focus; the box takes it back unless the user has gone elsewhere. */
+  private focusIsFree(): boolean {
+    const focused = document.activeElement
+    return !focused || focused === document.body || this.el.contains(focused)
+  }
+
+  private showSend(): void {
+    this.sendButton.hidden = this.box.disabled || this.box.value.trim() === ''
   }
 
   private nearBottom(): boolean {
@@ -189,7 +206,9 @@ export class PaneChat {
   private submit(): void {
     const text = this.box.value
     if (text.trim() === '' || this.box.disabled) return
-    this.host.send(text)
+    const { flattened } = this.host.send(text)
+    this.note.hidden = !flattened
+    this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
     this.box.value = ''
     this.growBox()
     this.stickBottom = true
@@ -200,5 +219,6 @@ export class PaneChat {
     this.box.style.height = 'auto'
     this.box.style.height = `${Math.min(this.box.scrollHeight, COMPOSER_MAX_PX)}px`
     this.box.style.overflowY = this.box.scrollHeight > COMPOSER_MAX_PX ? 'auto' : 'hidden'
+    this.showSend()
   }
 }

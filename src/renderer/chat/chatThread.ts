@@ -1,6 +1,8 @@
 import { foldLines, textDirection, type ChatItem, type ChatMessage, type ChatNotice, type ChatPhase, type ChatTool } from '../../shared/chatLog'
 import type { AgentKind } from '../../shared/types'
-import { h } from '../dom'
+import type { ToolKind } from '../../shared/chatKind'
+import { h, icon } from '../dom'
+import { ICONS } from '../icons'
 import { stateIcon } from '../components/stateIcon'
 import type { FeedSnapshot } from './chatFeed'
 import { CHAT_TEXT } from '../../shared/chatStrings'
@@ -22,6 +24,17 @@ export interface ThreadContext {
   limitDismissed: boolean
   permission: HTMLElement | null
   actions: ThreadActions
+}
+
+const TOOL_ICONS: Record<ToolKind, string> = {
+  agent: ICONS.toolAgent,
+  shell: ICONS.toolShell,
+  edit: ICONS.toolEdit,
+  create: ICONS.toolCreate,
+  read: ICONS.toolRead,
+  search: ICONS.toolSearch,
+  web: ICONS.toolWeb,
+  other: ICONS.toolOther
 }
 
 const PRESENT: Record<string, string> = { Ran: 'Running', Edited: 'Editing', Created: 'Creating', Read: 'Reading', Searched: 'Searching', Deleted: 'Deleting', Used: 'Using' }
@@ -69,24 +82,18 @@ export class ChatThread {
   private items(items: readonly ChatItem[], ctx: ThreadContext): Node[] {
     const out: Node[] = []
     let tools: HTMLElement[] = []
-    let dir: 'ltr' | 'rtl' = 'ltr'
     const flush = (): void => {
       if (tools.length === 0) return
-      out.push(h('div', { class: 'chat-tools', dir }, ...tools))
+      out.push(h('div', { class: 'chat-tools', dir: 'ltr' }, ...tools))
       tools = []
     }
     items.forEach((item, index) => {
       if (item.kind === 'tool') {
-        tools.push(...this.tool(item))
+        tools.push(...this.tool(item, ctx.phase === 'working'))
         return
       }
       flush()
-      if (item.kind === 'message') {
-        dir = textDirection(item.text)
-        out.push(this.message(item))
-      } else {
-        out.push(this.notice(item, index === items.length - 1, ctx))
-      }
+      out.push(item.kind === 'message' ? this.message(item) : this.notice(item, index === items.length - 1, ctx))
     })
     flush()
     return out
@@ -101,11 +108,12 @@ export class ChatThread {
     return body
   }
 
-  private tool(item: ChatTool): HTMLElement[] {
+  private tool(item: ChatTool, live: boolean): HTMLElement[] {
     const expanded = this.open.has(`t:${item.id}`)
     const row = h(
       'button',
       { class: `chat-tool${item.failed ? ' failed' : ''}`, type: 'button', 'aria-expanded': String(expanded), title: item.target, 'data-tool': item.id, onClick: () => this.flip(`t:${item.id}`) },
+      icon(!item.done && live ? ICONS.toolRunning : TOOL_ICONS[item.activity] ?? ICONS.toolOther),
       h('span', {}, item.verb),
       h('bdi', { dir: 'ltr' }, h('code', {}, item.target)),
       item.done ? this.toolNote(item) : null
