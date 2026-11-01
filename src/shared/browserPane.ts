@@ -34,7 +34,7 @@ export type BrowserCapture =
   | { ok: false; error: string }
 
 export type BrowserErrors =
-  | { ok: true; text: string; count: number }
+  | { ok: true; lines: string[]; url: string }
   | { ok: false; error: string }
 
 export const CLOSED_BROWSER: BrowserState = { open: false, url: '', title: '', loading: false, canGoBack: false, canGoForward: false, errorCount: 0, failure: null }

@@ -47,7 +47,7 @@ import { exportTranscript } from '../transcriptActions'
 import { replayPane } from '../replayActions'
 import { openShortcutsSheet } from '../components/shortcutsSheet'
 import { toggleQuickOpen } from '../components/quickOpen'
-import { requestFilesCommand, type FilesCommand } from '../files/filesActions'
+import { filesTarget, openFolderInFiles, requestFilesCommand, type FilesCommand } from '../files/filesActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
@@ -70,6 +70,22 @@ const filesOnly = (state: AppState): boolean => state.view === 'files'
 
 function filesCommand(id: string, title: string, command: FilesCommand, keys: Pick<Command, 'keys' | 'shortcut'>, keywords: string): Command {
   return { id, title, group: 'Actions', keywords: `files code ${keywords}`, ...keys, enabled: filesOnly, run: () => requestFilesCommand(command) }
+}
+
+const PANEL_OPEN_DELAY_MS = 150
+
+// Panel tabs open from anywhere: outside Files the view opens on the focused session's project first.
+function panelCommand(id: string, title: string, command: FilesCommand, keywords: string): Command {
+  return {
+    id, title, group: 'Actions', keywords: `files panel ${keywords}`,
+    run: () => {
+      if (store.state.view === 'files') return requestFilesCommand(command)
+      const target = filesTarget()
+      if (target) openFolderInFiles(target)
+      else showView('files')
+      window.setTimeout(() => requestFilesCommand(command), PANEL_OPEN_DELAY_MS)
+    }
+  }
 }
 
 // Code navigation keys work only while Files is showing, so Ctrl+Shift+O keeps filtering the sidebar in the grid.
@@ -316,6 +332,9 @@ export function installBuiltinCommands(): void {
       enabled: (state) => state.view === 'files',
       run: () => requestFilesCommand('toggle-explorer')
     },
+    panelCommand('files.config', 'Show config files', 'show-config', 'appsettings launchsettings env environment variables secrets settings'),
+    panelCommand('files.pr', 'Show pull request', 'show-pr', 'github gh review comments ci checks merge create'),
+    panelCommand('files.browser', 'Show browser', 'show-browser', 'preview localhost web page devtools screenshot'),
     {
       id: 'files.worktree',
       title: 'Switch worktree…',

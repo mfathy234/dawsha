@@ -36,6 +36,9 @@ import { openCommitDetails } from '../files/commitDetails'
 import { InFlight, LatestGate } from '../files/asyncGuard'
 import { errorNote, loadingNote } from '../files/loadNote'
 import { BottomPanel } from '../files/bottomPanel'
+import { BrowserTab } from '../files/browserPane'
+import { ConfigPane } from '../files/configPane'
+import { PrPanel } from '../files/prPanel'
 import { PreviewPane } from '../files/previewPane'
 import { commitDialog } from '../files/commitDialog'
 import { locationEntries, sendEntries } from '../files/locationMenu'
@@ -91,6 +94,13 @@ const wait = (ms: number): Promise<void> => new Promise((resolve) => window.setT
 export class FilesViewComponent {
   readonly el = h('main', { class: 'files-view', id: 'files-view', 'aria-label': 'Files' })
   private readonly runPanel = new RunCommandsPanel()
+  private readonly openChecked = (path: string, line: number): void => {
+    const target = openTarget(this.set?.prefix ?? '', path, line, undefined)
+    void this.openFile(target.path, { pin: true, focus: true, line: target.line, column: target.column })
+  }
+  private readonly configPane = new ConfigPane({ folder: () => this.set?.folder ?? null, open: this.openChecked })
+  private readonly prPanel = new PrPanel({ folder: () => this.set?.folder ?? null, open: this.openChecked, send: (text, anchor) => this.sendProblems(text, anchor) })
+  private readonly browserTab = new BrowserTab({ send: (text, anchor) => this.sendProblems(text, anchor) })
   private readonly panel = new BottomPanel(this.runPanel, () => {
     // the panel reports while it is built, before the status bar below exists
     if (this.status === undefined) return
@@ -102,7 +112,7 @@ export class FilesViewComponent {
       void this.openFile(target.path, { pin: true, focus: true, line: target.line, column: target.column })
     },
     send: (text, anchor) => this.sendProblems(text, anchor)
-  })
+  }, [this.configPane, this.prPanel, this.browserTab])
   private visible = false
   private target: FilesTarget | null = null
   private readonly sets = new Map<string, DocSet>()
@@ -917,6 +927,9 @@ export class FilesViewComponent {
     else if (command === 'everything') this.nav.openEverythingPicker()
     else if (command === 'symbol') this.nav.openSymbolPicker()
     else if (command === 'line') this.nav.openLinePicker()
+    else if (command === 'show-config') this.panel.show('config')
+    else if (command === 'show-pr') this.panel.show('pr')
+    else if (command === 'show-browser') this.panel.show('browser')
     else {
       if (!filesLayout().explorer.open) this.toggleExplorer()
       if (command === 'switch-branch') void this.showBranchMenu(this.explorer.branchesAnchor())

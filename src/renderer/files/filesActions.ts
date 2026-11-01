@@ -129,6 +129,7 @@ export function onFilesSearchRequest(listener: () => void): () => void {
 
 export type FilesCommand =
   | 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree' | 'switch-branch'
+  | 'show-config' | 'show-pr' | 'show-browser'
   | 'definition' | 'implementation' | 'references' | 'back' | 'forward' | 'everything' | 'symbol' | 'line'
 
 const commandListeners = new Set<(command: FilesCommand) => void>()

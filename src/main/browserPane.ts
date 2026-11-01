@@ -6,7 +6,6 @@ import {
   BROWSER_PARTITION,
   CLOSED_BROWSER,
   MAX_CONSOLE_ERRORS,
-  errorsMessage,
   isWebUrl,
   parseBrowserAddress,
   type BrowserBounds,
@@ -191,7 +190,7 @@ export class BrowserPane {
   consoleErrors(): BrowserErrors {
     if (!this.view) return { ok: false, error: 'The browser is not open.' }
     if (this.errors.length === 0) return { ok: false, error: 'The page has logged no errors.' }
-    return { ok: true, text: errorsMessage(this.view.webContents.getURL(), this.errors), count: this.errors.length }
+    return { ok: true, lines: [...this.errors], url: this.view.webContents.getURL() }
   }
 
   /** Removes the native view and closes its page. Safe to call twice. */

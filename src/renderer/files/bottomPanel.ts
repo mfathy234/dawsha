@@ -8,7 +8,15 @@ import { RunCommandsPanel } from '../components/runCommandsPanel'
 import { filesLayout, updateLayout } from './filesPrefs'
 import { ProblemsPane, type ProblemsHooks, type RunProblem } from './problemsPane'
 
-type Pane = 'run' | 'problems'
+type Pane = string
+
+/** A tab beside Run and Problems whose content is built elsewhere; activate tells it when it is the one in view. */
+export interface PanelExtra {
+  id: string
+  label: string
+  el: HTMLElement
+  activate(active: boolean): void
+}
 
 const GRIP_STEP = 24
 
@@ -26,7 +34,7 @@ export class BottomPanel {
   private height = filesLayout().panel.height
   private minimised = filesLayout().panel.minimised
 
-  constructor(readonly run: RunCommandsPanel, private readonly changed: () => void, problems: ProblemsHooks) {
+  constructor(readonly run: RunCommandsPanel, private readonly changed: () => void, problems: ProblemsHooks, private readonly extras: readonly PanelExtra[] = []) {
     this.problems = new ProblemsPane(problems, () => this.renderTabs())
     run.el.id = 'files-run-panel'
     run.dismiss = () => {
@@ -39,7 +47,7 @@ export class BottomPanel {
       this.renderTabs()
       changed()
     })
-    this.body.append(run.el, this.problems.el)
+    this.body.append(run.el, this.problems.el, ...extras.map((extra) => extra.el))
     this.el.append(this.grip, h('div', { class: 'files-panel-head' }, this.tabs, this.toggleButton), this.body)
     this.grip.addEventListener('pointerdown', (event) => this.startDrag(event))
     this.grip.addEventListener('keydown', (event) => {
@@ -114,6 +122,10 @@ export class BottomPanel {
     this.body.style.height = `${Math.max(this.height, PANEL_MIN_HEIGHT)}px`
     this.run.el.hidden = this.pane !== 'run'
     this.problems.el.hidden = this.pane !== 'problems'
+    for (const extra of this.extras) {
+      extra.el.hidden = this.pane !== extra.id
+      extra.activate(this.pane === extra.id && !this.minimised)
+    }
     this.toggleButton.replaceChildren(icon(this.minimised ? ICONS.chevronUp : ICONS.chevronDown))
     const label = this.minimised ? 'Show panel' : 'Hide panel'
     this.toggleButton.setAttribute('aria-label', label)
@@ -138,6 +150,7 @@ export class BottomPanel {
   /** Re-reads the problems for the current checkout, for when the target changes without a run changing. */
   refresh(): void {
     this.renderTabs()
+    for (const extra of this.extras) extra.activate(this.pane === extra.id && !this.minimised)
   }
 
   private renderTabs(): void {
@@ -149,7 +162,8 @@ export class BottomPanel {
         this.run.selectRun(run.id)
         this.show('run')
       }, { 'data-run': run.id, 'data-status': run.status, title: `${run.display}\n${run.status}` }))
-    this.tabs.replaceChildren(...runTabs, this.tab('files-ptab-problems', problemsLabel(this.problems.count), this.pane === 'problems', () => this.show('problems')))
+    this.tabs.replaceChildren(...runTabs, this.tab('files-ptab-problems', problemsLabel(this.problems.count), this.pane === 'problems', () => this.show('problems')),
+      ...this.extras.map((extra) => this.tab(`files-ptab-${extra.id}`, extra.label, this.pane === extra.id, () => this.show(extra.id))))
   }
 
   private onTabKey(event: KeyboardEvent): void {
