@@ -10,6 +10,8 @@ test('top bar shows the brand and the split New session button picks the agent',
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
+    // CI's window is 1024px wide, which would show the compact top bar.
+    await page.setViewportSize({ width: 1440, height: 900 })
     await expect(page).toHaveTitle('Dawsha')
     await expect(page.locator('.app-title')).toHaveText('Dawsha')
     await expect(page.locator('.app-logo svg')).toBeVisible()

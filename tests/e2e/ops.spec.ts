@@ -68,6 +68,8 @@ test('ops feed: strip, details panel, updates, stale and ended', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
+    // CI's window is 1024px wide, which would show the compact top bar.
+    await page.setViewportSize({ width: 1440, height: 900 })
     await page.getByRole('button', { name: NEW_IN_SMOKE }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.info-plan')).toHaveCount(0)

@@ -225,6 +225,8 @@ test('batteries: a gauge per limit with its stage, and the percent takes the sta
   withTheme(sandbox, undefined)
   const { app, page } = await launchApp(sandbox)
   try {
+    // CI's window is 1024px wide, which would show the compact top bar.
+    await page.setViewportSize({ width: 1440, height: 900 })
     await page.getByRole('button', { name: NEW_IN_SMOKE }).first().click()
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
     await openSettings(page, 'notifications')

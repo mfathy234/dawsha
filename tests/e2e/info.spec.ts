@@ -109,6 +109,8 @@ test('live session info: confirmation, install, info strip, limits, git changes 
 
   const { app, page } = await launchApp(sandbox)
   try {
+    // CI's window is 1024px wide, which would show the compact top bar.
+    await page.setViewportSize({ width: 1440, height: 900 })
     await page.getByRole('button', { name: NEW_IN_SMOKE }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.pane-info .info-changes')).toContainText('+1 −0 · 1 file', { timeout: 15_000 })
