@@ -56,8 +56,12 @@ async function archive(directory: string): Promise<string> {
 async function runElectron(app: string, project: string, output: string): Promise<number | null> {
   const { ELECTRON_RUN_AS_NODE: _nodeMode, ...env } = process.env
   return new Promise((resolve, reject) => {
-    const child = spawn(require('electron') as string, [...(process.platform === 'linux' ? ['--no-sandbox'] : []), app, project, output], { windowsHide: true, shell: false, env, stdio: 'ignore' })
-    const timer = setTimeout(() => { child.kill(); reject(new Error('Packaged utility test timed out.')) }, 20_000)
+    const child = spawn(require('electron') as string, [...(process.platform === 'linux' ? ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] : []), app, project, output], { windowsHide: true, shell: false, env, stdio: ['ignore', 'pipe', 'pipe'] })
+    let log = ''
+    child.stdout?.on('data', chunk => { log += chunk })
+    child.stderr?.on('data', chunk => { log += chunk })
+    const timer = setTimeout(() => { child.kill(); reject(new Error(`Packaged utility test timed out.
+${log.slice(-3000)}`)) }, 20_000)
     child.once('error', error => { clearTimeout(timer); reject(error) })
     child.once('exit', code => { clearTimeout(timer); resolve(code) })
   })
