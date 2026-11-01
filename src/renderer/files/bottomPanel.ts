@@ -6,7 +6,7 @@ import { h, icon } from '../dom'
 import { ICONS } from '../icons'
 import { RunCommandsPanel } from '../components/runCommandsPanel'
 import { filesLayout, updateLayout } from './filesPrefs'
-import { ProblemsPane, type ProblemsHooks } from './problemsPane'
+import { ProblemsPane, type ProblemsHooks, type RunProblem } from './problemsPane'
 
 type Pane = 'run' | 'problems'
 
@@ -49,6 +49,11 @@ export class BottomPanel {
     })
     this.tabs.addEventListener('keydown', (event) => this.onTabKey(event))
     this.apply()
+  }
+
+  /** Every problem the latest runs reported, for the editor to underline. */
+  problemList(): readonly RunProblem[] {
+    return this.problems.all
   }
 
   get isMinimised(): boolean {

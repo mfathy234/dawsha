@@ -21,8 +21,10 @@ import { paneTerminal } from '../terminalActions'
 import { lastOutputAt } from '../ptyActivity'
 import { waitForSessionOutput, waitUntil } from '../files/sessionWait'
 import { FileDoc, type DocHooks } from '../files/fileDoc'
+import { CodeNavigator } from '../files/navigation'
+import { marksForFile, openTarget } from '../files/problemMarks'
 import { noteOpened } from '../files/fileIndex'
-import { filesTarget, insertIntoSession, onFilesCommand, onFilesRequest, onFilesSearchRequest, openInVsCode, promptReference, setCurrentTarget, setDirtyProvider, takeFilesRequest, addToPrompt, type FilesTarget } from '../files/filesActions'
+import { filesTarget, insertIntoSession, onFilesCommand, type FilesCommand, onFilesRequest, onFilesSearchRequest, openInVsCode, promptReference, setCurrentTarget, setDirtyProvider, takeFilesRequest, addToPrompt, type FilesTarget } from '../files/filesActions'
 import { closeTab, openTab, pinTab, type TabRef } from '../files/filesState'
 import { fileIcon } from '../files/fileIcon'
 import { loadSessionData, orderSessions, type TouchMap } from '../files/sessionTouch'
@@ -91,9 +93,14 @@ export class FilesViewComponent {
   private readonly runPanel = new RunCommandsPanel()
   private readonly panel = new BottomPanel(this.runPanel, () => {
     // the panel reports while it is built, before the status bar below exists
-    if (this.status !== undefined) this.renderStatus()
+    if (this.status === undefined) return
+    this.renderStatus()
+    this.syncProblems()
   }, {
-    open: (path, line) => void this.openFile(toRepoPath(this.set?.prefix ?? '', path), { pin: true, focus: true, line }),
+    open: (path, line, column) => {
+      const target = openTarget(this.set?.prefix ?? '', path, line, column)
+      void this.openFile(target.path, { pin: true, focus: true, line: target.line, column: target.column })
+    },
     send: (text, anchor) => this.sendProblems(text, anchor)
   })
   private visible = false
@@ -166,6 +173,23 @@ export class FilesViewComponent {
     rowMenu: (path, x, y, returnFocus) => openContextMenu({ x, y, label: 'File actions', entries: this.entriesFor(treeMenu('file', false), path, 'file'), returnFocus }),
     openRow: (path, pin) => void this.openFile(path, { pin, focus: false })
   })
+  private readonly main = h('div', { class: 'files-main' })
+  private readonly problemSignature = new WeakMap<FileDoc, string>()
+  private readonly nav: CodeNavigator = new CodeNavigator({
+    folder: () => this.target?.folder ?? null,
+    prefix: () => this.set?.prefix ?? '',
+    active: () => this.active(),
+    open: (path) => this.openFile(path, { pin: false }),
+    say: (text) => this.setFlash(text),
+    warn: (text) => toast(text),
+    changed: () => {
+      this.renderBar()
+      this.renderStatus()
+    },
+    dark: () => themeKind() === 'dark',
+    overlay: () => this.main,
+    text: (path) => this.textOf(path)
+  })
   private readonly tabs = h('div', { class: 'files-tabs', role: 'tablist', 'aria-label': 'Open files' })
   private readonly bar = new FilesBar({
     showFile: () => void this.showFileMode(),
@@ -175,7 +199,10 @@ export class FilesViewComponent {
     send: (anchor) => this.openSendMenu(anchor),
     more: (anchor) => this.openMoreMenu(anchor),
     toggleInspector: () => this.toggleInspector(),
-    toggleExplorer: () => this.toggleExplorer()
+    toggleExplorer: () => this.toggleExplorer(),
+    back: () => void this.nav.back(),
+    forward: () => void this.nav.forward(),
+    symbol: () => this.nav.openSymbolPicker()
   })
   private readonly conflictText = h('span', { class: 'files-conflict-text' }, 'This file changed on disk.')
   private readonly reloadButton = h('button', { class: 'btn small', type: 'button', id: 'files-reload-theirs', onClick: () => void this.active()?.reload() }, 'Reload theirs')
@@ -199,7 +226,8 @@ export class FilesViewComponent {
 
   constructor() {
     this.stage.append(this.empty, this.preview.el)
-    this.el.append(this.header, this.explorer.el, h('div', { class: 'files-main' }, this.tabs, this.bar.el, this.conflict, this.stage, this.panel.el, this.status), this.inspector.el)
+    this.main.append(this.tabs, this.bar.el, this.conflict, this.stage, this.panel.el, this.status)
+    this.el.append(this.header, this.explorer.el, this.main, this.inspector.el)
     this.el.addEventListener('keydown', (event) => this.onKey(event))
     this.tabs.addEventListener('keydown', (event) => this.onTabKey(event))
     api.onFilesChanged((key, paths) => this.onDiskChange(key, paths))
@@ -235,8 +263,11 @@ export class FilesViewComponent {
     edited: (doc) => this.pin(doc.path),
     cursor: (doc) => this.cursorMoved(doc),
     outlineChanged: (doc) => {
-      if (doc === this.active()) this.renderOutline()
-    }
+      if (doc !== this.active()) return
+      this.renderOutline()
+      this.renderBar()
+    },
+    goto: (doc, pos) => this.nav.ctrlClick(doc, pos)
   }
 
   // Showing and hiding
@@ -266,6 +297,7 @@ export class FilesViewComponent {
     this.panel.refresh()
     window.clearInterval(this.touchTimer)
     window.clearTimeout(this.watchTimer)
+    this.nav.stop()
     this.checkoutGate.cancel()
     this.activationGate.cancel()
     this.treeGate.cancel()
@@ -680,14 +712,15 @@ export class FilesViewComponent {
     return new Set([...set.docs.values()].filter((doc) => doc.dirty).map((doc) => doc.path))
   }
 
-  async openFile(path: string, options: { pin?: boolean; focus?: boolean; line?: number } = {}): Promise<void> {
-    if (this.deletionPending) return
+  /** Opens a file in a tab and loads it. Null when it could not be opened, such as when every tab has unsaved changes. */
+  async openFile(path: string, options: { pin?: boolean; focus?: boolean; line?: number; column?: number } = {}): Promise<FileDoc | null> {
+    if (this.deletionPending) return null
     const set = this.set
-    if (!set) return
+    if (!set) return null
     const result = openTab(set.tabs, path, options.pin === true, set.active, this.protectedPaths(set))
     if (!result) {
       toast('Close a tab first: every open file has unsaved changes.', 'info')
-      return
+      return null
     }
     const kept = new Set(result.tabs.map((tab) => tab.path))
     for (const [known, doc] of set.docs) {
@@ -703,16 +736,38 @@ export class FilesViewComponent {
     this.explorer.setActive(path)
     if (options.line && doc && doc.previewing && doc.previewKind !== 'image') doc.setPreview(false)
     this.renderAll()
-    if (!doc) return
+    if (!doc) return null
     await this.loadActive(doc)
-    if (this.set !== set || set.active !== path) return
-    if (options.line && doc.editor) doc.editor.reveal(doc.editor.view.state.doc.line(Math.min(options.line, doc.editor.view.state.doc.lines)).from)
+    if (this.set !== set || set.active !== path) return null
+    if (options.line && doc.editor) doc.editor.reveal(doc.editor.posAt(options.line, options.column ?? 1))
     if (options.focus) doc.editor?.focus()
+    return doc
+  }
+
+  private async textOf(path: string): Promise<string | null> {
+    const set = this.set
+    const open = set?.docs.get(path)
+    if (open?.editor && open.status === 'ready') return open.text()
+    if (!set) return null
+    const result = await api.projectFile(set.folder, path).catch(() => null)
+    return result?.ok && result.text !== null ? result.text : null
+  }
+
+  private syncProblems(): void {
+    const set = this.set
+    const doc = this.active()
+    if (!set || !doc || doc.status !== 'ready') return
+    const marks = marksForFile(this.panel.problemList(), set.prefix, doc.path)
+    const signature = JSON.stringify(marks)
+    if (this.problemSignature.get(doc) === signature) return
+    this.problemSignature.set(doc, signature)
+    doc.setProblems(marks)
   }
 
   private async loadActive(doc: FileDoc): Promise<void> {
     await doc.ensureLoaded()
     this.renderAll()
+    if (doc === this.active()) void this.nav.refreshEngine()
   }
 
   private pin(path: string): void {
@@ -852,10 +907,16 @@ export class FilesViewComponent {
     else this.bar.focusExplorer()
   }
 
-  private runCommand(command: 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree' | 'switch-branch'): void {
+  private runCommand(command: FilesCommand): void {
     if (!this.visible) return
     if (command === 'toggle-inspector') this.toggleInspector()
     else if (command === 'toggle-explorer') this.toggleExplorer()
+    else if (command === 'definition' || command === 'implementation' || command === 'references') void this.nav.go(command)
+    else if (command === 'back') void this.nav.back()
+    else if (command === 'forward') void this.nav.forward()
+    else if (command === 'everything') this.nav.openEverythingPicker()
+    else if (command === 'symbol') this.nav.openSymbolPicker()
+    else if (command === 'line') this.nav.openLinePicker()
     else {
       if (!filesLayout().explorer.open) this.toggleExplorer()
       if (command === 'switch-branch') void this.showBranchMenu(this.explorer.branchesAnchor())
@@ -1136,8 +1197,8 @@ export class FilesViewComponent {
     const forms = pathForms(set.folder, set.prefix, path)
     const tabs = set.tabs.map((tab) => tab.path)
     switch (id) {
-      case 'open': return this.openFile(path, { pin: true, focus: true })
-      case 'open-new-tab': return this.openFile(path, { pin: true })
+      case 'open': return void (await this.openFile(path, { pin: true, focus: true }))
+      case 'open-new-tab': return void (await this.openFile(path, { pin: true }))
       case 'toggle': return this.explorer.tree.toggleFolder(path)
       case 'delete': return this.deletePath(path, kind)
       case 'add-prompt':
@@ -1251,6 +1312,12 @@ export class FilesViewComponent {
   private onKey(event: KeyboardEvent): void {
     const target = event.target as HTMLElement
     const plain = !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey
+    if (target.closest('.nav-peek')) return
+    if (event.key === 'Escape' && plain && this.nav.dismiss()) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
     const content = target.closest('.cm-content')
     const typing = target.closest('input, textarea, select') !== null || (content !== null && content.getAttribute('aria-readonly') !== 'true')
     if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 's') {
@@ -1295,7 +1362,9 @@ export class FilesViewComponent {
 
   private cursorMoved(doc: FileDoc): void {
     if (doc !== this.active()) return
+    this.nav.cursorMoved(doc)
     this.renderStatus()
+    this.renderBar()
   }
 
   private renderLiveNote(): void {
@@ -1310,6 +1379,7 @@ export class FilesViewComponent {
     this.renderTouches()
     this.renderOutline()
     this.renderReview()
+    this.syncProblems()
   }
 
   private renderTouches(): void {
@@ -1372,7 +1442,10 @@ export class FilesViewComponent {
       inspectorOpen: filesLayout().inspector.open,
       inspectorFits: this.fits.matches,
       explorerOpen: filesLayout().explorer.open,
-      deletedName: doc?.deleted ? doc.path : null
+      deletedName: doc?.deleted ? doc.path : null,
+      canBack: this.nav.canBack,
+      canForward: this.nav.canForward,
+      symbols: ready ? this.nav.breadcrumb().map((item) => item.name) : []
     })
     if (!doc) return
     this.conflict.hidden = !doc.conflict
@@ -1467,7 +1540,14 @@ export class FilesViewComponent {
       return
     }
     const cursor = doc.editor && doc.status === 'ready' ? doc.editor.cursor() : null
-    const left = [cursor ? `Ln ${cursor.line}, Col ${cursor.col}` : null, languageLabel(doc.path)].filter(Boolean).join('  ·  ')
+    const position = cursor
+      ? h('button', { class: 'files-status-pos', id: 'files-status-pos', type: 'button', title: 'Go to line (Ctrl+G)', onClick: () => this.nav.openLinePicker() }, `Ln ${cursor.line}, Col ${cursor.col}`)
+      : null
+    const left = h('span', {}, ...(position ? [position, '  ·  '] : []), languageLabel(doc.path))
+    const engine = this.nav.engineLine()
+    const engineEl = engine.text
+      ? h('span', { class: 'files-status-engine', id: 'files-status-engine' }, engine.text, ...(engine.action ? [' ', h('button', { class: 'files-status-link', type: 'button', onClick: () => void this.nav.runEngineAction() }, engine.actionLabel)] : []))
+      : null
     let mode = 'Read only · press E to edit'
     if (doc.deleted) mode = 'Deleted since main'
     else if (doc.changes) mode = 'Showing changes since main'
@@ -1478,7 +1558,7 @@ export class FilesViewComponent {
     const statEl = stat
       ? h('span', { class: 'files-stat' }, h('span', { class: 'plus' }, `+${stat.added}`), ' ', h('span', { class: 'minus' }, `−${stat.removed}`), doc.newFile ? ' new file' : ' since main')
       : null
-    this.status.replaceChildren(h('span', {}, left), h('span', { class: 'files-status-mode' }, this.flash || mode), h('span', { class: 'spacer' }), ...(runEl ? [runEl] : []), ...(checkout ? [h('span', { title: checkout.folder }, checkoutLabel(checkout))] : []), ...(statEl ? [statEl] : []), ...(this.watchFailed ? [this.worktreeNote] : []))
+    this.status.replaceChildren(left, h('span', { class: 'files-status-mode' }, this.flash || mode), h('span', { class: 'spacer' }), ...(engineEl ? [engineEl] : []), ...(runEl ? [runEl] : []), ...(checkout ? [h('span', { title: checkout.folder }, checkoutLabel(checkout))] : []), ...(statEl ? [statEl] : []), ...(this.watchFailed ? [this.worktreeNote] : []))
   }
 
   private renderActivity(): void {

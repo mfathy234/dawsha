@@ -3,6 +3,10 @@ import { ICONS } from '../icons'
 
 const minus = '−'
 
+const arrow = (path: string): string => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`
+const ARROW_LEFT = arrow('<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>')
+const ARROW_RIGHT = arrow('<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>')
+
 export interface BarModel {
   path: string | null
   /** The file is open and can be switched between File and Changes. */
@@ -19,6 +23,10 @@ export interface BarModel {
   inspectorFits: boolean
   explorerOpen: boolean
   deletedName: string | null
+  canBack: boolean
+  canForward: boolean
+  /** The class and method the caret is in, outermost first. */
+  symbols: readonly string[]
 }
 
 export interface BarHooks {
@@ -30,6 +38,10 @@ export interface BarHooks {
   more(anchor: HTMLElement): void
   toggleInspector(): void
   toggleExplorer(): void
+  back(): void
+  forward(): void
+  /** A symbol crumb was chosen: open Go to Symbol. */
+  symbol(): void
 }
 
 /** The breadcrumb bar: the path, File | Changes, Preview | Source, Send to agent, the more menu and the inspector toggle. */
@@ -45,11 +57,13 @@ export class FilesBar {
   private readonly done = h('button', { class: 'btn small', type: 'button', id: 'files-edit', hidden: true, 'aria-pressed': 'true', onClick: () => this.hooks.done() }, 'Done')
   private readonly send = h('button', { class: 'btn small', type: 'button', id: 'files-send', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send to agent', icon(ICONS.chevronDown))
   readonly more = h('button', { class: 'icon-btn files-more', type: 'button', id: 'files-more', 'aria-label': 'More actions', title: 'More actions', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: (event: Event) => this.hooks.more(event.currentTarget as HTMLElement) }, icon(ICONS.more))
+  private readonly backButton = h('button', { class: 'files-nav', type: 'button', id: 'files-back', 'aria-label': 'Back', title: 'Back (Alt+Left)', disabled: true, onClick: () => this.hooks.back() }, icon(ARROW_LEFT))
+  private readonly forwardButton = h('button', { class: 'files-nav', type: 'button', id: 'files-forward', 'aria-label': 'Forward', title: 'Forward (Alt+Right)', disabled: true, onClick: () => this.hooks.forward() }, icon(ARROW_RIGHT))
   private readonly explorer = h('button', { class: 'icon-btn files-explorer-toggle', type: 'button', id: 'files-explorer-toggle', 'aria-label': 'Show the file explorer', title: 'Show the file explorer (Ctrl+Alt+E)', hidden: true, onClick: () => this.hooks.toggleExplorer() }, icon(ICONS.layout))
   private readonly inspector = h('button', { class: 'icon-btn files-inspector-toggle', type: 'button', id: 'files-inspector-toggle', 'aria-controls': 'files-side', onClick: () => this.hooks.toggleInspector() }, icon(ICONS.layout))
 
   constructor(private readonly hooks: BarHooks) {
-    this.el.append(this.explorer, this.crumb, h('span', { class: 'spacer' }), this.previewSegment, this.diffSegment, this.done, this.send, this.more, this.inspector)
+    this.el.append(this.explorer, this.backButton, this.forwardButton, this.crumb, h('span', { class: 'spacer' }), this.previewSegment, this.diffSegment, this.done, this.send, this.more, this.inspector)
   }
 
   focusInspector(): void {
@@ -66,6 +80,8 @@ export class FilesBar {
 
   render(model: BarModel): void {
     this.explorer.hidden = model.explorerOpen
+    this.backButton.disabled = !model.canBack
+    this.forwardButton.disabled = !model.canForward
     const bare = model.path === null
     this.el.hidden = bare && model.explorerOpen && (model.inspectorOpen || !model.inspectorFits)
     this.inspector.hidden = !model.inspectorFits
@@ -75,7 +91,7 @@ export class FilesBar {
     this.inspector.title = `${inspectorLabel} (Ctrl+Alt+B)`
     if (bare) {
       this.crumb.replaceChildren()
-      for (const part of [this.previewSegment, this.diffSegment, this.done, this.send, this.more]) part.hidden = true
+      for (const part of [this.backButton, this.forwardButton, this.previewSegment, this.diffSegment, this.done, this.send, this.more]) part.hidden = true
       return
     }
     const path = model.path as string
@@ -83,6 +99,9 @@ export class FilesBar {
     this.crumb.replaceChildren(...parts.flatMap((part, index) => [
       ...(index > 0 ? [h('span', { class: 'files-crumb-sep', 'aria-hidden': 'true' }, '/')] : []),
       h('span', { class: index === parts.length - 1 ? 'files-crumb-leaf' : 'files-crumb-part' }, part)
+    ]), ...model.symbols.flatMap((name) => [
+      h('span', { class: 'files-crumb-sep', 'aria-hidden': 'true' }, '/'),
+      h('button', { class: 'files-crumb-symbol', type: 'button', title: 'Go to symbol (Ctrl+Shift+O)', onClick: () => this.hooks.symbol() }, name)
     ]))
     this.crumb.title = path
     this.diffSegment.hidden = !model.canDiff
@@ -94,6 +113,8 @@ export class FilesBar {
     this.previewButton.setAttribute('aria-pressed', String(model.previewing))
     this.sourceButton.setAttribute('aria-pressed', String(!model.previewing))
     this.done.hidden = !model.editing
+    this.backButton.hidden = false
+    this.forwardButton.hidden = false
     this.send.hidden = false
     this.more.hidden = false
     this.fileButton.disabled = !model.canDiff

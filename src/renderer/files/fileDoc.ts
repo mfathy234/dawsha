@@ -6,6 +6,10 @@ import type { DiffStat } from './diffStat'
 import type { OutlineItem } from './outline'
 import type { Extension } from '@codemirror/state'
 import { previewByDefault, previewKind } from '../../shared/filePreview'
+import { requestEditorConfig } from './codeNavApi'
+import { indentSettings } from './indentRules'
+import { lineCount } from './lineCount'
+import type { ProblemMark } from './problemMarks'
 
 type EditorModule = typeof import('./editor')
 type StatModule = typeof import('./diffStat')
@@ -40,6 +44,8 @@ export interface DocHooks {
   edited(doc: FileDoc): void
   cursor(doc: FileDoc, info: CursorInfo): void
   outlineChanged(doc: FileDoc): void
+  /** Ctrl+click on a name at a document position. */
+  goto(doc: FileDoc, pos: number): void
 }
 
 export type SaveOutcome = 'saved' | 'conflict' | 'failed'
@@ -160,7 +166,7 @@ export class FileDoc {
     this.mount(module, '', true)
     this.editor?.showChanges(result.base)
     this.changes = true
-    this.stat = { added: 0, removed: result.base?.split('\n').length ?? 0 }
+    this.stat = { added: 0, removed: lineCount(result.base) }
     this.status = 'ready'
     return true
   }
@@ -178,7 +184,19 @@ export class FileDoc {
     })
     editor.onCursor((info) => this.hooks.cursor(this, info))
     editor.onLanguage(() => this.hooks.outlineChanged(this))
+    editor.onGoto((pos) => this.hooks.goto(this, pos))
     this.editor = editor
+    void this.applyEditorConfig(editor)
+  }
+
+  /** Indentation from the project's `.editorconfig`; without one, or if it cannot be read, the editor keeps its defaults. */
+  private async applyEditorConfig(editor: FileEditor): Promise<void> {
+    const rules = await requestEditorConfig(this.folder, this.path)
+    if (this.editor === editor) editor.setIndent(indentSettings(rules))
+  }
+
+  setProblems(marks: readonly ProblemMark[]): void {
+    this.editor?.setProblems(marks)
   }
 
   private scheduleOutline(): void {

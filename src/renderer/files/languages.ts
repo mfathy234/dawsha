@@ -1,6 +1,7 @@
 import type { Extension } from '@codemirror/state'
 import { StreamLanguage, type StreamParser } from '@codemirror/language'
 
+import { braceFolding } from './braceFold'
 import { languageKey, type LanguageKey } from './languageInfo'
 
 export { languageKey, languageLabel, type LanguageKey } from './languageInfo'
@@ -20,7 +21,7 @@ const LOADERS: Record<LanguageKey, (() => Promise<Extension>) | null> = {
   xml: () => import('@codemirror/lang-xml').then((m) => m.xml()),
   yaml: () => import('@codemirror/lang-yaml').then((m) => m.yaml()),
   sql: () => import('@codemirror/lang-sql').then((m) => m.sql()),
-  csharp: () => import('@codemirror/legacy-modes/mode/clike').then((m) => legacy(m.csharp)),
+  csharp: () => import('@codemirror/legacy-modes/mode/clike').then((m) => [legacy(m.csharp), braceFolding]),
   shell: () => import('@codemirror/legacy-modes/mode/shell').then((m) => legacy(m.shell)),
   powershell: () => import('@codemirror/legacy-modes/mode/powershell').then((m) => legacy(m.powerShell)),
   plain: null

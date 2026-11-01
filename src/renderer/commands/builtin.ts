@@ -47,7 +47,7 @@ import { exportTranscript } from '../transcriptActions'
 import { replayPane } from '../replayActions'
 import { openShortcutsSheet } from '../components/shortcutsSheet'
 import { toggleQuickOpen } from '../components/quickOpen'
-import { requestFilesCommand } from '../files/filesActions'
+import { requestFilesCommand, type FilesCommand } from '../files/filesActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
@@ -60,6 +60,31 @@ const withKeys = (text: string): Pick<Command, 'keys' | 'shortcut'> => ({
   keys: [bind(text)],
   shortcut: formatShortcut(bind(text))
 })
+
+const functionKey = (key: string, shift = false): Pick<Command, 'keys' | 'shortcut'> => {
+  const binding = { key, ctrl: false, shift, alt: false }
+  return { keys: [binding], shortcut: formatShortcut(binding) }
+}
+
+const filesOnly = (state: AppState): boolean => state.view === 'files'
+
+function filesCommand(id: string, title: string, command: FilesCommand, keys: Pick<Command, 'keys' | 'shortcut'>, keywords: string): Command {
+  return { id, title, group: 'Actions', keywords: `files code ${keywords}`, ...keys, enabled: filesOnly, run: () => requestFilesCommand(command) }
+}
+
+// Code navigation keys work only while Files is showing, so Ctrl+Shift+O keeps filtering the sidebar in the grid.
+function filesNavigationCommands(): Command[] {
+  return [
+    filesCommand('files.definition', 'Go to Definition', 'definition', functionKey('F12'), 'jump declaration f12'),
+    filesCommand('files.implementation', 'Go to Implementation', 'implementation', withKeys('Ctrl+F12'), 'jump implements f12'),
+    filesCommand('files.references', 'Find All References', 'references', functionKey('F12', true), 'usages peek f12'),
+    filesCommand('files.back', 'Go Back', 'back', withKeys('Alt+ArrowLeft'), 'previous location history navigate'),
+    filesCommand('files.forward', 'Go Forward', 'forward', withKeys('Alt+ArrowRight'), 'next location history navigate'),
+    filesCommand('files.everything', 'Go to Everything…', 'everything', withKeys('Ctrl+T'), 'search symbol text file anywhere'),
+    filesCommand('files.symbol', 'Go to Symbol in this file…', 'symbol', withKeys('Ctrl+Shift+O'), 'outline method class function'),
+    filesCommand('files.line', 'Go to Line…', 'line', withKeys('Ctrl+G'), 'goto number position')
+  ]
+}
 
 function focusedAction(id: string, title: string, run: (paneId: string) => unknown, keywords?: string): Command {
   return {
@@ -267,6 +292,7 @@ export function installBuiltinCommands(): void {
       group: 'Actions',
       keywords: 'sidebar search find projects',
       ...withKeys('Ctrl+Shift+O'),
+      scope: 'grid',
       run: () => void window.dispatchEvent(new CustomEvent(SIDEBAR_FILTER_EVENT))
     },
     { id: 'view.toggleTagColors', title: 'Toggle tag colours', group: 'Actions', keywords: 'session tag bug feature colour color chip', run: () => setColorSessionsByTag(!store.state.settings.colorSessionsByTag) },
@@ -307,6 +333,7 @@ export function installBuiltinCommands(): void {
       enabled: (state) => state.view === 'files',
       run: () => requestFilesCommand('switch-branch')
     },
+    ...filesNavigationCommands(),
     { id: 'view.quickopen', title: 'Find a file…', group: 'Actions', keywords: 'quick open ctrl p files search project fuzzy', ...withKeys('Ctrl+P'), run: () => toggleQuickOpen() },
     { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },
     { id: 'view.crew', title: 'Open Agents', group: 'Actions', keywords: 'agents crew members run lead maya', ...withKeys('Ctrl+Shift+L'), run: () => showView('crew') },
