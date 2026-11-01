@@ -721,7 +721,6 @@ export function focusNextAttention(): boolean {
  */
 /** `true` accepts the highlighted choice, `false` denies, and a number picks that numbered option (Allow always). */
 export function answerPermission(paneId: string, choice: boolean | number): boolean {
-  if (store.state.attention[paneId] !== 'needs') return false
   const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
   const tail = tabId ? (getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '') : ''
   if (!tabId || !detectPermissionPrompt(tail)) return false

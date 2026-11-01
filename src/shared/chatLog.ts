@@ -152,17 +152,20 @@ export function foldLines(text: string, limit = FOLD_LINES): { head: string; hid
   return { head: lines.slice(0, limit).join('\n'), hidden: lines.length - limit }
 }
 
-export type ChatPhase = 'empty' | 'working' | 'approval' | 'limit' | 'done'
+export type ChatPhase = 'empty' | 'working' | 'approval' | 'menu' | 'limit' | 'done'
 
 export interface ChatPhaseInput {
   items: readonly ChatItem[]
   working: boolean
   needsApproval: boolean
+  /** The terminal shows a menu or picker that chat cannot draw. */
+  menuOpen?: boolean
 }
 
 /** What the thread says about the session right now. A working session keeps its indicator until the reply has landed. */
 export function chatPhase(input: ChatPhaseInput): ChatPhase {
   if (input.needsApproval) return 'approval'
+  if (input.menuOpen) return 'menu'
   const last = input.items[input.items.length - 1]
   if (last?.kind === 'notice' && last.notice === 'limit' && !input.working) return 'limit'
   if (input.working) return 'working'

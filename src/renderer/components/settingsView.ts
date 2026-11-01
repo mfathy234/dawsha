@@ -56,6 +56,10 @@ import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferA
 import { pageHeader } from './pageHeader'
 import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
 import { setGridStyle } from '../sessionsLayout'
+import { setDefaultView } from '../chat/chatActions'
+import { ViewSwitch } from '../chat/viewSwitch'
+import type { ChatView } from '../../shared/chatLog'
+import '../chat/chat.css'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
@@ -165,6 +169,7 @@ export class SettingsViewComponent {
       state.settingsSection,
       state.settings.paletteShortcut,
       state.settings.sidebarCollapsed,
+      state.settings.sessionView,
       state.settings.fullAccess,
       state.settings.sessionInfo,
       state.settings.autoUpdateCheck,
@@ -293,6 +298,13 @@ export class SettingsViewComponent {
     }
   }
 
+  private sessionViewSwitch(selected: ChatView): HTMLElement {
+    const switcher = new ViewSwitch('New sessions open in')
+    switcher.el.id = 'default-session-view'
+    switcher.update(selected, setDefaultView)
+    return switcher.el
+  }
+
   private gridStyles(selected: GridStyle): HTMLElement {
     return h('div', { class: 'segmented settings-grid-style', role: 'group', 'aria-label': 'Sessions grid style' },
       ...(['focus', 'tiles'] as const).map((style) => h('button', {
@@ -412,6 +424,7 @@ export class SettingsViewComponent {
         this.shortcutError ? h('p', { class: 'field-error', id: 'palette-shortcut-error', role: 'alert' }, this.shortcutError) : null
       ),
       row('Sessions', checkbox('dim-other-panes', "Dim sessions you're not working in", state.settings.dimOtherPanes, false, setDimOtherPanes), h('p', { class: 'hint' }, 'Keep the focused session clear while the others stay visible.')),
+      row('Session view', this.sessionViewSwitch(state.settings.sessionView), h('p', { class: 'hint' }, 'How new Claude and Codex sessions open. Gemini sessions and shells stay terminals. New session can override it, and each session remembers its own choice.')),
       row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag), h('p', { class: 'hint' }, 'Use a tag colour on each session pane.')),
       row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),
