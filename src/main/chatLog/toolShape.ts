@@ -48,6 +48,8 @@ function editShape(name: string, input: Json, edits: { path: string; added: numb
   }
 }
 
+const PLAIN_VERBS: Readonly<Record<string, string>> = { task: 'Agent', agent: 'Agent', webfetch: 'Fetched', web_fetch: 'Fetched', websearch: 'Searched', web_search: 'Searched' }
+
 /** One line for a tool call: a verb, what it touches, and for an edit how many lines it adds and removes. */
 export function toolShape(rawName: unknown, rawInput: unknown): ToolShape {
   const name = (typeof rawName === 'string' ? rawName : '').toLowerCase()
@@ -61,6 +63,6 @@ export function toolShape(rawName: unknown, rawInput: unknown): ToolShape {
     const line = tool.command.split('\n')[0]
     return { kind: 'shell', verb: 'Ran', target: flat(line, CHAT_TARGET_MAX), preview: tool.command.includes('\n') ? tool.command : '' }
   }
-  const label = flat(typeof rawName === 'string' && rawName !== '' ? rawName : 'tool', 60)
+  const label = PLAIN_VERBS[name] ?? flat(typeof rawName === 'string' && rawName !== '' ? rawName : 'tool', 60)
   return { kind: toolKind(rawName), verb: label, target: toolArg(rawInput).slice(0, CHAT_TARGET_MAX), preview: '' }
 }
