@@ -149,13 +149,25 @@ export async function readProjectFile(folder: unknown, path: unknown): Promise<P
   return target.ok ? readResolved(target) : target
 }
 
+// Previewed edits must preserve their exact text and refuse a changed or missing original.
+export interface ProjectFileWriteOptions { literal: true; expectedText: string }
+
+async function writeAll(handle: Awaited<ReturnType<typeof open>>, bytes: Buffer): Promise<void> {
+  let offset = 0
+  while (offset < bytes.length) {
+    const { bytesWritten } = await handle.write(bytes, offset, bytes.length - offset, offset)
+    if (bytesWritten <= 0) throw new Error('The filesystem stopped accepting file data.')
+    offset += bytesWritten
+  }
+}
+
 // Saves an existing text file through one open handle, so the checks and the write see the same file.
 // A changed mtime means someone else wrote it since it was read.
-export async function writeProjectFile(folder: unknown, path: unknown, text: unknown, expectedMtime: unknown): Promise<ProjectFileWriteResult> {
+export async function writeProjectFile(folder: unknown, path: unknown, text: unknown, expectedMtime: unknown, options?: ProjectFileWriteOptions): Promise<ProjectFileWriteResult> {
   if (typeof text !== 'string' || typeof expectedMtime !== 'number' || !Number.isFinite(expectedMtime)) return { ok: false, error: 'Invalid save request.' }
   if (Buffer.byteLength(text, 'utf8') > MAX_READ_BYTES) return { ok: false, error: 'File is too large to save here.' }
   const target = await resolveProjectFile(folder, path)
-  if (!target.ok) return target.missing ? createProjectFile(target.missing, text) : target
+  if (!target.ok) return target.missing && !options?.literal ? createProjectFile(target.missing, text) : target
   let handle
   try {
     handle = await open(target.full, 'r+')
@@ -169,12 +181,24 @@ export async function writeProjectFile(folder: unknown, path: unknown, text: unk
     const bytes = await handle.readFile()
     const decoded = decodeText(bytes)
     if (!decoded.ok) return { ok: false, error: decoded.reason === 'binary' ? `${target.rel} is a binary file.` : `${target.rel} is not UTF-8, so it cannot be saved here. Open it in VS Code.` }
-    if (info.mtimeMs !== expectedMtime) return { ok: false, conflict: true, error: `${target.rel} changed on disk.` }
-    const out = saveWithRules(text, decoded.text, await editorConfig(folder as string, path))
-    await handle.truncate(0)
-    await handle.write(out, 0, 'utf8')
-    await handle.sync()
-    return { ok: true, mtimeMs: (await handle.stat()).mtimeMs }
+    if (info.mtimeMs !== expectedMtime || (options?.literal && decoded.text !== options.expectedText)) return { ok: false, conflict: true, error: `${target.rel} changed on disk.` }
+    const out = options?.literal ? text : saveWithRules(text, decoded.text, await editorConfig(folder as string, path))
+    try {
+      await handle.truncate(0)
+      await writeAll(handle, Buffer.from(out, 'utf8'))
+      await handle.sync()
+      return { ok: true, mtimeMs: (await handle.stat()).mtimeMs }
+    } catch (error) {
+      if (!options?.literal) throw error
+      try {
+        await handle.truncate(0)
+        await writeAll(handle, bytes)
+        await handle.sync()
+      } catch (rollbackError) {
+        return { ok: false, error: `Could not save ${target.rel}: ${(error as Error).message}. Rollback failed: ${(rollbackError as Error).message}` }
+      }
+      return { ok: false, error: `Could not save ${target.rel}: ${(error as Error).message}. Original contents restored.` }
+    }
   } catch (error) {
     return { ok: false, error: `Could not save ${target.rel}: ${(error as Error).message}` }
   } finally {

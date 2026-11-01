@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { realpath } from 'node:fs/promises'
 import type { CodeNavEngine } from '../../shared/codeNav'
-import type { EditPreviewFile, EditResult, TextEdit } from '../../shared/codeNavExtras'
+import type { EditFileOutcome, EditPreviewFile, EditResult, TextEdit } from '../../shared/codeNavExtras'
 import { readProjectFile, resolveProjectFile, writeProjectFile } from '../gitWorkspace'
 
 export const validRelative = (path: unknown): path is string => typeof path === 'string' && path.length > 0 && path.length < 4096 && !/[\\:\x00-\x1f]/.test(path) && !path.startsWith('/') && !path.split('/').some(part => part === '..' || part === '.git' || part === '')
@@ -56,7 +56,7 @@ export class EditPreviews {
       return target.ok ? target.realRel : path
     }))
     const dirty = new Set<string>(process.platform === 'win32' ? canonical.map(path => path.toLowerCase()) : canonical)
-    const files = []
+    const files: EditFileOutcome[] = []
     for (const file of preview.files) {
       const target = await resolveProjectFile(folder, file.path)
       const identity = target.ok ? target.realRel : file.path
@@ -64,10 +64,29 @@ export class EditPreviews {
       const read = target.ok ? await readProjectFile(folder, file.path) : target
       if (dirty.has(key) || !read.ok || read.text === null || read.mtimeMs !== file.expectedMtime || read.text !== preview.originals.get(file.path)) {
         files.push({ path: file.path, ok: false, conflict: true, error: dirty.has(key) ? 'This file has unsaved editor changes.' : 'This file changed or was removed after preview.' })
-        continue
+      } else {
+        files.push({ path: file.path, ok: false, error: 'No files were changed because another target has a conflict.' })
       }
-      const result = await writeProjectFile(folder, file.path, preview.texts.get(file.path)!, file.expectedMtime)
-      files.push({ path: file.path, ...result })
+    }
+    const conflicts = files.filter(file => file.conflict).map(file => file.path)
+    if (conflicts.length > 0) return { ok: true, action: 'apply', files: files.map(file => file.conflict ? file : { ...file, error: `No files were changed because these targets have conflicts: ${conflicts.join(', ')}.` }) }
+
+    for (let index = 0; index < preview.files.length; index++) {
+      const file = preview.files[index]
+      const result = await writeProjectFile(folder, file.path, preview.texts.get(file.path)!, file.expectedMtime, { literal: true, expectedText: preview.originals.get(file.path)! })
+      files[index] = { path: file.path, ...result }
+      if (result.ok) continue
+
+      // Restore only our own successful writes, refusing to overwrite a later external edit.
+      for (let previous = index - 1; previous >= 0; previous--) {
+        const saved = files[previous]
+        const rollback = await writeProjectFile(folder, saved.path, preview.originals.get(saved.path)!, saved.mtimeMs!, { literal: true, expectedText: preview.texts.get(saved.path)! })
+        files[previous] = rollback.ok
+          ? { path: saved.path, ok: false, mtimeMs: rollback.mtimeMs, error: `Changes rolled back because ${file.path} could not be saved.` }
+          : { path: saved.path, ok: false, error: `Rollback failed: ${rollback.error}`, ...('conflict' in rollback && rollback.conflict ? { conflict: true } : {}) }
+      }
+      for (let remaining = index + 1; remaining < files.length; remaining++) files[remaining] = { path: files[remaining].path, ok: false, error: `Not applied because ${file.path} could not be saved.` }
+      break
     }
     return { ok: true, action: 'apply', files }
   }
