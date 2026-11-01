@@ -59,9 +59,11 @@
     "@xterm/headless": "6.0.0",
     "@xterm/xterm": "6.0.0",
     "bidi-js": "1.0.3",
+    "editorconfig": "3.0.2",
     "electron-updater": "6.8.9",
     "node-pty": "1.1.0",
     "qrcode-generator": "2.0.4",
+    "typescript": "5.9.3",
     "ws": "^8.22.0"
   },
   "devDependencies": {
@@ -73,7 +75,6 @@
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
     "png-to-ico": "3.0.2",
-    "typescript": "5.9.3",
     "vite": "7.3.7",
     "vitest": "3.2.7"
   }

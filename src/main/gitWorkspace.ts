@@ -16,6 +16,7 @@ import {
   type SessionStatusResult
 } from '../shared/gitStatus'
 import { asAddedDiff, decodeText, git, hasHead, insideRoot, readTextFile, repoRoot, repoStatus } from './gitCommit'
+import { editorConfig, saveWithRules } from './editorConfig'
 
 const MAX_LISTED = 20_000
 const MAX_WALKED = 5_000
@@ -169,7 +170,7 @@ export async function writeProjectFile(folder: unknown, path: unknown, text: unk
     const decoded = decodeText(bytes)
     if (!decoded.ok) return { ok: false, error: decoded.reason === 'binary' ? `${target.rel} is a binary file.` : `${target.rel} is not UTF-8, so it cannot be saved here. Open it in VS Code.` }
     if (info.mtimeMs !== expectedMtime) return { ok: false, conflict: true, error: `${target.rel} changed on disk.` }
-    const out = decoded.text.includes('\r\n') ? text.replace(/\r?\n/g, '\r\n') : text
+    const out = saveWithRules(text, decoded.text, await editorConfig(folder as string, path))
     await handle.truncate(0)
     await handle.write(out, 0, 'utf8')
     await handle.sync()
@@ -190,7 +191,8 @@ async function createProjectFile(missing: Missing, text: string): Promise<Projec
     const full = join(parent, basename(lexical))
     const realRel = relative(missing.realRoot, full).replace(/\\/g, '/')
     if (realRel.startsWith('..') || !inScope(missing.scope, realRel)) return { ok: false, error: `Path is outside the project: ${missing.rel}` }
-    await writeFile(full, text, { encoding: 'utf8', flag: 'wx' })
+    const rules = await editorConfig(missing.scope ? join(missing.realRoot, missing.scope) : missing.realRoot, missing.rel)
+    await writeFile(full, saveWithRules(text, '', rules), { encoding: 'utf8', flag: 'wx' })
     return { ok: true, mtimeMs: (await stat(full)).mtimeMs }
   } catch (error) {
     return { ok: false, error: `Could not save ${missing.rel}: ${(error as Error).message}` }
