@@ -89,7 +89,7 @@ export class ChatThread {
     }
     items.forEach((item, index) => {
       if (item.kind === 'tool') {
-        tools.push(...this.tool(item, ctx.phase === 'working'))
+        tools.push(...this.tool(item, ctx.phase === 'working' || ctx.phase === 'approval' || ctx.phase === 'menu'))
         return
       }
       flush()
