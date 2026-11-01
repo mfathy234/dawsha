@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -73,5 +73,27 @@ describe('one hunk', () => {
     expect(await changeHunk(join(root, 'src'), request, 'revert')).toEqual({ ok: true })
     expect(readFileSync(join(root, 'src/a.txt'), 'utf8')).toContain('line 2\n')
     expect(readFileSync(join(root, 'a.txt'), 'utf8')).toContain('changed 2\n')
+  })
+  it('stages and reverts an untracked file hunk', async () => {
+    const root = fixture()
+    writeFileSync(join(root, 'new.txt'), 'hello\n')
+    const hunk = { path: 'new.txt', oldStart: 0, oldLines: 0, newStart: 1, newLines: 1, expectedMtime: statSync(join(root, 'new.txt')).mtimeMs, expectedHunk: '@@ -0,0 +1 @@\n+hello\n' }
+    expect(await changeHunk(root, hunk, 'stage')).toEqual({ ok: true })
+    expect(git(root, ['show', ':new.txt'])).toBe('hello\n')
+    git(root, ['reset', '-q', '--', 'new.txt'])
+    expect(await changeHunk(root, hunk, 'revert')).toEqual({ ok: true })
+    expect(existsSync(join(root, 'new.txt'))).toBe(false)
+  })
+  it('stages a deleted file and restores it only while the path remains absent', async () => {
+    const root = fixture()
+    unlinkSync(join(root, 'a.txt'))
+    const diff = git(root, ['diff', '--src-prefix=a/', '--dst-prefix=b/', '--unified=3', 'HEAD', '--', 'a.txt'])
+    const selected = diffHunks(diff)[0]
+    const hunk = { path: 'a.txt', ...selected.coordinates, expectedMtime: 0, expectedHunk: selected.text }
+    expect(await changeHunk(root, hunk, 'stage')).toEqual({ ok: true })
+    expect(git(root, ['ls-files', '--', 'a.txt'])).toBe('')
+    expect(await changeHunk(root, hunk, 'revert')).toEqual({ ok: true })
+    expect(readFileSync(join(root, 'a.txt'), 'utf8')).toContain('line 2\n')
+    expect(await changeHunk(root, hunk, 'revert')).toMatchObject({ ok: false, conflict: true })
   })
 })

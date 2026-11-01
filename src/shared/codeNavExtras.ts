@@ -32,6 +32,7 @@ export interface HunkRequest {
   oldLines: number
   newStart: number
   newLines: number
+  /** Use 0 only for a deleted file; main verifies that the path is still absent. */
   expectedMtime: number
   expectedHunk: string
 }

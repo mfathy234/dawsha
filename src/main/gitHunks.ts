@@ -1,10 +1,10 @@
 import { spawn } from 'node:child_process'
-import { stat } from 'node:fs/promises'
 import type { HunkRequest, HunkResult } from '../shared/codeNavExtras'
 import { validRelative } from './codeNav/editPreviews'
 import { forgetChanges } from './git'
 import { git, REPO_BUSY, repoRoot, tryLockRepo, unlockRepo } from './gitCommit'
-import { mergeBase, resolveProjectFile } from './gitWorkspace'
+import { mergeBase } from './gitWorkspace'
+import { addedFileDiff, hunkTarget, matchesMtime } from './hunkSource'
 
 type Coordinates = Pick<HunkRequest, 'oldStart' | 'oldLines' | 'newStart' | 'newLines'>
 export interface DiffHunk { coordinates: Coordinates; text: string }
@@ -41,21 +41,20 @@ function apply(root: string, patch: string, args: string[]): Promise<boolean> {
 }
 
 async function applyMatching(folder: string, root: string, request: HunkRequest, operation: 'stage' | 'revert'): Promise<HunkResult> {
-  const target = await resolveProjectFile(folder, request.path)
-  if (!target.ok) return target
-  const before = await stat(target.full)
-  if (!before.isFile() || before.mtimeMs !== request.expectedMtime) return conflict()
+  const target = await hunkTarget(folder, request.path)
+  if (!target || !await matchesMtime(folder, request.path, target, request.expectedMtime)) return conflict()
   const base = await mergeBase(root)
   if (!base) return { ok: false, error: 'This repository has no base commit.' }
-  const diff = await git(root, ['diff', '--src-prefix=a/', '--dst-prefix=b/', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames', '--unified=3', base, '--', target.realRel])
+  const diff = await git(root, ['diff', '--src-prefix=a/', '--dst-prefix=b/', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames', '--unified=3', base, '--', target.path])
   if (!diff.ok || diff.stdout.length > MAX_PATCH) return { ok: false, error: 'Cannot read this change as a bounded text diff.' }
-  const hunk = diffHunks(diff.stdout).find(value => Object.entries(value.coordinates).every(([key, number]) => request[key as keyof Coordinates] === number))
+  const text = diff.stdout || (!target.absent && !(await git(root, ['cat-file', '-e', `${base}:${target.path}`])).ok ? await addedFileDiff(folder, target.path) : null)
+  if (!text) return conflict()
+  const hunk = diffHunks(text).find(value => Object.entries(value.coordinates).every(([key, number]) => request[key as keyof Coordinates] === number))
   if (!hunk || hunk.text !== request.expectedHunk) return conflict()
-  const patch = diff.stdout.slice(0, diff.stdout.indexOf('@@ ')) + hunk.text
+  const patch = text.slice(0, text.search(/^@@ /m)) + hunk.text
   const args = operation === 'stage' ? ['--cached'] : ['--reverse']
   if (!await apply(root, patch, [...args, '--check'])) return conflict('Git cannot apply this hunk to the current index or working file. Refresh Changes.')
-  const checked = await resolveProjectFile(folder, request.path)
-  if (!checked.ok || checked.full !== target.full || (await stat(checked.full)).mtimeMs !== request.expectedMtime) return conflict()
+  if (!await matchesMtime(folder, request.path, target, request.expectedMtime)) return conflict()
   return await apply(root, patch, args) ? { ok: true } : conflict()
 }
 
