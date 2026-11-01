@@ -13,6 +13,8 @@ export interface CallPanelSpec {
 }
 
 const baseName = (path: string): string => path.slice(path.lastIndexOf('/') + 1)
+/** A caller at the top of a file is named by its path; show the file name. */
+const shortLabel = (name: string): string => name.split(/[/\\]/).pop() || name
 const TITLES: Record<CallDirection, string> = { incoming: 'Callers of', outgoing: 'Calls made by' }
 const NEEDS_SERVER = 'Call hierarchy needs a language server. Start or install one for this file type, then try again.'
 
@@ -56,7 +58,7 @@ export function openCallPanel(host: HTMLElement, spec: CallPanelSpec): void {
     const outside = result.outside ? 'Some of these are in code outside this project and are not listed. ' : ''
     note.textContent = result.items.length === 0 ? `${byName}${outside}Nothing found.`.trim() : `${byName}${outside}`.trim()
     list.replaceChildren(...result.items.flatMap((item) => [
-      row(item.symbol, item.name),
+      row(item.symbol, shortLabel(item.name)),
       ...item.calls.map((call) => row(call, call.preview, true))
     ]))
   }

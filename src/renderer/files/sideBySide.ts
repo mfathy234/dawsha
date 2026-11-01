@@ -32,7 +32,7 @@ export class SideBySide {
       b: { doc: options.text, extensions: sideExtensions(options.theme, language) },
       parent: host,
       highlightChanges: true,
-      gutter: true,
+      gutter: false,
       collapseUnchanged: { margin: UNCHANGED_MARGIN, minSize: UNCHANGED_MIN }
     })
     this.view.dom.classList.add('side-by-side')
