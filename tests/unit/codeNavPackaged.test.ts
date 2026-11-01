@@ -15,6 +15,7 @@ import { join } from 'node:path'
 import { startTsServer, tsserverModulePath } from './src/main/codeNav/utility'
 import { NavigationProcesses } from './src/main/codeNav/processes'
 const project = process.argv[2], output = process.argv[3]
+for (const event of ['uncaughtException', 'unhandledRejection']) process.on(event, error => { writeFileSync(output, JSON.stringify({ error: String(error && error.stack || error) })); app.exit(1) })
 const processes = new NavigationProcesses()
 const fork = utilityProcess.fork
 utilityProcess.fork = (script, args, options) => {
@@ -56,7 +57,8 @@ async function archive(directory: string): Promise<string> {
 let lastLog = ''
 
 async function runElectron(app: string, project: string, output: string): Promise<number | null> {
-  const { ELECTRON_RUN_AS_NODE: _nodeMode, ...env } = process.env
+  const { ELECTRON_RUN_AS_NODE: _nodeMode, ...inherited } = process.env
+  const env = { ...inherited, ELECTRON_ENABLE_LOGGING: '1' }
   return new Promise((resolve, reject) => {
     const child = spawn(require('electron') as string, [...(process.platform === 'linux' ? ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] : []), app, project, output], { windowsHide: true, shell: false, env, stdio: ['ignore', 'pipe', 'pipe'] })
     let log = ''
