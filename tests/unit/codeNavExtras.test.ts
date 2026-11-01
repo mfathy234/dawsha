@@ -11,6 +11,7 @@ import { nodeIpcWire } from '../../src/main/codeNav/transport'
 import { CodeNavExtras } from '../../src/main/codeNav/extras'
 import { EditPreviews } from '../../src/main/codeNav/editPreviews'
 import { replaceInFiles } from '../../src/main/replaceInFiles'
+import { staleCallers } from '../../src/main/codeNav/staleCallers'
 
 const require = createRequire(import.meta.url)
 const roots: string[] = []
@@ -25,6 +26,7 @@ function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), 'dawsha-extras-'))
   roots.push(root)
   execFileSync('git', ['init', '-q'], { cwd: root, windowsHide: true })
+  execFileSync('git', ['config', 'core.autocrlf', 'false'], { cwd: root, windowsHide: true })
   writeFileSync(join(root, 'a.ts'), '/** Greets a person. */\nexport function greet(name: string) { return name; }\nexport function caller() { return greet("Ada"); }\n')
   writeFileSync(join(root, 'b.ts'), 'import { greet } from "./a";\nexport const result = greet("Bob");\n')
   writeFileSync(join(root, 'tsconfig.json'), JSON.stringify({ files: ['a.ts', 'b.ts'] }))
@@ -73,6 +75,15 @@ describe('exact code extras', () => {
     const extras = await service(root)
     expect(await extras.callHierarchy(root, { ...symbol, direction: 'incoming' })).toMatchObject({ ok: true, engine: 'typescript', items: expect.arrayContaining([expect.objectContaining({ name: 'caller', calls: [expect.objectContaining({ path: 'a.ts', line: 3 })] })]) })
     expect(await extras.callHierarchy(root, { ...symbol, symbol: 'caller', line: 3, column: 19, direction: 'outgoing' })).toMatchObject({ ok: true, items: [expect.objectContaining({ name: 'greet', symbol: expect.objectContaining({ line: 2 }), calls: [expect.objectContaining({ line: 3 })] })] })
+  })
+  it('returns exact untouched callers of a working-tree change with real TypeScript', async () => {
+    const root = fixture()
+    execFileSync('git', ['add', 'a.ts', 'b.ts', 'tsconfig.json'], { cwd: root, windowsHide: true })
+    execFileSync('git', ['-c', 'user.name=Tests', '-c', 'user.email=tests@example.test', 'commit', '-qm', 'initial'], { cwd: root, windowsHide: true })
+    writeFileSync(join(root, 'a.ts'), readFileSync(join(root, 'a.ts'), 'utf8').replace('return name;', 'return name.toUpperCase();'))
+    await service(root)
+    const navigation = new CodeNavRouter({ typescript: () => clients[clients.length - 1], csharp: async () => null, canInstall: async () => false })
+    expect(await staleCallers(root, navigation)).toMatchObject({ ok: true, symbols: [expect.objectContaining({ engine: 'typescript', references: expect.arrayContaining([expect.objectContaining({ path: 'b.ts', line: 2 })]) })] })
   })
   it('returns a declaration line by name and refuses guessed rename and calls', async () => {
     const root = fixture()
