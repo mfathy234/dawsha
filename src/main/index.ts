@@ -6,9 +6,11 @@ import { CodexWatcher } from './codexWatcher'
 import { GeminiWatcher } from './geminiWatcher'
 import { registerIpc } from './ipc'
 import { stopCodeNavigation } from './codeNav'
+import { closeAgentFiles, refreshAgentFiles } from './agentFiles'
 import { notifyUser } from './desktop'
 import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
+import { registerToolsIpc } from './toolsIpc'
 import { PtyManager } from './ptyManager'
 import { Recorder } from './recorder'
 import { RecordingService } from './recordings'
@@ -210,9 +212,9 @@ app.whenReady().then(async () => {
     recorder,
     projectName: (projectId) => store.get().projects.find((project) => project.id === projectId)?.name ?? ''
   })
-  const watcher = new SessionsWatcher((sessions) => send(IPC.sessionsUpdate, sessions))
-  const codexWatcher = new CodexWatcher((sessions) => send(IPC.codexUpdate, sessions))
-  const geminiWatcher = new GeminiWatcher((sessions) => send(IPC.geminiUpdate, sessions))
+  const watcher = new SessionsWatcher((sessions) => { send(IPC.sessionsUpdate, sessions); refreshAgentFiles() })
+  const codexWatcher = new CodexWatcher((sessions) => { send(IPC.codexUpdate, sessions); refreshAgentFiles() })
+  const geminiWatcher = new GeminiWatcher((sessions) => { send(IPC.geminiUpdate, sessions); refreshAgentFiles() })
   const usage = new UsageService(join(userData, 'usage-history.json'))
   usage.load()
   const statusWatcher = new StatusWatcher(bridgeDirs(app.getPath('userData')).statusDir, (infos) => {
@@ -239,6 +241,7 @@ app.whenReady().then(async () => {
   registerImageProtocol(store)
   registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings)
   const stopRunCommands = registerRunIpc(() => mainWindow, store)
+  const closeBrowserPane = registerToolsIpc(() => mainWindow, store)
   recordings.startSchedule()
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
@@ -256,7 +259,9 @@ app.whenReady().then(async () => {
     log: quitLog,
     stopServices: async () => {
       stopCodeNavigation()
+      closeBrowserPane()
       watcher.stop()
+      closeAgentFiles()
       codexWatcher.stop()
       geminiWatcher.stop()
       statusWatcher.stop()

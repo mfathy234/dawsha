@@ -69,6 +69,7 @@ import type {
 
 export interface GridApi {
   runs: import('./runCommands').RunApi
+  tools: import('./filesTools').FilesToolsApi
   getSettings(): Promise<SettingsLoadResult>
   updateSettings(patch: Partial<Settings>): Promise<Settings>
   exportSettings(): Promise<SettingsExportResult>
