@@ -37,7 +37,7 @@ export class CodeNavExtras {
     const context = await this.router.context(folder, value)
     if ('error' in context) return { ok: false, error: context.error }
     if (context.request.unsavedText !== undefined && context.request.unsavedText !== (await readProjectFile(folder, context.request.path) as { text?: string }).text) return { ok: false, error: 'Save this editor buffer before previewing rename.' }
-    if (!validRename(value.newName, context.engine)) return { ok: false, error: 'Enter a valid identifier for this language.' }
+    if (!await validRename(value.newName, context.engine)) return { ok: false, error: 'Enter a valid identifier for this language.' }
     if (!context.server?.rename) return needsServer
     try {
       const snapshot = await renameSnapshot(folder)

@@ -1,12 +1,12 @@
 import { realpath, stat } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { createScanner, ScriptTarget, SyntaxKind } from 'typescript'
 import { repoRoot } from '../gitCommit'
 import { projectFiles } from '../gitWorkspace'
 import { containsProjectPath } from '../projectContainment'
 
-export function validRename(name: string, engine: string): boolean {
+export async function validRename(name: string, engine: string): Promise<boolean> {
   if (engine !== 'typescript') return true // C# accepts escaped identifiers; its rename provider validates language-specific names.
+  const { createScanner, ScriptTarget, SyntaxKind } = await import('typescript')
   const scanner = createScanner(ScriptTarget.Latest, true, undefined, name)
   return scanner.scan() === SyntaxKind.Identifier && scanner.scan() === SyntaxKind.EndOfFileToken
 }

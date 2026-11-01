@@ -20,15 +20,22 @@ export function tsserverModulePath(): string {
 export function startTsServer(folder: string, processes: NavigationProcesses): TsServerClient {
   const directory = mkdtempSync(join(tmpdir(), 'dawsha-tsserver-'))
   const script = join(directory, 'utility.cjs')
-  writeFileSync(script, TSSERVER_UTILITY_SOURCE, { mode: 0o600 })
+  const cleanup = (): void => {
+    try { rmSync(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 25 }) }
+    catch (error) { console.warn('Could not remove the TypeScript utility directory:', error) }
+  }
   try {
+    writeFileSync(script, TSSERVER_UTILITY_SOURCE, { mode: 0o600 })
     const child = utilityProcess.fork(script, [tsserverModulePath(), '--useNodeIpc', '--disableAutomaticTypingAcquisition'], { cwd: folder, stdio: 'ignore', serviceName: 'Dawsha TypeScript' })
     const stop = (): void => {
-      if (!child.pid) child.once('spawn', () => { child.kill() })
-      child.kill()
+      try {
+        if (!child.pid) child.once('spawn', () => { child.kill() })
+        child.kill()
+      } finally { cleanup() }
     }
+    child.once('exit', cleanup)
+    child.once('error', cleanup)
     processes.track(stop, listener => { child.once('exit', listener) })
-    child.once('exit', () => { rmSync(directory, { recursive: true, force: true, maxRetries: 3 }) })
     return new TsServerClient({
       send: message => child.postMessage(message),
       onMessage: listener => { child.on('message', listener) },
@@ -36,7 +43,7 @@ export function startTsServer(folder: string, processes: NavigationProcesses): T
       stop
     })
   } catch (error) {
-    rmSync(directory, { recursive: true, force: true, maxRetries: 3 })
+    cleanup()
     throw error
   }
 }

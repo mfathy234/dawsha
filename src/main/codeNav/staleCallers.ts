@@ -75,7 +75,7 @@ async function scan(folder: string, navigation: Pick<CodeNavRouter, 'query'>, ca
 /** The timeout also bounds slow server/grep/git operations; at most one query remains pending after it expires. */
 export async function staleCallers(folder: string, navigation: Pick<CodeNavRouter, 'query'>, options: Options = {}): Promise<StaleCallersResult> {
   const symbols: StaleCaller[] = []
-  const timeoutMs = Math.max(1, Math.min(options.timeoutMs ?? DEFAULT_MS, 10_000))
+  const timeoutMs = Math.max(1, Math.min(options.timeoutMs ?? DEFAULT_MS, 15_000))
   const progress = { scanned: 0, expired: false, deadline: Date.now() + timeoutMs }
   const cap = Math.max(1, Math.min(options.symbolCap ?? SYMBOL_CAP, 100))
   let timer: NodeJS.Timeout | undefined

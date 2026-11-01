@@ -130,16 +130,16 @@ describe('exact code extras', () => {
 
 describe('replace in files', () => {
   const query = { action: 'preview' as const, query: 'greet', replacement: 'welcome', matchCase: true, wholeWord: true, regex: false, include: '*.ts' }
-  it('previews counts per file, applies literal replacements and editorconfig save rules', async () => {
+  it('previews counts per file and applies only the literal replacements', async () => {
     const root = fixture()
     writeFileSync(join(root, '.editorconfig'), 'root = true\n[*]\nend_of_line = crlf\ntrim_trailing_whitespace = true\ninsert_final_newline = true\n')
+    const original = readFileSync(join(root, 'a.ts'), 'utf8')
     const previews = new EditPreviews()
     const preview = await replaceInFiles(root, query, previews)
     expect(preview).toMatchObject({ ok: true, action: 'preview', files: [expect.objectContaining({ path: 'a.ts', matches: 2 }), expect.objectContaining({ path: 'b.ts', matches: 2 })] })
     if (!preview.ok || preview.action !== 'preview') throw new Error('No preview')
     expect(await replaceInFiles(root, { action: 'apply', previewId: preview.previewId, dirtyPaths: [] }, previews)).toMatchObject({ ok: true, files: [expect.objectContaining({ ok: true }), expect.objectContaining({ ok: true })] })
-    expect(readFileSync(join(root, 'a.ts'), 'utf8')).toContain('welcome(name: string)')
-    expect(readFileSync(join(root, 'a.ts'), 'utf8')).toContain('\r\n')
+    expect(readFileSync(join(root, 'a.ts'), 'utf8')).toBe(original.replaceAll('greet', 'welcome'))
   })
   it('honors regex captures and refuses changed mtimes and dirty files', async () => {
     const root = fixture()

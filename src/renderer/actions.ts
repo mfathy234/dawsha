@@ -714,12 +714,11 @@ export function focusNextAttention(): boolean {
 }
 
 /**
- * Answers the permission prompt in a pane's agent tab: the tab attention polling reads, never a shell
- * tab beside it. Agents put the "allow once" choice first, so Enter accepts it and Escape declines.
- * The screen is checked again first, because attention lags the terminal and a stray Enter would
- * send whatever is in the prompt box.
+ * Answers a permission prompt in the pane's primary agent tab after checking its current screen.
+ * This works independently of attention state; checking the screen prevents a stray reply from
+ * submitting the prompt box. `true` accepts the highlighted choice, `false` denies, and a number
+ * selects that numbered option (for example, Allow always).
  */
-/** `true` accepts the highlighted choice, `false` denies, and a number picks that numbered option (Allow always). */
 export function answerPermission(paneId: string, choice: boolean | number): boolean {
   const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
   const tail = tabId ? (getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '') : ''
