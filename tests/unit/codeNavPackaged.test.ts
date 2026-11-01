@@ -14,7 +14,7 @@ import { appendFileSync, writeFileSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { startTsServer, tsserverModulePath } from './src/main/codeNav/utility'
 import { NavigationProcesses } from './src/main/codeNav/processes'
-const project = process.argv[2], output = process.argv[3]
+const [project, output] = process.argv.slice(-2)
 for (const event of ['uncaughtException', 'unhandledRejection']) process.on(event, error => { writeFileSync(output, JSON.stringify({ error: String(error && error.stack || error) })); app.exit(1) })
 const processes = new NavigationProcesses()
 const fork = utilityProcess.fork
