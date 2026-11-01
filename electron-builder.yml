@@ -13,6 +13,7 @@ extraResources:
 asar: true
 asarUnpack:
   - node_modules/node-pty/**
+  - node_modules/typescript/**
 npmRebuild: false
 nodeGypRebuild: false
 buildDependenciesFromSource: false
