@@ -252,7 +252,6 @@
 }
 
 .chat button:focus-visible,
-.chat textarea:focus-visible,
 .chat-seg button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
@@ -292,10 +291,15 @@
   font: inherit;
   line-height: 22px;
   resize: none;
+  overflow: hidden;
 }
 
 .chat-input:focus-visible {
   outline: none;
+}
+
+.chat-box:focus-within {
+  background: var(--raised);
 }
 
 .chat-input::placeholder {
@@ -353,6 +357,10 @@
 }
 
 @container pane (max-width: 360px) {
+  .pane.has-view-switch .pane-header .state-pill-text {
+    display: none;
+  }
+
   .pane-header .chat-seg button {
     padding: 0 6px;
     font-size: var(--fs-1);

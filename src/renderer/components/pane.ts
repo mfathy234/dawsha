@@ -65,6 +65,7 @@ import './paneCalm.css'
 import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
 import { PaneChat } from '../chat/paneChat'
+import { chatCapable } from '../../shared/chatLog'
 import { ViewSwitch } from '../chat/viewSwitch'
 import { chatHostFor, syncPaneChat } from '../chat/paneChatController'
 import '../chat/chat.css'
@@ -307,6 +308,7 @@ export class PaneComponent {
   private updateChat(view: PaneView, state: SessionState, asking: boolean): void {
     const shown = syncPaneChat(this.paneId, view, state, asking, this.viewSwitch, this.chat)
     this.body.classList.toggle('chat-on', shown)
+    this.el.classList.toggle('has-view-switch', chatCapable(view.agent))
     if (!this.chat.holdsPermission && this.permission.parentElement !== this.el) this.el.insertBefore(this.permission, this.foot)
     if (shown !== this.chatShown) {
       this.chatShown = shown

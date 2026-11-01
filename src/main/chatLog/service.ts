@@ -1,5 +1,6 @@
 import { stat } from 'node:fs/promises'
 import { chatCapable, type ChatReadRequest, type ChatReadResult, type ChatReleaseRequest } from '../../shared/chatLog'
+import { CHAT_TEXT } from '../../shared/chatStrings'
 import { locateSession } from '../transcriptExport'
 import { ChatSession } from './session'
 
@@ -55,7 +56,7 @@ async function load(request: ChatReadRequest): Promise<ChatReadResult> {
     return result.status === 'ok' ? { ...result, version: `${key}#${result.version}` } : result
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code
-    const why = code === 'EACCES' || code === 'EPERM' ? 'Dawsha is not allowed to read this session log.' : 'Dawsha could not read this session log.'
+    const why = code === 'EACCES' || code === 'EPERM' ? CHAT_TEXT.failedDenied : CHAT_TEXT.failedRead
     return { status: 'failed', reason: why }
   }
 }

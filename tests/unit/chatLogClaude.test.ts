@@ -71,6 +71,12 @@ describe('ClaudeChatReader', () => {
     expect(reader.items().map((item) => (item as ChatMessage).text)).toEqual(['real'])
   })
 
+  it('keeps a prompt that merely starts with a tag', () => {
+    const reader = new ClaudeChatReader()
+    reader.feed(lines({ type: 'user', message: { content: '<div> renders twice, why?' } }))
+    expect((reader.items()[0] as ChatMessage).text).toBe('<div> renders twice, why?')
+  })
+
   it('turns the real limit record into a limit notice with its reset time', () => {
     const reader = new ClaudeChatReader()
     reader.feed(

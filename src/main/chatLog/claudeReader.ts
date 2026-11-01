@@ -1,17 +1,20 @@
 import type { ChatItem } from '../../shared/chatLog'
-import { asTime, blockText, isPrompt, isRecord, type Json } from '../../shared/transcript'
+import { asTime, blockText, isRecord, type Json } from '../../shared/transcript'
+import { CHAT_TEXT } from '../../shared/chatStrings'
 import { ChatBuilder } from './builder'
 import { toolShape } from './toolShape'
 import type { ChatLineReader, ReaderStats } from './reader'
 
 const KNOWN = new Set(['user', 'assistant', 'system', 'summary'])
+const SYSTEM_TAG = /^<(?:command-[a-z]+|local-command-[a-z]+|system-reminder|ide_[a-z_]+|user-prompt-submit-hook|bash-(?:input|stdout|stderr)|task-notification|persisted-output)[\s>]/
+const isUserText = (text: string): boolean => text.trim() !== '' && !SYSTEM_TAG.test(text.trim())
 const INTERRUPTED = /^\[Request interrupted by user/
 
 function promptText(content: unknown): string {
   if (typeof content === 'string') return content
   if (!Array.isArray(content)) return ''
   const parts = content.map((part) => (isRecord(part) && part.type === 'text' && typeof part.text === 'string' ? part.text : ''))
-  return parts.filter(isPrompt).join('\n')
+  return parts.filter(isUserText).join('\n')
 }
 
 function resultText(content: unknown): string {
@@ -76,8 +79,8 @@ export class ClaudeChatReader implements ChatLineReader {
       }
     }
     const prompt = promptText(content)
-    if (INTERRUPTED.test(prompt.trim())) this.builder.notice(this.nextId(record), 'interrupted', 'Interrupted', at)
-    else if (isPrompt(prompt)) this.builder.message(this.nextId(record), 'user', prompt, at)
+    if (INTERRUPTED.test(prompt.trim())) this.builder.notice(this.nextId(record), 'interrupted', CHAT_TEXT.interrupted, at)
+    else if (isUserText(prompt)) this.builder.message(this.nextId(record), 'user', prompt, at)
   }
 
   private assistant(record: Json, message: Json, at: number | undefined): void {

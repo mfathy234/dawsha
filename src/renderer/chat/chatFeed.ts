@@ -1,4 +1,5 @@
 import type { ChatItem, ChatReadRequest } from '../../shared/chatLog'
+import { CHAT_TEXT } from '../../shared/chatStrings'
 import { api } from '../api'
 
 export const CHAT_POLL_MS = 1000
@@ -23,7 +24,10 @@ export class ChatFeed {
   private generation = 0
   private snapshot: FeedSnapshot = LOADING
 
-  constructor(private readonly onChange: (snapshot: FeedSnapshot) => void) {}
+  constructor(
+    private readonly onChange: (snapshot: FeedSnapshot) => void,
+    private readonly onScreen: () => boolean = () => true
+  ) {}
 
   get running(): boolean {
     return this.request !== null
@@ -64,6 +68,10 @@ export class ChatFeed {
     if (!request) return
     const generation = this.generation
     let next = CHAT_POLL_MS
+    if (!this.onScreen()) {
+      this.schedule(FAILED_POLL_MS)
+      return
+    }
     try {
       const result = await api.chat.read({ ...request, version: this.version })
       if (generation !== this.generation) return
@@ -80,7 +88,7 @@ export class ChatFeed {
     } catch {
       if (generation !== this.generation) return
       next = FAILED_POLL_MS
-      this.publish({ state: 'failed', items: [], earlier: 0, reason: 'Dawsha could not read this session log.' })
+      this.publish({ state: 'failed', items: [], earlier: 0, reason: CHAT_TEXT.failedRead })
     }
     if (generation === this.generation) this.schedule(document.hidden ? FAILED_POLL_MS : next)
   }

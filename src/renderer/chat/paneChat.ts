@@ -2,6 +2,7 @@ import { AGENT_NAMES } from '../../shared/agents'
 import { chatPhase, type ChatPhase } from '../../shared/chatLog'
 import type { AgentKind } from '../../shared/types'
 import { h } from '../dom'
+import { CHAT_TEXT } from '../../shared/chatStrings'
 import { ChatFeed, LOADING, type FeedSnapshot } from './chatFeed'
 import { ChatThread } from './chatThread'
 
@@ -25,7 +26,9 @@ export interface ChatInput {
 }
 
 const NEAR_BOTTOM_PX = 96
+const MENU_CHECK_MS = 400
 const COMPOSER_MAX_PX = 140
+const LONG_HINT_MIN_PX = 380
 
 const other = (agent: AgentKind): AgentKind => (agent === 'claude' ? 'codex' : 'claude')
 
@@ -36,7 +39,7 @@ export class PaneChat {
   private readonly feed: ChatFeed
   private readonly thread: ChatThread
   private readonly box = h('textarea', { class: 'chat-input', rows: 1, 'aria-label': 'Message', dir: 'auto', spellcheck: 'false' })
-  private readonly sendButton = h('button', { class: 'chat-btn', type: 'button' }, 'Send')
+  private readonly sendButton = h('button', { class: 'chat-btn', type: 'button' }, CHAT_TEXT.send)
   private snapshot: FeedSnapshot = LOADING
   private input: ChatInput | null = null
   private phase: ChatPhase = 'empty'
@@ -44,13 +47,18 @@ export class PaneChat {
   private renderKey = ''
   private stickBottom = true
   private active = false
+  private menuAt = 0
+  private menuOpen = false
 
   constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
     this.thread = new ChatThread(() => this.render(true))
-    this.feed = new ChatFeed((snapshot) => {
-      this.snapshot = snapshot
-      this.render(false)
-    })
+    this.feed = new ChatFeed(
+      (snapshot) => {
+        this.snapshot = snapshot
+        this.render(false)
+      },
+      () => this.el.offsetParent !== null
+    )
     this.scroller.append(this.thread.el)
     this.el = h(
       'div',
@@ -60,6 +68,7 @@ export class PaneChat {
     )
     this.box.addEventListener('keydown', (event) => this.onKey(event))
     this.box.addEventListener('input', () => this.growBox())
+    new ResizeObserver(() => this.input && this.updateComposer(this.input, this.phase)).observe(this.box)
     this.sendButton.addEventListener('click', () => this.submit())
     this.el.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && this.phase === 'working') {
@@ -109,7 +118,7 @@ export class PaneChat {
     const input = this.input
     if (!input) return
     const snapshot = this.currentSnapshot()
-    const menuOpen = this.host.menuOpen()
+    const menuOpen = this.menuNow()
     const phase = chatPhase({ items: snapshot.items, working: input.working && !input.exited, needsApproval: input.needsApproval, menuOpen })
     const last = snapshot.items[snapshot.items.length - 1]
     if (last?.kind !== 'notice') this.limitDismissed = false
@@ -137,6 +146,16 @@ export class PaneChat {
 
   private renderedSnapshot: FeedSnapshot | null = null
 
+  /** The screen is only read now and then: a menu stays up for seconds and reading it is not free. */
+  private menuNow(): boolean {
+    const now = Date.now()
+    if (now - this.menuAt >= MENU_CHECK_MS) {
+      this.menuAt = now
+      this.menuOpen = this.host.menuOpen()
+    }
+    return this.menuOpen
+  }
+
   private dismissLimit(): void {
     this.limitDismissed = true
     this.render(true)
@@ -144,10 +163,12 @@ export class PaneChat {
 
   private updateComposer(input: ChatInput, phase: ChatPhase): void {
     const name = AGENT_NAMES[input.agent]
-    const blocked = input.exited ? 'This session has ended.' : phase === 'approval' ? 'Allow or deny above first.' : phase === 'menu' ? 'Show the terminal to answer the menu.' : ''
+    const blocked = input.exited ? CHAT_TEXT.composerEnded : phase === 'approval' ? CHAT_TEXT.composerApproval : phase === 'menu' ? CHAT_TEXT.composerMenu : ''
     this.box.disabled = blocked !== ''
     this.sendButton.disabled = blocked !== ''
-    this.box.placeholder = blocked || `Message ${name}. Enter to send, Shift+Enter for a new line`
+    const roomy = this.box.clientWidth >= LONG_HINT_MIN_PX
+    this.box.placeholder = blocked || (roomy ? CHAT_TEXT.messagePlaceholderLong(name) : CHAT_TEXT.messagePlaceholder(name))
+    this.box.title = blocked || CHAT_TEXT.messageHint
   }
 
   private nearBottom(): boolean {
@@ -178,5 +199,6 @@ export class PaneChat {
   private growBox(): void {
     this.box.style.height = 'auto'
     this.box.style.height = `${Math.min(this.box.scrollHeight, COMPOSER_MAX_PX)}px`
+    this.box.style.overflowY = this.box.scrollHeight > COMPOSER_MAX_PX ? 'auto' : 'hidden'
   }
 }

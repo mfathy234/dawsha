@@ -1,5 +1,6 @@
 import type { ChatReadResult } from '../../shared/chatLog'
 import type { TabAgent } from '../../shared/types'
+import { CHAT_TEXT } from '../../shared/chatStrings'
 import { CodexChatReader } from './codexReader'
 import { ClaudeChatReader } from './claudeReader'
 import { unrecognised, type ChatLineReader } from './reader'
@@ -36,7 +37,7 @@ export class ChatSession {
 
   result(): ChatReadResult {
     if (unrecognised(this.reader.stats)) {
-      return { status: 'failed', reason: 'Dawsha could not recognise this session log. The agent may have changed its format.' }
+      return { status: 'failed', reason: CHAT_TEXT.failedFormat }
     }
     return { status: 'ok', items: this.reader.items(), version: this.version, earlier: this.reader.earlier }
   }

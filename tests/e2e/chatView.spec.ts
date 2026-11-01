@@ -110,7 +110,7 @@ test('a message typed in chat goes to the terminal as a normal submit and the re
     const chat = pane.locator('.chat')
     await expect(chat.locator('.chat-say')).toContainText('RetryPolicy', { timeout: 15_000 })
     const box = chat.getByRole('textbox', { name: 'Message' })
-    await expect(box).toHaveAttribute('placeholder', /Message Claude\. Enter to send/)
+    await expect(box).toHaveAttribute('placeholder', /^Message Claude/)
     await box.fill('please cap the backoff')
     await box.press('Enter')
     await expect(box).toHaveValue('')
@@ -300,5 +300,35 @@ test('the default and each session remember their view across a relaunch, and Ne
     await expect(second.locator('.chat')).toBeHidden()
   } finally {
     await closeApp(session.app)
+  }
+})
+
+test('log content is drawn as text, long messages fold and huge output stays bounded', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const long = Array.from({ length: 60 }, (_, index) => `row ${index + 1}`).join('\n')
+    writeLog(sandbox, [
+      { type: 'user', uuid: 'u1', message: { content: '<img src=x onerror="window.__pwned=1"><b>bold?</b>' } },
+      { type: 'assistant', uuid: 'a1', message: { content: [{ type: 'text', text: long }] } },
+      { type: 'assistant', uuid: 'a2', message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'echo "<script>window.__pwned=2</script>"' } }] } },
+      { type: 'user', uuid: 'u2', message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: '<svg onload="window.__pwned=3">\n'.repeat(5000) }] } }
+    ])
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    await expect(chat.locator('.chat-you')).toContainText('<img src=x onerror="window.__pwned=1"><b>bold?</b>', { timeout: 15_000 })
+    await expect(chat.locator('img, svg, script, b')).toHaveCount(0)
+    await expect(chat.locator('.chat-say')).not.toContainText('row 60')
+    await chat.getByRole('button', { name: /Show \d+ more lines/ }).click()
+    await expect(chat.locator('.chat-say')).toContainText('row 60')
+    await chat.locator('.chat-tool').click()
+    const output = chat.locator('.chat-toolout')
+    await expect(output).toContainText('<svg onload')
+    expect((await output.textContent())?.length ?? 0).toBeLessThan(7000)
+    await expect(output).toContainText('Output too large to show in full')
+    expect(await page.evaluate(() => (window as unknown as { __pwned?: number }).__pwned)).toBeUndefined()
+  } finally {
+    await closeApp(app)
   }
 })

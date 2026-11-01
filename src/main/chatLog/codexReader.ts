@@ -1,6 +1,7 @@
 import { CHAT_TARGET_MAX, type ChatItem } from '../../shared/chatLog'
 import { lineCount, parsePatch } from '../../shared/timelineParse'
 import { asTime, flat, isRecord, type Json } from '../../shared/transcript'
+import { CHAT_TEXT } from '../../shared/chatStrings'
 import { ChatBuilder } from './builder'
 import type { ChatLineReader, ReaderStats } from './reader'
 import type { ToolShape } from './toolShape'
@@ -99,7 +100,7 @@ export class CodexChatReader implements ChatLineReader {
     if (kind === 'item_completed' && isRecord(payload.item)) this.item(payload.item, at)
     else if (kind === 'user_message') this.builder.message(this.nextId('u'), 'user', str(payload.message), at)
     else if (kind === 'agent_message') this.builder.message(this.nextId('a'), 'agent', str(payload.message), at)
-    else if (kind === 'turn_aborted') this.builder.notice(this.nextId('x'), 'interrupted', 'Interrupted', at)
+    else if (kind === 'turn_aborted') this.builder.notice(this.nextId('x'), 'interrupted', CHAT_TEXT.interrupted, at)
     else if (kind === 'error') this.failure(str(payload.message), at)
     else if (kind === 'token_count') this.limits(payload, at)
   }
