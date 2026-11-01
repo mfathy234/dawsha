@@ -1,10 +1,10 @@
 import { readFile, realpath, stat } from 'node:fs/promises'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join } from 'node:path'
 import { parseBuffer, parseFromFilesSync, type ECFile, type Props } from 'editorconfig'
 import type { EditorConfigRules } from '../shared/codeNav'
 import { resolveProjectFile } from './gitWorkspace'
+import { containsProjectPath as inside } from './projectContainment'
 
-const inside = (root: string, path: string): boolean => !relative(root, path).split(/[\\/]/).includes('..')
 const size = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value > 0 && value <= 256
 
 async function configFiles(root: string, full: string): Promise<ECFile[]> {
@@ -28,7 +28,7 @@ async function configFiles(root: string, full: string): Promise<ECFile[]> {
 
 function rulesFrom(props: Props): EditorConfigRules {
   return {
-    ...(props.indent_style === 'tab' || props.indent_style === 'space' ? { indentStyle: props.indent_style } : {}),
+    ...(props.indent_style === 'tab' || props.indent_style === 'space' ? { indentStyle: props.indent_style as 'tab' | 'space' } : {}),
     ...(size(props.indent_size) ? { indentSize: props.indent_size } : {}),
     ...(size(props.tab_width) ? { tabWidth: props.tab_width } : {}),
     ...(['lf', 'crlf', 'cr'].includes(String(props.end_of_line)) ? { endOfLine: props.end_of_line as EditorConfigRules['endOfLine'] } : {}),
