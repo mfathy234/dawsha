@@ -4,6 +4,7 @@ import type { AgentEditEvent, AgentFileTouch, LineSessionsResult } from '../shar
 import type { TimelineEvent } from '../shared/timeline'
 import { normalizeFolder } from '../shared/folderKey'
 import { addedLines } from '../shared/diffView'
+import { canonicalPath } from './canonicalPath'
 import { asAddedDiff, git, repoRoot } from './gitCommit'
 import { mergeBase, readProjectFile, resolveProjectFile } from './gitWorkspace'
 import { validRelative } from './codeNav/editPreviews'
@@ -23,7 +24,7 @@ export class AgentFileActivity {
   private async path(folder: string, raw: string): Promise<string | null> {
     if (!raw || raw.includes('\0')) return null
     const root = await realpath(await repoRoot(folder) ?? folder)
-    const path = relative(root, resolve(folder, raw.replace(/\\/g, '/'))).replace(/\\/g, '/')
+    const path = relative(root, await canonicalPath(resolve(folder, raw.replace(/\\/g, '/')))).replace(/\\/g, '/')
     if (!validRelative(path)) return null
     const target = await resolveProjectFile(folder, path)
     return target.ok ? target.realRel : null

@@ -4,6 +4,7 @@ import type { CallHierarchyItem, CallHierarchyResult, EditPreviewFile, EditResul
 import { repoRoot } from '../gitCommit'
 import { readProjectFile, resolveProjectFile } from '../gitWorkspace'
 import { EditPreviews, validRelative } from './editPreviews'
+import { canonicalPath } from '../canonicalPath'
 import { navigationHits } from './locations'
 import { isDeclaration, nameSearch } from './nameSearch'
 import type { CodeNavRouter } from './router'
@@ -53,7 +54,7 @@ export class CodeNavExtras {
     const files: EditPreviewFile[] = []
     const originals = new Map<string, string>()
     for (const group of groups) {
-      const path = relative(root, group.file).replace(/\\/g, '/')
+      const path = relative(root, await canonicalPath(group.file)).replace(/\\/g, '/')
       if (!validRelative(path)) return { ok: false, error: 'Rename includes files outside the project; no files were changed.' }
       const target = await resolveProjectFile(folder, path)
       if (!target.ok) return { ok: false, error: 'Rename includes unavailable files; no files were changed.' }

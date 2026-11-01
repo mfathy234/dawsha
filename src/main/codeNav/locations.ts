@@ -1,6 +1,7 @@
 import { realpath } from 'node:fs/promises'
 import { isAbsolute, relative } from 'node:path'
 import type { CodeNavEngine, CodeNavHit, CodeNavResult } from '../../shared/codeNav'
+import { canonicalPath } from '../canonicalPath'
 import { resolveProjectFile } from '../gitWorkspace'
 import { readTextFile, repoRoot } from '../gitCommit'
 
@@ -22,7 +23,7 @@ export async function navigationHits(folder: string, locations: readonly ServerL
   for (const location of locations.slice(0, 500)) {
     if (location.outside) { outside = true; continue }
     if (!isAbsolute(location.file) || !Number.isSafeInteger(location.line) || location.line < 1 || !Number.isSafeInteger(location.column) || location.column < 1) continue
-    const path = relative(root, location.file).replace(/\\/g, '/')
+    const path = relative(root, await canonicalPath(location.file)).replace(/\\/g, '/')
     const source = sources.get(path) ?? sourceLines(folder, path, current)
     sources.set(path, source)
     const file = await source

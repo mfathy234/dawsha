@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, it } from 'vitest'
@@ -35,6 +35,15 @@ it('returns file-level session evidence for changed lines without claiming line 
     { line: 2, session: { sessionId: 'latest', precision: 'file' } }
   ] })
   expect(await activity.lineSessions(root, '../secret')).toMatchObject({ ok: false })
+})
+it('matches session edits recorded through a symlinked project folder', async () => {
+  const root = fixture()
+  const alias = `${root}-alias`
+  symlinkSync(root, alias, process.platform === 'win32' ? 'junction' : 'dir')
+  roots.push(alias)
+  const activity = new AgentFileActivity(async () => [{ sessionId: 'agent', agent: 'codex', events: [edit('1', 10, join(alias, 'a.ts'))] }], () => undefined)
+  expect(await activity.lineSessions(root, 'a.ts')).toMatchObject({ ok: true, precision: 'file' })
+  expect(await activity.lineSessions(alias, 'a.ts')).toMatchObject({ ok: true, precision: 'file' })
 })
 it('reports unknown ownership without evidence and ignores outside paths', async () => {
   const root = fixture()
