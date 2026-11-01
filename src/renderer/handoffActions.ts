@@ -1,7 +1,7 @@
 import { AGENT_NAMES } from '../shared/agents'
 import { buildHandoff, buildTranscriptHandoff, type HandoffCheck } from '../shared/handoff'
 import { DEFAULT_FONT_SIZE, clampFontSize, type AgentKind } from '../shared/types'
-import { launch, makeTerm, persistWorkspace, refreshBranches, refreshGitChanges } from './actions'
+import { largeOf, launch, makeTerm, persistWorkspace, refreshBranches, refreshGitChanges } from './actions'
 import { api } from './api'
 import { handoffDialog } from './components/handoffDialog'
 import { toast } from './components/toast'
@@ -75,7 +75,7 @@ export async function startHandoff(paneId: string, to: AgentKind, text: string, 
   }
   store.set((s) => ({
     ...s,
-    panes: [...s.panes, pane],
+    largePaneId: largeOf(s), panes: [...s.panes, pane],
     focusedId: pane.id,
     maximizedId: s.maximizedId ? pane.id : null,
     detailsPaneId: null,

@@ -1,6 +1,6 @@
 import { forgetStateClocks } from '../stateClock'
 import { forgetTimelineLogs } from '../timelineLog'
-import { closePane, focusPane, openQuickPick, setSplits, showView } from '../actions'
+import { closePane, focusPane, largeOf, openQuickPick, setSplits, showView } from '../actions'
 import { OthersPanelComponent } from './othersPanel'
 import { derivePanes, type PaneView } from '../derive'
 import { clear, h, iconButton } from '../dom'
@@ -8,7 +8,7 @@ import { ICONS } from '../icons'
 import { pairOf } from '../../shared/compare'
 import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
 import { layoutForCount, type GridLayout } from '../../shared/layout'
-import { focusLayout, promotedRows, tileLayout, type GridStyle } from '../../shared/gridStyle'
+import { focusLayout, largeUnitIndex, promotedRows, quietPaneIds, tileLayout } from '../../shared/gridStyle'
 import { equalSizes, resolveSplit, shapeKey, withSplit } from '../../shared/splits'
 import type { CompareLink, GridSplit, GridSplits } from '../../shared/types'
 import type { AppState } from '../state'
@@ -78,9 +78,10 @@ export class GridComponent {
     const elements = this.syncUnits(units)
     const maximized = state.maximizedId !== null && views.some((v) => v.pane.id === state.maximizedId)
     this.splits = state.splits
-    const focusUnit = Math.max(0, units.findIndex((unit) => paneIds(unit).includes(state.focusedId ?? '')))
+    // The large unit is not always the focused one: see resolveLargePane.
+    const focusUnit = largeUnitIndex(units.map(paneIds), largeOf(state))
     this.layout(units, elements, views, state, maximized ? state.maximizedId : null, focusUnit)
-    const quiet = this.quietPanes(units, state.settings.gridStyle, focusUnit, maximized)
+    const quiet = this.quietPanes(units, state, focusUnit, maximized)
     for (const view of views) {
       const isMax = maximized && view.pane.id === state.maximizedId
       this.panes.get(view.pane.id)?.update(view, view.pane.id === state.focusedId, isMax, quiet.has(view.pane.id))
@@ -205,14 +206,10 @@ export class GridComponent {
     })
   }
 
-  /** In calm focus every sibling is quiet; mission control tiles are all equal. */
-  private quietPanes(units: Unit[], gridStyle: GridStyle, focusUnit: number, maximized: boolean): Set<string> {
-    const quiet = new Set<string>()
-    if (maximized || gridStyle !== 'focus' || units.length < 2) return quiet
-    units.forEach((unit, index) => {
-      if (index !== focusUnit) for (const id of paneIds(unit)) quiet.add(id)
-    })
-    return quiet
+  /** In calm focus every sibling is quiet unless you are working in it; mission control tiles are all equal. */
+  private quietPanes(units: Unit[], state: AppState, focusUnit: number, maximized: boolean): Set<string> {
+    if (maximized || state.settings.gridStyle !== 'focus' || units.length < 2) return new Set()
+    return quietPaneIds(units.map(paneIds), focusUnit, state.focusedId)
   }
 
   private layoutMaximized(units: Unit[], elements: HTMLElement[], views: PaneView[], maximizedId: string): void {

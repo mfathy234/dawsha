@@ -45,6 +45,12 @@ describe('snapshotWorkspace', () => {
     pane('p3', 'c', [{ id: 't5', agent: 'shell', label: 'task', task: {} }])
   ]
 
+  it('saves the large pane as an index and leaves it out when unknown', () => {
+    expect(snapshotWorkspace(panes, 'p2', { largeId: 'p2' }).largeIndex).toBe(1)
+    expect(snapshotWorkspace(panes, 'p2', { largeId: 'p3' })).not.toHaveProperty('largeIndex')
+    expect(snapshotWorkspace(panes, 'p2')).not.toHaveProperty('largeIndex')
+  })
+
   it('keeps order, font sizes and the active tab, and drops task tabs and empty panes', () => {
     const result = snapshotWorkspace(panes, 'p2')
     expect(result.focusedIndex).toBe(1)

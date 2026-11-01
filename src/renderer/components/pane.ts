@@ -23,6 +23,8 @@ import {
   findInPane,
   toggleDetails,
   toggleMaximize,
+  makeLarge,
+  canMakeLargePane,
   tagSession
 } from '../actions'
 import { derivePanes, type PaneView } from '../derive'
@@ -41,7 +43,7 @@ import { describeSync, formatSync } from '../../shared/gitBranches'
 import { keycaps } from './keycaps'
 import { tagMenuItems, tagWord, type TagSource } from './sessionTagUi'
 import { SESSION_TAG_LABELS, type SessionTag } from '../../shared/sessionTags'
-import { openBranchMenu } from './gitMenu'
+import { openPaneBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
 import { ICONS } from '../icons'
@@ -89,9 +91,9 @@ export class PaneComponent {
     class: 'chip chip-branch',
     type: 'button',
     hidden: true,
-    title: 'Git actions',
+    title: 'Switch branch or run a git action',
     'aria-haspopup': 'menu',
-    onClick: () => openBranchMenu(this.paneId, this.branch)
+    onClick: () => openPaneBranchMenu(this.paneId, this.branch)
   })
   private readonly branchName = h('span', { class: 'chip-text' })
   private readonly branchSync = h('span', { class: 'chip-sync', hidden: true })
@@ -219,7 +221,7 @@ export class PaneComponent {
     const sync = formatSync(view.sync)
     this.branchSync.hidden = sync === ''
     this.branchSync.textContent = sync
-    this.branch.title = view.sync ? `Git actions. ${describeSync(view.sync)} of ${view.branch ?? 'the upstream'}` : 'Git actions'
+    this.branch.title = view.sync ? `Switch branch or run a git action. ${describeSync(view.sync)} of ${view.branch ?? 'the upstream'}` : 'Switch branch or run a git action'
     const state = sessionState({ status: view.status, attention: view.attention })
     this.updateState(view, state)
     this.updateInfo(view, maximized)
@@ -551,6 +553,9 @@ export class PaneComponent {
       ? [item('Turn on live info', () => enableBridge(), ICONS.info)]
       : []
     const pinned = this.current?.pane.pinned === true
+    const largeItems = canMakeLargePane(store.state, this.paneId)
+      ? [item('Make large', () => makeLarge(this.paneId), ICONS.maximize, 'pane.make-large')]
+      : []
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
     const source = this.current?.agent ?? 'shell'
     const handoffs =
@@ -571,6 +576,7 @@ export class PaneComponent {
       { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Pane actions' },
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Pane'),
       first,
+      ...largeItems,
       showDetails,
       pinItem,
       item('Tag…', () => this.openTag(), ICONS.tag),

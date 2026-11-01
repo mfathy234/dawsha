@@ -29,7 +29,9 @@ import {
   toggleSidebar,
   setColorSessionsByTag,
   toggleThemePicker,
-  focusPane
+  focusPane,
+  makeLarge,
+  canMakeLargePane
 } from '../actions'
 import { derivePanes } from '../derive'
 import { applyStashPane, fetchPane, pullPane, stashPane, switchBranchPane } from '../gitQuickActions'
@@ -133,6 +135,16 @@ export function installBuiltinCommands(): void {
       enabled: (state) => state.panes.length > i,
       run: () => focusPaneAt(i)
     })),
+    {
+      id: 'pane.make-large',
+      title: 'Make the pane large',
+      group: 'Actions',
+      keywords: 'big main focus spot calm promote',
+      ...withKeys('Ctrl+Alt+L'),
+      scope: 'grid',
+      enabled: (state) => state.focusedId !== null && canMakeLargePane(state, state.focusedId),
+      run: () => makeLarge()
+    },
     {
       id: 'pane.pin',
       title: 'Pin or unpin the pane',

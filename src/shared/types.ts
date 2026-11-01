@@ -84,6 +84,8 @@ export type GridSplits = Record<string, GridSplit>
 export interface Workspace {
   panes: SavedPane[]
   focusedIndex: number
+  /** Index of the large pane in Calm focus; absent in older saves. */
+  largeIndex?: number
   splits?: GridSplits
 }
 
@@ -141,6 +143,8 @@ export interface Settings {
   sessionsLayout: SessionsLayout
   /** How the sessions grid arranges panes: calm focus (one large pane) or mission control (equal tiles). */
   gridStyle: GridStyle
+  /** Calm focus: the session you select takes the large spot. Off, the large session stays put. */
+  focusMovesSelected: boolean
   sessionInfo: SessionInfoSettings
   onboardingDismissed: boolean
   workspace: Workspace

@@ -68,6 +68,8 @@ test('ops feed: strip, details panel, updates, stale and ended', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
+    // CI's window is 1024px wide, which would show the compact top bar.
+    await page.setViewportSize({ width: 1440, height: 900 })
     await page.getByRole('button', { name: NEW_IN_SMOKE }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.info-plan')).toHaveCount(0)
@@ -82,10 +84,9 @@ test('ops feed: strip, details panel, updates, stale and ended', async () => {
     await expect(page.locator('.info-gauge .charge')).toHaveAttribute('data-filled', '4')
     await expect(strip.locator('.info-running, .info-letters')).toHaveCount(0)
     await expect(strip).not.toContainText('running')
-    await expect(page.locator('[data-limit="five_hour"]')).toContainText('5h 62%')
-    await expect(page.locator('.topbar-limits .charge')).toHaveCount(3)
-    await expect(page.locator('[data-limit="seven_day_fable"] .limit-label')).toHaveText('fable')
-    await expect(page.locator('[data-limit="seven_day_fable"] .limit-label')).toHaveClass(/fam-fable/)
+    await expect(page.locator('#topbar-limits [data-limit="five_hour"]')).toHaveAttribute('title', /5-hour: 62%/)
+    await expect(page.locator('.topbar-limits .limit-ring')).toHaveCount(3)
+    await expect(page.locator('#topbar-limits [data-limit="seven_day_fable"] .ring-text')).toHaveText('F')
 
     await expect(page.locator('.agents-toggle')).toHaveCount(0)
     await expect(page.locator('.agents-drawer')).toHaveCount(0)

@@ -34,6 +34,7 @@ export interface SnapshotOptions {
   sessionFor?: (tab: SnapshotTab) => string | undefined
   portable?: boolean
   splits?: GridSplits
+  largeId?: string | null
 }
 
 export function snapshotWorkspace(
@@ -74,6 +75,8 @@ export function snapshotWorkspace(
       return saved
     })
   }
+  const largeIndex = options.largeId ? kept.findIndex((pane) => pane.id === options.largeId) : -1
+  if (largeIndex >= 0) workspace.largeIndex = largeIndex
   const splits = sanitizeSplits(options.splits)
   if (splits) workspace.splits = splits
   return workspace

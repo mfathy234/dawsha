@@ -2,16 +2,10 @@ import { pickerRows, type BranchList, type PickerRow, type SwitchMode } from '..
 import { moveSelection } from '../../shared/quickPick'
 import { api } from '../api'
 import { clear, h, icon, leave } from '../dom'
-import { runQuick } from '../gitQuickActions'
+import { switchBranchGuarded } from '../gitSwitch'
 import { ICONS } from '../icons'
 import { toast } from './toast'
 import { popupDismissButton } from './popupDismiss'
-
-interface Refusal {
-  message: string
-  branch: string
-  mode: SwitchMode
-}
 
 interface Target {
   branch: string
@@ -53,7 +47,6 @@ export async function openBranchPicker(folder: string): Promise<void> {
   const previous = document.activeElement as HTMLElement | null
   let ordered: PickerRow[] = []
   let selected = 0
-  let refusal: Refusal | null = null
   let busy = false
 
   const input = h('input', {
@@ -103,10 +96,6 @@ export async function openBranchPicker(folder: string): Promise<void> {
     const rows = pickerRows(list, input.value)
     ordered = []
     clear(results)
-    if (refusal) {
-      results.append(h('p', { class: 'palette-empty branch-refusal', role: 'alert' }, refusal.message))
-      results.append(row(h('span', { class: 'palette-title' }, `Stash and switch to ${refusal.branch}`), ICONS.download, 'stash-switch'))
-    }
     for (const [label, belongs] of GROUPS) {
       const group = rows.filter(belongs)
       if (group.length === 0) continue
@@ -121,35 +110,12 @@ export async function openBranchPicker(folder: string): Promise<void> {
     select(Math.min(selected, Math.max(0, total - 1)))
   }
 
-  const attempt = async (target: Target, stash: boolean): Promise<void> => {
+  const attempt = async (target: Target): Promise<void> => {
     if (busy) return
     busy = true
-    const result = await runQuick({ folder, op: 'switch', branch: target.branch, mode: target.mode, stash })
+    close()
+    await switchBranchGuarded(folder, target)
     busy = false
-    if (result.ok) {
-      close()
-      toast(result.message, 'info')
-    } else if (result.canStash) {
-      refusal = { message: result.error, branch: target.branch, mode: target.mode }
-      selected = 0
-      render()
-    } else {
-      close()
-      toast(result.error)
-    }
-  }
-
-  function row(body: HTMLElement, svg: string, action: string): HTMLElement {
-    const element = h(
-      'div',
-      { class: 'palette-row', role: 'option', 'aria-selected': 'false', 'data-action': action },
-      h('span', { class: 'palette-lead' }, icon(svg)),
-      body
-    )
-    element.addEventListener('click', () => {
-      if (refusal) void attempt({ branch: refusal.branch, mode: refusal.mode }, true)
-    })
-    return element
   }
 
   function rowFor(item: PickerRow): HTMLElement {
@@ -169,22 +135,17 @@ export async function openBranchPicker(folder: string): Promise<void> {
       h('span', { class: 'palette-title' }, titleOf(item)),
       hint ? h('span', { class: 'palette-hint' }, hint) : null
     )
-    if (target) element.addEventListener('click', () => void attempt(target, false))
+    if (target) element.addEventListener('click', () => void attempt(target))
     return element
   }
 
   const choose = (): void => {
-    if (refusal && selected === 0) {
-      void attempt({ branch: refusal.branch, mode: refusal.mode }, true)
-      return
-    }
-    const picked = ordered[selected - (refusal ? 1 : 0)]
+    const picked = ordered[selected]
     const target = picked ? targetOf(picked) : null
-    if (target) void attempt(target, false)
+    if (target) void attempt(target)
   }
 
   input.addEventListener('input', () => {
-    refusal = null
     selected = 0
     render()
   })

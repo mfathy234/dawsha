@@ -25,7 +25,7 @@ export type SwitchMode = 'local' | 'remote' | 'create'
 
 export type GitQuickRequest =
   | { folder: string; op: 'pull' | 'fetch' | 'stash' | 'stashPop' }
-  | { folder: string; op: 'switch'; branch: string; mode: SwitchMode; stash?: boolean }
+  | { folder: string; op: 'switch'; branch: string; mode: SwitchMode; stash?: boolean; stashUntracked?: boolean }
 
 export type GitQuickResult = { ok: true; message: string } | { ok: false; error: string; canStash?: boolean }
 
@@ -188,11 +188,78 @@ export function needsBranchFilter(list: BranchList): boolean {
   return list.local.length + list.remote.length > BRANCH_FILTER_MIN
 }
 
-export function switchConfirmText(branch: string, changed: number): { title: string; body: string; confirmLabel: string } {
-  const files = `${changed} changed ${changed === 1 ? 'file' : 'files'}`
-  return {
-    title: `Switch to ${branch}?`,
-    body: `You have ${files}; git will carry them over or refuse if they conflict.`,
-    confirmLabel: `Switch to ${branch}`
+/** What a folder holds that a branch switch could trip over: tracked changes, and new (untracked) files with their size. */
+export interface DirtyReport {
+  modified: number
+  untracked: number
+  untrackedBytes: number
+  /** The count or the size stopped at a limit, so they are lower bounds. */
+  capped: boolean
+}
+
+export type DirtyReportResult = { ok: true; report: DirtyReport } | { ok: false; error: string }
+
+const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB']
+
+export function formatBytes(bytes: number): string {
+  let value = Math.max(0, bytes)
+  let unit = 0
+  while (value >= 1000 && unit < BYTE_UNITS.length - 1) {
+    value /= 1024
+    unit += 1
   }
+  const text = unit === 0 || value >= 100 ? String(Math.round(value)) : value.toFixed(1).replace(/\.0$/, '')
+  return `${text} ${BYTE_UNITS[unit]}`
+}
+
+export function formatSize(bytes: number, capped: boolean): string {
+  return capped ? `over ${formatBytes(bytes)}` : formatBytes(bytes)
+}
+
+const filesWord = (count: number): string => `${count} ${count === 1 ? 'file' : 'files'}`
+
+export interface StashDialogText {
+  title: string
+  body: string
+  rows: Array<{ label: string; value: string }>
+  /** Only when there are new files. */
+  checkbox: { label: string; hint: string } | null
+  confirmLabel: string
+  /** Shown when new files stay behind. */
+  leftBehind: string | null
+  /** Tracked files stashed (plus new ones when ticked); 0 means nothing is stashed. */
+  stashCount: number
+}
+
+export function stashDialogText(branch: string, report: DirtyReport, includeNew: boolean): StashDialogText {
+  const newFiles = report.untracked
+  const withNew = includeNew && newFiles > 0
+  const stashCount = report.modified + (withNew ? newFiles : 0)
+  const size = formatSize(report.untrackedBytes, report.capped)
+  const more = report.capped ? '+' : ''
+  const rows = [{ label: 'Modified files', value: String(report.modified) }]
+  if (newFiles > 0) rows.push({ label: `New files (${size})`, value: `${newFiles}${more}` })
+  return {
+    title: `Stash your changes to switch to ${branch}?`,
+    body: "You can't switch branches with uncommitted changes. Stash them first, and bring them back later with Apply last stash.",
+    rows,
+    checkbox: newFiles > 0
+      ? { label: `Also stash the ${newFiles}${more} new ${newFiles === 1 && !more ? 'file' : 'files'}`, hint: 'Off by default because large new files are slow to stash. Left out, they stay in your folder.' }
+      : null,
+    confirmLabel: stashCount > 0 ? `Stash ${filesWord(stashCount)} and switch to ${branch}` : `Switch to ${branch}`,
+    leftBehind: newFiles > 0 && !withNew ? `${newFiles === 1 ? 'The new file stays' : `The ${newFiles}${more} new files stay`} in your folder.` : null,
+    stashCount
+  }
+}
+
+/** The row to offer for a typed name that matches no branch: create it, or say why it cannot be a branch. */
+export function typedBranchRow(list: BranchList, query: string): Extract<PickerRow, { kind: 'create' | 'invalid' }> | null {
+  const row = pickerRows(list, query).find((item) => item.kind === 'create' || item.kind === 'invalid')
+  return row && (row.kind === 'create' || row.kind === 'invalid') ? row : null
+}
+
+/** What a switch to this target needs from the stash guard. */
+export function switchPlan(report: DirtyReport, includeNew: boolean): { stash: boolean; stashUntracked: boolean } {
+  const withNew = includeNew && report.untracked > 0
+  return { stash: report.modified > 0 || withNew, stashUntracked: withNew }
 }

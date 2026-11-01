@@ -1,4 +1,6 @@
+import { pairOf } from './compare'
 import type { Cell, GridLayout } from './layout'
+import type { CompareLink } from './types'
 
 /** Calm focus: one large pane and quieter siblings in a column. Mission control: equal tiles. */
 export type GridStyle = 'focus' | 'tiles'
@@ -50,4 +52,56 @@ export function tileLayout(count: number): GridLayout {
     for (let slot = 0; slot < size; slot += 1) cells.push({ row: row + 1, col: slot * span + 1, colSpan: span, rowSpan: 1 })
   })
   return { cols: TILE_TRACKS, rows: Math.max(1, sizes.length), scrolls: false, variant: '', rowsFrom: 0, cells }
+}
+
+/**
+ * The pane that is large in Calm focus. With "move the session I pick to the large spot" on it is
+ * the focused pane; off, it is the remembered large pane while that still exists, then the focused
+ * pane, then the first one. Null only when there are no panes.
+ */
+export function resolveLargePane(ids: string[], focusedId: string | null, largeId: string | null, moveOnFocus: boolean): string | null {
+  if (ids.length === 0) return null
+  const focused = focusedId !== null && ids.includes(focusedId) ? focusedId : null
+  if (moveOnFocus && focused) return focused
+  if (largeId !== null && ids.includes(largeId)) return largeId
+  return focused ?? ids[0]
+}
+
+/** Index of the unit (a pane, or a compare pair) that holds the large pane; 0 when none does. */
+export function largeUnitIndex(units: string[][], largeId: string | null): number {
+  return Math.max(0, units.findIndex((unit) => largeId !== null && unit.includes(largeId)))
+}
+
+/** Panes to dim: everything outside the large unit, except the pane you are working in. */
+export function quietPaneIds(units: string[][], largeIndex: number, focusedId: string | null): Set<string> {
+  const quiet = new Set<string>()
+  units.forEach((unit, index) => {
+    if (index === largeIndex) return
+    for (const id of unit) if (id !== focusedId) quiet.add(id)
+  })
+  return quiet
+}
+
+/** Whether "Make large" applies to a pane: Calm focus, two or more units, and it is not large already. */
+export function canMakeLarge(style: GridStyle, units: string[][], largeId: string | null, paneId: string): boolean {
+  if (style !== 'focus' || units.length < 2) return false
+  const unit = units.find((candidate) => candidate.includes(paneId))
+  return unit !== undefined && !(largeId !== null && unit.includes(largeId))
+}
+
+/** Index of a pane in the saved workspace, tolerant of old data that never saved one. */
+export function largeIndexOf(ids: string[], largeId: string | null): number | undefined {
+  const index = largeId === null ? -1 : ids.indexOf(largeId)
+  return index >= 0 ? index : undefined
+}
+
+/** Pane ids grouped the way the grid lays them out: a compare pair is one unit. */
+export function paneUnitIds(panes: { id: string; compare?: CompareLink }[]): string[][] {
+  const units: string[][] = []
+  for (let index = 0; index < panes.length; index += 1) {
+    const pair = pairOf(panes, index)
+    units.push(pair ? [pair.a.id, pair.b.id] : [panes[index].id])
+    if (pair) index += 1
+  }
+  return units
 }

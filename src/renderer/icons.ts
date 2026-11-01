@@ -49,7 +49,10 @@ export const ICONS = {
   linkOn: svg(18, '<circle cx="12" cy="12" r="9"/><polyline points="8 12.5 11 15.5 16 9"/>', 2),
   linkDropped: svg(18, '<path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5 M12 17.2v.3"/>', 2),
   linkOff: svg(18, '<path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/>', 2),
-  phone: svg(16, '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>')
+  phone: svg(16, '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>'),
+  navAgents: svg(16, '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8 M18 14.3a6.5 6.5 0 0 1 3.5 5.7"/>'),
+  navWork: svg(16, '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2 M3 13h18"/>'),
+  navSkills: svg(16, '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16v4 M17 18h4"/>')
 }
 
 export const logoMark = (size: number): string =>

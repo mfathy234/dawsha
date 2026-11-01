@@ -4,7 +4,11 @@ import {
   branchNameProblem,
   filterBranches,
   needsBranchFilter,
-  switchConfirmText,
+  formatBytes,
+  formatSize,
+  stashDialogText,
+  switchPlan,
+  typedBranchRow,
   formatSync,
   isDirtyRefusal,
   isDivergedPull,
@@ -182,13 +186,42 @@ describe('branch dropdown helpers', () => {
     expect(needsBranchFilter(parseBranchRefs(many))).toBe(true)
   })
 
-  it('names the target branch in the confirmation', () => {
-    expect(switchConfirmText('dev', 3)).toEqual({
-      title: 'Switch to dev?',
-      body: 'You have 3 changed files; git will carry them over or refuse if they conflict.',
-      confirmLabel: 'Switch to dev'
-    })
-    expect(switchConfirmText('dev', 1).body).toContain('1 changed file;')
+  it('words the stash dialog from the counts', () => {
+    const report = { modified: 2, untracked: 6, untrackedBytes: 716 * 1024 * 1024, capped: false }
+    const off = stashDialogText('main', report, false)
+    expect(off.title).toBe('Stash your changes to switch to main?')
+    expect(off.body).toBe("You can't switch branches with uncommitted changes. Stash them first, and bring them back later with Apply last stash.")
+    expect(off.rows).toEqual([{ label: 'Modified files', value: '2' }, { label: 'New files (716 MB)', value: '6' }])
+    expect(off.checkbox?.label).toBe('Also stash the 6 new files')
+    expect(off.checkbox?.hint).toBe('Off by default because large new files are slow to stash. Left out, they stay in your folder.')
+    expect(off.confirmLabel).toBe('Stash 2 files and switch to main')
+    expect(off.leftBehind).toBe('The 6 new files stay in your folder.')
+    expect(stashDialogText('main', report, true).confirmLabel).toBe('Stash 8 files and switch to main')
+    expect(stashDialogText('main', { ...report, modified: 1, untracked: 0 }, false)).toMatchObject({ confirmLabel: 'Stash 1 file and switch to main', checkbox: null, leftBehind: null })
+  })
+
+  it('only switches when just new files exist and the box is off', () => {
+    const report = { modified: 0, untracked: 3, untrackedBytes: 10, capped: false }
+    expect(stashDialogText('main', report, false).confirmLabel).toBe('Switch to main')
+    expect(stashDialogText('main', report, true).confirmLabel).toBe('Stash 3 files and switch to main')
+    expect(switchPlan(report, false)).toEqual({ stash: false, stashUntracked: false })
+    expect(switchPlan(report, true)).toEqual({ stash: true, stashUntracked: true })
+    expect(switchPlan({ ...report, modified: 1 }, false)).toEqual({ stash: true, stashUntracked: false })
+  })
+
+  it('says over when the size or count was cut off, and formats sizes', () => {
+    expect(formatSize(5000, true)).toBe('over 4.9 KB')
+    expect(formatBytes(0)).toBe('0 B')
+    expect(formatBytes(1536)).toBe('1.5 KB')
+    expect(stashDialogText('main', { modified: 0, untracked: 5000, untrackedBytes: 1024 * 1024, capped: true }, false).rows[1]).toEqual({ label: 'New files (over 1 MB)', value: '5000+' })
+  })
+
+  it('offers to create a typed name that matches no branch', () => {
+    const list = parseBranchRefs(REFS)
+    expect(typedBranchRow(list, 'feature/new-thing')).toMatchObject({ kind: 'create', name: 'feature/new-thing' })
+    expect(typedBranchRow(list, 'bad..name')).toMatchObject({ kind: 'invalid' })
+    expect(typedBranchRow(list, list.local[0].name)).toBeNull()
+    expect(typedBranchRow(list, '')).toBeNull()
   })
 
   it('rejects names git would not accept', () => {

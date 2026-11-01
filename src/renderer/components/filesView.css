@@ -1,3 +1,6 @@
+/* Fields in Files sit inside scrolling panes that clip an outer ring, so draw the ring inside the field. */
+:root { --field-inset: inset 0 1px 3px rgb(0 0 0 / .4), inset 0 0 0 1px rgb(255 255 255 / .28); }
+:root[data-kind='light'] { --field-inset: inset 0 1px 2px rgb(24 28 40 / .12), inset 0 0 0 1px rgb(24 28 40 / .40); }
 .files-view {
   flex: 1;
   min-width: 0;
@@ -29,7 +32,7 @@
 .files-location:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .files-loc-text { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
 .files-loc-project { font-size: var(--fs-body); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.files-loc-branch { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.files-loc-branch { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .files-branch {
   display: flex; align-items: center; gap: var(--s-2); width: 100%; min-height: 28px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control);
   background: transparent; color: var(--muted); font: inherit; font-size: var(--fs-ui); text-align: left; cursor: pointer;
@@ -60,10 +63,10 @@
 .files-pane[hidden] { display: none; }
 .files-goto {
   display: flex; align-items: center; gap: var(--s-2); width: 100%; height: var(--h-md); padding: 0 var(--s-3); border: 0; border-radius: var(--r-1); flex: none;
-  background: var(--well); box-shadow: var(--field-shadow); color: var(--muted); font: inherit; font-size: var(--fs-ui); text-align: left; cursor: pointer;
+  background: var(--well); box-shadow: var(--field-inset); color: var(--muted); font: inherit; font-size: var(--fs-ui); text-align: left; cursor: pointer;
 }
 .files-goto:hover { color: var(--text); }
-.files-goto:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.files-goto:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .files-goto-text { flex: 1; }
 .files-goto-keys { flex: none; padding: 2px 4px; border: 1px solid var(--line); border-radius: var(--r-1); color: var(--muted); font-size: var(--fs-status); line-height: 16px; }
 
@@ -119,12 +122,12 @@
 /* Search */
 .files-search-box { position: relative; flex: none; }
 .files-search-input, .files-search-include, .files-review-note, .commit-message {
-  width: 100%; border: 1px solid var(--line); border-radius: var(--r-1); background: var(--well); box-shadow: var(--field-shadow); color: var(--text); font: inherit; font-size: var(--fs-ui);
+  width: 100%; border: 0; border-radius: var(--r-1); background: var(--well); box-shadow: var(--field-inset); color: var(--text); font: inherit; font-size: var(--fs-ui);
 }
 .files-search-input, .files-search-include { height: var(--h-md); padding: 0 var(--s-3); }
 .files-search-input { padding-right: 112px; }
 .files-search-input::placeholder, .files-search-include::placeholder, .files-review-note::placeholder { color: var(--muted); }
-.files-search-input:focus-visible, .files-search-include:focus-visible, .files-review-note:focus-visible, .commit-message:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.files-search-input:focus-visible, .files-search-include:focus-visible, .files-review-note:focus-visible, .commit-message:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .files-search-input::-webkit-search-cancel-button { -webkit-appearance: none; }
 .files-search-opts { position: absolute; top: 1px; right: 2px; height: 26px; display: flex; align-items: center; gap: 2px; }
 .files-search-opt {
@@ -183,7 +186,7 @@
 .commit-dialog { width: min(560px, 92vw); display: flex; flex-direction: column; gap: var(--s-2); }
 .commit-label { color: var(--muted); font-size: var(--fs-ui); }
 .commit-message { padding: var(--s-2) var(--s-3); resize: vertical; min-height: 84px; }
-.commit-files { display: flex; flex-direction: column; max-height: 200px; overflow: auto; border-radius: var(--radius); background: var(--well); box-shadow: var(--field-shadow); padding: var(--s-1); }
+.commit-files { display: flex; flex-direction: column; max-height: 200px; overflow: auto; border-radius: var(--radius); background: var(--well); box-shadow: var(--field-inset); padding: var(--s-1); }
 .commit-file { display: flex; align-items: center; gap: var(--s-2); min-height: 26px; padding: 0 var(--s-2); border-radius: var(--r-control); font-size: var(--fs-ui); cursor: pointer; }
 .commit-file:hover { background: var(--hover); }
 .commit-file input { accent-color: var(--accent); margin: 0; }
@@ -320,7 +323,7 @@
 .cm-blame-mark .agent-mark svg { width: 11px; height: 11px; }
 .cm-review-comment { margin: 4px 16px 6px 48px; padding: var(--s-2) var(--s-3); border-radius: var(--radius); background: var(--raised); color: var(--text); font-family: var(--font-sans, inherit); font-size: var(--fs-ui); line-height: 1.5; white-space: normal; }
 .cm-review-text { white-space: pre-wrap; margin-bottom: var(--s-2); }
-.cm-review-input { width: 100%; box-sizing: border-box; padding: var(--s-2); border: 0; border-radius: var(--r-control); background: var(--well); box-shadow: var(--field-shadow); color: var(--text); font: inherit; resize: vertical; }
+.cm-review-input { width: 100%; box-sizing: border-box; padding: var(--s-2); border: 0; border-radius: var(--r-control); background: var(--well); box-shadow: var(--field-inset); color: var(--text); font: inherit; resize: vertical; }
 .cm-review-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 .cm-review-actions { display: flex; gap: var(--s-2); margin-top: var(--s-2); }
 .cm-review-comment .btn { height: 24px; border-color: transparent; background: var(--hover); color: var(--text); }
@@ -500,11 +503,11 @@
 /* Branch dropdown */
 .files-branch-row { display: flex; align-items: center; gap: 2px; }
 .files-branch-row .files-branch { flex: 1; min-width: 0; width: auto; }
-.files-branches { display: inline-flex; align-items: center; gap: var(--s-1); flex: none; min-height: 28px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--muted); font: inherit; font-size: var(--fs-ui); cursor: pointer; }
-.files-branches[hidden] { display: none; }
-.files-branches:hover { background: var(--hover); color: var(--text); }
-.files-branches:active, .files-branches[aria-expanded='true'] { background: var(--press); color: var(--text); }
-.files-branches:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.files-worktrees { display: inline-flex; align-items: center; gap: var(--s-1); flex: none; min-height: 28px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--muted); font: inherit; font-size: var(--fs-ui); cursor: pointer; }
+.files-worktrees[hidden] { display: none; }
+.files-worktrees:hover { background: var(--hover); color: var(--text); }
+.files-worktrees:active, .files-worktrees[aria-expanded='true'] { background: var(--press); color: var(--text); }
+.files-worktrees:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .files-branch-menu { display: flex; flex-direction: column; min-width: 260px; max-width: 340px; }
 .files-bm-filter { margin: var(--s-1) var(--s-2) var(--s-2); width: auto; flex: none; }
 .files-bm-list { overflow-y: auto; min-height: 0; flex: 1; }
@@ -513,3 +516,22 @@
 .files-bm-ago { flex: none; color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
 .files-bm-new { justify-content: flex-start; gap: var(--s-2); flex: none; }
 .files-bm-empty { margin: 0; padding: var(--s-3); color: var(--muted); font-size: var(--fs-ui); }
+
+.files-bm-invalid { color: var(--muted); }
+.files-worktrees > .icon { flex: none; }
+.files-loc-count { font-variant-numeric: tabular-nums; }
+
+/* A folder of new files folded into one row */
+.files-newdir { display: flex; flex-direction: column; min-width: 0; }
+.files-newdir-line { display: flex; align-items: center; gap: var(--s-2); padding-right: var(--s-2); min-width: 0; }
+.files-newdir-head { display: flex; align-items: center; gap: var(--s-2); flex: 1; min-width: 0; height: 28px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text); font: inherit; font-size: var(--fs-ui); text-align: left; cursor: pointer; }
+.files-newdir-head:hover { background: var(--hover); }
+.files-newdir-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.files-newdir-head > .icon { flex: none; color: var(--muted); }
+.files-newdir-head > .icon:first-child { transition: transform var(--dur-fast, 120ms) ease; }
+.files-newdir-head[aria-expanded='true'] > .icon:first-child { transform: rotate(90deg); }
+.files-newdir-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.files-newdir-size { flex: none; margin-left: auto; color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.files-newdir-size.heavy { color: var(--needs); font-weight: 600; }
+.files-newdir-ignore { flex: none; }
+.files-newdir-children { display: flex; flex-direction: column; padding-left: var(--s-3); }

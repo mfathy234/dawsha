@@ -14,6 +14,7 @@ import {
   setSessionInfo,
   setColorSessionsByTag,
   setDimOtherPanes,
+  setFocusMovesSelected,
   setShowRecap,
   setSidebarCollapsed,
   showSettingsSection,
@@ -264,7 +265,8 @@ export class SettingsViewComponent {
       case 'appearance':
         return [
           row('Theme', h('button', { class: 'btn', type: 'button', id: 'settings-theme-picker', onClick: () => toggleThemePicker() }, 'Choose theme'), h('p', { class: 'hint' }, 'Choose a theme and terminal background.')),
-          row('Sessions grid', this.gridStyles(state.settings.gridStyle), h('p', { class: 'hint' }, 'Choose between one focused session and a grid of equal tiles.'))
+          row('Sessions grid', this.gridStyles(state.settings.gridStyle), h('p', { class: 'hint' }, 'Choose between one focused session and a grid of equal tiles.')),
+          row('Large session', checkbox('focus-moves-selected', 'Move the session I pick to the large spot', state.settings.focusMovesSelected, false, setFocusMovesSelected), h('p', { class: 'hint' }, state.settings.focusMovesSelected ? 'On: the session you select becomes the large one.' : 'Off: the large session stays put. Selecting a side session just focuses it there. Applies to Calm focus.'))
         ]
       case 'import':
         return [h('div', { class: 'settings-import' },

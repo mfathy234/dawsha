@@ -27,6 +27,7 @@ async function addPanes(page: Page, count: number): Promise<void> {
 const boxes = async (page: Page) => Promise.all((await page.locator('.grid > .pane').all()).map((pane) => pane.boundingBox()))
 
 async function chooseGridStyle(page: Page, label: 'Calm focus' | 'Mission control'): Promise<void> {
+  await page.locator('#view-button').click()
   await page.locator('#layouts-button').click()
   await page.locator('.layouts-grid-style').getByRole('button', { name: label, exact: true }).click()
   await page.keyboard.press('Escape')
@@ -38,9 +39,10 @@ test('the sessions grid switches between calm focus and mission control, and the
   const { app, page } = await launchApp(sandbox)
   try {
     await addPanes(page, 3)
-    const focused = page.locator('.grid > .pane.focused')
-    await expect(focused).toHaveCount(1)
-    const focusedWidth = (await focused.boundingBox())!.width
+    // The large session stays put (the first one) while the newest session is focused beside it.
+    await expect(page.locator('.grid > .pane.focused')).toHaveCount(1)
+    const large = page.locator('.grid > .pane').first()
+    const focusedWidth = (await large.boundingBox())!.width
     const siblings = (await boxes(page)).filter((box) => box && Math.abs(box.width - focusedWidth) > 2).map((box) => box!)
     expect(siblings.length).toBe(2)
     expect(focusedWidth).toBeGreaterThan(siblings[0].width * 1.2)
@@ -57,7 +59,7 @@ test('the sessions grid switches between calm focus and mission control, and the
     await chooseGridStyle(page, 'Calm focus')
     await expect(page.locator('.grid.focus-style')).toHaveCount(1)
     await expect(page.locator('.grid > .pane.focused')).toHaveCount(1)
-    const again = (await page.locator('.grid > .pane.focused').boundingBox())!
+    const again = (await page.locator('.grid > .pane').first().boundingBox())!
     expect(again.width).toBeGreaterThan(siblings[0].width * 1.2)
     await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).gridStyle).toBe('focus')
 

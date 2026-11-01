@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cardSummary, formatResetIn, lastLines, sortByUrgency, limitText, limitRowLabel, moreLabel, stateWord, urgentWindow } from '../../src/shared/topbarSummary'
+import { cardSummary, countsLine, formatResetIn, lastLines, sortByUrgency, limitText, limitRowLabel, moreLabel, stateWord, urgentWindow } from '../../src/shared/topbarSummary'
 import type { RateLimitWindow } from '../../src/shared/types'
 
 const win = (key: string, percent: number, resetsAt: number | null = null): RateLimitWindow => ({ key, label: key, percent, resetsAt })
@@ -68,5 +68,12 @@ describe('compact usage meter helpers', () => {
     expect(limitRowLabel({ key: 'seven_day_opus', label: 'week opus', percent: 5, resetsAt: null, family: 'opus' })).toBe('Opus week')
     expect(limitRowLabel({ key: 'seven_day_fable', label: 'week fable', percent: 5, resetsAt: null, family: 'fable' })).toBe('Fable week')
     expect(limitRowLabel({ key: 'fable', label: 'fable', percent: 5, resetsAt: null, family: 'fable' })).toBe('Fable')
+  })
+
+  it('words the counts line of the View menu', () => {
+    expect(countsLine({ total: 3, needs: 0, working: 1, done: 0, idle: 1 })).toBe('3 sessions · 1 working · 1 idle')
+    expect(countsLine({ total: 1, needs: 1, working: 0, done: 0, idle: 0 })).toBe('1 session · 1 needs you')
+    expect(countsLine({ total: 4, needs: 2, working: 0, done: 1, idle: 0 })).toBe('4 sessions · 2 need you · 1 to review')
+    expect(countsLine({ total: 0, needs: 0, working: 0, done: 0, idle: 0 })).toBe('0 sessions')
   })
 })

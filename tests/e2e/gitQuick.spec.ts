@@ -48,10 +48,10 @@ async function startPane(page: Page): Promise<void> {
 }
 
 async function openPicker(page: Page): Promise<void> {
-  await page.locator('.chip-branch').click()
-  await page.getByRole('menuitem', { name: 'Switch branch…' }).click()
-  await expect(page.getByRole('dialog', { name: 'Switch branch' })).toBeVisible()
-  await expect(page.getByRole('combobox', { name: 'Switch branch' })).toBeFocused()
+  // The toast from the last switch can sit over the chip for a few seconds.
+  await page.locator('.chip-branch').evaluate((chip: HTMLElement) => chip.click())
+  await expect(page.locator('.files-branch-menu')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Find or create a branch' })).toBeFocused()
 }
 
 async function runFromPalette(page: Page, query: string, commandId: string): Promise<void> {
@@ -78,8 +78,9 @@ test('switches to local and remote-only branches, creates a branch from the pick
     await expect(page.locator('.chip-branch .chip-text')).toHaveText('main')
 
     await openPicker(page)
-    const rows = page.locator('.branch-picker .palette-row')
-    await expect(rows).toHaveText([/feature\/dark-mode/, /main\s*current/, /release\/2\.0\s*origin\/release\/2\.0/])
+    const rows = page.locator('.files-branch-menu .files-bm-item')
+    await expect(rows).toHaveText([/feature\/dark-mode/, /main/, /release\/2\.0/])
+    await expect(page.locator('.files-branch-menu .files-bm-extra')).toHaveText(['Pull', 'Stash changes', 'Apply last stash', 'Fetch'])
     await page.screenshot({ path: join('test-results/screens', '70-branch-picker.png') })
     await page.locator('[data-branch="feature/dark-mode"]').click()
     await expect(page.locator('.toast.info')).toContainText('Switched to feature/dark-mode', { timeout: SLOW })
@@ -87,14 +88,14 @@ test('switches to local and remote-only branches, creates a branch from the pick
     await expect(page.locator('.chip-branch .chip-text')).toHaveText('feature/dark-mode', { timeout: SLOW })
 
     await openPicker(page)
-    await page.locator('[data-branch="release/2.0"]').click()
+    await page.locator('[data-branch="origin/release/2.0"]').click()
     await expect(page.locator('.toast.info').last()).toContainText('Switched to release/2.0 tracking origin/release/2.0', { timeout: SLOW })
     expect(git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('release/2.0')
     expect(git(repo, 'rev-parse', '--abbrev-ref', '@{upstream}')).toBe('origin/release/2.0')
     await expect(page.locator('.chip-branch .chip-text')).toHaveText('release/2.0', { timeout: SLOW })
 
     await openPicker(page)
-    const input = page.getByRole('combobox', { name: 'Switch branch' })
+    const input = page.getByRole('textbox', { name: 'Find or create a branch' })
     await input.fill('feature/billing-export')
     await expect(page.locator('[data-kind="create"]')).toContainText('Create branch feature/billing-export from release/2.0')
     await input.press('Enter')
@@ -110,7 +111,7 @@ test('switches to local and remote-only branches, creates a branch from the pick
     await input.fill('-evil')
     await expect(page.locator('[data-kind="invalid"]')).toContainText('cannot start with a dash')
     await input.press('Enter')
-    await expect(page.getByRole('dialog', { name: 'Switch branch' })).toBeVisible()
+    await expect(page.locator('.files-branch-menu')).toBeVisible()
     expect(git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('feature/billing-export')
     expect(git(repo, 'branch', '--list', 'bad..name', '*evil')).toBe('')
 
@@ -126,13 +127,13 @@ test('switches to local and remote-only branches, creates a branch from the pick
     )
     expect(refused.ok).toBe(false)
     await input.press('Escape')
-    await expect(page.getByRole('dialog', { name: 'Switch branch' })).toHaveCount(0)
+    await expect(page.locator('.files-branch-menu')).toHaveCount(0)
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
-test('refuses a dirty switch, stashes and switches, then applies the last stash', async () => {
+test('asks before a dirty switch, stashes and switches, then applies the last stash', async () => {
   const sandbox = createSandbox()
   const { repo } = seedRig(sandbox)
   git(repo, 'switch', '-q', '-c', 'feature/dark-mode')
@@ -146,12 +147,13 @@ test('refuses a dirty switch, stashes and switches, then applies the last stash'
     await startPane(page)
     await openPicker(page)
     await page.locator('[data-branch="feature/dark-mode"]').click()
-    const refusal = page.locator('.branch-refusal')
-    await expect(refusal).toContainText('would be overwritten', { timeout: SLOW })
+    const guard = page.getByRole('alertdialog')
+    await expect(guard).toContainText('Stash your changes to switch to feature/dark-mode?')
     expect(git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main')
     await page.screenshot({ path: join('test-results/screens', '71-branch-refusal.png') })
 
-    await page.locator('[data-action="stash-switch"]').click()
+    await guard.getByLabel('Also stash the 1 new file').check()
+    await guard.getByRole('button', { name: 'Stash 2 files and switch to feature/dark-mode' }).click()
     await expect(page.locator('.toast.info').last()).toContainText('Apply last stash', { timeout: SLOW })
     expect(git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('feature/dark-mode')
     expect(git(repo, '-c', 'core.autocrlf=true', 'status', '--porcelain')).toBe('')

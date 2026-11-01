@@ -16,6 +16,7 @@ export const INCLUDED_KEYS = [
   'paletteShortcut',
   'sessionsLayout',
   'gridStyle',
+  'focusMovesSelected',
   'recordings',
   'crew',
   'sessionInfo',
@@ -119,7 +120,7 @@ const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
 const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew'] as const
-const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'colorSessionsByTag', 'othersCollapsed'] as const
+const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected'] as const
 
 function checkShapes(data: Raw): string | null {
   for (const key of LIST_KEYS) {
@@ -226,6 +227,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['paletteShortcut', 'Palette shortcut'],
   ['sessionsLayout', 'Sessions view'],
   ['gridStyle', 'Sessions grid'],
+  ['focusMovesSelected', 'Sessions grid'],
   ['recordings', 'Recording settings'],
   ['crew', 'Crew members'],
   ['sessionInfo', 'Notifications'],

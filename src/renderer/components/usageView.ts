@@ -21,6 +21,8 @@ import {
 import { api } from '../api'
 import { clear, h } from '../dom'
 import type { AppState } from '../state'
+import type { AgentKind } from '../../shared/types'
+import { visibleLimitAgents } from '../../shared/visibleAgents'
 import { agentMark } from './agentMark'
 import { buildBars, buildLegend, type ChartMode } from './usageChart'
 import { pageHeader } from './pageHeader'
@@ -48,11 +50,11 @@ function busiestLabel(key: string, hourly: boolean): string {
 }
 
 
-function notesFor(report: UsageReport): string[] {
+function notesFor(report: UsageReport, shown: readonly AgentKind[]): string[] {
   const notes: string[] = []
   notes.push(`${NOT_REPORTED} means not reported.`)
   for (const source of report.sources) {
-    if (!source.found) notes.push(`No ${agentLabel(source.agent)} history found, so it is not counted.`)
+    if (!source.found && shown.includes(source.agent)) notes.push(`No ${agentLabel(source.agent)} history found, so it is not counted.`)
   }
   if (report.sources.some((s) => s.found && s.agent !== 'claude')) {
     notes.push('Codex and Gemini report tokens only, so they have no cost.')
@@ -90,6 +92,11 @@ export class UsageViewComponent {
     this.render()
     void this.load()
     this.timer = window.setInterval(() => void this.load(), REFRESH_MS)
+  }
+
+  /** Agents listed per agent: installed ones, or (until the install check returns) those with history. The history itself stays. */
+  private shownAgents(report: UsageReport): AgentKind[] {
+    return visibleLimitAgents({ report: this.state?.agents.report?.tools ?? null, withData: report.byAgent.map((row) => row.agent), signedIn: [], focused: null })
   }
 
   private async load(): Promise<void> {
@@ -351,7 +358,8 @@ export class UsageViewComponent {
         h('td', {}, row.topAgent ? h('span', { class: 'usage-top' }, agentMark(row.topAgent), AGENT_NAMES[row.topAgent]) : '')
       )
     )
-    const agentRows = sortRows(report.byAgent, this.agentSort, (row, key) =>
+    const shown = this.shownAgents(report)
+    const agentRows = sortRows(report.byAgent.filter((row) => shown.includes(row.agent)), this.agentSort, (row, key) =>
       key === 'agent' ? agentLabel(row.agent) : key === 'sessions' ? row.sessions : key === 'tokens' ? row.tokens : key === 'cacheRead' ? row.cacheRead : row.costUsd
     ).map((row) =>
       h(
@@ -409,6 +417,6 @@ export class UsageViewComponent {
   }
 
   private notes(report: UsageReport): HTMLElement {
-    return h('p', { class: 'usage-notes' }, notesFor(report).join(' '))
+    return h('p', { class: 'usage-notes' }, notesFor(report, this.shownAgents(report)).join(' '))
   }
 }

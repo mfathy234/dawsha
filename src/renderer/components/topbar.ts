@@ -4,12 +4,10 @@ import {
   openQuickPick,
   openSettings,
   openResumePicker,
-  setDimOtherPanes,
   showView,
   toggleLayouts,
   toggleThemePicker,
   toggleUpdatePopover,
-  zoomAll,
   openPalette
 } from '../actions'
 import { pillLabel, showUpdatePill } from '../../shared/updates'
@@ -21,32 +19,37 @@ import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
 import type { PaneView } from '../derive'
 import { countSessionStates, sessionState } from '../../shared/sessionState'
-import { MORE_VIEWS, formatResetIn, limitRowLabel, limitText, urgentWindow, type MoreView } from '../../shared/topbarSummary'
+import { MORE_VIEWS, countsLine, formatResetIn, limitRowLabel, type MoreView } from '../../shared/topbarSummary'
 import { api } from '../api'
 import type { AgentAccount, AgentAccounts } from '../../shared/agentAccounts'
 import { allAgentLimits, dataAge, meterLimits, recordLimits, type AgentLimitStore, type AgentLimits } from '../../shared/agentLimits'
 import { stateIcon } from './stateIcon'
 import { toolState } from '../../shared/agentTools'
-import { formatPercent, gaugeStage } from '../../shared/statusLine'
+import { formatPercent } from '../../shared/statusLine'
+import { visibleLimitAgents } from '../../shared/visibleAgents'
+import { limitsPillModel, type LimitsPillModel } from '../../shared/limitsPill'
+import { checkLimitWarnings } from '../limitNotices'
+import { limitsPillChildren } from './limitRings'
+import { ViewMenu } from './viewMenu'
 import { chargeBar } from './chargeBar'
-import type { RateLimitWindow, TabAgent } from '../../shared/types'
+import type { TabAgent } from '../../shared/types'
 import { h, icon, leave, placeNearAnchor } from '../dom'
 import { store, type AppState } from '../state'
 import { bind, formatShortcut } from '../../shared/shortcuts'
-import { setSessionsLayout } from '../sessionsLayout'
 import { NotificationBell } from './notificationBell'
 import { AVATAR_LABELS, compareAvatarStates, stripSummary, type AvatarState } from '../../shared/crewLive'
 import { acknowledgeRun, liveRuns } from '../crewLive'
 import { crewAvatar } from './crewAvatar'
 import { openHandDialog } from './crewDialogs'
 import './topbar.css'
+import './topbarTools.css'
 
 const LIMIT_CELLS = 5
 const KNOWN_LIMITS_MS = 15_000
-const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
+/** Below this width nav labels become icons and New session becomes a + button. Keep in step with topbar-narrow.css. */
+const NARROW_QUERY = '(max-width: 1099px)'
 
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
-const BOARD_KEY_HINT = formatShortcut(bind('Ctrl+Shift+B'))
 const AGENTS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+L'))
 const FILES_KEY_HINT = formatShortcut(bind('Ctrl+Shift+E'))
 
@@ -84,13 +87,13 @@ export class TopBarComponent {
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.palette)),
     h('span', { class: 'utility-label' }, 'Theme')
   )
-  private readonly sessions = h('button', { class: 'btn ghost', type: 'button', id: 'sessions-button', onClick: () => showView('grid') }, 'Sessions')
-  private readonly background = h('button', { class: 'btn ghost', type: 'button', id: 'background-button', title: `Agents (${AGENTS_KEY_HINT})`, onClick: () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'crew') }, 'Agents')
+  private readonly sessions = navButton('sessions-button', 'Sessions', ICONS.terminal, null, () => showView('grid'))
+  private readonly background = navButton('background-button', 'Agents', ICONS.navAgents, AGENTS_KEY_HINT, () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'crew'))
   private readonly crewStrip = h('div', { class: 'crew-strip', id: 'crew-strip', role: 'group', 'aria-label': 'Who is on a job', hidden: true })
   private crewStripSignature = ''
-  private readonly files = h('button', { class: 'btn ghost', type: 'button', id: 'files-button', title: `Files (${FILES_KEY_HINT})`, onClick: () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files') }, 'Files')
-  private readonly work = h('button', { class: 'btn ghost', type: 'button', id: 'work-button', onClick: () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work') }, 'Work')
-  private readonly skills = h('button', { class: 'btn ghost', type: 'button', id: 'skills-button', onClick: () => showView(this.skills.getAttribute('aria-pressed') === 'true' ? 'grid' : 'skills') }, 'Skills')
+  private readonly files = navButton('files-button', 'Files', ICONS.folder, FILES_KEY_HINT, () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files'))
+  private readonly work = navButton('work-button', 'Work', ICONS.navWork, null, () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work'))
+  private readonly skills = navButton('skills-button', 'Skills', ICONS.navSkills, null, () => showView(this.skills.getAttribute('aria-pressed') === 'true' ? 'grid' : 'skills'))
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')
   private readonly more = h(
@@ -100,7 +103,11 @@ export class TopBarComponent {
     h('span', { class: 'more-chevron', 'aria-hidden': 'true' }, icon(ICONS.chevronDown)),
     this.moreDot
   )
-  readonly layoutsButton = h('button', { class: 'btn ghost sessions-layouts-button', type: 'button', id: 'layouts-button', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onClick: () => toggleLayouts() }, 'Layouts')
+  private readonly viewMenu = new ViewMenu()
+  /** The Layouts popover hangs from the open View menu's Layouts item, or from the View button once the menu has closed. */
+  get layoutsButton(): HTMLElement {
+    return this.viewMenu.layoutsAnchor
+  }
   private moreMenu: HTMLElement | null = null
   private moreItems: Record<MoreView, HTMLElement> | null = null
   private agentUpdates = false
@@ -109,27 +116,21 @@ export class TopBarComponent {
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.settings)),
     h('span', { class: 'utility-label' }, 'Settings')
   )
-  private readonly gridMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-grid', title: 'Show sessions as a grid', onClick: () => setSessionsLayout('grid') }, 'Grid')
-  private readonly boardMode = h('button', { class: 'btn ghost', type: 'button', id: 'layout-board', title: `Show sessions as a board (${BOARD_KEY_HINT})`, onClick: () => setSessionsLayout('board') }, 'Board')
-  private readonly dimSwitch = h('button', { class: 'icon-btn dim-toggle', type: 'button', id: 'dim-others', 'aria-pressed': 'false', 'aria-label': 'Dim others', title: 'Dim others', onClick: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
-    icon(ICONS.dim)
+  private readonly needsChip = h(
+    'button',
+    {
+      class: 'sum-chip sum-needs',
+      type: 'button',
+      id: 'needs-chip',
+      hidden: true,
+      title: `Go to the session that needs you (${NEEDS_KEY_HINT})`,
+      onClick: () => {
+        if (!focusNextAttention()) showView('grid')
+      }
+    }
   )
-  private readonly summary = h('div', { class: 'topbar-count', role: 'status', 'aria-live': 'polite' })
-  private summarySignature = ''
-  private readonly zoomValue = h('span', { class: 'zoom-value', title: 'Terminal text size of the focused pane' }, '15px')
-  private readonly zoomControl = h('div', { class: 'zoom-control', role: 'group', 'aria-label': 'Font size' },
-    h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Decrease font size', title: `Smaller text in every pane, from the focused pane's size (${ZOOM_MOD}+- changes the focused pane only)`, onClick: () => zoomAll(-1) }, icon(ICONS.minus)),
-    this.zoomValue,
-    h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane, from the focused pane's size (${ZOOM_MOD}+= changes the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
-  )
-  readonly sessionsToolbar = h('div', { class: 'sessions-toolbar', 'aria-label': 'Sessions tools' },
-    h('div', { class: 'layout-switch', role: 'group', 'aria-label': 'Sessions layout' }, this.gridMode, this.boardMode),
-    this.layoutsButton,
-    this.dimSwitch,
-    this.crewStrip,
-    this.summary,
-    this.zoomControl
-  )
+  private needsCount = -1
+  private readonly narrowQuery = window.matchMedia(NARROW_QUERY)
   readonly updatePill = h('button', {
     class: 'update-pill',
     type: 'button',
@@ -150,6 +151,7 @@ export class TopBarComponent {
   private limitsNow = 0
   private limitsPopover: HTMLElement | null = null
   private accounts: AgentAccounts | null = null
+  private accountsRequested = false
   private readonly limitsOutside = (event: Event): void => {
     const target = event.target as Node
     if (this.limitsPopover && !this.limitsPopover.contains(target) && !this.limits.contains(target)) this.closeLimitsPopover()
@@ -174,6 +176,9 @@ export class TopBarComponent {
         this.work,
         this.skills
       ),
+      this.viewMenu.el,
+      this.needsChip,
+      this.crewStrip,
       this.updatePill,
       h('span', { class: 'spacer' }),
       this.limits,
@@ -184,15 +189,23 @@ export class TopBarComponent {
       ),
       this.newSession
     )
+    this.narrowQuery.addEventListener('change', () => this.onNarrowChange())
+    this.onNarrowChange()
+  }
+
+  private get narrow(): boolean {
+    return this.narrowQuery.matches
+  }
+
+  private onNarrowChange(): void {
+    this.newSession.setAttribute('aria-label', this.narrow ? 'New session' : `New session, ${formatShortcut(bind('Ctrl+N'))}`)
+    this.limitsSignature = ''
+    if (this.lastLimitsArgs) this.updateLimits(this.lastLimitsArgs.state, this.lastLimitsArgs.views)
   }
 
   update(state: AppState, views: PaneView[]): void {
     this.updateLimits(state, views)
     this.sessions.setAttribute('aria-pressed', String(state.view === 'grid'))
-    this.gridMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'grid'))
-    this.boardMode.setAttribute('aria-pressed', String(state.settings.sessionsLayout === 'board'))
-    const dim = state.settings.dimOtherPanes
-    this.dimSwitch.setAttribute('aria-pressed', String(dim))
     this.background.setAttribute('aria-pressed', String(state.view === 'crew'))
     this.files.setAttribute('aria-pressed', String(state.view === 'files'))
     this.work.setAttribute('aria-pressed', String(state.view === 'work'))
@@ -206,10 +219,8 @@ export class TopBarComponent {
     this.agentUpdates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
     this.updateMore(state)
     this.updatePillState(state)
-    const focused = state.panes.find((pane) => pane.id === state.focusedId) ?? state.panes[0]
-    this.zoomValue.textContent = focused ? `${focused.fontSize}px` : '15px'
     this.themeButton.setAttribute('aria-expanded', String(state.themePickerOpen))
-    this.updateSummary(views)
+    this.updateSummary(state, views)
   }
 
   private updateCrewStrip(state: AppState): void {
@@ -260,8 +271,6 @@ export class TopBarComponent {
     const label = 'Dawsha menu'
     this.more.setAttribute('aria-pressed', String(this.activeMore !== null))
     this.more.setAttribute('aria-expanded', String(this.moreMenu !== null))
-    this.layoutsButton.setAttribute('aria-pressed', String(state.layoutsOpen))
-    this.layoutsButton.setAttribute('aria-expanded', String(state.layoutsOpen))
     this.more.setAttribute('aria-label', this.agentUpdates ? `${label}, agent updates available` : label)
     this.moreText.textContent = 'Dawsha'
     this.moreDot.hidden = !this.agentUpdates
@@ -276,36 +285,14 @@ export class TopBarComponent {
     if (dot) dot.hidden = !this.agentUpdates
   }
 
-  private updateSummary(views: PaneView[]): void {
+  private updateSummary(state: AppState, views: PaneView[]): void {
     const counts = countSessionStates(views.map((view) => sessionState(view)))
-    const signature = JSON.stringify(counts)
-    if (signature === this.summarySignature) return
-    this.summarySignature = signature
-    const chips: HTMLElement[] = [h('span', { class: 'sum-chip' }, `${counts.total} session${counts.total === 1 ? '' : 's'}`)]
-    if (counts.working > 0) chips.push(h('span', { class: 'sum-chip state-working' }, stateIcon('working'), `${counts.working} working`))
-    if (counts.needs > 0) {
-      chips.push(
-        h(
-          'button',
-          {
-            class: 'sum-chip sum-needs',
-            type: 'button',
-            id: 'needs-chip',
-            title: `Go to the session that needs you (${NEEDS_KEY_HINT})`,
-            'aria-label': `${counts.needs} needs you, go to the next one, ${NEEDS_KEY_HINT}`,
-            onClick: () => {
-              if (!focusNextAttention()) showView('grid')
-            }
-          },
-          stateIcon('needs'),
-          `${counts.needs} needs you`,
-          h('span', { class: 'kbd', 'aria-hidden': 'true' }, NEEDS_KEY_HINT)
-        )
-      )
-    }
-    if (counts.done > 0) chips.push(h('span', { class: 'sum-chip state-done' }, stateIcon('done'), `${counts.done} to review`))
-    if (counts.idle > 0) chips.push(h('span', { class: 'sum-chip state-idle' }, stateIcon('idle'), `${counts.idle} idle`))
-    this.summary.replaceChildren(...chips)
+    this.viewMenu.update(state, countsLine(counts))
+    if (counts.needs === this.needsCount) return
+    this.needsCount = counts.needs
+    this.needsChip.hidden = counts.needs === 0
+    this.needsChip.setAttribute('aria-label', `${counts.needs} needs you, go to the next one, ${NEEDS_KEY_HINT}`)
+    this.needsChip.replaceChildren(stateIcon('needs'), `${counts.needs} needs you`, h('span', { class: 'kbd', 'aria-hidden': 'true' }, NEEDS_KEY_HINT))
   }
 
   private updatePillState(state: AppState): void {
@@ -526,43 +513,44 @@ export class TopBarComponent {
     )
     const focusedView = views.find((view) => view.pane.id === state.focusedId)
     this.focusedAgent = focusedView?.agent ?? null
-    const focused = meterLimits(this.limitStore, this.focusedAgent, state.now)
-    this.limitsFocused = focused
+    this.limitsFocused = meterLimits(this.limitStore, this.focusedAgent, state.now)
     this.limitsNow = state.now
-    const items = (focused?.windows ?? []).map((window) => ({ window, text: limitText(window, state.now), title: resetText(window) }))
-    const signature = JSON.stringify([focused?.agent, focused?.state, focused?.at, items])
+    checkLimitWarnings(this.limitStore, state.now)
+    const model = limitsPillModel(this.limitStore, this.focusedAgent, state.now, this.narrow, this.visibleAgents(state))
+    const signature = JSON.stringify(model)
     if (signature !== this.limitsSignature) {
       this.limitsSignature = signature
-      this.renderLimits(focused, items)
+      this.renderLimits(model)
     }
     if (this.limitsPopover) this.fillLimitsPopover(this.limitsPopover)
   }
 
-  private renderLimits(focused: AgentLimits | null, items: { window: RateLimitWindow; text: string; title: string }[]): void {
-    const summaries = (['claude', 'codex'] as const).map((agent) => {
-      const entry = meterLimits(this.limitStore, agent, this.limitsNow)
-      if (!entry || entry.state === 'none' || entry.windows.length === 0) return null
-      const rows = entry.windows.map((window) => ({ window, text: limitText(window, this.limitsNow), title: resetText(window) }))
-      return h('span', { class: `limits-inline-agent limits-agent${entry.state === 'stale' ? ' stale' : ''}`, 'data-agent': agent, 'aria-label': `${agentLabel(agent)} ${rows.map((row) => row.title).join(', ')}` },
-        agentMark(agent), h('span', { class: 'limits-inline-agent-name limits-agent-name' }, agent === 'claude' ? 'Claude' : 'Codex'),
-        h('span', { class: 'limits-inline-windows' }, ...rows.map((row) => limitItem(row.window, row.text, row.title)))
-      )
-    }).filter((item): item is HTMLElement => item !== null)
-    this.limits.hidden = summaries.length === 0 && focused === null
-    this.limits.classList.toggle('stale', focused?.state === 'stale')
-    if (!focused && summaries.length === 0) return
-    const name = focused ? agentLabel(focused.agent) : 'Agent'
-    const summary = items.map((item) => item.title).join('; ')
-    const visibleSummary = summaries.map((item) => item.getAttribute('aria-label')).filter(Boolean).join('; ')
-    this.limits.setAttribute('aria-label', `${name} limits${focused?.state === 'stale' ? ' (stale)' : ''}: ${summary || visibleSummary}. Show limits for every agent`)
-    this.limits.title = visibleSummary || `${name} limits${focused?.state === 'stale' ? ' (stale)' : ''}: ${summary}`
-    const urgent = urgentWindow(items.map((item) => item.window))
-    this.limits.replaceChildren(
-      ...summaries,
-      ...(summaries.length === 0 && focused ? [h('span', { class: 'limits-agent' }, agentMark(focused.agent), h('span', { class: 'limits-agent-name' }, name)), focused.state === 'none' ? h('span', { class: 'limits-none' }, 'no limits reported') : h('span', { class: 'limits-windows' }, ...items.map((item) => limitItem(item.window, item.text, item.title)))] : []),
-      ...(urgent && focused?.state !== 'none' ? [h('span', { class: `limits-compact stage-${gaugeStage(urgent.percent)}`, 'data-limit-compact': urgent.key }, formatPercent(urgent.percent))] : []),
-      ...(focused?.state === 'stale' ? [h('span', { class: 'limits-note' }, 'stale')] : [])
-    )
+  /** Agents the limits list shows: installed ones (see visibleLimitAgents), judged from the shared install report. */
+  private visibleAgents(state: AppState): AgentKind[] {
+    this.loadAccountsOnce()
+    const withData = AGENTS.filter((agent) => (this.limitStore[agent]?.windows.length ?? 0) > 0)
+    const signedIn = AGENTS.filter((agent) => (this.accounts?.[agent]?.kind ?? 'none') !== 'none')
+    return visibleLimitAgents({ report: state.agents.report?.tools ?? null, withData, signedIn, focused: this.focusedAgent })
+  }
+
+  private loadAccountsOnce(): void {
+    if (this.accountsRequested) return
+    this.accountsRequested = true
+    void api.agentAccounts().then((accounts) => {
+      this.accounts = accounts
+      this.limitsSignature = ''
+      if (this.lastLimitsArgs) this.updateLimits(this.lastLimitsArgs.state, this.lastLimitsArgs.views)
+    }, () => { this.accountsRequested = false })
+  }
+
+  private renderLimits(model: LimitsPillModel): void {
+    this.limits.hidden = model.hidden
+    this.limits.classList.toggle('stale', model.stale)
+    this.limits.classList.toggle('compact', this.narrow)
+    if (model.hidden) return
+    this.limits.setAttribute('aria-label', model.ariaLabel)
+    this.limits.title = model.title
+    this.limits.replaceChildren(...limitsPillChildren(model))
   }
 
   private toggleLimitsPopover(): void {
@@ -579,7 +567,8 @@ export class TopBarComponent {
     this.limitsPopover = popover
     this.refreshKnownLimits(true)
     this.fillLimitsPopover(popover)
-    void api.agentAccounts().then((accounts) => {
+    // Opening the popover reads again, so signing in after launch shows at once.
+    void api.agentAccounts(true).then((accounts) => {
       this.accounts = accounts
       if (this.limitsPopover === popover) this.fillLimitsPopover(popover)
     }, () => undefined)
@@ -603,19 +592,14 @@ export class TopBarComponent {
   private fillLimitsPopover(popover: HTMLElement): void {
     const focused = this.focusedAgent
     const now = this.limitsNow
-    const sections = allAgentLimits(this.limitStore, now).map((entry) => limitsSection(entry, entry.agent === focused, now, this.accounts))
+    const visible = this.lastLimitsArgs ? this.visibleAgents(this.lastLimitsArgs.state) : AGENTS
+    const sections = allAgentLimits(this.limitStore, now).filter((entry) => visible.includes(entry.agent)).map((entry) => limitsSection(entry, entry.agent === focused, now, this.accounts))
     const link = h('button', { class: 'btn ghost small limits-usage-link', type: 'button', onClick: () => { this.closeLimitsPopover(); showView('usage') } }, 'Open Usage')
     const keep = popover.contains(document.activeElement) && document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('limits-usage-link')
     popover.replaceChildren(h('div', { class: 'popover-title' }, 'Limits by agent'), ...sections, h('div', { class: 'popover-foot limits-foot' }, link))
     if (keep) link.focus()
   }
 
-}
-
-function resetText(window: RateLimitWindow): string {
-  if (window.resetsAt === null) return `${window.label}: ${formatPercent(window.percent)} used`
-  const when = new Date(window.resetsAt).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })
-  return `${window.label}: ${formatPercent(window.percent)} used, resets ${when}`
 }
 
 function accountLine(account: AgentAccount | null): HTMLElement | null {
@@ -653,14 +637,12 @@ function resetLine(resetsAt: number, now: number): string {
   return left ? `resets in ${left}` : 'reset'
 }
 
-function limitItem(window: RateLimitWindow, text: string, title: string): HTMLElement {
+/** A nav button: the label always, plus an icon that stands in for the label on a narrow window (see topbar-narrow.css). */
+function navButton(id: string, label: string, svg: string, hint: string | null, onClick: () => void): HTMLButtonElement {
   return h(
-    'span',
-    { class: `limit stage-${gaugeStage(window.percent)}`, title, 'data-limit': window.key },
-    h('span', { class: `limit-label${window.family ? ` fam-${window.family}` : ''}` }, window.label),
-    ' ',
-    chargeBar(window.percent, LIMIT_CELLS),
-    ' ',
-    h('span', { class: 'limit-value' }, text)
+    'button',
+    { class: 'btn ghost nav-button', type: 'button', id, 'aria-label': label, title: hint ? `${label} (${hint})` : label, onClick },
+    h('span', { class: 'nav-icon', 'aria-hidden': 'true' }, icon(svg)),
+    h('span', { class: 'nav-label' }, label)
   )
 }
