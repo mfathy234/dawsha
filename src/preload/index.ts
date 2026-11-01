@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { createRunPreload } from './runCommands'
 import { createFilesToolsPreload } from './filesTools'
+import { createChatPreload } from './chat'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
 import { isRemoteControlBuild } from '../shared/remoteBuild'
@@ -28,6 +29,7 @@ async function invokeRemote(channel: string, ...args: unknown[]): Promise<Remote
 const api: GridApi = {
   runs: createRunPreload(),
   tools: createFilesToolsPreload(),
+  chat: createChatPreload(),
   ...(isRemoteControlBuild ? {
     remoteAccess: {
       getState: () => ipcRenderer.invoke(IPC.remoteAccessGet),

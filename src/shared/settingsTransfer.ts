@@ -54,6 +54,9 @@ export const EXCLUDED_KEYS = [
   'onboardingDismissed',
   // Tracks this PC's local model cache, so it is never carried to another PC.
   'legacyModelCacheCleared',
+  // Chat or terminal per session, keyed by this PC's session ids; the default view is a per-PC choice too.
+  'sessionView',
+  'chatViews',
   // Never carried between PCs: a shared file must not be able to switch agents to skipping permission prompts.
   'fullAccess'
 ] as const satisfies readonly (keyof Settings)[]

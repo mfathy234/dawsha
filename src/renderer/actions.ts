@@ -51,6 +51,7 @@ import { confirmDialog } from './components/dialogs'
 import { toast } from './components/toast'
 import { closedSessionsFor, insertKept, keptSessionKey, REOPEN_CONFIRM_OVER, renameKept, sameKept, tagKept } from '../shared/keptSessions'
 import { cleanSessionName, type SessionTag } from '../shared/sessionTags'
+import type { ChatView } from '../shared/chatLog'
 import { derivePanes, matchAll, primaryTab, sessionIdOf, workFolderOfPane } from './derive'
 import { nextFrame } from './dom'
 import { sharedZoomState } from './sharedZoom'
@@ -234,9 +235,10 @@ export async function startSession(
   chip = false,
   titleHint?: string,
   kept?: Pick<KeptSession, 'tag' | 'renamed'>,
-  prompt?: string
+  prompt?: string,
+  view?: ChatView
 ): Promise<number> {
-  return (await openSession(projectId, agent, resumeId, chip, titleHint, kept, undefined, prompt))?.number ?? 0
+  return (await openSession(projectId, agent, resumeId, chip, titleHint, kept, undefined, prompt, view))?.number ?? 0
 }
 
 /** Starts a session in a given checkout of the project (its own folder when none) and returns the new pane's id. */
@@ -252,7 +254,8 @@ async function openSession(
   titleHint?: string,
   kept?: Pick<KeptSession, 'tag' | 'renamed'>,
   folder?: string,
-  prompt?: string
+  prompt?: string,
+  view?: ChatView
 ): Promise<{ number: number; paneId: string } | null> {
   const project = projectById(store.state, projectId)
   if (!project) return null
@@ -262,7 +265,8 @@ async function openSession(
     name: kept?.renamed ? titleHint : undefined,
     tag: kept?.tag,
     prompt: prompt && prompt.trim() !== '' ? prompt : undefined,
-    resumeChipAt: chip ? Date.now() : undefined
+    resumeChipAt: chip ? Date.now() : undefined,
+    view
   }
   const pane: PaneState = {
     id: newId(),
@@ -1328,7 +1332,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, from: tab.from, baseline: tab.baseline, name: tab.name, tag: tab.tag, crew: tab.crew })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, titleHint: tab.titleHint, from: tab.from, baseline: tab.baseline, name: tab.name, tag: tab.tag, crew: tab.crew, view: tab.view })
   }
   return {
     id: newId(),

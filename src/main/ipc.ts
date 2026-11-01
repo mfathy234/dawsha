@@ -39,6 +39,7 @@ import { trashProjectPath } from './filesTrash'
 import { codeNavigation, installCodeNav } from './codeNav'
 import { editorConfig } from './editorConfig'
 import { registerCodeNavExtrasIpc } from './codeNavExtrasIpc'
+import { registerChatIpc } from './chatLog/ipc'
 import { closeAgentFiles, refreshAgentFiles, unwatchAgentFiles, watchAgentFiles } from './agentFiles'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
@@ -205,6 +206,7 @@ export function registerIpc(
   ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => gated(folder, (root) => sessionStatus(root, baseline)))
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
   registerCodeNavExtrasIpc(known, getWindow)
+  registerChatIpc()
   const refused = { ok: false as const, error: 'Not a project folder.' }
   ipcMain.handle(IPC.filesWorkspaces, (_event, projectId: unknown, folder: unknown) => listFilesWorkspaces(settings.get().projects, projectId, folder))
   ipcMain.handle(IPC.filesTrash, (_event, folder: unknown, path: unknown) => trashProjectPath(settings.get().projects, folder, path, full => shell.trashItem(full)))
