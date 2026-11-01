@@ -3,6 +3,8 @@ export interface KeyBinding {
   ctrl: boolean
   shift: boolean
   alt: boolean
+  /** Use the physical Control key, including on macOS. */
+  physicalCtrl?: boolean
 }
 
 export interface KeyEventLike {
@@ -44,14 +46,14 @@ export function parseShortcut(text: string): KeyBinding | null {
 
 export function formatShortcut(binding: KeyBinding, platform = runtimePlatform()): string {
   const key = binding.key.length === 1 ? binding.key.toUpperCase() : binding.key
-  return [binding.ctrl && (isMac(platform) ? 'Cmd' : 'Ctrl'), binding.shift && 'Shift', binding.alt && 'Alt', key].filter(Boolean).join('+')
+  return [binding.ctrl && (isMac(platform) && !binding.physicalCtrl ? 'Cmd' : 'Ctrl'), binding.shift && 'Shift', binding.alt && 'Alt', key].filter(Boolean).join('+')
 }
 
 export function matchesBinding(event: KeyEventLike, binding: KeyBinding, platform = runtimePlatform()): boolean {
-  const mac = isMac(platform)
+  const mac = isMac(platform) && !binding.physicalCtrl
   const primary = mac ? event.metaKey : event.ctrlKey
   if (primary !== binding.ctrl || (mac ? event.ctrlKey : event.metaKey) || event.shiftKey !== binding.shift || event.altKey !== binding.alt) return false
-  const pressed = event.key === ' ' ? 'Space' : event.key
+  const pressed = event.key === ' ' ? 'Space' : binding.key === '-' && event.shiftKey && event.key === '_' ? '-' : event.key
   return binding.key.length === 1 ? pressed.toLowerCase() === binding.key : pressed === binding.key
 }
 

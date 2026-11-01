@@ -42,6 +42,17 @@ describe('formatShortcut', () => {
 })
 
 describe('matchesBinding', () => {
+  it('supports physical Control bindings on macOS without claiming Command or Option navigation', () => {
+    const back = { key: '-', ctrl: true, shift: false, alt: false, physicalCtrl: true }
+    const forward = { ...back, shift: true }
+    expect(matchesBinding(event('-', { ctrlKey: true }), back, 'darwin')).toBe(true)
+    expect(matchesBinding(event('_', { ctrlKey: true, shiftKey: true }), forward, 'darwin')).toBe(true)
+    expect(matchesBinding(event('-', { metaKey: true }), back, 'darwin')).toBe(false)
+    expect(matchesBinding(event('ArrowLeft', { altKey: true }), back, 'darwin')).toBe(false)
+    expect(formatShortcut(back, 'darwin')).toBe('Ctrl+-')
+    expect(formatShortcut(forward, 'darwin')).toBe('Ctrl+Shift+-')
+  })
+
   it('requires the exact modifier set', () => {
     const ctrlK = bind('Ctrl+K')
     expect(matchesBinding(event('k', { ctrlKey: true }), ctrlK, 'win32')).toBe(true)

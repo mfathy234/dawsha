@@ -1,5 +1,6 @@
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
+import { fileHistoryShortcut } from '../../shared/filesShortcuts'
 
 const minus = '−'
 
@@ -61,8 +62,8 @@ export class FilesBar {
   private readonly done = h('button', { class: 'btn small', type: 'button', id: 'files-edit', hidden: true, 'aria-pressed': 'true', onClick: () => this.hooks.done() }, 'Done')
   private readonly send = h('button', { class: 'btn small', type: 'button', id: 'files-send', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send to agent', icon(ICONS.chevronDown))
   readonly more = h('button', { class: 'icon-btn files-more', type: 'button', id: 'files-more', 'aria-label': 'More actions', title: 'More actions', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: (event: Event) => this.hooks.more(event.currentTarget as HTMLElement) }, icon(ICONS.more))
-  private readonly backButton = h('button', { class: 'files-nav', type: 'button', id: 'files-back', 'aria-label': 'Back', title: 'Back (Alt+Left)', disabled: true, onClick: () => this.hooks.back() }, icon(ARROW_LEFT))
-  private readonly forwardButton = h('button', { class: 'files-nav', type: 'button', id: 'files-forward', 'aria-label': 'Forward', title: 'Forward (Alt+Right)', disabled: true, onClick: () => this.hooks.forward() }, icon(ARROW_RIGHT))
+  private readonly backButton = h('button', { class: 'files-nav', type: 'button', id: 'files-back', 'aria-label': 'Back', title: `Back (${fileHistoryShortcut('back').shortcut})`, disabled: true, onClick: () => this.hooks.back() }, icon(ARROW_LEFT))
+  private readonly forwardButton = h('button', { class: 'files-nav', type: 'button', id: 'files-forward', 'aria-label': 'Forward', title: `Forward (${fileHistoryShortcut('forward').shortcut})`, disabled: true, onClick: () => this.hooks.forward() }, icon(ARROW_RIGHT))
   private readonly explorer = h('button', { class: 'icon-btn files-explorer-toggle', type: 'button', id: 'files-explorer-toggle', 'aria-label': 'Show the file explorer', title: 'Show the file explorer (Ctrl+Alt+E)', hidden: true, onClick: () => this.hooks.toggleExplorer() }, icon(ICONS.layout))
   private readonly inspector = h('button', { class: 'icon-btn files-inspector-toggle', type: 'button', id: 'files-inspector-toggle', 'aria-controls': 'files-side', onClick: () => this.hooks.toggleInspector() }, icon(ICONS.layout))
 

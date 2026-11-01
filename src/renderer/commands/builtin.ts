@@ -1,6 +1,7 @@
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
 import { openHandDialog } from '../components/crewDialogs'
 import { bind, formatShortcut } from '../../shared/shortcuts'
+import { FILE_ASK_SHORTCUT, fileHistoryShortcut } from '../../shared/filesShortcuts'
 import {
   addTab,
   closePane,
@@ -94,8 +95,8 @@ function filesNavigationCommands(): Command[] {
     filesCommand('files.definition', 'Go to Definition', 'definition', functionKey('F12'), 'jump declaration f12'),
     filesCommand('files.implementation', 'Go to Implementation', 'implementation', withKeys('Ctrl+F12'), 'jump implements f12'),
     filesCommand('files.references', 'Find All References', 'references', functionKey('F12', true), 'usages peek f12'),
-    filesCommand('files.back', 'Go Back', 'back', withKeys('Alt+ArrowLeft'), 'previous location history navigate'),
-    filesCommand('files.forward', 'Go Forward', 'forward', withKeys('Alt+ArrowRight'), 'next location history navigate'),
+    filesCommand('files.back', 'Go Back', 'back', fileHistoryShortcut('back'), 'previous location history navigate'),
+    filesCommand('files.forward', 'Go Forward', 'forward', fileHistoryShortcut('forward'), 'next location history navigate'),
     filesCommand('files.everything', 'Go to Everything…', 'everything', withKeys('Ctrl+T'), 'search symbol text file anywhere'),
     filesCommand('files.symbol', 'Go to Symbol in this file…', 'symbol', withKeys('Ctrl+Shift+O'), 'outline method class function'),
     filesCommand('files.line', 'Go to Line…', 'line', withKeys('Ctrl+G'), 'goto number position'),
@@ -106,7 +107,7 @@ function filesNavigationCommands(): Command[] {
     filesCommand('files.previousProblem', 'Go to Previous Problem', 'previous-problem', functionKey('F8', true), 'error warning marker underline'),
     filesCommand('files.nextChange', 'Go to Next Change', 'next-change', functionKey('F7'), 'diff review hunk changes'),
     filesCommand('files.previousChange', 'Go to Previous Change', 'previous-change', functionKey('F7', true), 'diff review hunk changes'),
-    filesCommand('files.ask', 'Ask an Agent About This Code…', 'ask', withKeys('Ctrl+Alt+A'), 'send selection question symbol references'),
+    filesCommand('files.ask', 'Ask an Agent About This Code…', 'ask', withKeys(FILE_ASK_SHORTCUT), 'send selection question symbol references'),
     filesCommand('files.stale', 'Show Callers the Agent Did Not Update', 'stale', {}, 'unupdated stale callers implementations changed'),
     filesCommand('files.follow', 'Follow the Agent', 'follow', {}, 'watch open edited files live toggle')
   ]
