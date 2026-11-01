@@ -20,7 +20,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run test:unit
+      - run: xvfb-run -a npm run test:unit
       - run: npm run package -- --linux --x64 --publish never
       - name: Upload Linux test packages
         uses: actions/upload-artifact@v7
