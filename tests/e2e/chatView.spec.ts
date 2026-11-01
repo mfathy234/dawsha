@@ -243,7 +243,7 @@ test('Gemini and shells never get the option, in the pane, in New session or by 
     await expect(page.locator('#default-view-codex').getByRole('button', { name: 'Chat' })).toHaveAttribute('aria-pressed', 'true')
     await page.locator('#sessions-button').click()
 
-    await page.getByRole('button', { name: 'New session, Ctrl+N' }).click()
+    await page.locator('#new-session').click()
     const dialog = page.getByRole('dialog', { name: 'New session' })
     await dialog.getByRole('radio', { name: /Gemini/ }).click()
     await expect(dialog.locator('.nd-view')).toHaveCount(0)
@@ -301,7 +301,7 @@ test('the default and each session remember their view across a relaunch, and Ne
     await switchTo(pane, 'Terminal')
     await expect(pane.locator('.chat')).toBeHidden()
 
-    await page.getByRole('button', { name: 'New session, Ctrl+N' }).click()
+    await page.locator('#new-session').click()
     const dialog = page.getByRole('dialog', { name: 'New session' })
     await dialog.getByRole('radio', { name: /Claude/ }).click()
     await expect(dialog.locator('.nd-view').getByRole('button', { name: 'Chat' })).toHaveAttribute('aria-pressed', 'true')
@@ -362,7 +362,7 @@ test('each agent opens in its own default and a remembered choice beats the defa
     const first = await startClaude(session.page, sandbox)
     await expect(first.locator('.chat')).toBeHidden()
     await expect(first.locator('.term-host.active')).toBeVisible()
-    await session.page.getByRole('button', { name: 'New session, Ctrl+N' }).click()
+    await session.page.locator('#new-session').click()
     const dialog = session.page.getByRole('dialog', { name: 'New session' })
     await dialog.getByRole('radio', { name: /Codex/ }).click()
     await expect(dialog.locator('.nd-view').getByRole('button', { name: 'Chat' })).toHaveAttribute('aria-pressed', 'true')

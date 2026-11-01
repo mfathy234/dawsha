@@ -137,7 +137,7 @@ test('every chat state at the CI window size', async () => {
     await page.locator('#settings-tab-general').click()
     await shot(page.locator('.settings-view'), '11-settings')
     await page.locator('#sessions-button').click()
-    await page.getByRole('button', { name: 'New session, Ctrl+N' }).click()
+    await page.locator('#new-session').click()
     await expect(page.getByRole('dialog', { name: 'New session' })).toBeVisible()
     await shot(page.getByRole('dialog', { name: 'New session' }), '12-new-session-dialog')
   } finally {

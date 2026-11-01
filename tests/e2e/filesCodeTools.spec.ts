@@ -91,7 +91,7 @@ test('F2 previews a rename across files and writes nothing until the confirmatio
     await place()
     await previewRename(page, 'buildStore', place)
     await page.locator('#edit-preview-apply').click()
-    await page.locator('[role="alertdialog"] [data-confirm]').click()
+    await page.locator('.overlay:not(.leaving) [role="alertdialog"] [data-confirm]').click()
     await expect.poll(() => read(sandbox.projectFolder, 'src/app.ts')).toContain('buildStore()')
     expect(read(sandbox.projectFolder, 'src/store.ts')).toContain('export function buildStore()')
     expect(read(sandbox.projectFolder, 'src/app.ts')).not.toContain('makeStore')
@@ -133,7 +133,7 @@ test('Replace in files previews every match and only writes after a confirmation
 
     await page.locator('#files-search-replace-go').click()
     await page.locator('#edit-preview-apply').click()
-    await page.locator('[role="alertdialog"] [data-confirm]').click()
+    await page.locator('.overlay:not(.leaving) [role="alertdialog"] [data-confirm]').click()
     await expect.poll(() => read(sandbox.projectFolder, 'src/app.ts')).toContain('createStore()')
     await expect.poll(() => read(sandbox.projectFolder, 'src/store.ts')).toContain('export function createStore()')
     expect(read(sandbox.projectFolder, 'src/app.ts')).not.toContain('makeStore')
@@ -175,7 +175,7 @@ test('Revert one change from the gutter asks first, naming the lines, and Cancel
 
     await page.locator('.files-editor:not([hidden]) .cm-hunk-btn').first().click()
     await page.getByRole('menuitem', { name: 'Revert this change…' }).click()
-    await page.locator('[role="alertdialog"] [data-confirm]').click()
+    await page.locator('.overlay:not(.leaving) [role="alertdialog"] [data-confirm]').click()
     await expect.poll(() => read(root, 'notes.txt')).toBe(base.replace('line 25\n', 'line twenty-five\n'))
     await expect(page.locator('.files-editor:not([hidden]) .cm-hunk-btn')).toHaveCount(1)
 

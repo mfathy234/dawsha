@@ -39,7 +39,7 @@ test('top bar shows the brand and the split New session button picks the agent',
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['gemini'])
 
-    await page.getByRole('button', { name: 'New session, Ctrl+N' }).click()
+    await page.locator('#new-session').click()
     await expect(page.locator('.quickpick .option').first()).toContainText('Claude')
   } finally {
     await closeApp(app)
