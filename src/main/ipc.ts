@@ -36,6 +36,11 @@ import { PreviewServer } from './filePreviewServer'
 import { registerPreviewProtocol } from './previewProtocol'
 import { fileCommitDetails, fileCommitFile, fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { trashProjectPath } from './filesTrash'
+import { codeNavigation, installCodeNav } from './codeNav'
+import { editorConfig } from './editorConfig'
+import { registerCodeNavExtrasIpc } from './codeNavExtrasIpc'
+import { registerChatIpc } from './chatLog/ipc'
+import { closeAgentFiles, refreshAgentFiles, unwatchAgentFiles, watchAgentFiles } from './agentFiles'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
@@ -200,6 +205,8 @@ export function registerIpc(
   ipcMain.handle(IPC.gitBaseline, (_event, folder: unknown) => gated(folder, sessionBaseline))
   ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => gated(folder, (root) => sessionStatus(root, baseline)))
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
+  registerCodeNavExtrasIpc(known, getWindow)
+  registerChatIpc()
   const refused = { ok: false as const, error: 'Not a project folder.' }
   ipcMain.handle(IPC.filesWorkspaces, (_event, projectId: unknown, folder: unknown) => listFilesWorkspaces(settings.get().projects, projectId, folder))
   ipcMain.handle(IPC.filesTrash, (_event, folder: unknown, path: unknown) => trashProjectPath(settings.get().projects, folder, path, full => shell.trashItem(full)))
@@ -220,6 +227,7 @@ export function registerIpc(
     return root ? fileAgainstBase(root, path) : refused
   })
   const watchers = createWatchRegistry((key, paths) => {
+    refreshAgentFiles(key)
     const window = getWindow()
     if (window && !window.isDestroyed()) window.webContents.send(IPC.filesChanged, key, paths)
   }, undefined, undefined, (key) => {
@@ -235,14 +243,16 @@ export function registerIpc(
       watchedWindow = window
       window.once('closed', () => {
         watchers.closeAll()
+        closeAgentFiles()
         watchedWindow = null
       })
-      window.webContents.on('did-navigate', () => watchers.closeAll())
+      window.webContents.on('did-navigate', () => { watchers.closeAll(); closeAgentFiles() })
     }
     watchers.watch(root)
+    watchAgentFiles(root)
   })
   ipcMain.handle(IPC.filesUnwatch, (_event, folder: unknown) => {
-    if (typeof folder === 'string') watchers.unwatch(folder)
+    if (typeof folder === 'string') { watchers.unwatch(folder); unwatchAgentFiles(folder) }
   })
   ipcMain.handle(IPC.gitSync, (_event, folder: string) => gitSync(folder))
   ipcMain.handle(IPC.gitBranches, (_event, folder: unknown) => gated(folder, listBranches))
@@ -272,6 +282,23 @@ export function registerIpc(
   ipcMain.handle(IPC.filesSearch, async (_event, folder: unknown, request: unknown) => {
     const root = await known(folder)
     return root ? searchFiles(root, request) : refused
+  })
+  ipcMain.handle(IPC.codeNav, async (_event, folder: unknown, request: unknown) => {
+    const root = await known(folder)
+    return root ? codeNavigation.query(root, request) : refused
+  })
+  ipcMain.handle(IPC.codeNavStatus, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    return root ? codeNavigation.status(root, path) : { engine: 'name', state: 'none', canInstall: false }
+  })
+  ipcMain.handle(IPC.codeNavRestart, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    if (root) await codeNavigation.restart(root, path)
+  })
+  ipcMain.handle(IPC.codeNavInstall, () => installCodeNav())
+  ipcMain.handle(IPC.editorConfig, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    return root ? editorConfig(root, path) : {}
   })
   ipcMain.handle(IPC.filesLog, async (_event, folder: unknown, path: unknown) => {
     const root = await known(folder)

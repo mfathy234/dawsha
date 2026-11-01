@@ -55,7 +55,7 @@ import { canCompact, contextHintText, showContextHint } from '../../shared/conte
 import { dismissContextHint, typeCompact } from '../contextActions'
 import { dropFiles, hasFiles } from '../fileDrop'
 import { sessionState, type SessionState } from '../../shared/sessionState'
-import { parsePermissionDetail, permissionPromptText, type PermissionDetail, type PermissionOption } from '../../shared/permissionPrompt'
+import { detectPermissionPrompt, parsePermissionDetail, permissionPromptText, type PermissionDetail, type PermissionOption } from '../../shared/permissionPrompt'
 import { setStatePillSuffix, stateIcon, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
@@ -64,10 +64,17 @@ import { TimelinePanel } from './timelinePanel'
 import './paneCalm.css'
 import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
+import { PaneChat } from '../chat/paneChat'
+import { chatCapable } from '../../shared/chatLog'
+import { ViewSwitch } from '../chat/viewSwitch'
+import { chatHostFor, syncPaneChat } from '../chat/paneChatController'
+import '../chat/chat.css'
 
 const RESUMED_CHIP_MS = 60_000
 const RECAP_REFRESH_MS = 2_500
 const RECAP_SCREEN_ROWS = 60
+// Session time and last activity alone are not worth a footer.
+const FOOT_FILLER = ['info-elapsed', 'info-age']
 
 /** The header's panel button: a slide-over over the terminal, without maximizing the pane. */
 function toggleDetailsPanel(paneId: string): void {
@@ -98,6 +105,9 @@ export class PaneComponent {
   private readonly branchName = h('span', { class: 'chip-text' })
   private readonly branchSync = h('span', { class: 'chip-sync', hidden: true })
   private readonly stateHost = h('span', { class: 'pane-state' })
+  private readonly viewSwitch = new ViewSwitch('Session view', 'pane-view')
+  private chat!: PaneChat
+  private chatShown = false
   private stateSignature = ''
   private readonly recap = h('div', { class: 'pane-recap', dir: 'auto', hidden: true })
   private recapText = ''
@@ -142,6 +152,7 @@ export class PaneComponent {
       this.compareChip,
       this.fromChip,
       this.stateHost,
+      this.viewSwitch.el,
       this.restart,
       iconButton('Details panel', ICONS.info, () => toggleDetailsPanel(paneId), 'pane-panel'),
       this.maxButton,
@@ -174,6 +185,8 @@ export class PaneComponent {
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
     this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, content, this.permission, this.foot)
+    this.chat = new PaneChat(chatHostFor(paneId, () => this.current), this.permission)
+    this.body.append(this.chat.el)
     this.watchFileDrops()
     // Header buttons (menu, details, maximize, close) act on this pane without making it the focused one,
     // which in Calm focus would also move it into the large slot.
@@ -229,7 +242,9 @@ export class PaneComponent {
     this.updateRecap(view)
     this.recap.hidden = !store.state.settings.showRecap || this.recapText === ''
     this.updateHint(view)
-    this.updatePermission(view, state)
+    const asking = state === 'needs' || (this.chatShown && detectPermissionPrompt(permissionTail(this.paneId)))
+    this.updatePermission(view, asking ? 'needs' : state)
+    this.updateChat(view, state, asking)
     this.updateDetails(view, maximized)
     this.timeline.update(view, maximized && view.timelineOpen)
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
@@ -290,6 +305,18 @@ export class PaneComponent {
     this.permissionSignature = signature
     this.permission.hidden = false
     this.permission.replaceChildren(...this.approvalChildren(view, shown, this.permissionPrompt, project))
+  }
+
+  private updateChat(view: PaneView, state: SessionState, asking: boolean): void {
+    const shown = syncPaneChat(this.paneId, view, state, asking, this.viewSwitch, this.chat)
+    this.body.classList.toggle('chat-on', shown)
+    this.el.classList.toggle('has-view-switch', chatCapable(view.agent))
+    if (!this.chat.holdsPermission && this.permission.parentElement !== this.el) this.el.insertBefore(this.permission, this.foot)
+    if (shown !== this.chatShown) {
+      this.chatShown = shown
+      if (shown) this.chat.focusComposer()
+      else getTerminal(view.primaryTabId)?.focus()
+    }
   }
 
   private approvalChildren(view: PaneView, detail: PermissionDetail, prompt: string, project: string): HTMLElement[] {
@@ -368,8 +395,8 @@ export class PaneComponent {
       onEnableBridge: () => void enableBridge(),
       onReviewFiles: () => this.reviewInFiles()
     })
-    // Session time alone is not worth a footer: it shows only next to model, changes, review or the others.
-    this.info.hidden = !items.some((item) => !item.classList.contains('info-elapsed'))
+    // Session time and age show only next to model, changes, review or the others.
+    this.info.hidden = !items.some((item) => !FOOT_FILLER.some((name) => item.classList.contains(name)))
     this.info.replaceChildren(...items)
   }
 
@@ -783,6 +810,7 @@ export class PaneComponent {
     this.closeMenu()
     this.closeActions()
     this.timeline.dispose()
+    this.chat.dispose()
     this.el.remove()
   }
 }

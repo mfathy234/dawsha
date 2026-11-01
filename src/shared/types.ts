@@ -8,6 +8,7 @@ import type { RemoteCapabilities } from './remoteCapabilities'
 import type { SessionTag } from './sessionTags'
 import type { CrewIdentity, CrewLaunch, CrewRun, CrewSettings } from './crew'
 import type { CrewGoal, LeadSettings } from './crewLead'
+import type { ChatView, SessionViews } from './chatLog'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
 export type SessionStatus = 'busy' | 'idle'
@@ -62,6 +63,8 @@ export interface SavedTab {
   name?: string
   tag?: SessionTag
   crew?: CrewIdentity
+  /** Terminal or Chat, once the user picked one for this session. */
+  view?: ChatView
 }
 
 export interface SavedPane {
@@ -137,6 +140,10 @@ export interface Settings {
   sidebarHideEmpty: boolean
   dimOtherPanes: boolean
   showRecap: boolean
+  /** How a new session of each agent opens: as its terminal or as a chat drawn from its log. */
+  sessionViews: SessionViews
+  /** The view each session was last left in, by agent and session id, so a resume opens the same way. */
+  chatViews: Record<string, ChatView>
   colorSessionsByTag: boolean
   sidebarWidth: number
   othersCollapsed: boolean

@@ -3,6 +3,30 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.3] - 2026-11-02
+
+### Added
+
+- **Go to Definition, Implementation and References in Files.** F12, Ctrl+click, Ctrl+F12 and Shift+F12. One result jumps, several open a peek under the line, and Back and Forward bring you back. TypeScript and JavaScript answers are exact. C# answers are exact when `csharp-ls` or OmniSharp is installed, and Dawsha offers to install `csharp-ls`. Everything else searches by name, and says "Best match by name".
+- **Find your way faster.** Ctrl+T searches files, symbols and text in one box. Ctrl+Shift+O goes to a symbol, Ctrl+G to a line, and breadcrumbs show the symbol you are in.
+- **Change code like in VS Code.** F2 renames across files and Ctrl+Shift+H replaces across files, both with a preview and a confirmation. Ctrl+D adds the next match as another cursor.
+- **A better code view.** Errors from your runs show in the code, with F8 to step through them. Also folding, indent guides, sticky scroll, hover for type info, call hierarchy and a C# outline.
+- **Sharper review.** Word-level highlights, side-by-side Changes, and stage or revert one change from the gutter. F7 steps through changes across files and `v` marks a file as viewed.
+- **Work with your agents from the code.** Ask an agent about a selection or symbol with Ctrl+I. See which session edited a file from the gutter, which says plainly when the log only shows the file and not the line. List callers an agent's change did not update, and let Files follow the agent as it edits.
+- **A chat view for Claude and Codex sessions.** Each session can switch between Terminal and Chat at any time, and the agent keeps running in its terminal. Activity shows as one line per action with its own icon. Settings has a default per agent, New session can override it, and each session remembers its choice. Gemini and shells stay terminals.
+- **A pull request flow.** Open a PR, read review comments and failing checks, and send them to an agent, using the `gh` CLI. Merging asks you to confirm and names the PR.
+- **A built-in browser in Files.** Preview your running app, and send a screenshot or console errors to an agent. It is sandboxed from the rest of Dawsha.
+- **A Config tab in Files.** See values from `appsettings`, `launchSettings` and `.env` files, which file each comes from and which one wins. Values that look secret stay masked until you click them.
+- **Files respects `.editorconfig`.** Indentation applies as you edit. Line endings, final newline and trailing whitespace apply when you save an edit.
+
+### Fixed
+
+- Saving no longer normalises a file with mixed line endings.
+- Large files no longer show an empty outline.
+- The removed-line count for a deleted file was one too high.
+- Enter in Search now runs the search again after files change.
+- Clicking a Problem now opens at its column.
+
 ## [1.8.2] - 2026-11-01
 
 ### Added

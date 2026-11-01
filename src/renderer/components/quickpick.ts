@@ -21,6 +21,10 @@ import { modeTabs } from './pickerTabs'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
 import { popupDismissButton } from './popupDismiss'
+import { chatCapable, defaultViewFor, type ChatView } from '../../shared/chatLog'
+import { ViewSwitch } from '../chat/viewSwitch'
+import '../chat/chat.css'
+import '../chat/chatChoice.css'
 
 const MAC = navigator.platform.toLowerCase().includes('mac')
 
@@ -43,6 +47,9 @@ export class QuickPickComponent {
   private state: AppState | null = null
   private focusedAtOpen: string | null = null
   private views: PaneView[] = []
+  private viewOverride: ChatView | null = null
+  private viewAgent: AgentKind | null = null
+  private readonly viewSwitch = new ViewSwitch('Open the session as')
 
   constructor(private readonly anchor: () => HTMLElement) {}
 
@@ -105,6 +112,8 @@ export class QuickPickComponent {
     )
     this.selected = 0
     this.overrides = {}
+    this.viewOverride = null
+    this.viewAgent = null
     this.input.addEventListener('input', () => {
       this.selected = 0
       this.renderList()
@@ -145,7 +154,14 @@ export class QuickPickComponent {
 
   private startSelected(): void {
     const choice = this.matches[this.selected]
-    if (choice) void startSession(choice.id, pickedAgent(choice, this.overrides, this.preset))
+    if (!choice) return
+    const agent = pickedAgent(choice, this.overrides, this.preset)
+    void startSession(choice.id, agent, undefined, false, undefined, undefined, undefined, this.pickedView(agent))
+  }
+
+  /** Only a session whose agent has a chat view takes the override; the rest start as they always did. */
+  private pickedView(agent: AgentKind): ChatView | undefined {
+    return chatCapable(agent) ? (this.viewOverride ?? undefined) : undefined
   }
 
   private onKey(event: KeyboardEvent): void {
@@ -195,7 +211,7 @@ export class QuickPickComponent {
         h('span', { class: 'option-text' }, h('span', { class: 'option-name' }, project.name), h('span', { class: 'option-path' }, project.folder)),
         h('span', { class: 'option-agent' }, agentMark(agent), AGENT_NAMES[agent])
       )
-      option.addEventListener('click', () => void startSession(project.id, agent))
+      option.addEventListener('click', () => void startSession(project.id, agent, undefined, false, undefined, undefined, undefined, this.pickedView(agent)))
       option.addEventListener('mousemove', () => {
         if (this.selected === index) return
         this.selected = index
@@ -251,5 +267,19 @@ export class QuickPickComponent {
       )
       this.agents.append(card)
     }
+    this.renderViewChoice(current)
+  }
+
+  private renderViewChoice(agent: AgentKind): void {
+    if (agent !== this.viewAgent) this.viewOverride = null
+    this.viewAgent = agent
+    if (!this.agents || !chatCapable(agent)) return
+    const fallback = this.state ? defaultViewFor(this.state.settings.sessionViews, agent) : 'terminal'
+    this.viewSwitch.update(this.viewOverride ?? fallback, (view) => {
+      this.viewOverride = view
+      this.renderAgents()
+      this.input?.focus()
+    })
+    this.agents.append(h('div', { class: 'nd-view' }, h('span', { class: 'nd-note' }, 'Open as'), this.viewSwitch.el))
   }
 }

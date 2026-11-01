@@ -81,6 +81,10 @@ export class ProblemsPane {
     return this.problems.length
   }
 
+  get all(): readonly RunProblem[] {
+    return this.problems
+  }
+
   /** Re-reads the runs; rendering waits a moment so streaming output does not rebuild the list on every chunk. */
   update(runs: readonly RunSnapshot[], folder: string | null): void {
     const current = latestRuns(runs, folder)

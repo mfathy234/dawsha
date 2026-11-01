@@ -15,6 +15,9 @@ export interface TimelineEvent {
   removed?: number
   /** The text an edit wrote, for finding its lines again. */
   change?: EditChange
+  /** Edit calls are attempts until the transcript records a successful tool result. */
+  editStatus?: 'pending' | 'succeeded' | 'failed'
+  editCompletedAt?: number
   command?: string
   passed?: number
   failed?: number

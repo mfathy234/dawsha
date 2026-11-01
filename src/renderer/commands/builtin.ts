@@ -1,6 +1,7 @@
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
 import { openHandDialog } from '../components/crewDialogs'
 import { bind, formatShortcut } from '../../shared/shortcuts'
+import { FILE_ASK_SHORTCUT, fileHistoryShortcut } from '../../shared/filesShortcuts'
 import {
   addTab,
   closePane,
@@ -47,7 +48,7 @@ import { exportTranscript } from '../transcriptActions'
 import { replayPane } from '../replayActions'
 import { openShortcutsSheet } from '../components/shortcutsSheet'
 import { toggleQuickOpen } from '../components/quickOpen'
-import { requestFilesCommand } from '../files/filesActions'
+import { filesTarget, openFolderInFiles, requestFilesCommand, type FilesCommand } from '../files/filesActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
@@ -60,6 +61,57 @@ const withKeys = (text: string): Pick<Command, 'keys' | 'shortcut'> => ({
   keys: [bind(text)],
   shortcut: formatShortcut(bind(text))
 })
+
+const functionKey = (key: string, shift = false): Pick<Command, 'keys' | 'shortcut'> => {
+  const binding = { key, ctrl: false, shift, alt: false }
+  return { keys: [binding], shortcut: formatShortcut(binding) }
+}
+
+const filesOnly = (state: AppState): boolean => state.view === 'files'
+
+function filesCommand(id: string, title: string, command: FilesCommand, keys: Pick<Command, 'keys' | 'shortcut'>, keywords: string): Command {
+  return { id, title, group: 'Actions', keywords: `files code ${keywords}`, ...keys, enabled: filesOnly, run: () => requestFilesCommand(command) }
+}
+
+const PANEL_OPEN_DELAY_MS = 150
+
+// Panel tabs open from anywhere: outside Files the view opens on the focused session's project first.
+function panelCommand(id: string, title: string, command: FilesCommand, keywords: string): Command {
+  return {
+    id, title, group: 'Actions', keywords: `files panel ${keywords}`,
+    run: () => {
+      if (store.state.view === 'files') return requestFilesCommand(command)
+      const target = filesTarget()
+      if (target) openFolderInFiles(target)
+      else showView('files')
+      window.setTimeout(() => requestFilesCommand(command), PANEL_OPEN_DELAY_MS)
+    }
+  }
+}
+
+// Code navigation keys work only while Files is showing, so Ctrl+Shift+O keeps filtering the sidebar in the grid.
+function filesNavigationCommands(): Command[] {
+  return [
+    filesCommand('files.definition', 'Go to Definition', 'definition', functionKey('F12'), 'jump declaration f12'),
+    filesCommand('files.implementation', 'Go to Implementation', 'implementation', withKeys('Ctrl+F12'), 'jump implements f12'),
+    filesCommand('files.references', 'Find All References', 'references', functionKey('F12', true), 'usages peek f12'),
+    filesCommand('files.back', 'Go Back', 'back', fileHistoryShortcut('back'), 'previous location history navigate'),
+    filesCommand('files.forward', 'Go Forward', 'forward', fileHistoryShortcut('forward'), 'next location history navigate'),
+    filesCommand('files.everything', 'Go to Everything…', 'everything', withKeys('Ctrl+T'), 'search symbol text file anywhere'),
+    filesCommand('files.symbol', 'Go to Symbol in this file…', 'symbol', withKeys('Ctrl+Shift+O'), 'outline method class function'),
+    filesCommand('files.line', 'Go to Line…', 'line', withKeys('Ctrl+G'), 'goto number position'),
+    filesCommand('files.rename', 'Rename Symbol…', 'rename', functionKey('F2'), 'refactor name all files preview'),
+    filesCommand('files.replace', 'Replace in Files…', 'replace', withKeys('Ctrl+Shift+H'), 'search replace across files preview'),
+    filesCommand('files.calls', 'Call Hierarchy', 'calls', withKeys('Ctrl+Shift+Alt+H'), 'callers callees incoming outgoing'),
+    filesCommand('files.nextProblem', 'Go to Next Problem', 'next-problem', functionKey('F8'), 'error warning marker underline'),
+    filesCommand('files.previousProblem', 'Go to Previous Problem', 'previous-problem', functionKey('F8', true), 'error warning marker underline'),
+    filesCommand('files.nextChange', 'Go to Next Change', 'next-change', functionKey('F7'), 'diff review hunk changes'),
+    filesCommand('files.previousChange', 'Go to Previous Change', 'previous-change', functionKey('F7', true), 'diff review hunk changes'),
+    filesCommand('files.ask', 'Ask an Agent About This Code…', 'ask', withKeys(FILE_ASK_SHORTCUT), 'send selection question symbol references'),
+    filesCommand('files.stale', 'Show Callers the Agent Did Not Update', 'stale', {}, 'unupdated stale callers implementations changed'),
+    filesCommand('files.follow', 'Follow the Agent', 'follow', {}, 'watch open edited files live toggle')
+  ]
+}
 
 function focusedAction(id: string, title: string, run: (paneId: string) => unknown, keywords?: string): Command {
   return {
@@ -267,6 +319,7 @@ export function installBuiltinCommands(): void {
       group: 'Actions',
       keywords: 'sidebar search find projects',
       ...withKeys('Ctrl+Shift+O'),
+      scope: 'grid',
       run: () => void window.dispatchEvent(new CustomEvent(SIDEBAR_FILTER_EVENT))
     },
     { id: 'view.toggleTagColors', title: 'Toggle tag colours', group: 'Actions', keywords: 'session tag bug feature colour color chip', run: () => setColorSessionsByTag(!store.state.settings.colorSessionsByTag) },
@@ -290,6 +343,9 @@ export function installBuiltinCommands(): void {
       enabled: (state) => state.view === 'files',
       run: () => requestFilesCommand('toggle-explorer')
     },
+    panelCommand('files.config', 'Show config files', 'show-config', 'appsettings launchsettings env environment variables secrets settings'),
+    panelCommand('files.pr', 'Show pull request', 'show-pr', 'github gh review comments ci checks merge create'),
+    panelCommand('files.browser', 'Show browser', 'show-browser', 'preview localhost web page devtools screenshot'),
     {
       id: 'files.worktree',
       title: 'Switch worktree…',
@@ -307,6 +363,7 @@ export function installBuiltinCommands(): void {
       enabled: (state) => state.view === 'files',
       run: () => requestFilesCommand('switch-branch')
     },
+    ...filesNavigationCommands(),
     { id: 'view.quickopen', title: 'Find a file…', group: 'Actions', keywords: 'quick open ctrl p files search project fuzzy', ...withKeys('Ctrl+P'), run: () => toggleQuickOpen() },
     { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },
     { id: 'view.crew', title: 'Open Agents', group: 'Actions', keywords: 'agents crew members run lead maya', ...withKeys('Ctrl+Shift+L'), run: () => showView('crew') },

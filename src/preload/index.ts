@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { createRunPreload } from './runCommands'
+import { createFilesToolsPreload } from './filesTools'
+import { createChatPreload } from './chat'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
 import { isRemoteControlBuild } from '../shared/remoteBuild'
@@ -26,6 +28,8 @@ async function invokeRemote(channel: string, ...args: unknown[]): Promise<Remote
 
 const api: GridApi = {
   runs: createRunPreload(),
+  tools: createFilesToolsPreload(),
+  chat: createChatPreload(),
   ...(isRemoteControlBuild ? {
     remoteAccess: {
       getState: () => ipcRenderer.invoke(IPC.remoteAccessGet),
@@ -101,6 +105,20 @@ const api: GridApi = {
   filesWorkspaces: (projectId, folder) => ipcRenderer.invoke(IPC.filesWorkspaces, projectId, folder),
   trashProjectPath: (folder, path) => ipcRenderer.invoke(IPC.filesTrash, folder, path),
   searchFiles: (folder, request) => ipcRenderer.invoke(IPC.filesSearch, folder, request),
+  codeNav: (folder, request) => ipcRenderer.invoke(IPC.codeNav, folder, request),
+  codeNavStatus: (folder, path) => ipcRenderer.invoke(IPC.codeNavStatus, folder, path),
+  codeNavRestart: (folder, path) => ipcRenderer.invoke(IPC.codeNavRestart, folder, path),
+  codeNavInstall: () => ipcRenderer.invoke(IPC.codeNavInstall),
+  hover: (folder, request) => ipcRenderer.invoke(IPC.hover, folder, request),
+  renameSymbol: (folder, request) => ipcRenderer.invoke(IPC.renameSymbol, folder, request),
+  callHierarchy: (folder, request) => ipcRenderer.invoke(IPC.callHierarchy, folder, request),
+  staleCallers: (folder) => ipcRenderer.invoke(IPC.staleCallers, folder),
+  replaceInFiles: (folder, request) => ipcRenderer.invoke(IPC.replaceInFiles, folder, request),
+  stageChange: (folder, request) => ipcRenderer.invoke(IPC.stageChange, folder, request),
+  revertChange: (folder, request) => ipcRenderer.invoke(IPC.revertChange, folder, request),
+  lineSessions: (folder, path) => ipcRenderer.invoke(IPC.lineSessions, folder, path),
+  onAgentEdits: (listener) => subscribe<[import('../shared/codeNavExtras').AgentEditEvent]>(IPC.agentEdits, listener),
+  editorConfig: (folder, path) => ipcRenderer.invoke(IPC.editorConfig, folder, path),
   fileLog: (folder, path) => ipcRenderer.invoke(IPC.filesLog, folder, path),
   fileCommitDetails: (folder, hash) => ipcRenderer.invoke(IPC.filesCommitDetails, folder, hash),
   fileCommitFile: (folder, hash, path, full) => ipcRenderer.invoke(IPC.filesCommitFile, folder, hash, path, full),

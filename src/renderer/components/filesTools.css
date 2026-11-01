@@ -1,0 +1,67 @@
+/* Confirmation bodies list files and changes on separate lines. */
+.dialog [id^='dlg-body'] { white-space: pre-line; }
+
+/* Second-wave Files tools: sticky scroll, hover, change and session gutters, edit previews, call hierarchy, side by side. */
+
+.cm-panels-top .cm-sticky { background: var(--editor-bg, var(--surface)); box-shadow: 0 1px 0 var(--seam); font-family: var(--font-mono); font-size: 13px; }
+.cm-sticky[hidden] { display: none; }
+.cm-sticky-row { display: block; width: 100%; height: 22px; padding: 0 16px 0 24px; border: 0; background: transparent; color: var(--text); font: inherit; line-height: 22px; text-align: left; white-space: pre; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.cm-sticky-row:hover { background: var(--hover); }
+.cm-sticky-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.cm-tooltip.cm-tooltip-hover { max-width: min(560px, 80vw); border: 0; border-radius: var(--r-control); background: var(--overlay); color: var(--text); box-shadow: var(--e2); }
+.cm-hover-tip { display: grid; gap: var(--s-1); padding: var(--s-2) var(--s-3); font-family: var(--font-sans); font-size: var(--fs-ui); line-height: 1.45; }
+.cm-hover-code { font-family: var(--font-mono); font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cm-hover-doc { color: var(--muted); white-space: pre-wrap; }
+.cm-hover-note { color: var(--muted); font-size: var(--fs-status); }
+
+.cm-hunk-gutter { width: 20px; }
+.cm-hunk-gutter .cm-gutterElement { display: flex; align-items: center; justify-content: center; }
+.cm-hunk-btn { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: var(--r-micro); color: var(--muted); cursor: pointer; }
+.cm-hunk-btn svg { width: 14px; height: 14px; }
+.cm-hunk-btn:hover { background: var(--hover); color: var(--text); }
+.cm-touch-gutter { width: 18px; }
+.cm-touch-gutter .cm-gutterElement { display: flex; align-items: center; justify-content: center; }
+.cm-touch-mark { display: inline-grid; place-items: center; width: 16px; height: 16px; cursor: pointer; }
+.cm-touch-mark.guess { opacity: .55; }
+.cm-touch-mark .agent-mark { display: inline-grid; place-items: center; width: 12px; height: 12px; font-size: 12px; }
+.cm-touch-mark .agent-mark svg { width: 11px; height: 11px; }
+
+.edit-preview { width: min(640px, 92vw); max-height: min(560px, 84vh); display: flex; flex-direction: column; gap: var(--s-2); }
+.edit-preview-summary { margin: 0; color: var(--muted); }
+.edit-preview-problem { margin: 0; padding: var(--s-2) var(--s-3); border-radius: var(--r-control); background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--text); }
+.edit-preview-list { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 1px; }
+.edit-preview-file { display: flex; align-items: baseline; gap: var(--s-2); width: 100%; min-height: 28px; padding: 2px var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.edit-preview-file:hover { background: var(--hover); }
+.edit-preview-file[aria-expanded='true'] { background: var(--press); }
+.edit-preview-file:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.edit-preview-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+.edit-preview-count { flex: none; color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
+.edit-preview-lines { padding: var(--s-1) 0 var(--s-2); font-family: var(--font-mono); font-size: 12.5px; }
+.edit-preview-note { margin: 0; padding: var(--s-1) var(--s-3); color: var(--muted); font-family: var(--font-sans); }
+.edit-preview-row { display: flex; gap: var(--s-2); padding: 1px var(--s-3); white-space: pre-wrap; overflow-wrap: anywhere; }
+.edit-preview-row u { flex: none; width: 4ch; color: var(--muted); text-decoration: none; text-align: right; }
+.edit-preview-row.before { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.edit-preview-row.after { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+.call-panel { position: absolute; z-index: var(--z-pop, 40); top: 80px; left: 50%; transform: translateX(-50%); width: min(520px, 92%); max-height: 70%; display: flex; flex-direction: column; gap: var(--s-1); padding: 6px; border-radius: var(--r-card); background: var(--overlay); box-shadow: var(--e2); animation: nav-rise 160ms var(--ease-out, ease-out); }
+.call-panel:focus { outline: none; }
+.call-head { display: flex; align-items: center; gap: var(--s-2); min-height: 32px; padding: 0 2px 0 var(--s-2); }
+.call-head .grow { flex: 1; }
+.call-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.call-note { margin: 0; padding: 0 var(--s-2); color: var(--muted); font-size: var(--fs-status); }
+.call-note:empty { display: none; }
+.call-list { display: grid; gap: 1px; overflow-x: hidden; overflow-y: auto; }
+.call-row { display: flex; overflow: hidden; align-items: baseline; gap: var(--s-2); width: 100%; min-height: 26px; padding: 2px var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.call-row:hover { background: var(--hover); }
+.call-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.call-row.sub { padding-left: var(--s-5, 24px); color: var(--muted); font-family: var(--font-mono); font-size: 12.5px; }
+.call-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.call-row small { flex: none; color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
+
+.files-search-replace-row { display: flex; gap: var(--s-2); align-items: center; }
+.files-search-replace { flex: 1; min-width: 0; height: 28px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: var(--bg); color: var(--text); font: inherit; box-shadow: var(--field-inset, none); }
+.files-search-replace:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+
+.files-editor .cm-mergeView.side-by-side { height: 100%; overflow: auto; }
+.files-editor .cm-mergeView.side-by-side .cm-mergeViewEditors { min-height: 100%; }

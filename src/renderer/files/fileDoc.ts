@@ -6,6 +6,12 @@ import type { DiffStat } from './diffStat'
 import type { OutlineItem } from './outline'
 import type { Extension } from '@codemirror/state'
 import { previewByDefault, previewKind } from '../../shared/filePreview'
+import { requestEditorConfig } from './codeNavApi'
+import { indentSettings } from './indentRules'
+import { lineCount } from './lineCount'
+import type { ProblemMark } from './problemMarks'
+import type { HoverTip } from './hoverTip'
+import type { SideBySide } from './sideBySide'
 
 type EditorModule = typeof import('./editor')
 type StatModule = typeof import('./diffStat')
@@ -40,6 +46,10 @@ export interface DocHooks {
   edited(doc: FileDoc): void
   cursor(doc: FileDoc, info: CursorInfo): void
   outlineChanged(doc: FileDoc): void
+  /** Ctrl+click on a name at a document position. */
+  goto(doc: FileDoc, pos: number): void
+  /** What resting the pointer on the name at a position shows. */
+  hover(doc: FileDoc, pos: number): Promise<HoverTip | null>
 }
 
 export type SaveOutcome = 'saved' | 'conflict' | 'failed'
@@ -69,6 +79,7 @@ export class FileDoc {
   private destroyed = false
   private toggling: Promise<void> = Promise.resolve()
   private baseText: string | null | undefined
+  private side: SideBySide | null = null
   private statTimer: number | undefined
   private outlineTimer: number | undefined
 
@@ -160,7 +171,7 @@ export class FileDoc {
     this.mount(module, '', true)
     this.editor?.showChanges(result.base)
     this.changes = true
-    this.stat = { added: 0, removed: result.base?.split('\n').length ?? 0 }
+    this.stat = { added: 0, removed: lineCount(result.base) }
     this.status = 'ready'
     return true
   }
@@ -178,7 +189,20 @@ export class FileDoc {
     })
     editor.onCursor((info) => this.hooks.cursor(this, info))
     editor.onLanguage(() => this.hooks.outlineChanged(this))
+    editor.onGoto((pos) => this.hooks.goto(this, pos))
+    editor.setHover((pos) => this.hooks.hover(this, pos))
     this.editor = editor
+    void this.applyEditorConfig(editor)
+  }
+
+  /** Indentation from the project's `.editorconfig`; without one, or if it cannot be read, the editor keeps its defaults. */
+  private async applyEditorConfig(editor: FileEditor): Promise<void> {
+    const rules = await requestEditorConfig(this.folder, this.path)
+    if (this.editor === editor) editor.setIndent(indentSettings(rules))
+  }
+
+  setProblems(marks: readonly ProblemMark[]): void {
+    this.editor?.setProblems(marks)
   }
 
   private scheduleOutline(): void {
@@ -215,10 +239,42 @@ export class FileDoc {
     return this.toggling
   }
 
+  /** The Changes view shows the file next to main in two panes instead of one column. */
+  get sideBySide(): boolean {
+    return this.side !== null
+  }
+
+  async setSideBySide(on: boolean): Promise<void> {
+    if (on === this.sideBySide) return
+    if (!on) return this.closeSide()
+    if (!this.changes) await this.toggleChanges()
+    await this.openSide()
+    this.hooks.changed(this)
+  }
+
+  private async openSide(): Promise<void> {
+    const editor = this.editor
+    if (!editor || !this.changes) return
+    this.closeSide()
+    const module = await import('./sideBySide')
+    if (this.editor !== editor || !this.changes || this.side) return
+    editor.view.dom.hidden = true
+    this.side = new module.SideBySide(this.host, { base: this.baseText ?? '', text: editor.getText(), path: this.path, theme: this.hooks.theme() })
+  }
+
+  private closeSide(): void {
+    if (!this.side) return
+    this.side.destroy()
+    this.side = null
+    if (this.editor) this.editor.view.dom.hidden = false
+    this.hooks.changed(this)
+  }
+
   private async flipChanges(): Promise<void> {
     const editor = this.editor
     if (!editor || this.deleted) return
     if (this.changes) {
+      this.closeSide()
       editor.showFile()
       this.changes = false
       this.hooks.changed(this)
@@ -230,6 +286,7 @@ export class FileDoc {
       return
     }
     if (result.reason === 'large') toast('The version on main is too large to compare, so everything shows as added.', 'info')
+    this.baseText = result.base
     editor.showChanges(result.base)
     this.changes = true
     this.hooks.changed(this)
@@ -248,6 +305,7 @@ export class FileDoc {
     }
     this.baseText = result.base
     this.newFile = result.base === null
+    if (this.side) await this.openSide()
     await this.recomputeStat()
   }
 
@@ -384,6 +442,8 @@ export class FileDoc {
     this.destroyed = true
     window.clearTimeout(this.outlineTimer)
     window.clearTimeout(this.statTimer)
+    this.side?.destroy()
+    this.side = null
     this.editor?.destroy()
     this.editor = null
     this.host.remove()

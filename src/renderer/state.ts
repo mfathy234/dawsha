@@ -24,6 +24,7 @@ import type {
 } from '../shared/types'
 import type { SessionBaseline } from '../shared/gitStatus'
 import type { SessionTag } from '../shared/sessionTags'
+import type { ChatView } from '../shared/chatLog'
 import type { CrewIdentity, CrewLaunch } from '../shared/crew'
 import type { AvatarState } from '../shared/crewLive'
 import type { GoalLive } from '../shared/crewLead'
@@ -49,6 +50,8 @@ export interface TermState {
   /** The user's own name for the session; it wins over the name the agent reports. */
   name?: string
   tag?: SessionTag
+  /** Terminal or Chat, once the user picked one for this session; absent means the remembered view or the default. */
+  view?: ChatView
   /** The crew member this session works as, kept so the pane keeps its identity after a restart. */
   crew?: CrewIdentity
   /** What the first start of a crew run needs; spent after the spawn. */

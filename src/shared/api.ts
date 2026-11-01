@@ -69,6 +69,8 @@ import type {
 
 export interface GridApi {
   runs: import('./runCommands').RunApi
+  tools: import('./filesTools').FilesToolsApi
+  chat: import('./chatLog').ChatApi
   getSettings(): Promise<SettingsLoadResult>
   updateSettings(patch: Partial<Settings>): Promise<Settings>
   exportSettings(): Promise<SettingsExportResult>
@@ -147,6 +149,20 @@ export interface GridApi {
   filesWorkspaces(projectId: string, folder?: string): Promise<import('./filesWorkspace').FilesWorkspacesResult>
   trashProjectPath(folder: string, path: string): Promise<import('./filesWorkspace').FilesTrashResult>
   searchFiles(folder: string, request: import('./fileSearch').SearchRequest): Promise<import('./fileSearch').SearchResult>
+  codeNav(folder: string, request: import('./codeNav').CodeNavRequest): Promise<import('./codeNav').CodeNavResult>
+  codeNavStatus(folder: string, path: string): Promise<import('./codeNav').CodeNavStatus>
+  codeNavRestart(folder: string, path: string): Promise<void>
+  codeNavInstall(): Promise<{ ok: true } | { ok: false; error: string }>
+  hover(folder: string, request: import('./codeNavExtras').SymbolRequest): Promise<import('./codeNavExtras').HoverResult>
+  renameSymbol(folder: string, request: import('./codeNavExtras').RenameSymbolRequest): Promise<import('./codeNavExtras').EditResult>
+  callHierarchy(folder: string, request: import('./codeNavExtras').CallHierarchyRequest): Promise<import('./codeNavExtras').CallHierarchyResult>
+  staleCallers(folder: string): Promise<import('./codeNavExtras').StaleCallersResult>
+  replaceInFiles(folder: string, request: import('./codeNavExtras').ReplaceInFilesRequest): Promise<import('./codeNavExtras').EditResult>
+  stageChange(folder: string, request: import('./codeNavExtras').HunkRequest): Promise<import('./codeNavExtras').HunkResult>
+  revertChange(folder: string, request: import('./codeNavExtras').HunkRequest): Promise<import('./codeNavExtras').HunkResult>
+  lineSessions(folder: string, path: string): Promise<import('./codeNavExtras').LineSessionsResult>
+  onAgentEdits(listener: (event: import('./codeNavExtras').AgentEditEvent) => void): () => void
+  editorConfig(folder: string, path: string): Promise<import('./codeNav').EditorConfigRules>
   fileLog(folder: string, path: string): Promise<import('./filePreview').FileLogResult>
   fileCommitDetails(folder: string, hash: string): Promise<import('./commitDetails').CommitDetailsResult>
   fileCommitFile(folder: string, hash: string, path: string, full?: boolean): Promise<import('./commitDetails').CommitFileResult>

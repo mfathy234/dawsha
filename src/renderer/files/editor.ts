@@ -1,13 +1,26 @@
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import { EditorView, drawSelection, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { bracketMatching, syntaxHighlighting } from '@codemirror/language'
+import { bracketMatching, codeFolding, ensureSyntaxTree, foldGutter, foldKeymap, indentUnit, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import { getChunks, unifiedMergeView } from '@codemirror/merge'
+import { nextDiagnostic, previousDiagnostic } from '@codemirror/lint'
 import { EDITOR_COLORS } from '../../shared/syntaxPalette'
 import { highlightStyleFor } from './syntaxTheme'
 import { loadLanguage } from './languages'
-import { outlineOf, type OutlineItem } from './outline'
+import { languageKey } from './languageInfo'
+import { outlineResult, type OutlineItem } from './outline'
+import { csharpOutline } from './csharpOutline'
+import { flashLine, navExtensions, setInline, type InlineSpec } from './editorNav'
+import { problemExtensions, showProblems } from './editorProblems'
+import { indentGuides } from './indentGuides'
+import { nextChangeStart } from './changeStep'
+import { hoverInfo, type HoverProvider } from './hoverTip'
+import { stickyScroll } from './stickyScroll'
+import type { IndentSettings } from './indentRules'
+import type { ProblemMark } from './problemMarks'
+import { identifierAt, type Identifier } from './symbolAt'
+import { eolFor, resetEol, textForSave } from './editorText'
 
 export type EditorTheme = 'dark' | 'light'
 
@@ -48,12 +61,38 @@ export interface FileEditor {
   reveal(pos: number): void
   focus(): void
   destroy(): void
+  /** The name at a document position, or null in comments, strings and blank spots. */
+  identifierAt(pos: number): Identifier | null
+  /** The caret's document position. */
+  cursorPos(): number
+  /** The document position of a 1-based line and column, clamped into the file. */
+  posAt(line: number, column: number): number
+  /** Puts the caret at a position, scrolls it into view (centred) and focuses the editor. */
+  jumpTo(pos: number, options?: { focus?: boolean }): void
+  /** Shows a block under a line: the peek or a short message. Replaces what was shown before. */
+  showInline(line: number, build: InlineSpec['build']): void
+  clearInline(): void
+  /** The line, 1-based, that the inline block sits under. */
+  inlineLine(): number | null
+  flash(line: number): void
+  setProblems(marks: readonly ProblemMark[]): void
+  setIndent(settings: IndentSettings | null): void
+  /** Ctrl+click (Cmd+click) on a name. */
+  onGoto(cb: (pos: number) => void): void
+  /** What resting the pointer on a name shows; null turns hover off. */
+  setHover(provider: HoverProvider | null): void
+  /** Moves to the next (1) or previous (-1) change in the Changes view. False when there is none that way. `fromEdge` starts from the file's start (or end) instead of the caret. */
+  stepChange(direction: 1 | -1, fromEdge?: boolean): boolean
+  /** Moves to the next or previous problem underline. False when the file has none. */
+  stepProblem(direction: 1 | -1): boolean
+  /** The selected text, or an empty string. */
+  selectedText(): string
 }
 
-const CODE_FONT = "'Cascadia Code', 'JetBrains Mono', var(--font-mono)"
+export const CODE_FONT = "'Cascadia Code', 'JetBrains Mono', var(--font-mono)"
 
 // The editor looks like VS Code: Dark+ on a dark theme, Light+ on a light one, whatever the app's accent is.
-function baseTheme(dark: boolean): Extension {
+export function baseTheme(dark: boolean): Extension {
   const colors = EDITOR_COLORS[dark ? 'dark' : 'light']
   return [
     EditorView.theme(
@@ -87,8 +126,13 @@ function baseTheme(dark: boolean): Extension {
   ]
 }
 
-// text with CRLF keeps its line endings through the editor so a save does not rewrite them
-const eolFor = (text: string): Extension => (text.includes('\r\n') ? EditorState.lineSeparator.of('\r\n') : [])
+// Ctrl+G is Go to Line in Files, so the search keymap loses its find-next binding (F3 still finds next).
+const searchKeys = searchKeymap.filter((binding) => binding.key !== 'Mod-g' && binding.key !== 'Mod-Alt-g')
+
+const OUTLINE_RETRY_MS = 20
+const OUTLINE_GIVE_UP_MS = 15_000
+const OUTLINE_SLICE_MS = 40
+const FLASH_MS = 900
 
 // readOnly + editable keeps selection, Ctrl+A/C and the native context menu working while blocking edits
 const accessFor = (readOnly: boolean): Extension => [EditorState.readOnly.of(readOnly), EditorView.editable.of(true)]
@@ -100,6 +144,14 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
   const access = new Compartment()
   const merge = new Compartment()
   const annotations = new Compartment()
+  const indent = new Compartment()
+  const gotoListeners: Array<(pos: number) => void> = []
+  let hoverProvider: HoverProvider | null = null
+  let outlineOf: () => OutlineItem[] = () => []
+  const csharp = languageKey(options.path) === 'csharp'
+  let outlineTimer: number | undefined
+  let inlineSpec: InlineSpec | null = null
+  let inlineCount = 0
   const dirtyListeners: Array<() => void> = []
   const cursorListeners: Array<(info: CursorInfo) => void> = []
   const languageListeners: Array<() => void> = []
@@ -125,25 +177,57 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
       doc: options.text,
       extensions: [
         lineNumbers(),
+        foldGutter(),
+        codeFolding(),
+        indentGuides(),
+        navExtensions((pos) => {
+          for (const cb of gotoListeners) cb(pos)
+        }),
+        problemExtensions,
+        hoverInfo(() => hoverProvider),
+        stickyScroll(() => outlineOf()),
+        EditorState.allowMultipleSelections.of(true),
         history(),
         drawSelection(),
         highlightActiveLine(),
         bracketMatching(),
         highlightSelectionMatches(),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeys, ...foldKeymap, indentWithTab]),
         theme.of(baseTheme(options.theme === 'dark')),
         eol.of(eolFor(options.text)),
         language.of([]),
         access.of(accessFor(readOnly)),
         merge.of([]),
         annotations.of([]),
+        indent.of([]),
         EditorView.updateListener.of((update) => {
+          if (update.docChanged) inlineSpec = null
           if (update.docChanged && !suppress) for (const cb of dirtyListeners) cb()
           if (update.selectionSet || update.docChanged) for (const cb of cursorListeners) cb(cursorOf(update.state))
         })
       ]
     })
   })
+
+  // A big file does not parse within the quick budget: keep parsing in slices and tell the outline when the tree is whole.
+  const finishParse = (startedAt: number): void => {
+    window.clearTimeout(outlineTimer)
+    outlineTimer = window.setTimeout(() => {
+      outlineTimer = undefined
+      if (destroyed) return
+      if (ensureSyntaxTree(view.state, view.state.doc.length, OUTLINE_SLICE_MS)) {
+        for (const cb of languageListeners) cb()
+      } else if (Date.now() - startedAt < OUTLINE_GIVE_UP_MS) finishParse(startedAt)
+    }, OUTLINE_RETRY_MS)
+  }
+  const currentOutline = (): OutlineItem[] => {
+    if (csharp) return csharpOutline(view.state.sliceDoc())
+    const result = outlineResult(view.state)
+    if (!result.complete && outlineTimer === undefined) finishParse(Date.now())
+    return result.items
+  }
+
+  outlineOf = currentOutline
 
   void loadLanguage(options.path).then((ext) => {
     if (!ext || destroyed) return
@@ -156,19 +240,23 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
     setText(text) {
       suppress = true
       try {
-        view.dispatch({ effects: eol.reconfigure(eolFor(text)) })
-        const current = view.state.sliceDoc()
+        const nextDoc = view.state.toText(text)
+        const next = nextDoc.toString()
+        const current = view.state.doc.toString()
         let start = 0
-        const shortest = Math.min(current.length, text.length)
-        while (start < shortest && current.charCodeAt(start) === text.charCodeAt(start)) start += 1
+        const shortest = Math.min(current.length, next.length)
+        while (start < shortest && current.charCodeAt(start) === next.charCodeAt(start)) start += 1
         let tail = 0
-        while (tail < shortest - start && current.charCodeAt(current.length - 1 - tail) === text.charCodeAt(text.length - 1 - tail)) tail += 1
-        view.dispatch({ changes: { from: start, to: current.length - tail, insert: text.slice(start, text.length - tail) } })
+        while (tail < shortest - start && current.charCodeAt(current.length - 1 - tail) === next.charCodeAt(next.length - 1 - tail)) tail += 1
+        view.dispatch({
+          changes: { from: start, to: current.length - tail, insert: nextDoc.slice(start, next.length - tail) },
+          effects: resetEol(text)
+        })
       } finally {
         suppress = false
       }
     },
-    getText: () => view.state.sliceDoc(),
+    getText: () => textForSave(view.state),
     setTheme(next) {
       view.dispatch({ effects: theme.reconfigure(baseTheme(next === 'dark')) })
     },
@@ -181,7 +269,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
       view.dom.classList.add('diff')
       view.dispatch({
         effects: [
-          merge.reconfigure(unifiedMergeView({ original: baseText ?? '', mergeControls: false, highlightChanges: false, gutter: true, syntaxHighlightDeletions: true })),
+          merge.reconfigure(unifiedMergeView({ original: baseText ?? '', mergeControls: false, highlightChanges: true, gutter: true, syntaxHighlightDeletions: true })),
           access.reconfigure(accessFor(true))
         ]
       })
@@ -208,14 +296,65 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
       languageListeners.push(cb)
     },
     cursor: () => cursorOf(view.state),
-    outline: () => outlineOf(view.state),
+    outline: currentOutline,
     reveal(pos) {
       view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'start', yMargin: 24 }) })
       view.focus()
     },
     focus: () => view.focus(),
+    identifierAt: (pos) => identifierAt(view.state, pos),
+    cursorPos: () => view.state.selection.main.head,
+    posAt(line, column) {
+      const info = view.state.doc.line(Math.min(Math.max(line, 1), view.state.doc.lines))
+      return info.from + Math.min(Math.max(column - 1, 0), info.length)
+    },
+    jumpTo(pos, jump = {}) {
+      view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'center' }) })
+      if (jump.focus !== false) view.focus()
+    },
+    showInline(line, build) {
+      inlineCount += 1
+      inlineSpec = { id: inlineCount, line, build }
+      view.dispatch({ effects: setInline.of(inlineSpec) })
+    },
+    clearInline() {
+      if (!inlineSpec) return
+      inlineSpec = null
+      view.dispatch({ effects: setInline.of(null) })
+    },
+    inlineLine: () => inlineSpec?.line ?? null,
+    flash(line) {
+      view.dispatch({ effects: flashLine.of(line) })
+      window.setTimeout(() => {
+        if (!destroyed) view.dispatch({ effects: flashLine.of(null) })
+      }, FLASH_MS)
+    },
+    setProblems: (marks) => showProblems(view, marks),
+    setIndent(settings) {
+      view.dispatch({ effects: indent.reconfigure(settings ? [indentUnit.of(settings.unit), EditorState.tabSize.of(settings.tabSize)] : []) })
+    },
+    onGoto(cb) {
+      gotoListeners.push(cb)
+    },
+    setHover(provider) {
+      hoverProvider = provider
+    },
+    stepChange(direction, fromEdge = false) {
+      const starts = (getChunks(view.state)?.chunks ?? []).map((chunk) => chunk.fromB)
+      const here = fromEdge ? (direction === 1 ? -1 : Number.POSITIVE_INFINITY) : view.state.doc.lineAt(view.state.selection.main.head).from
+      const target = nextChangeStart(starts, here, direction)
+      if (target === null) return false
+      view.dispatch({ selection: { anchor: target }, effects: EditorView.scrollIntoView(target, { y: 'center' }), userEvent: 'select.byChunk' })
+      return true
+    },
+    stepProblem: (direction) => (direction === 1 ? nextDiagnostic(view) : previousDiagnostic(view)),
+    selectedText() {
+      const { from, to } = view.state.selection.main
+      return view.state.sliceDoc(from, to)
+    },
     destroy() {
       destroyed = true
+      window.clearTimeout(outlineTimer)
       view.destroy()
     }
   }

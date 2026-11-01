@@ -1,6 +1,7 @@
 import { changeFromEdit, changeFromPatch, type EditChange } from './editChange'
 import { isTestCommand, parseTestCounts, testSummary } from './testRun'
 import { readText, type TimelineEvent, type TimelineKind } from './timeline'
+import { codexOutput, geminiResult, type Outcome } from './timelineOutcome'
 import {
   asTime,
   blockText,
@@ -10,7 +11,6 @@ import {
   geminiMessages,
   isPrompt,
   isRecord,
-  parseJson,
   records,
   type Json
 } from './transcript'
@@ -18,7 +18,6 @@ import {
 export const PROMPT_MAX = 500
 export const REPLY_MAX = 220
 const ERROR_MAX = 200
-
 type Draft = Omit<TimelineEvent, 'id'>
 
 interface EditPart {
@@ -60,7 +59,6 @@ const READ_TOOLS = new Set([
 ])
 const COMMAND_TOOLS = new Set(['bash', 'shell', 'run_shell_command', 'exec_command', 'local_shell', 'shell_command', 'execute_bash', 'powershell'])
 const WRAPPER = /^(?:bash|sh|zsh|pwsh|powershell|cmd)(?:\.exe)?$/i
-
 const str = (value: unknown): string => (typeof value === 'string' ? value : '')
 
 export function lineCount(text: string): number {
@@ -177,13 +175,6 @@ interface Pending {
   tool: Tool['kind']
 }
 
-interface Outcome {
-  output: string
-  failed: boolean
-  exitCode?: number
-  patch?: Json[]
-}
-
 class Builder {
   readonly drafts: Draft[] = []
   private readonly pending = new Map<string, Pending>()
@@ -209,7 +200,7 @@ class Builder {
       const changes = toolChanges(name, input)
       tool.edits.forEach((part, index) => {
         const change = changes[index]
-        this.push({ at, kind: 'edit', text: part.path, path: part.path, added: part.added, removed: part.removed, ...(change ? { change } : {}) })
+        this.push({ at, kind: 'edit', editStatus: 'pending', text: part.path, path: part.path, added: part.added, removed: part.removed, ...(change ? { change } : {}) })
       })
     } else if (isTestCommand(tool.command)) {
       this.push({ at, kind: 'test', text: 'ran', command: flat(tool.command, 160) })
@@ -230,6 +221,12 @@ class Builder {
       const counts = patchCounts(outcome.patch)
       this.drafts[pending.firstIndex] = { ...draft, added: counts.added, removed: counts.removed }
     }
+    if (pending.tool === 'edit') {
+      const failed = outcome.failed || (outcome.exitCode !== undefined && outcome.exitCode !== 0)
+      for (let index = pending.firstIndex; index < pending.firstIndex + pending.count; index++) {
+        this.drafts[index] = { ...this.drafts[index], editStatus: failed ? 'failed' : 'succeeded', editCompletedAt: at }
+      }
+    }
     if (draft.kind === 'test') {
       const counts = parseTestCounts(outcome.output)
       const ok = outcome.exitCode !== undefined ? outcome.exitCode === 0 && (counts?.failed ?? 0) === 0 : !outcome.failed && (counts?.failed ?? 0) === 0
@@ -243,7 +240,6 @@ class Builder {
     }
   }
 }
-
 function firstLine(text: string): string {
   const line = cleanText(text)
     .split('\n')
@@ -251,7 +247,6 @@ function firstLine(text: string): string {
     .find((part) => part !== '')
   return line ? flat(line, ERROR_MAX) : ''
 }
-
 function patchCounts(hunks: Json[]): { added: number; removed: number } {
   let added = 0
   let removed = 0
@@ -306,19 +301,6 @@ function claudeRecord(builder: Builder, record: Json): void {
   }
 }
 
-function codexOutput(raw: unknown): Outcome {
-  const value = parseJson(raw)
-  if (isRecord(value)) {
-    const metadata = isRecord(value.metadata) ? value.metadata : {}
-    const exitCode = typeof metadata.exit_code === 'number' ? metadata.exit_code : undefined
-    return { output: str(value.output), failed: exitCode !== undefined && exitCode !== 0, exitCode }
-  }
-  const output = str(value)
-  const match = /Exit code:\s*(-?\d+)/.exec(output)
-  const exitCode = match ? Number(match[1]) : undefined
-  return { output, failed: exitCode !== undefined && exitCode !== 0, exitCode }
-}
-
 const hasConversationEvents = (all: Json[]): boolean =>
   all.some((r) => r.type === 'event_msg' && isRecord(r.payload) && (r.payload.type === 'user_message' || r.payload.type === 'agent_message'))
 
@@ -352,16 +334,6 @@ function codexRecord(builder: Builder, record: Json, hasEvents: boolean): void {
   }
 }
 
-function geminiResult(call: Json): Outcome {
-  const results = Array.isArray(call.result) ? call.result : []
-  const outputs = results.map((entry) => {
-    const response = isRecord(entry) && isRecord(entry.functionResponse) && isRecord(entry.functionResponse.response) ? entry.functionResponse.response : {}
-    return str(response.output) || str(response.error)
-  })
-  const failed = call.status === 'error' || call.status === 'cancelled'
-  return { output: outputs.join('\n') || str(call.resultDisplay), failed }
-}
-
 export function parseGeminiTimeline(text: string): TimelineEvent[] {
   const builder = new Builder()
   const { messages } = geminiMessages(text)
@@ -377,7 +349,7 @@ export function parseGeminiTimeline(text: string): TimelineEvent[] {
       const when = asTime(call.timestamp) ?? at
       const id = `g${messageIndex}-${callIndex}`
       builder.call(when, id, call.name ?? call.displayName, call.args)
-      builder.result(when, id, geminiResult(call))
+      if (['success', 'error', 'cancelled'].includes(str(call.status))) builder.result(when, id, geminiResult(call))
     })
   })
   return finish(builder)

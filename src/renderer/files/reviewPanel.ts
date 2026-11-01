@@ -30,6 +30,8 @@ export interface ReviewHooks {
   commit(): void
   discard(path: string): void
   ignoreFolder(folder: UntrackedFolder): void
+  /** List the callers and implementations of changed symbols that the agents did not touch. */
+  stale(): void
 }
 
 const minus = '−'
@@ -52,6 +54,7 @@ export class ReviewPanel {
     onInput: (event: Event) => this.hooks.note((event.target as HTMLTextAreaElement).value)
   })
   private readonly send = h('button', { class: 'btn small secondary', type: 'button', id: 'files-review-send', disabled: true, onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send comments to agent')
+  private readonly stale = h('button', { class: 'btn small', type: 'button', id: 'files-review-stale', title: 'Callers and implementations of changed symbols that were not updated', onClick: () => this.hooks.stale() }, 'Callers not updated…')
   private readonly commit = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
   private readonly discard = h('button', { class: 'btn small danger', type: 'button', id: 'files-review-discard', disabled: true, title: 'Select a changed file to discard it', onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
   private current: string | null = null
@@ -66,7 +69,7 @@ export class ReviewPanel {
       this.list,
       this.foot)
     this.steps.append(this.prev, this.next)
-    this.foot.append(h('div', { class: 'files-review-note-row' }, this.note, this.send), h('div', { class: 'files-review-more' }, this.discard, this.commit))
+    this.foot.append(h('div', { class: 'files-review-note-row' }, this.note, this.send), h('div', { class: 'files-review-more' }, this.stale, this.discard, this.commit))
     this.list.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
       const rows = [...this.list.querySelectorAll<HTMLElement>('.files-review-open')]

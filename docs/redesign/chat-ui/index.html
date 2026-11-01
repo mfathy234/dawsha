@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dawsha session chat view</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;500&display=swap">
+<style>
+/* Single theme by choice: Dawsha's real dark tokens. Layout idea: one real session pane you can switch between terminal and chat, with the decision around it. */
+:root {
+  color-scheme: dark;
+  --bg: #090b0f; --sidebar: #0e1116; --surface: #14181f; --raised: #1b212a; --pop: #232a35; --well: #0a0c10;
+  --text: #e8ebf1; --muted: #aab3c3; --text-3: #8c96a8;
+  --accent: #34d399; --on-accent: #04261b; --danger: #ff8080;
+  --seam: rgb(255 255 255 / .07); --line-strong: rgb(255 255 255 / .18);
+  --hover: color-mix(in srgb, var(--text) 7%, transparent); --press: color-mix(in srgb, var(--text) 12%, transparent);
+  --sel-ring: 0 0 0 1px rgb(255 255 255 / .12); --e2: 0 8px 24px rgb(0 0 0 / .45), 0 0 0 1px var(--line-strong);
+  --font-ui: 'Geist', 'Noto Sans Arabic', system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Noto Sans Arabic', Consolas, monospace;
+  --r: 8px; --r-card: 12px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 13px/20px var(--font-ui); }
+button { font: inherit; color: inherit; }
+button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.page { max-width: 1240px; margin: 0 auto; padding: 32px 24px 64px; display: grid; gap: 20px; }
+h1 { font-size: 28px; line-height: 32px; font-weight: 600; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 20px; line-height: 28px; font-weight: 600; margin: 0 0 8px; }
+.lede { font-size: 14px; color: var(--muted); max-width: 74ch; margin: 8px 0 0; }
+.dirs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--surface); border-radius: var(--r-card); }
+.dir { text-align: left; border: 0; background: transparent; border-radius: var(--r); padding: 10px 12px; cursor: pointer; display: grid; gap: 2px; align-content: start; }
+.dir:hover { background: var(--hover); }
+.dir[aria-pressed="true"] { background: var(--raised); box-shadow: var(--sel-ring); }
+.dir b { font-weight: 500; font-size: 14px; } .dir em { font-style: normal; color: var(--accent); }
+.dir span { color: var(--muted); font-size: 12px; line-height: 16px; }
+.try { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.try > span { color: var(--text-3); font-size: 12px; min-width: 50px; }
+.key { border: 0; background: var(--hover); height: 28px; padding: 0 10px; border-radius: var(--r); cursor: pointer; font-size: 12px; white-space: nowrap; }
+.key:hover { background: var(--press); }
+.key[aria-pressed="true"] { background: var(--raised); box-shadow: var(--sel-ring); }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+
+.pane { background: var(--well); border-radius: var(--r-card); box-shadow: var(--e2); display: flex; flex-direction: column; height: 640px; overflow: hidden; min-width: 0; }
+.head { background: var(--surface); display: flex; align-items: center; gap: 10px; padding: 8px 12px; flex: none; }
+.mark { width: 30px; height: 30px; border-radius: var(--r); background: #3a2024; color: #ff9a9a; display: grid; place-items: center; font: 500 10px var(--font-mono); flex: none; }
+.titles { min-width: 0; flex: 1; } .titles b { font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .titles small { color: var(--muted); font-size: 12px; }
+.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--r-card); background: var(--hover); flex: none; }
+.seg button { height: 24px; padding: 0 10px; border: 0; border-radius: var(--r); background: transparent; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--raised); box-shadow: var(--sel-ring); color: var(--text); font-weight: 500; }
+.state { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.body { flex: 1; min-height: 0; overflow: auto; }
+.term { font: 14px/24px var(--font-mono); padding: 16px; white-space: pre-wrap; color: #d4d4d4; }
+.term .dim { color: var(--text-3); } .term .acc { color: #45c7d6; } .term .g { color: var(--accent); }
+
+.thread { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; max-width: 760px; margin: 0 auto; }
+.you { align-self: flex-end; max-width: 76%; background: var(--raised); border-radius: var(--r-card); padding: 8px 12px; }
+.say { font-size: 14px; line-height: 22px; }
+.say code, .you code, .log code { font: 12.5px var(--font-mono); background: var(--hover); padding: 1px 4px; border-radius: 4px; }
+.tools { display: grid; gap: 1px; margin-top: -6px; }
+.tool { border: 0; background: none; width: 100%; text-align: left; display: flex; gap: 8px; align-items: center; height: 26px; padding: 0 8px; margin-left: -8px; border-radius: 6px; cursor: pointer; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.tool:hover { background: var(--hover); color: var(--text); }
+.tool code { font: 12px var(--font-mono); overflow: hidden; text-overflow: ellipsis; }
+.tool .n { margin-left: auto; font: 12px var(--font-mono); flex: none; }
+.add { color: var(--accent); } .del { color: var(--danger); }
+.toolout { font: 12px/18px var(--font-mono); background: var(--surface); border-radius: var(--r); padding: 8px 12px; white-space: pre-wrap; color: var(--muted); overflow-x: auto; }
+.working { display: flex; gap: 8px; color: var(--muted); align-items: center; }
+.spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--press); border-top-color: var(--text); animation: spin 1s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(1turn); } }
+.ask { background: var(--surface); border-radius: var(--r-card); padding: 12px 14px; display: grid; gap: 8px; }
+.ask b { font-weight: 500; } .ask pre { margin: 0; font: 12px/18px var(--font-mono); background: var(--well); padding: 8px 10px; border-radius: var(--r); white-space: pre-wrap; color: #d4d4d4; }
+.acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { height: 28px; padding: 0 12px; border: 0; border-radius: var(--r); background: var(--hover); cursor: pointer; }
+.btn:hover { background: var(--press); }
+.btn.primary { background: var(--accent); color: var(--on-accent); font-weight: 500; }
+.notice { background: var(--surface); border-radius: var(--r-card); padding: 12px 14px; display: grid; gap: 8px; }
+.empty { color: var(--muted); padding: 48px 24px; display: grid; gap: 4px; justify-items: center; text-align: center; }
+.empty b { color: var(--text); font-weight: 500; font-size: 14px; }
+.composer { flex: none; padding: 8px 12px 12px; background: var(--well); }
+.box { background: var(--surface); border-radius: var(--r-card); padding: 8px 10px; display: flex; align-items: end; gap: 8px; max-width: 760px; margin: 0 auto; }
+.box textarea { flex: 1; background: none; border: 0; resize: none; color: var(--text); font: inherit; height: 22px; line-height: 22px; min-width: 0; }
+.box textarea:focus-visible { outline: none; }
+.box textarea::placeholder { color: var(--text-3); }
+.foot { flex: none; display: flex; gap: 16px; padding: 6px 16px; color: var(--muted); font: 12px var(--font-mono); box-shadow: inset 0 1px 0 var(--seam); white-space: nowrap; overflow: hidden; }
+.foot .grow { flex: 1; }
+
+/* Split drawer */
+.drawer { flex: none; box-shadow: inset 0 1px 0 var(--seam); background: var(--well); }
+.drawer-head { width: 100%; border: 0; background: none; height: 30px; display: flex; gap: 8px; align-items: center; padding: 0 16px; color: var(--muted); cursor: pointer; font-size: 12px; }
+.drawer-head:hover { background: var(--hover); }
+.drawer-head code { font: 12px var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drawer .term { font-size: 12px; line-height: 18px; padding: 4px 16px 10px; height: 150px; overflow: auto; }
+
+/* Compact log */
+.log { padding: 12px 16px; display: grid; gap: 2px; font-size: 13px; }
+.entry { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 3px 0; align-items: baseline; }
+.entry time { color: var(--text-3); font: 11px var(--font-mono); font-variant-numeric: tabular-nums; }
+.entry.you-row > div { font-weight: 500; }
+.entry .tool { height: 22px; }
+.log .ask, .log .notice { margin: 6px 0 6px 52px; }
+
+[dir="rtl"] { font-family: var(--font-ui); }
+.side { display: grid; gap: 16px; align-content: start; }
+.card { background: var(--surface); border-radius: var(--r-card); padding: 14px 16px; }
+.card h3 { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+.card p { margin: 0 0 8px; color: var(--muted); } .card p:last-child { margin: 0; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; box-shadow: inset 0 -1px 0 var(--seam); }
+.setting:last-child { box-shadow: none; }
+.notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+.notes p { color: var(--muted); margin: 0 0 10px; max-width: 66ch; } .notes p b { color: var(--text); font-weight: 500; }
+.notes code { font: 12px var(--font-mono); color: var(--text); }
+@media (max-width: 960px) { .stage, .notes { grid-template-columns: 1fr; } .dirs { grid-template-columns: 1fr; } .page { padding: 20px 16px 40px; } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>A chat view for sessions</h1>
+    <p class="lede">The same session, shown as a conversation. The agent keeps running in its terminal, and each session can switch between the two at any time. Pick a direction and try the states. The conversation is example data; the styling is Dawsha's own.</p>
+  </header>
+  <div class="dirs" id="dirs"></div>
+  <div class="try" id="states"></div>
+  <div class="stage">
+    <div class="pane" id="pane"></div>
+    <aside class="side">
+      <div class="card" id="dirnote"></div>
+      <div class="card">
+        <h3>As a setting</h3>
+        <div class="setting"><span>Default for new sessions</span><span class="seg"><button aria-pressed="true">Terminal</button><button>Chat</button></span></div>
+        <div class="setting"><span>This session</span><span class="seg"><button id="s-term">Terminal</button><button id="s-chat">Chat</button></span></div>
+        <p style="margin-top:8px">The default lives in Settings, and New session can override it. A session remembers its choice when it resumes.</p>
+      </div>
+    </aside>
+  </div>
+  <section class="notes">
+    <div>
+      <h2>How it would work</h2>
+      <p><b>The terminal stays the source of truth.</b> Chat reads the agent's session log, which Dawsha already watches for status, and draws it as messages. What you type goes to the same terminal, so nothing about how the agent runs changes.</p>
+      <p><b>Approvals reuse today's card.</b> Dawsha already detects them from the terminal output, and Allow and Deny send the same keys as now.</p>
+      <p><b>Terminal stays one click away,</b> because anything chat can't draw, such as a menu or a slash-command screen, needs it. Chat says so and offers the switch.</p>
+    </div>
+    <div>
+      <h2>What's harder than it looks</h2>
+      <p><b>Three different agents.</b> Claude, Codex and Gemini each write their logs differently, so each needs its own reader. I'd do Claude first and leave the setting disabled for the others until theirs is ready.</p>
+      <p><b>Log formats can change</b> in any CLI update. When a reader fails, chat should fall back to the terminal and say why, without losing the session.</p>
+      <p><b>Live text.</b> Logs usually arrive a message at a time, so replies may appear in chunks and not word by word. I haven't tested this on each agent yet.</p>
+      <p><b>Effort:</b> my rough estimate is medium for Claude, then small to medium per extra agent.</p>
+    </div>
+  </section>
+</div>
+<script>
+const DIRS = [
+  { id: 'thread', name: 'Quiet thread', pick: true, line: 'A reading column. Your messages sit right, the agent writes plainly, tools fold into one line each.', note: ['Quiet thread', 'Best for following one session in Focus or when maximised. Long files and test output stay folded until you click.', 'I recommend this one. It reads best, and it is the furthest from what the terminal already gives you.'] },
+  { id: 'split', name: 'Split drawer', line: 'The thread, with a live terminal drawer under it that you can open at any moment.', note: ['Split drawer', 'You always see the last terminal line, and opening the drawer avoids a full switch. It takes space, so it suits large panes.', 'Good if you often need to check that the terminal agrees with chat.'] },
+  { id: 'log', name: 'Compact log', line: 'A dense timeline with times and no message shapes. Fits small grid panes.', note: ['Compact log', 'Fits the most in a small grid cell, so it suits watching four agents at once. It reads less like a conversation.', 'Good as the small-pane form of Quiet thread if you want both.'] }
+]
+const STATES = [['working', 'Working'], ['approval', 'Needs approval'], ['done', 'Done'], ['error', 'Limit reached'], ['unsupported', 'Needs terminal'], ['empty', 'New session'], ['arabic', 'Arabic']]
+const S = { dir: 'thread', state: 'working', mode: 'chat', open: new Set(), drawer: false }
+
+const T = (id, verb, file, n = '', out = '') => ({ id, verb, file, n, out })
+const edits = [T('t1', 'Edited', 'src/context/theme.tsx', '<span class="add">+18</span> <span class="del">-3</span>', "+export type Theme = 'light' | 'dark'\n+const THEME_KEY = 'acme.theme'\n-const [theme] = useState('light')"), T('t2', 'Edited', 'src/components/Settings.tsx', '<span class="add">+9</span>', "+<ThemeToggle />"), T('t3', 'Created', 'src/components/ThemeToggle.tsx', '<span class="add">+42</span>', "+export function ThemeToggle() {")]
+const test = T('t4', 'Ran', 'npm test -- theme', '41 passed', ' PASS  src/context/theme.test.tsx\n Tests  41 passed (41)')
+const tool = (t) => `<button class="tool" data-t="${t.id}" aria-expanded="${S.open.has(t.id)}"><span>${t.verb}</span><code>${t.file}</code><span class="n">${t.n}</span></button>` + (S.open.has(t.id) ? `<div class="toolout">${t.out.replace(/</g, '&lt;')}</div>` : '')
+const YOU = 'Add a dark mode toggle and keep the choice in localStorage.'
+const ASK = `<div class="ask"><b>Claude wants to run a command</b><pre>npm install --save-dev @testing-library/user-event</pre><div class="acts"><button class="btn primary">Allow</button><button class="btn">Always allow npm install</button><button class="btn">Deny</button></div></div>`
+const LIMIT = `<div class="notice"><b style="font-weight:500">Claude reached its 5 hour limit. It resets at 23:40.</b><div class="acts"><button class="btn primary">Continue in Codex</button><button class="btn">Wait for the reset</button></div></div>`
+const NEEDS = `<div class="notice"><b style="font-weight:500">Claude opened a menu that chat can't show.</b><span style="color:var(--muted)">Switch to the terminal to answer it. You can come back afterwards.</span><div class="acts"><button class="btn primary" data-mode="term">Show terminal</button></div></div>`
+
+function threadBody() {
+  if (S.state === 'empty') return `<div class="empty"><b>Tell Claude what to do</b><span>Working in acme-web on feature/dark-mode-toggle.</span></div>`
+  if (S.state === 'arabic') return `<div class="thread"><div class="you" dir="rtl">ضيف زرار للوضع الداكن واحفظ الاختيار في <code dir="ltr">localStorage</code>.</div><div class="say" dir="rtl">أضفت الزرار في صفحة الإعدادات، والاختيار بيتحفظ في <code dir="ltr">localStorage</code> وكل الاختبارات نجحت.</div><div class="tools">${edits.slice(0, 2).map(tool).join('')}</div></div>`
+  let h = `<div class="you">${YOU}</div><div class="say">I'll add a <code>ThemeToggle</code> to Settings and store the choice in <code>localStorage</code>.</div><div class="tools">${edits.map(tool).join('')}</div>`
+  if (S.state === 'working') h += `<div class="working"><span class="spin"></span>Running the test suite. Esc to interrupt.</div>`
+  if (S.state === 'approval') h += ASK
+  if (S.state === 'done') h += `<div class="tools">${tool(test)}</div><div class="say">Done. The toggle is in Settings and the choice survives a reload. All 41 tests pass.</div>`
+  if (S.state === 'error') h += LIMIT
+  if (S.state === 'unsupported') h += NEEDS
+  return `<div class="thread">${h}</div>`
+}
+function logBody() {
+  if (S.state === 'empty') return `<div class="empty"><b>Tell Claude what to do</b><span>Working in acme-web on feature/dark-mode-toggle.</span></div>`
+  const row = (t, html, cls = '') => `<div class="entry ${cls}"><time>${t}</time><div>${html}</div></div>`
+  if (S.state === 'arabic') return `<div class="log">${row('21:04', 'ضيف زرار للوضع الداكن', 'you-row').replace('<div>ضيف', '<div dir="rtl" style="text-align:left">ضيف')}${row('21:05', tool(edits[0]))}${row('21:06', 'أضفت الزرار، وكل الاختبارات نجحت.').replace('<div>أضفت', '<div dir="rtl" style="text-align:left">أضفت')}</div>`
+  let h = row('21:04', YOU, 'you-row') + row('21:04', `Adding a <code>ThemeToggle</code> to Settings.`) + edits.map((t, i) => row(`21:0${5 + i}`, tool(t))).join('')
+  if (S.state === 'working') h += row('21:08', `<span class="working"><span class="spin"></span>Running the test suite</span>`)
+  if (S.state === 'approval') h += ASK
+  if (S.state === 'done') h += row('21:08', tool(test)) + row('21:09', 'Done. All 41 tests pass.')
+  if (S.state === 'error') h += LIMIT
+  if (S.state === 'unsupported') h += NEEDS
+  return `<div class="log">${h}</div>`
+}
+const TERM = `<span class="g">●</span> Adding a <span class="acc">ThemeToggle</span> and persisting the choice in localStorage.
+  <span class="dim">⎿ Update src/context/theme.tsx  (+18 -3)
+  ⎿ Update src/components/Settings.tsx  (+9 -0)
+  ⎿ Create src/components/ThemeToggle.tsx  (+42)</span>
+
+<span style="color:#e8a33d">✻</span> Running the test suite… <span class="dim">(esc to interrupt)</span>`
+const stateLabel = () => ({ working: 'Working', approval: 'Needs you', done: 'Done', error: 'Limit reached', unsupported: 'Needs you', empty: 'Ready', arabic: 'Done' }[S.state])
+function render() {
+  document.getElementById('dirs').innerHTML = DIRS.map((d) => `<button class="dir" data-dir="${d.id}" aria-pressed="${S.dir === d.id}"><b>${d.name}${d.pick ? ' <em>· recommended</em>' : ''}</b><span>${d.line}</span></button>`).join('')
+  document.getElementById('states').innerHTML = '<span>States</span>' + STATES.map(([k, n]) => `<button class="key" data-state="${k}" aria-pressed="${S.state === k}">${n}</button>`).join('')
+  const n = DIRS.find((d) => d.id === S.dir).note
+  document.getElementById('dirnote').innerHTML = `<h3>${n[0]}</h3><p>${n[1]}</p><p>${n[2]}</p>`
+  document.getElementById('s-term').setAttribute('aria-pressed', S.mode === 'term'); document.getElementById('s-chat').setAttribute('aria-pressed', S.mode === 'chat')
+  const chat = S.mode === 'chat'
+  const body = !chat ? `<div class="term">${TERM}</div>` : S.dir === 'log' ? logBody() : threadBody()
+  const composer = chat ? `<div class="composer"><div class="box"><textarea id="msg" rows="1" aria-label="Message" placeholder="Message Claude. Enter to send, Shift+Enter for a new line"></textarea><button class="btn">Send</button></div></div>` : ''
+  const drawer = chat && S.dir === 'split' ? `<div class="drawer"><button class="drawer-head" data-drawer aria-expanded="${S.drawer}"><span>${S.drawer ? '⌄' : '›'}</span><span>Terminal</span><code>Running the test suite… (esc to interrupt)</code></button>${S.drawer ? `<div class="term">${TERM}</div>` : ''}</div>` : ''
+  document.getElementById('pane').innerHTML = `<div class="head"><span class="mark">SA</span><div class="titles"><b>Sami · dark mode toggle</b><small>acme-web · Claude</small></div><span class="state">${stateLabel()}</span><span class="seg" role="group" aria-label="Session view"><button data-mode="term" aria-pressed="${!chat}">Terminal</button><button data-mode="chat" aria-pressed="${chat}">Chat</button></span></div><div class="body">${body}</div>${drawer}${composer}<div class="foot"><span>+69 -3</span><span class="grow"></span><span>Review 3 files</span><span>feature/dark-mode-toggle</span></div>`
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-dir],[data-state],[data-mode],[data-t],[data-drawer],#s-term,#s-chat'); if (!b) return
+  const d = b.dataset
+  if (d.dir) S.dir = d.dir
+  else if (d.state) S.state = d.state
+  else if (d.mode) S.mode = d.mode
+  else if (b.id === 's-term') S.mode = 'term'
+  else if (b.id === 's-chat') S.mode = 'chat'
+  else if (d.t) { const o = new Set(S.open); o.has(d.t) ? o.delete(d.t) : o.add(d.t); S.open = o }
+  else if ('drawer' in d) S.drawer = !S.drawer
+  render()
+})
+render()
+</script>
+</body>
+</html>
