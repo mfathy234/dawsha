@@ -20,6 +20,7 @@ import { stickyScroll } from './stickyScroll'
 import type { IndentSettings } from './indentRules'
 import type { ProblemMark } from './problemMarks'
 import { identifierAt, type Identifier } from './symbolAt'
+import { eolFor, resetEol, textForSave } from './editorText'
 
 export type EditorTheme = 'dark' | 'light'
 
@@ -124,9 +125,6 @@ export function baseTheme(dark: boolean): Extension {
     syntaxHighlighting(highlightStyleFor(dark ? 'dark' : 'light'))
   ]
 }
-
-// text with CRLF keeps its line endings through the editor so a save does not rewrite them
-const eolFor = (text: string): Extension => (text.includes('\r\n') ? EditorState.lineSeparator.of('\r\n') : [])
 
 // Ctrl+G is Go to Line in Files, so the search keymap loses its find-next binding (F3 still finds next).
 const searchKeys = searchKeymap.filter((binding) => binding.key !== 'Mod-g' && binding.key !== 'Mod-Alt-g')
@@ -242,19 +240,23 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
     setText(text) {
       suppress = true
       try {
-        view.dispatch({ effects: eol.reconfigure(eolFor(text)) })
-        const current = view.state.sliceDoc()
+        const nextDoc = view.state.toText(text)
+        const next = nextDoc.toString()
+        const current = view.state.doc.toString()
         let start = 0
-        const shortest = Math.min(current.length, text.length)
-        while (start < shortest && current.charCodeAt(start) === text.charCodeAt(start)) start += 1
+        const shortest = Math.min(current.length, next.length)
+        while (start < shortest && current.charCodeAt(start) === next.charCodeAt(start)) start += 1
         let tail = 0
-        while (tail < shortest - start && current.charCodeAt(current.length - 1 - tail) === text.charCodeAt(text.length - 1 - tail)) tail += 1
-        view.dispatch({ changes: { from: start, to: current.length - tail, insert: text.slice(start, text.length - tail) } })
+        while (tail < shortest - start && current.charCodeAt(current.length - 1 - tail) === next.charCodeAt(next.length - 1 - tail)) tail += 1
+        view.dispatch({
+          changes: { from: start, to: current.length - tail, insert: nextDoc.slice(start, next.length - tail) },
+          effects: resetEol(text)
+        })
       } finally {
         suppress = false
       }
     },
-    getText: () => view.state.sliceDoc(),
+    getText: () => textForSave(view.state),
     setTheme(next) {
       view.dispatch({ effects: theme.reconfigure(baseTheme(next === 'dark')) })
     },
