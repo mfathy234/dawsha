@@ -5,7 +5,7 @@ import { repoRoot } from '../gitCommit'
 import { readProjectFile, resolveProjectFile } from '../gitWorkspace'
 import { EditPreviews, validRelative } from './editPreviews'
 import { navigationHits } from './locations'
-import { nameSearch } from './nameSearch'
+import { isDeclaration, nameSearch } from './nameSearch'
 import type { CodeNavRouter } from './router'
 import type { ServerFileEdits } from './protocolExtras'
 import { renameSnapshot, validRename } from './renameSnapshot'
@@ -25,7 +25,7 @@ export class CodeNavExtras {
     }
     const found = await nameSearch(folder, { ...request, kind: 'definition' })
     if (!found.ok) return found
-    const declaration = found.hits[0]
+    const declaration = found.hits.find(hit => isDeclaration(hit.preview, request.symbol))
     return { ok: true, engine: 'name', display: declaration?.preview ?? '', documentation: '', ...(declaration ? { declaration } : {}) }
   }
 

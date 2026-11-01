@@ -3,7 +3,7 @@ import { searchFiles } from '../filesExtra'
 import { readProjectFile } from '../gitWorkspace'
 
 const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-const declaration = (text: string, symbol: string): boolean => new RegExp(`\\b(class|interface|struct|record|enum|type|function|const|let|var|def)\\s+${escape(symbol)}\\b|\\b${escape(symbol)}\\s*(?:\\([^;]*\\)\\s*(?:[:{]|=>)|[{:])`).test(text)
+export const isDeclaration = (text: string, symbol: string): boolean => new RegExp(`\\b(class|interface|struct|record|enum|type|function|const|let|var|def)\\s+${escape(symbol)}\\b|\\b${escape(symbol)}\\s*(?:\\([^;]*\\)\\s*(?:[:{]|=>)|[{:])`).test(text)
 
 function implementation(text: string, symbol: string, prefix: string): boolean {
   const name = escape(symbol)
@@ -39,6 +39,6 @@ export async function nameSearch(folder: string, request: CodeNavRequest): Promi
     const lines = request.unsavedText.split(/\r\n|\r|\n/)
     hits.push(...hitsIn(request.path, lines, request))
   }
-  const ranked = request.kind === 'definition' ? [...hits].sort((a, b) => Number(declaration(b.preview, request.symbol)) - Number(declaration(a.preview, request.symbol))) : hits
+  const ranked = request.kind === 'definition' ? [...hits].sort((a, b) => Number(isDeclaration(b.preview, request.symbol)) - Number(isDeclaration(a.preview, request.symbol))) : hits
   return { ok: true, hits: ranked.slice(0, 500), engine: 'name', outside: false }
 }

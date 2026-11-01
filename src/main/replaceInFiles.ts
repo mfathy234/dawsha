@@ -2,7 +2,7 @@ import type { EditPreviewFile, EditResult, TextEdit } from '../shared/codeNavExt
 import { matcherFor, validateSearchRequest } from '../shared/fileSearch'
 import { EditPreviews } from './codeNav/editPreviews'
 import { searchFiles } from './filesExtra'
-import { MAX_READ_BYTES, readProjectFile } from './gitWorkspace'
+import { MAX_READ_BYTES, readProjectFile, resolveProjectFile } from './gitWorkspace'
 
 /** Replacement uses JavaScript capture substitutions only for regex queries. */
 function substitution(template: string, match: RegExpMatchArray, line: string): string {
@@ -65,7 +65,10 @@ export async function replaceInFiles(folder: string, raw: unknown, previews: Edi
   let remaining = 10_000
   let totalBytes = 0
   for (const file of found.files) {
-    const read = await readProjectFile(folder, file.path)
+    const target = await resolveProjectFile(folder, file.path)
+    if (!target.ok) return { ok: false, error: `Could not preview ${file.path}. Search again.` }
+    if (originals.has(target.realRel)) continue
+    const read = await readProjectFile(folder, target.realRel)
     if (!read.ok || read.text === null) return { ok: false, error: `Could not preview ${file.path}. Search again.` }
     let edits: TextEdit[]
     try { edits = lineEdits(read.text, matcherFor(checked.request)!, value.replacement, checked.request.regex, remaining) }
@@ -74,8 +77,8 @@ export async function replaceInFiles(folder: string, raw: unknown, previews: Edi
     totalBytes += Buffer.byteLength(read.text) + edits.reduce((sum, edit) => sum + Buffer.byteLength(edit.newText), 0)
     if (totalBytes > 16 * MAX_READ_BYTES) return { ok: false, error: 'Replacement preview exceeds its byte budget. Narrow the search.' }
     if (edits.length === 0) continue
-    files.push({ path: file.path, expectedMtime: read.mtimeMs, edits, matches: edits.length })
-    originals.set(file.path, read.text)
+    files.push({ path: target.realRel, expectedMtime: read.mtimeMs, edits, matches: edits.length })
+    originals.set(target.realRel, read.text)
   }
   return previews.create(folder, 'replace', files, originals, 'search', found.truncated)
 }

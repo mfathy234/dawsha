@@ -58,8 +58,9 @@ export class EditPreviews {
     const dirty = new Set<string>(process.platform === 'win32' ? canonical.map(path => path.toLowerCase()) : canonical)
     const files = []
     for (const file of preview.files) {
-      const key = process.platform === 'win32' ? file.path.toLowerCase() : file.path
       const target = await resolveProjectFile(folder, file.path)
+      const identity = target.ok ? target.realRel : file.path
+      const key = process.platform === 'win32' ? identity.toLowerCase() : identity
       const read = target.ok ? await readProjectFile(folder, file.path) : target
       if (dirty.has(key) || !read.ok || read.text === null || read.mtimeMs !== file.expectedMtime || read.text !== preview.originals.get(file.path)) {
         files.push({ path: file.path, ok: false, conflict: true, error: dirty.has(key) ? 'This file has unsaved editor changes.' : 'This file changed or was removed after preview.' })

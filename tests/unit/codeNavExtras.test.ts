@@ -95,6 +95,12 @@ describe('exact code extras', () => {
     expect(await extras.callHierarchy(root, { ...request, direction: 'incoming' })).toMatchObject({ ok: true, engine: 'name', items: [] })
     expect(await extras.hover(root, { ...request, path: '../secret' })).toMatchObject({ ok: false })
   })
+  it('does not present a usage as declaration information when name search has no declaration', async () => {
+    const root = fixture()
+    writeFileSync(join(root, 'usage.py'), 'unresolved()\n')
+    const extras = await service(root)
+    expect(await extras.hover(root, { path: 'usage.py', symbol: 'unresolved', line: 1, column: 1 })).toMatchObject({ ok: true, engine: 'name', display: '', documentation: '' })
+  })
   it('refuses stale rename ranges when an agent writes while the server is answering', async () => {
     const root = fixture()
     const server = { state: 'ready' as const, ready: Promise.resolve(), stop() {}, query: async () => [], rename: async () => {
@@ -159,5 +165,18 @@ describe('replace in files', () => {
   it('rejects replacement output above the save byte budget during preview', async () => {
     const root = fixture()
     expect(await replaceInFiles(root, { ...query, replacement: 'x'.repeat(600_000) }, new EditPreviews())).toMatchObject({ ok: false, error: expect.stringMatching(/large|budget|many/i) })
+  })
+  it.skipIf(process.platform !== 'win32')('refuses a dirty real file when Git search returns a tracked junction alias', async () => {
+    const root = fixture()
+    mkdirSync(join(root, 'real'))
+    writeFileSync(join(root, 'real/item.ts'), 'greet\n')
+    symlinkSync(join(root, 'real'), join(root, 'alias'), 'junction')
+    execFileSync('git', ['add', 'alias/item.ts'], { cwd: root, windowsHide: true })
+    const previews = new EditPreviews()
+    const preview = await replaceInFiles(root, { ...query, include: 'alias/*.ts' }, previews)
+    expect(preview).toMatchObject({ ok: true, files: [{ matches: 1 }] })
+    if (!preview.ok || preview.action !== 'preview') throw new Error('No preview')
+    expect(await replaceInFiles(root, { action: 'apply', previewId: preview.previewId, dirtyPaths: ['real/item.ts'] }, previews)).toMatchObject({ ok: true, files: [{ ok: false, conflict: true }] })
+    expect(readFileSync(join(root, 'real/item.ts'), 'utf8')).toBe('greet\n')
   })
 })
