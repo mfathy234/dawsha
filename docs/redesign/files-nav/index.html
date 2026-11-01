@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dawsha Files navigation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Single theme by choice: this is Dawsha's own dark UI, using its real tokens. Layout idea: a working Files view you can press keys in, with the decisions around it. */
+:root {
+  color-scheme: dark;
+  --bg: #090b0f; --sidebar: #0e1116; --surface: #14181f; --raised: #1b212a; --pop: #232a35;
+  --text: #e8ebf1; --muted: #aab3c3; --text-3: #8c96a8;
+  --accent: #34d399; --on-accent: #04261b; --danger: #ff8080;
+  --seam: rgb(255 255 255 / .07); --line: rgb(255 255 255 / .08); --line-strong: rgb(255 255 255 / .18);
+  --hover: color-mix(in srgb, var(--text) 7%, transparent); --press: color-mix(in srgb, var(--text) 12%, transparent);
+  --sel-ring: 0 0 0 1px rgb(255 255 255 / .12);
+  --e2: 0 8px 24px rgb(0 0 0 / .45), 0 0 0 1px var(--line-strong);
+  --editor: #1e1e1e; --gutter: #858585; --gutter-on: #c6c6c6; --active: rgb(255 255 255 / .05);
+  --font-ui: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-code: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+  --r: 8px; --r-card: 12px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 13px/20px var(--font-ui); }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.page { max-width: 1320px; margin: 0 auto; padding: 32px 24px 64px; display: grid; gap: 24px; }
+h1 { font-size: 28px; line-height: 32px; font-weight: 600; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+h2 { font-size: 20px; line-height: 28px; font-weight: 600; margin: 0 0 12px; text-wrap: balance; }
+.lede { font-size: 14px; color: var(--muted); max-width: 72ch; margin: 8px 0 0; }
+
+.dirs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--surface); border-radius: var(--r-card); }
+.dir { text-align: left; border: 0; background: transparent; border-radius: var(--r); padding: 10px 12px; cursor: pointer; display: grid; gap: 2px; align-content: start; }
+.dir:hover { background: var(--hover); }
+.dir[aria-pressed="true"] { background: var(--raised); box-shadow: var(--sel-ring); }
+.dir b { font-weight: 500; font-size: 14px; }
+.dir span { color: var(--muted); font-size: 12px; line-height: 16px; }
+.dir em { font-style: normal; color: var(--accent); }
+
+.try { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.try > span { color: var(--text-3); font-size: 12px; margin-right: 4px; min-width: 66px; }
+.key { border: 0; background: var(--hover); height: 28px; padding: 0 10px; border-radius: var(--r); cursor: pointer; display: inline-flex; gap: 8px; align-items: center; font-size: 12px; white-space: nowrap; }
+.key:hover { background: var(--press); }
+.key:disabled { opacity: .45; cursor: default; }
+.key[aria-pressed="true"] { background: var(--raised); box-shadow: var(--sel-ring); }
+.key kbd { font: 11px var(--font-code); color: var(--muted); }
+
+/* The app frame */
+.scroll-x { overflow-x: auto; border-radius: var(--r-card); box-shadow: var(--e2); }
+.app { min-width: 1040px; height: 660px; background: var(--bg); display: grid; grid-template-columns: 236px minmax(0, 1fr) 190px; grid-template-rows: minmax(0, 1fr) 28px; }
+.side { background: var(--sidebar); padding: 10px 8px; overflow: hidden; display: flex; flex-direction: column; gap: 1px; grid-area: 1 / 1; }
+.side .proj { font-weight: 600; padding: 4px 8px 8px; }
+.side h3, .insp h3 { font-size: 13px; font-weight: 600; margin: 8px 0 2px; padding: 2px 8px; }
+.row { border: 0; background: none; width: 100%; text-align: left; height: 26px; padding: 0 8px; border-radius: var(--r); cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
+.row:hover { background: var(--hover); }
+.row[aria-current="true"] { background: var(--raised); box-shadow: var(--sel-ring); }
+.row i { font: 500 9px var(--font-code); color: #7fb2e5; font-style: normal; width: 16px; flex: none; }
+.row small { color: var(--text-3); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+.main { grid-area: 1 / 2; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--editor); position: relative; }
+.tabs { display: flex; gap: 2px; padding: 8px 12px 0; background: var(--surface); flex: none; overflow: hidden; }
+.tab { border: 0; height: 30px; padding: 0 12px; border-radius: var(--r) var(--r) 0 0; background: transparent; color: var(--muted); cursor: pointer; white-space: nowrap; display: flex; gap: 8px; align-items: center; }
+.tab:hover { background: var(--hover); color: var(--text); }
+.tab.on { background: var(--editor); color: var(--text); font-weight: 500; }
+.tab.preview span { font-style: italic; }
+.tab i { font: 500 9px var(--font-code); color: #7fb2e5; font-style: normal; }
+.bar { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; flex: none; }
+.nav { width: 26px; height: 26px; border: 0; border-radius: var(--r); background: transparent; cursor: pointer; display: grid; place-items: center; color: var(--muted); }
+.nav:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.nav:disabled { opacity: .35; cursor: default; }
+.crumb { flex: 1; min-width: 0; display: flex; gap: 4px; align-items: center; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.crumb .leaf { color: var(--text); font-weight: 500; }
+.crumb button { border: 0; background: none; padding: 1px 4px; border-radius: 6px; cursor: pointer; color: var(--text); }
+.crumb button:hover { background: var(--hover); }
+.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--r-card); background: var(--hover); flex: none; }
+.seg span { height: 24px; line-height: 24px; padding: 0 10px; border-radius: var(--r); color: var(--muted); }
+.seg span.on { background: var(--raised); box-shadow: var(--sel-ring); color: var(--text); font-weight: 500; }
+.barbtn { height: 28px; line-height: 28px; padding: 0 10px; background: var(--hover); border-radius: var(--r); flex: none; }
+
+.ed { flex: 1 1 0; min-height: 0; overflow: auto; font: 13px/21px var(--font-code); color: #d4d4d4; font-variant-ligatures: none; padding: 4px 0 12px; position: relative; }
+.ln { display: flex; min-height: 21px; cursor: text; white-space: pre; width: max-content; min-width: 100%; }
+.ln.on { background: var(--active); }
+.ln.flash { animation: flash .9s cubic-bezier(.16,1,.3,1); }
+@keyframes flash { from { background: rgb(52 211 153 / .28); } to { background: var(--active); } }
+.num { width: 48px; text-align: right; padding-right: 6px; color: var(--gutter); flex: none; user-select: none; }
+.ln.on .num { color: var(--gutter-on); }
+.foldg { width: 16px; flex: none; color: var(--gutter); text-align: center; cursor: pointer; user-select: none; opacity: 0; font-family: var(--font-ui); font-size: 10px; }
+.ed:hover .foldg.can, .foldg.shut { opacity: 1; }
+.code { padding: 0 16px 0 4px; }
+.indent { background-image: linear-gradient(90deg, rgb(255 255 255 / .1) 1px, transparent 1px); background-size: 2ch 100%; }
+.more { background: var(--hover); border-radius: 4px; color: var(--muted); padding: 0 4px; margin-left: 4px; font-size: 11px; }
+.t-k { color: #569cd6; } .t-c { color: #c586c0; } .t-f { color: #dcdcaa; } .t-t { color: #4ec9b0; } .t-s { color: #ce9178; } .t-v { color: #9cdcfe; } .t-m { color: #6a9955; } .t-n { color: #b5cea8; }
+.sym { border-radius: 2px; cursor: text; }
+.sym.at { background: rgb(255 255 255 / .1); }
+body.ctrl .app.live .sym:hover { text-decoration: underline; cursor: pointer; color: #6cb6ff; }
+.err { text-decoration: underline wavy var(--danger) 1px; text-underline-offset: 3px; }
+.diag { color: var(--danger); margin-left: 24px; font-family: var(--font-ui); font-size: 12px; }
+
+/* Inline peek. It sits in the code like VS Code's, without the coloured rule. */
+.peek { margin: 4px 0 6px 48px; background: var(--surface); border-radius: var(--r); box-shadow: var(--e2); font-family: var(--font-ui); animation: rise .16s cubic-bezier(.16,1,.3,1); position: sticky; left: 48px; width: calc(100% - 64px); cursor: default; }
+@keyframes rise { from { opacity: 0; transform: translateY(-4px); } }
+.peek-head { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 6px 0 12px; }
+.peek-head b { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.peek-head span { color: var(--muted); white-space: nowrap; }
+.peek-head .grow { flex: 1; }
+.peek-body { display: grid; grid-template-columns: minmax(0, 1fr) 248px; height: 232px; }
+.peek-code { overflow: auto; background: var(--editor); font: 13px/21px var(--font-code); border-radius: 0 0 0 var(--r); padding: 4px 0; }
+.peek-code .ln { cursor: default; }
+.peek-code .hit { background: rgb(52 211 153 / .14); }
+.peek-list { overflow: auto; padding: 4px; display: flex; flex-direction: column; gap: 1px; }
+.group { padding: 6px 8px 2px; font-weight: 500; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; flex: none; }
+.group small { color: var(--text-3); font-weight: 400; }
+.hitrow { border: 0; background: none; text-align: left; border-radius: 6px; padding: 2px 8px; cursor: pointer; font: 12px/20px var(--font-code); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; display: flex; gap: 8px; color: #d4d4d4; }
+.hitrow:hover { background: var(--hover); }
+.hitrow.sel { background: var(--press); box-shadow: var(--sel-ring); }
+.hitrow u { color: var(--text-3); text-decoration: none; flex: none; width: 3ch; text-align: right; }
+.hitrow span { overflow: hidden; text-overflow: ellipsis; }
+.note-btn { border: 0; height: 24px; padding: 0 8px; border-radius: 6px; background: var(--hover); cursor: pointer; font-size: 12px; white-space: nowrap; }
+.note-btn:hover { background: var(--press); }
+.close { width: 24px; height: 24px; border: 0; background: none; border-radius: 6px; cursor: pointer; color: var(--muted); }
+.close:hover { background: var(--hover); color: var(--text); }
+.bubble { white-space: nowrap; position: sticky; left: 52px; display: inline-flex; gap: 12px; align-items: center; margin: 2px 0 4px 52px; padding: 6px 10px; background: var(--pop); border-radius: var(--r); box-shadow: var(--e2); font: 12px/16px var(--font-ui); color: var(--text); animation: rise .16s cubic-bezier(.16,1,.3,1); }
+
+.panel { flex: none; background: var(--sidebar); box-shadow: inset 0 1px 0 var(--seam); display: flex; flex-direction: column; }
+.panel-head { display: flex; gap: 2px; height: 32px; align-items: center; padding: 0 8px; flex: none; }
+.ptab { border: 0; background: transparent; height: 26px; padding: 0 10px; border-radius: var(--r); color: var(--muted); cursor: pointer; display: flex; gap: 6px; }
+.ptab:hover { background: var(--hover); color: var(--text); }
+.ptab.on { background: var(--raised); color: var(--text); box-shadow: var(--sel-ring); font-weight: 500; }
+.ptab small { color: var(--text-3); font-size: 12px; font-weight: 400; }
+.panel-note { color: var(--muted); font-size: 12px; margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel-body { height: 168px; overflow: auto; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 1px; }
+.panel-empty { color: var(--muted); padding: 8px; }
+.panel-body .group { direction: ltr; }
+
+.insp { background: var(--sidebar); padding: 10px 8px; overflow: auto; grid-area: 1 / 3; }
+.insp .row { justify-content: space-between; }
+.insp .row small { font-variant-numeric: tabular-nums; }
+.status { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; padding: 0 16px; background: var(--sidebar); box-shadow: inset 0 1px 0 var(--seam); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+.status .grow { flex: 1; }
+.status button { border: 0; background: none; color: var(--text); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; padding: 0; font-size: 12px; }
+
+.qp { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); width: min(460px, 90%); background: var(--pop); border-radius: var(--r-card); box-shadow: var(--e2); padding: 6px; z-index: 3; animation: rise .16s cubic-bezier(.16,1,.3,1); display: grid; gap: 4px; }
+.qp input { width: 100%; height: 30px; background: var(--bg); border: 0; border-radius: var(--r); color: var(--text); padding: 0 10px; font: inherit; }
+.qp-list { max-height: 210px; overflow: auto; display: grid; gap: 1px; }
+.qp-empty { color: var(--muted); padding: 6px 10px; }
+
+/* Below the frame */
+.split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 32px; align-items: start; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 6px 12px 6px 0; }
+td { padding: 8px 12px 8px 0; vertical-align: top; box-shadow: inset 0 1px 0 var(--seam); }
+td:nth-child(1) { font-weight: 500; min-width: 170px; }
+td:nth-child(2) { color: var(--muted); min-width: 240px; }
+td:nth-child(3), td:nth-child(4) { white-space: nowrap; }
+.prose p { color: var(--muted); margin: 0 0 12px; max-width: 68ch; }
+.prose p b { color: var(--text); font-weight: 500; }
+.prose code, td code { font: 12px var(--font-code); color: var(--text); }
+.worddiff { font-variant-ligatures: none; font: 13px/21px var(--font-code); background: var(--editor); border-radius: var(--r); padding: 6px 12px; overflow-x: auto; white-space: pre; margin-bottom: 12px; color: #d4d4d4; }
+.worddiff .old { background: rgb(255 128 128 / .08); display: block; } .worddiff .new { background: rgb(52 211 153 / .08); display: block; }
+.worddiff del { background: rgb(255 128 128 / .3); text-decoration: none; } .worddiff ins { background: rgb(52 211 153 / .3); text-decoration: none; }
+.ask { background: var(--surface); border-radius: var(--r-card); padding: 16px 20px; }
+.ask ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 80ch; }
+@media (max-width: 860px) { .dirs { grid-template-columns: 1fr 1fr; } .split { grid-template-columns: 1fr; } }
+@media (max-width: 420px) { .dirs { grid-template-columns: 1fr; } .page { padding: 20px 16px 40px; } }
+@media (prefers-reduced-motion: reduce) { .ln.flash, .peek, .bubble, .qp { animation: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Files navigation, like VS Code</h1>
+    <p class="lede">A working mock of the Files view. Pick a direction, click a name in the code, then press F12 or Ctrl+F12. The code is example data; the colours, fonts and layout are Dawsha's own.</p>
+  </header>
+
+  <div class="dirs" id="dirs" role="group" aria-label="Direction"></div>
+
+  <div class="try" id="keys"></div>
+  <div class="try" id="sims"></div>
+  <div class="try" id="extras"></div>
+
+  <div class="scroll-x"><div class="app" id="app"></div></div>
+
+  <section class="ask">
+    <h2>What I need from you</h2>
+    <ol>
+      <li><b>Direction.</b> I recommend Jump first, because it is what VS Code does: one result jumps, several open a peek.</li>
+      <li><b>C#.</b> I recommend using <code>csharp-ls</code> when it is installed, with a one-click install offer and search by name until then. Nothing that answers Ctrl+F12 for C# is small enough to bundle.</li>
+      <li><b>Which of the extras</b> to include in the first round. The table below marks my pick.</li>
+    </ol>
+  </section>
+
+  <section class="split">
+    <div>
+      <h2>Everything else that keeps Files from feeling like VS Code</h2>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Change</th><th>Why</th><th>Effort</th><th>My pick</th></tr></thead>
+        <tbody>
+          <tr><td>Definition, implementation, references, back and forward</td><td>The ask. By-name search first, real language servers next.</td><td>Medium, then large</td><td>First round</td></tr>
+          <tr><td>Errors shown in the code</td><td>Problems are already parsed from runs but never reach the editor.</td><td>Small</td><td>First round</td></tr>
+          <tr><td>Fold arrows and indent guides</td><td>Neither exists today.</td><td>Small</td><td>First round</td></tr>
+          <tr><td>Go to symbol and symbol breadcrumbs</td><td>Reuses the outline. <code>Ctrl+Shift+O</code> is taken by the sidebar filter, which must become grid-only.</td><td>Small to medium</td><td>First round</td></tr>
+          <tr><td>Go to line on Ctrl+G, clickable Ln/Col</td><td>It exists on Alt+G, unlabelled. Ctrl+G is find next today.</td><td>Small</td><td>First round</td></tr>
+          <tr><td>Word-level highlights in Changes</td><td>They are turned off, so a one-word edit reads as a whole changed line.</td><td>Small</td><td>First round</td></tr>
+          <tr><td>Multi-cursor and Ctrl+D</td><td>Multiple selections are not enabled, so Ctrl+D collapses.</td><td>Small</td><td>First round</td></tr>
+          <tr><td>C# outline, folding and breadcrumbs</td><td>C# uses the old highlighting mode, which has no syntax tree. A regex outline is the cheap version.</td><td>Small, or large with a real parser</td><td>First round, regex</td></tr>
+          <tr><td>Sticky scroll</td><td>Useful in long files, but not needed to start.</td><td>Medium</td><td>Later</td></tr>
+          <tr><td>Autocomplete</td><td>Only worth it once language servers are in and you are editing.</td><td>Large</td><td>Later</td></tr>
+          <tr><td>Minimap and split editor</td><td>Crowds a panel that already has a sidebar and an outline.</td><td>Medium</td><td>Skip</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="prose">
+      <h2>How the keys get answers</h2>
+      <p><b>Search by name, for every language.</b> Instant and offline, with no download. It finds definitions well and guesses at implementations, so those results say "Best match by name".</p>
+      <p><b>TypeScript and JavaScript.</b> The TypeScript service ships with the app, adding about 2 MB to the installer. It gives exact answers once it has started, which can take 2 to 10 seconds and use 300 MB to 1 GB of memory in a big repo.</p>
+      <p><b>C#.</b> Uses <code>csharp-ls</code> or OmniSharp if found. A large solution can take 10 to 60 seconds to load, and name search covers that time.</p>
+      <h2>Word-level Changes</h2>
+      <div class="worddiff"><span class="old">const [theme] = useState&lt;Theme&gt;(<del>'light'</del>)</span><span class="new">const [theme] = useState&lt;Theme&gt;(<ins>() =&gt; store.read() ?? 'light'</ins>)</span></div>
+      <p>The effort and size figures are Fable's estimates and have not been measured yet.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const LONG = 'src/features/settings/appearance/persistence/remote/remoteThemeStore.ts'
+const FILES = {
+  'src/context/theme.tsx': `import { createContext, useContext, useState, type ReactNode } from 'react'
+import { readStoredTheme, storeTheme } from '../lib/storage'
+import type { ThemeStore } from '../lib/themeStore'
+
+export type Theme = 'light' | 'dark'
+
+interface ThemeValue {
+  theme: Theme
+  setTheme: (theme: Theme) => void
+}
+
+const ThemeContext = createContext<ThemeValue | null>(null)
+
+export function systemTheme(): Theme {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+export function ThemeProvider({ store, children }: { store: ThemeStore; children: ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>(() => store.read() ?? readStoredTheme('dark') ?? systemTheme())
+
+  const setTheme = (next: Theme) => {
+    setThemeState(next)
+    store.write(next)
+    storeTheme(next)
+  }
+
+  return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>
+}
+
+export function useTheme(): ThemeValue {
+  const value = useContext(ThemeContext)
+  if (!value) throw new Error('useTheme needs a ThemeProvider')
+  return value
+}`,
+  'src/lib/storage.ts': `import type { Theme } from '../context/theme'
+
+const THEME_KEY = 'acme.theme'
+
+export function readStoredTheme(): Theme | null {
+  const raw = localStorage.getItem(THEME_KEY)
+  return raw === 'light' || raw === 'dark' ? raw : null
+}
+
+export function storeTheme(theme: Theme): void {
+  localStorage.setItem(THEME_KEY, theme)
+}`,
+  'src/lib/themeStore.ts': `import type { Theme } from '../context/theme'
+
+export interface ThemeStore {
+  read(): Theme | null
+  write(theme: Theme): void
+}`,
+  'src/lib/stores/localThemeStore.ts': `import { readStoredTheme, storeTheme } from '../storage'
+import type { Theme } from '../../context/theme'
+import type { ThemeStore } from '../themeStore'
+
+export class LocalThemeStore implements ThemeStore {
+  read(): Theme | null {
+    return readStoredTheme()
+  }
+
+  write(theme: Theme): void {
+    storeTheme(theme)
+  }
+}`,
+  'src/lib/stores/memoryThemeStore.ts': `import type { Theme } from '../../context/theme'
+import type { ThemeStore } from '../themeStore'
+
+export class MemoryThemeStore implements ThemeStore {
+  private value: Theme | null = null
+
+  read(): Theme | null {
+    return this.value
+  }
+
+  write(theme: Theme): void {
+    this.value = theme
+  }
+}`,
+  [LONG]: `import type { ThemeStore } from '../../../../../lib/themeStore'
+import type { Theme } from '../../../../../context/theme'
+
+export class RemoteThemeStore implements ThemeStore {
+  private cached: Theme | null = null
+
+  read(): Theme | null {
+    return this.cached
+  }
+
+  write(theme: Theme): void {
+    this.cached = theme
+    void fetch('/api/preferences/theme', { method: 'PUT', body: theme })
+  }
+}`,
+  'src/lib/storage.test.ts': `import { readStoredTheme, storeTheme } from './storage'
+
+it('reads back what it stored', () => {
+  storeTheme('dark')
+  expect(readStoredTheme()).toBe('dark')
+})`,
+  'Services/StockLedger.cs': `namespace Acme.Stock;
+
+public interface IStockLedger
+{
+    Task<int> BalanceAsync(Guid serviceId, CancellationToken token);
+    Task RecordAsync(StockMovement movement, CancellationToken token);
+}
+
+public sealed class StockService(IStockLedger ledger)
+{
+    public Task<int> BalanceOfAsync(Guid serviceId, CancellationToken token) =>
+        ledger.BalanceAsync(serviceId, token);
+}`,
+  'Services/SqlStockLedger.cs': `namespace Acme.Stock;
+
+public sealed class SqlStockLedger(StockDbContext db) : IStockLedger
+{
+    public async Task<int> BalanceAsync(Guid serviceId, CancellationToken token)
+    {
+        var rows = db.Movements.Where(row => row.ServiceId == serviceId);
+        return await rows.SumAsync(row => row.Quantity, token);
+    }
+
+    public Task RecordAsync(StockMovement movement, CancellationToken token) =>
+        db.AddAsync(movement, token).AsTask();
+}`,
+  'Tests/FakeStockLedger.cs': `namespace Acme.Stock.Tests;
+
+internal sealed class FakeStockLedger : IStockLedger
+{
+    public Task<int> BalanceAsync(Guid serviceId, CancellationToken token) => Task.FromResult(5);
+    public Task RecordAsync(StockMovement movement, CancellationToken token) => Task.CompletedTask;
+}`
+}
+const LINES = Object.fromEntries(Object.entries(FILES).map(([p, t]) => [p, t.split('\n')]))
+const at = (path, needle) => { const i = LINES[path].findIndex((l) => l.includes(needle)); if (i < 0) throw new Error(needle); return { path, line: i + 1 } }
+const THEME = 'src/context/theme.tsx', STORAGE = 'src/lib/storage.ts', IFACE = 'src/lib/themeStore.ts', LOCAL = 'src/lib/stores/localThemeStore.ts', MEM = 'src/lib/stores/memoryThemeStore.ts', TEST = 'src/lib/storage.test.ts'
+const CS = 'Services/StockLedger.cs', SQL = 'Services/SqlStockLedger.cs', FAKE = 'Tests/FakeStockLedger.cs'
+const readDef = at(STORAGE, 'export function readStoredTheme'), storeDef = at(STORAGE, 'export function storeTheme')
+const SYMS = {
+  readStoredTheme: { def: [readDef], impl: [readDef], refs: [at(THEME, 'import { readStoredTheme'), at(THEME, 'store.read() ??'), at(LOCAL, 'return readStoredTheme'), at(TEST, 'expect(readStoredTheme')] },
+  storeTheme: { def: [storeDef], impl: [storeDef], refs: [at(THEME, 'storeTheme(next)'), at(LOCAL, 'storeTheme(theme)'), at(TEST, "storeTheme('dark')")] },
+  ThemeStore: { def: [at(IFACE, 'export interface ThemeStore')], impl: [at(LOCAL, 'class LocalThemeStore'), at(MEM, 'class MemoryThemeStore'), at(LONG, 'class RemoteThemeStore')], refs: [at(THEME, 'import type { ThemeStore'), at(THEME, 'store: ThemeStore'), at(LOCAL, 'implements ThemeStore'), at(MEM, 'implements ThemeStore'), at(LONG, 'implements ThemeStore')] },
+  read: { def: [at(IFACE, 'read(): Theme')], impl: [at(LOCAL, 'read(): Theme'), at(MEM, 'read(): Theme'), at(LONG, 'read(): Theme')], refs: [at(THEME, 'store.read()')] },
+  write: { def: [at(IFACE, 'write(theme')], impl: [at(LOCAL, 'write(theme'), at(MEM, 'write(theme'), at(LONG, 'write(theme')], refs: [at(THEME, 'store.write')] },
+  systemTheme: { def: [at(THEME, 'export function systemTheme')], impl: [at(THEME, 'export function systemTheme')], refs: [at(THEME, '?? systemTheme()')] },
+  ThemeValue: { def: [at(THEME, 'interface ThemeValue')], impl: [], refs: [at(THEME, 'createContext<ThemeValue'), at(THEME, 'useTheme(): ThemeValue')] },
+  useTheme: { def: [at(THEME, 'export function useTheme')], impl: [at(THEME, 'export function useTheme')], refs: [] },
+  IStockLedger: { def: [at(CS, 'public interface IStockLedger')], impl: [at(SQL, 'class SqlStockLedger'), at(FAKE, 'class FakeStockLedger')], refs: [at(CS, 'StockService(IStockLedger'), at(SQL, ': IStockLedger'), at(FAKE, ': IStockLedger')] },
+  BalanceAsync: { def: [at(CS, 'Task<int> BalanceAsync')], impl: [at(SQL, 'BalanceAsync'), at(FAKE, 'BalanceAsync')], refs: [at(CS, 'ledger.BalanceAsync')] },
+  useState: { outside: true }, createContext: { outside: true }, useContext: { outside: true }, Task: { outside: true },
+  matchMedia: { none: true }
+}
+const DIRS = [
+  { id: 'today', name: 'Today', line: 'The current screen. These keys do nothing yet.' },
+  { id: 'jump', name: 'Jump first', line: "VS Code's behaviour. One result jumps in a preview tab, several open a peek.", pick: true },
+  { id: 'peek', name: 'Peek always', line: 'Every result opens inline, so you never leave your place. Fable preferred this.' },
+  { id: 'panel', name: 'Panel results', line: 'One result jumps. Lists go to a References tab beside Run and Problems, and stay there.' }
+]
+const KEYS = [['def', 'Go to Definition', 'F12'], ['impl', 'Go to Implementation', 'Ctrl+F12'], ['refs', 'Find All References', 'Shift+F12'], ['back', 'Back', 'Alt+←'], ['fwd', 'Forward', 'Alt+→'], ['sym', 'Go to Symbol', 'Ctrl+Shift+O'], ['line', 'Go to Line', 'Ctrl+G']]
+const SIMS = [['none', 'Exact results'], ['starting', 'TypeScript starting'], ['crashed', 'TypeScript stopped'], ['csharp', 'C# without a server'], ['noresult', 'Nothing found'], ['outside', 'Outside the project']]
+const EXTRAS = [['fold', 'Folding and guides'], ['errors', 'Errors in the code'], ['crumbs', 'Symbol breadcrumbs']]
+const SAMPLE_CARET = { path: THEME, line: at(THEME, 'store: ThemeStore').line, sym: 'ThemeStore' }
+
+const S = {
+  view: 'jump', tabs: [{ path: THEME, pinned: true }], caret: { ...SAMPLE_CARET }, peek: null, refs: null, ptab: 'Run', msg: null, qp: null,
+  back: [], fwd: [], flash: null, sim: 'none', extras: { fold: true, errors: true, crumbs: true }, folded: new Set(), scrollTo: SAMPLE_CARET.line
+}
+const live = () => S.view !== 'today'
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+const base = (p) => p.split('/').pop()
+const dir = (p) => p.split('/').slice(0, -1).join('/')
+const icon = (p) => (p.endsWith('.cs') ? 'C#' : 'TS')
+const langOf = (p) => (p.endsWith('.cs') ? 'C#' : p.endsWith('x') ? 'TSX' : 'TypeScript')
+const byName = () => S.sim === 'starting' || S.sim === 'crashed' || S.caret.path.endsWith('.cs')
+
+const KW = new Set('import from export type interface const function class implements private public void namespace sealed internal async var null new true false readonly'.split(' '))
+const CTRL = new Set('return if else throw await'.split(' '))
+function tok(text, opts = {}) {
+  const lead = /^ */.exec(text)[0]
+  let out = lead ? `<span class="${live() && S.extras.fold ? 'indent' : ''}">${lead}</span>` : ''
+  const re = /(\/\/.*$)|('[^']*'|"[^"]*")|\b(\d+)\b|([A-Za-z_$][\w$]*)|([^\w\s]+|\s+)/g
+  const rest = text.slice(lead.length)
+  let m
+  while ((m = re.exec(rest))) {
+    if (m[1]) out += `<span class="t-m">${esc(m[1])}</span>`
+    else if (m[2]) out += `<span class="t-s">${esc(m[2])}</span>`
+    else if (m[3]) out += `<span class="t-n">${m[3]}</span>`
+    else if (m[4]) {
+      const w = m[4], next = rest[re.lastIndex]
+      const cls = KW.has(w) ? 't-k' : CTRL.has(w) ? 't-c' : /^[A-Z]/.test(w) ? 't-t' : next === '(' ? 't-f' : 't-v'
+      const isErr = opts.err && w === opts.err
+      if (SYMS[w] && !opts.plain) out += `<span class="sym ${cls} ${isErr ? 'err' : ''} ${opts.at === w ? 'at' : ''}" data-sym="${w}">${w}</span>`
+      else out += `<span class="${cls} ${isErr ? 'err' : ''}">${esc(w)}</span>`
+    } else out += esc(m[5])
+  }
+  return out
+}
+const indentOf = (l) => /^ */.exec(l)[0].length
+function foldEnd(path, i) {
+  const L = LINES[path], line = L[i]
+  if (!/[{(]\s*$|=>\s*$/.test(line) && !(L[i + 1] || '').trim().startsWith('{')) return -1
+  const ind = indentOf(line)
+  for (let j = i + 1; j < L.length; j++) if (L[j].trim() && indentOf(L[j]) <= ind && !L[j].trim().startsWith('{')) return /^[})\]]/.test(L[j].trim()) ? j : j - 1
+  return L.length - 1
+}
+function outline(path) {
+  const out = []
+  LINES[path].forEach((l, i) => {
+    const m = /^(?:export )?(?:public |internal )?(?:sealed )?(?:function|interface|class|type)\s+(\w+)/.exec(l) || /^const (\w+) =/.exec(l)
+    if (m) out.push({ name: m[1], line: i + 1 })
+    const member = /^\s+(?:public |private )?(?:async )?(?:Task(?:<int>)? )?(\w+)\(.*(?:\{|;|=>)\s*$/.exec(l)
+    if (member && !/^(if|return)$/.test(member[1]) && !l.includes('=') && !l.trim().startsWith('return')) out.push({ name: member[1], line: i + 1, sub: true })
+  })
+  return out
+}
+const enclosing = (path, line) => outline(path).filter((o) => o.line <= line && !o.sub).pop()?.name
+
+function renderCode(path) {
+  const L = LINES[path]
+  const err = live() && S.extras.errors && path === THEME
+  let html = ''
+  for (let i = 0; i < L.length; i++) {
+    const n = i + 1, isCaret = S.caret.path === path && S.caret.line === n
+    const end = live() && S.extras.fold ? foldEnd(path, i) : -1
+    const shut = S.folded.has(path + ':' + n) && end > i
+    const lineErr = err && L[i].includes('?? systemTheme()')
+    html += `<div class="ln ${isCaret ? 'on' : ''} ${S.flash === n && isCaret ? 'flash' : ''}" data-line="${n}"><span class="num">${n}</span>`
+    if (live() && S.extras.fold) html += `<span class="foldg ${end > i ? 'can' : ''} ${shut ? 'shut' : ''}" ${end > i ? `data-fold="${n}"` : ''}>${end > i ? (shut ? '›' : '⌄') : ''}</span>`
+    html += `<span class="code">${tok(L[i], { at: isCaret ? S.caret.sym : null, err: lineErr ? 'readStoredTheme' : null })}${shut ? '<span class="more">…</span>' : ''}${lineErr ? `<span class="diag">Expected 0 arguments, but got 1. From your last run.</span>` : ''}</span></div>`
+    if (isCaret && S.msg) html += `<div class="bubble">${S.msg.text}${S.msg.action ? `<button class="note-btn" data-toast="${esc(S.msg.done || '')}">${S.msg.action}</button>` : ''}</div>`
+    if (isCaret && S.peek) html += renderPeek()
+    if (shut) i = end
+  }
+  return html
+}
+function hitText(h) { return LINES[h.path][h.line - 1].trim() }
+function groupHits(hits) { const g = new Map(); hits.forEach((h, i) => { if (!g.has(h.path)) g.set(h.path, []); g.get(h.path).push({ ...h, i }) }); return [...g.entries()] }
+const countLabel = (kind, n) => `${n} ${{ def: 'definition', impl: 'implementation', refs: 'reference' }[kind]}${n === 1 ? '' : 's'}`
+function byNameNote(n) { return n > 1 ? `Best match by name · ${n - 1} other match${n > 2 ? 'es' : ''}` : 'Best match by name' }
+function renderPeek() {
+  const P = S.peek, hit = P.hits[P.sel]
+  const list = groupHits(P.hits).map(([path, hs]) => `<div class="group" title="${esc(path)}"><bdi>${esc(base(path))} <small>${esc(dir(path))}</small></bdi></div>` + hs.map((h) => `<button class="hitrow ${h.i === P.sel ? 'sel' : ''}" data-hit="${h.i}"><u>${h.line}</u><span>${esc(hitText(h))}</span></button>`).join('')).join('')
+  const code = LINES[hit.path].map((l, i) => `<div class="ln ${i + 1 === hit.line ? 'hit' : ''}" ${i + 1 === hit.line ? 'data-peekhit' : ''}><span class="num">${i + 1}</span><span class="code">${tok(l, { plain: true })}</span></div>`).join('')
+  return `<div class="peek" role="region" aria-label="Peek"><div class="peek-head"><b>${esc(base(hit.path))}</b><span>${P.note || countLabel(P.kind, P.hits.length)}</span><span class="grow"></span><button class="note-btn" data-openhit>Open <span style="color:var(--muted)">Enter</span></button><button class="close" data-closepeek aria-label="Close peek">✕</button></div><div class="peek-body"><div class="peek-code">${code}</div><div class="peek-list">${list}</div></div></div>`
+}
+function renderPanel() {
+  const panelView = S.view === 'panel'
+  const tabs = ['Run', 'Problems'].concat(panelView ? ['References'] : [])
+  const refs = S.refs
+  const head = tabs.map((t) => `<button class="ptab ${S.ptab === t ? 'on' : ''}" data-ptab="${t}">${t}${t === 'Problems' && live() && S.extras.errors ? ' <small>1</small>' : ''}${t === 'References' && refs ? ` <small>${refs.hits.length}</small>` : ''}</button>`).join('')
+  if (S.ptab === 'Run' || (!panelView && S.ptab === 'References')) return `<div class="panel"><div class="panel-head">${head}</div></div>`
+  let body
+  if (S.ptab === 'Problems') {
+    const e = at(THEME, '?? systemTheme()')
+    body = live() && S.extras.errors
+      ? `<div class="group" style="direction:ltr"><bdi>theme.tsx <small>src/context</small></bdi></div><button class="hitrow" data-goto="${e.path}|${e.line}"><u>${e.line}</u><span>Expected 0 arguments, but got 1.</span></button>`
+      : `<div class="panel-empty">No problems from your last run.</div>`
+  } else if (!refs) body = `<div class="panel-empty">Press Ctrl+F12 or Shift+F12 on a name to list its results here.</div>`
+  else body = groupHits(refs.hits).map(([p, hs]) => `<div class="group"><bdi>${esc(base(p))} <small>${esc(dir(p))}</small></bdi></div>` + hs.map((h) => `<button class="hitrow" data-goto="${h.path}|${h.line}"><u>${h.line}</u><span>${esc(hitText(h))}</span></button>`).join('')).join('')
+  const note = S.ptab === 'References' && refs ? `<span class="panel-note">${refs.note || `${refs.title} · ${countLabel(refs.kind, refs.hits.length)}`}</span>` : ''
+  return `<div class="panel"><div class="panel-head">${head}${note}</div><div class="panel-body">${body}</div></div>`
+}
+function renderStatus() {
+  const c = S.caret
+  let engine = ''
+  if (live()) {
+    if (S.caret.path.endsWith('.cs')) engine = `C# by name <button data-toast="Installing csharp-ls with dotnet tool install. Results get exact when the solution has loaded.">Install csharp-ls for exact results</button>`
+    else if (S.sim === 'starting') engine = 'TypeScript starting. Results are by name until it is ready.'
+    else if (S.sim === 'crashed') engine = `TypeScript stopped. Results are by name. <button data-sim="none">Restart</button>`
+    else engine = 'TypeScript ready'
+  }
+  return `<span>Ln ${c.line}, Col 1 · ${langOf(c.path)}</span>${S.toast ? `<span style="color:var(--text)">${esc(S.toast)}</span>` : ''}<span class="grow"></span><span>${engine}</span><span>feature/dark-mode-toggle · acme-web</span>`
+}
+function renderQp() {
+  if (!S.qp) return ''
+  return `<div class="qp"><input id="qp" aria-label="${S.qp === 'sym' ? 'Go to symbol' : 'Go to line'}" placeholder="${S.qp === 'sym' ? 'Go to a symbol in this file' : `Line number, 1 to ${LINES[S.caret.path].length}`}" autocomplete="off"><div class="qp-list" id="qp-list"></div></div>`
+}
+function qpList(q) {
+  const box = document.getElementById('qp-list'); if (!box) return
+  if (S.qp === 'line') { box.innerHTML = q && !/^\d+$/.test(q) ? '<div class="qp-empty">Type a line number.</div>' : ''; return }
+  const items = outline(S.caret.path).filter((o) => o.name.toLowerCase().includes(q.toLowerCase()))
+  box.innerHTML = items.length ? items.map((o) => `<button class="row" data-goto="${S.caret.path}|${o.line}"><span>${o.sub ? '&nbsp;&nbsp;' : ''}${o.name}</span><small style="margin-left:auto">${o.line}</small></button>`).join('') : `<div class="qp-empty">No symbol matches "${esc(q)}".</div>`
+}
+function render() {
+  document.getElementById('dirs').innerHTML = DIRS.map((d) => `<button class="dir" aria-pressed="${S.view === d.id}" data-view="${d.id}"><b>${d.name}${d.pick ? ' <em>· recommended</em>' : ''}</b><span>${d.line}</span></button>`).join('')
+  document.getElementById('keys').innerHTML = '<span>Press</span>' + KEYS.map(([k, n, s]) => `<button class="key" data-key="${k}" ${live() ? '' : 'disabled'}>${n} <kbd>${s}</kbd></button>`).join('')
+  document.getElementById('sims').innerHTML = '<span>States</span>' + SIMS.map(([k, n]) => `<button class="key" data-sim="${k}" aria-pressed="${S.sim === k}" ${live() ? '' : 'disabled'}>${n}</button>`).join('')
+  document.getElementById('extras').innerHTML = '<span>Extras</span>' + EXTRAS.map(([k, n]) => `<button class="key" data-extra="${k}" aria-pressed="${S.extras[k]}" ${live() ? '' : 'disabled'}>${S.extras[k] ? '✓ ' : ''}${n}</button>`).join('')
+  const c = S.caret, parts = dir(c.path).split('/').filter(Boolean)
+  const encl = live() && S.extras.crumbs ? enclosing(c.path, c.line) : null
+  const crumbs = parts.map((p) => `<span>${esc(p)}</span><span style="opacity:.5">/</span>`).join('') + `<span class="leaf">${esc(base(c.path))}</span>` + (encl ? `<span style="opacity:.5">/</span><button data-key="sym">${esc(encl)}</button>` : '')
+  const openFiles = [THEME, STORAGE, IFACE, LOCAL, MEM, CS]
+  const tree = openFiles.map((p) => `<button class="row" aria-current="${c.path === p}" data-open="${p}"><i>${icon(p)}</i><span>${esc(base(p))}</span><small>${esc(dir(p))}</small></button>`).join('')
+  const outl = outline(c.path).map((o) => `<button class="row" data-goto="${c.path}|${o.line}"><span>${o.sub ? '&nbsp;&nbsp;' : ''}${esc(o.name)}</span><small>${o.line}</small></button>`).join('')
+  const prevEd = document.querySelector('.ed'), keep = prevEd ? prevEd.scrollTop : 0
+  document.getElementById('app').className = 'app ' + (live() ? 'live' : '')
+  document.getElementById('app').innerHTML = `
+    <aside class="side"><div class="proj">acme-web</div><h3>Files</h3>${tree}</aside>
+    <div class="main">
+      <div class="tabs">${S.tabs.map((t) => `<button class="tab ${t.path === c.path ? 'on' : ''} ${t.pinned ? '' : 'preview'}" data-open="${t.path}"><i>${icon(t.path)}</i><span>${esc(base(t.path))}</span></button>`).join('')}</div>
+      <div class="bar">
+        ${live() ? `<button class="nav" data-key="back" aria-label="Back" title="Back (Alt+←)" ${S.back.length ? '' : 'disabled'}>←</button><button class="nav" data-key="fwd" aria-label="Forward" title="Forward (Alt+→)" ${S.fwd.length ? '' : 'disabled'}>→</button>` : ''}
+        <div class="crumb">${crumbs}</div>
+        <div class="seg"><span class="on">File</span><span>Changes</span></div><span class="barbtn">Send to agent</span>
+      </div>
+      <div class="ed" tabindex="0" aria-label="Code">${renderCode(c.path)}</div>
+      ${renderPanel()}
+      ${renderQp()}
+    </div>
+    <aside class="insp"><h3>Outline</h3>${outl}</aside>
+    <div class="status">${renderStatus()}</div>`
+  const ed = document.querySelector('.ed')
+  ed.scrollTop = keep
+  if (S.scrollTo != null) {
+    const el = ed.querySelector(`.ln[data-line="${S.scrollTo}"]`)
+    if (el) ed.scrollTop = Math.max(0, el.offsetTop - 84)
+    S.scrollTo = null
+  }
+  const ph = document.querySelector('[data-peekhit]')
+  if (ph) { const pc = ph.parentElement; pc.scrollTop = Math.max(0, ph.offsetTop - pc.offsetTop - 42) }
+  if (S.qp) { const i = document.getElementById('qp'); i.focus({ preventScroll: true }); qpList('') }
+}
+
+function clearTransient() { S.msg = null; S.toast = null; S.flash = null }
+function openPath(path, line, sym = null, { pin = false } = {}) {
+  S.caret = { path, line, sym }
+  if (!S.tabs.some((t) => t.path === path)) {
+    const i = S.tabs.findIndex((t) => !t.pinned)
+    if (i >= 0 && !pin) S.tabs = S.tabs.map((t, j) => (j === i ? { path, pinned: false } : t))
+    else S.tabs = [...S.tabs, { path, pinned: pin }]
+  }
+  S.flash = line; S.scrollTo = line; S.peek = null
+}
+function navigate(hit) {
+  S.back = [...S.back, { path: S.caret.path, line: S.caret.line, sym: S.caret.sym }]; S.fwd = []
+  openPath(hit.path, hit.line)
+}
+function run(kind) {
+  clearTransient()
+  const sym = S.caret.sym, info = sym && SYMS[sym]
+  const noun = { def: 'definition', impl: 'implementation', refs: 'references' }[kind]
+  if (!info) { S.msg = { text: `Put the cursor on a name first, then press the key again.` }; S.peek = null; return render() }
+  if (info.none) { S.msg = { text: `No ${noun} found for <b>${sym}</b>.` }; S.peek = null; return render() }
+  if (info.outside) { S.msg = { text: `<b>${sym}</b> is defined outside this project.`, action: 'Open in VS Code', done: 'Opened in VS Code.' }; S.peek = null; return render() }
+  const hits = info[kind]
+  if (!hits.length) { S.msg = { text: `No ${noun} found for <b>${sym}</b>.` }; S.peek = null; return render() }
+  const note = byName() && kind !== 'refs' ? byNameNote(hits.length) : null
+  const list = () => { S.peek = { kind, hits, sel: 0, note }; S.scrollTo = S.caret.line }
+  if (S.view === 'peek') list()
+  else if (hits.length === 1 && kind !== 'refs') navigate(hits[0])
+  else if (S.view === 'panel') { S.refs = { kind, hits, note, title: sym }; S.ptab = 'References'; S.peek = null }
+  else list()
+  render()
+}
+function move(from, to) {
+  if (!from.length) return
+  clearTransient()
+  const entry = from[from.length - 1]
+  const cur = { path: S.caret.path, line: S.caret.line, sym: S.caret.sym }
+  if (from === S.back) { S.back = S.back.slice(0, -1); S.fwd = [...S.fwd, cur] } else { S.fwd = S.fwd.slice(0, -1); S.back = [...S.back, cur] }
+  openPath(entry.path, entry.line, entry.sym)
+  render()
+}
+function setSim(k) {
+  clearTransient(); S.peek = null; S.sim = k
+  if (k === 'csharp') { openPath(CS, at(CS, 'public interface IStockLedger').line, 'IStockLedger', { pin: false }); S.flash = null; S.view === 'today' || run('impl'); return }
+  if (k === 'noresult') { openPath(THEME, at(THEME, 'matchMedia').line, 'matchMedia'); S.flash = null; run('def'); return }
+  if (k === 'outside') { openPath(THEME, at(THEME, 'useState<Theme>').line, 'useState'); S.flash = null; run('def'); return }
+  if (k === 'starting' || k === 'crashed') { openPath(THEME, SAMPLE_CARET.line, 'ThemeStore'); S.flash = null; run('impl'); return }
+  render()
+}
+const panelHit = (h) => { navigate(h); render() }
+
+document.addEventListener('click', (e) => {
+  const t = e.target
+  const b = t.closest('[data-view],[data-key],[data-sim],[data-extra],[data-open],[data-goto],[data-hit],[data-openhit],[data-closepeek],[data-ptab],[data-fold],[data-toast]')
+  if (b) {
+    const d = b.dataset
+    if (d.view) { S.view = d.view; S.peek = null; clearTransient(); if (d.view !== 'panel' && S.ptab === 'References') S.ptab = 'Run'; if (d.view === 'today') { S.sim = 'none'; S.ptab = 'Run' } if (d.view === 'panel' && S.ptab === 'Run') S.ptab = 'References'; return render() }
+    if (d.key) return act(d.key)
+    if (d.sim) return setSim(d.sim)
+    if (d.extra) { S.extras = { ...S.extras, [d.extra]: !S.extras[d.extra] }; return render() }
+    if (d.open) { clearTransient(); S.peek = null; const line = 1; openPath(d.open, line); S.flash = null; return render() }
+    if (d.goto) { const [p, l] = d.goto.split('|'); S.qp = null; return panelHit({ path: p, line: +l }) }
+    if (d.hit) { S.peek = { ...S.peek, sel: +d.hit }; return render() }
+    if ('openhit' in d) return navigatePeek()
+    if ('closepeek' in d) { S.peek = null; return render() }
+    if (d.ptab) { S.ptab = d.ptab === S.ptab && d.ptab !== 'Run' ? 'Run' : d.ptab; return render() }
+    if (d.fold) { const k = S.caret.path + ':' + d.fold; const next = new Set(S.folded); next.has(k) ? next.delete(k) : next.add(k); S.folded = next; return render() }
+    if ('toast' in d) { S.msg = null; S.toast = d.toast; return render() }
+  }
+  const inFrame = t.closest('.ed')
+  if (S.qp && !t.closest('.qp')) { S.qp = null; return render() }
+  if (!inFrame || t.closest('.peek') || t.closest('.bubble')) return
+  const sym = t.closest('.sym'), ln = t.closest('.ln')
+  if (!ln) return
+  clearTransient()
+  S.caret = { ...S.caret, line: +ln.dataset.line, sym: sym ? sym.dataset.sym : null }
+  if (sym && (e.ctrlKey || e.metaKey) && live()) return run('def')
+  render()
+})
+document.addEventListener('dblclick', (e) => { if (e.target.closest('[data-hit]')) navigatePeek() })
+function navigatePeek() { if (!S.peek) return; const h = S.peek.hits[S.peek.sel]; clearTransient(); navigate(h); render() }
+function act(k) {
+  if (!live()) return
+  if (k === 'def' || k === 'impl' || k === 'refs') return run(k)
+  if (k === 'back') return move(S.back, S.fwd)
+  if (k === 'fwd') return move(S.fwd, S.back)
+  if (k === 'sym' || k === 'line') { S.qp = k; render() }
+}
+document.addEventListener('input', (e) => { if (e.target.id === 'qp') qpList(e.target.value.trim()) })
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Control' || e.key === 'Meta') document.body.classList.add('ctrl')
+  const inInput = e.target.id === 'qp'
+  if (inInput) {
+    if (e.key === 'Escape') { S.qp = null; render(); return }
+    if (e.key === 'Enter') {
+      const v = e.target.value.trim()
+      if (S.qp === 'line') { const n = +v, max = LINES[S.caret.path].length; if (n >= 1 && n <= max) { S.qp = null; panelHit({ path: S.caret.path, line: n }) } return }
+      const first = document.querySelector('#qp-list [data-goto]')
+      if (first) first.click()
+    }
+    return
+  }
+  const combo = e.key === 'F12' ? (e.ctrlKey ? 'impl' : e.shiftKey ? 'refs' : 'def')
+    : e.altKey && e.key === 'ArrowLeft' ? 'back' : e.altKey && e.key === 'ArrowRight' ? 'fwd'
+    : e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o' ? 'sym' : e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'g' ? 'line' : null
+  if (combo && live()) { e.preventDefault(); return act(combo) }
+  if (S.peek && e.key === 'Escape') { S.peek = null; return render() }
+  if (S.peek && e.key === 'Enter' && !e.target.closest('button')) { e.preventDefault(); return navigatePeek() }
+  if (S.peek && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+    e.preventDefault(); const n = S.peek.hits.length
+    S.peek = { ...S.peek, sel: (S.peek.sel + (e.key === 'ArrowDown' ? 1 : n - 1)) % n }; return render()
+  }
+  if (e.key === 'Escape' && S.msg) { S.msg = null; render() }
+})
+document.addEventListener('keyup', (e) => { if (e.key === 'Control' || e.key === 'Meta') document.body.classList.remove('ctrl') })
+window.addEventListener('blur', () => document.body.classList.remove('ctrl'))
+run('impl')
+</script>
+</body>
+</html>

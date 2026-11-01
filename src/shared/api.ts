@@ -147,6 +147,11 @@ export interface GridApi {
   filesWorkspaces(projectId: string, folder?: string): Promise<import('./filesWorkspace').FilesWorkspacesResult>
   trashProjectPath(folder: string, path: string): Promise<import('./filesWorkspace').FilesTrashResult>
   searchFiles(folder: string, request: import('./fileSearch').SearchRequest): Promise<import('./fileSearch').SearchResult>
+  codeNav(folder: string, request: import('./codeNav').CodeNavRequest): Promise<import('./codeNav').CodeNavResult>
+  codeNavStatus(folder: string, path: string): Promise<import('./codeNav').CodeNavStatus>
+  codeNavRestart(folder: string, path: string): Promise<void>
+  codeNavInstall(): Promise<{ ok: true } | { ok: false; error: string }>
+  editorConfig(folder: string, path: string): Promise<import('./codeNav').EditorConfigRules>
   fileLog(folder: string, path: string): Promise<import('./filePreview').FileLogResult>
   fileCommitDetails(folder: string, hash: string): Promise<import('./commitDetails').CommitDetailsResult>
   fileCommitFile(folder: string, hash: string, path: string, full?: boolean): Promise<import('./commitDetails').CommitFileResult>
