@@ -5,6 +5,7 @@ import { navigationHits } from './locations'
 import { nameSearch } from './nameSearch'
 import type { NavigationClient } from './tsserver'
 import { validateCodeNavRequest } from './validation'
+import type { SymbolRequest } from '../../shared/codeNavExtras'
 
 interface Engines {
   typescript(folder: string): NavigationClient
@@ -19,6 +20,18 @@ export class CodeNavRouter {
   private stopped = false
 
   constructor(private readonly engines: Engines) {}
+
+  async context(folder: string, raw: unknown): Promise<{ request: SymbolRequest; file: string; text: string; mtimeMs: number; engine: CodeNavEngine; server: NavigationClient | null } | { error: string }> {
+    const request = validateCodeNavRequest({ ...(raw && typeof raw === 'object' ? raw : {}), kind: 'definition' })
+    if (!request || request.path.includes('\\')) return { error: 'Invalid symbol request.' }
+    const target = await resolveProjectFile(folder, request.path)
+    if (!target.ok) return { error: target.error }
+    const read = await readProjectFile(folder, request.path)
+    if (!read.ok || read.text === null) return { error: 'Cannot read this file as text.' }
+    const engine = engineFor(target.full)
+    const server = await this.server(folder, target.full, engine)
+    return { request, file: target.full, text: request.unsavedText ?? read.text, mtimeMs: read.mtimeMs, engine, server: server?.state === 'ready' ? server : null }
+  }
 
   private server(folder: string, file: string, engine: CodeNavEngine): Promise<NavigationClient | null> {
     const key = `${folder}:${engine === 'csharp' ? file : engine}`
