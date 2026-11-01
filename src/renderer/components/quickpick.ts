@@ -21,9 +21,10 @@ import { modeTabs } from './pickerTabs'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
 import { popupDismissButton } from './popupDismiss'
-import { chatCapable, type ChatView } from '../../shared/chatLog'
+import { chatCapable, defaultViewFor, type ChatView } from '../../shared/chatLog'
 import { ViewSwitch } from '../chat/viewSwitch'
 import '../chat/chat.css'
+import '../chat/chatChoice.css'
 
 const MAC = navigator.platform.toLowerCase().includes('mac')
 
@@ -47,6 +48,7 @@ export class QuickPickComponent {
   private focusedAtOpen: string | null = null
   private views: PaneView[] = []
   private viewOverride: ChatView | null = null
+  private viewAgent: AgentKind | null = null
   private readonly viewSwitch = new ViewSwitch('Open the session as')
 
   constructor(private readonly anchor: () => HTMLElement) {}
@@ -111,6 +113,7 @@ export class QuickPickComponent {
     this.selected = 0
     this.overrides = {}
     this.viewOverride = null
+    this.viewAgent = null
     this.input.addEventListener('input', () => {
       this.selected = 0
       this.renderList()
@@ -268,8 +271,11 @@ export class QuickPickComponent {
   }
 
   private renderViewChoice(agent: AgentKind): void {
+    if (agent !== this.viewAgent) this.viewOverride = null
+    this.viewAgent = agent
     if (!this.agents || !chatCapable(agent)) return
-    this.viewSwitch.update(this.viewOverride ?? this.state?.settings.sessionView ?? 'terminal', (view) => {
+    const fallback = this.state ? defaultViewFor(this.state.settings.sessionViews, agent) : 'terminal'
+    this.viewSwitch.update(this.viewOverride ?? fallback, (view) => {
       this.viewOverride = view
       this.renderAgents()
       this.input?.focus()

@@ -64,7 +64,7 @@ function setSession(sandbox: Sandbox, status: 'busy' | 'idle'): void {
 function chatDefault(sandbox: Sandbox): void {
   const path = join(sandbox.userData, 'settings.json')
   const settings = JSON.parse(readFileSync(path, 'utf8'))
-  writeFileSync(path, JSON.stringify({ ...settings, sessionView: 'chat' }), 'utf8')
+  writeFileSync(path, JSON.stringify({ ...settings, sessionViews: { claude: 'chat', codex: 'chat' } }), 'utf8')
 }
 
 async function shot(target: Locator | Page, name: string): Promise<void> {

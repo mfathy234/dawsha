@@ -58,8 +58,10 @@ import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
 import { setGridStyle } from '../sessionsLayout'
 import { setDefaultView } from '../chat/chatActions'
 import { ViewSwitch } from '../chat/viewSwitch'
-import type { ChatView } from '../../shared/chatLog'
+import type { ChatAgent, SessionViews } from '../../shared/chatLog'
+import { agentMark } from './agentMark'
 import '../chat/chat.css'
+import '../chat/chatChoice.css'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
@@ -80,6 +82,8 @@ const LINKS = [
   { id: 'settings-link-releases', label: 'Releases', url: `${REPO_URL}/releases` },
   { id: 'settings-link-license', label: 'License (MIT)', url: `${REPO_URL}/blob/main/LICENSE` }
 ]
+
+const CHAT_AGENTS: readonly ChatAgent[] = ['claude', 'codex']
 
 function row(title: string, control: HTMLElement | null, ...notes: (HTMLElement | null)[]): HTMLElement {
   return h(
@@ -169,7 +173,7 @@ export class SettingsViewComponent {
       state.settingsSection,
       state.settings.paletteShortcut,
       state.settings.sidebarCollapsed,
-      state.settings.sessionView,
+      state.settings.sessionViews,
       state.settings.fullAccess,
       state.settings.sessionInfo,
       state.settings.autoUpdateCheck,
@@ -298,11 +302,17 @@ export class SettingsViewComponent {
     }
   }
 
-  private sessionViewSwitch(selected: ChatView): HTMLElement {
-    const switcher = new ViewSwitch('New sessions open in')
-    switcher.el.id = 'default-session-view'
-    switcher.update(selected, setDefaultView)
-    return switcher.el
+  private sessionViewRows(views: SessionViews): HTMLElement {
+    return h(
+      'div',
+      { class: 'set-views' },
+      ...CHAT_AGENTS.map((agent) => {
+        const switcher = new ViewSwitch(`Open ${AGENT_NAMES[agent]} sessions as`)
+        switcher.el.id = `default-view-${agent}`
+        switcher.update(views[agent], (view) => setDefaultView(agent, view))
+        return h('div', { class: 'set-view' }, h('span', { class: 'set-view-name' }, agentMark(agent), AGENT_NAMES[agent]), switcher.el)
+      })
+    )
   }
 
   private gridStyles(selected: GridStyle): HTMLElement {
@@ -424,7 +434,7 @@ export class SettingsViewComponent {
         this.shortcutError ? h('p', { class: 'field-error', id: 'palette-shortcut-error', role: 'alert' }, this.shortcutError) : null
       ),
       row('Sessions', checkbox('dim-other-panes', "Dim sessions you're not working in", state.settings.dimOtherPanes, false, setDimOtherPanes), h('p', { class: 'hint' }, 'Keep the focused session clear while the others stay visible.')),
-      row('Session view', this.sessionViewSwitch(state.settings.sessionView), h('p', { class: 'hint' }, 'How new Claude and Codex sessions open. Gemini sessions and shells stay terminals. New session can override it, and each session remembers its own choice.')),
+      row('Open sessions as', null, this.sessionViewRows(state.settings.sessionViews), h('p', { class: 'hint' }, 'Gemini and shells always open as terminals. New session can override it, and each session remembers its own choice.')),
       row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag), h('p', { class: 'hint' }, 'Use a tag colour on each session pane.')),
       row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),

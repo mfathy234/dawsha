@@ -1,0 +1,26 @@
+.nd-view {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0 0;
+}
+
+.set-views {
+  display: grid;
+  gap: var(--sp-2);
+  max-width: 320px;
+  margin-top: var(--sp-2);
+}
+
+.set-view {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.set-view-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}

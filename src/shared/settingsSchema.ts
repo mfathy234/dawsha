@@ -3,7 +3,7 @@ import { checkoutTabsKey } from './filesWorkspace'
 import { defaultLayout, parseLayout } from './filesLayout'
 import { sanitizeRunOverrides } from './runCommands'
 import { isAgent } from './agents'
-import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews } from './chatLog'
+import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews, sanitizeSessionViews } from './chatLog'
 import { isSessionsLayout } from './board'
 import { DEFAULT_GRID_STYLE, isGridStyle } from './gridStyle'
 import { isSidebarSort } from './sidebarModel'
@@ -81,7 +81,7 @@ export const defaultSettings = (): Settings => ({
   sidebarHideEmpty: false,
   dimOtherPanes: false,
   showRecap: true,
-  sessionView: DEFAULT_CHAT_VIEW,
+  sessionViews: { claude: DEFAULT_CHAT_VIEW, codex: DEFAULT_CHAT_VIEW },
   chatViews: {},
   colorSessionsByTag: true,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
@@ -382,7 +382,7 @@ export function migrateSettings(raw: unknown): Settings {
     sidebarHideEmpty: raw.sidebarHideEmpty === true,
     dimOtherPanes: raw.dimOtherPanes === true,
     showRecap: raw.showRecap !== false,
-    sessionView: isChatView(raw.sessionView) ? raw.sessionView : DEFAULT_CHAT_VIEW,
+    sessionViews: sanitizeSessionViews(raw.sessionViews, raw.sessionView),
     chatViews: sanitizeChatViews(raw.chatViews),
     colorSessionsByTag: raw.colorSessionsByTag !== false,
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),

@@ -20,6 +20,13 @@ describe('migrateSettings', () => {
     }
   })
 
+  it('moves the single session view default to each agent and keeps the new one when both exist', () => {
+    expect(migrateSettings({ sessionView: 'chat' }).sessionViews).toEqual({ claude: 'chat', codex: 'chat' })
+    expect(migrateSettings({ sessionView: 'chat', sessionViews: { claude: 'terminal', codex: 'chat' } }).sessionViews).toEqual({ claude: 'terminal', codex: 'chat' })
+    expect(migrateSettings({}).sessionViews).toEqual({ claude: 'terminal', codex: 'terminal' })
+    expect(migrateSettings({ sessionView: 'chat' })).not.toHaveProperty('sessionView')
+  })
+
   it('persists the Files layout through a settings reload and repairs a bad one', () => {
     const file = tempFile()
     const store = new SettingsStore(file)

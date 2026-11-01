@@ -1,4 +1,4 @@
-import { chatViewKey, rememberChatView, resolveChatView, type ChatView } from '../../shared/chatLog'
+import { chatViewKey, defaultViewFor, rememberChatView, resolveChatView, type ChatAgent, type ChatView } from '../../shared/chatLog'
 import { persistWorkspace, saveSettings } from '../actions'
 import { api } from '../api'
 import type { PaneView } from '../derive'
@@ -20,8 +20,8 @@ export function paneViewOf(view: PaneView): ChatView {
   const tab = primaryTab(view)
   if (!tab) return 'terminal'
   const key = sessionKey(tab)
-  const { sessionView, chatViews } = store.state.settings
-  return resolveChatView({ agent: tab.agent, tabView: tab.view, remembered: key ? chatViews[key] : undefined, fallback: sessionView })
+  const { sessionViews, chatViews } = store.state.settings
+  return resolveChatView({ agent: tab.agent, tabView: tab.view, remembered: key ? chatViews[key] : undefined, fallback: defaultViewFor(sessionViews, tab.agent) })
 }
 
 function remember(key: string, next: ChatView): void {
@@ -48,17 +48,21 @@ export function rememberPending(view: PaneView): void {
   if (key && store.state.settings.chatViews[key] !== tab.view) remember(key, tab.view)
 }
 
-export function setDefaultView(next: ChatView): void {
-  store.set((state) => ({ ...state, settings: { ...state.settings, sessionView: next } }))
-  void saveSettings({ sessionView: next })
+export function setDefaultView(agent: ChatAgent, next: ChatView): void {
+  const sessionViews = { ...store.state.settings.sessionViews, [agent]: next }
+  store.set((state) => ({ ...state, settings: { ...state.settings, sessionViews } }))
+  void saveSettings({ sessionViews })
 }
 
 /** Types a message into the agent's terminal and presses Enter, the same as typing it there. */
-export function sendChatMessage(tabId: string, text: string): void {
+export function sendChatMessage(tabId: string, text: string): { flattened: boolean } {
   const terminal = getTerminal(tabId)
-  if (!terminal || text.trim() === '') return
-  terminal.insertText(text.trim())
+  if (!terminal || text.trim() === '') return { flattened: false }
+  const { flattened } = terminal.insertText(text.trim())
+  // Mark the prompt as typing Enter would, so Ctrl+Up and Copy last reply point at this message.
+  terminal.prompts.noteInput('\r')
   window.setTimeout(() => api.write(tabId, '\r'), SUBMIT_DELAY_MS)
+  return { flattened }
 }
 
 export function interruptAgent(tabId: string): void {
