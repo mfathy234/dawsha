@@ -382,6 +382,16 @@
   }
 }
 
+@container pane (max-width: 460px) {
+  .pane.has-view-switch .pane-header {
+    gap: var(--s-1);
+  }
+
+  .pane.has-view-switch .pane-header .state-pill-text {
+    display: none;
+  }
+}
+
 @container pane (max-width: 360px) {
   .pane.has-view-switch .pane-header .state-pill-text {
     display: none;
