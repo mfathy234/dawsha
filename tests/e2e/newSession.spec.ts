@@ -44,15 +44,18 @@ test('top bar shows the brand and the split New session button picks the agent',
   }
 })
 
-test('compact header keeps New session, zoom and Settings usable at 960px', async () => {
+test('compact header keeps New session as a + button, the View menu and Settings usable at 960px', async () => {
   const { app, page } = await launchApp(createSandbox())
   try {
     await page.setViewportSize({ width: 960, height: 600 })
-    const newSession = page.getByRole('button', { name: 'New session, Ctrl+N' })
-    await expect(newSession).toContainText('New session')
-    for (const name of ['Decrease font size', 'Increase font size', 'Settings']) {
+    const newSession = page.locator('.topbar').getByRole('button', { name: 'New session', exact: true })
+    await expect(newSession).toBeVisible()
+    await expect(newSession.locator('.new-session-label')).toBeHidden()
+    for (const name of ['View', 'Settings']) {
       await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
     }
+    await expect(page.locator('#files-button .nav-label')).toBeHidden()
+    await expect(page.locator('#sessions-button .nav-label')).toBeVisible()
     expect(await page.locator('.topbar').evaluate((bar) => bar.scrollWidth <= bar.clientWidth)).toBe(true)
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     await expect(page.locator('.settings-view')).toBeVisible()

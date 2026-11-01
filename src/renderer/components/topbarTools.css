@@ -1,0 +1,78 @@
+/* Top bar: limit rings, the Sessions tools (Grid | Board and the View menu), the needs chip and the narrow layout. */
+
+/* Limits pill: the agent mark, then one ring per limit the agent really reported. */
+.topbar-limits .limits-agent { display: inline-flex; align-items: center; gap: var(--s-1); color: var(--text-2); white-space: nowrap; }
+.topbar-limits .limits-agent-name { font-weight: 500; }
+.topbar-limits .limits-none { color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-12); }
+.topbar-limits .agent-mark { width: 16px; height: 16px; }
+.limit-rings { display: inline-flex; align-items: center; gap: 3px; }
+.limit-ring { --ring: var(--accent); display: inline-flex; flex: none; line-height: 0; }
+.limit-ring.stage-warn { --ring: var(--busy); }
+.limit-ring.stage-danger { --ring: var(--danger); }
+.limit-ring svg { display: block; overflow: visible; }
+.limit-ring .ring-track { stroke: var(--line-strong); }
+.limit-ring .ring-arc { stroke: var(--ring); }
+.limit-ring .ring-text { fill: var(--text-2); font: 600 8.5px/1 var(--font-mono); letter-spacing: -0.02em; }
+.limit-ring.stage-warn .ring-text { fill: var(--busy); }
+.limit-ring.stage-danger .ring-text { fill: var(--danger); }
+.topbar-limits.stale .limit-rings { opacity: 0.55; }
+.topbar-limits.stale::after { content: 'stale'; color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-12); }
+.topbar-limits .limits-agent + .limits-agent { margin-inline-start: var(--s-1); }
+
+/* Sessions tools: only on the Sessions page, right after the nav. */
+.topbar-view { display: flex; align-items: center; gap: var(--s-2); }
+.topbar-view[hidden] { display: none; }
+.topbar-sep { width: 1px; height: 20px; margin-inline: var(--s-1); background: var(--line); }
+.view-button { height: 32px; gap: var(--s-1); padding: 0 var(--s-2) 0 var(--s-3); border-radius: 8px; color: var(--text-2); font-weight: 400; }
+.view-button[aria-expanded='true'] { background: var(--raised); color: var(--text); }
+.view-chevron svg { width: 12px; height: 12px; }
+.view-menu { min-width: 264px; }
+.view-menu-counts { padding: 6px 8px 8px; margin-bottom: 2px; border-bottom: 1px solid var(--line); color: var(--text-3); font-size: var(--fs-12); font-variant-numeric: tabular-nums; user-select: none; }
+.view-menu-item { width: 100%; justify-content: space-between; text-align: start; }
+.view-menu-value { color: var(--text-3); font-size: var(--fs-12); }
+.view-menu-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-height: 32px; padding: 0 4px 0 8px; font-size: var(--fs-13); }
+.view-menu-label { color: var(--text); }
+.view-menu .zoom-control { display: inline-flex; align-items: center; margin: 0; }
+.view-menu .zoom-value { min-width: 44px; color: var(--text-2); font-size: var(--fs-12); text-align: center; }
+
+/* Needs-you chip and crew strip live in the bar; they give way before the tools do. */
+.topbar > .sum-needs { flex: none; }
+.topbar > .sum-needs[hidden] { display: none; }
+.topbar > .crew-strip { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+
+/* Nav: labels on wide windows, icons on narrow ones. */
+.nav-icon { display: none; }
+.nav-icon svg { width: 16px; height: 16px; }
+.topbar-nav { min-width: 0; }
+
+@media (max-width: 1720px) {
+  .app-title, .new-session-kbd, .sum-needs .kbd { display: none; }
+  .topbar { gap: var(--s-2); }
+  .topbar-nav .btn { padding: 0 var(--s-2); }
+}
+@media (max-width: 1280px) {
+  .topbar-sep { display: none; }
+  .view-button { padding-inline-start: var(--s-2); }
+  .topbar-limits { gap: var(--s-2); padding: 0 var(--s-1); }
+}
+
+/* Below 1100px (keep in step with NARROW_QUERY in topbar.ts): icons for the nav, + for New session, one small ring per agent. */
+@media (max-width: 1099px) {
+  .topbar { gap: var(--s-1); padding: 0 var(--s-2); }
+  .topbar .btn { padding: 0 var(--s-2); }
+  .topbar-nav { gap: 0; }
+  .topbar-nav .nav-button { min-width: 32px; padding: 0 var(--s-2); }
+  .topbar-nav .nav-button .nav-icon { display: inline-flex; }
+  .topbar-nav .nav-button .nav-label { display: none; }
+  .topbar-nav .nav-button[aria-current='page'] .nav-icon { display: none; }
+  .topbar-nav .nav-button[aria-current='page'] .nav-label { display: inline; }
+  .topbar .split-main { padding: 0 var(--s-2); }
+  .new-session-label, .new-session-kbd, .utility-label { display: none; }
+  .topbar .layout-switch .btn { padding: 0 var(--s-2); }
+  .topbar-limits { gap: var(--s-1); padding: 0 var(--s-1); }
+  .topbar-limits .limits-agent-name { display: none; }
+  .topbar > .crew-strip .crew-strip-label { display: none; }
+}
+@media (max-width: 900px) {
+  .topbar-limits { display: none; }
+}

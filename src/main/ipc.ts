@@ -23,6 +23,9 @@ import type { FileRef } from '../shared/filePaths'
 import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
 import { changedFiles, currentBranch, gitChanges, gitSync } from './git'
 import { listBranches, runGitQuick } from './gitQuick'
+import { dirtyReport, untrackedFolders } from './gitDirty'
+import { addGitIgnore } from './gitIgnore'
+import type { IgnoreAddRequest } from '../shared/gitIgnore'
 import type { GitQuickRequest } from '../shared/gitBranches'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
@@ -244,6 +247,9 @@ export function registerIpc(
   ipcMain.handle(IPC.gitSync, (_event, folder: string) => gitSync(folder))
   ipcMain.handle(IPC.gitBranches, (_event, folder: unknown) => gated(folder, listBranches))
   ipcMain.handle(IPC.gitQuick, (_event, request: GitQuickRequest) => gated(request?.folder, () => runGitQuick(request)))
+  ipcMain.handle(IPC.gitDirty, (_event, folder: unknown) => gated(folder, dirtyReport))
+  ipcMain.handle(IPC.gitUntrackedFolders, (_event, folder: unknown) => gated(folder, untrackedFolders))
+  ipcMain.handle(IPC.gitIgnoreAdd, (_event, request: IgnoreAddRequest) => gated(request?.folder, () => addGitIgnore(request)))
   ipcMain.handle(IPC.resumeList, (_event, agent: AgentKind, folder: string) =>
     agent === 'codex' ? listCodexSessions(folder) : agent === 'gemini' ? listGeminiSessions(folder) : listClaudeSessions(folder)
   )
@@ -355,8 +361,8 @@ export function registerIpc(
   })
   const readAccounts = createAgentAccountsReader()
   const readCodexLimitsCached = createCodexLimitsReader()
-  ipcMain.handle(IPC.agentAccounts, async () => {
-    const accounts = await readAccounts()
+  ipcMain.handle(IPC.agentAccounts, async (_event, fresh: unknown) => {
+    const accounts = await readAccounts(fresh === true)
     if (accounts.codex.kind !== 'account' || accounts.codex.plan) return accounts
     return { ...accounts, codex: { ...accounts.codex, plan: (await readCodexLimitsCached()).plan } }
   })

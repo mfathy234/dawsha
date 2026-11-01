@@ -31,9 +31,9 @@ async function shot(page: Page, name: string): Promise<void> {
 }
 
 for (const [mode, themeId] of THEMES) {
-  test(`${mode}: calm focus keeps the focused session large and the rest in a quiet column`, async () => {
+  test(`${mode}: with the move switch on, calm focus keeps the focused session large and the rest in a quiet column`, async () => {
     const sandbox = createSandbox()
-    const settings = { version: 2, lastSeenVersion: APP_VERSION, dimOtherPanes: true, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }], ...(themeId ? { theme: { id: themeId } } : {}) }
+    const settings = { version: 2, lastSeenVersion: APP_VERSION, dimOtherPanes: true, focusMovesSelected: true, projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }], ...(themeId ? { theme: { id: themeId } } : {}) }
     writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(settings), 'utf8')
     const { app, page } = await launchApp(sandbox)
     try {
@@ -64,7 +64,9 @@ for (const [mode, themeId] of THEMES) {
         await expect(first.locator('.pane-permission')).toBeVisible({ timeout: 1500 })
         await expect(first.locator('.pane-permission').getByRole('button', { name: /^Allow/ })).toBeVisible()
         await expect(page.locator('#needs-chip')).toContainText('1 needs you')
-        await expect(page.locator('.topbar-count')).toContainText('idle')
+        await page.locator('#view-button').click()
+        await expect(page.locator('#view-menu-counts')).toContainText('idle')
+        await page.keyboard.press('Escape')
         // The needs-you sibling promotes itself to a taller card in the column.
         const promoted = (await boxes(page))[0]!
         const other = (await boxes(page))[1]!
@@ -92,25 +94,25 @@ for (const [mode, themeId] of THEMES) {
   })
 }
 
-test('dim others is off until the top bar toggle is turned on, and it persists', async () => {
+test('dim others is off until it is turned on in the View menu, and it persists', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
     await addPanes(page, 2)
-    const toggle = page.getByRole('button', { name: 'Dim others' })
-    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await page.locator('#view-button').click()
+    await expect(page.locator('#dim-others')).toHaveAttribute('aria-checked', 'false')
     await expect(page.locator('.pane.calm')).toHaveCount(0)
-    await toggle.click()
-    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await page.locator('#dim-others').click()
     await expect(page.locator('.pane.calm')).toHaveCount(1)
     await expect.poll(() => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8')).dimOtherPanes).toBe(true)
     await closeApp(app)
     const again = await launchApp(sandbox)
     try {
       await addPanes(again.page, 2)
-      await expect(again.page.getByRole('button', { name: 'Dim others' })).toHaveAttribute('aria-pressed', 'true')
       await expect(again.page.locator('.pane.calm')).toHaveCount(1)
-      await again.page.getByRole('button', { name: 'Dim others' }).click()
+      await again.page.locator('#view-button').click()
+      await expect(again.page.locator('#dim-others')).toHaveAttribute('aria-checked', 'true')
+      await again.page.locator('#dim-others').click()
       await expect(again.page.locator('.pane.calm')).toHaveCount(0)
     } finally {
       await closeApp(again.app)

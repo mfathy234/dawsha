@@ -49,10 +49,10 @@ export async function readAgentAccounts(): Promise<AgentAccounts> {
   return { claude, codex, gemini }
 }
 
-export function createAgentAccountsReader(read: () => Promise<AgentAccounts> = readAgentAccounts, now: () => number = Date.now): () => Promise<AgentAccounts> {
+export function createAgentAccountsReader(read: () => Promise<AgentAccounts> = readAgentAccounts, now: () => number = Date.now): (fresh?: boolean) => Promise<AgentAccounts> {
   let cached: { at: number; value: AgentAccounts } | null = null
-  return async () => {
-    if (cached && now() - cached.at < CACHE_MS) return cached.value
+  return async (fresh = false) => {
+    if (!fresh && cached && now() - cached.at < CACHE_MS) return cached.value
     const value = await read()
     cached = { at: now(), value }
     return value

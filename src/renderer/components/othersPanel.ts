@@ -12,6 +12,10 @@ import { agentMark } from './agentMark'
 import { crewSignature, identityMark } from './crewAvatar'
 import { stateIcon } from './stateIcon'
 
+const RAIL_MARK_SIZE = 18
+
+export const othersCountLabel = (count: number): string => `${count} other session${count === 1 ? '' : 's'}`
+
 const PREVIEW_LINES = 2
 const PREVIEW_MS = 1500
 const NEXT_KEY = formatShortcut(bind('Ctrl+Shift+J'))
@@ -60,6 +64,7 @@ export class OthersPanelComponent {
   }
 
   private renderCards(): void {
+    this.el.removeAttribute('title')
     clear(this.el)
     this.previews.clear()
     const head = h(
@@ -129,9 +134,10 @@ export class OthersPanelComponent {
   private renderStrip(): void {
     clear(this.el)
     this.previews.clear()
+    this.el.title = 'Other sessions'
     this.el.append(
       iconButton('Show other sessions', ICONS.collapse, () => toggleOthersPanel(), 'others-toggle'),
-      h('span', { class: 'others-strip-label', 'aria-hidden': 'true' }, 'Other sessions')
+      h('span', { class: 'others-rail-count', role: 'img', 'aria-label': othersCountLabel(this.others.length) }, String(this.others.length))
     )
     for (const { view, state } of this.others) {
       const status = stateWord(state, '')
@@ -146,8 +152,8 @@ export class OthersPanelComponent {
             'aria-label': `${view.title} in ${project}, ${status}`,
             onClick: () => focusPane(view.pane.id)
           },
-          identityMark(view),
-          stateIcon(state)
+          identityMark(view, RAIL_MARK_SIZE),
+          state === 'idle' || state === 'exited' ? null : h('span', { class: `others-dot state-${state}`, 'aria-hidden': 'true' })
         )
       )
     }

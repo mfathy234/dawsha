@@ -91,7 +91,7 @@ export async function launchApp(
   const env = { ...process.env } as Record<string, string>
   delete env.ELECTRON_RUN_AS_NODE
   const app = await electron.launch({
-    args: [resolve(__dirname, '../../out/main/index.js'), ...chromiumArgs],
+    args: [resolve(__dirname, '../../out/main/index.js'), '--force-device-scale-factor=1', ...chromiumArgs],
     env: {
       ...env,
       DAWSHA_USER_DATA: sandbox.userData,

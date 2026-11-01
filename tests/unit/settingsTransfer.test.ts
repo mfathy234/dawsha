@@ -99,6 +99,16 @@ describe('what is exported', () => {
   })
 })
 
+describe('focusMovesSelected', () => {
+  it('is exported, round-trips through an import and rejects a non-boolean', () => {
+    expect(INCLUDED_KEYS).toContain('focusMovesSelected')
+    const data = parsed({ ...buildTransferData(rich()), focusMovesSelected: true })
+    expect(data.focusMovesSelected).toBe(true)
+    expect(run(rich(), data, 'replace').patch.focusMovesSelected).toBe(true)
+    expect(parseTransfer(wrap({ focusMovesSelected: 'yes' }))).toMatchObject({ ok: false })
+  })
+})
+
 describe('parseTransfer', () => {
   it('discards retired dictation fields from older exports without rejecting the import', () => {
     for (const dictation of [{ language: 'en', model: 'small' }, 'invalid', null]) {

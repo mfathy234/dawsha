@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { focusLayout, isGridStyle, promotedRows, tileLayout, tileRowSizes } from '../../src/shared/gridStyle'
+import { canMakeLarge, focusLayout, isGridStyle, largeIndexOf, largeUnitIndex, paneUnitIds, promotedRows, quietPaneIds, resolveLargePane, tileLayout, tileRowSizes } from '../../src/shared/gridStyle'
 
 const covered = (cells: { row: number; col: number; colSpan: number; rowSpan: number }[], cols: number, rows: number): boolean => {
   const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 0))
@@ -62,5 +62,53 @@ describe('grid style', () => {
         expect(new Set(spans).size).toBe(1)
       }
     }
+  })
+})
+
+describe('resolveLargePane', () => {
+  const ids = ['a', 'b', 'c']
+  it('follows the focused pane when selecting moves the large spot', () => {
+    expect(resolveLargePane(ids, 'c', 'a', true)).toBe('c')
+  })
+  it('keeps the remembered large pane when the switch is off', () => {
+    expect(resolveLargePane(ids, 'c', 'a', false)).toBe('a')
+  })
+  it('falls back to the focused pane, then the first, when the remembered one is gone', () => {
+    expect(resolveLargePane(ids, 'b', 'gone', false)).toBe('b')
+    expect(resolveLargePane(ids, null, null, false)).toBe('a')
+    expect(resolveLargePane(ids, 'gone', 'gone', true)).toBe('a')
+  })
+  it('is null without panes', () => {
+    expect(resolveLargePane([], 'a', 'a', true)).toBeNull()
+  })
+})
+
+describe('large units and quiet panes', () => {
+  const units = [['a'], ['b', 'c'], ['d']]
+  it('finds the unit that holds the large pane, including a compare pair', () => {
+    expect(largeUnitIndex(units, 'c')).toBe(1)
+    expect(largeUnitIndex(units, null)).toBe(0)
+    expect(largeUnitIndex(units, 'zzz')).toBe(0)
+  })
+  it('dims everything outside the large unit except the focused pane', () => {
+    expect([...quietPaneIds(units, 0, 'd')].sort()).toEqual(['b', 'c'])
+    expect([...quietPaneIds(units, 1, 'b')].sort()).toEqual(['a', 'd'])
+    expect([...quietPaneIds(units, 0, 'a')].sort()).toEqual(['b', 'c', 'd'])
+  })
+  it('groups compare pairs into one unit', () => {
+    const link = (slot: 'a' | 'b') => ({ id: 'k', slot }) as never
+    expect(paneUnitIds([{ id: 'a' }, { id: 'b', compare: link('a') }, { id: 'c', compare: link('b') }, { id: 'd' }])).toEqual([['a'], ['b', 'c'], ['d']])
+  })
+  it('offers Make large only in calm focus with two or more units and a non-large pane', () => {
+    expect(canMakeLarge('focus', units, 'a', 'b')).toBe(true)
+    expect(canMakeLarge('focus', units, 'a', 'a')).toBe(false)
+    expect(canMakeLarge('focus', units, 'b', 'c')).toBe(false)
+    expect(canMakeLarge('tiles', units, 'a', 'b')).toBe(false)
+    expect(canMakeLarge('focus', [['a']], 'a', 'a')).toBe(false)
+  })
+  it('turns a large pane id into a saved index and back, tolerating missing data', () => {
+    expect(largeIndexOf(['a', 'b'], 'b')).toBe(1)
+    expect(largeIndexOf(['a', 'b'], 'x')).toBeUndefined()
+    expect(largeIndexOf(['a'], null)).toBeUndefined()
   })
 })

@@ -85,6 +85,7 @@ export const defaultSettings = (): Settings => ({
   othersCollapsed: false,
   sessionsLayout: 'grid',
   gridStyle: DEFAULT_GRID_STYLE,
+  focusMovesSelected: false,
   sessionInfo: { notifications: true, sound: false },
   onboardingDismissed: false,
   workspace: { panes: [], focusedIndex: 0 },
@@ -234,6 +235,7 @@ function sanitizeWorkspace(value: unknown, projectIds: Set<string>): Workspace {
   if (!isRecord(value) || !Array.isArray(value.panes)) return { panes: [], focusedIndex: 0 }
   const panes = singlePin(sanitizePanes(value.panes).filter((pane) => projectIds.has(pane.projectId)))
   const workspace: Workspace = { panes, focusedIndex: focusedIn(value.focusedIndex, panes.length) }
+  if (typeof value.largeIndex === 'number' && Number.isInteger(value.largeIndex) && value.largeIndex >= 0 && value.largeIndex < panes.length) workspace.largeIndex = value.largeIndex
   const splits = sanitizeSplits(value.splits)
   if (splits) workspace.splits = splits
   return workspace
@@ -381,6 +383,7 @@ export function migrateSettings(raw: unknown): Settings {
     othersCollapsed: raw.othersCollapsed === true,
     sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
     gridStyle: isGridStyle(raw.gridStyle) ? raw.gridStyle : DEFAULT_GRID_STYLE,
+    focusMovesSelected: raw.focusMovesSelected === true,
     sessionInfo: {
       notifications: typeof info.notifications === 'boolean' ? info.notifications : defaults.sessionInfo.notifications,
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound

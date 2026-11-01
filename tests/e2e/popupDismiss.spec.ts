@@ -62,6 +62,8 @@ test('palettes, pickers and popovers each close with their Dismiss button', asyn
     await dismiss(page, '.resume-picker').click()
     await expect(resume).toHaveCount(0)
 
+    await page.locator('#view-button').click()
+
     await page.locator('#layouts-button').click()
     const layouts = page.getByRole('dialog', { name: 'Saved layouts' })
     await expect(layouts).toBeVisible()
@@ -95,8 +97,10 @@ test('the branch picker closes with its Dismiss button', async () => {
   try {
     await page.getByRole('button', { name: /^New (Claude|Codex|Gemini) session in Smoke$/ }).click()
     await expect(page.locator('.chip-branch')).toBeVisible({ timeout: SLOW })
-    await page.locator('.chip-branch').click()
-    await page.getByRole('menuitem', { name: 'Switch branch…' }).click()
+    await page.locator('.term-host.active').click()
+    await page.keyboard.press('Control+k')
+    await page.locator('#palette-input').fill('Switch branch')
+    await page.locator('.palette-row[data-command="git.switch"]').click()
     const picker = page.getByRole('dialog', { name: 'Switch branch' })
     await expect(picker).toBeVisible()
     await expect(page.getByRole('combobox', { name: 'Switch branch' })).toBeFocused()

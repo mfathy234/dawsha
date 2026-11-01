@@ -1,5 +1,7 @@
 import { h } from '../dom'
+import { foldRows, type UntrackedFolder } from '../../shared/gitIgnore'
 import { fileIcon } from './fileIcon'
+import { newFolderRow, toggleFolderOpen } from './newFolders'
 
 export interface ReviewFile {
   path: string
@@ -15,6 +17,8 @@ export interface ReviewModel {
   commentCounts: ReadonlyMap<string, number>
   commentTotal: number
   note: string
+  /** Folders of new files that fold into one row. */
+  newFolders?: readonly UntrackedFolder[]
 }
 
 export interface ReviewHooks {
@@ -25,6 +29,7 @@ export interface ReviewHooks {
   send(anchor: HTMLElement): void
   commit(): void
   discard(path: string): void
+  ignoreFolder(folder: UntrackedFolder): void
 }
 
 const minus = '−'
@@ -50,6 +55,7 @@ export class ReviewPanel {
   private readonly commit = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
   private readonly discard = h('button', { class: 'btn small danger', type: 'button', id: 'files-review-discard', disabled: true, title: 'Select a changed file to discard it', onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
   private current: string | null = null
+  private last: ReviewModel | null = null
   private readonly steps = h('div', { class: 'files-review-steps' })
   private readonly foot = h('div', { class: 'files-review-foot' })
 
@@ -78,6 +84,7 @@ export class ReviewPanel {
 
   render(model: ReviewModel): void {
     this.current = model.current
+    this.last = model
     const total = model.files.length
     const done = model.files.filter((file) => model.viewed.has(file.path)).length
     this.progress.textContent = total === 0 ? 'Nothing to review. The agents have not changed any files yet.' : `${done} of ${total} viewed`
@@ -93,20 +100,25 @@ export class ReviewPanel {
     this.send.disabled = model.commentTotal === 0 && model.note.trim() === ''
     this.send.textContent = model.commentTotal > 0 ? `Send ${model.commentTotal} comment${model.commentTotal === 1 ? '' : 's'} to agent` : 'Send note to agent'
     if (this.note.value !== model.note) this.note.value = model.note
-    this.list.replaceChildren(...model.files.map((file) => {
-      const { name, folder } = split(file.path)
-      const viewed = model.viewed.has(file.path)
-      const comments = model.commentCounts.get(file.path) ?? 0
-      const tick = h('input', { class: 'files-review-tick', type: 'checkbox', 'aria-label': `Viewed: ${file.path}`, 'data-path': file.path, onChange: (event: Event) => this.hooks.toggleViewed(file.path, (event.target as HTMLInputElement).checked) })
-      tick.checked = viewed
-      return h('div', { class: `files-review-row${file.path === model.current ? ' current' : ''}${viewed ? ' viewed' : ''}`, role: 'listitem', 'data-path': file.path },
-        tick,
-        h('button', { class: 'files-review-open', type: 'button', title: file.path, 'aria-current': file.path === model.current ? 'true' : undefined, onClick: () => this.hooks.open(file.path) },
-          fileIcon(file.path), h('span', { class: 'files-flat-name' }, name), folder ? h('span', { class: 'files-flat-dir' }, folder) : null),
-        comments > 0 ? h('span', { class: 'files-review-comments', title: `${comments} comment${comments === 1 ? '' : 's'}` }, `${comments} comment${comments === 1 ? '' : 's'}`) : null,
-        file.added !== null || file.removed !== null ? h('span', { class: 'files-review-stat' }, h('span', { class: 'plus' }, `+${file.added ?? 0}`), ' ', h('span', { class: 'minus' }, `${minus}${file.removed ?? 0}`)) : null,
-        h('span', { class: `files-badge b-${file.letter === 'U' ? 'A' : file.letter}`, title: BADGE_TITLES[file.letter] ?? file.letter }, file.letter === 'U' ? 'A' : file.letter),
-        viewed ? h('span', { class: 'files-review-done' }, 'Viewed') : null)
-    }))
+    const hooks = { toggle: (path: string) => { toggleFolderOpen(path); if (this.last) this.render(this.last) }, ignore: (folder: UntrackedFolder) => this.hooks.ignoreFolder(folder) }
+    this.list.replaceChildren(...foldRows(model.files, model.newFolders ?? []).map((item) => item.kind === 'file'
+      ? this.fileRow(item.row, model)
+      : newFolderRow(item.folder, hooks, item.rows.map((file) => this.fileRow(file, model)))))
+  }
+
+  private fileRow(file: ReviewFile, model: ReviewModel): HTMLElement {
+    const { name, folder } = split(file.path)
+    const viewed = model.viewed.has(file.path)
+    const comments = model.commentCounts.get(file.path) ?? 0
+    const tick = h('input', { class: 'files-review-tick', type: 'checkbox', 'aria-label': `Viewed: ${file.path}`, 'data-path': file.path, onChange: (event: Event) => this.hooks.toggleViewed(file.path, (event.target as HTMLInputElement).checked) })
+    tick.checked = viewed
+    return h('div', { class: `files-review-row${file.path === model.current ? ' current' : ''}${viewed ? ' viewed' : ''}`, role: 'listitem', 'data-path': file.path },
+      tick,
+      h('button', { class: 'files-review-open', type: 'button', title: file.path, 'aria-current': file.path === model.current ? 'true' : undefined, onClick: () => this.hooks.open(file.path) },
+        fileIcon(file.path), h('span', { class: 'files-flat-name' }, name), folder ? h('span', { class: 'files-flat-dir' }, folder) : null),
+      comments > 0 ? h('span', { class: 'files-review-comments', title: `${comments} comment${comments === 1 ? '' : 's'}` }, `${comments} comment${comments === 1 ? '' : 's'}`) : null,
+      file.added !== null || file.removed !== null ? h('span', { class: 'files-review-stat' }, h('span', { class: 'plus' }, `+${file.added ?? 0}`), ' ', h('span', { class: 'minus' }, `${minus}${file.removed ?? 0}`)) : null,
+      h('span', { class: `files-badge b-${file.letter === 'U' ? 'A' : file.letter}`, title: BADGE_TITLES[file.letter] ?? file.letter }, file.letter === 'U' ? 'A' : file.letter),
+      viewed ? h('span', { class: 'files-review-done' }, 'Viewed') : null)
   }
 }

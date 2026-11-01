@@ -159,10 +159,10 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await expect(page.locator('.pane-info .info-cost')).toHaveText('$0.34')
     await expect(page.locator('.pane-info [data-pane-limit]')).toHaveCount(0)
     await expect(page.locator('.pane-info .info-age')).toContainText('ago')
-    await expect(page.locator('[data-limit="five_hour"]')).toContainText('5h 9%')
-    await expect(page.locator('[data-limit="seven_day"]')).toHaveText('week 54%')
-    await expect(page.locator('.topbar-limits .charge')).toHaveCount(2)
-    await expect(page.locator('[data-limit="five_hour"]')).toHaveClass(/stage-ok/)
+    await expect(page.locator('#topbar-limits [data-limit="five_hour"]')).toHaveAttribute('title', /5-hour: 9%/)
+    await expect(page.locator('#topbar-limits [data-limit="seven_day"]')).toHaveAttribute('title', /weekly: 54%/)
+    await expect(page.locator('.topbar-limits .limit-ring')).toHaveCount(2)
+    await expect(page.locator('#topbar-limits [data-limit="five_hour"]')).toHaveClass(/stage-ok/)
     expect(await page.locator('.pane-info').evaluate((el) => el.getBoundingClientRect().height)).toBe(22)
     await page.screenshot({ path: join(SCREENS, '13-info-strip.png') })
 
@@ -173,7 +173,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await closeSettings(page)
     await expect(page.locator('.pane-info .info-model')).toHaveCount(0)
     await expect(page.locator('.pane-info .info-changes')).toHaveCount(1)
-    await expect(page.locator('.topbar-limits')).toContainText('Claude')
+    await expect(page.locator('.topbar-limits')).toHaveAttribute('aria-label', /Claude/)
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }

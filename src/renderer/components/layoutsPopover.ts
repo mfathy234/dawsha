@@ -1,8 +1,9 @@
 import { layoutSlug, paneAgent, paneCountText } from '../../shared/layouts'
 import type { SavedLayout } from '../../shared/types'
-import { toggleLayouts } from '../actions'
+import { setFocusMovesSelected, toggleLayouts } from '../actions'
 import { deleteLayout, openLayoutFromUi, renameLayout, saveCurrentLayout } from '../layoutActions'
-import { h, leave } from '../dom'
+import { h, icon, leave } from '../dom'
+import { ICONS } from '../icons'
 import { projectById, type AppState } from '../state'
 import { setGridStyle } from '../sessionsLayout'
 import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
@@ -60,7 +61,7 @@ export class LayoutsPopoverComponent {
   private render(state: AppState): void {
     if (!this.root) return
     const { layouts } = state.settings
-    const signature = JSON.stringify([layouts, state.settings.projects.map((p) => [p.id, p.name]), state.panes.length, state.settings.gridStyle])
+    const signature = JSON.stringify([layouts, state.settings.projects.map((p) => [p.id, p.name]), state.panes.length, state.settings.gridStyle, state.settings.focusMovesSelected])
     if (signature === this.signature) return
     this.signature = signature
     const hadFocus = this.root.contains(document.activeElement)
@@ -108,10 +109,10 @@ export class LayoutsPopoverComponent {
       h('span', { class: 'muted' }, 'From a terminal: ', h('code', {}, `dawsha open ${example}`))
     )
     const savedLabel = h('span', { class: 'layouts-section-label' }, 'Saved layouts')
-    return [head, this.gridStyleRow(state.settings.gridStyle), h('div', { class: 'layouts-divider' }), savedLabel, list, foot]
+    return [head, this.gridStyleRow(state.settings.gridStyle, state.settings.focusMovesSelected), h('div', { class: 'layouts-divider' }), savedLabel, list, foot]
   }
 
-  private gridStyleRow(current: GridStyle): HTMLElement {
+  private gridStyleRow(current: GridStyle, moves: boolean): HTMLElement {
     const hints: Record<GridStyle, string> = { focus: 'One large session, the rest beside it', tiles: 'Every session the same size' }
     // A tiny drawing of the layout: three cells, the first one large in Calm focus.
     const sketch = (style: GridStyle): HTMLElement =>
@@ -127,13 +128,29 @@ export class LayoutsPopoverComponent {
           onClick: () => setGridStyle(style)
         },
         sketch(style),
-        h('span', { class: 'layouts-grid-text' }, h('strong', {}, GRID_STYLE_LABELS[style]), h('span', {}, hints[style]))
+        h('span', { class: 'layouts-grid-text' }, h('strong', {}, GRID_STYLE_LABELS[style]), h('span', {}, hints[style])),
+        h('span', { class: 'layouts-check', 'aria-hidden': 'true' }, icon(ICONS.check))
       )
     return h(
       'div',
       { class: 'layouts-grid-style' },
       h('span', { class: 'layouts-section-label' }, 'Sessions grid'),
-      h('div', { class: 'layouts-segment', role: 'group', 'aria-label': 'Sessions grid' }, option('focus'), option('tiles'))
+      h('div', { class: 'layouts-segment', role: 'group', 'aria-label': 'Sessions grid' }, option('focus'), option('tiles')),
+      current === 'focus' ? this.moveSwitch(moves) : null
+    )
+  }
+
+  private moveSwitch(moves: boolean): HTMLElement {
+    const label = h('span', { class: 'layouts-switch-label' }, 'Move the session I pick to the large spot')
+    const hint = h('span', { class: 'layouts-switch-hint' }, moves ? 'On: the session you select becomes the large one.' : 'Off: the large session stays put. Selecting a side session just focuses it there.')
+    return h(
+      'div',
+      { class: 'layouts-switch-row' },
+      h('span', { class: 'layouts-switch-text' }, label, hint),
+      h('button', {
+        class: 'toggle', type: 'button', id: 'focus-moves-selected', role: 'switch', 'aria-label': 'Move the session I pick to the large spot',
+        'aria-checked': String(moves), onClick: () => setFocusMovesSelected(!moves)
+      })
     )
   }
 

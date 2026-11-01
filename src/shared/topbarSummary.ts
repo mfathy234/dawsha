@@ -1,6 +1,6 @@
 import type { RateLimitWindow } from './types'
 import { formatPercent } from './statusLine'
-import { SESSION_STATE_LABELS, compareSessionStates, type SessionState } from './sessionState'
+import { SESSION_STATE_LABELS, compareSessionStates, type SessionCounts, type SessionState } from './sessionState'
 
 export type MoreView = 'projects' | 'usage' | 'work' | 'agents' | 'skills' | 'layouts'
 
@@ -78,4 +78,14 @@ export function sortByUrgency<T extends { state: SessionState }>(entries: readon
 /** A one-line summary of what the session is doing, or '' when nothing is known. */
 export function cardSummary(view: { snapshot: { plan: { title: string | null } | null } | null }): string {
   return view.snapshot?.plan?.title?.trim().replace(/\s+/g, ' ') ?? ''
+}
+
+/** "3 sessions · 1 working · 1 idle": the line at the top of the View menu. */
+export function countsLine(counts: SessionCounts): string {
+  const parts = [`${counts.total} session${counts.total === 1 ? '' : 's'}`]
+  if (counts.working > 0) parts.push(`${counts.working} working`)
+  if (counts.needs > 0) parts.push(`${counts.needs} need${counts.needs === 1 ? 's' : ''} you`)
+  if (counts.done > 0) parts.push(`${counts.done} to review`)
+  if (counts.idle > 0) parts.push(`${counts.idle} idle`)
+  return parts.join(' · ')
 }

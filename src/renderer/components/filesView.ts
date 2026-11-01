@@ -1,7 +1,7 @@
 import { pathForms, tabMenu, treeMenu, type FileActionId, type FileMenuEntry } from '../../shared/fileMenus'
 import { statusLetter } from '../../shared/gitStatus'
 import { normalizeFolder } from '../../shared/folderKey'
-import { branchName, checkoutLabel, checkoutTabsKey, worktreeCountText, type FilesCheckout } from '../../shared/filesWorkspace'
+import { branchName, checkoutLabel, checkoutTabsKey, type FilesCheckout } from '../../shared/filesWorkspace'
 import { INSPECTOR_MIN_WIDTH, type InspectorTab } from '../../shared/filesLayout'
 import { blameLines, type BlameSource } from '../../shared/fileActivity'
 import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
@@ -43,9 +43,8 @@ import type { TreeTarget } from '../files/filesTree'
 import type { ReviewFile } from '../files/reviewPanel'
 import { openContextMenu, type ContextEntry } from './contextMenu'
 import { confirmDialog, promptDialog } from './dialogs'
-import { openBranchMenu, type BranchTarget } from '../files/branchMenu'
-import { branchNameProblem, switchConfirmText } from '../../shared/gitBranches'
-import { runQuick } from '../gitQuickActions'
+import { ignoredToast, type UntrackedFolder } from '../../shared/gitIgnore'
+import { openBranchSwitcher } from '../files/branchSwitcher'
 import { toast } from './toast'
 import { toggleQuickOpen } from './quickOpen'
 import { RunCommandsPanel } from './runCommandsPanel'
@@ -123,6 +122,8 @@ export class FilesViewComponent {
   private checkouts: FilesCheckout[] = []
   private isGit = true
   private statusFiles: GitFileEntry[] = []
+  private newFolders: UntrackedFolder[] = []
+  private readonly newFolderGate = new LatestGate()
   private linked: LinkedRepo[] = []
   private linkedKey = ''
   private readonly commits = new Map<string, FileCommit[]>()
@@ -152,11 +153,13 @@ export class FilesViewComponent {
       },
       send: (anchor) => this.sendReview(anchor),
       commit: () => void this.commitChanges(),
-      discard: (path) => void this.discardFile(path)
+      discard: (path) => void this.discardFile(path),
+      ignoreFolder: (folder) => void this.ignoreFolder(folder)
     },
     goToFile: () => toggleQuickOpen(),
     openLocation: (button, worktreesFirst) => this.openLocationMenu(button, worktreesFirst),
     openBranches: (button) => void this.showBranchMenu(button),
+    ignoreFolder: (folder) => void this.ignoreFolder(folder),
     hide: () => this.toggleExplorer(),
     retryChanges: () => void this.retryTree(),
     retryOpen: () => void this.refreshTouches(),
@@ -401,7 +404,7 @@ export class FilesViewComponent {
     const target = this.target
     const project = target ? projectById(store.state, target.projectId) : undefined
     const checkout = this.currentCheckout()
-    this.explorer.setLocation(project?.name ?? '', branchName(checkout, this.isGit), this.isGit ? worktreeCountText(this.checkouts.length) : '', target ? `${project?.name ?? ''}\n${target.folder}` : '')
+    this.explorer.setLocation(project?.name ?? '', branchName(checkout, this.isGit), this.isGit ? this.checkouts.length : 0, target ? `${project?.name ?? ''}\n${target.folder}` : '')
     this.explorer.setTreeTitle(target ? folderTail(target.folder) : '')
   }
 
@@ -452,49 +455,14 @@ export class FilesViewComponent {
       toast('This folder is not a git repository.')
       return
     }
-    const loaded = await api.gitBranches(target.folder).catch(() => ({ ok: false as const, error: 'Could not read the branches.' }))
-    if (!loaded.ok) {
-      toast(loaded.error)
-      return
-    }
-    if (this.target !== target) return
-    this.explorer.setLocationOpen(true, anchor)
-    openBranchMenu({
-      anchor, list: loaded.branches, now: Date.now(),
-      pick: (choice) => void this.switchBranch(target, choice),
-      create: () => void this.createBranch(target),
-      closed: (focusAnchor) => {
-        this.explorer.setLocationOpen(false)
-        if (focusAnchor) anchor.focus()
-      }
+    await openBranchSwitcher({
+      folder: target.folder, anchor,
+      open: (open) => this.explorer.setLocationOpen(open, open ? anchor : null),
+      switched: () => void this.afterBranchSwitch(target)
     })
   }
 
-  private async switchBranch(target: FilesTarget, choice: BranchTarget): Promise<void> {
-    const label = choice.mode === 'remote' ? choice.branch.slice(choice.branch.indexOf('/') + 1) : choice.branch
-    const changes = await api.gitChanges(target.folder).catch(() => null)
-    if (changes && changes.files > 0) {
-      const confirmed = await confirmDialog({ ...switchConfirmText(label, changes.files), danger: false })
-      if (!confirmed) return
-    }
-    await this.runBranchSwitch(target, choice)
-  }
-
-  private async createBranch(target: FilesTarget): Promise<void> {
-    const name = await promptDialog({
-      title: 'New branch', label: 'Branch name', hint: 'Created from the current commit and switched to.', confirmLabel: 'Create branch',
-      validate: (value) => branchNameProblem(value.trim())
-    })
-    if (name) await this.runBranchSwitch(target, { branch: name, mode: 'create' })
-  }
-
-  private async runBranchSwitch(target: FilesTarget, choice: BranchTarget): Promise<void> {
-    const result = await runQuick({ folder: target.folder, op: 'switch', branch: choice.branch, mode: choice.mode })
-    if (!result.ok) {
-      toast(result.error)
-      return
-    }
-    toast(result.message, 'info')
+  private async afterBranchSwitch(target: FilesTarget): Promise<void> {
     if (this.target !== target || !this.visible) return
     void this.refreshCheckouts()
     await this.loadTree()
@@ -596,6 +564,39 @@ export class FilesViewComponent {
     this.explorer.setChanges(this.statusFiles.map((file) => ({ path: file.path, letter: statusLetter(file) })))
     this.renderReview()
     this.renderStage()
+    void this.loadNewFolders(target)
+  }
+
+  // Folders of new files fold into one row. Reading their size can take a moment, so Changes shows the plain list first.
+  private async loadNewFolders(target: FilesTarget): Promise<void> {
+    const ticket = this.newFolderGate.begin()
+    if (!this.statusFiles.some((file) => file.untracked)) {
+      this.setNewFolders([])
+      return
+    }
+    const result = await api.gitUntrackedFolders(target.folder).catch(() => null)
+    if (!ticket.current() || this.target !== target) return
+    this.setNewFolders(result?.ok ? result.folders : [])
+  }
+
+  private setNewFolders(folders: UntrackedFolder[]): void {
+    const same = folders.length === this.newFolders.length && folders.every((folder, at) => JSON.stringify(folder) === JSON.stringify(this.newFolders[at]))
+    this.newFolders = folders
+    if (same) return
+    this.explorer.setNewFolders(folders)
+    this.renderReview(false)
+  }
+
+  private async ignoreFolder(folder: UntrackedFolder): Promise<void> {
+    const target = this.target
+    if (!target) return
+    const result = await api.gitIgnoreAdd({ folder: target.folder, path: folder.path }).catch(() => ({ ok: false as const, error: 'Could not update the .gitignore.' }))
+    if (!result.ok) {
+      toast(result.error)
+      return
+    }
+    toast(ignoredToast(folder.path), 'info')
+    if (this.target === target) await this.loadTree()
   }
 
   private async retryTree(): Promise<void> {
@@ -908,7 +909,7 @@ export class FilesViewComponent {
     const counts = new Map<string, number>()
     for (const comment of set.review.comments) if (comment.text.trim() !== '') counts.set(comment.path, (counts.get(comment.path) ?? 0) + 1)
     const total = [...counts.values()].reduce((sum, count) => sum + count, 0)
-    this.explorer.review.render({ files, current: set.review.current ?? set.active, viewed: set.review.viewed, commentCounts: counts, commentTotal: total, note: set.review.note })
+    this.explorer.review.render({ newFolders: this.newFolders, files, current: set.review.current ?? set.active, viewed: set.review.viewed, commentCounts: counts, commentTotal: total, note: set.review.note })
     if (updateCounts) this.syncAnnotations()
   }
 

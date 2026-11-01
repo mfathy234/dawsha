@@ -35,6 +35,7 @@ import {
 import { decideWhatsNew, effectiveLastSeen, entriesUpTo } from '../shared/changelog'
 import { showUpdatePill, type UpdateState } from '../shared/updates'
 import { snapshotWorkspace } from '../shared/layouts'
+import { canMakeLarge, paneUnitIds, resolveLargePane } from '../shared/gridStyle'
 import { moveById, moveItem } from '../shared/reorder'
 import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
@@ -118,8 +119,14 @@ export function saveSettings(patch: Partial<Settings>): Promise<void> {
   )
 }
 
+/** The large pane in Calm focus, resolved against the panes that exist right now. */
+export function largeOf(state: AppState): string | null {
+  return resolveLargePane(state.panes.map((pane) => pane.id), state.focusedId, state.largePaneId, state.settings.focusMovesSelected)
+}
+
 function saveWorkspace(): Promise<void> {
-  return saveSettings({ workspace: snapshotWorkspace(store.state.panes, store.state.focusedId, { splits: store.state.splits }) })
+  const { panes, focusedId, splits } = store.state
+  return saveSettings({ workspace: snapshotWorkspace(panes, focusedId, { splits, largeId: largeOf(store.state) }) })
 }
 
 export function persistWorkspace(): void {
@@ -267,7 +274,7 @@ async function openSession(
   }
   store.set((s) => ({
     ...s,
-    panes: [...s.panes, pane],
+    largePaneId: largeOf(s), panes: [...s.panes, pane],
     focusedId: pane.id,
     maximizedId: s.maximizedId ? pane.id : null,
     view: 'grid',
@@ -315,8 +322,8 @@ export async function startCrewSession(projectId: string, start: CrewStart): Pro
   }
   store.set((s) =>
     start.background
-      ? { ...s, panes: [...s.panes, pane], quickPickOpen: false }
-      : { ...s, panes: [...s.panes, pane], focusedId: pane.id, maximizedId: s.maximizedId ? pane.id : null, view: 'grid', quickPickOpen: false, sidebarOverride: null }
+      ? { ...s, largePaneId: largeOf(s), panes: [...s.panes, pane], quickPickOpen: false }
+      : { ...s, largePaneId: largeOf(s), panes: [...s.panes, pane], focusedId: pane.id, maximizedId: s.maximizedId ? pane.id : null, view: 'grid', quickPickOpen: false, sidebarOverride: null }
   )
   persistWorkspace()
   void refreshBranches()
@@ -340,7 +347,7 @@ export function attachRemoteSession(session: RemoteSessionStarted): void {
     activeTabId: tab.id,
     fontSize: clampFontSize(project.fontSize ?? DEFAULT_FONT_SIZE)
   }
-  store.set((state) => ({ ...state, panes: [...state.panes, pane], focusedId: pane.id, view: 'grid', sidebarOverride: null }))
+  store.set((state) => ({ ...state, largePaneId: largeOf(state), panes: [...state.panes, pane], focusedId: pane.id, view: 'grid', sidebarOverride: null }))
   persistWorkspace()
   void refreshBranches()
   void refreshGitChanges()
@@ -577,14 +584,18 @@ function removeTab(state: AppState, paneId: string, termId: string): AppState {
 }
 
 function removePane(state: AppState, paneId: string): AppState {
+  const large = largeOf(state)
   const index = state.panes.findIndex((p) => p.id === paneId)
   const panes = state.panes.filter((p) => p.id !== paneId)
   const neighbour = panes[Math.min(index, panes.length - 1)]
   const closing = state.panes[index]?.compare?.id
+  const focusedId = state.focusedId === paneId ? (neighbour?.id ?? null) : state.focusedId
   return {
     ...state,
     panes: closing ? panes.map((p) => (p.compare?.id === closing ? { ...p, compare: undefined } : p)) : panes,
-    focusedId: state.focusedId === paneId ? (neighbour?.id ?? null) : state.focusedId,
+    focusedId,
+    // The large pane closing hands the spot to whatever is focused next, or the first pane.
+    largePaneId: large === paneId ? resolveLargePane(panes.map((p) => p.id), focusedId, null, false) : large,
     // Closing the shown session in the focus view moves to its neighbour instead of leaving the view.
     maximizedId: state.maximizedId === paneId ? (neighbour?.id ?? null) : state.maximizedId
   }
@@ -943,6 +954,32 @@ export async function resetHighlightRules(): Promise<void> {
 export function setPaletteShortcut(paletteShortcut: string): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, paletteShortcut } }))
   void saveSettings({ paletteShortcut })
+}
+
+/** Makes a pane the large one in Calm focus and focuses it. */
+export function makeLarge(paneId: string | null = store.state.focusedId): void {
+  const state = store.state
+  if (!paneId || !canMakeLargePane(state, paneId)) return
+  leaveBoard()
+  store.set((s) => ({ ...s, largePaneId: paneId, focusedId: paneId, view: 'grid' }))
+  persistWorkspace()
+}
+
+/** Whether the Make large command applies to this pane right now. */
+export function canMakeLargePane(state: AppState, paneId: string): boolean {
+  if (state.maximizedId !== null || !state.panes.some((pane) => pane.id === paneId)) return false
+  return canMakeLarge(state.settings.gridStyle, paneUnitIds(state.panes), largeOf(state), paneId)
+}
+
+/** Turning the switch on makes the focused session large; turning it off keeps today's large one. */
+export function setFocusMovesSelected(focusMovesSelected: boolean): void {
+  if (store.state.settings.focusMovesSelected === focusMovesSelected) return
+  store.set((s) => {
+    const next = { ...s, settings: { ...s.settings, focusMovesSelected } }
+    return { ...next, largePaneId: largeOf(focusMovesSelected ? next : s) }
+  })
+  void saveSettings({ focusMovesSelected })
+  persistWorkspace()
 }
 
 export function toggleOthersPanel(): void {
@@ -1318,6 +1355,7 @@ export async function restoreWorkspace(): Promise<void> {
   store.patch({
     panes: restored.map((pane, index) => (pane.pinned && index !== pinned ? { ...pane, pinned: undefined } : pane)),
     focusedId: focused.id,
+    largePaneId: restored[settings.workspace.largeIndex ?? -1]?.id ?? focused.id,
     splits: settings.workspace.splits ?? {}
   })
   void refreshBranches()
@@ -1479,7 +1517,7 @@ async function openTaskTab(plan: TaskPlan, command: string, before: TermState['t
     activeTabId: tab.id,
     fontSize: DEFAULT_FONT_SIZE
   }
-  store.set((s) => ({ ...s, panes: [...s.panes, pane], focusedId: pane.id, view: 'grid', sidebarOverride: null }))
+  store.set((s) => ({ ...s, largePaneId: largeOf(s), panes: [...s.panes, pane], focusedId: pane.id, view: 'grid', sidebarOverride: null }))
   await launch(pane.id, tab.id, false)
 }
 

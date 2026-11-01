@@ -91,15 +91,27 @@ async function switchArgs(root: string, branch: string, mode: SwitchMode): Promi
   return (await refExists(root, `refs/remotes/${target}`)) ? ['switch', '--track', target] : fail(`There is no remote branch ${target}.`)
 }
 
+/** The newest stash, so a push that found nothing to save is not mistaken for one that stashed. */
+async function stashTip(root: string): Promise<string> {
+  return (await git(root, ['rev-parse', '-q', '--verify', 'refs/stash'])).stdout.trim()
+}
+
+/** New (untracked) files are only stashed when asked: large ones make a stash slow. */
+export function stashArgs(includeUntracked: boolean, message: string): string[] {
+  return ['stash', 'push', ...(includeUntracked ? ['-u'] : []), '-m', message]
+}
+
 async function switchBranch(root: string, request: Extract<GitQuickRequest, { op: 'switch' }>): Promise<GitQuickResult> {
   const args = await switchArgs(root, request.branch, request.mode)
   if (!Array.isArray(args)) return args
   const before = (await git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).stdout.trim()
+  const wantStash = request.stash === true
   let stashed = false
-  if (request.stash) {
-    const pushed = await git(root, ['stash', 'push', '-u', '-m', stashMessage(new Date(), before)], QUICK_MS, false)
+  if (wantStash) {
+    const tip = await stashTip(root)
+    const pushed = await git(root, stashArgs(request.stashUntracked === true, stashMessage(new Date(), before)), request.stashUntracked === true ? SLOW_MS : QUICK_MS, false)
     if (!pushed.ok) return fail(pushed.message)
-    stashed = !/no local changes/i.test(pushed.message)
+    stashed = (await stashTip(root)) !== tip
   }
   const switched = await git(root, args, SLOW_MS)
   if (!switched.ok) {
@@ -111,7 +123,7 @@ async function switchBranch(root: string, request: Extract<GitQuickRequest, { op
 Your changes are still in the stash: run "Apply last stash" after fixing the problem.`)
       }
     }
-    return fail(switched.message, !request.stash && isDirtyRefusal(switched.message))
+    return fail(switched.message, !wantStash && isDirtyRefusal(switched.message))
   }
   const target = request.mode === 'remote' ? request.branch.slice(request.branch.indexOf('/') + 1) : request.branch
   const tail = request.mode === 'create' ? ` from ${before}` : request.mode === 'remote' ? ` tracking ${request.branch}` : ''

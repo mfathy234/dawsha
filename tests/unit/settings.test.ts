@@ -71,6 +71,22 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ dimOtherPanes: 'yes' }).dimOtherPanes).toBe(false)
     expect(migrateSettings({ dimOtherPanes: true }).dimOtherPanes).toBe(true)
   })
+  it('leaves focusMovesSelected off by default and only turns it on for true', () => {
+    expect(defaultSettings().focusMovesSelected).toBe(false)
+    expect(migrateSettings({}).focusMovesSelected).toBe(false)
+    expect(migrateSettings({ focusMovesSelected: 'yes' }).focusMovesSelected).toBe(false)
+    expect(migrateSettings({ focusMovesSelected: true }).focusMovesSelected).toBe(true)
+    expect(migrateSettings({}).gridStyle).toBe('focus')
+  })
+  it('keeps a valid largeIndex in the saved workspace and drops a bad one', () => {
+    const pane = { projectId: 'api', fontSize: 15, activeIndex: 0, tabs: [{ agent: 'claude', label: 'claude' }] }
+    const base = { projects: [{ id: 'api', name: 'API', folder: 'C:\work\api', defaultAgent: 'claude' }] }
+    const load = (largeIndex: unknown) => migrateSettings({ ...base, workspace: { panes: [pane, pane], focusedIndex: 0, largeIndex } }).workspace.largeIndex
+    expect(load(1)).toBe(1)
+    expect(load(5)).toBeUndefined()
+    expect(load('x')).toBeUndefined()
+    expect(load(undefined)).toBeUndefined()
+  })
   it('keeps closed sessions and task history only for known projects', () => {
     const projects = [{ id: 'api', name: 'API', folder: 'C:\\work\\api', defaultAgent: 'codex' }]
     const keptSessions = [{ projectId: 'api', agent: 'codex', sessionId: 'session-1', title: 'Fix export', closedAt: 100 }, { projectId: 'missing', agent: 'claude', sessionId: 'x', title: 'Orphan', closedAt: 100 }]

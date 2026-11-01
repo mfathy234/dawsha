@@ -7,7 +7,8 @@ import type { CliCommand, CliReply } from './cli'
 import type { FileRef } from './filePaths'
 import type { InstructionRead, InstructionWriteRequest, InstructionWriteResult } from './instructions'
 import type { WorktreeStatus } from './compare'
-import type { BranchListResult, GitQuickRequest, GitQuickResult, SyncCounts } from './gitBranches'
+import type { BranchListResult, DirtyReportResult, GitQuickRequest, GitQuickResult, SyncCounts } from './gitBranches'
+import type { IgnoreAddRequest, IgnoreAddResult, UntrackedFoldersResult } from './gitIgnore'
 import type { ProjectGroup } from './worktreeGroups'
 import type {
   CommitRequest,
@@ -129,6 +130,12 @@ export interface GridApi {
   gitSync(folder: string): Promise<SyncCounts | null>
   gitBranches(folder: string): Promise<BranchListResult>
   gitQuick(request: GitQuickRequest): Promise<GitQuickResult>
+  /** Tracked changes and new files (with their size) in a folder, for the stash guard. */
+  gitDirty(folder: string): Promise<DirtyReportResult>
+  /** Folders whose files are all new, with their size, so Changes can fold them. */
+  gitUntrackedFolders(folder: string): Promise<UntrackedFoldersResult>
+  /** Adds one folder to the repository's root .gitignore. */
+  gitIgnoreAdd(request: IgnoreAddRequest): Promise<IgnoreAddResult>
   listResumable(agent: AgentKind, folder: string): Promise<ResumeEntry[]>
   listAllResumable(query: ResumeQuery): Promise<ResumeSession[]>
   quickOpen(kind: QuickOpenKind, folder: string): Promise<void>
@@ -192,7 +199,7 @@ export interface GridApi {
   openUpdateLink(url: string): Promise<void>
   usageReport(range: UsageRange): Promise<UsageReport>
   usageSnapshot(): Promise<UsageSnapshot>
-  agentAccounts(): Promise<AgentAccounts>
+  agentAccounts(fresh?: boolean): Promise<AgentAccounts>
   knownLimits(): Promise<KnownLimits>
   /** `offset`: periods back from now (0 now, -1 the one before). */
   workReport(period: WorkPeriod, offset?: number): Promise<WorkReport>

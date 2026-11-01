@@ -30,6 +30,7 @@ test('saves, lists, renames and deletes layouts from the Layouts menu', async ()
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
+    await page.locator('#view-button').click()
     await page.locator('#layouts-button').click()
     const popover = page.getByRole('dialog', { name: 'Saved layouts' })
     await expect(popover).toBeVisible()
@@ -44,6 +45,8 @@ test('saves, lists, renames and deletes layouts from the Layouts menu', async ()
     await openTerminalPicker(page.locator('.pane').first())
     await page.getByRole('menuitem', { name: 'Shell' }).click()
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['claude', 'shell'])
+
+    await page.locator('#view-button').click()
 
     await page.locator('#layouts-button').click()
     await page.locator('#save-layout').click()
@@ -61,6 +64,8 @@ test('saves, lists, renames and deletes layouts from the Layouts menu', async ()
     expect(saved.panes[0].tabs.map((t: any) => t.agent)).toEqual(['claude', 'shell'])
     expect(saved.panes[0].activeIndex).toBe(1)
 
+    await page.locator('#view-button').click()
+
     await page.locator('#layouts-button').click()
     await expect(page.locator('.layout-row')).toHaveCount(1)
     await expect(page.locator('.layout-row')).toContainText('Morning')
@@ -77,6 +82,8 @@ test('saves, lists, renames and deletes layouts from the Layouts menu', async ()
     await expect(page.getByRole('dialog', { name: 'Save current layout' })).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).layouts.length).toBe(2)
 
+    await page.locator('#view-button').click()
+
     await page.locator('#layouts-button').click()
     await page.getByRole('button', { name: 'Rename layout Docs day' }).click()
     const rename = page.getByRole('dialog', { name: 'Rename layout "Docs day"' })
@@ -88,6 +95,8 @@ test('saves, lists, renames and deletes layouts from the Layouts menu', async ()
     await rename.getByRole('button', { name: 'Rename layout' }).click()
     await expect.poll(() => readSettings(sandbox.userData).layouts.map((l: any) => l.name)).toEqual(['Morning', 'Docs'])
 
+    await page.locator('#view-button').click()
+
     await page.locator('#layouts-button').click()
     await page.getByRole('button', { name: 'Delete layout Docs' }).click()
     const confirm = page.getByRole('alertdialog')
@@ -96,6 +105,7 @@ test('saves, lists, renames and deletes layouts from the Layouts menu', async ()
     await page.screenshot({ path: join(SCREENS, '33-delete-layout.png') })
     await confirm.getByRole('button', { name: 'Cancel' }).click()
     expect(readSettings(sandbox.userData).layouts).toHaveLength(2)
+    await page.locator('#view-button').click()
     await page.locator('#layouts-button').click()
     await page.getByRole('button', { name: 'Delete layout Docs' }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Delete "Docs"' }).click()
@@ -110,6 +120,7 @@ test('opens a layout into an empty grid, asks before touching open panes and res
   seedLayouts(sandbox.userData)
   const { app, page } = await launchApp(sandbox)
   try {
+    await page.locator('#view-button').click()
     await page.locator('#layouts-button').click()
     await expect(page.locator('.layout-row')).toHaveCount(3)
     await expect(page.locator('.layout-row').nth(2)).toContainText('removed project')
@@ -139,11 +150,15 @@ test('opens a layout into an empty grid, asks before touching open panes and res
     await choice.getByRole('button', { name: 'Cancel' }).click()
     await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
 
+    await page.locator('#view-button').click()
+
     await page.locator('#layouts-button').click()
     await page.getByRole('button', { name: 'Open layout Docs day' }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Add alongside' }).click()
     await expect(page.locator('.pane')).toHaveCount(3, { timeout: 20_000 })
     await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveCount(1)
+
+    await page.locator('#view-button').click()
 
     await page.locator('#layouts-button').click()
     await page.getByRole('button', { name: 'Open layout Morning' }).click()
@@ -151,6 +166,8 @@ test('opens a layout into an empty grid, asks before touching open panes and res
     await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
     await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.length).toBe(2)
+
+    await page.locator('#view-button').click()
 
     await page.locator('#layouts-button').click()
     await page.getByRole('button', { name: 'Open layout Lost' }).click()

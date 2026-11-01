@@ -206,7 +206,7 @@ test('projects view validates folders and confirms removal by name', async () =>
   }
 })
 
-test('names panes from Claude session files and lays three panes out with a tall focused pane', async () => {
+test('names panes from Claude session files and lays three panes out with a tall large pane', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
@@ -216,8 +216,8 @@ test('names panes from Claude session files and lays three panes out with a tall
     await add.click()
     await expect(page.locator('.pane')).toHaveCount(3)
     const boxes = await page.locator('.pane').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()))
-    expect(boxes[2].height).toBeGreaterThan(boxes[1].height * 1.8)
-    expect(boxes[0].left).toBeGreaterThan(boxes[2].left)
+    expect(boxes[0].height).toBeGreaterThan(boxes[1].height * 1.8)
+    expect(boxes[1].left).toBeGreaterThan(boxes[0].left)
 
     const now = Date.now()
     writeFileSync(
@@ -240,7 +240,9 @@ test('names panes from Claude session files and lays three panes out with a tall
     const clipped = await page.locator('.pane-title').evaluateAll((els) => els.filter((el) => el.scrollWidth > el.clientWidth + 1).length)
     expect(clipped).toBe(0)
     await expect(page.locator('.pane-state .state-pill.state-working')).toHaveCount(1)
-    await expect(page.locator('.topbar-count')).toContainText('1 working')
+    await page.locator('#view-button').click()
+    await expect(page.locator('#view-menu-counts')).toContainText('1 working')
+    await page.keyboard.press('Escape')
     await page.screenshot({ path: join(SCREENS, '9-three-panes-named.png') })
   } finally {
     await closeBounded(app)
@@ -330,7 +332,9 @@ test('starts Codex from the quick-pick with Tab, shows the OpenAI mark and adds 
     await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('codex 2')
     await page.keyboard.press('Control+PageDown')
     await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('claude')
-    await expect(page.locator('.topbar-count')).toContainText('1 session')
+    await page.locator('#view-button').click()
+    await expect(page.locator('#view-menu-counts')).toContainText('1 session')
+    await page.keyboard.press('Escape')
     await page.screenshot({ path: join(SCREENS, '10-codex-tabs.png') })
 
     await page.keyboard.press('Control+Shift+N')
@@ -464,7 +468,9 @@ test('names and status of a Codex pane come from Codex rollout files', async () 
     )
     await expect(page.locator('.pane-title', { hasText: 'Fix the invoice report' })).toHaveCount(1, { timeout: 15_000 })
     await expect(page.locator('.pane-state .state-pill.state-working')).toHaveCount(1)
-    await expect(page.locator('.topbar-count')).toContainText('1 working')
+    await page.locator('#view-button').click()
+    await expect(page.locator('#view-menu-counts')).toContainText('1 working')
+    await page.keyboard.press('Escape')
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.[0]?.sessionId).toBe(id)
   } finally {
     await closeBounded(app)

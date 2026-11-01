@@ -3,6 +3,30 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.2] - 2026-11-01
+
+### Added
+
+- **Choose whether the session you pick moves.** A new switch in Layouts and Settings, "Move the session I pick to the large spot", is off by default. Off, the large session stays put and selecting a side session just focuses it. Make large, in the pane menu, the command palette and on Ctrl+Alt+L, changes the large session on purpose.
+- **A warning before you hit a limit.** You get one notification when a limit crosses 80%, and it re-arms after the limit drops or resets.
+- **A branch switcher in the pane footer.** Click the branch to find, switch to or create a branch. Pull, Stash, Apply last stash and Fetch are in the same menu.
+- **Add big new folders to .gitignore.** A big folder of new files folds into one row in Files and Review with its size, and an Add to .gitignore button.
+
+### Changed
+
+- **Limits take far less room.** The top bar shows one lettered ring per limit: 5h, W for week and a model letter when one is reported. Rings turn amber at 80% and red at 95%, and a click still opens the details.
+- **Only agents you have.** Limits and Usage hide agents that are not installed, unless a session you have focused uses one.
+- **One less row above your sessions.** Grid and Board moved to the top bar, next to a View menu with Layouts, Dim other sessions, Text size and session counts. Session tabs keep their own row.
+- **A slimmer Other sessions rail.** It is 34px wide, with a count instead of a vertical label.
+- **A clearer branch button in Files.** The branch name is now the button, with a filter that can also create a branch, and worktrees have their own button.
+- **Stash before switching.** With uncommitted changes, every branch switch now asks you to stash first and names the files and the branch. New files stay in your folder unless you tick the box.
+- **The top bar fits narrow windows.** Below about 1100px, pages become icons and New session becomes a + button.
+
+### Fixed
+
+- The selected card in Layouts looked quieter than the unselected one.
+- Fields in Files had a clipped, doubled border.
+
 ## [1.8.1] - 2026-10-31
 
 ### Added

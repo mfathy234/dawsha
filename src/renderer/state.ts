@@ -105,6 +105,8 @@ export interface AppState {
   settings: Settings
   panes: PaneState[]
   focusedId: string | null
+  /** The large pane in Calm focus when selecting a session does not move it; see resolveLargePane. */
+  largePaneId: string | null
   maximizedId: string | null
   splits: GridSplits
   view: View
@@ -160,6 +162,7 @@ export const initialState = (): AppState => ({
   settings: defaultSettings(),
   panes: [],
   focusedId: null,
+  largePaneId: null,
   maximizedId: null,
   splits: {},
   view: 'grid',

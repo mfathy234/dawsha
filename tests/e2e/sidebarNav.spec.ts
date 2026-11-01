@@ -276,7 +276,7 @@ test('F2 and double click rename closed and open sessions; Enter and blur save, 
     await page.keyboard.press('Enter')
     await expect(open.locator('.sess-name')).toHaveText('Release notes')
     await expect(page.locator('.pane-title')).toContainText('Release notes')
-    await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.[0]?.name).toBe('Release notes')
+    await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.[0]?.name, { timeout: 15_000 }).toBe('Release notes')
 
     await closeFirstPane(page)
     await expect(page.locator('.pane')).toHaveCount(0)

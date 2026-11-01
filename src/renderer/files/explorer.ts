@@ -1,7 +1,10 @@
 import type { SectionId } from '../../shared/filesLayout'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
+import { worktreeCountText } from '../../shared/filesWorkspace'
+import { foldRows, type UntrackedFolder } from '../../shared/gitIgnore'
 import { fileIcon } from './fileIcon'
+import { newFolderRow, toggleFolderOpen } from './newFolders'
 import { filesLayout, updateLayout } from './filesPrefs'
 import { FilesTree, type TreeHooks } from './filesTree'
 import { errorNote, loadingNote } from './loadNote'
@@ -27,10 +30,12 @@ export interface ExplorerHooks {
   search: SearchHooks
   review: ReviewHooks
   goToFile(): void
-  /** The project button (projects first) or the branch control (worktrees first) was used. */
+  /** The project button (projects first) or the worktrees button (worktrees first) was used. */
   openLocation(button: HTMLElement, worktreesFirst: boolean): void
-  /** The branches control next to the branch button was used. */
+  /** The branch button was used. */
   openBranches(button: HTMLElement): void
+  /** Add to .gitignore on a folded folder of new files. */
+  ignoreFolder(folder: UntrackedFolder): void
   hide(): void
   retryChanges(): void
   retryOpen(): void
@@ -56,16 +61,17 @@ export class Explorer {
   private mode: ExplorerMode = 'files'
   private active: string | null = null
   private changes: ChangeRow[] = []
+  private newFolders: readonly UntrackedFolder[] = []
   private open: OpenRow[] = []
   private readonly projectLine = h('span', { class: 'files-loc-project' }, 'No project')
   private readonly branchLineEl = h('span', { class: 'files-loc-branch' })
   private readonly worktreeCount = h('span', { class: 'files-loc-count' })
   private readonly location = h('button', { class: 'files-location', type: 'button', id: 'files-location', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'Project and checkout' },
     h('span', { class: 'files-loc-text' }, this.projectLine), icon(ICONS.chevronDown))
-  private readonly branchButton = h('button', { class: 'files-branch', type: 'button', id: 'files-branch', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: 'Switch branch or worktree', hidden: true },
-    icon(ICONS.branch), this.branchLineEl, this.worktreeCount, icon(ICONS.chevronDown))
-  private readonly branchesButton = h('button', { class: 'files-branches', type: 'button', id: 'files-branches', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'Switch branch', title: 'Switch branch', hidden: true },
-    icon(ICONS.chevronDown))
+  private readonly branchButton = h('button', { class: 'files-branch', type: 'button', id: 'files-branch', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: 'Switch branch', hidden: true },
+    icon(ICONS.branch), this.branchLineEl, icon(ICONS.chevronDown))
+  private readonly worktreesButton = h('button', { class: 'files-worktrees', type: 'button', id: 'files-worktrees', 'aria-haspopup': 'menu', 'aria-expanded': 'false', hidden: true },
+    icon(ICONS.layout), this.worktreeCount)
   private readonly hideButton = h('button', { class: 'icon-btn files-hide-explorer', type: 'button', id: 'files-explorer-hide', 'aria-label': 'Hide the file explorer', title: 'Hide the file explorer (Ctrl+Alt+E)', onClick: () => this.hooks.hide() }, icon(PANEL_LEFT))
   private readonly tabs = (['files', 'search', 'review'] as const).map((mode) => h('button', {
     class: 'files-mode', type: 'button', role: 'tab', id: `files-mode-${mode}`, 'aria-selected': 'false', tabindex: '-1', onClick: () => this.setMode(mode)
@@ -97,10 +103,10 @@ export class Explorer {
     }
     this.filesPane.append(this.goTo, this.sections.changes.root, this.sections.open.root, this.sections.tree.root)
     this.location.addEventListener('click', () => hooks.openLocation(this.location, false))
-    this.branchButton.addEventListener('click', () => hooks.openLocation(this.branchButton, true))
+    this.branchButton.addEventListener('click', () => hooks.openBranches(this.branchButton))
+    this.worktreesButton.addEventListener('click', () => hooks.openLocation(this.worktreesButton, true))
     this.tablist.addEventListener('keydown', (event) => this.onTabKey(event))
-    this.branchesButton.addEventListener('click', () => hooks.openBranches(this.branchesButton))
-    this.el.append(h('div', { class: 'files-loc' }, this.location, h('div', { class: 'files-branch-row' }, this.branchButton, this.branchesButton)), h('div', { class: 'files-modes-row' }, this.tablist, this.hideButton), this.filesPane, this.search.el, this.review.el)
+    this.el.append(h('div', { class: 'files-loc' }, this.location, h('div', { class: 'files-branch-row' }, this.branchButton, this.worktreesButton)), h('div', { class: 'files-modes-row' }, this.tablist, this.hideButton), this.filesPane, this.search.el, this.review.el)
     this.renderTabs()
     this.renderChanges()
     this.renderOpen()
@@ -130,28 +136,33 @@ export class Explorer {
     this.syncFold(id, head, head.nextElementSibling as HTMLElement)
   }
 
-  setLocation(project: string, branch: string, worktrees: string, title: string): void {
+  /** `worktrees` is how many checkouts the project has; the worktrees button shows from two. */
+  setLocation(project: string, branch: string, worktrees: number, title: string): void {
+    const many = worktrees > 1
     this.projectLine.textContent = project || 'No project'
     this.branchLineEl.textContent = branch
-    this.worktreeCount.textContent = worktrees ? ` · ${worktrees}` : ''
+    this.worktreeCount.textContent = many ? String(worktrees) : ''
     this.branchButton.hidden = branch === ''
-    this.branchesButton.hidden = branch === ''
-    this.branchesButton.setAttribute('aria-label', `Switch branch. Now on ${branch}`)
-    this.branchButton.setAttribute('aria-label', `Switch branch or worktree. Now on ${branch}${worktrees ? `, ${worktrees}` : ''}`)
+    this.worktreesButton.hidden = branch === '' || !many
+    this.branchButton.title = branch ? `Switch branch. Now on ${branch}` : 'Switch branch'
+    this.branchButton.setAttribute('aria-label', `Switch branch. Now on ${branch}`)
+    this.worktreesButton.title = worktreeCountText(worktrees)
+    this.worktreesButton.setAttribute('aria-label', worktreeCountText(worktrees))
     this.location.title = title
   }
 
   setLocationOpen(open: boolean, button: HTMLElement | null = null): void {
-    for (const control of [this.location, this.branchButton, this.branchesButton]) control.setAttribute('aria-expanded', String(open && (button === null || control === button)))
+    for (const control of [this.location, this.branchButton, this.worktreesButton]) control.setAttribute('aria-expanded', String(open && (button === null || control === button)))
   }
 
+  /** The branch button, which anchors the branch menu (and the palette's Switch branch command). */
   branchesAnchor(): HTMLElement {
-    return this.branchesButton.hidden ? this.location : this.branchesButton
+    return this.branchButton.hidden ? this.location : this.branchButton
   }
 
-  /** Moves focus to the branch control (the Ctrl+Alt+W shortcut and palette command use it as the menu's anchor). */
+  /** The worktrees button, or the project button when there is only one checkout; anchors the worktree menu (Ctrl+Alt+W and the palette command). */
   branchAnchor(): HTMLElement {
-    return this.branchButton.hidden ? this.location : this.branchButton
+    return this.worktreesButton.hidden ? this.location : this.worktreesButton
   }
 
   focusLocation(): void {
@@ -185,6 +196,23 @@ export class Explorer {
     this.reviewCount = rows.length
     this.renderChanges()
     this.renderTabs()
+  }
+
+  /** Folders of new files that may fold into one row in Changes (and in Review). */
+  setNewFolders(folders: readonly UntrackedFolder[]): void {
+    this.newFolders = folders
+    this.renderChanges()
+  }
+
+  private changeRow(row: ChangeRow): HTMLElement {
+    return this.flat(row.path, h('span', { class: `files-badge b-${row.letter === 'U' ? 'A' : row.letter}`, title: BADGE_TITLES[row.letter] ?? row.letter }, row.letter === 'U' ? 'A' : row.letter))
+  }
+
+  private changeItems(): HTMLElement[] {
+    const hooks = { toggle: (path: string) => { toggleFolderOpen(path); this.renderChanges() }, ignore: (folder: UntrackedFolder) => this.hooks.ignoreFolder(folder) }
+    return foldRows(this.changes, this.newFolders).map((item) => item.kind === 'file'
+      ? this.changeRow(item.row)
+      : newFolderRow(item.folder, hooks, item.rows.map((row) => this.changeRow(row))))
   }
 
   setOpenInSessions(rows: OpenRow[]): void {
@@ -255,7 +283,7 @@ export class Explorer {
         ? [errorNote("Couldn't read the changes.", () => this.hooks.retryChanges())]
         : this.changes.length === 0
       ? [h('div', { class: 'files-empty' }, 'Nothing has changed yet.')]
-      : this.changes.map((row) => this.flat(row.path, h('span', { class: `files-badge b-${row.letter === 'U' ? 'A' : row.letter}`, title: BADGE_TITLES[row.letter] ?? row.letter }, row.letter === 'U' ? 'A' : row.letter)))))
+      : this.changeItems()))
   }
 
   private renderOpen(): void {
