@@ -69,7 +69,7 @@ export class ChangeTools {
     const out: Extension[] = []
     const lines = touchedLines(this.result(doc))
     if (lines.size > 0) out.push(lineTouchGutter(lines, { open: (touch) => this.openSession(touch) }))
-    if (!doc.newFile) out.push(changeGutter({ open: (hunk, anchor) => this.menu(doc, hunk, anchor) }))
+    out.push(changeGutter({ open: (hunk, anchor) => this.menu(doc, hunk, anchor) }))
     return out
   }
 
@@ -108,7 +108,7 @@ export class ChangeTools {
     const span = lineSpan(hunk)
     const confirmed = await confirmDialog({
       title: `Revert the change at ${span} in ${name}?`,
-      body: `${doc.path}\n${hunk.added} added and ${hunk.removed} removed lines go back to the version on main:\n${changePreview(hunk)}\nThis cannot be undone.`,
+      body: `${doc.path}\n${doc.newFile ? 'This file is not on main yet, so these lines are removed:' : `${hunk.added} added and ${hunk.removed} removed lines go back to the version on main:`}\n${changePreview(hunk)}\nThis cannot be undone.`,
       confirmLabel: `Revert ${span} in ${name}`
     })
     if (!confirmed) return

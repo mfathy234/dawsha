@@ -28,7 +28,8 @@ export function changesOfState(state: EditorState): Found {
   const eol = state.lineBreak
   const before = textLines(base.sliceString(0, base.length, eol), eol)
   const after = textLines(state.sliceDoc(), eol)
-  const hunks = before.finalNewline === after.finalNewline ? buildHunks(before.lines, after.lines, changesOf(info.chunks, base, state.doc), eol) : []
+  const comparable = before.lines.length === 0 ? after.finalNewline : before.finalNewline === after.finalNewline
+  const hunks = comparable ? buildHunks(before.lines, after.lines, changesOf(info.chunks, base, state.doc), eol) : []
   const byLine = new Map<number, Hunk>()
   for (const hunk of hunks) for (const change of hunk.changes) byLine.set(Math.min(change.curStart + 1, state.doc.lines), hunk)
   const found = { hunks, byLine }
