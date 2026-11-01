@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { AgentEditEvent, EditPreviewFile, StaleCaller } from '../../src/shared/codeNavExtras'
 import { askMessage } from '../../src/renderer/files/askAgent'
-import { dirtyConflicts, outcomeText, placesIn, renameCopy, replaceCopy } from '../../src/renderer/files/editPlan'
+import { dirtyConflicts, outcomeText, placesIn, previewRows, renameCopy, replaceCopy } from '../../src/renderer/files/editPlan'
 import { followTarget, mayFollow } from '../../src/renderer/files/followAgent'
 import { touchedLines, touchNote, touchText } from '../../src/renderer/files/lineTouch'
 import { staleNote, staleRows } from '../../src/renderer/files/staleList'
 import { stickyHeaders } from '../../src/renderer/files/stickyScroll'
 import type { OutlineItem } from '../../src/renderer/files/outline'
+import { neighbourFile, nextChangeStart } from '../../src/renderer/files/changeStep'
 
 const file = (path: string, matches: number): EditPreviewFile => ({ path, expectedMtime: 1, edits: [], matches })
 const hit = (path: string, line: number, preview = 'call()') => ({ path, line, column: 1, preview })
@@ -109,13 +110,12 @@ describe('follow the agent', () => {
   const event: AgentEditEvent = { folder: 'C:\\Work\\app\\', path: 'src/a.ts', sessionId: 's', agent: 'claude', at: 1, precision: 'file' }
 
   it('does nothing while it is off', () => {
-    expect(followTarget(event, 'C:\\Work\\app', '', false)).toBeNull()
+    expect(followTarget(event, 'C:\\Work\\app', false)).toBeNull()
   })
 
   it('opens the edited file of this folder, in repo form', () => {
-    expect(followTarget(event, 'c:\\work\\app', '', true)).toBe('src/a.ts')
-    expect(followTarget(event, 'C:\\Work\\app', 'packages/web', true)).toBe('packages/web/src/a.ts')
-    expect(followTarget(event, 'C:\\Other', '', true)).toBeNull()
+    expect(followTarget(event, 'c:\\work\\app', true)).toBe('src/a.ts')
+    expect(followTarget(event, 'C:\\Other', true)).toBeNull()
   })
 
   it('does not switch away from unsaved work', () => {
@@ -143,5 +143,49 @@ describe('sticky scroll', () => {
   it('keeps at most three', () => {
     const deep = [item('a', 1, 0), item('b', 2, 1), item('c', 3, 2), item('d', 4, 3)]
     expect(stickyHeaders(deep, 10).map((entry) => entry.name)).toEqual(['b', 'c', 'd'])
+  })
+})
+
+describe('stepping through changes', () => {
+  const starts = [10, 40, 90]
+
+  it('goes to the next and previous change and stops at the ends', () => {
+    expect(nextChangeStart(starts, 0, 1)).toBe(10)
+    expect(nextChangeStart(starts, 10, 1)).toBe(40)
+    expect(nextChangeStart(starts, 90, 1)).toBeNull()
+    expect(nextChangeStart(starts, 95, -1)).toBe(90)
+    expect(nextChangeStart(starts, 40, -1)).toBe(10)
+    expect(nextChangeStart(starts, 10, -1)).toBeNull()
+    expect(nextChangeStart([], 0, 1)).toBeNull()
+  })
+
+  it('moves on to the neighbouring file in a review pass', () => {
+    const paths = ['a.ts', 'b.ts', 'c.ts']
+    expect(neighbourFile(paths, 'a.ts', 1)).toBe('b.ts')
+    expect(neighbourFile(paths, 'c.ts', 1)).toBeNull()
+    expect(neighbourFile(paths, 'a.ts', -1)).toBeNull()
+    expect(neighbourFile(paths, null, 1)).toBe('a.ts')
+    expect(neighbourFile(paths, null, -1)).toBe('c.ts')
+    expect(neighbourFile([], null, 1)).toBeNull()
+  })
+})
+
+describe('preview rows', () => {
+  const text = ['const load = 1', 'load(load)', 'other', ''].join('\n')
+
+  it('shows each changed line before and after, several edits on one line together', () => {
+    const rows = previewRows(text, [
+      { line: 2, column: 1, endLine: 2, endColumn: 5, newText: 'fetch' },
+      { line: 2, column: 6, endLine: 2, endColumn: 10, newText: 'fetch' },
+      { line: 1, column: 7, endLine: 1, endColumn: 11, newText: 'fetch' }
+    ])
+    expect(rows).toEqual([
+      { line: 1, before: 'const load = 1', after: 'const fetch = 1' },
+      { line: 2, before: 'load(load)', after: 'fetch(fetch)' }
+    ])
+  })
+
+  it('does not pretend to show an edit across lines', () => {
+    expect(previewRows(text, [{ line: 1, column: 1, endLine: 2, endColumn: 1, newText: '' }])[0].after).toMatch(/several lines/)
   })
 })

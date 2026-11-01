@@ -22,6 +22,9 @@ import { lastOutputAt } from '../ptyActivity'
 import { waitForSessionOutput, waitUntil } from '../files/sessionWait'
 import { FileDoc, type DocHooks } from '../files/fileDoc'
 import { CodeNavigator } from '../files/navigation'
+import { CodeTools } from '../files/codeTools'
+import { neighbourFile } from '../files/changeStep'
+import type { ToolsHost } from '../files/toolsHost'
 import { marksForFile, openTarget } from '../files/problemMarks'
 import { noteOpened } from '../files/fileIndex'
 import { filesTarget, insertIntoSession, onFilesCommand, type FilesCommand, onFilesRequest, onFilesSearchRequest, openInVsCode, promptReference, setCurrentTarget, setDirtyProvider, takeFilesRequest, addToPrompt, type FilesTarget } from '../files/filesActions'
@@ -55,6 +58,7 @@ import { toggleQuickOpen } from './quickOpen'
 import { RunCommandsPanel } from './runCommandsPanel'
 import { pageHeader } from './pageHeader'
 import './filesView.css'
+import './filesTools.css'
 
 const TOUCH_REFRESH_MS = 8000
 const WATCH_DEBOUNCE_MS = 150
@@ -158,7 +162,8 @@ export class FilesViewComponent {
     search: {
       folder: () => this.target?.folder ?? null,
       run: (folder, request) => api.searchFiles(folder, request),
-      open: (path, line) => void this.openFile(path, { pin: true, focus: true, line })
+      open: (path, line) => void this.openFile(path, { pin: true, focus: true, line }),
+      replace: (request, replacement) => void this.tools.replace(request, replacement)
     },
     review: {
       open: (path) => void this.reviewOpen(path),
@@ -171,7 +176,8 @@ export class FilesViewComponent {
       send: (anchor) => this.sendReview(anchor),
       commit: () => void this.commitChanges(),
       discard: (path) => void this.discardFile(path),
-      ignoreFolder: (folder) => void this.ignoreFolder(folder)
+      ignoreFolder: (folder) => void this.ignoreFolder(folder),
+      stale: () => void this.tools.stale()
     },
     goToFile: () => toggleQuickOpen(),
     openLocation: (button, worktreesFirst) => this.openLocationMenu(button, worktreesFirst),
@@ -200,6 +206,7 @@ export class FilesViewComponent {
     overlay: () => this.main,
     text: (path) => this.textOf(path)
   })
+  private readonly tools = new CodeTools(this.toolsHost())
   private readonly tabs = h('div', { class: 'files-tabs', role: 'tablist', 'aria-label': 'Open files' })
   private readonly bar = new FilesBar({
     showFile: () => void this.showFileMode(),
@@ -212,7 +219,8 @@ export class FilesViewComponent {
     toggleExplorer: () => this.toggleExplorer(),
     back: () => void this.nav.back(),
     forward: () => void this.nav.forward(),
-    symbol: () => this.nav.openSymbolPicker()
+    symbol: () => this.nav.openSymbolPicker(),
+    setSideBySide: (on) => void this.active()?.setSideBySide(on)
   })
   private readonly conflictText = h('span', { class: 'files-conflict-text' }, 'This file changed on disk.')
   private readonly reloadButton = h('button', { class: 'btn small', type: 'button', id: 'files-reload-theirs', onClick: () => void this.active()?.reload() }, 'Reload theirs')
@@ -277,7 +285,8 @@ export class FilesViewComponent {
       this.renderOutline()
       this.renderBar()
     },
-    goto: (doc, pos) => this.nav.ctrlClick(doc, pos)
+    goto: (doc, pos) => this.nav.ctrlClick(doc, pos),
+    hover: (doc, pos) => this.tools.hover(doc, pos)
   }
 
   // Showing and hiding
@@ -569,6 +578,8 @@ export class FilesViewComponent {
     if (!doc || !set) return
     const entries: ContextEntry[] = [
       { label: 'Edit', keys: 'E', disabled: !doc.canEdit || doc.editing, run: () => void this.toggleEdit() },
+      { label: 'Ask an agent about this…', run: () => void this.tools.ask() },
+      { label: 'Follow the agent', current: this.tools.follows, run: () => this.tools.toggleFollow() },
       { label: 'Open in VS Code', run: () => this.openActiveInCode() },
       { label: 'Copy path', run: () => void this.runFileAction('copy-path', doc.path) },
       { label: 'Copy relative path', run: () => void this.runFileAction('copy-relative', doc.path) },
@@ -927,6 +938,16 @@ export class FilesViewComponent {
     else if (command === 'everything') this.nav.openEverythingPicker()
     else if (command === 'symbol') this.nav.openSymbolPicker()
     else if (command === 'line') this.nav.openLinePicker()
+    else if (command === 'ask') void this.tools.ask()
+    else if (command === 'rename') {
+      if (this.el.contains(document.activeElement)) void this.tools.rename()
+    }
+    else if (command === 'calls') this.tools.calls()
+    else if (command === 'stale') void this.tools.stale()
+    else if (command === 'follow') this.tools.toggleFollow()
+    else if (command === 'next-problem' || command === 'previous-problem') this.stepProblem(command === 'next-problem' ? 1 : -1)
+    else if (command === 'next-change' || command === 'previous-change') void this.stepChange(command === 'next-change' ? 1 : -1)
+    else if (command === 'replace') this.explorer.setMode('search')
     else if (command === 'show-config') this.panel.show('config')
     else if (command === 'show-pr') this.panel.show('pr')
     else if (command === 'show-browser') this.panel.show('browser')
@@ -935,6 +956,11 @@ export class FilesViewComponent {
       if (command === 'switch-branch') void this.showBranchMenu(this.explorer.branchesAnchor())
       else this.openLocationMenu(this.explorer.branchAnchor(), true)
     }
+  }
+
+  private stepProblem(direction: 1 | -1): void {
+    const editor = this.active()?.editor
+    if (editor && !editor.stepProblem(direction)) this.setFlash('This file has no problems marked.')
   }
 
   private setInspectorTab(tab: InspectorTab): void {
@@ -995,6 +1021,53 @@ export class FilesViewComponent {
     const doc = this.active()
     if (doc && doc.path === path && doc.status === 'ready' && !doc.changes && !doc.deleted) await doc.toggleChanges()
     this.renderReview()
+  }
+
+  private toolsHost(): ToolsHost {
+    return {
+      folder: () => this.target?.folder ?? null,
+      prefix: () => this.set?.prefix ?? '',
+      active: () => this.active(),
+      say: (text) => this.setFlash(text),
+      warn: (text) => toast(text),
+      dirtyPaths: () => [...(this.set?.docs.values() ?? [])].filter((doc) => doc.dirty).map((doc) => doc.path),
+      changedOnDisk: (paths) => {
+        void this.loadTree()
+        this.checkOpenDocs(paths)
+      },
+      sessions: () => this.liveSessions(),
+      openAt: async (path, line) => void (await this.openFile(path, { pin: true, focus: true, line })),
+      text: (path) => this.textOf(path),
+      overlay: () => this.main,
+      refreshAnnotations: () => this.syncAnnotations(),
+      followTo: (path) => void this.followTo(path)
+    }
+  }
+
+  private async followTo(path: string): Promise<void> {
+    await this.openFile(path, { pin: false })
+    const doc = this.active()
+    if (!doc || doc.path !== path || doc.status !== 'ready' || doc.deleted || doc.noRepo) return
+    if (!doc.changes) await doc.toggleChanges()
+    doc.editor?.stepChange(1, true)
+    this.renderReview()
+  }
+
+  /** F7 and Shift+F7: the next or previous change; past the last one in a review pass, the next file's first. */
+  private async stepChange(direction: 1 | -1): Promise<void> {
+    const doc = this.active()
+    const set = this.set
+    if (!doc || !set || doc.status !== 'ready' || doc.deleted || doc.noRepo) return
+    if (!doc.changes) {
+      await doc.toggleChanges()
+      doc.editor?.stepChange(direction, true)
+      return
+    }
+    if (doc.editor?.stepChange(direction)) return
+    const next = this.explorer.currentMode() === 'review' ? neighbourFile(this.reviewFiles().map((file) => file.path), set.review.current ?? set.active, direction) : null
+    if (!next) return this.setFlash(direction === 1 ? 'That was the last change.' : 'That was the first change.')
+    await this.reviewOpen(next)
+    this.active()?.editor?.stepChange(direction, true)
   }
 
   private async reviewStep(direction: 1 | -1): Promise<void> {
@@ -1157,22 +1230,23 @@ export class FilesViewComponent {
     const set = this.set
     if (!doc || !set || doc.status !== 'ready') return
     const comments = set.review.comments.filter((comment) => comment.path === doc.path)
-    const blame = doc.changes ? this.blameFor(doc) : new Map()
-    const signature = `${doc.changes}|${JSON.stringify(comments)}|${JSON.stringify([...blame.entries()])}`
+    if (doc.changes) this.tools.changes.load(doc)
+    const blame = doc.changes && !this.tools.changes.hasLineSessions(doc) ? this.blameFor(doc) : new Map()
+    const signature = `${doc.changes}|${JSON.stringify(comments)}|${JSON.stringify([...blame.entries()])}|${this.tools.changes.signature(doc)}`
     if (this.annotationSignature.get(doc) === signature) return
     this.annotationSignature.set(doc, signature)
     if (!doc.changes) {
       doc.annotate([])
       return
     }
-    doc.annotate(reviewExtension({
+    doc.annotate([this.tools.changes.extensions(doc), reviewExtension({
       comments, blame,
       onAdd: (line) => this.addComment(doc, line),
       onEdit: (id) => this.updateComment(id, (comment) => ({ ...comment, editing: true })),
       onSave: (id, text) => this.updateComment(id, (comment) => (text.trim() === '' ? null : { ...comment, text: text.trim(), editing: false })),
       onCancel: (id) => this.updateComment(id, (comment) => (comment.text.trim() === '' ? null : { ...comment, editing: false })),
       onDelete: (id) => void this.deleteComment(id)
-    }))
+    })])
   }
 
   private async copyText(text: string, done: string): Promise<void> {
@@ -1353,6 +1427,13 @@ export class FilesViewComponent {
       void this.reviewStep(event.key.toLowerCase() === 'n' ? 1 : -1)
       return
     }
+    if (plain && this.explorer.currentMode() === 'review' && event.key.toLowerCase() === 'v' && !typing && !this.active()?.editing) {
+      event.preventDefault()
+      event.stopPropagation()
+      const path = this.set?.review.current ?? this.set?.active
+      if (path) this.toggleViewed(path, !this.set?.review.viewed.has(path))
+      return
+    }
     if (plain && event.key.toLowerCase() === 'e' && !target.closest('input, textarea, select')) {
       const doc = this.active()
       if (!doc || doc.editing || !doc.canEdit) return
@@ -1366,7 +1447,7 @@ export class FilesViewComponent {
 
   // Typing reports a change per keystroke; the view only redraws when something it shows differs.
   private docChanged(doc: FileDoc): void {
-    const signature = `${doc.path}|${doc.status}|${doc.dirty}|${doc.editing}|${doc.changes}|${doc.conflict}|${doc.gone}|${doc.noRepo}|${doc.deleted}|${doc.stat?.added}|${doc.stat?.removed}|${doc.newFile}|${doc.previewing}`
+    const signature = `${doc.path}|${doc.status}|${doc.dirty}|${doc.editing}|${doc.changes}|${doc.conflict}|${doc.gone}|${doc.noRepo}|${doc.deleted}|${doc.stat?.added}|${doc.stat?.removed}|${doc.newFile}|${doc.previewing}|${doc.sideBySide}`
     if (this.lastSignature.get(doc) === signature) return
     this.lastSignature.set(doc, signature)
     if (doc !== this.active()) this.renderTabs()
@@ -1458,7 +1539,8 @@ export class FilesViewComponent {
       deletedName: doc?.deleted ? doc.path : null,
       canBack: this.nav.canBack,
       canForward: this.nav.canForward,
-      symbols: ready ? this.nav.breadcrumb().map((item) => item.name) : []
+      symbols: ready ? this.nav.breadcrumb().map((item) => item.name) : [],
+      sideBySide: doc?.sideBySide ?? false
     })
     if (!doc) return
     this.conflict.hidden = !doc.conflict

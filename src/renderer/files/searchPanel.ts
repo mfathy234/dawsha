@@ -12,6 +12,8 @@ export interface SearchHooks {
   folder(): string | null
   run(folder: string, request: SearchRequest): Promise<SearchResult>
   open(path: string, line: number): void
+  /** Replace every match across files. Opens a preview first; nothing is written until the user confirms. */
+  replace(request: SearchRequest, replacement: string): void
 }
 
 const split = (path: string): { name: string; folder: string } => {
@@ -62,6 +64,16 @@ export class SearchPanel {
       }
     }
   })
+  private readonly replaceInput = h('input', {
+    class: 'files-search-replace', id: 'files-search-replace', type: 'text', placeholder: 'Replace with', 'aria-label': 'Replace with', spellcheck: 'false',
+    onKeydown: (event: Event) => {
+      if ((event as KeyboardEvent).key === 'Enter') {
+        event.preventDefault()
+        this.replaceAll()
+      }
+    }
+  })
+  private readonly replaceButton = h('button', { class: 'btn small', type: 'button', id: 'files-search-replace-go', title: 'See every change before anything is written', onClick: () => this.replaceAll() }, 'Preview replace…')
   private readonly options = {
     matchCase: this.toggle('files-search-case', 'Aa', 'Match case'),
     wholeWord: this.toggle('files-search-word', 'ab', 'Match whole word'),
@@ -77,7 +89,7 @@ export class SearchPanel {
     this.results.addEventListener('keydown', (event) => this.onResultKey(event))
     this.el.append(
       h('div', { class: 'files-search-box' }, this.input, h('div', { class: 'files-search-opts', role: 'group', 'aria-label': 'Search options' }, this.options.matchCase, this.options.wholeWord, this.options.regex)),
-      this.include, this.summary, this.results)
+      this.include, h('div', { class: 'files-search-replace-row' }, this.replaceInput, this.replaceButton), this.summary, this.results)
     this.showHint()
   }
 
@@ -111,6 +123,15 @@ export class SearchPanel {
   private request(): SearchRequest {
     const on = (button: HTMLButtonElement): boolean => button.getAttribute('aria-pressed') === 'true'
     return { query: this.input.value, matchCase: on(this.options.matchCase), wholeWord: on(this.options.wholeWord), regex: on(this.options.regex), include: this.include.value.trim() }
+  }
+
+  private replaceAll(): void {
+    const request = this.request()
+    if (request.query.trim() === '') {
+      this.input.focus()
+      return
+    }
+    this.hooks.replace(request, this.replaceInput.value)
   }
 
   private schedule(): void {

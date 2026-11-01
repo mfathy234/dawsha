@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { Text } from '@codemirror/state'
 import { Chunk } from '@codemirror/merge'
 import { afterAll, describe, expect, it } from 'vitest'
-import { buildHunks, changesOf, hunkAtLine, lineSpan, textLines } from '../../src/renderer/files/changeHunks'
+import { buildHunks, changePreview, changesOf, hunkAtLine, lineSpan, textLines } from '../../src/renderer/files/changeHunks'
 import { diffHunks } from '../../src/main/gitHunks'
 
 const root = mkdtempSync(join(tmpdir(), 'dawsha-hunks-'))
@@ -79,5 +79,15 @@ describe('the hunk numbers', () => {
   it('keeps carriage returns in the patch lines', () => {
     const [hunk] = mine('a\r\nb\r\nc\r\n', 'a\r\nB\r\nc\r\n', '\r\n')
     expect(hunk.text).toContain('-b\r\n+B\r\n')
+  })
+})
+
+describe('the confirmation preview', () => {
+  it('shows the first changed lines and counts the rest', () => {
+    const [hunk] = mine(numbered(30), edit(numbered(30), [[14, 6, ['a', 'b', 'c', 'd', 'e', 'f']]]))
+    const lines = changePreview(hunk).split('\n')
+    expect(lines).toHaveLength(5)
+    expect(lines[0]).toBe('-line 15')
+    expect(lines[4]).toBe('and 8 more changed lines')
   })
 })

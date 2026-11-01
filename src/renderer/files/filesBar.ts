@@ -27,6 +27,8 @@ export interface BarModel {
   canForward: boolean
   /** The class and method the caret is in, outermost first. */
   symbols: readonly string[]
+  /** The Changes view shows two panes. */
+  sideBySide: boolean
 }
 
 export interface BarHooks {
@@ -42,6 +44,7 @@ export interface BarHooks {
   forward(): void
   /** A symbol crumb was chosen: open Go to Symbol. */
   symbol(): void
+  setSideBySide(on: boolean): void
 }
 
 /** The breadcrumb bar: the path, File | Changes, Preview | Source, Send to agent, the more menu and the inspector toggle. */
@@ -52,7 +55,8 @@ export class FilesBar {
   private readonly changesButton = h('button', { class: 'files-seg', type: 'button', id: 'files-changes', 'aria-pressed': 'false', title: 'Show what changed since main (click again for the file)', onClick: () => this.hooks.showChanges() }, 'Changes')
   private readonly previewButton = h('button', { class: 'files-seg', type: 'button', id: 'files-view-preview', 'aria-pressed': 'true', onClick: () => this.hooks.setPreview(true) }, 'Preview')
   private readonly sourceButton = h('button', { class: 'files-seg', type: 'button', id: 'files-view-source', 'aria-pressed': 'false', onClick: () => this.hooks.setPreview(false) }, 'Source')
-  private readonly diffSegment = h('div', { class: 'files-segment', role: 'group', 'aria-label': 'View' }, this.fileButton, this.changesButton)
+  private readonly layoutButton = h('button', { class: 'files-seg', type: 'button', id: 'files-side-by-side', 'aria-pressed': 'false', hidden: true, title: 'Show the file next to the version on main', onClick: () => this.hooks.setSideBySide(this.layoutButton.getAttribute('aria-pressed') !== 'true') }, 'Side by side')
+  private readonly diffSegment = h('div', { class: 'files-segment', role: 'group', 'aria-label': 'View' }, this.fileButton, this.changesButton, this.layoutButton)
   private readonly previewSegment = h('div', { class: 'files-segment', role: 'group', 'aria-label': 'Preview or source', hidden: true }, this.previewButton, this.sourceButton)
   private readonly done = h('button', { class: 'btn small', type: 'button', id: 'files-edit', hidden: true, 'aria-pressed': 'true', onClick: () => this.hooks.done() }, 'Done')
   private readonly send = h('button', { class: 'btn small', type: 'button', id: 'files-send', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send to agent', icon(ICONS.chevronDown))
@@ -105,6 +109,8 @@ export class FilesBar {
     ]))
     this.crumb.title = path
     this.diffSegment.hidden = !model.canDiff
+    this.layoutButton.hidden = !model.changes
+    this.layoutButton.setAttribute('aria-pressed', String(model.sideBySide))
     this.fileButton.setAttribute('aria-pressed', String(!model.changes))
     this.changesButton.setAttribute('aria-pressed', String(model.changes))
     const stat = model.added !== null || model.removed !== null ? ` +${model.added ?? 0} ${minus}${model.removed ?? 0}` : ''

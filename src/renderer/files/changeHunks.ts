@@ -145,3 +145,9 @@ export function textLines(text: string, eol: string): { lines: string[]; finalNe
   if (finalNewline) lines.pop()
   return { lines, finalNewline }
 }
+
+/** The first few changed lines of a hunk (with their - and + marks), for a confirmation that names what is about to be undone. */
+export function changePreview(hunk: Pick<Hunk, 'text'>, max = 4): string {
+  const changed = hunk.text.split('\n').slice(1).filter((line) => line.startsWith('-') || line.startsWith('+')).map((line) => line.replace(/\r$/, '').slice(0, 100))
+  return [...changed.slice(0, max), ...(changed.length > max ? [`and ${changed.length - max} more changed lines`] : [])].join('\n')
+}

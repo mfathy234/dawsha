@@ -98,7 +98,17 @@ function filesNavigationCommands(): Command[] {
     filesCommand('files.forward', 'Go Forward', 'forward', withKeys('Alt+ArrowRight'), 'next location history navigate'),
     filesCommand('files.everything', 'Go to Everything…', 'everything', withKeys('Ctrl+T'), 'search symbol text file anywhere'),
     filesCommand('files.symbol', 'Go to Symbol in this file…', 'symbol', withKeys('Ctrl+Shift+O'), 'outline method class function'),
-    filesCommand('files.line', 'Go to Line…', 'line', withKeys('Ctrl+G'), 'goto number position')
+    filesCommand('files.line', 'Go to Line…', 'line', withKeys('Ctrl+G'), 'goto number position'),
+    filesCommand('files.rename', 'Rename Symbol…', 'rename', functionKey('F2'), 'refactor name all files preview'),
+    filesCommand('files.replace', 'Replace in Files…', 'replace', withKeys('Ctrl+Shift+H'), 'search replace across files preview'),
+    filesCommand('files.calls', 'Call Hierarchy', 'calls', withKeys('Ctrl+Shift+Alt+H'), 'callers callees incoming outgoing'),
+    filesCommand('files.nextProblem', 'Go to Next Problem', 'next-problem', functionKey('F8'), 'error warning marker underline'),
+    filesCommand('files.previousProblem', 'Go to Previous Problem', 'previous-problem', functionKey('F8', true), 'error warning marker underline'),
+    filesCommand('files.nextChange', 'Go to Next Change', 'next-change', functionKey('F7'), 'diff review hunk changes'),
+    filesCommand('files.previousChange', 'Go to Previous Change', 'previous-change', functionKey('F7', true), 'diff review hunk changes'),
+    filesCommand('files.ask', 'Ask an Agent About This Code…', 'ask', withKeys('Ctrl+Alt+A'), 'send selection question symbol references'),
+    filesCommand('files.stale', 'Show Callers the Agent Did Not Update', 'stale', {}, 'unupdated stale callers implementations changed'),
+    filesCommand('files.follow', 'Follow the Agent', 'follow', {}, 'watch open edited files live toggle')
   ]
 }
 

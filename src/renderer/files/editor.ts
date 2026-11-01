@@ -4,6 +4,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { bracketMatching, codeFolding, ensureSyntaxTree, foldGutter, foldKeymap, indentUnit, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import { getChunks, unifiedMergeView } from '@codemirror/merge'
+import { nextDiagnostic, previousDiagnostic } from '@codemirror/lint'
 import { EDITOR_COLORS } from '../../shared/syntaxPalette'
 import { highlightStyleFor } from './syntaxTheme'
 import { loadLanguage } from './languages'
@@ -13,6 +14,9 @@ import { csharpOutline } from './csharpOutline'
 import { flashLine, navExtensions, setInline, type InlineSpec } from './editorNav'
 import { problemExtensions, showProblems } from './editorProblems'
 import { indentGuides } from './indentGuides'
+import { nextChangeStart } from './changeStep'
+import { hoverInfo, type HoverProvider } from './hoverTip'
+import { stickyScroll } from './stickyScroll'
 import type { IndentSettings } from './indentRules'
 import type { ProblemMark } from './problemMarks'
 import { identifierAt, type Identifier } from './symbolAt'
@@ -74,6 +78,14 @@ export interface FileEditor {
   setIndent(settings: IndentSettings | null): void
   /** Ctrl+click (Cmd+click) on a name. */
   onGoto(cb: (pos: number) => void): void
+  /** What resting the pointer on a name shows; null turns hover off. */
+  setHover(provider: HoverProvider | null): void
+  /** Moves to the next (1) or previous (-1) change in the Changes view. False when there is none that way. `fromEdge` starts from the file's start (or end) instead of the caret. */
+  stepChange(direction: 1 | -1, fromEdge?: boolean): boolean
+  /** Moves to the next or previous problem underline. False when the file has none. */
+  stepProblem(direction: 1 | -1): boolean
+  /** The selected text, or an empty string. */
+  selectedText(): string
 }
 
 export const CODE_FONT = "'Cascadia Code', 'JetBrains Mono', var(--font-mono)"
@@ -136,6 +148,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
   const annotations = new Compartment()
   const indent = new Compartment()
   const gotoListeners: Array<(pos: number) => void> = []
+  let hoverProvider: HoverProvider | null = null
+  let outlineOf: () => OutlineItem[] = () => []
   const csharp = languageKey(options.path) === 'csharp'
   let outlineTimer: number | undefined
   let inlineSpec: InlineSpec | null = null
@@ -172,6 +186,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
           for (const cb of gotoListeners) cb(pos)
         }),
         problemExtensions,
+        hoverInfo(() => hoverProvider),
+        stickyScroll(() => outlineOf()),
         EditorState.allowMultipleSelections.of(true),
         history(),
         drawSelection(),
@@ -212,6 +228,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
     if (!result.complete && outlineTimer === undefined) finishParse(Date.now())
     return result.items
   }
+
+  outlineOf = currentOutline
 
   void loadLanguage(options.path).then((ext) => {
     if (!ext || destroyed) return
@@ -315,6 +333,22 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
     },
     onGoto(cb) {
       gotoListeners.push(cb)
+    },
+    setHover(provider) {
+      hoverProvider = provider
+    },
+    stepChange(direction, fromEdge = false) {
+      const starts = (getChunks(view.state)?.chunks ?? []).map((chunk) => chunk.fromB)
+      const here = fromEdge ? (direction === 1 ? -1 : Number.POSITIVE_INFINITY) : view.state.doc.lineAt(view.state.selection.main.head).from
+      const target = nextChangeStart(starts, here, direction)
+      if (target === null) return false
+      view.dispatch({ selection: { anchor: target }, effects: EditorView.scrollIntoView(target, { y: 'center' }), userEvent: 'select.byChunk' })
+      return true
+    },
+    stepProblem: (direction) => (direction === 1 ? nextDiagnostic(view) : previousDiagnostic(view)),
+    selectedText() {
+      const { from, to } = view.state.selection.main
+      return view.state.sliceDoc(from, to)
     },
     destroy() {
       destroyed = true

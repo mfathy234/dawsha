@@ -1,4 +1,4 @@
-import type { EditFileOutcome, EditPreviewFile } from '../../shared/codeNavExtras'
+import type { EditFileOutcome, EditPreviewFile, TextEdit } from '../../shared/codeNavExtras'
 
 export interface ConfirmCopy {
   title: string
@@ -50,4 +50,28 @@ export function outcomeText(outcomes: readonly EditFileOutcome[]): { text: strin
   if (failed.length === 0) return { text: done, changed, failed }
   const why = failed.slice(0, 3).map((outcome) => `${outcome.path}: ${outcome.conflict ? 'changed on disk since the preview' : outcome.error ?? 'could not be written'}`).join('; ')
   return { text: `${done}. ${plural(failed.length, 'file')} not changed. ${why}`, changed, failed }
+}
+
+export interface PreviewRow {
+  line: number
+  before: string
+  after: string
+}
+
+const MANY_LINES = '(this edit spans several lines)'
+const LINE_BREAK = /\r\n|\r|\n/
+const NEW_LINES = /\r?\n/g
+
+/** The lines an edit list changes, as they read before and after. Columns are 1-based and the end is exclusive. */
+export function previewRows(text: string, edits: readonly TextEdit[]): PreviewRow[] {
+  const lines = text.split(LINE_BREAK)
+  const byLine = new Map<number, TextEdit[]>()
+  for (const edit of edits) byLine.set(edit.line, [...(byLine.get(edit.line) ?? []), edit])
+  return [...byLine.entries()].sort((a, b) => a[0] - b[0]).map(([line, list]) => {
+    const before = lines[line - 1] ?? ''
+    if (list.some((edit) => edit.endLine !== edit.line)) return { line, before, after: MANY_LINES }
+    const apply = (current: string, edit: TextEdit): string => current.slice(0, edit.column - 1) + edit.newText.replace(NEW_LINES, ' ') + current.slice(edit.endColumn - 1)
+    const after = [...list].sort((a, b) => b.column - a.column).reduce(apply, before)
+    return { line, before, after }
+  })
 }
