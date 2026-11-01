@@ -3,8 +3,9 @@ import type { HunkRequest, HunkResult } from '../shared/codeNavExtras'
 import { validRelative } from './codeNav/editPreviews'
 import { forgetChanges } from './git'
 import { git, REPO_BUSY, repoRoot, tryLockRepo, unlockRepo } from './gitCommit'
-import { mergeBase } from './gitWorkspace'
+import { mergeBase, readProjectFile, writeProjectFile } from './gitWorkspace'
 import { addedFileDiff, hunkTarget, matchesMtime } from './hunkSource'
+import { reverseHunk } from './hunkRevert'
 
 type Coordinates = Pick<HunkRequest, 'oldStart' | 'oldLines' | 'newStart' | 'newLines'>
 export interface DiffHunk { coordinates: Coordinates; text: string }
@@ -51,6 +52,16 @@ async function applyMatching(folder: string, root: string, request: HunkRequest,
   if (!text) return conflict()
   const hunk = diffHunks(text).find(value => Object.entries(value.coordinates).every(([key, number]) => request[key as keyof Coordinates] === number))
   if (!hunk || hunk.text !== request.expectedHunk) return conflict()
+  // Git apply runs checkout EOL conversion on the entire working file. Existing-file
+  // reverts instead retain its literal context and write only the reconstructed hunk.
+  if (operation === 'revert' && !target.absent && !/^new file mode /m.test(text)) {
+    const original = await readProjectFile(folder, request.path)
+    if (!original.ok || original.text === null || original.mtimeMs !== request.expectedMtime) return conflict()
+    const reverted = reverseHunk(original.text, hunk)
+    if (reverted === null || !await matchesMtime(folder, request.path, target, request.expectedMtime)) return conflict()
+    const result = await writeProjectFile(folder, request.path, reverted, request.expectedMtime, { literal: true, expectedText: original.text })
+    return result.ok ? { ok: true } : result
+  }
   const patch = text.slice(0, text.search(/^@@ /m)) + hunk.text
   const args = operation === 'stage' ? ['--cached'] : ['--reverse']
   if (!await apply(root, patch, [...args, '--check'])) return conflict('Git cannot apply this hunk to the current index or working file. Refresh Changes.')

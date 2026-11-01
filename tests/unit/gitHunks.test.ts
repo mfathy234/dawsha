@@ -9,17 +9,17 @@ import type { HunkRequest } from '../../src/shared/codeNavExtras'
 const roots: string[] = []
 afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
 function git(root: string, args: string[]): string { return execFileSync('git', args, { cwd: root, windowsHide: true, encoding: 'utf8' }) }
-function fixture(): string {
+function fixture(eol = '\n', autocrlf = 'false'): string {
   const root = mkdtempSync(join(tmpdir(), 'dawsha-hunk-'))
   roots.push(root)
   git(root, ['init', '-q', '-b', 'main'])
   git(root, ['config', 'user.name', 'Tests'])
   git(root, ['config', 'user.email', 'tests@example.test'])
-  git(root, ['config', 'core.autocrlf', 'false'])
-  writeFileSync(join(root, 'a.txt'), Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join('\n') + '\n')
+  git(root, ['config', 'core.autocrlf', autocrlf])
+  writeFileSync(join(root, 'a.txt'), Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join(eol) + eol)
   git(root, ['add', 'a.txt'])
   git(root, ['commit', '-qm', 'initial'])
-  writeFileSync(join(root, 'a.txt'), readFileSync(join(root, 'a.txt'), 'utf8').replace('line 2\n', 'changed 2\n').replace('line 25\n', 'changed 25\n'))
+  writeFileSync(join(root, 'a.txt'), readFileSync(join(root, 'a.txt'), 'utf8').replace(`line 2${eol}`, `changed 2${eol}`).replace(`line 25${eol}`, `changed 25${eol}`))
   return root
 }
 async function request(root: string): Promise<HunkRequest> {
@@ -28,6 +28,57 @@ async function request(root: string): Promise<HunkRequest> {
   return { path: 'a.txt', ...hunk.coordinates, expectedMtime: statSync(join(root, 'a.txt')).mtimeMs, expectedHunk: hunk.text }
 }
 describe('one hunk', () => {
+  for (const eol of ['\n', '\r\n']) {
+    for (const autocrlf of ['true', 'false', 'input']) {
+      it.each(['stage', 'revert'] as const)(`%s preserves ${eol === '\n' ? 'LF' : 'CRLF'} bytes with core.autocrlf=${autocrlf}`, async operation => {
+        const root = fixture(eol, autocrlf)
+        const workingBefore = readFileSync(join(root, 'a.txt'), 'utf8')
+        const indexBefore = git(root, ['show', ':a.txt'])
+        const selected = await request(root)
+        expect(await changeHunk(root, selected, operation)).toEqual({ ok: true })
+        expect(readFileSync(join(root, 'a.txt'), 'utf8')).toBe(operation === 'stage' ? workingBefore : workingBefore.replace(`changed 2${eol}`, `line 2${eol}`))
+        expect(git(root, ['show', ':a.txt'])).toBe(operation === 'revert' ? indexBefore : indexBefore.replace('line 2', 'changed 2'))
+      })
+    }
+  }
+  it.each([
+    ['a final line without a newline', 'first\nlast', 'first\nchanged'],
+    ['a final carriage return without LF', 'first\nlast\r', 'first\nchanged\r'],
+    ['an inserted line', 'first\nlast\n', 'first\ninserted\nlast\n'],
+    ['a removed line', 'first\nremoved\nlast\n', 'first\nlast\n'],
+    ['mixed line endings', 'first\r\nsecond\nlast\r\n', 'first\r\nchanged\nlast\r\n'],
+    ['a literal LF changed to CRLF', 'first\nlast\n', 'first\r\nlast\n'],
+    ['a removed LF line between CRLF lines', 'first\r\nremoved\nlast\r\n', 'first\r\nlast\r\n']
+  ])('reverts %s without applying editor save rules', async (_name, before, after) => {
+    const root = fixture()
+    writeFileSync(join(root, 'a.txt'), before)
+    git(root, ['add', 'a.txt'])
+    git(root, ['commit', '-qm', 'line shape'])
+    writeFileSync(join(root, '.editorconfig'), 'root = true\n[*]\nend_of_line = crlf\ninsert_final_newline = true\n')
+    writeFileSync(join(root, 'a.txt'), after)
+    expect(await changeHunk(root, await request(root), 'revert')).toEqual({ ok: true })
+    expect(readFileSync(join(root, 'a.txt'), 'utf8')).toBe(before)
+    expect(git(root, ['show', ':a.txt'])).toBe(before)
+  })
+  it.each([
+    ['-text', 'true', 'first\nlast\r\n', 'first\r\nlast\r\n'],
+    ['text eol=lf', 'false', 'first\r\nlast\r\n', 'changed\r\nlast\r\n'],
+    ['text eol=crlf', 'false', 'first\r\nlast\r\n', 'changed\r\nlast\r\n'],
+    ['text=auto', 'true', 'first\nlast\r\n', 'first\r\nlast\r\n']
+  ])('uses the actual diff conversion for attributes %s and core.autocrlf=%s', async (attributes, autocrlf, before, after) => {
+    const root = fixture()
+    // Commit literal bytes first: text=auto must preserve an existing CRLF index.
+    writeFileSync(join(root, 'a.txt'), before)
+    git(root, ['add', 'a.txt'])
+    git(root, ['commit', '-qm', 'literal baseline'])
+    git(root, ['config', 'core.autocrlf', autocrlf])
+    writeFileSync(join(root, '.gitattributes'), `a.txt ${attributes}\n`)
+    writeFileSync(join(root, 'a.txt'), after)
+    const indexBefore = git(root, ['show', ':a.txt'])
+    expect(await changeHunk(root, await request(root), 'revert')).toEqual({ ok: true })
+    expect(readFileSync(join(root, 'a.txt'), 'utf8')).toBe(before)
+    expect(git(root, ['show', ':a.txt'])).toBe(indexBefore)
+  })
   it('stages only the selected hunk via stdin', async () => {
     const root = fixture()
     expect(await changeHunk(root, await request(root), 'stage')).toEqual({ ok: true })
