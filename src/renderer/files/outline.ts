@@ -1,4 +1,4 @@
-import { ensureSyntaxTree } from '@codemirror/language'
+import { ensureSyntaxTree, syntaxTree } from '@codemirror/language'
 import type { EditorState } from '@codemirror/state'
 import type { SyntaxNode } from '@lezer/common'
 
@@ -65,11 +65,21 @@ function collect(state: EditorState, parent: SyntaxNode, depth: number, out: Out
   }
 }
 
-/** Top-level classes, functions, types and (for Markdown) headings, with a class's methods nested one level. */
-export function outlineOf(state: EditorState): OutlineItem[] {
-  const tree = ensureSyntaxTree(state, state.doc.length, 50)
-  if (!tree) return []
-  const out: OutlineItem[] = []
-  collect(state, tree.topNode, 0, out)
-  return out
+export interface OutlineResult {
+  items: OutlineItem[]
+  /** False when the file is too big to parse within the quick budget: the items cover the part parsed so far. */
+  complete: boolean
 }
+
+const QUICK_BUDGET_MS = 50
+
+/** Top-level classes, functions, types and (for Markdown) headings, with a class's methods nested one level. */
+export function outlineResult(state: EditorState): OutlineResult {
+  const quick = ensureSyntaxTree(state, state.doc.length, QUICK_BUDGET_MS)
+  const tree = quick ?? syntaxTree(state)
+  const items: OutlineItem[] = []
+  collect(state, tree.topNode, 0, items)
+  return { items, complete: quick !== null }
+}
+
+export const outlineOf = (state: EditorState): OutlineItem[] => outlineResult(state).items

@@ -3,6 +3,7 @@ import { h } from '../dom'
 import { fileIcon } from './fileIcon'
 import { LatestGate } from './asyncGuard'
 import { errorNote, loadingNote } from './loadNote'
+import { shouldSearch } from './searchGate'
 
 const DEBOUNCE_MS = 300
 
@@ -44,7 +45,7 @@ export class SearchPanel {
       const key = (event as KeyboardEvent).key
       if (key === 'Enter') {
         event.preventDefault()
-        void this.run()
+        void this.run(true)
       } else if (key === 'ArrowDown') {
         event.preventDefault()
         this.results.querySelector<HTMLElement>('.files-hit')?.focus()
@@ -57,7 +58,7 @@ export class SearchPanel {
     onKeydown: (event: Event) => {
       if ((event as KeyboardEvent).key === 'Enter') {
         event.preventDefault()
-        void this.run()
+        void this.run(true)
       }
     }
   })
@@ -117,7 +118,8 @@ export class SearchPanel {
     this.timer = window.setTimeout(() => void this.run(), DEBOUNCE_MS)
   }
 
-  async run(): Promise<void> {
+  /** `force` searches again even for the same query: Enter does, because files may have changed since. */
+  async run(force = false): Promise<void> {
     window.clearTimeout(this.timer)
     const folder = this.hooks.folder()
     const request = this.request()
@@ -129,7 +131,7 @@ export class SearchPanel {
       return
     }
     const key = JSON.stringify([folder, request])
-    if (key === this.lastKey) return
+    if (!shouldSearch(this.lastKey, key, force)) return
     this.lastKey = key
     const ticket = this.gate.begin()
     this.summary.replaceChildren(loadingNote('Searching…'))
