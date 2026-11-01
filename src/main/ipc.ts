@@ -36,6 +36,8 @@ import { PreviewServer } from './filePreviewServer'
 import { registerPreviewProtocol } from './previewProtocol'
 import { fileCommitDetails, fileCommitFile, fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { trashProjectPath } from './filesTrash'
+import { codeNavigation, installCodeNav } from './codeNav'
+import { editorConfig } from './editorConfig'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
@@ -272,6 +274,23 @@ export function registerIpc(
   ipcMain.handle(IPC.filesSearch, async (_event, folder: unknown, request: unknown) => {
     const root = await known(folder)
     return root ? searchFiles(root, request) : refused
+  })
+  ipcMain.handle(IPC.codeNav, async (_event, folder: unknown, request: unknown) => {
+    const root = await known(folder)
+    return root ? codeNavigation.query(root, request) : refused
+  })
+  ipcMain.handle(IPC.codeNavStatus, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    return root ? codeNavigation.status(root, path) : { engine: 'name', state: 'none', canInstall: false }
+  })
+  ipcMain.handle(IPC.codeNavRestart, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    if (root) await codeNavigation.restart(root, path)
+  })
+  ipcMain.handle(IPC.codeNavInstall, () => installCodeNav())
+  ipcMain.handle(IPC.editorConfig, async (_event, folder: unknown, path: unknown) => {
+    const root = await known(folder)
+    return root ? editorConfig(root, path) : {}
   })
   ipcMain.handle(IPC.filesLog, async (_event, folder: unknown, path: unknown) => {
     const root = await known(folder)

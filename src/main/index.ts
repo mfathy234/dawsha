@@ -5,6 +5,7 @@ import { IPC } from '../shared/ipc'
 import { CodexWatcher } from './codexWatcher'
 import { GeminiWatcher } from './geminiWatcher'
 import { registerIpc } from './ipc'
+import { stopCodeNavigation } from './codeNav'
 import { notifyUser } from './desktop'
 import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
@@ -254,6 +255,7 @@ app.whenReady().then(async () => {
   const shutdownDeps: ShutdownDeps = {
     log: quitLog,
     stopServices: async () => {
+      stopCodeNavigation()
       watcher.stop()
       codexWatcher.stop()
       geminiWatcher.stop()
