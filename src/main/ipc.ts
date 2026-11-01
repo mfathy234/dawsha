@@ -38,6 +38,8 @@ import { fileCommitDetails, fileCommitFile, fileLog, htmlToOpen, linkedRepos, re
 import { trashProjectPath } from './filesTrash'
 import { codeNavigation, installCodeNav } from './codeNav'
 import { editorConfig } from './editorConfig'
+import { registerCodeNavExtrasIpc } from './codeNavExtrasIpc'
+import { closeAgentFiles, refreshAgentFiles, unwatchAgentFiles, watchAgentFiles } from './agentFiles'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
@@ -202,6 +204,7 @@ export function registerIpc(
   ipcMain.handle(IPC.gitBaseline, (_event, folder: unknown) => gated(folder, sessionBaseline))
   ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => gated(folder, (root) => sessionStatus(root, baseline)))
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
+  registerCodeNavExtrasIpc(known, getWindow)
   const refused = { ok: false as const, error: 'Not a project folder.' }
   ipcMain.handle(IPC.filesWorkspaces, (_event, projectId: unknown, folder: unknown) => listFilesWorkspaces(settings.get().projects, projectId, folder))
   ipcMain.handle(IPC.filesTrash, (_event, folder: unknown, path: unknown) => trashProjectPath(settings.get().projects, folder, path, full => shell.trashItem(full)))
@@ -222,6 +225,7 @@ export function registerIpc(
     return root ? fileAgainstBase(root, path) : refused
   })
   const watchers = createWatchRegistry((key, paths) => {
+    refreshAgentFiles(key)
     const window = getWindow()
     if (window && !window.isDestroyed()) window.webContents.send(IPC.filesChanged, key, paths)
   }, undefined, undefined, (key) => {
@@ -237,14 +241,16 @@ export function registerIpc(
       watchedWindow = window
       window.once('closed', () => {
         watchers.closeAll()
+        closeAgentFiles()
         watchedWindow = null
       })
-      window.webContents.on('did-navigate', () => watchers.closeAll())
+      window.webContents.on('did-navigate', () => { watchers.closeAll(); closeAgentFiles() })
     }
     watchers.watch(root)
+    watchAgentFiles(root)
   })
   ipcMain.handle(IPC.filesUnwatch, (_event, folder: unknown) => {
-    if (typeof folder === 'string') watchers.unwatch(folder)
+    if (typeof folder === 'string') { watchers.unwatch(folder); unwatchAgentFiles(folder) }
   })
   ipcMain.handle(IPC.gitSync, (_event, folder: string) => gitSync(folder))
   ipcMain.handle(IPC.gitBranches, (_event, folder: unknown) => gated(folder, listBranches))
