@@ -9,7 +9,7 @@ import { findSolution } from '../../src/main/codeNav/csharp'
 const roots: string[] = []
 afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
 function fixture(): string {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'dawsha-router-')))
+  const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'dawsha-router-')))
   roots.push(root)
   writeFileSync(join(root, 'a.ts'), 'interface Shape {}\nclass Circle implements Shape {}\n')
   return root
