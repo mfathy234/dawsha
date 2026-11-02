@@ -171,6 +171,7 @@ export class PaneChat {
       ask: this.ask,
       pending: views,
       starting: this.starting,
+      session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
         showTerminal: () => this.host.showTerminal(),
         continueIn: (to) => this.host.continueIn(to),

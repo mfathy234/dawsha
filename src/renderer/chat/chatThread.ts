@@ -11,6 +11,8 @@ import type { AskPrompt } from '../../shared/chatAsk'
 import type { AskAnswer } from '../../shared/menuAnswer'
 import type { PendingLabel } from '../../shared/chatPending'
 import { AskCard } from './chatAsk'
+import { imageStrip } from './chatImages'
+import type { ChatSessionRef } from './chatImageCache'
 
 export interface ThreadActions {
   showTerminal(): void
@@ -37,6 +39,8 @@ export interface ThreadContext {
   ask: AskPrompt | null
   pending: readonly PendingView[]
   starting: boolean
+  /** Which session the thread shows, so its pictures can be fetched. */
+  session: ChatSessionRef | null
   actions: ThreadActions
 }
 
@@ -108,26 +112,28 @@ export class ChatThread {
     }
     items.forEach((item, index) => {
       if (item.kind === 'tool') {
-        tools.push(...this.tool(item, ctx.phase === 'working' || ctx.phase === 'approval' || ctx.phase === 'menu'))
+        tools.push(...this.tool(item, ctx.phase === 'working' || ctx.phase === 'approval' || ctx.phase === 'menu', ctx))
         return
       }
       flush()
-      out.push(item.kind === 'message' ? this.message(item) : this.notice(item, index === items.length - 1, ctx))
+      out.push(item.kind === 'message' ? this.message(item, ctx) : this.notice(item, index === items.length - 1, ctx))
     })
     flush()
     return out
   }
 
-  private message(item: ChatMessage): HTMLElement {
+  private message(item: ChatMessage, ctx: ThreadContext): HTMLElement {
     const folded = foldLines(item.text)
     const opened = this.open.has(`m:${item.id}`)
     const shown = opened || folded.hidden === 0 ? item.text : folded.head
     const body = h('div', { class: item.role === 'user' ? 'chat-you' : 'chat-say', dir: textDirection(item.text), 'data-role': item.role }, ...richText(shown))
     if (folded.hidden > 0) body.append(this.toggle(`m:${item.id}`, opened ? CHAT_TEXT.showLess : CHAT_TEXT.showMore(folded.hidden), 'chat-more'))
+    const pictures = imageStrip(item.images, ctx.session)
+    if (pictures) body.append(pictures)
     return body
   }
 
-  private tool(item: ChatTool, live: boolean): HTMLElement[] {
+  private tool(item: ChatTool, live: boolean, ctx: ThreadContext): HTMLElement[] {
     const expanded = this.open.has(`t:${item.id}`)
     const row = h(
       'button',
@@ -137,9 +143,10 @@ export class ChatThread {
       h('bdi', { dir: 'ltr' }, h('code', {}, item.target)),
       item.done ? this.toolNote(item) : null
     )
-    if (!expanded) return [row]
+    const pictures = imageStrip(item.images, ctx.session)
+    if (!expanded) return pictures ? [row, pictures] : [row]
     const text = item.output === '' ? CHAT_TEXT.noOutput : item.output
-    return [row, h('pre', { class: 'chat-toolout', dir: 'ltr' }, item.outputTruncated ? `${text}\n${CHAT_TEXT.outputTooLarge}` : text)]
+    return [row, h('pre', { class: 'chat-toolout', dir: 'ltr' }, item.outputTruncated ? `${text}\n${CHAT_TEXT.outputTooLarge}` : text), ...(pictures ? [pictures] : [])]
   }
 
   private toolNote(item: ChatTool): HTMLElement | null {

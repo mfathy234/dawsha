@@ -1,3 +1,4 @@
+import type { ChatImageRef } from '../../shared/chatImage'
 import { CHAT_ITEMS_MAX, CHAT_MESSAGE_MAX, boundText, type ChatItem, type ChatNoticeKind, type ChatTool } from '../../shared/chatLog'
 import { isTestCommand, parseTestCounts, testSummary } from '../../shared/testRun'
 import { cleanText } from '../../shared/transcript'
@@ -8,6 +9,7 @@ const KEEP = CHAT_ITEMS_MAX * 2
 export interface ToolResult {
   output: string
   failed?: boolean
+  images?: ChatImageRef[]
 }
 
 function noteFor(tool: ChatTool, output: string, failed: boolean | undefined): string | undefined {
@@ -33,9 +35,18 @@ export class ChatBuilder {
     return this.list.slice(-CHAT_ITEMS_MAX)
   }
 
-  message(id: string, role: 'user' | 'agent', text: string, at?: number): void {
+  message(id: string, role: 'user' | 'agent', text: string, at?: number, images: readonly ChatImageRef[] = []): void {
     const body = boundText(cleanText(text).trim(), CHAT_MESSAGE_MAX).text
-    if (body !== '') this.push({ kind: 'message', id, role, text: body, at })
+    if (body !== '' || images.length > 0) this.push({ kind: 'message', id, role, text: body, ...(images.length > 0 ? { images: [...images] } : {}), at })
+  }
+
+  /** Pictures that arrived after the user's message they belong to. True when the last item was that message. */
+  attachToLastUser(images: readonly ChatImageRef[]): boolean {
+    const index = this.list.length - 1
+    const last = this.list[index]
+    if (images.length === 0 || last?.kind !== 'message' || last.role !== 'user') return false
+    this.list[index] = { ...last, images: [...(last.images ?? []), ...images] }
+    return true
   }
 
   notice(id: string, notice: ChatNoticeKind, text: string, at?: number, resetsAt?: number): void {
@@ -57,6 +68,9 @@ export class ChatBuilder {
       outputTruncated: truncated,
       done: false,
       ...(shape.ask ? { ask: shape.ask } : {}),
+      ...(shape.path ? { path: shape.path } : {}),
+      ...(shape.line ? { line: shape.line } : {}),
+      ...(shape.images && shape.images.length > 0 ? { images: [...shape.images] } : {}),
       at
     }
     this.open.set(id, this.list.length)
@@ -72,7 +86,8 @@ export class ChatBuilder {
     const keepsDiff = tool.verb === 'Edited' || tool.verb === 'Created'
     const bounded = keepsDiff && tool.output !== '' ? { output: tool.output, truncated: tool.outputTruncated } : boundedOutput(result.output)
     const failed = result.failed === true ? true : undefined
-    this.list[index] = { ...tool, output: bounded.output, outputTruncated: bounded.truncated, failed, note: noteFor(tool, result.output, failed), done: true }
+    const images = [...(tool.images ?? []), ...(result.images ?? [])]
+    this.list[index] = { ...tool, ...(images.length > 0 ? { images } : {}), output: bounded.output, outputTruncated: bounded.truncated, failed, note: noteFor(tool, result.output, failed), done: true }
   }
 
   private push(item: ChatItem): void {

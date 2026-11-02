@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CodexChatReader } from '../../src/main/chatLog/codexReader'
+import { PNG_DATA_URL } from '../support/tinyImages'
 import type { ChatMessage, ChatTool } from '../../src/shared/chatLog'
 
 const lines = (...records: unknown[]): string => records.map((r) => JSON.stringify(r)).join('\n') + '\n'
@@ -112,5 +113,43 @@ describe('CodexChatReader', () => {
     const tool = reader.items()[0] as ChatTool
     expect(tool.outputTruncated).toBe(true)
     expect(tool.output.split('\n').length).toBeLessThanOrEqual(82)
+  })
+
+  const userItem = { type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: '<image name=[Image #1]>' }, { type: 'input_image', image_url: PNG_DATA_URL, detail: 'high' }] } }
+  const typed = { type: 'event_msg', payload: { type: 'user_message', message: 'Look at this' } }
+
+  it('puts an ImageView on a tool row with a file reference', () => {
+    const reader = new CodexChatReader()
+    reader.feed(lines(done({ type: 'ImageView', id: 'iv1', path: 'file:///C:/proj/ref/pose.png' })))
+    const [tool] = reader.items() as ChatTool[]
+    expect(tool).toMatchObject({ verb: 'Viewed', done: true })
+    expect(tool.images?.[0]).toMatchObject({ source: 'file', label: 'pose.png' })
+  })
+
+  it('uses the saved path of a generated picture and skips the inline result', () => {
+    const reader = new CodexChatReader()
+    reader.feed(lines(done({ type: 'Extension', kind: 'image_gen.generation', id: 'e1', status: 'completed', result: 'A'.repeat(5000), savedPath: 'C:\\Users\\me\\gen\\g.png' })))
+    const [tool] = reader.items() as ChatTool[]
+    expect(tool.verb).toBe('Generated')
+    expect(tool.images).toHaveLength(1)
+    expect(JSON.stringify(tool)).not.toContain('AAAAAAAA')
+  })
+
+  it('ignores an Extension without a saved path', () => {
+    const reader = new CodexChatReader()
+    reader.feed(lines(done({ type: 'Extension', kind: 'image_gen.generation', id: 'e2', result: 'AAAA' })))
+    expect(reader.items()).toHaveLength(0)
+  })
+
+  it('attaches input_image parts to the user message whichever record comes first', () => {
+    const after = new CodexChatReader()
+    after.feed(lines(typed, userItem))
+    expect((after.items()[0] as ChatMessage).images).toHaveLength(1)
+    const before = new CodexChatReader()
+    before.feed(lines(userItem, typed))
+    const [message] = before.items() as ChatMessage[]
+    expect(message.text).toBe('Look at this')
+    expect(message.images).toHaveLength(1)
+    expect(before.image(message.images?.[0].id ?? '')?.kind).toBe('bytes')
   })
 })

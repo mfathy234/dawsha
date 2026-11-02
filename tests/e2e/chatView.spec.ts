@@ -1,7 +1,8 @@
-import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { activeTermId, bufferText, closeApp, createSandbox, feedTerminal, launchApp, openSettings, type Sandbox } from './helpers'
+import { PNG_BASE64 } from '../support/tinyImages'
 
 const AGENT = resolve(__dirname, '../support/chatAgent.cjs')
 const SESSION = '5b1c2d3e-4f50-4a61-8b72-93a4b5c6d7e8'
@@ -453,6 +454,41 @@ test('a sent message carries a marker until the log has it', async () => {
     await expect(chat.locator('.chat-you', { hasText: 'hello there' }).first()).toBeVisible({ timeout: 15_000 })
     await expect(chat.locator('.chat-say')).toContainText('Echo: hello there', { timeout: 15_000 })
     await expect(chat.locator('.chat-pend')).toHaveCount(0, { timeout: 15_000 })
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('a pasted picture shows as a thumbnail, opens in a lightbox and its actions work', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    writeLog(sandbox, [
+      { type: 'user', uuid: 'p1', message: { role: 'user', content: [{ type: 'text', text: 'What is in this picture?' }, { type: 'image', source: { type: 'base64', media_type: 'image/png', data: PNG_BASE64 } }, { type: 'text', text: '[Image: source: C:\\tmp\\shot.png]' }] } },
+      { type: 'assistant', uuid: 'p2', message: { role: 'assistant', content: [{ type: 'text', text: 'One pixel.' }] } }
+    ])
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    await expect(chat.locator('.chat-you')).toContainText('What is in this picture?', { timeout: 15_000 })
+    await expect(chat.locator('.chat-you')).not.toContainText('[Image: source')
+    const thumb = chat.locator('.chat-thumb')
+    await expect(thumb).toHaveCount(1)
+    await expect(thumb.locator('img')).toHaveAttribute('src', /^data:image\/png;base64,/, { timeout: 15_000 })
+
+    await thumb.click()
+    const box = page.locator('.chat-lightbox')
+    await expect(box).toBeVisible()
+    await expect(box.locator('img')).toBeVisible({ timeout: 15_000 })
+    await box.getByRole('button', { name: 'Open externally' }).click()
+    await expect.poll(() => (existsSync(sandbox.openLog) ? readFileSync(sandbox.openLog, 'utf8') : '')).toContain('"kind":"image"')
+    await page.keyboard.press('Escape')
+    await expect(box).toHaveCount(0)
+
+    await thumb.click()
+    await expect(box).toBeVisible()
+    await page.mouse.click(5, 5)
+    await expect(box).toHaveCount(0)
   } finally {
     await closeApp(app)
   }

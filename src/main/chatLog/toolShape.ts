@@ -1,3 +1,4 @@
+import type { ChatImageRef } from '../../shared/chatImage'
 import { classifyTool } from '../../shared/timelineParse'
 import { toolKind, type ToolKind } from '../../shared/chatKind'
 import { CHAT_OUTPUT_LINES, CHAT_OUTPUT_MAX, CHAT_TARGET_MAX, boundText } from '../../shared/chatLog'
@@ -14,6 +15,11 @@ export interface ToolShape {
   preview: string
   /** The questions of an AskUserQuestion call. */
   ask?: AskQuestion[]
+  /** Pictures the call itself carries, such as one the agent was asked to view. */
+  images?: ChatImageRef[]
+  /** The one file this call touched, for the open button. */
+  path?: string
+  line?: number
 }
 
 const CREATE_TOOLS = new Set(['write', 'create_file', 'write_file'])
@@ -33,6 +39,12 @@ function diffPreview(input: Json): string {
     .join('\n')
 }
 
+/** A positive whole number from a tool argument, as the line it points at. */
+export function lineOf(value: unknown): { line?: number } {
+  const line = typeof value === 'number' ? value : typeof value === 'string' ? Number.parseInt(value, 10) : NaN
+  return Number.isInteger(line) && line > 0 ? { line } : {}
+}
+
 export function boundedOutput(text: string): { output: string; truncated: boolean } {
   const bounded = boundText(cleanText(text), CHAT_OUTPUT_MAX, CHAT_OUTPUT_LINES)
   return { output: bounded.text, truncated: bounded.truncated }
@@ -45,6 +57,7 @@ function editShape(name: string, input: Json, edits: { path: string; added: numb
     kind: CREATE_TOOLS.has(name) ? 'create' : 'edit',
     verb: CREATE_TOOLS.has(name) ? 'Created' : 'Edited',
     target: `${first.path}${more}`,
+    path: first.path,
     added: edits.reduce((sum, edit) => sum + edit.added, 0),
     removed: edits.reduce((sum, edit) => sum + edit.removed, 0),
     preview: diffPreview(input)
@@ -72,7 +85,9 @@ export function toolShape(rawName: unknown, rawInput: unknown): ToolShape {
   const tool = classifyTool(rawName, rawInput)
   if (tool?.kind === 'edit') return editShape(name, input, tool.edits)
   if (tool?.kind === 'read') {
-    return { kind: SEARCH_TOOLS.has(name) ? 'search' : 'read', verb: SEARCH_TOOLS.has(name) ? 'Searched' : 'Read', target: flat(tool.paths.join(', '), CHAT_TARGET_MAX), preview: '' }
+    const search = SEARCH_TOOLS.has(name)
+    const target = flat(tool.paths.join(', '), CHAT_TARGET_MAX)
+    return { kind: search ? 'search' : 'read', verb: search ? 'Searched' : 'Read', target, preview: '', ...(search || tool.paths.length !== 1 ? {} : { path: tool.paths[0], ...lineOf(input.offset) }) }
   }
   if (tool?.kind === 'command') {
     const line = tool.command.split('\n')[0]

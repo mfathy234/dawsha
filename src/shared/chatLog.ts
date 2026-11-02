@@ -1,4 +1,5 @@
 import type { AskQuestion } from './chatAsk'
+import type { ChatImageActionRequest, ChatImageActionResult, ChatImageRef, ChatImageRequest, ChatImageResult } from './chatImage'
 import type { ToolKind } from './chatKind'
 import type { TabAgent } from './types'
 
@@ -66,6 +67,7 @@ export interface ChatMessage {
   id: string
   role: 'user' | 'agent'
   text: string
+  images?: ChatImageRef[]
   at?: number
 }
 
@@ -84,6 +86,10 @@ export interface ChatTool {
   done: boolean
   /** The questions of an AskUserQuestion call, while it waits for an answer. */
   ask?: AskQuestion[]
+  images?: ChatImageRef[]
+  /** The file the call touched, and the line it was at when known. */
+  path?: string
+  line?: number
   at?: number
 }
 
@@ -121,11 +127,15 @@ export interface ChatReleaseRequest {
 export interface ChatApi {
   read(request: ChatReadRequest): Promise<ChatReadResult>
   release(request: ChatReleaseRequest): Promise<void>
+  image(request: ChatImageRequest): Promise<ChatImageResult>
+  imageAction(request: ChatImageActionRequest): Promise<ChatImageActionResult>
 }
 
 export const CHAT_IPC = {
   read: 'chat:read',
-  release: 'chat:release'
+  release: 'chat:release',
+  image: 'chat:image',
+  imageAction: 'chat:image-action'
 } as const
 
 export interface Bounded {

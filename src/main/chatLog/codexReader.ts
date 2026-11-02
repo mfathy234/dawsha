@@ -1,8 +1,10 @@
+import { baseName, fileUrlToPath, type ChatImageRef } from '../../shared/chatImage'
 import { CHAT_TARGET_MAX, type ChatItem } from '../../shared/chatLog'
 import { lineCount, parsePatch } from '../../shared/timelineParse'
 import { asTime, flat, isRecord, type Json } from '../../shared/transcript'
 import { CHAT_TEXT } from '../../shared/chatStrings'
 import { ChatBuilder } from './builder'
+import { ImageCollector, type ImageEntry } from './imageTable'
 import type { ChatLineReader, ReaderStats } from './reader'
 import type { ToolShape } from './toolShape'
 
@@ -60,6 +62,9 @@ function changeShape(path: string, change: Json): ToolShape {
 /** Reads a Codex rollout: finished items arrive as event_msg item_completed records, the user and agent messages among them. */
 export class CodexChatReader implements ChatLineReader {
   private readonly builder = new ChatBuilder()
+  private readonly collector = new ImageCollector()
+  /** Pictures of a user message that arrived before the message's own record. */
+  private held: ChatImageRef[] = []
   private lines = 0
   private known = 0
   private counter = 0
@@ -76,6 +81,10 @@ export class CodexChatReader implements ChatLineReader {
 
   items(): ChatItem[] {
     return this.builder.items()
+  }
+
+  image(id: string): ImageEntry | undefined {
+    return this.collector.get(id)
   }
 
   feed(text: string): void {
@@ -99,6 +108,7 @@ export class CodexChatReader implements ChatLineReader {
   private record(record: Json): void {
     this.lines += 1
     if (typeof record.type === 'string' && KNOWN.has(record.type)) this.known += 1
+    if (record.type === 'response_item' && isRecord(record.payload)) return this.responseItem(record.payload)
     if (record.type !== 'event_msg' || !isRecord(record.payload)) return
     const payload = record.payload
     const at = asTime(record.timestamp)
@@ -118,10 +128,13 @@ export class CodexChatReader implements ChatLineReader {
     const twin = this.unmatched[other].indexOf(key)
     if (twin >= 0) {
       this.unmatched[other] = this.unmatched[other].filter((_, index) => index !== twin)
+      this.settleHeld()
       return
     }
     this.unmatched[source] = [...this.unmatched[source], key].slice(-UNMATCHED_MAX)
-    this.builder.message(id, role, text, at)
+    const images = role === 'user' ? this.held : []
+    if (role === 'user') this.held = []
+    this.builder.message(id, role, text, at, images)
   }
 
   private item(item: Json, at: number | undefined): void {
@@ -131,6 +144,43 @@ export class CodexChatReader implements ChatLineReader {
     else if (item.type === 'CommandExecution') this.command(id, item, at)
     else if (item.type === 'FileChange') this.fileChange(id, item, at)
     else if (item.type === 'McpToolCall') this.mcp(id, item, at)
+    else if (item.type === 'ImageView') this.imageView(id, item, at)
+    else if (item.type === 'Extension') this.generated(id, item, at)
+  }
+
+  /** The agent looked at a picture file. */
+  private imageView(id: string, item: Json, at: number | undefined): void {
+    const path = fileUrlToPath(str(item.path))
+    const ref = path ? this.collector.fromFile(path) : null
+    if (!path || !ref) return
+    this.builder.call(id, { kind: 'read', verb: 'Viewed', target: flat(path, CHAT_TARGET_MAX), preview: '', images: [ref] }, at)
+    this.builder.result(id, { output: '' })
+  }
+
+  /** A picture the agent made. Its inline copy is huge and skipped; the saved file is what is shown. */
+  private generated(id: string, item: Json, at: number | undefined): void {
+    const saved = str(item.savedPath)
+    const ref = saved === '' ? null : this.collector.fromFile(saved)
+    if (!ref || !str(item.kind).startsWith('image')) return
+    this.builder.call(id, { kind: 'other', verb: 'Generated', target: baseName(saved), preview: '', images: [ref] }, at)
+    this.builder.result(id, { output: '', failed: item.status === 'failed' })
+  }
+
+  /** User messages with pictures carry them as input_image parts here, not in the event that holds the typed text. */
+  private responseItem(payload: Json): void {
+    if (payload.type !== 'message' || payload.role !== 'user' || !Array.isArray(payload.content)) return
+    const images = payload.content.flatMap((part) => {
+      const ref = isRecord(part) && part.type === 'input_image' ? this.collector.fromDataUrl(str(part.image_url)) : null
+      return ref ? [ref] : []
+    })
+    if (images.length === 0) return
+    this.held = [...this.held, ...images]
+    this.settleHeld()
+  }
+
+  /** Pictures wait for their message; if it is already there they join it. */
+  private settleHeld(): void {
+    if (this.held.length > 0 && this.builder.attachToLastUser(this.held)) this.held = []
   }
 
   private command(id: string, item: Json, at: number | undefined): void {

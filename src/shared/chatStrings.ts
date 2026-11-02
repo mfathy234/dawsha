@@ -43,5 +43,18 @@ export const CHAT_TEXT = {
   composerEnded: 'This session has ended.',
   composerApproval: 'Waiting for your answer above.',
   composerMenu: 'Show the terminal to answer the menu.',
+  close: 'Close',
+  openFile: 'Open file',
+  imageAlt: 'Image',
+  imageOpen: 'Open image',
+  imageCopy: 'Copy image',
+  imageCopied: 'Image copied',
+  imageOpenExternal: 'Open externally',
+  imageReveal: 'Reveal in folder',
+  imageLoading: 'Loading…',
+  imageTooLarge: 'Image too large to show',
+  imageBlocked: 'Image not shown: it is outside this project',
+  imageMissing: 'Image not available',
+  imageActionFailed: 'Could not do that with the image.',
   running: (verb: string, target: string): string => `${verb} ${target}`.trim()
 } as const
