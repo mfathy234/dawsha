@@ -124,3 +124,46 @@ describe('detectPermissionPrompt with a mostly blank screen', () => {
     expect(detectPermissionPrompt(screen)).toBe(true)
   })
 })
+
+describe('stepAttention with a flickering prompt', () => {
+  const hidden: Partial<AttentionObservation> = { status: 'idle', visible: false }
+
+  it('stays needs through a short flicker and notifies once', () => {
+    const { steps } = run([
+      { ...hidden, waiting: true, now: 0 },
+      { ...hidden, waiting: false, now: 1_500 },
+      { ...hidden, waiting: true, now: 3_000 },
+      { ...hidden, waiting: false, now: 4_500 },
+      { ...hidden, waiting: true, now: 6_000 }
+    ])
+    expect(steps.map((s) => s.memory.attention)).toEqual(['needs', 'needs', 'needs', 'needs', 'needs'])
+    expect(steps.filter((s) => s.notify === 'needs')).toHaveLength(1)
+  })
+
+  it('clears needs once the prompt has been gone longer than the grace period', () => {
+    const { steps } = run([
+      { ...hidden, waiting: true, now: 0 },
+      { ...hidden, waiting: false, now: 20_000 }
+    ])
+    expect(steps[1].memory.attention).toBe('none')
+  })
+
+  it('does not notify again for a new prompt within the cooldown when the user never looked', () => {
+    const { steps } = run([
+      { ...hidden, waiting: true, now: 0 },
+      { ...hidden, waiting: false, now: 20_000 },
+      { ...hidden, waiting: true, now: 30_000 }
+    ])
+    expect(steps[2].memory.attention).toBe('needs')
+    expect(steps[2].notify).toBeNull()
+  })
+
+  it('notifies for a new prompt after the user has looked at the pane', () => {
+    const { steps } = run([
+      { ...hidden, waiting: true, now: 0 },
+      { status: 'idle', waiting: false, focused: true, now: 5_000 },
+      { ...hidden, waiting: true, now: 10_000 }
+    ])
+    expect(steps[2].notify).toBe('needs')
+  })
+})
