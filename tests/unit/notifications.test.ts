@@ -5,7 +5,9 @@ import {
   addNotification,
   badgeText,
   bellLabel,
+  clearSummary,
   consumeAction,
+  groupNotifications,
   markAllRead,
   needsMessage,
   newlyNeeding,
@@ -67,5 +69,32 @@ describe('notification history', () => {
     expect(badgeText(12)).toBe('9+')
     expect(bellLabel(0)).toBe('Notifications')
     expect(bellLabel(2)).toBe('Notifications, 2 unread')
+  })
+})
+
+describe('notification groups', () => {
+  it('groups by project, newest group and newest entry first, with General for the rest', () => {
+    const list = [
+      entry(1, { group: 'Smoke', at: 10 }),
+      entry(2, { at: 20 }),
+      entry(3, { group: 'Smoke', at: 30, read: true }),
+      entry(4, { group: 'Other', at: 5 })
+    ]
+    const groups = groupNotifications(list)
+    expect(groups.map((group) => group.name)).toEqual(['Smoke', 'General', 'Other'])
+    expect(groups[0].entries.map((e) => e.id)).toEqual([3, 1])
+    expect(groups[0].unread).toBe(1)
+  })
+
+  it('does not change the list it was given', () => {
+    const list = Object.freeze([entry(1, { at: 1 }), entry(2, { at: 2 })])
+    groupNotifications(list)
+    expect(list.map((e) => e.id)).toEqual([1, 2])
+  })
+
+  it('names what Clear all removes', () => {
+    expect(clearSummary([entry(1)])).toBe('1 notification')
+    expect(clearSummary([entry(1, { group: 'Smoke' }), entry(2), entry(3)])).toBe('3 notifications (General 2, Smoke 1)')
+    expect(clearSummary([entry(1), entry(2)])).toBe('2 notifications')
   })
 })

@@ -7391,3 +7391,39 @@ button.tl-event:hover { background: var(--raised); }
 .files-branch-menu .files-bm-item { justify-content: flex-start; }
 .files-branch-menu .files-bm-item .ctx-label { flex: 1 1 auto; }
 .files-branch-menu .files-bm-ago { margin-inline-start: auto; text-align: right; }
+
+/* 1.8.4 toasts: small, one icon per kind, a one-line title with an optional quiet detail, and a x2 count for repeats. */
+.toasts { gap: 6px; max-width: 360px; }
+.toast {
+  gap: var(--sp-2); padding: 6px 6px 6px 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface-pop, var(--overlay)); box-shadow: var(--e1); font-size: var(--fs-13); line-height: 1.35;
+}
+.toast.error { border-color: var(--line); }
+.toast .toast-icon { flex: none; display: inline-flex; color: var(--text-3); }
+.toast.error .toast-icon { color: var(--danger); }
+.toast .toast-text { display: flex; flex-direction: column; gap: 1px; }
+.toast .toast-title { font-weight: 500; color: var(--text); }
+.toast .toast-detail { color: var(--text-3); font-size: var(--fs-12); white-space: pre-line; }
+.toast .toast-count { flex: none; padding: 0 6px; border-radius: 8px; background: var(--hover); color: var(--text-2); font-size: var(--fs-12); font-variant-numeric: tabular-nums; }
+.toast .toast-count[hidden] { display: none; }
+.toast:hover { border-color: var(--line-strong); }
+.toast .toast-action { flex: none; }
+
+/* 1.8.4 calm selected states: a main tab is brighter text with a thin accent underline, the logo has no pill,
+   and Grid/Board is a light segmented control with a faint inset chip. Hover and pressed stay one quiet step. */
+.topbar-nav .btn { position: relative; }
+.topbar-nav .btn[aria-pressed='true'], .topbar-nav .btn[aria-pressed='true']:hover { background: transparent; box-shadow: none; color: var(--text); font-weight: 500; }
+.topbar-nav .btn[aria-pressed='true']::after {
+  content: ''; position: absolute; inset-inline: 12px; bottom: 1px; height: 2px; border-radius: 2px; background: var(--accent-ink, var(--accent));
+}
+.topbar-nav .btn[aria-pressed='true']:hover { background: var(--hover); }
+.topbar-nav .btn:active:not(:disabled) { background: var(--press); transform: none; }
+.app-logo-menu[aria-pressed='true'], .app-logo-menu[aria-pressed='true']:hover { background: transparent; box-shadow: none; }
+.app-logo-menu:hover:not([aria-expanded='true']) { background: var(--hover); }
+.topbar-tools .btn[aria-pressed='true'], .topbar-tools .btn[aria-expanded='true'] { background: var(--hover); box-shadow: none; color: var(--text); }
+.topbar-view .layout-switch .btn[aria-pressed='true'],
+.topbar-view .layout-switch .btn[aria-pressed='true']:hover { background: color-mix(in srgb, var(--text) 9%, transparent); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-weight: 500; }
+.topbar-view .layout-switch .btn:active:not(:disabled) { background: var(--press); transform: none; }
+:is(.topbar-nav .btn, .topbar-tools .btn, .topbar-view .layout-switch .btn, .app-logo-menu):focus-visible {
+  outline: 2px solid var(--focus-ring); outline-offset: 1px; box-shadow: none;
+}
