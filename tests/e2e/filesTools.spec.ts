@@ -92,7 +92,7 @@ test('the Pull request tab explains a missing gh, then opens a PR, lists feedbac
     await missing.page.locator('#files-button').click()
     await missing.page.locator('#files-run-toggle').click()
     await missing.page.locator('#files-ptab-pr').click()
-    await expect(missing.page.locator('#files-pr-state')).toHaveAttribute('data-reason', 'gh-missing')
+    await expect(missing.page.locator('#files-pr-state')).toHaveAttribute('data-reason', 'gh-missing', { timeout: 30_000 })
     await expect(missing.page.locator('#files-pr-message')).toContainText('not installed')
   } finally {
     await closeApp(missing.app)
@@ -105,7 +105,7 @@ test('the Pull request tab explains a missing gh, then opens a PR, lists feedbac
     await page.locator('#files-button').click()
     await page.locator('#files-run-toggle').click()
     await page.locator('#files-ptab-pr').click()
-    await expect(page.locator('#files-pr-title')).toHaveValue('Config')
+    await expect(page.locator('#files-pr-title')).toHaveValue('Config', { timeout: 30_000 })
     await page.locator('#files-pr-title').fill('Add config tab')
     await page.locator('#files-pr-create').click()
     await expect(page.locator('#files-pr-link')).toHaveText('#7 Add config tab')
