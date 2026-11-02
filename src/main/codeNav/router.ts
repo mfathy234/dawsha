@@ -32,7 +32,9 @@ export class CodeNavRouter {
     if (!read.ok || read.text === null) return { error: 'Cannot read this file as text.' }
     const engine = engineFor(target.full)
     const server = await this.server(folder, target.full, engine)
-    return { request, file: target.full, text: request.unsavedText ?? read.text, mtimeMs: read.mtimeMs, engine, server: server?.state === 'ready' ? server : null }
+    const text = request.unsavedText ?? read.text
+    const usable = server?.state === 'ready' && await this.loaded(server, target.full, text)
+    return { request, file: target.full, text, mtimeMs: read.mtimeMs, engine, server: usable ? server : null }
   }
 
   private server(folder: string, file: string, engine: CodeNavEngine): Promise<NavigationClient | null> {

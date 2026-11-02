@@ -10,7 +10,7 @@ import type { ToolsHost } from './toolsHost'
 type Preview = Extract<EditResult, { ok: true; action: 'preview' }>
 
 const NAME = /^@?[$_\p{L}][$_\p{L}\p{N}]*$/u
-const NEEDS_SERVER = 'Rename needs a language server, so it can be exact. Start or install one for this file type, then try again. A name search could rename the wrong things.'
+const NEEDS_SERVER = 'Rename needs a language server, so it can be exact. If it is still loading the project, wait a few seconds and try again; otherwise start or install one for this file type. A name search could rename the wrong things.'
 
 const failure = (error: unknown): EditResult => ({ ok: false, error: error instanceof Error ? error.message : 'The request failed.' })
 
