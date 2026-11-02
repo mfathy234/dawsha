@@ -102,8 +102,8 @@ export class FilesViewComponent {
     const target = openTarget(this.set?.prefix ?? '', path, line, undefined)
     void this.openFile(target.path, { pin: true, focus: true, line: target.line, column: target.column })
   }
-  private readonly configPane = new ConfigPane({ folder: () => this.set?.folder ?? null, open: this.openChecked })
-  private readonly prPanel = new PrPanel({ folder: () => this.set?.folder ?? null, open: this.openChecked, send: (text, anchor) => this.sendProblems(text, anchor) })
+  private readonly configPane = new ConfigPane({ folder: () => this.target?.folder ?? null, open: this.openChecked })
+  private readonly prPanel = new PrPanel({ folder: () => this.target?.folder ?? null, open: this.openChecked, send: (text, anchor) => this.sendProblems(text, anchor) })
   private readonly browserTab = new BrowserTab({ send: (text, anchor) => this.sendProblems(text, anchor) })
   private readonly panel = new BottomPanel(this.runPanel, () => {
     // the panel reports while it is built, before the status bar below exists
@@ -1231,7 +1231,7 @@ export class FilesViewComponent {
     if (!doc || !set || doc.status !== 'ready') return
     const comments = set.review.comments.filter((comment) => comment.path === doc.path)
     if (doc.changes) this.tools.changes.load(doc)
-    const blame = doc.changes && !this.tools.changes.hasLineSessions(doc) ? this.blameFor(doc) : new Map()
+    const blame = doc.changes ? this.blameFor(doc) : new Map()
     const signature = `${doc.changes}|${JSON.stringify(comments)}|${JSON.stringify([...blame.entries()])}|${this.tools.changes.signature(doc)}`
     if (this.annotationSignature.get(doc) === signature) return
     this.annotationSignature.set(doc, signature)
@@ -1239,7 +1239,7 @@ export class FilesViewComponent {
       doc.annotate([])
       return
     }
-    doc.annotate([this.tools.changes.extensions(doc), reviewExtension({
+    doc.annotate([this.tools.changes.extensions(doc, blame), reviewExtension({
       comments, blame,
       onAdd: (line) => this.addComment(doc, line),
       onEdit: (id) => this.updateComment(id, (comment) => ({ ...comment, editing: true })),
