@@ -24,7 +24,43 @@ function hitsIn(path: string, lines: string[], request: CodeNavRequest, candidat
   })
 }
 
+const TYPE_KEYWORDS = 'class|interface|struct|record|enum|delegate|type|function|def'
+const MEMBER_MODIFIERS = 'public|private|protected|internal|static|override|virtual|abstract|async|sealed|readonly|export'
+
+/**
+ * Patterns that match only where a name is declared, so a search for them stays small however often the name is used.
+ * Types come first; members (a method, property or field) need a modifier before them, which calls never have.
+ */
+export function declarationPatterns(symbol: string): string[] {
+  const name = escape(symbol)
+  return [
+    `\\b(?:${TYPE_KEYWORDS})\\s+${name}\\b`,
+    `\\b(?:${MEMBER_MODIFIERS})\\s[^;=()]*\\b${name}\\s*(?:<[^;()]*>)?\\s*(?:\\(|\\{|=>|;|=)`
+  ]
+}
+
+/** Declarations of the name, found without the cap of a plain search that a widely used name would hit first. */
+async function declarationHits(folder: string, request: CodeNavRequest): Promise<CodeNavHit[]> {
+  for (const query of declarationPatterns(request.symbol)) {
+    const found = await searchFiles(folder, { query, matchCase: true, wholeWord: false, regex: true, include: '' })
+    if (!found.ok) continue
+    const hits: CodeNavHit[] = []
+    for (const file of found.files) {
+      const read = await readProjectFile(folder, file.path)
+      if (!read.ok || read.text === null) continue
+      const lines = read.text.split(/\r\n|\r|\n/)
+      hits.push(...hitsIn(file.path, lines, request, file.matches.map(match => match.line - 1)).filter(hit => isDeclaration(hit.preview, request.symbol)))
+    }
+    if (hits.length > 0) return hits
+  }
+  return []
+}
+
 export async function nameSearch(folder: string, request: CodeNavRequest): Promise<CodeNavResult> {
+  if (request.kind === 'definition' && request.unsavedText === undefined) {
+    const declared = await declarationHits(folder, request)
+    if (declared.length > 0) return { ok: true, hits: declared.slice(0, 500), engine: 'name', outside: false }
+  }
   const result = await searchFiles(folder, { query: request.symbol, matchCase: true, wholeWord: false, regex: false, include: '' })
   if (!result.ok) return result
   const hits: CodeNavHit[] = []
