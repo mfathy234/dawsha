@@ -11,14 +11,23 @@ export interface NavigationClient {
   state: LanguageServerState
   ready: Promise<void>
   query(file: string, text: string, position: QueryPosition): Promise<ServerLocation[]>
+  /** False while a first project load is still running; answers would time out until then. Absent when the server needs no warm-up. */
+  warmed?: boolean
+  /** Loads the project containing the file, with a long limit. Resolves when the load ended, whatever its outcome. */
+  warmUp?(file: string, text: string): Promise<void>
   hover?(file: string, text: string, position: ExtrasPosition): Promise<ServerHover>
   rename?(file: string, text: string, position: ExtrasPosition, newName: string): Promise<ServerFileEdits[]>
   calls?(file: string, text: string, position: ExtrasPosition, direction: 'incoming' | 'outgoing'): Promise<ServerCall[]>
   stop(): void
 }
 
+/** The first answer builds the whole program, which takes many seconds in a large project. */
+const LOAD_TIMEOUT_MS = 90_000
+
 export class TsServerClient implements NavigationClient {
   state: LanguageServerState = 'starting'
+  warmed = false
+  private warming: Promise<void> | null = null
   readonly ready: Promise<void>
   private readonly requests: Requests
   private queue: Promise<unknown> = Promise.resolve()
@@ -35,16 +44,23 @@ export class TsServerClient implements NavigationClient {
     void this.ready.catch(() => undefined)
   }
 
-  query(file: string, text: string, position: QueryPosition): Promise<ServerLocation[]> {
-    const result = this.queue.then(() => this.runQuery(file, text, position))
+  warmUp(file: string, text: string): Promise<void> {
+    this.warming ??= this.query(file, text, { kind: 'definition', line: 1, column: 1 }, LOAD_TIMEOUT_MS)
+      .then(() => undefined, () => undefined)
+      .finally(() => { this.warmed = true })
+    return this.warming
+  }
+
+  query(file: string, text: string, position: QueryPosition, timeout?: number): Promise<ServerLocation[]> {
+    const result = this.queue.then(() => this.runQuery(file, text, position, timeout))
     this.queue = result.catch(() => undefined)
     return result
   }
 
-  private async runQuery(file: string, text: string, position: QueryPosition): Promise<ServerLocation[]> {
+  private async runQuery(file: string, text: string, position: QueryPosition, timeout?: number): Promise<ServerLocation[]> {
     try {
       await this.requests.request('updateOpen', { openFiles: [{ file, fileContent: text }] })
-      const body = await this.requests.request(position.kind, { file, line: position.line, offset: position.column })
+      const body = await this.requests.request(position.kind, { file, line: position.line, offset: position.column }, timeout)
       const spans = position.kind === 'references' ? (body as server.protocol.ReferencesResponseBody | undefined)?.refs : body as server.protocol.FileSpan[] | undefined
       return (spans ?? []).map(span => ({ file: normalize(span.file), line: span.start.line, column: span.start.offset }))
     } finally {

@@ -13,14 +13,14 @@ export class Requests {
     wire.onStop(() => this.close())
   }
 
-  request(method: string, params: unknown): Promise<unknown> {
+  request(method: string, params: unknown, timeout = this.timeout): Promise<unknown> {
     if (this.stopped) return Promise.reject(new Error('Language server stopped.'))
     const id = ++this.sequence
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id)
         reject(new Error('Language server request timed out.'))
-      }, this.timeout)
+      }, timeout)
       this.pending.set(id, { resolve, reject, timer })
       try {
         this.wire.send(this.protocol === 'ts' ? { seq: id, type: 'request', command: method, arguments: params } : { jsonrpc: '2.0', id, method, params })
