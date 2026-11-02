@@ -122,10 +122,13 @@ test('Go to Everything, Go to Line and Go to Symbol open from their keys', async
     await page.locator('.files-row[data-path="src"]').click()
     await openFile(page, 'src/store.ts')
 
+    // Ctrl+T is gone; Ctrl+P finds files.
     await page.keyboard.press('Control+t')
-    await expect(page.locator('.nav-pick-input')).toBeFocused()
+    await expect(page.locator('.nav-pick-input')).toHaveCount(0)
+    await page.keyboard.press('Control+p')
+    await expect(page.locator('#quick-open-input')).toBeFocused()
     await page.keyboard.type('local')
-    await expect(page.locator('.nav-pick-row').first()).toContainText('local.ts')
+    await expect(page.locator('.qo-row').first()).toHaveAttribute('data-path', /local\.ts$/)
     await page.keyboard.press('Enter')
     await active(page, 'local.ts')
     await expect(editor(page)).toContainText('LocalStore')
