@@ -74,9 +74,29 @@ describe('parseMenuPrompt', () => {
     expect(prompt?.questions[0].otherNumber).toBe(3)
   })
 
-  it('leaves a titled list such as a model picker to the terminal', () => {
+  it('shows a titled picker such as a model list, since it waits on the user too', () => {
     const screen = [' Select model', ' ❯ 1. Default', '   2. Sonnet', '   3. Haiku', ' Enter to confirm · Esc to exit'].join('\n')
-    expect(parseMenuPrompt(screen)).toBeNull()
+    const prompt = parseMenuPrompt(screen)
+    expect(prompt?.questions[0].question).toBe('Select model')
+    expect(prompt?.questions[0].options.map((option) => option.label)).toEqual(['Default', 'Sonnet', 'Haiku'])
+  })
+
+  it('shows the Codex update screen', () => {
+    const screen = [
+      '  ✨ Update available! 0.163.0 -> 0.166.0',
+      '  Release notes: https://github.com/openai/codex/releases/latest',
+      '› 1. Update now (runs `npm install -g @openai/codex`)',
+      '  2. Skip',
+      '  3. Skip until next version',
+      '  Press enter to continue · esc skip'
+    ].join('\n')
+    const prompt = parseMenuPrompt(screen)
+    expect(prompt?.questions[0].options.map((option) => option.number)).toEqual([1, 2, 3])
+    expect(prompt?.questions[0].question).toContain('Update available')
+  })
+
+  it('still ignores a plain numbered list in a reply', () => {
+    expect(parseMenuPrompt('Steps\n1. Build it\n2. Test it\n3. Ship it')).toBeNull()
   })
 
   it('needs two numbered rows', () => {

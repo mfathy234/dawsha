@@ -8,8 +8,10 @@ const RULE_LINE = /^[\s─━═\-_]*$/
 const HINT = /(?:enter|return)\s+to\s+\w+|esc(?:ape)?\s+to\s+\w+|[↑↓]\s*\/?\s*[↑↓]|arrow\s+keys/i
 const OTHER_LABEL = /^(?:type something|other|something else|type your own|enter your own)\b/i
 const SKIP_LABEL = /^chat about this$/i
-/** A picker is only drawn in chat when it asks something; a list titled "Select model" stays in the terminal. */
+/** A numbered list is a menu when it asks something, or when it is a live picker (see isPicker). */
 const ASKS = /[?؟:]\s*$/
+const SELECTED = /^\s*[❯›▸▶]/
+const LINK_LINE = /https?:\/\//
 const QUESTION_TABS = /^[←→\s☐☒✔✓]+/
 const OPTIONS_MAX = 12
 const NAMES_MAX = 160
@@ -58,9 +60,15 @@ function describe(lines: readonly string[], row: Row, next: Row | undefined): st
 function questionBefore(lines: readonly string[], first: Row): string {
   for (let at = first.index - 1; at >= 0; at -= 1) {
     const text = lines[at].trim().replace(QUESTION_TABS, '')
-    if (text !== '' && !HINT.test(text)) return text.slice(0, NAMES_MAX * 3)
+    if (text !== '' && !HINT.test(text) && !LINK_LINE.test(text)) return text.slice(0, NAMES_MAX * 3)
   }
   return ''
+}
+
+/** A live picker: one of its rows carries the selection mark and the screen says which keys answer it. */
+function isPicker(lines: readonly string[], run: readonly Row[]): boolean {
+  const marked = run.some((row) => SELECTED.test(lines[row.index]))
+  return marked && lines.slice(run[0].index).some((line) => HINT.test(line))
 }
 
 /**
@@ -78,7 +86,7 @@ export function parseMenuPrompt(tail: string): AskPrompt | null {
   const choices = options.filter((option) => option !== other)
   if (choices.length < 2) return null
   const asked = questionBefore(lines, run[0])
-  if (!ASKS.test(asked)) return null
+  if (!ASKS.test(asked) && !isPicker(lines, run)) return null
   const question: AskQuestion = {
     header: '',
     question: asked,
