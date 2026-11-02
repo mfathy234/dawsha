@@ -64,10 +64,115 @@
   white-space: pre-wrap;
 }
 
-.chat-p + .chat-p,
-.chat-p + .chat-code,
-.chat-code + .chat-p {
+.chat-say > * + *,
+.chat-you > * + * {
   margin-top: var(--sp-2);
+}
+
+.chat-h {
+  margin: 0;
+  font-weight: var(--w-medium);
+  line-height: 24px;
+}
+
+.chat-say > .chat-h:not(:first-child) {
+  margin-top: var(--sp-3);
+}
+
+.chat-h1 {
+  font-size: 17px;
+}
+
+.chat-h2 {
+  font-size: 15.5px;
+}
+
+.chat-list {
+  margin: 0;
+  padding-inline-start: 22px;
+}
+
+.chat-list .chat-list {
+  margin-top: 2px;
+}
+
+.chat-list li {
+  padding-inline-start: 2px;
+}
+
+.chat-list li + li {
+  margin-top: 2px;
+}
+
+.chat-quote {
+  margin: 0;
+  padding-inline-start: var(--sp-3);
+  border-inline-start: 2px solid var(--border);
+  color: var(--text-2);
+}
+
+.chat-quote > * + * {
+  margin-top: var(--sp-2);
+}
+
+.chat-rule {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.chat-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.chat-table {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+}
+
+.chat-table table {
+  border-collapse: collapse;
+  font-size: var(--fs-2);
+  line-height: 20px;
+}
+
+.chat-table th,
+.chat-table td {
+  padding: var(--sp-1) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.chat-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.chat-table th {
+  background: var(--surface);
+  font-weight: var(--w-medium);
+  white-space: nowrap;
+}
+
+.chat-table td {
+  min-width: 80px;
+}
+
+.chat-table .chat-al-center {
+  text-align: center;
+}
+
+.chat-table .chat-al-right {
+  text-align: end;
 }
 
 .chat code {
