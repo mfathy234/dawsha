@@ -615,6 +615,9 @@ export class PaneComponent {
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       pauseItem,
       ...restartItems,
+      ...(handoffs.length > 0
+        ? [h('div', { class: 'menu-separator', role: 'separator' }), h('div', { class: 'menu-heading', role: 'presentation' }, 'Hand over'), ...handoffs]
+        : []),
       h('div', { class: 'menu-separator', role: 'separator' }),
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Open and review'),
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),

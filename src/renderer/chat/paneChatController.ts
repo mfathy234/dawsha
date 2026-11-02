@@ -19,7 +19,7 @@ export function chatHostFor(paneId: string, current: () => PaneView | null): Cha
   return {
     showTerminal: () => setPaneView(paneId, 'terminal'),
     continueIn: (to: AgentKind) => void continueIn(paneId, to),
-    send: (text) => sendChatMessage(tabId(), text),
+    send: (text) => sendChatMessage(tabId(), current()?.agent ?? 'shell', text),
     interrupt: () => interruptAgent(tabId()),
     menuOpen: () => detectTerminalMenu(getTerminal(tabId())?.tailText(MENU_ROWS) ?? '')
   }

@@ -1,3 +1,5 @@
+import { submitDelayFor } from '../../shared/chatSubmit'
+import type { TabAgent } from '../../shared/types'
 import { chatViewKey, defaultViewFor, rememberChatView, resolveChatView, type ChatAgent, type ChatView } from '../../shared/chatLog'
 import { persistWorkspace, saveSettings } from '../actions'
 import { api } from '../api'
@@ -6,7 +8,6 @@ import { mapTerm, store, type TermState } from '../state'
 import { getTerminal } from '../terminals'
 import { sessionIdOf } from '../transcriptActions'
 
-const SUBMIT_DELAY_MS = 40
 
 export const primaryTab = (view: PaneView): TermState | undefined => view.pane.tabs.find((tab) => tab.id === view.primaryTabId)
 
@@ -55,13 +56,13 @@ export function setDefaultView(agent: ChatAgent, next: ChatView): void {
 }
 
 /** Types a message into the agent's terminal and presses Enter, the same as typing it there. */
-export function sendChatMessage(tabId: string, text: string): { flattened: boolean } {
+export function sendChatMessage(tabId: string, agent: TabAgent, text: string): { flattened: boolean } {
   const terminal = getTerminal(tabId)
   if (!terminal || text.trim() === '') return { flattened: false }
   const { flattened } = terminal.insertText(text.trim())
   // Mark the prompt as typing Enter would, so Ctrl+Up and Copy last reply point at this message.
   terminal.prompts.noteInput('\r')
-  window.setTimeout(() => api.write(tabId, '\r'), SUBMIT_DELAY_MS)
+  window.setTimeout(() => api.write(tabId, '\r'), submitDelayFor(agent))
   return { flattened }
 }
 
