@@ -1,4 +1,6 @@
 import { foldLines, textDirection, type ChatItem, type ChatMessage, type ChatNotice, type ChatPhase, type ChatTool } from '../../shared/chatLog'
+import type { BackgroundTask } from '../../shared/chatBackground'
+import { BACKGROUND_STATUS_TEXT } from './chatBackground'
 import type { AgentKind } from '../../shared/types'
 import type { ToolKind } from '../../shared/chatKind'
 import { h, icon } from '../dom'
@@ -48,6 +50,8 @@ export interface ThreadContext {
   session: ChatSessionRef | null
   /** The id of the pane's terminal tab, which file links resolve their folder from. */
   fileScope: string | null
+  /** The session's background work, so the row that launched each can say whether it still runs. */
+  background?: readonly BackgroundTask[]
   actions: ThreadActions
 }
 
@@ -151,24 +155,35 @@ export class ChatThread {
     return body
   }
 
+  /** Opens a launch row's report. True when the row is in the thread. */
+  reveal(id: string): boolean {
+    if (!this.el.querySelector(`[data-tool="${CSS.escape(id)}"]`)) return false
+    this.open.add(`t:${id}`)
+    this.rerender()
+    return true
+  }
+
   private tool(item: ChatTool, live: boolean, ctx: ThreadContext): HTMLElement[] {
     const expanded = this.open.has(`t:${item.id}`)
+    const task = ctx.background?.find((entry) => entry.launchId === item.id)
     const row = h(
       'button',
       { class: `chat-tool${item.failed ? ' failed' : ''}${!item.done && live ? ' running' : ''}`, 'data-kind': item.activity, type: 'button', 'aria-expanded': String(expanded), title: item.target, 'data-tool': item.id, onClick: () => this.flip(`t:${item.id}`) },
       icon(!item.done && live ? ICONS.toolRunning : TOOL_ICONS[item.activity] ?? ICONS.toolOther),
       h('span', {}, item.verb),
       h('bdi', { dir: 'ltr' }, h('code', {}, item.target)),
-      item.done ? this.toolNote(item) : null
+      item.done && !task ? this.toolNote(item) : null,
+      task ? h('span', { class: `chat-badge ${task.status}`, 'data-bg-badge': task.status }, BACKGROUND_STATUS_TEXT[task.status]) : null
     )
     const pictures = imageStrip(item.images, ctx.session)
     const line = item.path && ctx.fileScope ? h('div', { class: 'chat-toolrow' }, row, openFileButton(ctx.fileScope, { path: item.path, ...(item.line ? { line: item.line } : {}) })) : row
     const always = [item.todos ? todoCard(item.todos) : null, item.answers ? answersCard(item.answers) : null, pictures]
-    return [line, ...[...always, ...(expanded ? [this.toolDetail(item)] : [])].filter((node): node is HTMLElement => node !== null)]
+    return [line, ...[...always, ...(expanded ? [this.toolDetail(item, task)] : [])].filter((node): node is HTMLElement => node !== null)]
   }
 
   /** What an opened tool row shows: its change, its plan or report as markdown, or the plain output. */
-  private toolDetail(item: ChatTool): HTMLElement {
+  private toolDetail(item: ChatTool, task?: BackgroundTask): HTMLElement {
+    if (task) return markdownCard(task.resultPreview ?? (task.status === 'running' ? BACKGROUND_STATUS_TEXT.running : task.summary ?? CHAT_TEXT.backgroundNoResult))
     if (item.diff) {
       const key = `d:${item.id}`
       return renderDiff(item.diff, { open: this.open.has(key), toggle: () => this.flip(key) })

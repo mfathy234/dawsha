@@ -45,6 +45,6 @@ export class ChatSession {
     if (unrecognised(this.reader.stats)) {
       return { status: 'failed', reason: CHAT_TEXT.failedFormat }
     }
-    return { status: 'ok', items: this.reader.items(), version: this.version, earlier: this.reader.earlier }
+    return { status: 'ok', items: this.reader.items(), version: this.version, earlier: this.reader.earlier, background: this.reader.background() }
   }
 }

@@ -1,3 +1,4 @@
+import type { BackgroundTask } from '../../shared/chatBackground'
 import type { ChatItem, ChatReadRequest } from '../../shared/chatLog'
 import { CHAT_TEXT } from '../../shared/chatStrings'
 import { api } from '../api'
@@ -17,9 +18,10 @@ export interface FeedSnapshot {
   items: readonly ChatItem[]
   earlier: number
   reason: string
+  background: readonly BackgroundTask[]
 }
 
-export const LOADING: FeedSnapshot = { state: 'loading', items: [], earlier: 0, reason: '' }
+export const LOADING: FeedSnapshot = { state: 'loading', items: [], earlier: 0, reason: '', background: [] }
 
 /** Reads one session's log on a timer while its Chat view is on screen, and stops, releasing what main kept, when it is not. */
 export class ChatFeed {
@@ -91,18 +93,18 @@ export class ChatFeed {
       if (generation !== this.generation) return
       if (result.status === 'ok') {
         this.version = result.version
-        this.publish({ state: result.items.length > 0 ? 'ok' : 'empty', items: result.items, earlier: result.earlier, reason: '' })
+        this.publish({ state: result.items.length > 0 ? 'ok' : 'empty', items: result.items, earlier: result.earlier, reason: '', background: result.background })
       } else if (result.status === 'no-session') {
         this.version = undefined
-        this.publish({ state: 'empty', items: [], earlier: 0, reason: '' })
+        this.publish({ state: 'empty', items: [], earlier: 0, reason: '', background: [] })
       } else if (result.status === 'failed') {
         next = FAILED_POLL_MS
-        this.publish({ state: 'failed', items: [], earlier: 0, reason: result.reason })
+        this.publish({ state: 'failed', items: [], earlier: 0, reason: result.reason, background: [] })
       }
     } catch {
       if (generation !== this.generation) return
       next = FAILED_POLL_MS
-      this.publish({ state: 'failed', items: [], earlier: 0, reason: CHAT_TEXT.failedRead })
+      this.publish({ state: 'failed', items: [], earlier: 0, reason: CHAT_TEXT.failedRead, background: [] })
     }
     if (generation === this.generation) this.schedule(document.hidden ? FAILED_POLL_MS : next)
   }

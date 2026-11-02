@@ -75,5 +75,13 @@ export const CHAT_TEXT = {
   imageBlocked: 'Image not shown: it is outside this project',
   imageMissing: 'Image not available',
   imageActionFailed: 'Could not do that with the image.',
+  backgroundLabel: 'Background work',
+  backgroundAgent: 'Agent',
+  backgroundShell: 'Command',
+  backgroundRunning: 'Running…',
+  backgroundDone: 'Done',
+  backgroundFailed: 'Failed',
+  backgroundStopped: 'Stopped',
+  backgroundNoResult: 'No report was recorded.',
   running: (verb: string, target: string): string => `${verb} ${target}`.trim()
 } as const

@@ -4,6 +4,9 @@ import { stripImageMarkers, type ChatImageRef } from '../../shared/chatImage'
 import type { ChatItem } from '../../shared/chatLog'
 import { asTime, blockText, isRecord, type Json } from '../../shared/transcript'
 import { CHAT_TEXT } from '../../shared/chatStrings'
+import { parseTaskNotifications } from '../../shared/chatBackground'
+import type { BackgroundTask } from '../../shared/chatBackground'
+import { BackgroundTracker } from './background'
 import { ChatBuilder } from './builder'
 import { ImageCollector, type ImageEntry } from './imageTable'
 import { toolShape } from './toolShape'
@@ -40,6 +43,7 @@ function resultText(content: unknown): string {
 export class ClaudeChatReader implements ChatLineReader {
   private readonly builder = new ChatBuilder()
   private readonly collector = new ImageCollector()
+  private readonly tracker = new BackgroundTracker()
   private lines = 0
   private known = 0
   private counter = 0
@@ -58,6 +62,10 @@ export class ClaudeChatReader implements ChatLineReader {
 
   image(id: string): ImageEntry | undefined {
     return this.collector.get(id)
+  }
+
+  background(): BackgroundTask[] {
+    return this.tracker.list()
   }
 
   feed(text: string): void {
@@ -95,10 +103,12 @@ export class ClaudeChatReader implements ChatLineReader {
     if (Array.isArray(content)) {
       for (const part of content) {
         if (isRecord(part) && part.type === 'tool_result' && typeof part.tool_use_id === 'string') {
+          this.tracker.launched(part.tool_use_id, record.toolUseResult, at)
           this.builder.result(part.tool_use_id, { output: resultText(part.content), failed: part.is_error === true, images: this.imagesIn(part.content), ...patchOf(record) })
         }
       }
     }
+    for (const raw of promptParts(content)) for (const note of parseTaskNotifications(raw)) this.tracker.notified(note, at)
     const markers: string[] = []
     const written: string[] = []
     let held = this.userImages(content)
@@ -169,6 +179,7 @@ export class ClaudeChatReader implements ChatLineReader {
       } else if (part.type === 'thinking' && typeof part.thinking === 'string') {
         this.builder.thought(this.nextId(record), part.thinking, at)
       } else if (part.type === 'tool_use' && typeof part.id === 'string') {
+        this.tracker.use(part.id, part.name, part.input)
         this.builder.call(part.id, toolShape(part.name, part.input), at)
       }
     }

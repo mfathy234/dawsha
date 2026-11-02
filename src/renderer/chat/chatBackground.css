@@ -1,0 +1,136 @@
+/* The strip of background work above the composer, and the badge on a launch row in the thread. */
+.chat-bg {
+  flex: none;
+  box-sizing: border-box;
+  max-width: 720px;
+  width: calc(100% - var(--sp-6) * 2);
+  margin: 0 auto var(--sp-2);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-1);
+}
+
+.chat-bg[hidden] {
+  display: none;
+}
+
+.chat-bg-head,
+.chat-bg-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.chat-bg-head {
+  height: 28px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-card);
+}
+
+.chat-bg-head:hover,
+.chat-bg-row:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.chat-bg .icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+}
+
+.chat-bg-head.running .icon,
+.chat-bg-status.running .icon {
+  color: var(--accent-ink);
+}
+
+.chat-bg-count {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+}
+
+.chat-bg-list {
+  display: grid;
+  max-height: 200px;
+  overflow: auto;
+  padding: 0 0 var(--sp-1);
+}
+
+.chat-bg-row {
+  height: 28px;
+  padding: 0 var(--sp-3);
+}
+
+.chat-bg-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.chat-bg-kind,
+.chat-bg-time {
+  flex: none;
+  color: var(--text-3);
+}
+
+.chat-bg-time {
+  min-width: 4ch;
+  text-align: end;
+  font-family: var(--font-mono);
+}
+
+.chat-bg-status.done .icon {
+  color: var(--term-add);
+}
+
+.chat-bg-status.failed .icon {
+  color: var(--danger);
+}
+
+.chat-bg-status.stopped .icon {
+  color: var(--text-3);
+  opacity: 0.7;
+}
+
+.chat-bg-row.failed .chat-bg-title {
+  color: var(--danger);
+}
+
+.chat-bg-detail {
+  max-height: 260px;
+  overflow: auto;
+  padding: 0 var(--sp-3) var(--sp-2);
+}
+
+.chat-tool .chat-badge {
+  margin-inline-start: auto;
+  flex: none;
+  font-size: var(--fs-1);
+  color: var(--text-3);
+}
+
+.chat-tool .chat-badge.running {
+  color: var(--accent-ink);
+}
+
+.chat-tool .chat-badge.failed {
+  color: var(--danger);
+}
+
+.chat-tool.flash {
+  background: var(--hover);
+}
