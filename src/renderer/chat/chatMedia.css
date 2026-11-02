@@ -93,3 +93,53 @@
   white-space: nowrap;
   color: var(--text-2);
 }
+
+/* File links in replies and the open button beside a tool row. */
+.chat-file {
+  color: var(--accent-ink, var(--accent));
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 2px;
+}
+
+.chat-file:hover {
+  text-decoration-color: currentColor;
+}
+
+.chat-file:focus-visible,
+.chat-tool-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.chat-toolrow {
+  position: relative;
+}
+
+.chat-tool-open {
+  position: absolute;
+  inset-block: 2px;
+  inset-inline-end: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text-3);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.chat-toolrow:hover .chat-tool-open,
+.chat-tool-open:focus-visible {
+  opacity: 1;
+}
+
+.chat-tool-open:hover {
+  background: var(--hover);
+  color: var(--text);
+}

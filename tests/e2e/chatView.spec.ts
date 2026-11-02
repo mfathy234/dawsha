@@ -459,6 +459,36 @@ test('a sent message carries a marker until the log has it', async () => {
   }
 })
 
+test('a file name in a reply is a link only when the file exists, and a click opens it in Files', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    mkdirSync(join(sandbox.projectFolder, 'src'), { recursive: true })
+    writeFileSync(join(sandbox.projectFolder, 'src', 'retry.ts'), 'export const retries = 3\n'.repeat(20))
+    writeLog(sandbox, [
+      { type: 'user', uuid: 'l1', message: { role: 'user', content: 'Where is the retry?' } },
+      { type: 'assistant', uuid: 'l2', message: { role: 'assistant', content: [{ type: 'text', text: 'See src/retry.ts:7 and `src/retry.ts` but not ghost/missing.ts' }] } },
+      { type: 'assistant', uuid: 'l3', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'r1', name: 'Read', input: { file_path: 'src/retry.ts', offset: 5 } }] } },
+      { type: 'user', uuid: 'l4', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'r1', content: 'x' }] } }
+    ])
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    const links = chat.locator('.chat-say a.chat-file')
+    await expect(links).toHaveCount(2, { timeout: 15_000 })
+    await expect(links.first()).toHaveText('src/retry.ts:7')
+    await expect(links.first()).not.toHaveAttribute('href', /.*/)
+    await expect(chat.locator('.chat-say')).toContainText('ghost/missing.ts')
+    await expect(chat.locator('.chat-say a', { hasText: 'ghost' })).toHaveCount(0)
+    await expect(chat.locator('.chat-tool-open')).toHaveCount(1)
+    await links.first().click()
+    await expect(page.locator('#files-view')).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('.files-tab.active')).toContainText('retry.ts')
+  } finally {
+    await closeApp(app)
+  }
+})
+
 test('a pasted picture shows as a thumbnail, opens in a lightbox and its actions work', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox, agentEnv(sandbox))

@@ -12,6 +12,7 @@ import type { AskAnswer } from '../../shared/menuAnswer'
 import type { PendingLabel } from '../../shared/chatPending'
 import { AskCard } from './chatAsk'
 import { imageStrip } from './chatImages'
+import { linkifyChat, openFileButton } from './chatLinks'
 import type { ChatSessionRef } from './chatImageCache'
 
 export interface ThreadActions {
@@ -41,6 +42,8 @@ export interface ThreadContext {
   starting: boolean
   /** Which session the thread shows, so its pictures can be fetched. */
   session: ChatSessionRef | null
+  /** The id of the pane's terminal tab, which file links resolve their folder from. */
+  fileScope: string | null
   actions: ThreadActions
 }
 
@@ -78,6 +81,8 @@ export class ChatThread {
     const children: (Node | null)[] =
       feed.state === 'failed' ? [this.failed(feed.reason, ctx)] : feed.state === 'loading' ? [h('p', { class: 'chat-quiet' }, CHAT_TEXT.reading)] : this.body(feed, ctx)
     this.el.replaceChildren(...children.filter((child): child is Node => child !== null))
+    const scope = ctx.fileScope
+    if (scope) this.el.querySelectorAll<HTMLElement>('.chat-say').forEach((reply) => linkifyChat(reply, scope))
   }
 
   private body(feed: FeedSnapshot, ctx: ThreadContext): (Node | null)[] {
@@ -144,9 +149,10 @@ export class ChatThread {
       item.done ? this.toolNote(item) : null
     )
     const pictures = imageStrip(item.images, ctx.session)
-    if (!expanded) return pictures ? [row, pictures] : [row]
+    const line = item.path && ctx.fileScope ? h('div', { class: 'chat-toolrow' }, row, openFileButton(ctx.fileScope, { path: item.path, ...(item.line ? { line: item.line } : {}) })) : row
+    if (!expanded) return pictures ? [line, pictures] : [line]
     const text = item.output === '' ? CHAT_TEXT.noOutput : item.output
-    return [row, h('pre', { class: 'chat-toolout', dir: 'ltr' }, item.outputTruncated ? `${text}\n${CHAT_TEXT.outputTooLarge}` : text), ...(pictures ? [pictures] : [])]
+    return [line, h('pre', { class: 'chat-toolout', dir: 'ltr' }, item.outputTruncated ? `${text}\n${CHAT_TEXT.outputTooLarge}` : text), ...(pictures ? [pictures] : [])]
   }
 
   private toolNote(item: ChatTool): HTMLElement | null {

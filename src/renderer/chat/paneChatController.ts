@@ -52,7 +52,8 @@ export function syncPaneChat(paneId: string, view: PaneView, state: SessionState
           needsApproval: asking,
           exited: tab.status === 'exited',
           status: tab.status,
-          startedAt: tab.startedAt
+          startedAt: tab.startedAt,
+          tabId: tab.id
         }
       : null
   )

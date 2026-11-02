@@ -33,6 +33,8 @@ export interface ChatInput {
   exited: boolean
   status: 'starting' | 'running' | 'exited'
   startedAt: number
+  /** The pane's terminal tab: file links in the thread resolve against its folder. */
+  tabId: string
 }
 
 const NEAR_BOTTOM_PX = 96
@@ -171,6 +173,7 @@ export class PaneChat {
       ask: this.ask,
       pending: views,
       starting: this.starting,
+      fileScope: input.tabId,
       session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
         showTerminal: () => this.host.showTerminal(),
