@@ -34,11 +34,12 @@ function writeLog(text) {
   setTimeout(() => appendFileSync(log, reply.slice(half)), 700)
 }
 
-process.stdout.write(`READY ${kind}\r\n`)
+process.stdout.write(`READY ${kind}\r\n> \r\n  ? for shortcuts\r\n`)
 if (process.stdin.isTTY) process.stdin.setRawMode(true)
 process.stdin.on('data', (chunk) => {
   const text = chunk.toString('utf8').replace(/\u001b\[20[01]~/g, '')
   if (text === '\u001b') return
+  if (text.length === 1 && text >= '1' && text <= '9') process.stdout.write(`KEY ${text}\r\n`)
   typed += text.replace(/\r/g, '')
   if (text.includes('\r')) {
     process.stdout.write(`GOT ${JSON.stringify(typed)}\r\n`)

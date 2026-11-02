@@ -103,6 +103,17 @@ describe('ClaudeChatReader', () => {
     expect(reader.items()[0]).toMatchObject({ kind: 'notice', notice: 'interrupted' })
   })
 
+  it('keeps a follow-up that comes with an interrupt marker', () => {
+    const reader = new ClaudeChatReader()
+    reader.feed(
+      lines(
+        { type: 'user', uuid: 'a', message: { content: [{ type: 'text', text: '[Request interrupted by user for tool use]' }, { type: 'text', text: 'do it differently' }] } },
+        { type: 'user', uuid: 'b', message: { content: [{ type: 'text', text: '[Request interrupted by user]\nand then this' }] } }
+      )
+    )
+    expect(reader.items().map((item) => (item.kind === 'message' ? item.text : item.kind === 'notice' ? item.notice : ''))).toEqual(['interrupted', 'do it differently', 'interrupted', 'and then this'])
+  })
+
   it('keeps Arabic in logical order and never touches the text', () => {
     const reader = new ClaudeChatReader()
     reader.feed(lines(block('x', [{ type: 'text', text: 'أضفت الزرار في الإعدادات' }])))

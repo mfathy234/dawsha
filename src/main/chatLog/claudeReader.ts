@@ -8,13 +8,13 @@ import type { ChatLineReader, ReaderStats } from './reader'
 const KNOWN = new Set(['user', 'assistant', 'system', 'summary'])
 const SYSTEM_TAG = /^<(?:command-[a-z]+|local-command-[a-z]+|system-reminder|ide_[a-z_]+|user-prompt-submit-hook|bash-(?:input|stdout|stderr)|task-notification|persisted-output)[\s>]/
 const isUserText = (text: string): boolean => text.trim() !== '' && !SYSTEM_TAG.test(text.trim())
-const INTERRUPTED = /^\[Request interrupted by user/
+const INTERRUPTED = /^\[Request interrupted by user[^\]]*\]\s*/
 
-function promptText(content: unknown): string {
-  if (typeof content === 'string') return content
-  if (!Array.isArray(content)) return ''
-  const parts = content.map((part) => (isRecord(part) && part.type === 'text' && typeof part.text === 'string' ? part.text : ''))
-  return parts.filter(isUserText).join('\n')
+/** The text parts of a user record, one string each, so a marker such as an interrupt can be told from what the user wrote. */
+function promptParts(content: unknown): string[] {
+  if (typeof content === 'string') return [content]
+  if (!Array.isArray(content)) return []
+  return content.map((part) => (isRecord(part) && part.type === 'text' && typeof part.text === 'string' ? part.text : '')).filter((text) => text.trim() !== '')
 }
 
 function resultText(content: unknown): string {
@@ -78,9 +78,24 @@ export class ClaudeChatReader implements ChatLineReader {
         }
       }
     }
-    const prompt = promptText(content)
-    if (INTERRUPTED.test(prompt.trim())) this.builder.notice(this.nextId(record), 'interrupted', CHAT_TEXT.interrupted, at)
-    else if (isUserText(prompt)) this.builder.message(this.nextId(record), 'user', prompt, at)
+    const written: string[] = []
+    for (const part of promptParts(content)) {
+      const marker = INTERRUPTED.exec(part.trim())
+      if (marker) {
+        this.flushWritten(record, written, at)
+        this.builder.notice(this.nextId(record), 'interrupted', CHAT_TEXT.interrupted, at)
+      }
+      const rest = marker ? part.trim().slice(marker[0].length) : part
+      if (isUserText(rest)) written.push(rest)
+    }
+    this.flushWritten(record, written, at)
+  }
+
+  /** What the user wrote around an interrupt marker is still their message. */
+  private flushWritten(record: Json, written: string[], at: number | undefined): void {
+    if (written.length === 0) return
+    this.builder.message(this.nextId(record), 'user', written.join('\n'), at)
+    written.length = 0
   }
 
   private assistant(record: Json, message: Json, at: number | undefined): void {

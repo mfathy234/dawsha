@@ -1,6 +1,7 @@
 import { classifyTool } from '../../shared/timelineParse'
 import { toolKind, type ToolKind } from '../../shared/chatKind'
 import { CHAT_OUTPUT_LINES, CHAT_OUTPUT_MAX, CHAT_TARGET_MAX, boundText } from '../../shared/chatLog'
+import { parseAskQuestions, type AskQuestion } from '../../shared/chatAsk'
 import { cleanText, flat, isRecord, toolArg, type Json } from '../../shared/transcript'
 
 export interface ToolShape {
@@ -11,6 +12,8 @@ export interface ToolShape {
   removed?: number
   /** Text shown when the call is opened and no result replaces it: a diff for an edit. */
   preview: string
+  /** The questions of an AskUserQuestion call. */
+  ask?: AskQuestion[]
 }
 
 const CREATE_TOOLS = new Set(['write', 'create_file', 'write_file'])
@@ -50,6 +53,18 @@ function editShape(name: string, input: Json, edits: { path: string; added: numb
 
 const PLAIN_VERBS: Readonly<Record<string, string>> = { task: 'Agent', agent: 'Agent', webfetch: 'Fetched', web_fetch: 'Fetched', websearch: 'Searched', web_search: 'Searched' }
 
+function questionShape(input: Json): ToolShape {
+  const ask = parseAskQuestions(input)
+  const first = ask[0]?.question ?? toolArg(input)
+  return { kind: 'question', verb: 'Asked', target: flat(first, CHAT_TARGET_MAX), preview: '', ...(ask.length > 0 ? { ask } : {}) }
+}
+
+/** mcp__server__tool, the name Claude logs for a tool an MCP server gives it. */
+export function mcpParts(name: string): { server: string; tool: string } | null {
+  const match = /^mcp__(.+?)__(.+)$/.exec(name)
+  return match ? { server: flat(match[1], 40), tool: flat(match[2], 80) } : null
+}
+
 /** One line for a tool call: a verb, what it touches, and for an edit how many lines it adds and removes. */
 export function toolShape(rawName: unknown, rawInput: unknown): ToolShape {
   const name = (typeof rawName === 'string' ? rawName : '').toLowerCase()
@@ -63,6 +78,9 @@ export function toolShape(rawName: unknown, rawInput: unknown): ToolShape {
     const line = tool.command.split('\n')[0]
     return { kind: 'shell', verb: 'Ran', target: flat(line, CHAT_TARGET_MAX), preview: tool.command.includes('\n') ? tool.command : '' }
   }
+  if (toolKind(rawName) === 'question') return questionShape(input)
+  const mcp = mcpParts(typeof rawName === 'string' ? rawName : '')
+  if (mcp) return { kind: 'mcp', verb: mcp.server, target: mcp.tool, preview: '' }
   const label = PLAIN_VERBS[name] ?? flat(typeof rawName === 'string' && rawName !== '' ? rawName : 'tool', 60)
   return { kind: toolKind(rawName), verb: label, target: toolArg(rawInput).slice(0, CHAT_TARGET_MAX), preview: '' }
 }

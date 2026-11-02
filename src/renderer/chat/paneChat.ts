@@ -4,14 +4,22 @@ import type { AgentKind } from '../../shared/types'
 import { h } from '../dom'
 import { CHAT_TEXT } from '../../shared/chatStrings'
 import { ChatFeed, LOADING, type FeedSnapshot } from './chatFeed'
-import { ChatThread } from './chatThread'
+import { ChatThread, type PendingView } from './chatThread'
+import { askPromptFor } from '../../shared/menuPrompt'
+import { detectTerminalMenu } from '../../shared/terminalMenu'
+import { isStarting } from '../../shared/agentReady'
+import { isTracked, newPending, pendingLabel, settlePending, type PendingMessage } from '../../shared/chatPending'
+import { planAnswers, type AskAnswer, type KeyStep } from '../../shared/menuAnswer'
+import type { AskPrompt } from '../../shared/chatAsk'
 
 export interface ChatHost {
   showTerminal(): void
   continueIn(to: AgentKind): void
   send(text: string): { flattened: boolean }
   interrupt(): void
-  menuOpen(): boolean
+  /** The last rows on the agent's screen. */
+  screenTail(): string
+  answer(steps: KeyStep[]): void
 }
 
 export interface ChatInput {
@@ -23,10 +31,13 @@ export interface ChatInput {
   working: boolean
   needsApproval: boolean
   exited: boolean
+  status: 'starting' | 'running' | 'exited'
+  startedAt: number
 }
 
 const NEAR_BOTTOM_PX = 96
 const MENU_CHECK_MS = 400
+const WATCH_MS = 500
 const COMPOSER_MAX_PX = 140
 const LONG_HINT_MIN_PX = 380
 
@@ -49,7 +60,12 @@ export class PaneChat {
   private stickBottom = true
   private active = false
   private menuAt = 0
-  private menuOpen = false
+  private tail = ''
+  private pending: PendingMessage[] = []
+  private ask: AskPrompt | null = null
+  private starting = false
+  private watch = 0
+  private counter = 0
 
   constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
     this.thread = new ChatThread(() => this.render(true))
@@ -95,8 +111,10 @@ export class PaneChat {
       this.input = null
       this.feed.stop()
       this.renderKey = ''
+      this.setWatch(false)
       return
     }
+    if (this.input && (this.input.agent !== input.agent || (this.input.sessionId && this.input.sessionId !== input.sessionId))) this.pending = []
     this.input = input
     if (input.sessionId) this.feed.start({ agent: input.agent, sessionId: input.sessionId, folder: input.folder })
     else this.feed.stop()
@@ -109,6 +127,7 @@ export class PaneChat {
   }
 
   dispose(): void {
+    this.setWatch(false)
     this.feed.stop()
     this.el.remove()
   }
@@ -122,11 +141,19 @@ export class PaneChat {
     const input = this.input
     if (!input) return
     const snapshot = this.currentSnapshot()
-    const menuOpen = this.menuNow()
-    const phase = chatPhase({ items: snapshot.items, working: input.working && !input.exited, needsApproval: input.needsApproval, menuOpen })
+    const tail = this.screenNow()
+    const working = input.working && !input.exited
+    const menuOpen = detectTerminalMenu(tail)
+    const phase = chatPhase({ items: snapshot.items, working, needsApproval: input.needsApproval, menuOpen })
+    this.starting = isStarting({ agent: input.agent, status: input.status, startedAt: input.startedAt, now: Date.now(), tail, working })
+    this.flushWaiting(working)
+    this.pending = settlePending(this.pending, snapshot.items, Date.now(), working)
+    this.ask = phase === 'menu' ? askPromptFor(snapshot.items, tail) : null
+    this.setWatch(this.starting || this.pending.length > 0)
+    const views = this.pendingViews()
     const last = snapshot.items[snapshot.items.length - 1]
     if (last?.kind !== 'notice') this.limitDismissed = false
-    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent])
+    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', views])
     if (!force && snapshot === this.renderedSnapshot && key === this.renderKey) return
     this.renderedSnapshot = snapshot
     this.renderKey = key
@@ -141,7 +168,15 @@ export class PaneChat {
       phase,
       limitDismissed: this.limitDismissed,
       permission: this.permission,
-      actions: { showTerminal: () => this.host.showTerminal(), continueIn: (to) => this.host.continueIn(to), dismissLimit: () => this.dismissLimit() }
+      ask: this.ask,
+      pending: views,
+      starting: this.starting,
+      actions: {
+        showTerminal: () => this.host.showTerminal(),
+        continueIn: (to) => this.host.continueIn(to),
+        dismissLimit: () => this.dismissLimit(),
+        answer: (answers) => this.answerAsk(answers)
+      }
     })
     this.updateComposer(input, phase)
     if (!force && (this.stickBottom || wasNear)) this.toBottom()
@@ -151,13 +186,42 @@ export class PaneChat {
   private renderedSnapshot: FeedSnapshot | null = null
 
   /** The screen is only read now and then: a menu stays up for seconds and reading it is not free. */
-  private menuNow(): boolean {
+  private screenNow(): string {
     const now = Date.now()
     if (now - this.menuAt >= MENU_CHECK_MS) {
       this.menuAt = now
-      this.menuOpen = this.host.menuOpen()
+      this.tail = this.host.screenTail()
     }
-    return this.menuOpen
+    return this.tail
+  }
+
+  /** While the agent starts or a message waits to be seen in the log, nothing else triggers a redraw, so a timer does. */
+  private setWatch(on: boolean): void {
+    if (on === (this.watch !== 0)) return
+    if (on) this.watch = window.setInterval(() => this.render(false), WATCH_MS)
+    else {
+      window.clearInterval(this.watch)
+      this.watch = 0
+    }
+  }
+
+  private pendingViews(): PendingView[] {
+    return this.pending.map((message) => ({ id: message.id, text: message.text, label: pendingLabel(message) }))
+  }
+
+  /** Messages typed while the agent was starting go in as soon as its input box is up. */
+  private flushWaiting(working: boolean): void {
+    if (this.starting || !this.pending.some((message) => message.waiting)) return
+    this.pending = this.pending.flatMap((message) => {
+      if (!message.waiting) return [message]
+      this.host.send(message.text)
+      return isTracked(message.text) ? [{ ...message, waiting: false, queued: working, at: Date.now() }] : []
+    })
+  }
+
+  private answerAsk(answers: readonly AskAnswer[]): void {
+    const ask = this.ask
+    if (ask) this.host.answer(planAnswers(ask.questions, answers))
   }
 
   private dismissLimit(): void {
@@ -167,14 +231,14 @@ export class PaneChat {
 
   private updateComposer(input: ChatInput, phase: ChatPhase): void {
     const name = AGENT_NAMES[input.agent]
-    const blocked = input.exited ? CHAT_TEXT.composerEnded : phase === 'approval' ? CHAT_TEXT.composerApproval : phase === 'menu' ? CHAT_TEXT.composerMenu : ''
+    const blocked = input.exited ? CHAT_TEXT.composerEnded : phase === 'approval' ? CHAT_TEXT.composerApproval : phase === 'menu' ? (this.ask ? CHAT_TEXT.composerApproval : CHAT_TEXT.composerMenu) : ''
     const wasBlocked = this.box.disabled
     this.box.disabled = blocked !== ''
     this.sendButton.disabled = blocked !== ''
     this.showSend()
     if (wasBlocked && !this.box.disabled && this.active && this.focusIsFree()) this.focusComposer()
     const roomy = this.box.clientWidth >= LONG_HINT_MIN_PX
-    this.box.placeholder = blocked || (roomy ? CHAT_TEXT.messagePlaceholderLong(name) : CHAT_TEXT.messagePlaceholder(name))
+    this.box.placeholder = blocked || (this.starting ? CHAT_TEXT.composerStarting(name) : roomy ? CHAT_TEXT.messagePlaceholderLong(name) : CHAT_TEXT.messagePlaceholder(name))
     this.box.title = blocked || CHAT_TEXT.messageHint
   }
 
@@ -206,13 +270,23 @@ export class PaneChat {
   private submit(): void {
     const text = this.box.value
     if (text.trim() === '' || this.box.disabled) return
-    const { flattened } = this.host.send(text)
-    this.note.hidden = !flattened
-    this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
+    this.note.hidden = true
+    if (this.starting) {
+      this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, true, false)]
+    } else {
+      const { flattened } = this.host.send(text)
+      this.note.hidden = !flattened
+      this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
+      if (isTracked(text)) {
+        const working = (this.input?.working ?? false) && !this.input?.exited
+        this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, working)]
+      }
+    }
     this.box.value = ''
     this.growBox()
     this.stickBottom = true
     this.feed.nudge()
+    this.render(false)
   }
 
   private growBox(): void {

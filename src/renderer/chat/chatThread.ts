@@ -7,11 +7,22 @@ import { stateIcon } from '../components/stateIcon'
 import type { FeedSnapshot } from './chatFeed'
 import { CHAT_TEXT } from '../../shared/chatStrings'
 import { richText } from './chatText'
+import type { AskPrompt } from '../../shared/chatAsk'
+import type { AskAnswer } from '../../shared/menuAnswer'
+import type { PendingLabel } from '../../shared/chatPending'
+import { AskCard } from './chatAsk'
 
 export interface ThreadActions {
   showTerminal(): void
   continueIn(to: AgentKind): void
   dismissLimit(): void
+  answer(answers: AskAnswer[]): void
+}
+
+export interface PendingView {
+  id: string
+  text: string
+  label: PendingLabel
 }
 
 export interface ThreadContext {
@@ -23,6 +34,9 @@ export interface ThreadContext {
   phase: ChatPhase
   limitDismissed: boolean
   permission: HTMLElement | null
+  ask: AskPrompt | null
+  pending: readonly PendingView[]
+  starting: boolean
   actions: ThreadActions
 }
 
@@ -34,6 +48,9 @@ const TOOL_ICONS: Record<ToolKind, string> = {
   read: ICONS.toolRead,
   search: ICONS.toolSearch,
   web: ICONS.toolWeb,
+  todo: ICONS.toolTodo,
+  mcp: ICONS.toolMcp,
+  question: ICONS.toolQuestion,
   other: ICONS.toolOther
 }
 
@@ -49,6 +66,7 @@ function workingText(items: readonly ChatItem[]): string {
 export class ChatThread {
   readonly el = h('div', { class: 'chat-thread' })
   private readonly open = new Set<string>()
+  private card: { id: string; card: AskCard } | null = null
 
   constructor(private readonly rerender: () => void) {}
 
@@ -59,8 +77,9 @@ export class ChatThread {
   }
 
   private body(feed: FeedSnapshot, ctx: ThreadContext): (Node | null)[] {
-    if (feed.items.length === 0 && ctx.phase !== 'approval' && ctx.phase !== 'menu') return [this.empty(ctx)]
-    return [feed.earlier > 0 ? h('p', { class: 'chat-quiet' }, CHAT_TEXT.earlier(feed.earlier)) : null, ...this.items(feed.items, ctx), ...this.tail(feed.items, ctx)]
+    const bare = feed.items.length === 0 && ctx.pending.length === 0
+    if (bare && ctx.phase !== 'approval' && ctx.phase !== 'menu' && !ctx.starting) return [this.empty(ctx)]
+    return [feed.earlier > 0 ? h('p', { class: 'chat-quiet' }, CHAT_TEXT.earlier(feed.earlier)) : null, ...this.items(feed.items, ctx), ...ctx.pending.map((item) => this.pendingMessage(item)), ...this.tail(feed.items, ctx)]
   }
 
   private empty(ctx: ThreadContext): HTMLElement {
@@ -112,7 +131,7 @@ export class ChatThread {
     const expanded = this.open.has(`t:${item.id}`)
     const row = h(
       'button',
-      { class: `chat-tool${item.failed ? ' failed' : ''}`, type: 'button', 'aria-expanded': String(expanded), title: item.target, 'data-tool': item.id, onClick: () => this.flip(`t:${item.id}`) },
+      { class: `chat-tool${item.failed ? ' failed' : ''}${!item.done && live ? ' running' : ''}`, 'data-kind': item.activity, type: 'button', 'aria-expanded': String(expanded), title: item.target, 'data-tool': item.id, onClick: () => this.flip(`t:${item.id}`) },
       icon(!item.done && live ? ICONS.toolRunning : TOOL_ICONS[item.activity] ?? ICONS.toolOther),
       h('span', {}, item.verb),
       h('bdi', { dir: 'ltr' }, h('code', {}, item.target)),
@@ -148,6 +167,7 @@ export class ChatThread {
 
   private tail(items: readonly ChatItem[], ctx: ThreadContext): (Node | null)[] {
     if (ctx.phase === 'approval') return [ctx.permission]
+    if (ctx.phase === 'menu' && ctx.ask) return [this.askCard(ctx.ask, ctx)]
     if (ctx.phase === 'menu') {
       return [
         h(
@@ -159,10 +179,26 @@ export class ChatThread {
         )
       ]
     }
+    if (ctx.starting) {
+      return [h('div', { class: 'chat-working', role: 'status' }, icon(ICONS.toolRunning), h('span', { dir: 'auto' }, `${CHAT_TEXT.starting(ctx.agentName)} ${ctx.pending.length > 0 ? CHAT_TEXT.startingWait : ''}`.trim()))]
+    }
     if (ctx.phase === 'working') {
       return [h('div', { class: 'chat-working', role: 'status' }, stateIcon('working'), h('span', { dir: 'auto' }, `${workingText(items)}. ${CHAT_TEXT.interruptHint}.`))]
     }
     return []
+  }
+
+  /** The card is kept while its question stays up, so a choice made in it survives the thread being drawn again. */
+  private askCard(prompt: AskPrompt, ctx: ThreadContext): HTMLElement {
+    if (this.card?.id !== prompt.id) {
+      this.card = { id: prompt.id, card: new AskCard(prompt, ctx.agentName, { send: (answers) => ctx.actions.answer(answers), showTerminal: () => ctx.actions.showTerminal() }) }
+    }
+    return this.card.card.el
+  }
+
+  private pendingMessage(item: PendingView): HTMLElement {
+    const note = item.label === 'queued' ? CHAT_TEXT.queued : item.label === 'waiting' ? CHAT_TEXT.waitingToStart : CHAT_TEXT.sending
+    return h('div', { class: 'chat-you pending', 'data-pending': item.label, dir: textDirection(item.text) }, ...richText(item.text), h('span', { class: 'chat-pend', role: 'status' }, note))
   }
 
   private button(label: string, onClick: () => void, primary: boolean): HTMLElement {
