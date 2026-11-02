@@ -58,6 +58,7 @@ export class PaneChat {
   private readonly thread: ChatThread
   private readonly box = h('textarea', { class: 'chat-input', rows: 1, 'aria-label': 'Message', dir: 'auto', spellcheck: 'false' })
   private readonly sendButton = h('button', { class: 'chat-btn', type: 'button', hidden: true }, CHAT_TEXT.send)
+  private readonly jump = h('button', { class: 'chat-jump', type: 'button', hidden: true }, CHAT_TEXT.jumpLatest)
   private readonly note = h('p', { class: 'chat-quiet', role: 'status', hidden: true })
   private readonly attachments = new ChatAttachments(() => this.showSend())
   private snapshot: FeedSnapshot = LOADING
@@ -88,7 +89,7 @@ export class PaneChat {
     this.el = h(
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
-      this.scroller,
+      h('div', { class: 'chat-feedwrap' }, this.scroller, this.jump),
       h('div', { class: 'chat-composer' }, this.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.sendButton))
     )
     this.box.addEventListener('keydown', (event) => this.onKey(event))
@@ -98,6 +99,11 @@ export class PaneChat {
     })
     new ResizeObserver(() => this.input && this.updateComposer(this.input, this.phase)).observe(this.box)
     this.sendButton.addEventListener('click', () => this.submit())
+    this.scroller.addEventListener('scroll', () => this.updateJump(), { passive: true })
+    this.jump.addEventListener('click', () => {
+      this.toBottom()
+      this.updateJump()
+    })
     this.box.addEventListener('paste', (event) => this.onPaste(event))
     this.watchDrops()
     this.el.addEventListener('keydown', (event) => {
@@ -193,6 +199,7 @@ export class PaneChat {
     })
     this.updateComposer(input, phase)
     if (!force && (this.stickBottom || wasNear)) this.toBottom()
+    this.updateJump()
     if (!force) this.stickBottom = false
   }
 
@@ -263,6 +270,11 @@ export class PaneChat {
 
   private showSend(): void {
     this.sendButton.hidden = this.box.disabled || (this.box.value.trim() === '' && this.attachments.items.length === 0)
+  }
+
+  /** The button shows only when the thread is scrolled up and there is more below. */
+  private updateJump(): void {
+    this.jump.hidden = this.nearBottom() || this.scroller.scrollHeight <= this.scroller.clientHeight
   }
 
   private nearBottom(): boolean {

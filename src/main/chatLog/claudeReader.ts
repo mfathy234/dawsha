@@ -1,3 +1,4 @@
+import { parseAnswers, type AnswerEntry } from '../../shared/chatCards'
 import { diffFromStructuredPatch, firstChangedLine, type ChatDiff } from '../../shared/chatDiff'
 import { stripImageMarkers, type ChatImageRef } from '../../shared/chatImage'
 import type { ChatItem } from '../../shared/chatLog'
@@ -11,6 +12,9 @@ import type { ChatLineReader, ReaderStats } from './reader'
 const KNOWN = new Set(['user', 'assistant', 'system', 'summary'])
 const SYSTEM_TAG = /^<(?:command-[a-z]+|local-command-[a-z]+|system-reminder|ide_[a-z_]+|user-prompt-submit-hook|bash-(?:input|stdout|stderr)|task-notification|persisted-output)[\s>]/
 const isUserText = (text: string): boolean => text.trim() !== '' && !SYSTEM_TAG.test(text.trim())
+const COMMAND_NAME = /<command-name>([\s\S]*?)<\/command-name>/
+const COMMAND_ARGS = /<command-args>([\s\S]*?)<\/command-args>/
+const COMMAND_OUTPUT = /^\s*<local-command-stdout>([\s\S]*?)<\/local-command-stdout>\s*$/
 const INTERRUPTED = /^\[Request interrupted by user[^\]]*\]\s*/
 
 /** The text parts of a user record, one string each, so a marker such as an interrupt can be told from what the user wrote. */
@@ -21,10 +25,10 @@ function promptParts(content: unknown): string[] {
 }
 
 /** The numbered change Claude records beside an edit's result. */
-function patchOf(record: Json): { diff: ChatDiff | null; line?: number } {
+function patchOf(record: Json): { diff: ChatDiff | null; line?: number; answers: AnswerEntry[] } {
   const result = isRecord(record.toolUseResult) ? record.toolUseResult : {}
   const line = firstChangedLine(result.structuredPatch)
-  return { diff: diffFromStructuredPatch(result.structuredPatch), ...(line ? { line } : {}) }
+  return { diff: diffFromStructuredPatch(result.structuredPatch), answers: parseAnswers(result), ...(line ? { line } : {}) }
 }
 
 function resultText(content: unknown): string {
@@ -80,7 +84,9 @@ export class ClaudeChatReader implements ChatLineReader {
     if (record.isSidechain === true) return
     const message = isRecord(record.message) ? record.message : {}
     const at = asTime(record.timestamp)
-    if (record.type === 'user' && record.isMeta !== true) this.user(record, message, at)
+    if (record.type === 'system' && record.subtype === 'compact_boundary') this.builder.notice(this.nextId(record), 'compact', CHAT_TEXT.compacted, at)
+    else if (record.type === 'user' && record.isCompactSummary === true) this.builder.compact(this.nextId(record), promptParts(message.content).join('\n'), at)
+    else if (record.type === 'user' && record.isMeta !== true) this.user(record, message, at)
     else if (record.type === 'assistant') this.assistant(record, message, at)
   }
 
@@ -106,11 +112,26 @@ export class ClaudeChatReader implements ChatLineReader {
         this.builder.notice(this.nextId(record), 'interrupted', CHAT_TEXT.interrupted, at)
       }
       const rest = marker ? part.trim().slice(marker[0].length) : part
+      if (this.slashCommand(record, rest)) continue
       if (isUserText(rest)) written.push(rest)
     }
     if (held.length === 0) held = markers.flatMap((path) => this.collector.fromFile(path) ?? [])
     const left = this.flushWritten(record, written, at, held)
     if (left.length > 0) this.builder.message(this.nextId(record), 'user', '', at, left)
+  }
+
+  /** A slash command and what it printed arrive as tagged text; both become one quiet row. True when the text was one of them. */
+  private slashCommand(record: Json, text: string): boolean {
+    const name = COMMAND_NAME.exec(text)
+    if (name) {
+      const args = COMMAND_ARGS.exec(text)?.[1]?.trim() ?? ''
+      this.builder.command(this.nextId(record), `${name[1].trim()} ${args}`.trim(), asTime(record.timestamp))
+      return true
+    }
+    const printed = COMMAND_OUTPUT.exec(text)
+    if (!printed) return false
+    this.builder.commandOutput(printed[1])
+    return true
   }
 
   /** What the user wrote around an interrupt marker is still their message. Pictures ride on the first message; what is left over is returned. */
@@ -145,6 +166,8 @@ export class ClaudeChatReader implements ChatLineReader {
         if (limit) this.builder.notice(this.nextId(record), 'limit', part.text, at, resetsAt(record))
         else if (apiError !== '' || record.isApiErrorMessage === true) this.builder.notice(this.nextId(record), 'error', part.text, at)
         else this.builder.message(this.nextId(record), 'agent', part.text, at)
+      } else if (part.type === 'thinking' && typeof part.thinking === 'string') {
+        this.builder.thought(this.nextId(record), part.thinking, at)
       } else if (part.type === 'tool_use' && typeof part.id === 'string') {
         this.builder.call(part.id, toolShape(part.name, part.input), at)
       }

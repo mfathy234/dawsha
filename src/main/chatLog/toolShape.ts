@@ -1,8 +1,10 @@
+import { parsePlan, parseTodos, todoSummary, type TodoEntry } from '../../shared/chatCards'
 import type { ChatImageRef } from '../../shared/chatImage'
 import { classifyTool } from '../../shared/timelineParse'
 import { toolKind, type ToolKind } from '../../shared/chatKind'
 import { CHAT_OUTPUT_LINES, CHAT_OUTPUT_MAX, CHAT_TARGET_MAX, boundText } from '../../shared/chatLog'
 import { parseAskQuestions, type AskQuestion } from '../../shared/chatAsk'
+import { CHAT_TEXT } from '../../shared/chatStrings'
 import { cleanText, flat, isRecord, toolArg, type Json } from '../../shared/transcript'
 
 export interface ToolShape {
@@ -20,6 +22,8 @@ export interface ToolShape {
   /** The one file this call touched, for the open button. */
   path?: string
   line?: number
+  todos?: TodoEntry[]
+  plan?: string
 }
 
 const CREATE_TOOLS = new Set(['write', 'create_file', 'write_file'])
@@ -72,6 +76,17 @@ function questionShape(input: Json): ToolShape {
   return { kind: 'question', verb: 'Asked', target: flat(first, CHAT_TARGET_MAX), preview: '', ...(ask.length > 0 ? { ask } : {}) }
 }
 
+function todoShape(input: Json): ToolShape {
+  const todos = parseTodos(input)
+  return { kind: 'todo', verb: 'Todos', target: todos.length > 0 ? todoSummary(todos) : '', preview: '', todos }
+}
+
+/** A sub-agent call is named by what it was asked to do, not by its whole prompt. */
+function agentShape(rawName: unknown, input: Json): ToolShape {
+  const what = str(input.description) || toolArg(input)
+  return { kind: 'agent', verb: 'Agent', target: flat(what, CHAT_TARGET_MAX), preview: '' }
+}
+
 /** mcp__server__tool, the name Claude logs for a tool an MCP server gives it. */
 export function mcpParts(name: string): { server: string; tool: string } | null {
   const match = /^mcp__(.+?)__(.+)$/.exec(name)
@@ -93,7 +108,10 @@ export function toolShape(rawName: unknown, rawInput: unknown): ToolShape {
     const line = tool.command.split('\n')[0]
     return { kind: 'shell', verb: 'Ran', target: flat(line, CHAT_TARGET_MAX), preview: tool.command.includes('\n') ? tool.command : '' }
   }
+  if (name === 'todowrite') return todoShape(input)
+  if (name === 'exitplanmode') return { kind: 'todo', verb: 'Plan', target: CHAT_TEXT.planTarget, preview: '', plan: parsePlan(input) }
   if (toolKind(rawName) === 'question') return questionShape(input)
+  if (name === 'task' || name === 'agent') return agentShape(rawName, input)
   const mcp = mcpParts(typeof rawName === 'string' ? rawName : '')
   if (mcp) return { kind: 'mcp', verb: mcp.server, target: mcp.tool, preview: '' }
   const label = PLAIN_VERBS[name] ?? flat(typeof rawName === 'string' && rawName !== '' ? rawName : 'tool', 60)

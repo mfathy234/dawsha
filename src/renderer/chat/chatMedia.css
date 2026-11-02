@@ -166,3 +166,46 @@
 .chat-diff .del .sg { color: var(--term-del); }
 .chat-diff .tx { min-width: 0; }
 .chat-diff .chat-more { margin: var(--sp-1) var(--sp-3); }
+
+/* Copy buttons, times, day separators, the jump button and compaction. */
+.chat-feedwrap { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.chat-feedwrap > .chat-scroll { flex: 1; }
+.chat-jump { position: absolute; inset-inline: 0; bottom: var(--sp-3); margin-inline: auto; width: fit-content; padding: 4px var(--sp-4); border: 0; border-radius: 999px; background: var(--overlay); color: var(--text); box-shadow: var(--e2); cursor: pointer; }
+.chat-jump[hidden] { display: none; }
+.chat-say, .chat-you { position: relative; }
+.chat-copy { position: absolute; inset-block-start: 0; inset-inline-end: 0; padding: 1px var(--sp-2); border: 0; border-radius: 5px; background: var(--surface); color: var(--text-3); font-size: 11px; opacity: 0; cursor: pointer; }
+.chat-say:hover > .chat-copy, .chat-you:hover > .chat-copy, .chat-codewrap:hover > .chat-copy, .chat-copy:focus-visible { opacity: 1; }
+.chat-copy:hover { color: var(--text); }
+.chat-codewrap { position: relative; }
+.chat-codewrap > .chat-copy { inset-block-start: var(--sp-1); inset-inline-end: var(--sp-1); }
+/* The time is drawn from an attribute, so it is not part of the message text that is selected or copied. */
+.chat-time::after { content: attr(data-time); }
+.chat-copy .icon { width: 14px; height: 14px; }
+.chat-copy.copied { color: var(--accent-ink, var(--accent)); opacity: 1; }
+.chat-time { position: absolute; inset-block-end: -14px; inset-inline-end: 0; color: var(--text-3); font-size: 10px; opacity: 0; pointer-events: none; }
+.chat-say:hover > .chat-time, .chat-you:hover > .chat-time { opacity: 1; }
+.chat-day { display: flex; align-items: center; gap: var(--sp-3); margin-block: var(--sp-2); color: var(--text-3); font-size: 11px; }
+.chat-day::before, .chat-day::after { content: ''; flex: 1; height: 1px; background: var(--border, color-mix(in srgb, var(--text) 12%, transparent)); }
+.chat-compact { display: grid; gap: var(--sp-1); justify-items: start; }
+
+/* Checklist, answers and plan cards on tool rows. */
+.chat-todos { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-3); display: grid; gap: 2px; border-radius: var(--r-control); background: var(--surface); }
+.chat-todos .todo { display: flex; gap: var(--sp-2); color: var(--text-2); }
+.chat-todos .todo.completed .txt { color: var(--text-3); text-decoration: line-through; }
+.chat-todos .todo.in_progress { color: var(--text); font-weight: 600; }
+.chat-todos .mark { flex: none; width: 1.2em; text-align: center; }
+.chat-answers { margin: 0; padding: var(--sp-1) var(--sp-3); border-radius: var(--r-control); background: var(--surface); }
+.chat-answers dt { color: var(--text-3); }
+.chat-answers dd { margin: 0 0 var(--sp-1); color: var(--text); font-weight: 600; }
+.chat-card { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-control); background: var(--surface); }
+
+/* Checklist, answers and plan cards on tool rows. */
+.chat-todos { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-3); display: grid; gap: 2px; border-radius: var(--r-control); background: var(--surface); }
+.chat-todos .todo { display: flex; gap: var(--sp-2); color: var(--text-2); }
+.chat-todos .todo.completed .txt { color: var(--text-3); text-decoration: line-through; }
+.chat-todos .todo.in_progress { color: var(--text); font-weight: 600; }
+.chat-todos .mark { flex: none; width: 1.2em; text-align: center; }
+.chat-answers { margin: 0; padding: var(--sp-1) var(--sp-3); border-radius: var(--r-control); background: var(--surface); }
+.chat-answers dt { color: var(--text-3); }
+.chat-answers dd { margin: 0 0 var(--sp-1); color: var(--text); font-weight: 600; }
+.chat-card { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-control); background: var(--surface); }

@@ -21,6 +21,14 @@ function itemText(content: unknown): string {
   return content.map((part) => (isRecord(part) ? str(part.text) : '')).join('')
 }
 
+/** The readable text of a Reasoning item: its summary parts, or its content when there is no summary. Empty when it holds none. */
+function reasoningText(item: Json): string {
+  const parts = (value: unknown): string[] =>
+    Array.isArray(value) ? value.map((part) => (typeof part === 'string' ? part : isRecord(part) ? str(part.text) : '')).filter((text) => text.trim() !== '') : []
+  const summary = parts(item.summary)
+  return (summary.length > 0 ? summary : parts(item.content)).join('\n\n')
+}
+
 function commandOf(item: Json): string {
   const command = item.command
   if (Array.isArray(command)) {
@@ -144,6 +152,7 @@ export class CodexChatReader implements ChatLineReader {
     else if (item.type === 'CommandExecution') this.command(id, item, at)
     else if (item.type === 'FileChange') this.fileChange(id, item, at)
     else if (item.type === 'McpToolCall') this.mcp(id, item, at)
+    else if (item.type === 'Reasoning') this.builder.thought(id, reasoningText(item), at)
     else if (item.type === 'ImageView') this.imageView(id, item, at)
     else if (item.type === 'Extension') this.generated(id, item, at)
   }

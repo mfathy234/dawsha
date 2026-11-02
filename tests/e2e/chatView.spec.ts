@@ -532,6 +532,77 @@ test('files dropped on the chat become chips with a thumbnail and go with the ne
   }
 })
 
+test('day separators, copy buttons, folded compaction and thought rows, and a jump to the latest message', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const filler = Array.from({ length: 40 }, (_, i) => ({ type: 'assistant', uuid: `f${i}`, timestamp: '2026-10-14T09:00:00.000Z', message: { role: 'assistant', content: [{ type: 'text', text: `Filler paragraph number ${i}` }] } }))
+    writeLog(sandbox, [
+      { type: 'user', uuid: 'd1', timestamp: '2026-10-13T09:00:00.000Z', message: { role: 'user', content: 'Day one question' } },
+      { type: 'assistant', uuid: 'd2', timestamp: '2026-10-13T09:01:00.000Z', message: { role: 'assistant', content: [{ type: 'thinking', thinking: 'Considering the options' }, { type: 'text', text: 'Run this:\n\n```\nnpm test\n```' }] } },
+      { type: 'system', subtype: 'compact_boundary', timestamp: '2026-10-14T08:00:00.000Z' },
+      { type: 'user', uuid: 'd3', timestamp: '2026-10-14T08:00:01.000Z', isCompactSummary: true, message: { role: 'user', content: 'SECRET-SUMMARY of the earlier talk' } },
+      ...filler
+    ])
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    await expect(chat.locator('.chat-day')).toHaveCount(2, { timeout: 15_000 })
+    await expect(chat.locator('.chat-compact')).toContainText('Conversation compacted')
+    await expect(chat.locator('.chat-jump')).toBeHidden()
+    await expect(chat.locator('.chat-compact')).not.toContainText('SECRET-SUMMARY')
+    await chat.getByRole('button', { name: 'Show summary' }).click()
+    await expect(chat.locator('.chat-compact')).toContainText('SECRET-SUMMARY')
+    await expect(chat.locator('.chat-tool', { hasText: 'Thought' })).toHaveCount(1)
+    await expect(chat.locator('.chat-codewrap .chat-copy')).toHaveCount(1)
+    await chat.locator('.chat-scroll').evaluate((el) => {
+      el.scrollTop = 0
+    })
+    await expect(chat.locator('.chat-jump')).toBeVisible()
+    await chat.locator('.chat-jump').click()
+    await expect(chat.locator('.chat-jump')).toBeHidden()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('tool cards: a checklist, the chosen answers, a collapsible plan and a sub-agent report', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const questions = [{ header: 'Lib', question: 'Which library?', multiSelect: false, options: [{ label: 'zod', description: 'schemas' }, { label: 'yup', description: 'older' }] }]
+    const use = (id: string, name: string, input: unknown) => ({ type: 'assistant', uuid: `a-${id}`, message: { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] } })
+    const done = (id: string, content: unknown, toolUseResult?: unknown) => ({ type: 'user', uuid: `u-${id}`, ...(toolUseResult ? { toolUseResult } : {}), message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content }] } })
+    writeLog(sandbox, [
+      use('t1', 'TodoWrite', { todos: [{ content: 'Write the tests', status: 'completed' }, { content: 'Ship it', status: 'in_progress' }] }),
+      done('t1', 'ok'),
+      use('q1', 'AskUserQuestion', { questions }),
+      done('q1', 'User has answered', { questions, answers: { 'Which library?': 'zod' } }),
+      use('p1', 'ExitPlanMode', { plan: '# The plan\n\n- first step\n- second step' }),
+      done('p1', 'approved'),
+      use('g1', 'Task', { description: 'Find the flaky test', subagent_type: 'general-purpose', prompt: 'long prompt' }),
+      done('g1', [{ type: 'text', text: 'It is **login.spec.ts**' }])
+    ])
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    await expect(chat.locator('.chat-todos li')).toHaveCount(2, { timeout: 15_000 })
+    await expect(chat.locator('.chat-todos .todo.completed')).toContainText('Write the tests')
+    await expect(chat.locator('.chat-answers')).toContainText('Which library?')
+    await expect(chat.locator('.chat-answers dd')).toHaveText('zod')
+    await expect(chat.locator('.chat-card')).toHaveCount(0)
+    await chat.locator('.chat-tool', { hasText: 'Plan' }).click()
+    await expect(chat.locator('.chat-card li')).toHaveCount(2)
+    await chat.locator('.chat-tool', { hasText: 'Plan' }).click()
+    await expect(chat.locator('.chat-card')).toHaveCount(0)
+    await expect(chat.locator('.chat-tool', { hasText: 'Agent' })).toContainText('Find the flaky test')
+    await chat.locator('.chat-tool', { hasText: 'Agent' }).click()
+    await expect(chat.locator('.chat-card strong')).toHaveText('login.spec.ts')
+  } finally {
+    await closeApp(app)
+  }
+})
+
 test('a pasted picture shows as a thumbnail, opens in a lightbox and its actions work', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox, agentEnv(sandbox))

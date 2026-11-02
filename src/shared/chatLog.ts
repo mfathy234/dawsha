@@ -1,4 +1,5 @@
 import type { AskQuestion } from './chatAsk'
+import type { AnswerEntry, TodoEntry } from './chatCards'
 import type { ChatDiff } from './chatDiff'
 import type { ChatPreviewRequest } from './chatAttach'
 import type { ChatImageActionRequest, ChatImageActionResult, ChatImageRef, ChatImageRequest, ChatImageResult } from './chatImage'
@@ -70,6 +71,8 @@ export interface ChatMessage {
   role: 'user' | 'agent'
   text: string
   images?: ChatImageRef[]
+  /** The message was longer than Chat keeps and was cut. */
+  truncated?: boolean
   at?: number
 }
 
@@ -94,10 +97,16 @@ export interface ChatTool {
   line?: number
   /** The change an edit made, with line numbers where the log has them. */
   diff?: ChatDiff
+  /** The checklist of a TodoWrite call. */
+  todos?: TodoEntry[]
+  /** What was chosen for an AskUserQuestion, once answered. */
+  answers?: AnswerEntry[]
+  /** The plan an ExitPlanMode call proposes, as markdown. */
+  plan?: string
   at?: number
 }
 
-export type ChatNoticeKind = 'limit' | 'error' | 'interrupted'
+export type ChatNoticeKind = 'limit' | 'error' | 'interrupted' | 'compact'
 
 export interface ChatNotice {
   kind: 'notice'
@@ -105,6 +114,8 @@ export interface ChatNotice {
   notice: ChatNoticeKind
   text: string
   resetsAt?: number
+  /** Text kept out of sight until asked for: the summary a compaction left. */
+  detail?: string
   at?: number
 }
 

@@ -65,7 +65,7 @@ describe('ClaudeChatReader', () => {
     expect(reader.items()).toHaveLength(1)
   })
 
-  it('ignores sidechain records, meta prompts and command traces', () => {
+  it('ignores sidechain records and meta prompts, and shows a slash command as a row rather than a message', () => {
     const reader = new ClaudeChatReader()
     reader.feed(
       lines(
@@ -75,7 +75,9 @@ describe('ClaudeChatReader', () => {
         { type: 'user', message: { content: [{ type: 'text', text: '<system-reminder>x</system-reminder>' }, { type: 'text', text: 'real' }] } }
       )
     )
-    expect(reader.items().map((item) => (item as ChatMessage).text)).toEqual(['real'])
+    const items = reader.items()
+    expect(items.filter((item) => item.kind === 'message').map((item) => (item as ChatMessage).text)).toEqual(['real'])
+    expect(items.filter((item) => item.kind === 'tool')).toMatchObject([{ verb: 'Ran', target: '/model' }])
   })
 
   it('keeps a prompt that merely starts with a tag', () => {
