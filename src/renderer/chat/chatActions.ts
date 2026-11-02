@@ -1,4 +1,5 @@
-import { submitDelayFor } from '../../shared/chatSubmit'
+import { composerHolds, submitDelayFor, submitKey } from '../../shared/chatSubmit'
+import { detectTerminalMenu } from '../../shared/terminalMenu'
 import type { TabAgent } from '../../shared/types'
 import { chatViewKey, defaultViewFor, rememberChatView, resolveChatView, type ChatAgent, type ChatView } from '../../shared/chatLog'
 import { persistWorkspace, saveSettings } from '../actions'
@@ -62,8 +63,32 @@ export function sendChatMessage(tabId: string, agent: TabAgent, text: string): {
   const { flattened } = terminal.insertText(text.trim())
   // Mark the prompt as typing Enter would, so Ctrl+Up and Copy last reply point at this message.
   terminal.prompts.noteInput('\r')
-  window.setTimeout(() => api.write(tabId, '\r'), submitDelayFor(agent))
+  window.setTimeout(() => {
+    api.write(tabId, '\r')
+    if (agent === 'codex') confirmSent(tabId, text.trim(), 1)
+  }, submitDelayFor(agent))
   return { flattened }
+}
+
+const CHECK_MS = 1_200
+const MAX_PRESSES = 3
+const MAX_CHECKS = 50
+const SCREEN_ROWS = 30
+
+/**
+ * Codex can leave a message in its box after Enter, and the next message is then glued onto it. Watch the box until it
+ * is empty: while Codex says it is holding the message until it has started, just wait; otherwise press the key Codex
+ * asks for (Tab to queue while it works, Enter when idle), a few times at most and never while a menu is up.
+ */
+function confirmSent(tabId: string, message: string, presses: number, checks = 0): void {
+  window.setTimeout(() => {
+    const tail = getTerminal(tabId)?.tailText(SCREEN_ROWS) ?? ''
+    if (tail === '' || detectTerminalMenu(tail) || !composerHolds(tail, message)) return
+    const key = submitKey(tail)
+    if (key) api.write(tabId, key)
+    const pressed = presses + (key ? 1 : 0)
+    if (pressed <= MAX_PRESSES && checks < MAX_CHECKS) confirmSent(tabId, message, pressed, checks + 1)
+  }, CHECK_MS)
 }
 
 export function interruptAgent(tabId: string): void {
