@@ -102,8 +102,8 @@ export class FilesViewComponent {
     const target = openTarget(this.set?.prefix ?? '', path, line, undefined)
     void this.openFile(target.path, { pin: true, focus: true, line: target.line, column: target.column })
   }
-  private readonly configPane = new ConfigPane({ folder: () => this.set?.folder ?? null, open: this.openChecked })
-  private readonly prPanel = new PrPanel({ folder: () => this.set?.folder ?? null, open: this.openChecked, send: (text, anchor) => this.sendProblems(text, anchor) })
+  private readonly configPane = new ConfigPane({ folder: () => this.target?.folder ?? null, open: this.openChecked })
+  private readonly prPanel = new PrPanel({ folder: () => this.target?.folder ?? null, open: this.openChecked, send: (text, anchor) => this.sendProblems(text, anchor) })
   private readonly browserTab = new BrowserTab({ send: (text, anchor) => this.sendProblems(text, anchor) })
   private readonly panel = new BottomPanel(this.runPanel, () => {
     // the panel reports while it is built, before the status bar below exists
