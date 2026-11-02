@@ -61,7 +61,8 @@ test('in a project below the git root F12, Back, Ctrl+D, F2 and Stage from the g
     await token(page, 'makeStore', 'const a').click()
     await page.keyboard.press('Control+d')
     await page.keyboard.press('Control+d')
-    expect(await page.locator('.files-editor:not([hidden]) .cm-selectionBackground').count()).toBeGreaterThanOrEqual(2)
+    // The editor draws the added selection on its next frame, so wait for it rather than count once.
+    await expect.poll(() => page.locator('.files-editor:not([hidden]) .cm-selectionBackground').count(), { timeout: 10_000 }).toBeGreaterThanOrEqual(2)
     await page.keyboard.press('Escape')
 
     await token(page, 'makeStore', 'const a').click()
