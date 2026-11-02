@@ -385,3 +385,75 @@ test('each agent opens in its own default and a remembered choice beats the defa
     await closeApp(session.app)
   }
 })
+
+const ASK_SCREEN = ['', 'Which color?', '', '❯ 1. Red', '     Warm', '  2. Blue', '     Cool', '  3. Type something.', '', 'Enter to select · ↑/↓ to navigate · Esc to cancel', ''].join('\r\n')
+const ASK_LOG = [
+  { type: 'user', uuid: 'u1', message: { content: 'pick a color' } },
+  {
+    type: 'assistant',
+    uuid: 'a1',
+    message: { content: [{ type: 'tool_use', id: 'q1', name: 'AskUserQuestion', input: { questions: [{ question: 'Which color?', header: 'Color', multiSelect: false, options: [{ label: 'Red', description: 'Warm' }, { label: 'Blue', description: 'Cool' }] }] } }] }
+  }
+]
+
+test('a question menu is answered from chat by pressing the option number', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    writeLog(sandbox, ASK_LOG)
+    const pane = await startClaude(page, sandbox)
+    const termId = await activeTermId(page)
+    await expect.poll(() => bufferText(page, termId)).toContain('READY claude')
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    await feedTerminal(page, termId, ASK_SCREEN)
+    const card = chat.locator('.chat-ask')
+    await expect(card).toContainText('Which color?', { timeout: 15_000 })
+    await expect(card.locator('.chat-opt')).toHaveCount(2)
+    await expect(chat.getByRole('textbox', { name: 'Message' })).toBeDisabled()
+    await card.locator('.chat-opt', { hasText: 'Blue' }).click()
+    await expect(card).toContainText('Answer sent.')
+    await expect.poll(() => bufferText(page, termId), { timeout: 15_000 }).toContain('KEY 2')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('markdown in a reply is drawn as a table, a list and emphasis, and links never navigate', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const reply = '## Plan\n\n| Name | Count |\n|---|:-:|\n| a | 1 |\n| b | 2 |\n\n- **bold** item\n  - nested\n1. one\n\n[site](https://example.com) and [file](src/a.ts)'
+    writeLog(sandbox, [{ type: 'assistant', uuid: 'a1', message: { content: [{ type: 'text', text: reply }] } }])
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    await expect(chat.locator('.chat-table tbody tr')).toHaveCount(2, { timeout: 15_000 })
+    await expect(chat.locator('.chat-table th')).toHaveText(['Name', 'Count'])
+    await expect(chat.locator('.chat-say strong')).toHaveText('bold')
+    await expect(chat.locator('.chat-list .chat-list li')).toHaveText('nested')
+    await expect(chat.locator('.chat-link')).toHaveCount(1)
+    await expect(chat.locator('.chat-say a')).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('a sent message carries a marker until the log has it', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    const box = chat.getByRole('textbox', { name: 'Message' })
+    await expect(box).toBeEnabled({ timeout: 15_000 })
+    await box.fill('hello there')
+    await box.press('Enter')
+    await expect(chat.locator('.chat-you', { hasText: 'hello there' }).first()).toBeVisible({ timeout: 15_000 })
+    await expect(chat.locator('.chat-say')).toContainText('Echo: hello there', { timeout: 15_000 })
+    await expect(chat.locator('.chat-pend')).toHaveCount(0, { timeout: 15_000 })
+  } finally {
+    await closeApp(app)
+  }
+})

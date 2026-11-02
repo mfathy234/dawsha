@@ -160,7 +160,7 @@ export class CodexChatReader implements ChatLineReader {
   private mcp(id: string, item: Json, at: number | undefined): void {
     const args = isRecord(item.arguments) ? item.arguments : {}
     const title = str(args.title) || `${str(item.server)}.${str(item.tool)}`
-    this.builder.call(id, { kind: 'other', verb: 'Used', target: flat(title, CHAT_TARGET_MAX), preview: '' }, at)
+    this.builder.call(id, { kind: 'mcp', verb: 'Used', target: flat(title, CHAT_TARGET_MAX), preview: '' }, at)
     const result = isRecord(item.result) ? item.result : {}
     this.builder.result(id, { output: itemText(result.content), failed: result.isError === true || item.status === 'failed' })
   }

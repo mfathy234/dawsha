@@ -56,6 +56,7 @@ export class ChatBuilder {
       output,
       outputTruncated: truncated,
       done: false,
+      ...(shape.ask ? { ask: shape.ask } : {}),
       at
     }
     this.open.set(id, this.list.length)

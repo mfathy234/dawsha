@@ -1,12 +1,12 @@
 import { chatCapable } from '../../shared/chatLog'
 import type { SessionState } from '../../shared/sessionState'
 import type { AgentKind } from '../../shared/types'
-import { detectTerminalMenu } from '../../shared/terminalMenu'
 import { folderOfPane, store } from '../state'
 import { continueIn } from '../handoffActions'
 import type { PaneView } from '../derive'
 import { getTerminal } from '../terminals'
 import { sessionIdOf } from '../transcriptActions'
+import { answerMenu } from './menuActions'
 import { interruptAgent, paneViewOf, primaryTab, rememberPending, sendChatMessage, setPaneView } from './chatActions'
 import type { ChatHost, PaneChat } from './paneChat'
 import type { ViewSwitch } from './viewSwitch'
@@ -21,7 +21,8 @@ export function chatHostFor(paneId: string, current: () => PaneView | null): Cha
     continueIn: (to: AgentKind) => void continueIn(paneId, to),
     send: (text) => sendChatMessage(tabId(), text),
     interrupt: () => interruptAgent(tabId()),
-    menuOpen: () => detectTerminalMenu(getTerminal(tabId())?.tailText(MENU_ROWS) ?? '')
+    screenTail: () => getTerminal(tabId())?.tailText(MENU_ROWS) ?? '',
+    answer: (steps) => void answerMenu(tabId(), steps)
   }
 }
 
@@ -49,7 +50,9 @@ export function syncPaneChat(paneId: string, view: PaneView, state: SessionState
           branch: view.branch ?? '',
           working: state === 'working',
           needsApproval: asking,
-          exited: tab.status === 'exited'
+          exited: tab.status === 'exited',
+          status: tab.status,
+          startedAt: tab.startedAt
         }
       : null
   )

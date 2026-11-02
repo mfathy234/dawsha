@@ -125,7 +125,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--accent-ink);
   font: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -233,7 +233,21 @@
 }
 
 .chat-tool .icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
   color: var(--text-3);
+}
+
+.chat-tool.running .icon {
+  color: var(--accent-ink);
+}
+
+.chat-tool.failed .icon {
+  color: var(--danger);
 }
 
 .chat-tool:hover .icon {
@@ -506,4 +520,104 @@
     padding: 0 6px;
     font-size: var(--fs-1);
   }
+}
+
+.chat-you.pending {
+  opacity: 0.8;
+}
+
+.chat-pend {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: var(--fs-1);
+  text-align: end;
+}
+
+.chat-ask {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 14px;
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+
+.chat-ask-q {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.chat-ask-title {
+  font-weight: var(--w-medium);
+  overflow-wrap: anywhere;
+}
+
+.chat-chip {
+  justify-self: start;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-micro);
+  background: var(--hover);
+  color: var(--text-2);
+  font-size: var(--fs-1);
+}
+
+.chat-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: none;
+  color: var(--text);
+  text-align: start;
+  cursor: pointer;
+}
+
+.chat-opt:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.chat-opt.on {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+
+.chat-opt:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.chat-opt-n {
+  flex: none;
+  min-width: 16px;
+  color: var(--text-3);
+  font: var(--fs-1) var(--font-mono);
+  line-height: 20px;
+}
+
+.chat-opt-text {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chat-opt-row {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.chat-opt-other {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: none;
+  color: var(--text);
+  font: inherit;
+}
+
+.chat-ask-footer {
+  align-items: center;
 }

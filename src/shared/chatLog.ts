@@ -1,3 +1,4 @@
+import type { AskQuestion } from './chatAsk'
 import type { ToolKind } from './chatKind'
 import type { TabAgent } from './types'
 
@@ -81,6 +82,8 @@ export interface ChatTool {
   outputTruncated: boolean
   failed?: boolean
   done: boolean
+  /** The questions of an AskUserQuestion call, while it waits for an answer. */
+  ask?: AskQuestion[]
   at?: number
 }
 
