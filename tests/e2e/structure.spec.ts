@@ -94,7 +94,14 @@ test('nav: five primary destinations, secondary pages in the brand menu', async 
     await expect(page.locator('#more-button .app-title')).toHaveText('Dawsha')
     await page.locator('#sessions-button').click()
     await page.mouse.move(700, 500)
-    await expect.poll(async () => (await style(page, '#sessions-button', ['background-color']))['background-color']).toBe(rgb('#1b212a'))
+    // 1.8.4: the selected tab has no fill; a thin accent underline marks it instead.
+    await expect.poll(async () => (await style(page, '#sessions-button', ['background-color']))['background-color']).toBe('rgba(0, 0, 0, 0)')
+    const underline = await page.locator('#sessions-button').evaluate((el) => {
+      const after = getComputedStyle(el, '::after')
+      return { content: after.content, height: after.height }
+    })
+    expect(underline.content).not.toBe('none')
+    expect(parseFloat(underline.height)).toBeGreaterThan(0)
     const active = await style(page, '#sessions-button', ['font-weight', 'border-bottom-style', 'outline-style'])
     expect(Number(active['font-weight'])).toBe(500)
     expect(active['border-bottom-style']).toBe('none')
