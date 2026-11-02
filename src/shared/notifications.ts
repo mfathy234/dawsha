@@ -13,6 +13,8 @@ export interface NotificationEntry {
   kind: NotificationKind
   at: number
   read: boolean
+  /** The project the notice is about; notices without one are listed under General. */
+  group?: string
   action?: NotificationAction
 }
 
@@ -52,3 +54,28 @@ export const needsMessage = (title: string, project: string | null): string =>
 export const badgeText = (count: number): string => (count > 9 ? '9+' : String(count))
 
 export const bellLabel = (count: number): string => (count > 0 ? `Notifications, ${count} unread` : 'Notifications')
+
+export const GENERAL_GROUP = 'General'
+
+export interface NotificationGroup {
+  name: string
+  entries: readonly NotificationEntry[]
+  unread: number
+}
+
+/** Entries grouped by project (or General), the group with the newest entry first and each group newest first. */
+export function groupNotifications(list: readonly NotificationEntry[]): NotificationGroup[] {
+  const byName = new Map<string, NotificationEntry[]>()
+  for (const entry of [...list].sort((a, b) => b.at - a.at || b.id - a.id)) {
+    const name = entry.group?.trim() || GENERAL_GROUP
+    byName.set(name, [...(byName.get(name) ?? []), entry])
+  }
+  return [...byName].map(([name, entries]) => ({ name, entries, unread: unreadCount(entries) }))
+}
+
+/** What Clear all is about to remove, for the confirmation: "12 notifications (Smoke 5, General 7)". */
+export function clearSummary(list: readonly NotificationEntry[]): string {
+  const noun = `${list.length} notification${list.length === 1 ? '' : 's'}`
+  const groups = groupNotifications(list)
+  return groups.length < 2 ? noun : `${noun} (${groups.map((group) => `${group.name} ${group.entries.length}`).join(', ')})`
+}

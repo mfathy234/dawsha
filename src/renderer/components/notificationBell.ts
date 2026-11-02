@@ -10,7 +10,10 @@ import {
   actionAvailable,
   badgeText,
   bellLabel,
+  clearSummary,
+  groupNotifications,
   unreadCount,
+  type NotificationGroup,
   type NotificationEntry,
   type NotificationKind
 } from '../../shared/notifications'
@@ -129,7 +132,8 @@ export class NotificationBell {
         'div',
         { class: 'popup-head notifications-head' },
         h('h2', { class: 'popover-title', id: 'notifications-title' }, 'Notifications'),
-        entries.length > 0 ? h('button', { class: 'btn ghost small', type: 'button', id: 'notifications-clear', onClick: () => void this.confirmClear() }, 'Clear') : null,
+        this.fresh.size > 0 ? h('button', { class: 'btn ghost small', type: 'button', id: 'notifications-mark-read', onClick: () => this.markRead() }, 'Mark all read') : null,
+        entries.length > 0 ? h('button', { class: 'btn ghost small', type: 'button', id: 'notifications-clear', onClick: () => void this.confirmClear() }, 'Clear all') : null,
         popupDismissButton(() => this.close(true))
       ),
       entries.length > 0 ? this.list(entries) : this.empty()
@@ -137,12 +141,21 @@ export class NotificationBell {
     if (hadFocus && !root.contains(document.activeElement)) root.focus()
   }
 
+  /** Opening the list already counts everything as read; this also drops the dots. */
+  private markRead(): void {
+    this.fresh = new Set()
+    this.render()
+  }
+
   private async confirmClear(): Promise<void> {
     const count = notificationEntries().length
     if (count === 0 || this.confirming) return
     const noun = `${count} notification${count === 1 ? '' : 's'}`
     this.confirming = true
-    const confirmed = await confirmDialog({ title: 'Clear notifications?', body: `This removes ${noun} from the list.`, confirmLabel: `Clear ${noun}` })
+    const summary = clearSummary(notificationEntries())
+    const groups = summary.includes('(') ? `
+${summary.slice(summary.indexOf('('))}` : ''
+    const confirmed = await confirmDialog({ title: 'Clear notifications?', body: `This removes ${noun} from the list.${groups}`, confirmLabel: `Clear ${noun}` })
     this.confirming = false
     if (!confirmed) {
       this.popover?.querySelector<HTMLElement>('#notifications-clear')?.focus()
@@ -162,7 +175,18 @@ export class NotificationBell {
 
   private list(entries: readonly NotificationEntry[]): HTMLElement {
     const now = Date.now()
-    return h('ul', { class: 'notifications-list', 'aria-label': 'Recent notifications' }, ...entries.map((entry) => this.row(entry, now)))
+    const groups = groupNotifications(entries)
+    return h('div', { class: 'notifications-groups' }, ...groups.map((group) => this.group(group, now)))
+  }
+
+  private group(group: NotificationGroup, now: number): HTMLElement {
+    const fresh = group.entries.filter((entry) => this.fresh.has(entry.id)).length
+    return h(
+      'section',
+      { class: 'notification-group' },
+      h('h3', { class: 'notification-group-title' }, group.name, h('span', { class: 'notification-group-count' }, fresh > 0 ? `${fresh} new` : String(group.entries.length))),
+      h('ul', { class: 'notifications-list', 'aria-label': `${group.name} notifications` }, ...group.entries.map((entry) => this.row(entry, now)))
+    )
   }
 
   private row(entry: NotificationEntry, now: number): HTMLElement {
@@ -173,10 +197,11 @@ export class NotificationBell {
       action.run()
       consumeNotificationAction(entry.id)
     }
-    return h(
+    const fresh = this.fresh.has(entry.id)
+    const item = h(
       'li',
-      { class: `notification-item kind-${entry.kind}${this.fresh.has(entry.id) ? ' fresh' : ''}`, 'data-kind': entry.kind },
-      h('span', { class: 'notification-icon' }, kindIcon(entry.kind)),
+      { class: `notification-item kind-${entry.kind}${fresh ? ' fresh' : ''}${action ? ' jumpable' : ''}`, 'data-kind': entry.kind },
+      h('span', { class: 'notification-icon' }, kindIcon(entry.kind), fresh ? h('span', { class: 'notification-dot', title: 'Unread' }, h('span', { class: 'sr-only' }, 'Unread')) : null),
       h(
         'div',
         { class: 'notification-body' },
@@ -186,5 +211,8 @@ export class NotificationBell {
       ),
       action ? h('button', { class: 'btn small notification-action', type: 'button', onClick: run }, action.label) : null
     )
+    // The whole row jumps to the session; the button stays as the keyboard path.
+    if (action) item.addEventListener('click', (event) => { if (!(event.target as HTMLElement).closest('button')) run() })
+    return item
   }
 }
