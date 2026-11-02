@@ -935,7 +935,6 @@ export class FilesViewComponent {
     else if (command === 'definition' || command === 'implementation' || command === 'references') void this.nav.go(command)
     else if (command === 'back') void this.nav.back()
     else if (command === 'forward') void this.nav.forward()
-    else if (command === 'everything') this.nav.openEverythingPicker()
     else if (command === 'symbol') this.nav.openSymbolPicker()
     else if (command === 'line') this.nav.openLinePicker()
     else if (command === 'ask') void this.tools.ask()

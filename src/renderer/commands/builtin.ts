@@ -97,7 +97,6 @@ function filesNavigationCommands(): Command[] {
     filesCommand('files.references', 'Find All References', 'references', functionKey('F12', true), 'usages peek f12'),
     filesCommand('files.back', 'Go Back', 'back', fileHistoryShortcut('back'), 'previous location history navigate'),
     filesCommand('files.forward', 'Go Forward', 'forward', fileHistoryShortcut('forward'), 'next location history navigate'),
-    filesCommand('files.everything', 'Go to Everything…', 'everything', withKeys('Ctrl+T'), 'search symbol text file anywhere'),
     filesCommand('files.symbol', 'Go to Symbol in this file…', 'symbol', withKeys('Ctrl+Shift+O'), 'outline method class function'),
     filesCommand('files.line', 'Go to Line…', 'line', withKeys('Ctrl+G'), 'goto number position'),
     filesCommand('files.rename', 'Rename Symbol…', 'rename', functionKey('F2'), 'refactor name all files preview'),

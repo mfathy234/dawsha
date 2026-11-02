@@ -4,6 +4,7 @@ import { CHAT_TEXT } from '../../shared/chatStrings'
 import { CodexChatReader } from './codexReader'
 import { ClaudeChatReader } from './claudeReader'
 import { unrecognised, type ChatLineReader } from './reader'
+import type { ImageEntry } from './imageTable'
 import { LogTail } from './tail'
 
 function createReader(agent: TabAgent): ChatLineReader {
@@ -35,10 +36,15 @@ export class ChatSession {
     return changed
   }
 
+  /** A picture this session's reader produced, or undefined when the id is not one of its own. */
+  image(id: string): ImageEntry | undefined {
+    return this.reader.image(id)
+  }
+
   result(): ChatReadResult {
     if (unrecognised(this.reader.stats)) {
       return { status: 'failed', reason: CHAT_TEXT.failedFormat }
     }
-    return { status: 'ok', items: this.reader.items(), version: this.version, earlier: this.reader.earlier }
+    return { status: 'ok', items: this.reader.items(), version: this.version, earlier: this.reader.earlier, background: this.reader.background() }
   }
 }

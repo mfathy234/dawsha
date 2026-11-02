@@ -1,13 +1,10 @@
 import type { CodeNavHit, CodeNavKind, CodeNavStatus } from '../../shared/codeNav'
-import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
-import { quickOpen as rankFiles } from '../../shared/fileTree'
 import { api } from '../api'
 import { requestCodeNav, requestInstall, requestRestart, requestStatus } from './codeNavApi'
 import { LatestGate } from './asyncGuard'
 import type { FileDoc } from './fileDoc'
 import type { FileEditor } from './editor'
 import { openInVsCode } from './filesActions'
-import { fileIndex, recentFiles } from './fileIndex'
 import { closeJumpPick, openJumpPick, type PickItem } from './jumpPick'
 import { enclosingSymbols, filterOutline, parseLineInput } from './jumpInputs'
 import { EMPTY_HISTORY, forgetPath, recordJump, stepBack, stepForward, type NavHistory, type NavPoint, type Step } from './navHistory'
@@ -18,7 +15,7 @@ import { relocateHit } from './relocate'
 
 export interface NavHost {
   folder(): string | null
-  /** The project's place in its repository: file tabs use repo paths, the engine uses project paths. */
+  /** The project's place in its repository. File tabs and the engine both use repo-relative paths. */
   prefix(): string
   active(): FileDoc | null
   /** Opens a file in a preview tab and loads it. Null when it could not be opened (every tab has unsaved edits). */
@@ -37,14 +34,9 @@ export interface NavHost {
 
 const POLL_MS = 2000
 const POLL_MAX = 45
-const EVERYTHING_FILES = 6
-const EVERYTHING_SYMBOLS = 6
-const EVERYTHING_TEXT = 8
-const NAME_ONLY = /^[A-Za-z_$][\w$]*$/
 const INSTALL_NOTE = 'Installing csharp-ls with dotnet tool install. Results get exact when the solution has loaded.'
 
 const baseName = (path: string): string => path.slice(path.lastIndexOf('/') + 1)
-const dirName = (path: string): string => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '')
 
 /** Go to Definition, Implementation and References, Back and Forward, and the pickers that jump around a project. */
 export class CodeNavigator {
@@ -100,7 +92,7 @@ export class CodeNavigator {
     const cursor = editor.cursor()
     const ticket = this.requestGate.begin()
     const result = await requestCodeNav(folder, {
-      kind, path: toProjectPath(this.host.prefix(), doc.path), symbol: found.name, line: cursor.line, column: cursor.col, unsavedText: doc.dirty ? doc.text() : undefined
+      kind, path: doc.path, symbol: found.name, line: cursor.line, column: cursor.col, unsavedText: doc.dirty ? doc.text() : undefined
     })
     if (!ticket.current() || this.host.active() !== doc || !doc.editor) return
     void this.refreshEngine()
@@ -131,8 +123,7 @@ export class CodeNavigator {
   private async peek(doc: FileDoc, symbol: string, note: string, hits: readonly CodeNavHit[]): Promise<void> {
     const editor = doc.editor
     if (!editor) return
-    const prefix = this.host.prefix()
-    const peekHits: PeekHit[] = hits.map((hit) => ({ ...hit, repoPath: toRepoPath(prefix, hit.path) }))
+    const peekHits: PeekHit[] = hits.map((hit) => ({ ...hit, repoPath: hit.path }))
     const { buildPeek } = await import('./peek')
     if (doc.editor !== editor || this.host.active() !== doc) return
     const hooks = {
@@ -191,7 +182,7 @@ export class CodeNavigator {
   }
 
   private jumpToHit(hit: { path: string; line: number; column: number; preview: string }, symbol: string): Promise<boolean> {
-    return this.travel(toRepoPath(this.host.prefix(), hit.path), (editor, target) => {
+    return this.travel(hit.path, (editor, target) => {
       const spot = target.dirty ? relocateHit(editor.view.state.sliceDoc(), hit, symbol) : hit
       return editor.posAt(spot.line, spot.column)
     }, (origin) => (origin ? recordJump(this.history, origin) : this.history))
@@ -233,7 +224,7 @@ export class CodeNavigator {
       return
     }
     const ticket = this.engineGate.begin()
-    const status = await requestStatus(folder, toProjectPath(this.host.prefix(), doc.path))
+    const status = await requestStatus(folder, doc.path)
     if (!ticket.current()) return
     this.setEngine(status)
     if (status?.state === 'starting' && this.polls < POLL_MAX) {
@@ -262,7 +253,7 @@ export class CodeNavigator {
     const folder = this.host.folder()
     if (!folder || !doc) return
     if (line.action === 'restart') {
-      const failure = await requestRestart(folder, toProjectPath(this.host.prefix(), doc.path))
+      const failure = await requestRestart(folder, doc.path)
       if (failure) this.host.warn(failure)
     } else if (line.action === 'install') {
       this.host.say(INSTALL_NOTE)
@@ -307,51 +298,5 @@ export class CodeNavigator {
         return target !== null
       }
     })
-  }
-
-  openEverythingPicker(): void {
-    const folder = this.host.folder()
-    if (!folder) return
-    openJumpPick(this.host.overlay(), {
-      ariaLabel: 'Go to everything', placeholder: 'Find a file, a symbol or text', delayMs: 120, restoreFocus: () => this.focusEditor(),
-      items: (query) => this.everything(folder, query),
-      empty: (query) => (query ? 'Nothing matches that.' : 'No files yet.')
-    })
-  }
-
-  private async everything(folder: string, query: string): Promise<PickItem[]> {
-    const [files, symbols, text] = await Promise.all([this.fileItems(folder, query), this.symbolItems(folder, query), this.textItems(folder, query)])
-    return [...files, ...symbols, ...text]
-  }
-
-  private async fileItems(folder: string, query: string): Promise<PickItem[]> {
-    const index = await fileIndex(folder)
-    return rankFiles(index.files, query, recentFiles(folder)).slice(0, EVERYTHING_FILES).map((path): PickItem => ({
-      id: `file:${path}`, group: 'Files', label: baseName(path), detail: dirName(path), run: () => void this.jumpToLine(path, 1)
-    }))
-  }
-
-  private async symbolItems(folder: string, query: string): Promise<PickItem[]> {
-    const doc = this.host.active()
-    if (query === '' || !doc) return []
-    const here: PickItem[] = filterOutline(this.symbols(), query).slice(0, EVERYTHING_SYMBOLS).map((item) => ({
-      id: `sym:${item.from}`, group: 'Symbols', label: item.name, detail: `${baseName(doc.path)}:${item.line}`, run: () => void this.jumpToLine(doc.path, item.line)
-    }))
-    if (!NAME_ONLY.test(query) || query.length < 2) return here
-    const result = await requestCodeNav(folder, { kind: 'definition', path: toProjectPath(this.host.prefix(), doc.path), symbol: query, line: 1, column: 1 })
-    const found = result.ok ? result.hits.slice(0, EVERYTHING_SYMBOLS) : []
-    const defined: PickItem[] = found.map((hit) => ({
-      id: `def:${hit.path}:${hit.line}`, group: 'Symbols', label: hit.preview || query, detail: `${baseName(hit.path)}:${hit.line}`, run: () => void this.jumpToHit(hit, query)
-    }))
-    return [...here, ...defined].slice(0, EVERYTHING_SYMBOLS)
-  }
-
-  private async textItems(folder: string, query: string): Promise<PickItem[]> {
-    if (query.length < 2) return []
-    const result = await api.searchFiles(folder, { query, matchCase: false, wholeWord: false, regex: false, include: '' }).catch(() => null)
-    if (!result?.ok) return []
-    return result.files.flatMap((file) => file.matches.map((match): PickItem => ({
-      id: `text:${file.path}:${match.line}`, group: 'Text', label: match.text.trim(), detail: `${baseName(file.path)}:${match.line}`, run: () => void this.jumpToLine(file.path, match.line)
-    }))).slice(0, EVERYTHING_TEXT)
   }
 }

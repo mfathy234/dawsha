@@ -76,7 +76,16 @@ function createArgs(request: Extract<PrRequest, { action: 'create' }>): string[]
   return ['pr', 'create', `--title=${request.title.trim()}`, `--body=${request.body}`, ...(request.base ? [`--base=${request.base}`] : []), ...(request.draft ? ['--draft'] : [])]
 }
 
-async function createPr(root: string, request: Extract<PrRequest, { action: 'create' }>): Promise<PrActionResult> {
+/** gh refuses to open a PR for a branch the remote has not seen, so the branch is published (or brought up to date) first. */
+async function publishBranch(repo: Repo): Promise<string | null> {
+  const push = await git(repo.root, ['push', '--set-upstream', repo.remote, `HEAD:refs/heads/${repo.branch}`], MERGE_MS)
+  return push.ok ? null : `Could not push ${repo.branch} to ${repo.remote}: ${tail(push.message) || 'git push failed.'}`
+}
+
+async function createPr(repo: Repo, request: Extract<PrRequest, { action: 'create' }>): Promise<PrActionResult> {
+  const pushProblem = await publishBranch(repo)
+  if (pushProblem) return { ok: false, error: pushProblem }
+  const root = repo.root
   const run = await runGh(root, createArgs(request), MERGE_MS)
   if (!run.ok) return { ok: false, error: tail(run.message) || 'gh could not open the pull request.' }
   const url = run.stdout.split('\n').map((line) => line.trim()).find((line) => /^https:\/\//.test(line))
@@ -102,5 +111,5 @@ export async function runPrFlow(request: PrRequest): Promise<PrOverviewResult | 
   if (!isRepo(repo)) return { ok: false, error: repo.ok ? 'Not a repository.' : repo.message }
   const blocked = await signedIn(repo.root)
   if (blocked) return { ok: false, error: blocked.ok ? '' : blocked.message }
-  return request.action === 'create' ? createPr(repo.root, request) : mergePr(repo.root, request)
+  return request.action === 'create' ? createPr(repo, request) : mergePr(repo.root, request)
 }

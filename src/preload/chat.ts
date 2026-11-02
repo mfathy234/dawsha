@@ -4,6 +4,9 @@ import { CHAT_IPC, type ChatApi } from '../shared/chatLog'
 export function createChatPreload(): ChatApi {
   return {
     read: (request) => ipcRenderer.invoke(CHAT_IPC.read, request),
-    release: (request) => ipcRenderer.invoke(CHAT_IPC.release, request)
+    release: (request) => ipcRenderer.invoke(CHAT_IPC.release, request),
+    image: (request) => ipcRenderer.invoke(CHAT_IPC.image, request),
+    imageAction: (request) => ipcRenderer.invoke(CHAT_IPC.imageAction, request),
+    preview: (request) => ipcRenderer.invoke(CHAT_IPC.preview, request)
   }
 }

@@ -56,11 +56,14 @@ export const ICONS = {
   toolAgent: svg(14, '<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V5 M9.5 13v1.5 M14.5 13v1.5"/><circle cx="12" cy="4" r="1"/>'),
   toolEdit: svg(14, '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'),
   toolCreate: svg(14, '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5 M12 12v6 M9 15h6"/>'),
-  toolRead: svg(14, '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>'),
+  toolRead: svg(14, '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5 M9 13h6 M9 17h4"/>'),
   toolShell: svg(14, '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>'),
   toolSearch: svg(14, '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
   toolWeb: svg(14, '<circle cx="12" cy="12" r="9"/><path d="M3 12h18 M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9"/>'),
   toolOther: svg(14, '<path d="M14.5 6a4 4 0 0 0 4.7 4.7l-8.8 8.8a2 2 0 0 1-2.8-2.8l8.8-8.8A4 4 0 0 0 14.5 6z"/>'),
+  toolTodo: svg(14, '<path d="M4 6l1.6 1.6L8.5 4.7 M4 12.5l1.6 1.6 2.9-2.9 M4 19l1.6 1.6L8.5 17.7 M12 6h8 M12 12.5h8 M12 19h8"/>'),
+  toolMcp: svg(14, '<path d="M9 3v5 M15 3v5 M6 8h12v4a6 6 0 0 1-12 0z M12 18v3"/>'),
+  toolQuestion: svg(14, '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M9.6 9.5a2.4 2.4 0 0 1 4.6.9c0 1.6-2.2 1.9-2.2 3.2 M12 16.4v.2"/>'),
   toolRunning: '<svg width="14" height="14" viewBox="0 0 12 12" class="state-spin"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="1.5"/><path d="M6 1.5a4.5 4.5 0 0 1 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
 }
 

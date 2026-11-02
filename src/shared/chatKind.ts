@@ -1,4 +1,4 @@
-export type ToolKind = 'agent' | 'shell' | 'edit' | 'create' | 'read' | 'search' | 'web' | 'other'
+export type ToolKind = 'agent' | 'shell' | 'edit' | 'create' | 'read' | 'search' | 'web' | 'todo' | 'mcp' | 'question' | 'other'
 
 const KINDS: Record<string, ToolKind> = {
   task: 'agent',
@@ -38,11 +38,17 @@ const KINDS: Record<string, ToolKind> = {
   websearchcall: 'web',
   webfetch: 'web',
   web_fetch: 'web',
-  google_web_search: 'web'
+  google_web_search: 'web',
+  todowrite: 'todo',
+  update_plan: 'todo',
+  exitplanmode: 'todo',
+  askuserquestion: 'question'
 }
 
 /** What a tool call does, from the name an agent logs for it. Claude and Codex names map to the same kinds, so the same action looks the same. */
 export function toolKind(name: unknown): ToolKind {
   if (typeof name !== 'string') return 'other'
-  return KINDS[name.trim().toLowerCase()] ?? 'other'
+  const key = name.trim().toLowerCase()
+  if (key.startsWith('mcp__') || key === 'mcptoolcall') return 'mcp'
+  return KINDS[key] ?? 'other'
 }

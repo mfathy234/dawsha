@@ -69,17 +69,13 @@ import { chatCapable } from '../../shared/chatLog'
 import { ViewSwitch } from '../chat/viewSwitch'
 import { chatHostFor, syncPaneChat } from '../chat/paneChatController'
 import '../chat/chat.css'
+import '../chat/chatMedia.css'
 
 const RESUMED_CHIP_MS = 60_000
 const RECAP_REFRESH_MS = 2_500
 const RECAP_SCREEN_ROWS = 60
 // Session time and last activity alone are not worth a footer.
 const FOOT_FILLER = ['info-elapsed', 'info-age']
-
-/** The header's panel button: a slide-over over the terminal, without maximizing the pane. */
-function toggleDetailsPanel(paneId: string): void {
-  store.set((state) => ({ ...state, focusedId: paneId, detailsPaneId: state.detailsPaneId === paneId ? null : paneId }))
-}
 
 export class PaneComponent {
   readonly el: HTMLElement
@@ -154,7 +150,6 @@ export class PaneComponent {
       this.stateHost,
       this.viewSwitch.el,
       this.restart,
-      iconButton('Details panel', ICONS.info, () => toggleDetailsPanel(paneId), 'pane-panel'),
       this.maxButton,
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
       this.closeButton
@@ -613,8 +608,14 @@ export class PaneComponent {
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Replay session', () => replayPane(this.paneId), ICONS.replay, 'pane.replay'),
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
+      item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
+      item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),
+      item('Clear scrollback', () => clearScrollback(this.paneId), ICONS.eraser),
       pauseItem,
       ...restartItems,
+      ...(handoffs.length > 0
+        ? [h('div', { class: 'menu-separator', role: 'separator' }), h('div', { class: 'menu-heading', role: 'presentation' }, 'Hand over'), ...handoffs]
+        : []),
       h('div', { class: 'menu-separator', role: 'separator' }),
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Open and review'),
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),

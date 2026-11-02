@@ -1,3 +1,9 @@
+import type { BackgroundTask } from './chatBackground'
+import type { AskQuestion } from './chatAsk'
+import type { AnswerEntry, TodoEntry } from './chatCards'
+import type { ChatDiff } from './chatDiff'
+import type { ChatPreviewRequest } from './chatAttach'
+import type { ChatImageActionRequest, ChatImageActionResult, ChatImageRef, ChatImageRequest, ChatImageResult } from './chatImage'
 import type { ToolKind } from './chatKind'
 import type { TabAgent } from './types'
 
@@ -65,6 +71,9 @@ export interface ChatMessage {
   id: string
   role: 'user' | 'agent'
   text: string
+  images?: ChatImageRef[]
+  /** The message was longer than Chat keeps and was cut. */
+  truncated?: boolean
   at?: number
 }
 
@@ -81,10 +90,24 @@ export interface ChatTool {
   outputTruncated: boolean
   failed?: boolean
   done: boolean
+  /** The questions of an AskUserQuestion call, while it waits for an answer. */
+  ask?: AskQuestion[]
+  images?: ChatImageRef[]
+  /** The file the call touched, and the line it was at when known. */
+  path?: string
+  line?: number
+  /** The change an edit made, with line numbers where the log has them. */
+  diff?: ChatDiff
+  /** The checklist of a TodoWrite call. */
+  todos?: TodoEntry[]
+  /** What was chosen for an AskUserQuestion, once answered. */
+  answers?: AnswerEntry[]
+  /** The plan an ExitPlanMode call proposes, as markdown. */
+  plan?: string
   at?: number
 }
 
-export type ChatNoticeKind = 'limit' | 'error' | 'interrupted'
+export type ChatNoticeKind = 'limit' | 'error' | 'interrupted' | 'compact'
 
 export interface ChatNotice {
   kind: 'notice'
@@ -92,6 +115,8 @@ export interface ChatNotice {
   notice: ChatNoticeKind
   text: string
   resetsAt?: number
+  /** Text kept out of sight until asked for: the summary a compaction left. */
+  detail?: string
   at?: number
 }
 
@@ -105,7 +130,7 @@ export interface ChatReadRequest {
 }
 
 export type ChatReadResult =
-  | { status: 'ok'; items: ChatItem[]; version: string; earlier: number }
+  | { status: 'ok'; items: ChatItem[]; version: string; earlier: number; background: BackgroundTask[] }
   | { status: 'unchanged' }
   | { status: 'no-session' }
   | { status: 'failed'; reason: string }
@@ -118,11 +143,18 @@ export interface ChatReleaseRequest {
 export interface ChatApi {
   read(request: ChatReadRequest): Promise<ChatReadResult>
   release(request: ChatReleaseRequest): Promise<void>
+  image(request: ChatImageRequest): Promise<ChatImageResult>
+  imageAction(request: ChatImageActionRequest): Promise<ChatImageActionResult>
+  /** A small picture of a file about to be sent, if it is a picture inside the project or the paste folder. */
+  preview(request: ChatPreviewRequest): Promise<ChatImageResult>
 }
 
 export const CHAT_IPC = {
   read: 'chat:read',
-  release: 'chat:release'
+  release: 'chat:release',
+  image: 'chat:image',
+  imageAction: 'chat:image-action',
+  preview: 'chat:attachment-preview'
 } as const
 
 export interface Bounded {

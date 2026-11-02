@@ -37,14 +37,15 @@ export async function askAgent(host: ToolsHost): Promise<void> {
   const cursor = editor.cursor()
   const found = editor.identifierAt(editor.cursorPos())
   const selection = editor.selectedText()
-  const path = toProjectPath(host.prefix(), doc.path)
+  const prefix = host.prefix()
+  const path = toProjectPath(prefix, doc.path)
   const box = (editor.view.dom as HTMLElement).getBoundingClientRect()
   host.say('Collecting where this is used…')
-  const refs = await referencesOf(host, found?.name ?? null, cursor.line, cursor.col, path)
+  const refs = await referencesOf(host, found?.name ?? null, cursor.line, cursor.col, doc.path)
   const startLine = selection === '' ? cursor.line : cursor.startLine
   const endLine = selection === '' ? cursor.line : cursor.endLine
   const text = selection === '' ? editor.view.state.doc.line(cursor.line).text : selection
-  const message = askMessage({ path, startLine, endLine, symbol: found?.name ?? null, selection: text, references: refs.hits, referencesByName: refs.byName })
+  const message = askMessage({ path, startLine, endLine, symbol: found?.name ?? null, selection: text, references: refs.hits.map((hit) => ({ ...hit, path: toProjectPath(prefix, hit.path) })), referencesByName: refs.byName })
   chooseSession(host, 'Ask an agent', { x: box.left + 80, y: box.top + 80 }, (paneId, title) => {
     if (insertIntoSession(paneId, message)) toast(`Added the question to ${title}. Type what you want to know, then press Enter there.`, 'info')
   })

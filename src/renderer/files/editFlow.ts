@@ -1,6 +1,5 @@
 import type { SearchRequest } from '../../shared/fileSearch'
 import type { EditResult } from '../../shared/codeNavExtras'
-import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
 import { api } from '../api'
 import { confirmDialog, promptDialog } from '../components/dialogs'
 import { toast } from '../components/toast'
@@ -11,18 +10,17 @@ import type { ToolsHost } from './toolsHost'
 type Preview = Extract<EditResult, { ok: true; action: 'preview' }>
 
 const NAME = /^@?[$_\p{L}][$_\p{L}\p{N}]*$/u
-const NEEDS_SERVER = 'Rename needs a language server, so it can be exact. Start or install one for this file type, then try again. A name search could rename the wrong things.'
+const NEEDS_SERVER = 'Rename needs a language server, so it can be exact. If it is still loading the project, wait a few seconds and try again; otherwise start or install one for this file type. A name search could rename the wrong things.'
 
 const failure = (error: unknown): EditResult => ({ ok: false, error: error instanceof Error ? error.message : 'The request failed.' })
 
 /** Preview, then the confirmation, then the write. Nothing reaches the disk unless the user confirms the exact files and counts. */
 async function review(host: ToolsHost, preview: Preview, copy: ConfirmCopy, title: string, apply: (previewId: string, dirty: string[]) => Promise<EditResult>): Promise<void> {
-  const prefix = host.prefix()
-  const dirty = host.dirtyPaths().map((path) => toProjectPath(prefix, path))
+  const dirty = host.dirtyPaths()
   const source = preview.engine === 'search' ? 'Found by text search' : preview.engine === 'name' ? 'Found by name, so check each place' : 'Exact, from the language service'
   const go = await showEditPreview({
     title, source, files: preview.files, truncated: preview.truncated, dirty, applyLabel: 'Apply…',
-    text: (path) => host.text(toRepoPath(prefix, path))
+    text: (path) => host.text(path)
   })
   if (!go) return
   const confirmed = await confirmDialog(copy)
@@ -32,7 +30,7 @@ async function review(host: ToolsHost, preview: Preview, copy: ConfirmCopy, titl
   if (result.action !== 'apply') return
   const outcome = outcomeText(result.files)
   toast(outcome.text, outcome.failed.length > 0 ? 'error' : 'info')
-  host.changedOnDisk(outcome.changed.map((path) => toRepoPath(prefix, path)))
+  host.changedOnDisk(outcome.changed)
 }
 
 /** F2: asks for the new name, previews every place it changes, and applies only after a confirmation. */
@@ -51,7 +49,7 @@ export async function renameSymbol(host: ToolsHost): Promise<void> {
   })
   if (newName === null) return
   const cursor = editor.cursor()
-  const request = { action: 'preview' as const, path: toProjectPath(host.prefix(), doc.path), symbol: found.name, line: cursor.line, column: cursor.col, newName }
+  const request = { action: 'preview' as const, path: doc.path, symbol: found.name, line: cursor.line, column: cursor.col, newName }
   const result = await api.renameSymbol(folder, request).catch(failure)
   if (!result.ok) return host.warn(result.needsLanguageServer ? NEEDS_SERVER : result.error)
   if (result.action !== 'preview') return

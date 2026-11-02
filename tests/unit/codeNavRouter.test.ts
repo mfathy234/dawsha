@@ -46,6 +46,30 @@ describe('navigation router', () => {
     expect(await router.query(root, { ...request, unsavedText: 'interface Shape {}\nclass Unsaved implements Shape {}' })).toMatchObject({ engine: 'typescript', hits: [{ preview: 'class Unsaved implements Shape {}' }] })
     router.stop()
   })
+  it('answers by name while the project is still loading, then exactly once it has loaded', async () => {
+    const root = fixture()
+    let finishLoad: () => void = () => undefined
+    const server = client()
+    server.state = 'ready'
+    server.warmed = false
+    server.warmUp = () => new Promise<void>(resolve => { finishLoad = () => { server.warmed = true; resolve() } })
+    server.query = async () => [{ file: join(root, 'a.ts'), line: 1, column: 11 }]
+    const router = new CodeNavRouter({ typescript: () => server, csharp: async () => null, canInstall: async () => false })
+    expect(await router.query(root, request)).toMatchObject({ engine: 'name' })
+    expect(await router.status(root, 'a.ts')).toEqual({ engine: 'typescript', state: 'starting', canInstall: false })
+    finishLoad()
+    expect(await router.status(root, 'a.ts')).toEqual({ engine: 'typescript', state: 'ready', canInstall: false })
+    expect(await router.query(root, request)).toMatchObject({ engine: 'typescript' })
+    router.stop()
+  })
+  it('starts the TypeScript service when a TypeScript file is opened, before any navigation is asked for', async () => {
+    const root = fixture()
+    let starts = 0
+    const router = new CodeNavRouter({ typescript: () => { starts++; return client() }, csharp: async () => null, canInstall: async () => false })
+    expect(await router.status(root, 'a.ts')).toEqual({ engine: 'typescript', state: 'starting', canInstall: false })
+    expect(starts).toBe(1)
+    router.stop()
+  })
   it('offers C# installation only for missing C# servers with a dotnet SDK', async () => {
     const root = fixture()
     writeFileSync(join(root, 'a.cs'), 'interface Shape {}')

@@ -3,6 +3,38 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.4] - 2026-11-02
+
+### Added
+
+- **Background agents in chat.** A Background bar above the message box lists the agents and commands a Claude session sent to the background, what each is doing, how long it has run and whether it is still working, done, stopped or failed. Click one to jump to where it started and read its report.
+- **Questions and menus answered in chat.** When Claude asks a question, chat shows its options as buttons, with a box for your own answer. Pickers such as `/model` and Codex's update screen show the same way, and the terminal is one click away.
+- **Pictures in chat.** Images you paste and images the agent's tools return show as thumbnails; click one to see it large, copy it, open it or show it in its folder.
+- **Attach files from chat.** Paste an image or drop files on the message box. They show as chips you can remove, and go to the agent the same way a drop on the terminal does.
+- **Clickable paths in chat.** File paths in replies and on tool lines open in Files at the right line.
+- **Richer replies.** Tables, lists, headings, bold and links render. Edits show as coloured diffs with line numbers. Thinking, compaction and slash commands show as quiet rows, and todo lists, plans, your answers to questions and subagent reports show as cards. Messages and code blocks have copy buttons, and times show on hover.
+- **Clearer chat states.** "Starting Claude…" while the agent loads, and Sending… or Queued on your message until the agent takes it.
+
+### Changed
+
+- **Calmer top bar.** The selected tab is underlined instead of filled, and Grid and Board sit in a quiet switch.
+- **Notifications.** Toasts are smaller, at most three show, and repeats fold into one with a count. The bell groups notifications by project, with Mark all read and Clear all.
+- **A tidier Review panel.** Progress and Previous/Next sit on one row, the note to the agent opens from a button, and Callers not updated and Discard file moved into a `…` menu, leaving Commit as the one main button.
+- **Faster chat.** Codex messages go out sooner, and chat reads the session four times a second while your message is on its way.
+- Removed Ctrl+T. Ctrl+P finds files.
+- Removed the Details button from the pane header. Details stays in the pane menu.
+
+### Fixed
+
+- Messages sent from Codex chat sometimes stayed in Codex's input box and were sent together with the next one. Chat now checks that the message left the box.
+- A question on screen in chat view no longer sends a stream of "needs you" notifications.
+- Continue in Claude or Codex, Copy last reply, Copy current prompt and Clear scrollback are back in the pane menu.
+- Go to Definition, references, rename and hover work when the project is a folder inside a larger git repo.
+- The first Go to Definition in a large TypeScript project waits for TypeScript instead of guessing by name, and TypeScript starts loading when you open a file.
+- Go to Definition by name finds C# types such as `User` in large repos, where hundreds of uses used to hide the declaration.
+- Open pull request publishes the branch first, so it works on a branch that was never pushed.
+- A message sent right after stopping the agent is no longer lost in chat.
+
 ## [1.8.3] - 2026-11-02
 
 ### Added

@@ -27,11 +27,17 @@ describe('toolKind', () => {
   it('maps the item types Codex logs to the same kinds', () => {
     expect(toolKind('CommandExecution')).toBe('shell')
     expect(toolKind('FileChange')).toBe('edit')
-    expect(toolKind('McpToolCall')).toBe('other')
+    expect(toolKind('McpToolCall')).toBe('mcp')
+  })
+
+  it('maps plan, question and MCP tools to their own kinds', () => {
+    expect(toolKind('TodoWrite')).toBe('todo')
+    expect(toolKind('update_plan')).toBe('todo')
+    expect(toolKind('AskUserQuestion')).toBe('question')
+    expect(toolKind('mcp__github__list_issues')).toBe('mcp')
   })
 
   it('falls back to other for anything unknown or not a name', () => {
-    expect(toolKind('mcp__github__list_issues')).toBe('other')
     expect(toolKind('')).toBe('other')
     expect(toolKind(undefined)).toBe('other')
     expect(toolKind(42)).toBe('other')
@@ -64,6 +70,6 @@ describe('the kind each reader gives a tool row', () => {
         done({ type: 'McpToolCall', id: 'm', server: 's', tool: 't', status: 'completed', result: { content: [] } })
       )
     )
-    expect(reader.items().map((item) => (item as ChatTool).activity)).toEqual(['shell', 'edit', 'create', 'other'])
+    expect(reader.items().map((item) => (item as ChatTool).activity)).toEqual(['shell', 'edit', 'create', 'mcp'])
   })
 })

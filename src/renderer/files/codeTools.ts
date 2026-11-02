@@ -1,6 +1,5 @@
 import type { AgentEditEvent } from '../../shared/codeNavExtras'
 import type { SearchRequest } from '../../shared/fileSearch'
-import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
 import { api } from '../api'
 import { askAgent } from './askFlow'
 import { openCallPanel } from './callPanel'
@@ -61,7 +60,7 @@ export class CodeTools {
     if (!found) return null
     const line = editor.view.state.doc.lineAt(pos)
     const result = await api.hover(folder, {
-      path: toProjectPath(this.host.prefix(), doc.path), symbol: found.name, line: line.number, column: pos - line.from + 1, unsavedText: doc.dirty ? doc.text() : undefined
+      path: doc.path, symbol: found.name, line: line.number, column: pos - line.from + 1, unsavedText: doc.dirty ? doc.text() : undefined
     }).catch(() => null)
     if (!result?.ok) return null
     return { display: result.display, documentation: result.documentation, byName: result.engine === 'name' }
@@ -87,11 +86,11 @@ export class CodeTools {
     const found = editor.identifierAt(editor.cursorPos())
     if (!found) return this.host.say('Put the cursor on a name first, then open the call hierarchy.')
     const cursor = editor.cursor()
-    const path = toProjectPath(this.host.prefix(), doc.path)
+    const path = doc.path
     openCallPanel(this.host.overlay(), {
       symbol: found.name,
       load: (direction) => api.callHierarchy(folder, { direction, path, symbol: found.name, line: cursor.line, column: cursor.col, unsavedText: doc.dirty ? doc.text() : undefined }),
-      open: (hit) => void this.host.openAt(toRepoPath(this.host.prefix(), hit.path), hit.line),
+      open: (hit) => void this.host.openAt(hit.path, hit.line),
       restoreFocus: () => editor.focus()
     })
   }
@@ -105,7 +104,6 @@ export class CodeTools {
     if (!result.ok) return this.host.warn(result.error)
     const rows = staleRows(result.symbols)
     const note = staleNote(result)
-    const prefix = this.host.prefix()
     openJumpPick(this.host.overlay(), {
       ariaLabel: 'Callers not updated', placeholder: 'Callers and implementations the agent did not update', restoreFocus: () => this.host.active()?.editor?.focus(),
       items: (query) => {
@@ -115,7 +113,7 @@ export class CodeTools {
           ...(note && needle === '' ? [{ id: 'note', label: note, run: () => undefined }] : []),
           ...shown.map((row) => ({
             id: row.id, group: row.group, label: row.hit.preview || row.hit.path, detail: `${row.kind === 'implementation' ? 'implements, ' : ''}${baseName(row.hit.path)}:${row.hit.line}`,
-            run: () => void this.host.openAt(toRepoPath(prefix, row.hit.path), row.hit.line)
+            run: () => void this.host.openAt(row.hit.path, row.hit.line)
           }))
         ]
       },

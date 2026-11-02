@@ -24,10 +24,10 @@ export function subscribeNotifications(listener: () => void): () => void {
   return () => listeners.delete(listener)
 }
 
-export function recordNotification(message: string, kind: NotificationKind, action?: NotificationAction): number {
+export function recordNotification(message: string, kind: NotificationKind, action?: NotificationAction, group?: string): number {
   const id = nextId
   nextId += 1
-  commit(addNotification(entries, { id, message, kind, at: Date.now(), read: false, action }))
+  commit(addNotification(entries, { id, message, kind, at: Date.now(), read: false, action, group }))
   return id
 }
 

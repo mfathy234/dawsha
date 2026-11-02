@@ -21,7 +21,7 @@ function check(state: AppState): void {
       label: 'Go to session',
       run: () => focusPaneFromNotification(paneId),
       valid: () => store.state.panes.some((pane) => pane.id === paneId)
-    })
+    }, view.project?.name)
   }
 }
 

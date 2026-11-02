@@ -1,4 +1,6 @@
 import type { ChatItem } from '../../shared/chatLog'
+import type { BackgroundTask } from '../../shared/chatBackground'
+import type { ImageEntry } from './imageTable'
 
 export interface ReaderStats {
   /** JSON records read so far. */
@@ -11,7 +13,11 @@ export interface ChatLineReader {
   feed(text: string): void
   items(): ChatItem[]
   readonly earlier: number
+  /** Background agents and commands the session started, with whether each still runs. */
+  background(): BackgroundTask[]
   readonly stats: ReaderStats
+  /** What a picture id from this reader's items points at; undefined once it was evicted. */
+  image(id: string): ImageEntry | undefined
 }
 
 /** A log of several records that has none the reader understands: the format changed or this is not that agent's log. */

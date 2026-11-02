@@ -53,7 +53,8 @@ function evaluate(state: AppState): void {
       waiting: view.fileWaiting || state.waiting[paneId] === true,
       focused: (boardShowing(state) ? state.boardPeekId : state.focusedId) === paneId,
       visible: paneVisible(state, view),
-      windowFocused: state.windowFocused
+      windowFocused: state.windowFocused,
+      now: Date.now()
     })
     memories.set(paneId, step.memory)
     notifyContext(state, view)

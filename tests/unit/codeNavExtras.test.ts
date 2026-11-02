@@ -39,6 +39,8 @@ async function service(root: string): Promise<CodeNavExtras> {
   const client = new TsServerClient(nodeIpcWire(child), 10_000)
   clients.push(client)
   await client.ready
+  // The first answer loads the project; the router only trusts the service once that has finished.
+  await client.warmUp(join(root, 'a.ts'), readFileSync(join(root, 'a.ts'), 'utf8'))
   return new CodeNavExtras(new CodeNavRouter({ typescript: () => client, csharp: async () => null, canInstall: async () => false }), new EditPreviews())
 }
 const symbol = { path: 'a.ts', symbol: 'greet', line: 2, column: 19 }

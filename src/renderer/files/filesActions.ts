@@ -130,7 +130,7 @@ export function onFilesSearchRequest(listener: () => void): () => void {
 export type FilesCommand =
   | 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree' | 'switch-branch'
   | 'show-config' | 'show-pr' | 'show-browser'
-  | 'definition' | 'implementation' | 'references' | 'back' | 'forward' | 'everything' | 'symbol' | 'line'
+  | 'definition' | 'implementation' | 'references' | 'back' | 'forward' | 'symbol' | 'line'
   | 'ask' | 'rename' | 'calls' | 'stale' | 'follow' | 'next-problem' | 'previous-problem' | 'next-change' | 'previous-change' | 'replace'
 
 const commandListeners = new Set<(command: FilesCommand) => void>()
