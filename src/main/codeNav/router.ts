@@ -13,6 +13,8 @@ interface Engines {
   canInstall(): Promise<boolean>
 }
 const engineFor = (file: string): CodeNavEngine => /\.[cm]?[jt]sx?$/i.test(file) ? 'typescript' : extname(file).toLowerCase() === '.cs' ? 'csharp' : 'name'
+/** How long a first answer may wait for the project to load before the by-name answer is shown instead. */
+const WARM_WAIT_MS = 1500
 const noServer: CodeNavStatus = { engine: 'name', state: 'none', canInstall: false }
 
 export class CodeNavRouter {
@@ -30,7 +32,9 @@ export class CodeNavRouter {
     if (!read.ok || read.text === null) return { error: 'Cannot read this file as text.' }
     const engine = engineFor(target.full)
     const server = await this.server(folder, target.full, engine)
-    return { request, file: target.full, text: request.unsavedText ?? read.text, mtimeMs: read.mtimeMs, engine, server: server?.state === 'ready' ? server : null }
+    const text = request.unsavedText ?? read.text
+    const usable = server?.state === 'ready' && await this.loaded(server, target.full, text)
+    return { request, file: target.full, text, mtimeMs: read.mtimeMs, engine, server: usable ? server : null }
   }
 
   private server(folder: string, file: string, engine: CodeNavEngine): Promise<NavigationClient | null> {
@@ -44,6 +48,13 @@ export class CodeNavRouter {
     return start
   }
 
+  /** A server that is still loading its project cannot answer within the request limit: wait a moment, else report it as starting. */
+  private async loaded(server: NavigationClient, file: string, text: string): Promise<boolean> {
+    if (!server.warmUp || server.warmed) return true
+    const loading = server.warmUp(file, text).then(() => true)
+    return Promise.race([loading, new Promise<boolean>(resolve => setTimeout(() => resolve(false), WARM_WAIT_MS))])
+  }
+
   async query(folder: string, raw: unknown): Promise<CodeNavResult> {
     const request = validateCodeNavRequest(raw)
     if (!request) return { ok: false, error: 'Invalid navigation request.' }
@@ -53,7 +64,7 @@ export class CodeNavRouter {
     const server = await this.server(folder, target.full, engine)
     if (server?.state === 'ready') {
       const read = request.unsavedText !== undefined ? { ok: true as const, text: request.unsavedText } : await readProjectFile(folder, request.path)
-      if (read.ok && read.text !== null) {
+      if (read.ok && read.text !== null && await this.loaded(server, target.full, read.text)) {
         try {
           const locations = await server.query(target.full, read.text, request)
           return await navigationHits(folder, locations, engine, { file: target.full, text: read.text })
@@ -68,9 +79,16 @@ export class CodeNavRouter {
     if (!target.ok) return noServer
     const engine = engineFor(target.full)
     if (engine === 'name') return noServer
-    const key = `${folder}:${engine === 'csharp' ? target.full : engine}`
-    const server = engine === 'csharp' ? await this.server(folder, target.full, engine) : await this.servers.get(key)
-    return { engine, state: server?.state ?? (engine === 'csharp' ? 'missing' : 'none'), canInstall: engine === 'csharp' && !server && await this.engines.canInstall() }
+    // Opening a file starts its language service, so the first F12 finds it loaded instead of waiting for it.
+    const server = await this.server(folder, target.full, engine)
+    const loading = server?.state === 'ready' && server.warmUp !== undefined && !server.warmed
+    if (loading && typeof path === 'string') void this.warmFromDisk(folder, path, target.full, server)
+    return { engine, state: loading ? 'starting' : server?.state ?? (engine === 'csharp' ? 'missing' : 'none'), canInstall: engine === 'csharp' && !server && await this.engines.canInstall() }
+  }
+
+  private async warmFromDisk(folder: string, relativePath: string, file: string, server: NavigationClient): Promise<void> {
+    const read = await readProjectFile(folder, relativePath)
+    if (read.ok && read.text !== null) await server.warmUp?.(file, read.text)
   }
 
   async restart(folder: string, path: unknown): Promise<void> {

@@ -11,7 +11,7 @@ import type { CodeNavRouter } from './router'
 import type { ServerFileEdits } from './protocolExtras'
 import { renameSnapshot, validRename } from './renameSnapshot'
 
-const needsServer = { ok: false as const, needsLanguageServer: true, error: 'Rename needs a ready language server. Start or install the language server, then try again.' }
+const needsServer = { ok: false as const, needsLanguageServer: true, error: 'Rename needs a ready language server. If it is still loading the project, wait a few seconds; otherwise start or install the language server, then try again.' }
 const message = (error: unknown): string => error instanceof Error ? error.message : 'The language server could not answer.'
 
 export class CodeNavExtras {

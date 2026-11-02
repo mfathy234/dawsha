@@ -1,5 +1,4 @@
 import type { CodeNavHit, CodeNavKind, CodeNavStatus } from '../../shared/codeNav'
-import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
 import { quickOpen as rankFiles } from '../../shared/fileTree'
 import { api } from '../api'
 import { requestCodeNav, requestInstall, requestRestart, requestStatus } from './codeNavApi'
@@ -18,7 +17,7 @@ import { relocateHit } from './relocate'
 
 export interface NavHost {
   folder(): string | null
-  /** The project's place in its repository: file tabs use repo paths, the engine uses project paths. */
+  /** The project's place in its repository. File tabs and the engine both use repo-relative paths. */
   prefix(): string
   active(): FileDoc | null
   /** Opens a file in a preview tab and loads it. Null when it could not be opened (every tab has unsaved edits). */
@@ -100,7 +99,7 @@ export class CodeNavigator {
     const cursor = editor.cursor()
     const ticket = this.requestGate.begin()
     const result = await requestCodeNav(folder, {
-      kind, path: toProjectPath(this.host.prefix(), doc.path), symbol: found.name, line: cursor.line, column: cursor.col, unsavedText: doc.dirty ? doc.text() : undefined
+      kind, path: doc.path, symbol: found.name, line: cursor.line, column: cursor.col, unsavedText: doc.dirty ? doc.text() : undefined
     })
     if (!ticket.current() || this.host.active() !== doc || !doc.editor) return
     void this.refreshEngine()
@@ -131,8 +130,7 @@ export class CodeNavigator {
   private async peek(doc: FileDoc, symbol: string, note: string, hits: readonly CodeNavHit[]): Promise<void> {
     const editor = doc.editor
     if (!editor) return
-    const prefix = this.host.prefix()
-    const peekHits: PeekHit[] = hits.map((hit) => ({ ...hit, repoPath: toRepoPath(prefix, hit.path) }))
+    const peekHits: PeekHit[] = hits.map((hit) => ({ ...hit, repoPath: hit.path }))
     const { buildPeek } = await import('./peek')
     if (doc.editor !== editor || this.host.active() !== doc) return
     const hooks = {
@@ -191,7 +189,7 @@ export class CodeNavigator {
   }
 
   private jumpToHit(hit: { path: string; line: number; column: number; preview: string }, symbol: string): Promise<boolean> {
-    return this.travel(toRepoPath(this.host.prefix(), hit.path), (editor, target) => {
+    return this.travel(hit.path, (editor, target) => {
       const spot = target.dirty ? relocateHit(editor.view.state.sliceDoc(), hit, symbol) : hit
       return editor.posAt(spot.line, spot.column)
     }, (origin) => (origin ? recordJump(this.history, origin) : this.history))
@@ -233,7 +231,7 @@ export class CodeNavigator {
       return
     }
     const ticket = this.engineGate.begin()
-    const status = await requestStatus(folder, toProjectPath(this.host.prefix(), doc.path))
+    const status = await requestStatus(folder, doc.path)
     if (!ticket.current()) return
     this.setEngine(status)
     if (status?.state === 'starting' && this.polls < POLL_MAX) {
@@ -262,7 +260,7 @@ export class CodeNavigator {
     const folder = this.host.folder()
     if (!folder || !doc) return
     if (line.action === 'restart') {
-      const failure = await requestRestart(folder, toProjectPath(this.host.prefix(), doc.path))
+      const failure = await requestRestart(folder, doc.path)
       if (failure) this.host.warn(failure)
     } else if (line.action === 'install') {
       this.host.say(INSTALL_NOTE)
@@ -338,7 +336,7 @@ export class CodeNavigator {
       id: `sym:${item.from}`, group: 'Symbols', label: item.name, detail: `${baseName(doc.path)}:${item.line}`, run: () => void this.jumpToLine(doc.path, item.line)
     }))
     if (!NAME_ONLY.test(query) || query.length < 2) return here
-    const result = await requestCodeNav(folder, { kind: 'definition', path: toProjectPath(this.host.prefix(), doc.path), symbol: query, line: 1, column: 1 })
+    const result = await requestCodeNav(folder, { kind: 'definition', path: doc.path, symbol: query, line: 1, column: 1 })
     const found = result.ok ? result.hits.slice(0, EVERYTHING_SYMBOLS) : []
     const defined: PickItem[] = found.map((hit) => ({
       id: `def:${hit.path}:${hit.line}`, group: 'Symbols', label: hit.preview || query, detail: `${baseName(hit.path)}:${hit.line}`, run: () => void this.jumpToHit(hit, query)
