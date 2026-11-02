@@ -162,9 +162,10 @@ test('working shows an indicator until the session stops, approvals reuse the ca
     await expect(chat.locator('.pane-permission')).toHaveCount(0, { timeout: 15_000 })
 
     await feedTerminal(page, termId, MENU)
-    const notice = chat.locator('.chat-notice')
-    await expect(notice).toContainText('Claude is showing a menu.', { timeout: 15_000 })
-    await notice.getByRole('button', { name: 'Show terminal' }).click()
+    // A live picker such as /model shows as a card in chat, with the terminal one click away.
+    const picker = chat.locator('.chat-ask')
+    await expect(picker).toContainText('Select model', { timeout: 15_000 })
+    await picker.getByRole('button', { name: 'Or answer in the terminal' }).click()
     await expect(chat).toBeHidden()
     await expect(pane.locator('.term-host.active')).toBeVisible()
     expect(await bufferText(page, termId)).toContain('Select model')
