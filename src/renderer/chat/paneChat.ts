@@ -9,6 +9,7 @@ import { api } from '../api'
 import { store } from '../state'
 import { ChatAttachments } from './chatAttachments'
 import { ChatFeed, LOADING, type FeedSnapshot } from './chatFeed'
+import { BackgroundStrip } from './chatBackground'
 import { ChatThread, type PendingView } from './chatThread'
 import { askPromptFor } from '../../shared/menuPrompt'
 import { detectTerminalMenu } from '../../shared/terminalMenu'
@@ -60,6 +61,7 @@ export class PaneChat {
   private readonly sendButton = h('button', { class: 'chat-btn', type: 'button', hidden: true }, CHAT_TEXT.send)
   private readonly jump = h('button', { class: 'chat-jump', type: 'button', hidden: true }, CHAT_TEXT.jumpLatest)
   private readonly note = h('p', { class: 'chat-quiet', role: 'status', hidden: true })
+  private readonly strip = new BackgroundStrip({ reveal: (task) => this.revealLaunch(task.launchId) })
   private readonly attachments = new ChatAttachments(() => this.showSend())
   private snapshot: FeedSnapshot = LOADING
   private input: ChatInput | null = null
@@ -90,6 +92,7 @@ export class PaneChat {
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
       h('div', { class: 'chat-feedwrap' }, this.scroller, this.jump),
+      this.strip.el,
       h('div', { class: 'chat-composer' }, this.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.sendButton))
     )
     this.box.addEventListener('keydown', (event) => this.onKey(event))
@@ -144,6 +147,7 @@ export class PaneChat {
   }
 
   dispose(): void {
+    this.strip.dispose()
     this.setWatch(false)
     this.feed.stop()
     this.el.remove()
@@ -151,7 +155,7 @@ export class PaneChat {
 
   private currentSnapshot(): FeedSnapshot {
     if (this.input?.sessionId) return this.snapshot
-    return { state: 'empty', items: [], earlier: 0, reason: '' }
+    return { state: 'empty', items: [], earlier: 0, reason: '', background: [] }
   }
 
   private render(force: boolean): void {
@@ -188,6 +192,7 @@ export class PaneChat {
       ask: this.ask,
       pending: views,
       starting: this.starting,
+      background: snapshot.background,
       fileScope: input.tabId,
       session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
@@ -197,6 +202,7 @@ export class PaneChat {
         answer: (answers) => this.answerAsk(answers)
       }
     })
+    this.strip.update(snapshot.background)
     this.updateComposer(input, phase)
     if (!force && (this.stickBottom || wasNear)) this.toBottom()
     this.updateJump()
@@ -204,6 +210,16 @@ export class PaneChat {
   }
 
   private renderedSnapshot: FeedSnapshot | null = null
+
+  /** Opens the launch row's report and brings it into view. False when the thread no longer holds that row. */
+  private revealLaunch(launchId: string): boolean {
+    if (!this.thread.reveal(launchId)) return false
+    const row = this.thread.el.querySelector<HTMLElement>(`[data-tool="${CSS.escape(launchId)}"]`)
+    row?.scrollIntoView({ block: 'center' })
+    row?.classList.add('flash')
+    window.setTimeout(() => row?.classList.remove('flash'), 1200)
+    return true
+  }
 
   /** The screen is only read now and then: a menu stays up for seconds and reading it is not free. */
   private screenNow(): string {

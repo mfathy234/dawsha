@@ -1,3 +1,4 @@
+import type { BackgroundTask } from './chatBackground'
 import type { AskQuestion } from './chatAsk'
 import type { AnswerEntry, TodoEntry } from './chatCards'
 import type { ChatDiff } from './chatDiff'
@@ -129,7 +130,7 @@ export interface ChatReadRequest {
 }
 
 export type ChatReadResult =
-  | { status: 'ok'; items: ChatItem[]; version: string; earlier: number }
+  | { status: 'ok'; items: ChatItem[]; version: string; earlier: number; background: BackgroundTask[] }
   | { status: 'unchanged' }
   | { status: 'no-session' }
   | { status: 'failed'; reason: string }

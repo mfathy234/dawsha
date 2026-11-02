@@ -1,3 +1,4 @@
+import type { BackgroundTask } from '../../shared/chatBackground'
 import { baseName, fileUrlToPath, type ChatImageRef } from '../../shared/chatImage'
 import { CHAT_TARGET_MAX, type ChatItem } from '../../shared/chatLog'
 import { lineCount, parsePatch } from '../../shared/timelineParse'
@@ -89,6 +90,11 @@ export class CodexChatReader implements ChatLineReader {
 
   items(): ChatItem[] {
     return this.builder.items()
+  }
+
+  /** Codex logs hold no record of spawned agents, so there is no background work to show. */
+  background(): BackgroundTask[] {
+    return []
   }
 
   image(id: string): ImageEntry | undefined {

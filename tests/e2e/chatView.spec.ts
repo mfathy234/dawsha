@@ -637,3 +637,41 @@ test('a pasted picture shows as a thumbnail, opens in a lightbox and its actions
     await closeApp(app)
   }
 })
+
+test('the background strip shows an agent as running, then done, and a click opens its report', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const started = new Date(Date.now() - 65_000).toISOString()
+    const launch = [
+      { type: 'user', uuid: 'b1', timestamp: started, message: { role: 'user', content: 'Research it in the background' } },
+      { type: 'assistant', uuid: 'b2', timestamp: started, message: { role: 'assistant', content: [{ type: 'tool_use', id: 'tb1', name: 'Agent', input: { description: 'Research the gaps', subagent_type: 'general-purpose', prompt: 'Look' } }] } },
+      { type: 'user', uuid: 'b3', timestamp: started, toolUseResult: { isAsync: true, status: 'async_launched', agentId: 'agent42', description: 'Research the gaps' }, message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'tb1', content: [{ type: 'text', text: 'Async agent launched successfully.' }] }] } }
+    ]
+    writeLog(sandbox, launch)
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    const strip = chat.locator('.chat-bg')
+    await expect(strip).toBeVisible({ timeout: 15_000 })
+    await expect(strip.locator('.chat-bg-count')).toHaveText('1 running')
+    await expect(chat.locator('[data-tool="tb1"] .chat-badge')).toHaveText('Running…')
+    await strip.locator('.chat-bg-head').click()
+    const row = strip.locator('.chat-bg-row')
+    await expect(row).toContainText('Research the gaps')
+    await expect(row).toContainText('general-purpose')
+    await expect(row.locator('.chat-bg-time')).toHaveText(/^1m \d\ds$/)
+
+    const note = '<task-notification>\n<task-id>agent42</task-id>\n<tool-use-id>tb1</tool-use-id>\n<status>completed</status>\n<summary>Agent finished</summary>\n<result>The final report.</result>\n</task-notification>'
+    appendFileSync(logPath(sandbox), line({ type: 'user', uuid: 'b4', timestamp: new Date().toISOString(), message: { role: 'user', content: note } }))
+    await expect(strip.locator('.chat-bg-count')).toHaveText('1 done', { timeout: 15_000 })
+    await expect(chat.locator('[data-tool="tb1"] .chat-badge')).toHaveText('Done')
+    await expect(chat.locator('.chat-you')).toHaveCount(1)
+    await expect(chat).not.toContainText('task-notification')
+
+    await strip.locator('.chat-bg-row').click()
+    await expect(chat.locator('.chat-card')).toContainText('The final report.')
+  } finally {
+    await closeApp(app)
+  }
+})
