@@ -62,6 +62,14 @@ describe('navigation router', () => {
     expect(await router.query(root, request)).toMatchObject({ engine: 'typescript' })
     router.stop()
   })
+  it('starts the TypeScript service when a TypeScript file is opened, before any navigation is asked for', async () => {
+    const root = fixture()
+    let starts = 0
+    const router = new CodeNavRouter({ typescript: () => { starts++; return client() }, csharp: async () => null, canInstall: async () => false })
+    expect(await router.status(root, 'a.ts')).toEqual({ engine: 'typescript', state: 'starting', canInstall: false })
+    expect(starts).toBe(1)
+    router.stop()
+  })
   it('offers C# installation only for missing C# servers with a dotnet SDK', async () => {
     const root = fixture()
     writeFileSync(join(root, 'a.cs'), 'interface Shape {}')

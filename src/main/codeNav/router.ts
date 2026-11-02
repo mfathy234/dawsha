@@ -77,8 +77,8 @@ export class CodeNavRouter {
     if (!target.ok) return noServer
     const engine = engineFor(target.full)
     if (engine === 'name') return noServer
-    const key = `${folder}:${engine === 'csharp' ? target.full : engine}`
-    const server = engine === 'csharp' ? await this.server(folder, target.full, engine) : await this.servers.get(key)
+    // Opening a file starts its language service, so the first F12 finds it loaded instead of waiting for it.
+    const server = await this.server(folder, target.full, engine)
     const loading = server?.state === 'ready' && server.warmUp !== undefined && !server.warmed
     if (loading && typeof path === 'string') void this.warmFromDisk(folder, path, target.full, server)
     return { engine, state: loading ? 'starting' : server?.state ?? (engine === 'csharp' ? 'missing' : 'none'), canInstall: engine === 'csharp' && !server && await this.engines.canInstall() }
