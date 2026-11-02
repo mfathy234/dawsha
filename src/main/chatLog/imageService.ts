@@ -4,13 +4,14 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ClipboardItem, clipboard, nativeImage, shell } from 'electron'
 import {
-  IMAGE_MAX_BYTES, IMAGE_MAX_EDGE, sniffImageMime, type ChatImageActionRequest, type ChatImageActionResult, type ChatImageRequest, type ChatImageResult, type ImageMime
+  IMAGE_MAX_BYTES, IMAGE_MAX_EDGE, mimeFromName, sniffImageMime, type ChatImageActionRequest, type ChatImageActionResult, type ChatImageRequest, type ChatImageResult, type ImageMime
 } from '../../shared/chatImage'
+import type { ChatPreviewRequest } from '../../shared/chatAttach'
 import { pasteDir } from '../clipboardImage'
 import { logTo, revealInFolder } from '../desktop'
 import { checkImageFile } from './imageAccess'
 import type { ImageEntry } from './imageTable'
-import { chatImageEntry } from './service'
+import { chatFolder, chatImageEntry } from './service'
 
 interface Loaded {
   bytes: Buffer
@@ -56,6 +57,20 @@ function fitted(loaded: Loaded): { dataUrl: string; mime: ImageMime; width: numb
   const out = jpeg ? small.toJPEG(85) : small.toPNG()
   const mime: ImageMime = jpeg ? 'image/jpeg' : 'image/png'
   return { dataUrl: `data:${mime};base64,${out.toString('base64')}`, mime, width, height }
+}
+
+/** A small picture of a file the user is about to send. The path comes from a paste or a drop, so it gets the same checks as a path in a log. */
+export async function previewAttachment(request: ChatPreviewRequest): Promise<ChatImageResult> {
+  const folder = chatFolder(request?.agent, request?.sessionId)
+  const mime = typeof request?.path === 'string' ? mimeFromName(request.path) : null
+  if (!folder || !mime) return { status: 'blocked' }
+  const loaded = await loadEntry({ kind: 'file', mime, path: request.path }, folder)
+  if (failed(loaded)) return loaded
+  try {
+    return { status: 'ok', ...fitted(loaded) }
+  } catch {
+    return { status: 'blocked' }
+  }
 }
 
 /** A picture of a session as a data: URL, looked up by the id its own reader made. A path never arrives from the page. */

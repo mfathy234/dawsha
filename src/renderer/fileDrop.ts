@@ -6,7 +6,7 @@ import { getTerminal } from './terminals'
 
 export const hasFiles = (transfer: DataTransfer | null): boolean => transfer?.types.includes('Files') === true
 
-function droppedPaths(transfer: DataTransfer): string[] {
+export function droppedPaths(transfer: DataTransfer): string[] {
   const fromFiles = [...transfer.files].slice(0, DROP_FILE_LIMIT).map((file) => api.pathForFile(file))
   if (fromFiles.some((path) => path !== '')) return fromFiles.filter((path) => path !== '')
   return pathsFromUriList(transfer.getData('text/uri-list'))

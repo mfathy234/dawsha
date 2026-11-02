@@ -489,6 +489,44 @@ test('a file name in a reply is a link only when the file exists, and a click op
   }
 })
 
+test('files dropped on the chat become chips with a thumbnail and go with the next message, not into the terminal', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const shot = join(sandbox.projectFolder, 'shot.png')
+    writeFileSync(shot, Buffer.from(PNG_BASE64, 'base64'))
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    const box = chat.getByRole('textbox', { name: 'Message' })
+    await expect(box).toBeEnabled({ timeout: 15_000 })
+    await box.evaluate((el, uri) => {
+      const transfer = new DataTransfer()
+      transfer.items.add(new File(['x'], 'shot.png', { type: 'image/png' }))
+      transfer.setData('text/uri-list', uri)
+      const drop = new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true })
+      el.dispatchEvent(drop)
+    }, `file:///${shot.replace(/\\/g, '/')}`)
+    const chip = chat.locator('.chat-chip')
+    await expect(chip).toHaveCount(1)
+    await expect(chip).toContainText('shot.png')
+    await expect(chip.locator('img')).toBeVisible({ timeout: 15_000 })
+    expect(await bufferText(page, await activeTermId(page))).not.toContain('shot.png')
+    await box.fill('what is this')
+    await box.press('Enter')
+    await expect(chat.locator('.chat-you', { hasText: 'what is this' }).first()).toContainText('shot.png', { timeout: 15_000 })
+    await expect(chat.locator('.chat-chip')).toHaveCount(0)
+    await box.evaluate((el) => {
+      const transfer = new DataTransfer()
+      transfer.items.add(new File(['x'], 'a.png', { type: 'image/png' }))
+      el.dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true }))
+    })
+    await expect(chat.locator('.chat-chip')).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
 test('a pasted picture shows as a thumbnail, opens in a lightbox and its actions work', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox, agentEnv(sandbox))

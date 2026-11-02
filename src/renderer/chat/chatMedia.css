@@ -143,3 +143,13 @@
   background: var(--hover);
   color: var(--text);
 }
+
+/* Files waiting to go with the next message. */
+.chat.file-drop { outline: 2px dashed var(--accent); outline-offset: -4px; }
+.chat-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); max-width: 720px; margin: 0 auto var(--sp-2); }
+.chat-chip { display: inline-flex; align-items: center; gap: var(--sp-2); max-width: 220px; padding: 2px var(--sp-2) 2px 2px; border-radius: var(--r-control); background: var(--surface); color: var(--text-2); font-size: var(--fs-1); }
+.chat-chip-thumb { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; overflow: hidden; border-radius: 5px; color: var(--text-3); }
+.chat-chip-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.chat-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-chip-x { flex: none; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-3); cursor: pointer; }
+.chat-chip-x:hover { background: var(--hover); color: var(--text); }

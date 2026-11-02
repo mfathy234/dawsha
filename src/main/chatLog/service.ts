@@ -86,6 +86,12 @@ export function chatImageEntry(agent: string, sessionId: string, imageId: string
   return held && entry ? { entry, folder: held.folder } : null
 }
 
+/** The project folder of a session that has been read; the root a pasted or dropped file must lie in. */
+export function chatFolder(agent: string, sessionId: string): string | null {
+  if (typeof agent !== 'string' || typeof sessionId !== 'string') return null
+  return entries.get(keyOf(agent, sessionId))?.folder ?? null
+}
+
 /** Drops what was read for a session once its pane closes or leaves the Chat view. */
 export function releaseChat(request: ChatReleaseRequest): void {
   if (typeof request?.agent === 'string' && typeof request.sessionId === 'string') entries.delete(keyOf(request.agent, request.sessionId))

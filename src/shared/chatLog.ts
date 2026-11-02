@@ -1,4 +1,5 @@
 import type { AskQuestion } from './chatAsk'
+import type { ChatPreviewRequest } from './chatAttach'
 import type { ChatImageActionRequest, ChatImageActionResult, ChatImageRef, ChatImageRequest, ChatImageResult } from './chatImage'
 import type { ToolKind } from './chatKind'
 import type { TabAgent } from './types'
@@ -129,13 +130,16 @@ export interface ChatApi {
   release(request: ChatReleaseRequest): Promise<void>
   image(request: ChatImageRequest): Promise<ChatImageResult>
   imageAction(request: ChatImageActionRequest): Promise<ChatImageActionResult>
+  /** A small picture of a file about to be sent, if it is a picture inside the project or the paste folder. */
+  preview(request: ChatPreviewRequest): Promise<ChatImageResult>
 }
 
 export const CHAT_IPC = {
   read: 'chat:read',
   release: 'chat:release',
   image: 'chat:image',
-  imageAction: 'chat:image-action'
+  imageAction: 'chat:image-action',
+  preview: 'chat:attachment-preview'
 } as const
 
 export interface Bounded {

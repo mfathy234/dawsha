@@ -1,9 +1,14 @@
-import { realpath, stat } from 'node:fs/promises'
+import { realpath as realpathCallback } from 'node:fs'
+import { stat } from 'node:fs/promises'
+import { promisify } from 'node:util'
 import { isAbsolute } from 'node:path'
 import { IMAGE_MAX_BYTES } from '../../shared/chatImage'
 import { containsProjectPath } from '../projectContainment'
 
 export type FileCheck = { ok: true; real: string; size: number } | { ok: false; status: 'missing' | 'blocked' | 'too-large' }
+
+// The native call also expands Windows 8.3 short names, so MICROT~1 and Microtec-Dev compare as the same folder.
+const realpath = promisify(realpathCallback.native)
 
 const isNetworkPath = (path: string): boolean => /^[\\/]{2}/.test(path)
 
