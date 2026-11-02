@@ -45,6 +45,8 @@ export const CHAT_TEXT = {
   composerMenu: 'Show the terminal to answer the menu.',
   close: 'Close',
   openFile: 'Open file',
+  diffLabel: 'Changes',
+  diffMore: (count: number): string => `${count} more changed lines not shown`,
   attachments: 'Attached files',
   removeAttachment: (name: string): string => `Remove ${name}`,
   dropHint: 'Drop files to attach them',

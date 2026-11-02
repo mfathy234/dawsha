@@ -12,6 +12,7 @@ import type { AskAnswer } from '../../shared/menuAnswer'
 import type { PendingLabel } from '../../shared/chatPending'
 import { AskCard } from './chatAsk'
 import { imageStrip } from './chatImages'
+import { renderDiff } from './chatDiffView'
 import { linkifyChat, openFileButton } from './chatLinks'
 import type { ChatSessionRef } from './chatImageCache'
 
@@ -151,6 +152,10 @@ export class ChatThread {
     const pictures = imageStrip(item.images, ctx.session)
     const line = item.path && ctx.fileScope ? h('div', { class: 'chat-toolrow' }, row, openFileButton(ctx.fileScope, { path: item.path, ...(item.line ? { line: item.line } : {}) })) : row
     if (!expanded) return pictures ? [line, pictures] : [line]
+    if (item.diff) {
+      const key = `d:${item.id}`
+      return [line, renderDiff(item.diff, { open: this.open.has(key), toggle: () => this.flip(key) }), ...(pictures ? [pictures] : [])]
+    }
     const text = item.output === '' ? CHAT_TEXT.noOutput : item.output
     return [line, h('pre', { class: 'chat-toolout', dir: 'ltr' }, item.outputTruncated ? `${text}\n${CHAT_TEXT.outputTooLarge}` : text), ...(pictures ? [pictures] : [])]
   }

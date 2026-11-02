@@ -1,4 +1,5 @@
 import type { AskQuestion } from './chatAsk'
+import type { ChatDiff } from './chatDiff'
 import type { ChatPreviewRequest } from './chatAttach'
 import type { ChatImageActionRequest, ChatImageActionResult, ChatImageRef, ChatImageRequest, ChatImageResult } from './chatImage'
 import type { ToolKind } from './chatKind'
@@ -91,6 +92,8 @@ export interface ChatTool {
   /** The file the call touched, and the line it was at when known. */
   path?: string
   line?: number
+  /** The change an edit made, with line numbers where the log has them. */
+  diff?: ChatDiff
   at?: number
 }
 

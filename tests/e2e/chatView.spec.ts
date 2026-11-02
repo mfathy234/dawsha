@@ -87,6 +87,11 @@ test('the header switch swaps Terminal and Chat and the terminal keeps what it s
     await expect(chat.locator('.chat-toolout')).toContainText('Tests  24 passed (24)')
     await chat.locator('.chat-tool').nth(1).click()
     await expect(chat.locator('.chat-toolout')).toHaveCount(0)
+    await chat.locator('.chat-tool').first().click()
+    await expect(chat.locator('.chat-diff .dl.add')).toHaveCount(2)
+    await expect(chat.locator('.chat-diff .dl.del')).toHaveCount(1)
+    await chat.locator('.chat-tool').first().click()
+    await expect(chat.locator('.chat-diff')).toHaveCount(0)
     await expect(pane.locator('.term-host.active')).toBeHidden()
     await expect(pane.locator('.term-host.active')).toHaveCount(1)
 

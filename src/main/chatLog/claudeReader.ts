@@ -1,3 +1,4 @@
+import { diffFromStructuredPatch, firstChangedLine, type ChatDiff } from '../../shared/chatDiff'
 import { stripImageMarkers, type ChatImageRef } from '../../shared/chatImage'
 import type { ChatItem } from '../../shared/chatLog'
 import { asTime, blockText, isRecord, type Json } from '../../shared/transcript'
@@ -17,6 +18,13 @@ function promptParts(content: unknown): string[] {
   if (typeof content === 'string') return [content]
   if (!Array.isArray(content)) return []
   return content.map((part) => (isRecord(part) && part.type === 'text' && typeof part.text === 'string' ? part.text : '')).filter((text) => text.trim() !== '')
+}
+
+/** The numbered change Claude records beside an edit's result. */
+function patchOf(record: Json): { diff: ChatDiff | null; line?: number } {
+  const result = isRecord(record.toolUseResult) ? record.toolUseResult : {}
+  const line = firstChangedLine(result.structuredPatch)
+  return { diff: diffFromStructuredPatch(result.structuredPatch), ...(line ? { line } : {}) }
 }
 
 function resultText(content: unknown): string {
@@ -81,7 +89,7 @@ export class ClaudeChatReader implements ChatLineReader {
     if (Array.isArray(content)) {
       for (const part of content) {
         if (isRecord(part) && part.type === 'tool_result' && typeof part.tool_use_id === 'string') {
-          this.builder.result(part.tool_use_id, { output: resultText(part.content), failed: part.is_error === true, images: this.imagesIn(part.content) })
+          this.builder.result(part.tool_use_id, { output: resultText(part.content), failed: part.is_error === true, images: this.imagesIn(part.content), ...patchOf(record) })
         }
       }
     }

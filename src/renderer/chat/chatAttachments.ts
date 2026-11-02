@@ -66,8 +66,7 @@ export class ChatAttachments {
 
   /** The session's folder is known to main once its first read has run; a drop just after opening may get there first, so a refusal is tried again a few times. */
   private async preview(item: Attachment, thumb: HTMLElement, session: ChatSessionRef): Promise<void> {
-    const key = `${session.sessionId}
-${item.path}`
+    const key = `${session.sessionId}|${item.path}`
     for (let attempt = 0; attempt < PREVIEW_TRIES && thumb.isConnected; attempt += 1) {
       const result = previews.get(key) ?? (await api.chat.preview({ agent: session.agent, sessionId: session.sessionId, path: item.path }).catch((): ChatImageResult => ({ status: 'blocked' })))
       if (result.status === 'ok') {

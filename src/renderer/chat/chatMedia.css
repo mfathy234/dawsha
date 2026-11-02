@@ -153,3 +153,16 @@
 .chat-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-chip-x { flex: none; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-3); cursor: pointer; }
 .chat-chip-x:hover { background: var(--hover); color: var(--text); }
+
+/* Coloured changes of an edit. */
+.chat-diff { margin: 0; padding: var(--sp-1) 0; border-radius: var(--r-control); background: var(--surface); font: 12px/18px var(--font-mono); overflow: auto; max-height: 420px; }
+.chat-diff .dl { display: flex; gap: var(--sp-2); padding: 0 var(--sp-3); white-space: pre; color: var(--text-2); }
+.chat-diff .dl.add { background: color-mix(in srgb, var(--term-add) 14%, transparent); color: var(--text); }
+.chat-diff .dl.del { background: color-mix(in srgb, var(--term-del) 14%, transparent); color: var(--text); }
+.chat-diff .dl.gap { color: var(--text-3); }
+.chat-diff .no { flex: none; min-width: 3ch; text-align: end; color: var(--text-3); user-select: none; }
+.chat-diff .sg { flex: none; width: 1ch; user-select: none; }
+.chat-diff .add .sg { color: var(--term-add); }
+.chat-diff .del .sg { color: var(--term-del); }
+.chat-diff .tx { min-width: 0; }
+.chat-diff .chat-more { margin: var(--sp-1) var(--sp-3); }

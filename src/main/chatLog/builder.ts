@@ -1,3 +1,4 @@
+import { diffFromText, type ChatDiff } from '../../shared/chatDiff'
 import type { ChatImageRef } from '../../shared/chatImage'
 import { CHAT_ITEMS_MAX, CHAT_MESSAGE_MAX, boundText, type ChatItem, type ChatNoticeKind, type ChatTool } from '../../shared/chatLog'
 import { isTestCommand, parseTestCounts, testSummary } from '../../shared/testRun'
@@ -10,6 +11,9 @@ export interface ToolResult {
   output: string
   failed?: boolean
   images?: ChatImageRef[]
+  /** The numbered change the log's own record gives for an edit. */
+  diff?: ChatDiff | null
+  line?: number
 }
 
 function noteFor(tool: ChatTool, output: string, failed: boolean | undefined): string | undefined {
@@ -56,6 +60,7 @@ export class ChatBuilder {
 
   call(id: string, shape: ToolShape, at?: number): void {
     const { output, truncated } = boundedOutput(shape.preview)
+    const diff = shape.kind === 'edit' || shape.kind === 'create' ? diffFromText(shape.preview) : null
     const tool: ChatTool = {
       kind: 'tool',
       id,
@@ -68,6 +73,7 @@ export class ChatBuilder {
       outputTruncated: truncated,
       done: false,
       ...(shape.ask ? { ask: shape.ask } : {}),
+      ...(diff ? { diff } : {}),
       ...(shape.path ? { path: shape.path } : {}),
       ...(shape.line ? { line: shape.line } : {}),
       ...(shape.images && shape.images.length > 0 ? { images: [...shape.images] } : {}),
@@ -87,7 +93,9 @@ export class ChatBuilder {
     const bounded = keepsDiff && tool.output !== '' ? { output: tool.output, truncated: tool.outputTruncated } : boundedOutput(result.output)
     const failed = result.failed === true ? true : undefined
     const images = [...(tool.images ?? []), ...(result.images ?? [])]
-    this.list[index] = { ...tool, ...(images.length > 0 ? { images } : {}), output: bounded.output, outputTruncated: bounded.truncated, failed, note: noteFor(tool, result.output, failed), done: true }
+    const diff = result.diff ?? tool.diff
+    const line = tool.line ?? result.line
+    this.list[index] = { ...tool, ...(images.length > 0 ? { images } : {}), ...(diff ? { diff } : {}), ...(line ? { line } : {}), output: bounded.output, outputTruncated: bounded.truncated, failed, note: noteFor(tool, result.output, failed), done: true }
   }
 
   private push(item: ChatItem): void {
