@@ -1231,7 +1231,7 @@ export class FilesViewComponent {
     if (!doc || !set || doc.status !== 'ready') return
     const comments = set.review.comments.filter((comment) => comment.path === doc.path)
     if (doc.changes) this.tools.changes.load(doc)
-    const blame = doc.changes && !this.tools.changes.hasLineSessions(doc) ? this.blameFor(doc) : new Map()
+    const blame = doc.changes ? this.blameFor(doc) : new Map()
     const signature = `${doc.changes}|${JSON.stringify(comments)}|${JSON.stringify([...blame.entries()])}|${this.tools.changes.signature(doc)}`
     if (this.annotationSignature.get(doc) === signature) return
     this.annotationSignature.set(doc, signature)
@@ -1239,7 +1239,7 @@ export class FilesViewComponent {
       doc.annotate([])
       return
     }
-    doc.annotate([this.tools.changes.extensions(doc), reviewExtension({
+    doc.annotate([this.tools.changes.extensions(doc, blame), reviewExtension({
       comments, blame,
       onAdd: (line) => this.addComment(doc, line),
       onEdit: (id) => this.updateComment(id, (comment) => ({ ...comment, editing: true })),

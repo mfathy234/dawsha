@@ -60,14 +60,10 @@ export class ChangeTools {
     return this.touches.get(doc)?.result ?? null
   }
 
-  /** Whether the old blame marks from the session timelines are still needed: not when the log answered line by line. */
-  hasLineSessions(doc: FileDoc): boolean {
-    return touchedLines(this.result(doc)).size > 0
-  }
-
-  extensions(doc: FileDoc): Extension[] {
+  /** The session log marks only the lines the timeline blame has not placed: blame knows the line, the log knows the file. */
+  extensions(doc: FileDoc, placed: ReadonlyMap<number, unknown>): Extension[] {
     const out: Extension[] = []
-    const lines = touchedLines(this.result(doc))
+    const lines = new Map([...touchedLines(this.result(doc))].filter(([line]) => !placed.has(line)))
     if (lines.size > 0) out.push(lineTouchGutter(lines, { open: (touch) => this.openSession(touch) }))
     out.push(changeGutter({ open: (hunk, anchor) => this.menu(doc, hunk, anchor) }))
     return out
