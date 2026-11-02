@@ -2,6 +2,7 @@ import { parseMarkdown, type Block, type ListBlock } from '../../shared/chatMark
 import { isWebLink, type Inline } from '../../shared/chatMarkdownInline'
 import { api } from '../api'
 import { h } from '../dom'
+import { copyButton } from './chatCopy'
 import { renderTable } from './chatTable'
 
 const text = (value: string): Node => document.createTextNode(value)
@@ -35,7 +36,7 @@ function renderBlock(block: Block): HTMLElement {
     case 'heading':
       return h('p', { class: `chat-h chat-h${Math.min(block.level, 3)}`, dir: 'auto', role: 'heading', 'aria-level': Math.min(block.level + 1, 6) }, ...renderInline(block.inline))
     case 'code':
-      return h('pre', { class: 'chat-code', dir: 'ltr' }, block.text)
+      return h('div', { class: 'chat-codewrap' }, h('pre', { class: 'chat-code', dir: 'ltr' }, block.text), copyButton(() => block.text))
     case 'quote':
       return h('blockquote', { class: 'chat-quote', dir: 'auto' }, ...block.blocks.map(renderBlock))
     case 'rule':

@@ -1,4 +1,8 @@
+import { diffFromText, type ChatDiff } from '../../shared/chatDiff'
+import type { ChatImageRef } from '../../shared/chatImage'
 import { CHAT_ITEMS_MAX, CHAT_MESSAGE_MAX, boundText, type ChatItem, type ChatNoticeKind, type ChatTool } from '../../shared/chatLog'
+import type { AnswerEntry } from '../../shared/chatCards'
+import { CHAT_TEXT } from '../../shared/chatStrings'
 import { isTestCommand, parseTestCounts, testSummary } from '../../shared/testRun'
 import { cleanText } from '../../shared/transcript'
 import { boundedOutput, type ToolShape } from './toolShape'
@@ -8,6 +12,11 @@ const KEEP = CHAT_ITEMS_MAX * 2
 export interface ToolResult {
   output: string
   failed?: boolean
+  images?: ChatImageRef[]
+  /** The numbered change the log's own record gives for an edit. */
+  diff?: ChatDiff | null
+  line?: number
+  answers?: AnswerEntry[]
 }
 
 function noteFor(tool: ChatTool, output: string, failed: boolean | undefined): string | undefined {
@@ -33,18 +42,64 @@ export class ChatBuilder {
     return this.list.slice(-CHAT_ITEMS_MAX)
   }
 
-  message(id: string, role: 'user' | 'agent', text: string, at?: number): void {
-    const body = boundText(cleanText(text).trim(), CHAT_MESSAGE_MAX).text
-    if (body !== '') this.push({ kind: 'message', id, role, text: body, at })
+  message(id: string, role: 'user' | 'agent', text: string, at?: number, images: readonly ChatImageRef[] = []): void {
+    const bounded = boundText(cleanText(text).trim(), CHAT_MESSAGE_MAX)
+    const body = bounded.text
+    if (body !== '' || images.length > 0) {
+      this.push({ kind: 'message', id, role, text: body, ...(images.length > 0 ? { images: [...images] } : {}), ...(bounded.truncated ? { truncated: true } : {}), at })
+    }
   }
 
-  notice(id: string, notice: ChatNoticeKind, text: string, at?: number, resetsAt?: number): void {
+  /** The agent's reasoning, as a row that stays closed until opened. Nothing is added for empty reasoning. */
+  thought(id: string, text: string, at?: number): void {
+    const { output, truncated } = boundedOutput(text.trim())
+    if (output === '') return
+    this.push({ kind: 'tool', id, activity: 'other', verb: 'Thought', target: '', output, outputTruncated: truncated, done: true, at })
+  }
+
+  /** The summary a compaction left joins the notice that marked it, or makes one. */
+  compact(id: string, summary: string, at?: number): void {
+    const index = this.list.length - 1
+    const last = this.list[index]
+    if (last?.kind === 'notice' && last.notice === 'compact' && last.detail === undefined && summary.trim() !== '') {
+      this.list[index] = { ...last, detail: boundText(cleanText(summary).trim(), CHAT_MESSAGE_MAX).text }
+      return
+    }
+    this.notice(id, 'compact', CHAT_TEXT.compacted, at, undefined, summary)
+  }
+
+  /** A slash command the user ran: a quiet row, with what it printed folded inside. */
+  command(id: string, target: string, at?: number): void {
+    this.push({ kind: 'tool', id: `cmd:${id}`, activity: 'other', verb: 'Ran', target, output: '', outputTruncated: false, done: true, at })
+  }
+
+  /** What the last slash command printed. Ignored when the last item is not a slash command. */
+  commandOutput(text: string): void {
+    const index = this.list.length - 1
+    const last = this.list[index]
+    if (last?.kind !== 'tool' || !last.id.startsWith('cmd:')) return
+    const { output, truncated } = boundedOutput(text.trim())
+    this.list[index] = { ...last, output, outputTruncated: truncated }
+  }
+
+  /** Pictures that arrived after the user's message they belong to. True when the last item was that message. */
+  attachToLastUser(images: readonly ChatImageRef[]): boolean {
+    const index = this.list.length - 1
+    const last = this.list[index]
+    if (images.length === 0 || last?.kind !== 'message' || last.role !== 'user') return false
+    this.list[index] = { ...last, images: [...(last.images ?? []), ...images] }
+    return true
+  }
+
+  notice(id: string, notice: ChatNoticeKind, text: string, at?: number, resetsAt?: number, detail?: string): void {
     const body = boundText(cleanText(text).trim(), 600).text
-    this.push({ kind: 'notice', id, notice, text: body, ...(resetsAt !== undefined ? { resetsAt } : {}), at })
+    const more = detail === undefined ? '' : boundText(cleanText(detail).trim(), CHAT_MESSAGE_MAX).text
+    this.push({ kind: 'notice', id, notice, text: body, ...(resetsAt !== undefined ? { resetsAt } : {}), ...(more !== '' ? { detail: more } : {}), at })
   }
 
   call(id: string, shape: ToolShape, at?: number): void {
     const { output, truncated } = boundedOutput(shape.preview)
+    const diff = shape.kind === 'edit' || shape.kind === 'create' ? diffFromText(shape.preview) : null
     const tool: ChatTool = {
       kind: 'tool',
       id,
@@ -57,6 +112,12 @@ export class ChatBuilder {
       outputTruncated: truncated,
       done: false,
       ...(shape.ask ? { ask: shape.ask } : {}),
+      ...(diff ? { diff } : {}),
+      ...(shape.todos && shape.todos.length > 0 ? { todos: shape.todos } : {}),
+      ...(shape.plan ? { plan: shape.plan } : {}),
+      ...(shape.path ? { path: shape.path } : {}),
+      ...(shape.line ? { line: shape.line } : {}),
+      ...(shape.images && shape.images.length > 0 ? { images: [...shape.images] } : {}),
       at
     }
     this.open.set(id, this.list.length)
@@ -72,7 +133,10 @@ export class ChatBuilder {
     const keepsDiff = tool.verb === 'Edited' || tool.verb === 'Created'
     const bounded = keepsDiff && tool.output !== '' ? { output: tool.output, truncated: tool.outputTruncated } : boundedOutput(result.output)
     const failed = result.failed === true ? true : undefined
-    this.list[index] = { ...tool, output: bounded.output, outputTruncated: bounded.truncated, failed, note: noteFor(tool, result.output, failed), done: true }
+    const images = [...(tool.images ?? []), ...(result.images ?? [])]
+    const diff = result.diff ?? tool.diff
+    const line = tool.line ?? result.line
+    this.list[index] = { ...tool, ...(images.length > 0 ? { images } : {}), ...(diff ? { diff } : {}), ...(line ? { line } : {}), ...(result.answers && result.answers.length > 0 ? { answers: result.answers } : {}), output: bounded.output, outputTruncated: bounded.truncated, failed, note: noteFor(tool, result.output, failed), done: true }
   }
 
   private push(item: ChatItem): void {

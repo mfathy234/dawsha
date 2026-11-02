@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ClaudeChatReader } from '../../src/main/chatLog/claudeReader'
+import { PNG_BASE64 } from '../support/tinyImages'
 import { CHAT_ITEMS_MAX, type ChatMessage, type ChatTool } from '../../src/shared/chatLog'
 
 const lines = (...records: unknown[]): string => records.map((r) => JSON.stringify(r)).join('\n') + '\n'
@@ -64,7 +65,7 @@ describe('ClaudeChatReader', () => {
     expect(reader.items()).toHaveLength(1)
   })
 
-  it('ignores sidechain records, meta prompts and command traces', () => {
+  it('ignores sidechain records and meta prompts, and shows a slash command as a row rather than a message', () => {
     const reader = new ClaudeChatReader()
     reader.feed(
       lines(
@@ -74,7 +75,9 @@ describe('ClaudeChatReader', () => {
         { type: 'user', message: { content: [{ type: 'text', text: '<system-reminder>x</system-reminder>' }, { type: 'text', text: 'real' }] } }
       )
     )
-    expect(reader.items().map((item) => (item as ChatMessage).text)).toEqual(['real'])
+    const items = reader.items()
+    expect(items.filter((item) => item.kind === 'message').map((item) => (item as ChatMessage).text)).toEqual(['real'])
+    expect(items.filter((item) => item.kind === 'tool')).toMatchObject([{ verb: 'Ran', target: '/model' }])
   })
 
   it('keeps a prompt that merely starts with a tag', () => {
@@ -143,6 +146,55 @@ describe('ClaudeChatReader', () => {
     expect(reader.items()).toHaveLength(CHAT_ITEMS_MAX)
     expect((reader.items().at(-1) as ChatMessage).text).toBe(`message ${CHAT_ITEMS_MAX * 3 - 1}`)
     expect(reader.earlier).toBeGreaterThan(0)
+  })
+
+  const imageBlock = { type: 'image', source: { type: 'base64', media_type: 'image/png', data: PNG_BASE64 } }
+  const userRecord = (content: unknown, uuid = 'ui') => ({ type: 'user', uuid, message: { role: 'user', content } })
+
+  it('draws a pasted picture under the user message and hides the source marker', () => {
+    const reader = new ClaudeChatReader()
+    reader.feed(lines(userRecord([{ type: 'text', text: 'What is this?' }, imageBlock, { type: 'text', text: '[Image: source: C:\\tmp\\shot.png]' }])))
+    const [message] = reader.items() as ChatMessage[]
+    expect(message.text).toBe('What is this?')
+    expect(message.images).toHaveLength(1)
+    expect(message.images?.[0]).toMatchObject({ source: 'log', mime: 'image/png', width: 1, height: 1 })
+    expect(reader.image(message.images?.[0].id ?? '')?.kind).toBe('bytes')
+  })
+
+  it('keeps the marker path as a file reference when the log holds no bytes', () => {
+    const reader = new ClaudeChatReader()
+    reader.feed(lines(userRecord([{ type: 'text', text: 'see [Image: source: C:\\proj\\a.png]' }])))
+    const [message] = reader.items() as ChatMessage[]
+    expect(message.text).toBe('see')
+    expect(message.images?.[0]).toMatchObject({ source: 'file', label: 'a.png' })
+  })
+
+  it('shows a picture-only message', () => {
+    const reader = new ClaudeChatReader()
+    reader.feed(lines(userRecord([imageBlock])))
+    const [message] = reader.items() as ChatMessage[]
+    expect(message.text).toBe('')
+    expect(message.images).toHaveLength(1)
+  })
+
+  it('attaches pictures inside a tool result to the tool, and ignores url sources', () => {
+    const reader = new ClaudeChatReader()
+    reader.feed(
+      lines(
+        block('a1', [{ type: 'tool_use', id: 'r1', name: 'Read', input: { file_path: 'shot.png' } }]),
+        userRecord([{ type: 'tool_result', tool_use_id: 'r1', content: [imageBlock, { type: 'image', source: { type: 'url', url: 'https://x.test/a.png' } }] }], 'u9')
+      )
+    )
+    const [tool] = reader.items() as ChatTool[]
+    expect(tool.images).toHaveLength(1)
+    expect(tool.done).toBe(true)
+  })
+
+  it('drops a base64 block that is not a real picture', () => {
+    const reader = new ClaudeChatReader()
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>').toString('base64')
+    reader.feed(lines(userRecord([{ type: 'text', text: 'hi' }, { type: 'image', source: { type: 'base64', media_type: 'image/svg+xml', data: svg } }])))
+    expect((reader.items()[0] as ChatMessage).images).toBeUndefined()
   })
 
   it('counts records so a log in an unknown format can be recognised', () => {

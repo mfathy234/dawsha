@@ -3,6 +3,11 @@ import { chatPhase, type ChatPhase } from '../../shared/chatLog'
 import type { AgentKind } from '../../shared/types'
 import { h } from '../dom'
 import { CHAT_TEXT } from '../../shared/chatStrings'
+import { messageWithAttachments } from '../../shared/chatAttach'
+import { hasFiles, droppedPaths } from '../fileDrop'
+import { api } from '../api'
+import { store } from '../state'
+import { ChatAttachments } from './chatAttachments'
 import { ChatFeed, LOADING, type FeedSnapshot } from './chatFeed'
 import { ChatThread, type PendingView } from './chatThread'
 import { askPromptFor } from '../../shared/menuPrompt'
@@ -33,6 +38,8 @@ export interface ChatInput {
   exited: boolean
   status: 'starting' | 'running' | 'exited'
   startedAt: number
+  /** The pane's terminal tab: file links in the thread resolve against its folder. */
+  tabId: string
 }
 
 const NEAR_BOTTOM_PX = 96
@@ -51,7 +58,9 @@ export class PaneChat {
   private readonly thread: ChatThread
   private readonly box = h('textarea', { class: 'chat-input', rows: 1, 'aria-label': 'Message', dir: 'auto', spellcheck: 'false' })
   private readonly sendButton = h('button', { class: 'chat-btn', type: 'button', hidden: true }, CHAT_TEXT.send)
+  private readonly jump = h('button', { class: 'chat-jump', type: 'button', hidden: true }, CHAT_TEXT.jumpLatest)
   private readonly note = h('p', { class: 'chat-quiet', role: 'status', hidden: true })
+  private readonly attachments = new ChatAttachments(() => this.showSend())
   private snapshot: FeedSnapshot = LOADING
   private input: ChatInput | null = null
   private phase: ChatPhase = 'empty'
@@ -80,8 +89,8 @@ export class PaneChat {
     this.el = h(
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
-      this.scroller,
-      h('div', { class: 'chat-composer' }, this.note, h('div', { class: 'chat-box' }, this.box, this.sendButton))
+      h('div', { class: 'chat-feedwrap' }, this.scroller, this.jump),
+      h('div', { class: 'chat-composer' }, this.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.sendButton))
     )
     this.box.addEventListener('keydown', (event) => this.onKey(event))
     this.box.addEventListener('input', () => {
@@ -90,6 +99,13 @@ export class PaneChat {
     })
     new ResizeObserver(() => this.input && this.updateComposer(this.input, this.phase)).observe(this.box)
     this.sendButton.addEventListener('click', () => this.submit())
+    this.scroller.addEventListener('scroll', () => this.updateJump(), { passive: true })
+    this.jump.addEventListener('click', () => {
+      this.toBottom()
+      this.updateJump()
+    })
+    this.box.addEventListener('paste', (event) => this.onPaste(event))
+    this.watchDrops()
     this.el.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && this.phase === 'working') {
         event.preventDefault()
@@ -116,6 +132,7 @@ export class PaneChat {
     }
     if (this.input && (this.input.agent !== input.agent || (this.input.sessionId && this.input.sessionId !== input.sessionId))) this.pending = []
     this.input = input
+    this.attachments.setSession(input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null)
     if (input.sessionId) this.feed.start({ agent: input.agent, sessionId: input.sessionId, folder: input.folder })
     else this.feed.stop()
     if (!wasActive) this.stickBottom = true
@@ -171,6 +188,8 @@ export class PaneChat {
       ask: this.ask,
       pending: views,
       starting: this.starting,
+      fileScope: input.tabId,
+      session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
         showTerminal: () => this.host.showTerminal(),
         continueIn: (to) => this.host.continueIn(to),
@@ -180,6 +199,7 @@ export class PaneChat {
     })
     this.updateComposer(input, phase)
     if (!force && (this.stickBottom || wasNear)) this.toBottom()
+    this.updateJump()
     if (!force) this.stickBottom = false
   }
 
@@ -249,7 +269,12 @@ export class PaneChat {
   }
 
   private showSend(): void {
-    this.sendButton.hidden = this.box.disabled || this.box.value.trim() === ''
+    this.sendButton.hidden = this.box.disabled || (this.box.value.trim() === '' && this.attachments.items.length === 0)
+  }
+
+  /** The button shows only when the thread is scrolled up and there is more below. */
+  private updateJump(): void {
+    this.jump.hidden = this.nearBottom() || this.scroller.scrollHeight <= this.scroller.clientHeight
   }
 
   private nearBottom(): boolean {
@@ -268,8 +293,9 @@ export class PaneChat {
   }
 
   private submit(): void {
-    const text = this.box.value
-    if (text.trim() === '' || this.box.disabled) return
+    const typed = this.box.value
+    if ((typed.trim() === '' && this.attachments.items.length === 0) || this.box.disabled) return
+    const text = messageWithAttachments(this.input?.agent, this.attachments.items, typed, store.state.info.shellCommand)
     this.note.hidden = true
     if (this.starting) {
       this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, true, false)]
@@ -283,10 +309,54 @@ export class PaneChat {
       }
     }
     this.box.value = ''
+    this.attachments.clear()
     this.growBox()
     this.stickBottom = true
     this.feed.nudge()
     this.render(false)
+  }
+
+  /** A pasted picture or file becomes a chip; pasted text goes into the box as usual. */
+  private onPaste(event: ClipboardEvent): void {
+    const files = [...(event.clipboardData?.files ?? [])]
+    if (files.length === 0) return
+    event.preventDefault()
+    const paths = files.map((file) => api.pathForFile(file)).filter((path) => path !== '')
+    if (paths.length > 0) return this.attachments.add(paths)
+    void api
+      .readClipboard()
+      .then((content) => {
+        if (content.kind === 'image') this.attachments.add([content.path])
+        else if (content.kind === 'text') this.box.setRangeText(content.text, this.box.selectionStart, this.box.selectionEnd, 'end')
+      })
+      .catch(() => {
+        this.note.hidden = false
+        this.note.textContent = CHAT_TEXT.pasteFailed
+      })
+  }
+
+  /** Files dropped on the chat attach here and stop: the pane's own drop handler would type them into the terminal. */
+  private watchDrops(): void {
+    const mark = (on: boolean): void => {
+      this.el.classList.toggle('file-drop', on)
+    }
+    this.el.addEventListener('dragover', (event) => {
+      if (!hasFiles(event.dataTransfer)) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+      mark(true)
+    })
+    this.el.addEventListener('dragleave', (event) => {
+      if (!event.relatedTarget || !this.el.contains(event.relatedTarget as Node)) mark(false)
+    })
+    this.el.addEventListener('drop', (event) => {
+      mark(false)
+      if (!event.dataTransfer || !hasFiles(event.dataTransfer)) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (!this.box.disabled) this.attachments.add(droppedPaths(event.dataTransfer))
+    })
   }
 
   private growBox(): void {

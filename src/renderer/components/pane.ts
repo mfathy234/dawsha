@@ -69,6 +69,7 @@ import { chatCapable } from '../../shared/chatLog'
 import { ViewSwitch } from '../chat/viewSwitch'
 import { chatHostFor, syncPaneChat } from '../chat/paneChatController'
 import '../chat/chat.css'
+import '../chat/chatMedia.css'
 
 const RESUMED_CHIP_MS = 60_000
 const RECAP_REFRESH_MS = 2_500

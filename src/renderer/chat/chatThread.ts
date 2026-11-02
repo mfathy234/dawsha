@@ -11,6 +11,13 @@ import type { AskPrompt } from '../../shared/chatAsk'
 import type { AskAnswer } from '../../shared/menuAnswer'
 import type { PendingLabel } from '../../shared/chatPending'
 import { AskCard } from './chatAsk'
+import { imageStrip } from './chatImages'
+import { answersCard, markdownCard, todoCard } from './chatCards'
+import { copyButton } from './chatCopy'
+import { dayLabel, dayStarts, fullTimeLabel, timeLabel } from '../../shared/chatTime'
+import { renderDiff } from './chatDiffView'
+import { linkifyChat, openFileButton } from './chatLinks'
+import type { ChatSessionRef } from './chatImageCache'
 
 export interface ThreadActions {
   showTerminal(): void
@@ -37,6 +44,10 @@ export interface ThreadContext {
   ask: AskPrompt | null
   pending: readonly PendingView[]
   starting: boolean
+  /** Which session the thread shows, so its pictures can be fetched. */
+  session: ChatSessionRef | null
+  /** The id of the pane's terminal tab, which file links resolve their folder from. */
+  fileScope: string | null
   actions: ThreadActions
 }
 
@@ -74,6 +85,8 @@ export class ChatThread {
     const children: (Node | null)[] =
       feed.state === 'failed' ? [this.failed(feed.reason, ctx)] : feed.state === 'loading' ? [h('p', { class: 'chat-quiet' }, CHAT_TEXT.reading)] : this.body(feed, ctx)
     this.el.replaceChildren(...children.filter((child): child is Node => child !== null))
+    const scope = ctx.fileScope
+    if (scope) this.el.querySelectorAll<HTMLElement>('.chat-say').forEach((reply) => linkifyChat(reply, scope))
   }
 
   private body(feed: FeedSnapshot, ctx: ThreadContext): (Node | null)[] {
@@ -106,28 +119,39 @@ export class ChatThread {
       out.push(h('div', { class: 'chat-tools', dir: 'ltr' }, ...tools))
       tools = []
     }
+    const starts = new Set(dayStarts(items.map((item) => item.at)))
+    const now = Date.now()
     items.forEach((item, index) => {
+      if (starts.has(index) && item.at !== undefined) {
+        flush()
+        out.push(h('div', { class: 'chat-day', role: 'separator' }, h('span', {}, dayLabel(item.at, now))))
+      }
       if (item.kind === 'tool') {
-        tools.push(...this.tool(item, ctx.phase === 'working' || ctx.phase === 'approval' || ctx.phase === 'menu'))
+        tools.push(...this.tool(item, ctx.phase === 'working' || ctx.phase === 'approval' || ctx.phase === 'menu', ctx))
         return
       }
       flush()
-      out.push(item.kind === 'message' ? this.message(item) : this.notice(item, index === items.length - 1, ctx))
+      out.push(item.kind === 'message' ? this.message(item, ctx) : this.notice(item, index === items.length - 1, ctx))
     })
     flush()
     return out
   }
 
-  private message(item: ChatMessage): HTMLElement {
+  private message(item: ChatMessage, ctx: ThreadContext): HTMLElement {
     const folded = foldLines(item.text)
     const opened = this.open.has(`m:${item.id}`)
     const shown = opened || folded.hidden === 0 ? item.text : folded.head
     const body = h('div', { class: item.role === 'user' ? 'chat-you' : 'chat-say', dir: textDirection(item.text), 'data-role': item.role }, ...richText(shown))
     if (folded.hidden > 0) body.append(this.toggle(`m:${item.id}`, opened ? CHAT_TEXT.showLess : CHAT_TEXT.showMore(folded.hidden), 'chat-more'))
+    const pictures = imageStrip(item.images, ctx.session)
+    if (pictures) body.append(pictures)
+    if (item.truncated) body.append(h('p', { class: 'chat-quiet' }, CHAT_TEXT.truncatedNote))
+    if (item.text !== '') body.append(copyButton(() => item.text))
+    if (item.at !== undefined) body.append(h('time', { class: 'chat-time', datetime: new Date(item.at).toISOString(), title: fullTimeLabel(item.at), 'data-time': timeLabel(item.at) }))
     return body
   }
 
-  private tool(item: ChatTool, live: boolean): HTMLElement[] {
+  private tool(item: ChatTool, live: boolean, ctx: ThreadContext): HTMLElement[] {
     const expanded = this.open.has(`t:${item.id}`)
     const row = h(
       'button',
@@ -137,9 +161,22 @@ export class ChatThread {
       h('bdi', { dir: 'ltr' }, h('code', {}, item.target)),
       item.done ? this.toolNote(item) : null
     )
-    if (!expanded) return [row]
+    const pictures = imageStrip(item.images, ctx.session)
+    const line = item.path && ctx.fileScope ? h('div', { class: 'chat-toolrow' }, row, openFileButton(ctx.fileScope, { path: item.path, ...(item.line ? { line: item.line } : {}) })) : row
+    const always = [item.todos ? todoCard(item.todos) : null, item.answers ? answersCard(item.answers) : null, pictures]
+    return [line, ...[...always, ...(expanded ? [this.toolDetail(item)] : [])].filter((node): node is HTMLElement => node !== null)]
+  }
+
+  /** What an opened tool row shows: its change, its plan or report as markdown, or the plain output. */
+  private toolDetail(item: ChatTool): HTMLElement {
+    if (item.diff) {
+      const key = `d:${item.id}`
+      return renderDiff(item.diff, { open: this.open.has(key), toggle: () => this.flip(key) })
+    }
+    if (item.plan) return markdownCard(item.plan)
+    if (item.activity === 'agent' && item.output !== '') return markdownCard(item.outputTruncated ? `${item.output}\n\n${CHAT_TEXT.outputTooLarge}` : item.output)
     const text = item.output === '' ? CHAT_TEXT.noOutput : item.output
-    return [row, h('pre', { class: 'chat-toolout', dir: 'ltr' }, item.outputTruncated ? `${text}\n${CHAT_TEXT.outputTooLarge}` : text)]
+    return h('pre', { class: 'chat-toolout', dir: 'ltr' }, item.outputTruncated ? `${text}\n${CHAT_TEXT.outputTooLarge}` : text)
   }
 
   private toolNote(item: ChatTool): HTMLElement | null {
@@ -153,6 +190,7 @@ export class ChatThread {
 
   private notice(item: ChatNotice, last: boolean, ctx: ThreadContext): HTMLElement {
     if (item.notice === 'interrupted') return h('p', { class: 'chat-quiet' }, item.text)
+    if (item.notice === 'compact') return this.compacted(item)
     const actions =
       item.notice === 'limit' && last && ctx.phase === 'limit' && !ctx.limitDismissed
         ? h(
@@ -163,6 +201,19 @@ export class ChatThread {
           )
         : null
     return h('div', { class: 'chat-notice' }, h('b', { dir: 'auto' }, item.text), actions)
+  }
+
+  /** A compaction: one quiet line, with the summary it left folded away. */
+  private compacted(item: ChatNotice): HTMLElement {
+    const key = `n:${item.id}`
+    const opened = this.open.has(key)
+    return h(
+      'div',
+      { class: 'chat-compact' },
+      h('p', { class: 'chat-quiet' }, item.text),
+      item.detail ? this.toggle(key, opened ? CHAT_TEXT.hideSummary : CHAT_TEXT.showSummary, 'chat-more') : null,
+      item.detail && opened ? h('div', { class: 'chat-say', dir: textDirection(item.detail) }, ...richText(item.detail)) : null
+    )
   }
 
   private tail(items: readonly ChatItem[], ctx: ThreadContext): (Node | null)[] {

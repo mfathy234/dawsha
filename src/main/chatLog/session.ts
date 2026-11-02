@@ -4,6 +4,7 @@ import { CHAT_TEXT } from '../../shared/chatStrings'
 import { CodexChatReader } from './codexReader'
 import { ClaudeChatReader } from './claudeReader'
 import { unrecognised, type ChatLineReader } from './reader'
+import type { ImageEntry } from './imageTable'
 import { LogTail } from './tail'
 
 function createReader(agent: TabAgent): ChatLineReader {
@@ -33,6 +34,11 @@ export class ChatSession {
     const changed = read.reset || read.text !== ''
     if (changed) this.counter += 1
     return changed
+  }
+
+  /** A picture this session's reader produced, or undefined when the id is not one of its own. */
+  image(id: string): ImageEntry | undefined {
+    return this.reader.image(id)
   }
 
   result(): ChatReadResult {
