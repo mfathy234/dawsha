@@ -5,11 +5,12 @@ import type { TabAgent } from './types'
  *
  * Codex treats keys that arrive close together as a paste, and an Enter that comes within its paste window
  * becomes a newline in the composer instead of sending. On Windows the PTY delivers chat text as plain keys,
- * so Codex needs a pause well past that window before Enter counts as "send".
+ * so Codex needs a pause past that window before Enter counts as "send". Measured on Codex 0.163 on Windows:
+ * Enter is ignored at 100ms and sends at 150ms and 200ms; a miss is caught by the box check in chatActions.
  */
 const SUBMIT_DELAY_MS: Readonly<Record<TabAgent, number>> = {
   claude: 40,
-  codex: 350,
+  codex: 200,
   gemini: 150,
   shell: 40
 }

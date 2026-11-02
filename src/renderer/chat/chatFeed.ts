@@ -3,6 +3,11 @@ import { CHAT_TEXT } from '../../shared/chatStrings'
 import { api } from '../api'
 
 export const CHAT_POLL_MS = 1000
+/** While a sent message waits to show up, or the agent is working, the log is read more often so chat keeps up. */
+export const CHAT_POLL_SENDING_MS = 250
+export const CHAT_POLL_WORKING_MS = 500
+export type FeedPace = 'idle' | 'working' | 'sending'
+const PACE_MS: Readonly<Record<FeedPace, number>> = { idle: CHAT_POLL_MS, working: CHAT_POLL_WORKING_MS, sending: CHAT_POLL_SENDING_MS }
 const FAILED_POLL_MS = 4000
 
 export type FeedState = 'loading' | 'empty' | 'ok' | 'failed'
@@ -23,6 +28,7 @@ export class ChatFeed {
   private version: string | undefined
   private generation = 0
   private snapshot: FeedSnapshot = LOADING
+  private pace: FeedPace = 'idle'
 
   constructor(
     private readonly onChange: (snapshot: FeedSnapshot) => void,
@@ -53,6 +59,14 @@ export class ChatFeed {
     if (request) void api.chat.release({ agent: request.agent, sessionId: request.sessionId }).catch(() => undefined)
   }
 
+  /** How often to read: faster while a message is on its way or the agent is working. */
+  setPace(pace: FeedPace): void {
+    if (pace === this.pace) return
+    const faster = PACE_MS[pace] < PACE_MS[this.pace]
+    this.pace = pace
+    if (faster && this.request) this.schedule(PACE_MS[pace])
+  }
+
   /** Read again soon, for after a message was sent. */
   nudge(): void {
     if (this.request) this.schedule(250)
@@ -67,7 +81,7 @@ export class ChatFeed {
     const request = this.request
     if (!request) return
     const generation = this.generation
-    let next = CHAT_POLL_MS
+    let next = PACE_MS[this.pace]
     if (!this.onScreen()) {
       this.schedule(FAILED_POLL_MS)
       return

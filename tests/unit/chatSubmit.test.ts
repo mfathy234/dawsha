@@ -3,7 +3,7 @@ import { submitDelayFor } from '../../src/shared/chatSubmit'
 
 describe('submitDelayFor', () => {
   it('waits past the Codex paste window so Enter sends instead of adding a newline', () => {
-    expect(submitDelayFor('codex')).toBeGreaterThanOrEqual(300)
+    expect(submitDelayFor('codex')).toBeGreaterThan(100)
   })
 
   it('keeps Claude quick', () => {

@@ -167,6 +167,7 @@ export class PaneChat {
     this.pending = settlePending(this.pending, snapshot.items, Date.now(), working)
     this.ask = phase === 'menu' ? askPromptFor(snapshot.items, tail) : null
     this.setWatch(this.starting || this.pending.length > 0)
+    this.feed.setPace(this.pending.length > 0 ? 'sending' : working ? 'working' : 'idle')
     const views = this.pendingViews()
     const last = snapshot.items[snapshot.items.length - 1]
     if (last?.kind !== 'notice') this.limitDismissed = false

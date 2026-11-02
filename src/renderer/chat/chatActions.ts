@@ -70,7 +70,7 @@ export function sendChatMessage(tabId: string, agent: TabAgent, text: string): {
   return { flattened }
 }
 
-const CHECK_MS = 1_200
+const CHECK_MS = 700
 const MAX_PRESSES = 3
 const MAX_CHECKS = 50
 const SCREEN_ROWS = 30
