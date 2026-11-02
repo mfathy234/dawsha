@@ -84,7 +84,10 @@ test('the Pull request tab explains a missing gh, then opens a PR, lists feedbac
   git('add', '.')
   git('commit', '-qm', 'initial')
   git('switch', '-qc', 'feature/config')
-  git('remote', 'add', 'origin', 'https://example.invalid/o/r.git')
+  // A local bare repo stands in for GitHub, so opening a PR can publish the branch first.
+  const origin = mkdtempSync(join(tmpdir(), 'dawsha-origin-'))
+  execFileSync('git', ['init', '-q', '--bare', origin])
+  git('remote', 'add', 'origin', origin)
 
   const missing = await launchApp(sandbox, { DAWSHA_GH_COMMAND: join(sandbox.root, 'no-such-gh') })
   try {
@@ -115,6 +118,7 @@ test('the Pull request tab explains a missing gh, then opens a PR, lists feedbac
     await expect(page.locator('#files-pr-comments')).toContainText('Please add tests')
     const created = readFileSync(join(state, 'calls.log'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line) as string[])
     expect(created.find((call) => call[1] === 'create')).toEqual(['pr', 'create', '--title=Add config tab', '--body=', ])
+    expect(execFileSync('git', ['--git-dir', origin, 'branch', '--list', 'feature/config'], { encoding: 'utf8' })).toContain('feature/config')
     await page.screenshot({ path: 'test-results/screens/192-files-pr.png' })
 
     await page.locator('#files-pr-merge').click()
