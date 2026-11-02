@@ -153,8 +153,10 @@
 .files-hit-mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: 2px; text-decoration: underline; text-underline-offset: 2px; }
 
 /* Review */
-.files-review-progress { padding: var(--s-1); color: var(--muted); font-size: var(--fs-ui); flex: none; }
-.files-review-steps { display: flex; gap: var(--s-2); flex: none; }
+.files-review-head { display: flex; align-items: center; gap: var(--s-1); flex: none; }
+.files-review-progress { flex: 1; min-width: 0; padding: var(--s-1); color: var(--muted); font-size: var(--fs-ui); }
+.files-review-head .icon-btn[hidden] { display: none; }
+.files-review-head .icon-btn:disabled { opacity: 0.5; }
 .files-review-list { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow: auto; flex: 1 1 auto; }
 .files-review-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--s-2); min-height: 28px; padding: 0 var(--s-2); border-radius: var(--r-control); font-size: var(--fs-ui); }
 .files-review-row:hover { background: var(--hover); }
@@ -170,17 +172,21 @@
 .files-review-stat .plus, .files-stat .plus { color: var(--accent); font-weight: 500; }
 .files-review-stat .minus, .files-stat .minus { color: var(--danger); font-weight: 500; }
 .files-review-foot { display: flex; flex-direction: column; gap: var(--s-2); flex: none; padding-top: var(--s-2); border-top: 1px solid var(--line); }
-.files-review-note-row { display: flex; flex-direction: column; align-items: stretch; gap: var(--s-2); }
-.files-review-note { padding: var(--s-2) var(--s-3); resize: vertical; min-height: 52px; }
-.files-review-note-row .files-review-note { flex: 1 1 auto; min-width: 0; }
-.files-review-note-row #files-review-send { flex: none; align-self: flex-end; }
-.files-review-more { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
-.files-review-foot .btn, .files-review-steps .btn { height: var(--h-md); min-height: var(--h-md); }
-.files-review-foot .btn:hover:not(:disabled), .files-review-steps .btn:hover:not(:disabled) { background: var(--press); }
-.files-review-foot #files-review-send { background: var(--raised); color: var(--text); }
-.files-review-foot #files-review-commit { margin-inline-start: auto; }
-.files-review-foot #files-review-discard { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
-.files-review-foot .btn:disabled, .files-review-steps .btn:disabled { opacity: 0.5; }
+.files-review-note { padding: var(--s-2) var(--s-3); resize: vertical; min-height: 60px; }
+.files-review-note[hidden], .files-review-actions .btn[hidden] { display: none; }
+.files-review-actions { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.files-review-actions .btn { height: var(--h-md); min-height: var(--h-md); }
+.files-review-actions .btn:hover:not(:disabled) { background: var(--press); }
+.files-review-actions .btn:disabled { opacity: 0.5; }
+.files-review-foot { min-width: 0; }
+.files-review-foot > #files-review-send { align-self: flex-end; max-width: 100%; }
+.files-review-foot > #files-review-send[hidden] { display: none; }
+#files-review-note-toggle { color: var(--muted); white-space: nowrap; flex: none; }
+#files-review-note-toggle[aria-expanded='true'], #files-review-note-toggle.has-note { color: var(--text); }
+#files-review-note-toggle.has-note::after { content: ''; width: 6px; height: 6px; margin-inline-start: var(--s-2); border-radius: 50%; background: var(--accent); }
+#files-review-send { background: var(--raised); color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#files-review-more { margin-inline-start: auto; }
+#files-review-commit { flex: none; }
 
 /* Commit dialog */
 .commit-dialog { width: min(560px, 92vw); display: flex; flex-direction: column; gap: var(--s-2); }
@@ -533,7 +539,8 @@
 .files-newdir-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .files-newdir-size { flex: none; margin-left: auto; color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .files-newdir-size.heavy { color: var(--needs); font-weight: 600; }
-.files-newdir-ignore { flex: none; }
+.files-newdir-ignore { flex: none; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast, 120ms) ease; }
+.files-newdir-line:hover .files-newdir-ignore, .files-newdir-line:focus-within .files-newdir-ignore { opacity: 1; pointer-events: auto; }
 .files-newdir-children { display: flex; flex-direction: column; padding-left: var(--s-3); }
 
 /* Code navigation: Back and Forward, symbol crumbs, the pickers, the peek and its message */

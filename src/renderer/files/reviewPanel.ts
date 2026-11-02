@@ -1,5 +1,7 @@
-import { h } from '../dom'
+import { h, icon } from '../dom'
 import { foldRows, type UntrackedFolder } from '../../shared/gitIgnore'
+import { openContextMenu } from '../components/contextMenu'
+import { ICONS } from '../icons'
 import { fileIcon } from './fileIcon'
 import { newFolderRow, toggleFolderOpen } from './newFolders'
 
@@ -47,29 +49,27 @@ export class ReviewPanel {
   readonly el = h('div', { class: 'files-pane files-pane-review' })
   private readonly progress = h('div', { class: 'files-review-progress', id: 'files-review-progress', role: 'status', 'aria-live': 'polite' })
   private readonly list = h('div', { class: 'files-review-list', id: 'files-review-list', role: 'list', 'aria-label': 'Changed files' })
-  private readonly prev = h('button', { class: 'btn small', type: 'button', id: 'files-review-prev', disabled: true, title: 'Previous file (P)', onClick: () => this.hooks.step(-1) }, 'Previous')
-  private readonly next = h('button', { class: 'btn small', type: 'button', id: 'files-review-next', disabled: true, title: 'Next file (N)', onClick: () => this.hooks.step(1) }, 'Next')
+  private readonly prev = h('button', { class: 'icon-btn', type: 'button', id: 'files-review-prev', disabled: true, title: 'Previous file (P)', 'aria-label': 'Previous file', onClick: () => this.hooks.step(-1) }, icon(ICONS.chevronUp))
+  private readonly next = h('button', { class: 'icon-btn', type: 'button', id: 'files-review-next', disabled: true, title: 'Next file (N)', 'aria-label': 'Next file', onClick: () => this.hooks.step(1) }, icon(ICONS.chevronDown))
   private readonly note = h('textarea', {
-    class: 'files-review-note', id: 'files-review-note', rows: '2', placeholder: 'Overall note (optional)', 'aria-label': 'Overall note for the agent',
+    class: 'files-review-note', id: 'files-review-note', rows: '3', placeholder: 'Overall note for the agent', 'aria-label': 'Overall note for the agent',
     onInput: (event: Event) => this.hooks.note((event.target as HTMLTextAreaElement).value)
   })
-  private readonly send = h('button', { class: 'btn small secondary', type: 'button', id: 'files-review-send', disabled: true, onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send comments to agent')
-  private readonly stale = h('button', { class: 'btn small', type: 'button', id: 'files-review-stale', title: 'Callers and implementations of changed symbols that were not updated', onClick: () => this.hooks.stale() }, 'Callers not updated…')
+  private readonly noteToggle = h('button', { class: 'btn small ghost', type: 'button', id: 'files-review-note-toggle', 'aria-expanded': 'false', 'aria-controls': 'files-review-note', onClick: () => this.setNoteOpen(!this.noteOpen) }, 'Note to agent')
+  private readonly send = h('button', { class: 'btn small secondary', type: 'button', id: 'files-review-send', disabled: true, onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send note to agent')
+  private readonly more = h('button', { class: 'icon-btn', type: 'button', id: 'files-review-more', 'aria-haspopup': 'menu', title: 'More review actions', 'aria-label': 'More review actions', onClick: () => this.openMenu() }, icon(ICONS.more))
   private readonly commit = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
-  private readonly discard = h('button', { class: 'btn small danger', type: 'button', id: 'files-review-discard', disabled: true, title: 'Select a changed file to discard it', onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard file…')
   private current: string | null = null
   private last: ReviewModel | null = null
-  private readonly steps = h('div', { class: 'files-review-steps' })
+  private noteOpen = false
+  private readonly head = h('div', { class: 'files-review-head' })
   private readonly foot = h('div', { class: 'files-review-foot' })
 
   constructor(private readonly hooks: ReviewHooks) {
-    this.el.append(
-      this.progress,
-      this.steps,
-      this.list,
-      this.foot)
-    this.steps.append(this.prev, this.next)
-    this.foot.append(h('div', { class: 'files-review-note-row' }, this.note, this.send), h('div', { class: 'files-review-more' }, this.stale, this.discard, this.commit))
+    this.el.append(this.head, this.list, this.foot)
+    this.head.append(this.progress, this.prev, this.next)
+    this.note.hidden = true
+    this.foot.append(this.note, this.send, h('div', { class: 'files-review-actions' }, this.noteToggle, this.more, this.commit))
     this.list.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
       const rows = [...this.list.querySelectorAll<HTMLElement>('.files-review-open')]
@@ -77,6 +77,28 @@ export class ReviewPanel {
       if (at < 0) return
       event.preventDefault()
       rows[Math.min(Math.max(at + (event.key === 'ArrowDown' ? 1 : -1), 0), rows.length - 1)]?.focus()
+    })
+  }
+
+  private setNoteOpen(open: boolean, focus = true): void {
+    this.noteOpen = open
+    this.note.hidden = !open
+    this.noteToggle.setAttribute('aria-expanded', String(open))
+    if (this.last) this.send.hidden = !open && this.last.commentTotal === 0
+    if (open && focus) this.note.focus()
+  }
+
+  private openMenu(): void {
+    const model = this.last
+    const path = model?.current && model.files.some((file) => file.path === model.current) ? model.current : null
+    const rect = this.more.getBoundingClientRect()
+    openContextMenu({
+      x: rect.left, y: rect.bottom, anchor: rect, label: 'More review actions', returnFocus: this.more,
+      entries: [
+        { label: 'Callers not updated…', detail: 'Callers and implementations of changed symbols that were not updated', run: () => this.hooks.stale() },
+        'separator',
+        { label: path ? `Discard ${split(path).name}…` : 'Discard file…', detail: path ? undefined : 'Select a changed file to discard it', disabled: path === null, run: () => path && this.hooks.discard(path) }
+      ]
     })
   }
 
@@ -92,16 +114,20 @@ export class ReviewPanel {
     const done = model.files.filter((file) => model.viewed.has(file.path)).length
     this.progress.textContent = total === 0 ? 'Nothing to review. The agents have not changed any files yet.' : `${done} of ${total} viewed`
     // With nothing to review, the stepping buttons and the note, commit and discard controls have nothing to act on.
-    this.steps.hidden = total === 0
+    this.head.classList.toggle('empty', total === 0)
+    this.prev.hidden = total === 0
+    this.next.hidden = total === 0
     this.foot.hidden = total === 0
     this.prev.disabled = total === 0
     this.next.disabled = total === 0
     this.commit.disabled = total === 0
-    this.discard.disabled = !model.current || !model.files.some((file) => file.path === model.current)
-    this.discard.title = this.discard.disabled ? 'Select a changed file to discard it' : `Discard changes to ${split(model.current ?? '').name}`
-    this.discard.textContent = model.current && !this.discard.disabled ? `Discard ${split(model.current).name}…` : 'Discard file…'
-    this.send.disabled = model.commentTotal === 0 && model.note.trim() === ''
-    this.send.textContent = model.commentTotal > 0 ? `Send ${model.commentTotal} comment${model.commentTotal === 1 ? '' : 's'} to agent` : 'Send note to agent'
+    if (model.note.trim() !== '' && !this.noteOpen) this.setNoteOpen(true, false)
+    const count = model.commentTotal
+    this.send.disabled = count === 0 && model.note.trim() === ''
+    this.send.textContent = count > 0 ? `Send ${count} comment${count === 1 ? '' : 's'} to agent` : 'Send note to agent'
+    // Comments can be sent without opening the note, so the button also shows while any exist.
+    this.send.hidden = !this.noteOpen && count === 0
+    this.noteToggle.classList.toggle('has-note', model.note.trim() !== '')
     if (this.note.value !== model.note) this.note.value = model.note
     const hooks = { toggle: (path: string) => { toggleFolderOpen(path); if (this.last) this.render(this.last) }, ignore: (folder: UntrackedFolder) => this.hooks.ignoreFolder(folder) }
     this.list.replaceChildren(...foldRows(model.files, model.newFolders ?? []).map((item) => item.kind === 'file'

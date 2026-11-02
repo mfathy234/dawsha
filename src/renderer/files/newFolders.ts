@@ -1,5 +1,6 @@
 import { formatSize } from '../../shared/gitBranches'
 import { folderFilesText, isHeavyFolder, type UntrackedFolder } from '../../shared/gitIgnore'
+import { openContextMenu } from '../components/contextMenu'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
 
@@ -36,11 +37,17 @@ export function newFolderRow(folder: UntrackedFolder, hooks: NewFolderHooks, chi
   },
   icon(ICONS.chevronRight), icon(ICONS.folder), h('span', { class: 'files-newdir-name' }, folder.path),
   h('span', { class: `files-newdir-size${isHeavyFolder(folder) ? ' heavy' : ''}` }, folderSummary(folder)))
-  const ignore = h('button', {
-    class: 'btn small files-newdir-ignore', type: 'button', 'aria-label': `Add ${folder.path} to .gitignore`, title: `Add ${folder.path} to .gitignore so git stops listing it`,
-    onClick: () => hooks.ignore(folder)
-  }, 'Add to .gitignore')
+  const kebab = h('button', {
+    class: 'icon-btn small files-newdir-ignore', type: 'button', 'aria-haspopup': 'menu', 'aria-label': `Actions for ${folder.path}`, title: 'Folder actions',
+    onClick: () => {
+      const rect = kebab.getBoundingClientRect()
+      openContextMenu({
+        x: rect.left, y: rect.bottom, anchor: rect, label: `Actions for ${folder.path}`, returnFocus: kebab,
+        entries: [{ label: 'Add to .gitignore', detail: `${folder.path} stops being listed by git`, run: () => hooks.ignore(folder) }]
+      })
+    }
+  }, icon(ICONS.more))
   return h('div', { class: `files-newdir${open ? ' open' : ''}`, 'data-folder': folder.path, role: 'listitem' },
-    h('div', { class: 'files-newdir-line' }, head, ignore),
+    h('div', { class: 'files-newdir-line' }, head, kebab),
     open ? h('div', { class: 'files-newdir-children' }, ...children) : null)
 }
