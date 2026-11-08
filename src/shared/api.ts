@@ -119,6 +119,9 @@ export interface GridApi {
   gitDiffSince(folder: string, path: string, baseline: SessionBaseline): Promise<GitDiffResult>
   gitBaseline(folder: string): Promise<SessionBaselineResult>
   gitSessionStatus(folder: string, baseline: SessionBaseline): Promise<SessionStatusResult>
+  checkpointPrepare(folder: string, sessionId: string): Promise<boolean>
+  listCheckpoints(folder: string, sessionId: string, messageIds: string[]): Promise<Record<string, string>>
+  restoreCheckpoint(folder: string, sessionId: string, ref: string, paths: string[]): Promise<{ ok: true; beforeUndo: string | null; skipped: string[] } | { ok: false; error: string }>
   projectFiles(folder: string): Promise<ProjectFilesResult>
   projectFile(folder: string, path: string): Promise<ProjectFileResult>
   writeProjectFile(folder: string, path: string, text: string, expectedMtime: number): Promise<ProjectFileWriteResult>

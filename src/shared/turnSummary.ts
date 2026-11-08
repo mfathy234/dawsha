@@ -9,6 +9,9 @@ export interface TurnFileSummary {
 
 export interface TurnSummary {
   messageId: string
+  /** The user message this turn answers; its checkpoint is looked up by this id. */
+  userMessageId?: string
+  checkpointRef?: string
   files: TurnFileSummary[]
   added: number
   removed: number
@@ -28,13 +31,14 @@ function summarize(messageId: string | null, tools: readonly ChatTool[]): TurnSu
 }
 
 /** Groups parsed edit tool calls by user turn and attaches the result to that turn's agent reply. */
-export function turnSummaries(items: readonly ChatItem[]): TurnSummary[] {
+export function turnSummaries(items: readonly ChatItem[], refs: Readonly<Record<string, string>> = {}): TurnSummary[] {
   const out: TurnSummary[] = []
   let edits: ChatTool[] = []
   let reply: string | null = null
+  let userId: string | null = null
   const finish = (): void => {
     const result = summarize(reply, edits)
-    if (result) out.push(result)
+    if (result) out.push(userId ? { ...result, userMessageId: userId, ...(refs[userId] ? { checkpointRef: refs[userId] } : {}) } : result)
     edits = []
     reply = null
   }
@@ -42,6 +46,7 @@ export function turnSummaries(items: readonly ChatItem[]): TurnSummary[] {
     if (item.kind === 'message' && item.role === 'user') {
       finish()
       edits = []
+      userId = item.id
     }
     else if (item.kind === 'tool' && (item.activity === 'edit' || item.activity === 'create')) edits = [...edits, item]
     else if (item.kind === 'message' && item.role === 'agent') reply = item.id

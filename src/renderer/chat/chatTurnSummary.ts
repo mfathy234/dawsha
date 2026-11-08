@@ -3,7 +3,7 @@ import { CHAT_TEXT } from '../../shared/chatStrings'
 import { h } from '../dom'
 import { fileLinkHost } from '../terminalExtras'
 
-export function turnSummaryCard(summary: TurnSummary, scope: string, review: () => void): HTMLElement {
+export function turnSummaryCard(summary: TurnSummary, scope: string, review: () => void, undo: (summary: TurnSummary) => void): HTMLElement {
   const host = fileLinkHost(scope)
   const rows = summary.files.map((file) => {
     const parts = file.path.split(/[\\/]/)
@@ -18,5 +18,8 @@ export function turnSummaryCard(summary: TurnSummary, scope: string, review: () 
   })
   return h('section', { class: 'chat-turn-summary', 'aria-label': CHAT_TEXT.turnSummary },
     h('div', { class: 'chat-turn-head' }, h('b', {}, CHAT_TEXT.turnChanged(summary.files.length)), h('span', { class: 'add' }, `+${summary.added}`), h('span', { class: 'del' }, `−${summary.removed}`)),
-    ...rows, h('button', { class: 'link-quiet', type: 'button', onClick: review }, CHAT_TEXT.reviewChanges))
+    ...rows,
+    h('div', { class: 'chat-turn-actions' },
+      h('button', { class: 'link-quiet', type: 'button', onClick: review }, CHAT_TEXT.reviewChanges),
+      summary.checkpointRef ? h('button', { class: 'link-quiet', type: 'button', onClick: () => undo(summary), 'aria-label': `${CHAT_TEXT.undoReply}: ${summary.files.length} files` }, CHAT_TEXT.undoReply) : null))
 }

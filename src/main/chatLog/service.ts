@@ -1,9 +1,10 @@
 import { stat } from 'node:fs/promises'
-import { chatCapable, type ChatReadRequest, type ChatReadResult, type ChatReleaseRequest } from '../../shared/chatLog'
+import { chatCapable, type ChatItem, type ChatReadRequest, type ChatReadResult, type ChatReleaseRequest } from '../../shared/chatLog'
 import { CHAT_TEXT } from '../../shared/chatStrings'
 import { locateSession } from '../transcriptExport'
 import type { ImageEntry } from './imageTable'
 import { ChatSession } from './session'
+import { storeCheckpoint } from '../checkpoints'
 
 const CACHE_LIMIT = 8
 const MISS_TTL_MS = 1500
@@ -14,10 +15,14 @@ interface Entry {
   checkedAt: number
   /** The project folder the pane reads from: the root a picture file must lie in. */
   folder: string
+  lastUserId: string | null
+  /** When the latest user message was first seen; a pending snapshot older than this is late. */
+  lastUserSeenAt: number
 }
 
 const entries = new Map<string, Entry>()
 const locks = new Map<string, Promise<unknown>>()
+const workingSessions = new Set<string>()
 
 const keyOf = (agent: string, sessionId: string): string => `${agent}:${sessionId}`
 
@@ -48,7 +53,7 @@ async function pathOf(request: ChatReadRequest, entry: Entry, now: number): Prom
 
 async function load(request: ChatReadRequest): Promise<ChatReadResult> {
   const key = keyOf(request.agent, request.sessionId)
-  const entry = entries.get(key) ?? { session: new ChatSession(request.agent, undefined, request.folder), path: null, checkedAt: 0, folder: request.folder }
+  const entry = entries.get(key) ?? { session: new ChatSession(request.agent, undefined, request.folder), path: null, checkedAt: 0, folder: request.folder, lastUserId: null, lastUserSeenAt: 0 }
   entry.folder = request.folder
   remember(key, entry)
   try {
@@ -57,6 +62,7 @@ async function load(request: ChatReadRequest): Promise<ChatReadResult> {
     await entry.session.refresh(path)
     if (request.version !== undefined && request.version === `${key}#${entry.session.version}`) return { status: 'unchanged' }
     const result = entry.session.result()
+    if (result.status === 'ok') await trackUserTurn(entry, request, result.items)
     return result.status === 'ok' ? { ...result, version: `${key}#${result.version}` } : result
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code
@@ -64,6 +70,30 @@ async function load(request: ChatReadRequest): Promise<ChatReadResult> {
     return { status: 'failed', reason: why }
   }
 }
+
+/**
+ * Notices a new user message and files the snapshot the pane took just before sending it under that message's id.
+ * The first message seen is only adopted, except in a session with exactly one user message and a fresh snapshot
+ * (its first turn). Also tracks whether the agent has answered, for the Undo refusal.
+ */
+async function trackUserTurn(entry: Entry, request: ChatReadRequest, items: readonly ChatItem[]): Promise<void> {
+  const users = items.filter((item) => item.kind === 'message' && item.role === 'user')
+  const lastUser = users[users.length - 1]
+  if (lastUser && lastUser.id !== entry.lastUserId) {
+    const first = entry.lastUserId === null
+    const seenAfter = entry.lastUserSeenAt
+    entry.lastUserId = lastUser.id
+    entry.lastUserSeenAt = Date.now()
+    if (!first || users.length === 1) {
+      workingSessions.add(request.sessionId)
+      await storeCheckpoint(request.folder, request.sessionId, lastUser.id, seenAfter)
+    }
+  }
+  const userAt = items.findIndex((item) => item.kind === 'message' && item.id === entry.lastUserId)
+  if (userAt >= 0 && items.slice(userAt + 1).some((item) => item.kind === 'message' && item.role === 'agent')) workingSessions.delete(request.sessionId)
+}
+
+export const isChatSessionWorking = (sessionId: string): boolean => workingSessions.has(sessionId)
 
 /** The session log drawn as a conversation. Each call reads only what the file gained; calls for one session run one at a time. */
 export function readChat(request: ChatReadRequest): Promise<ChatReadResult> {

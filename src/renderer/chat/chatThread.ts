@@ -29,6 +29,7 @@ export interface ThreadActions {
   dismissLimit(): void
   answer(answers: AskAnswer[]): void
   reviewChanges(): void
+  undoReply(summary: import('../../shared/turnSummary').TurnSummary): void
 }
 
 export interface PendingView {
@@ -58,6 +59,8 @@ export interface ThreadContext {
   session: ChatSessionRef | null
   /** The id of the pane's terminal tab, which file links resolve their folder from. */
   fileScope: string | null
+  /** Checkpoint ref per user message id. */
+  checkpointRefs?: Readonly<Record<string, string>>
   /** The session's background work, so the row that launched each can say whether it still runs. */
   background?: readonly BackgroundTask[]
   actions: ThreadActions
@@ -122,7 +125,7 @@ export class ChatThread {
 
   private items(items: readonly ChatItem[], ctx: ThreadContext): Node[] {
     const out: Node[] = []
-    const summaries = new Map(turnSummaries(items).map((summary) => [summary.messageId, summary]))
+    const summaries = new Map(turnSummaries(items, ctx.checkpointRefs).map((summary) => [summary.messageId, summary]))
     const positions = new Map(items.map((item, index) => [item.id, index]))
     const lastUser = items.reduce((last, item, index) => item.kind === 'message' && item.role === 'user' ? index : last, -1)
     let tools: HTMLElement[] = []
@@ -146,7 +149,7 @@ export class ChatThread {
       out.push(item.kind === 'message' ? this.message(item, ctx) : this.notice(item, index === items.length - 1, ctx))
       const summary = item.kind === 'message' && item.role === 'agent' ? summaries.get(item.id) : undefined
       const activeTurn = summary && positions.get(summary.messageId)! > lastUser
-      if (summary && !(activeTurn && ctx.phase === 'working') && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges))
+      if (summary && !(activeTurn && ctx.phase === 'working') && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges, (value) => ctx.actions.undoReply(value)))
     })
     flush()
     return out
