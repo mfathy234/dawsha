@@ -5839,7 +5839,6 @@ body { font-family: var(--font-ui); font-size: var(--fs-2); line-height: var(--l
 :is(input, textarea, select, .text-input, .select) { min-height: var(--h-lg); border-radius: var(--r-1); background: var(--well); color: var(--text); }
 .tabs, .segmented { gap: var(--sp-1); padding: var(--sp-1); border: 1px solid var(--line); border-radius: var(--r-1); background: var(--raised); }
 .tabs [role='tab'], .tab-label { min-height: var(--h-md); border-radius: var(--r-1); font-size: var(--fs-1); font-weight: var(--w-medium); }
-.tabs [aria-selected='true'], .tab.active { background: var(--surface); color: var(--text); box-shadow: var(--e1); }
 .segmented > button, .segmented [role='tab'] { min-height: var(--h-md); border: 0; border-radius: var(--r-1); background: transparent; color: var(--text-2); font-size: var(--fs-1); font-weight: var(--w-medium); }
 .segmented > button[aria-pressed='true'], .segmented [aria-selected='true'] { background: var(--surface); color: var(--text); box-shadow: var(--e1); }
 .popover, .menu { border: 1px solid var(--line-strong); border-radius: var(--r-2); background: var(--pop, var(--overlay)); box-shadow: var(--e1); }
@@ -5894,7 +5893,7 @@ body { font-family: var(--font-ui); font-size: var(--fs-2); line-height: var(--l
 :is(.toggle, [role='switch']) { accent-color: var(--accent); }
 :is(.tabs, .segmented, .files-modes, .files-segment, .files-side-tabs) { border-radius: var(--r-1); }
 :is(.tabs [role='tab'], .tab, .files-mode, .files-seg, .files-side-tab) { min-height: var(--h-md); font-size: var(--fs-2); font-weight: var(--w-medium); }
-:is(.tabs [aria-selected='true'], .tab.active, .files-mode[aria-selected='true'], .files-seg[aria-pressed='true'], .files-side-tab[aria-selected='true']) { background: var(--pop, var(--raised)); color: var(--text); box-shadow: var(--e1); }
+:is(.files-seg[aria-pressed='true']) { background: var(--pop, var(--raised)); color: var(--text); box-shadow: var(--e1); }
 :is(.input, .text-input, .text-input input, .select, .select-menu-trigger) { min-height: var(--h-lg); border-radius: var(--r-1); background: var(--well); color: var(--text); }
 .state-working, [data-state='working'] .state-pill { color: var(--st-working); }
 .state-needs, [data-state='needs'] .state-pill { color: var(--st-needs); }
@@ -7260,10 +7259,10 @@ button.tl-event:hover { background: var(--raised); }
 .topbar-nav .btn[aria-pressed='true'] { color: var(--text); font-weight: 500; }
 .layout-switch { gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 .layout-switch .btn { height: 24px; min-height: 24px; padding: 0 12px; border-radius: 6px; font-size: var(--fs-13); font-weight: 400; }
-:is(.layout-switch .btn, .seg-btn, .changes-tab, .tl-scope, .tl-filter, .settings-tab, .files-mode, .files-seg, .files-side-tab, .files-panel-tab, .replay-speeds .btn, .files-search-opt, .rp-tab, .rp-chip, .skill-filters [aria-pressed], .tabs [role='tab'], .segmented > button)[aria-pressed='true'],
-:is(.changes-tab, .files-mode, .files-side-tab, .files-panel-tab, .rp-tab, .tabs [role='tab'], .segmented [role='tab'])[aria-selected='true'],
+:is(.layout-switch .btn, .seg-btn, .tl-scope, .tl-filter, .settings-tab, .files-seg, .replay-speeds .btn, .files-search-opt, .rp-chip, .skill-filters [aria-pressed], .segmented > button)[aria-pressed='true'],
+:is(.segmented [role='tab'])[aria-selected='true'],
 :is(.seg-btn, .rp-chip, .rp-tab, .settings-tab, .theme-row, .layouts-grid-option).on,
-:is(.rp-chip, .rp-tab, .settings-tab, .theme-row).selected {
+:is(.rp-chip, .settings-tab, .theme-row).selected {
   border-color: transparent;
   background: var(--surface-pop);
   box-shadow: var(--sel-hl);
@@ -7427,3 +7426,31 @@ button.tl-event:hover { background: var(--raised); }
 :root:not([data-input='pointer']) :is(.topbar-nav .btn, .topbar-tools .btn, .topbar-view .layout-switch .btn, .app-logo-menu):focus-visible {
   outline: 2px solid var(--focus-ring); outline-offset: 1px; box-shadow: none;
 }
+
+/* 1.8.5 one selected look for every tab row: brighter text and a thin accent underline, no fill, ring or shadow.
+   The Files modes, side and panel tabs, pane tabs, picker/usage/work tabs, crew tabs and the changes dialog tabs
+   share it. Two-way switches (Grid/Board, .seg, .files-seg, .segmented, Timeline scope) keep the segmented chip.
+   The :root prefix keeps this ahead of the older per-component selected rules whatever order the CSS loads in. */
+:root :is(.files-mode, .files-side-tab, .files-panel-tab, .rp-tab, .crew-tab, .changes-tab, .tabs .tab) { position: relative; }
+:root :is(.files-modes, .files-side-tabs, .rp-tabs, .changes-tabs) { background: transparent; }
+:root :is(.files-mode, .files-side-tab, .files-panel-tab, .rp-tab, .crew-tab, .changes-tab):hover:not(:disabled),
+:root .tabs .tab:hover { background: var(--hover); }
+:root :is(.files-mode, .files-side-tab, .files-panel-tab, .rp-tab, .crew-tab, .changes-tab)[aria-selected='true'],
+:root :is(.rp-tab).selected,
+:root .tabs .tab.active,
+:root .tabs .tab-label[aria-selected='true'] {
+  border-color: transparent; box-shadow: none; color: var(--text); font-weight: 500;
+}
+:root :is(.files-mode, .files-side-tab, .files-panel-tab, .rp-tab, .crew-tab, .changes-tab)[aria-selected='true']:not(:hover),
+:root .rp-tab.selected:not(:hover),
+:root .tabs .tab.active:not(:hover),
+:root .tabs .tab-label[aria-selected='true'] { background: transparent; }
+:root :is(.files-mode, .files-side-tab, .files-panel-tab, .rp-tab, .crew-tab, .changes-tab)[aria-selected='true']::after,
+:root .rp-tab.selected::after,
+:root .tabs .tab.active::after {
+  content: ''; position: absolute; inset-inline: 8px; bottom: 1px; height: 2px; border-radius: 2px; background: var(--accent-ink, var(--accent));
+  pointer-events: none;
+}
+/* The pane tab bar is a plain row: tabs fill its height so the underline sits inside it, with no tray or border. */
+:root .tabs { padding: 0 6px; border: 0; border-radius: 0; background: transparent; }
+:root .tabs .tab { min-height: 0; border-radius: var(--r-1); }
