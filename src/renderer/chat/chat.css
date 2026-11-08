@@ -534,6 +534,25 @@
   text-align: end;
 }
 
+.chat-pend-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+.chat-text-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+
+.chat-text-btn:hover {
+  color: var(--text);
+}
+
 .chat-ask {
   display: grid;
   gap: var(--sp-3);
