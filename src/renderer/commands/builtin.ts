@@ -48,6 +48,7 @@ import { exportTranscript } from '../transcriptActions'
 import { replayPane } from '../replayActions'
 import { openShortcutsSheet } from '../components/shortcutsSheet'
 import { toggleQuickOpen } from '../components/quickOpen'
+import { openGlobalSearch } from '../components/globalSearch'
 import { filesTarget, openFolderInFiles, requestFilesCommand, type FilesCommand } from '../files/filesActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
@@ -363,6 +364,15 @@ export function installBuiltinCommands(): void {
       run: () => requestFilesCommand('switch-branch')
     },
     ...filesNavigationCommands(),
+    {
+      id: 'view.sessionSearch',
+      title: 'Search all sessions',
+      group: 'Actions',
+      keywords: 'find past history prompts replies transcript timeline everywhere',
+      ...withKeys('Ctrl+Shift+H'),
+      enabled: (state) => state.view !== 'files',
+      run: () => openGlobalSearch()
+    },
     { id: 'view.quickopen', title: 'Find a file…', group: 'Actions', keywords: 'quick open ctrl p files search project fuzzy', ...withKeys('Ctrl+P'), run: () => toggleQuickOpen() },
     { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },
     { id: 'view.crew', title: 'Open Agents', group: 'Actions', keywords: 'agents crew members run lead maya', ...withKeys('Ctrl+Shift+L'), run: () => showView('crew') },

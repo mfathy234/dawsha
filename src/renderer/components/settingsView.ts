@@ -54,6 +54,7 @@ import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
 import { pageHeader } from './pageHeader'
+import { McpServersPanel } from './mcpPanel'
 import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
 import { setGridStyle } from '../sessionsLayout'
 import { setDefaultView } from '../chat/chatActions'
@@ -68,6 +69,7 @@ const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'appearance', label: 'Appearance', lede: 'Choose a theme and terminal background.' },
   { id: 'notifications', label: 'Notifications', lede: 'What Dawsha shows and tells you while sessions run.' },
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
+  { id: 'mcp', label: 'MCP', lede: 'The MCP servers each agent is set up with.' },
   { id: 'import', label: 'Import', lede: 'Bring settings from another Dawsha installation.' },
   ...(isRemoteControlBuild ? [{ id: 'remote' as const, label: 'Remote access', lede: 'Reach this Dawsha installation from your own devices.' }] : []),
   { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
@@ -121,6 +123,7 @@ export class SettingsViewComponent {
   private readonly lede = h('p', { class: 'lede' })
   private signature = ''
   private importPath = ''
+  private readonly mcp = new McpServersPanel()
   private navSection: string | null = null
   private shortcutDraft: string | null = null
   private shortcutError: string | null = null
@@ -289,6 +292,9 @@ export class SettingsViewComponent {
         return [...this.notifications(state), ...this.highlights(state)]
       case 'agents':
         return this.agents(state)
+      case 'mcp':
+        this.mcp.activate()
+        return [this.mcp.el]
       case 'updates':
         return this.updates(state)
       case 'highlights':
