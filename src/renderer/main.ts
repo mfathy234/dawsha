@@ -38,6 +38,7 @@ import { installCompareCommands } from './commands/compare'
 import { installHandoffCommands } from './commands/handoff'
 import { installClosedSessionCommands } from './commands/closedSessions'
 import { installLayoutCommands } from './commands/layouts'
+import { installPresetCommands } from './commands/presets'
 import { installNotificationCommands } from './commands/notifications'
 import { installNeedsNotices } from './needsNotice'
 import { installReplayCommands } from './commands/replay'
@@ -136,6 +137,7 @@ async function boot(): Promise<void> {
   installProcessActivity()
   installBuiltinCommands()
   installLayoutCommands()
+  installPresetCommands()
   installNotificationCommands()
   installCompareCommands()
   installHandoffCommands()

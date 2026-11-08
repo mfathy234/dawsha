@@ -1,3 +1,4 @@
+import { savePresetFromUi } from '../presetActions'
 import { closeQuickPick, setQuickPickMode, showView, startSession } from '../actions'
 import { AGENTS, AGENT_NAMES } from '../../shared/agents'
 import {
@@ -106,6 +107,7 @@ export class QuickPickComponent {
         { class: 'popover-foot nd-foot' },
         h('span', { class: 'nd-hint' }, 'Enter starts a session. Tab switches agent. ', keycaps(MAC ? 'Cmd+R' : 'Ctrl+R'), ' resumes'),
         h('span', { class: 'spacer' }),
+        h('button', { class: 'btn ghost', type: 'button', id: 'save-preset', onClick: () => this.saveAsPreset() }, 'Save as preset…'),
         h('button', { class: 'btn ghost', type: 'button', onClick: () => closeQuickPick() }, 'Cancel'),
         this.start
       )
@@ -157,6 +159,16 @@ export class QuickPickComponent {
     if (!choice) return
     const agent = pickedAgent(choice, this.overrides, this.preset)
     void startSession(choice.id, agent, undefined, false, undefined, undefined, undefined, this.pickedView(agent))
+  }
+
+  /** Closes the pick first: its outside-click handler would otherwise fight the dialog. */
+  private saveAsPreset(): void {
+    const choice = this.matches[this.selected]
+    const projectId = choice?.id ?? this.projects[0]?.id
+    if (!projectId) return
+    const agent = choice ? pickedAgent(choice, this.overrides, this.preset) : 'claude'
+    closeQuickPick()
+    void savePresetFromUi({ name: '', agent, projectId, worktree: false, prompt: '' })
   }
 
   /** Only a session whose agent has a chat view takes the override; the rest start as they always did. */

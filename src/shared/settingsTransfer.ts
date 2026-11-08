@@ -50,6 +50,8 @@ export const EXCLUDED_KEYS = [
   // Keyed by this PC's project ids and branches, like closed sessions.
   'ticketNotes',
   'tasks',
+  // Presets name this PC's projects, like run commands.
+  'presets',
   'lastSeenVersion',
   'onboardingDismissed',
   'tourSeen',

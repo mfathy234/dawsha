@@ -1,7 +1,8 @@
 import { execFile } from 'node:child_process'
 import { existsSync, lstatSync, readdirSync, rmdirSync, unlinkSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { compareNames, isCompareBranch, isCompareWorktree, isShortId } from '../shared/compare'
+import { compareNames, isShortId } from '../shared/compare'
+import { isOwnBranch, isOwnWorktree } from '../shared/mergeBack'
 import type { WorktreeStatus } from '../shared/compare'
 import type { GitResult, RepoProbe, WorktreeRemoval, WorktreesResult } from '../shared/types'
 
@@ -56,7 +57,7 @@ export async function createWorktrees(repo: string, short: string): Promise<Work
 }
 
 export async function worktreeStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus> {
-  if (!isCompareBranch(branch) || !existsSync(path)) return { exists: false, dirtyFiles: 0, commits: 0 }
+  if (!isOwnBranch(branch) || !existsSync(path)) return { exists: false, dirtyFiles: 0, commits: 0 }
   const dirty = await git(['status', '--porcelain'], path)
   const ahead = await git(['rev-list', '--count', `HEAD..${branch}`], repo)
   const commits = ahead.ok ? Number.parseInt(ahead.stdout, 10) : 0
@@ -119,8 +120,8 @@ function deleteLeftover(path: string): string | null {
 
 export async function removeWorktree(request: WorktreeRemoval): Promise<GitResult> {
   const { repo, path, branch, force } = request
-  if (!isCompareBranch(branch) || !isCompareWorktree(path)) {
-    return { ok: false, error: 'Dawsha only removes worktrees and branches it created for a comparison.' }
+  if (!isOwnBranch(branch) || !isOwnWorktree(path)) {
+    return { ok: false, error: 'Dawsha only removes worktrees and branches it created for a comparison or a preset.' }
   }
   if (existsSync(path)) {
     const problem = await removeWorktreeFolder(repo, path, force)

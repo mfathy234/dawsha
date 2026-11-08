@@ -60,6 +60,7 @@ import { setDefaultView } from '../chat/chatActions'
 import { ViewSwitch } from '../chat/viewSwitch'
 import type { ChatAgent, SessionViews } from '../../shared/chatLog'
 import { agentMark } from './agentMark'
+import { presetsSettings } from './presetsSettings'
 import '../chat/chat.css'
 import '../chat/chatChoice.css'
 
@@ -175,6 +176,7 @@ export class SettingsViewComponent {
       state.settings.sidebarCollapsed,
       state.settings.sessionViews,
       state.settings.fullAccess,
+      state.settings.presets,
       state.settings.sessionInfo,
       state.settings.autoUpdateCheck,
       state.settings.highlights,
@@ -511,7 +513,7 @@ export class SettingsViewComponent {
       h('button', { class: 'btn ghost small', type: 'button', id: 'settings-manage-agents', onClick: () => showView('agents') }, 'Manage installs in Agent tools'),
       h('p', { class: 'hint' }, 'Install or update the command-line agents.')
     )
-    return [...rows, manage]
+    return [...rows, manage, ...presetsSettings(state)]
   }
 
   private updates(state: AppState): HTMLElement[] {
