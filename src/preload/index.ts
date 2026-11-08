@@ -145,6 +145,7 @@ const api: GridApi = {
   onRemoteSessionStarted: (listener) => subscribe<[RemoteSessionStarted]>(IPC.remoteSessionStarted, listener),
   listProcessActivity: () => ipcRenderer.invoke(IPC.processActivityList),
   listSkills: () => ipcRenderer.invoke(IPC.skillsList),
+  chatCommands: (request) => ipcRenderer.invoke(IPC.chatCommands, request),
   openSkill: (id) => ipcRenderer.invoke(IPC.skillsOpen, id),
   exportSkill: (id) => ipcRenderer.invoke(IPC.skillsExport, id),
   exportSkills: (ids) => ipcRenderer.invoke(IPC.skillsExportMany, ids),

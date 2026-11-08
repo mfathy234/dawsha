@@ -17,6 +17,7 @@ import { isStarting } from '../../shared/agentReady'
 import { isTracked, newPending, pendingLabel, settlePending, type PendingMessage } from '../../shared/chatPending'
 import { planAnswers, type AskAnswer, type KeyStep } from '../../shared/menuAnswer'
 import type { AskPrompt } from '../../shared/chatAsk'
+import { ChatComplete } from './chatComplete'
 
 export interface ChatHost {
   showTerminal(): void
@@ -77,6 +78,7 @@ export class PaneChat {
   private starting = false
   private watch = 0
   private counter = 0
+  private readonly completion: ChatComplete
 
   constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
     this.thread = new ChatThread(() => this.render(true))
@@ -88,6 +90,7 @@ export class PaneChat {
       () => this.el.offsetParent !== null
     )
     this.scroller.append(this.thread.el)
+    this.completion = new ChatComplete(this.box, () => this.input?.folder ?? '', () => this.input?.agent ?? 'claude')
     this.el = h(
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
@@ -95,10 +98,12 @@ export class PaneChat {
       this.strip.el,
       h('div', { class: 'chat-composer' }, this.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.sendButton))
     )
+    this.el.querySelector('.chat-composer')?.insertBefore(this.completion.el, this.box.parentElement)
     this.box.addEventListener('keydown', (event) => this.onKey(event))
     this.box.addEventListener('input', () => {
       this.note.hidden = true
       this.growBox()
+      void this.completion.refresh().catch((error) => console.error('Chat completion failed', error))
     })
     new ResizeObserver(() => this.input && this.updateComposer(this.input, this.phase)).observe(this.box)
     this.sendButton.addEventListener('click', () => this.submit())
@@ -304,6 +309,7 @@ export class PaneChat {
   }
 
   private onKey(event: KeyboardEvent): void {
+    if (this.completion.handleKey(event)) return
     if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return
     event.preventDefault()
     this.submit()

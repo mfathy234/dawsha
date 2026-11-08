@@ -51,6 +51,8 @@ import { readLinked, scanSources } from './crewSources'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
 import { listAllSessions } from './sessionIndex'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
+import { validCommandsRequest } from '../shared/chatComplete'
+import { chatCommands } from './chatCommands'
 import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type BridgeLocations } from './statusBridge'
 import type { OpsWatcher } from './opsWatcher'
 import type { StatusWatcher } from './statusWatcher'
@@ -162,6 +164,10 @@ export function registerIpc(
   ipcMain.handle(IPC.opsList, () => ops.current())
   ipcMain.handle(IPC.processActivityList, () => collectProcessActivity(ptys.activityRoots()))
   ipcMain.handle(IPC.skillsList, () => listSkills(skillLocations()))
+  ipcMain.handle(IPC.chatCommands, (_event, request: unknown) => {
+    if (!validCommandsRequest(request) || !checkFolder(request.folder).ok) throw new Error('Invalid chat command request.')
+    return chatCommands(request.agent, request.folder, skillLocations())
+  })
   ipcMain.handle(IPC.skillsOpen, async (_event, id: unknown) => {
     const skill = resolveSkill(skillLocations(), id)
     if (!skill) throw new Error('Skill is no longer available.')

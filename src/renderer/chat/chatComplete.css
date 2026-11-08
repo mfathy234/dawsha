@@ -1,0 +1,11 @@
+.chat-composer { position: relative; }
+.chat-complete {
+  position: absolute; z-index: 12; inset-inline: max(var(--sp-6), calc((100% - 720px) / 2)); bottom: calc(100% - var(--sp-2));
+  max-height: 280px; overflow: auto; padding: var(--s-2); border-radius: var(--r-pop); background: var(--overlay); box-shadow: var(--shadow-pop);
+}
+.chat-complete[hidden] { display: none; }
+.chat-complete-row { display: flex; align-items: baseline; gap: var(--sp-2); min-height: 32px; padding: var(--s-2) var(--s-3); border-radius: var(--r-control); cursor: pointer; }
+.chat-complete-row.selected { background: var(--hover); }
+.chat-complete-name { flex: none; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.chat-complete-description { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); font-size: var(--fs-1); }
+.chat-complete-kind { flex: none; color: var(--text-3); font-size: var(--fs-1); }
