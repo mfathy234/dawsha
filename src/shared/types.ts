@@ -154,6 +154,7 @@ export interface Settings {
   focusMovesSelected: boolean
   sessionInfo: SessionInfoSettings
   onboardingDismissed: boolean
+  tourSeen: boolean
   workspace: Workspace
   layouts: SavedLayout[]
   keptSessions: KeptSession[]

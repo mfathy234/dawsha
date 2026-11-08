@@ -28,6 +28,7 @@ import { TopBarComponent } from './topbar'
 import { UsageViewComponent } from './usageView'
 import { WorkViewComponent } from './workView'
 import { isSidebarCollapsed } from './sidebar'
+import { startTour } from './tour'
 
 export class AppShell {
   readonly el: HTMLElement
@@ -65,6 +66,8 @@ export class AppShell {
   private lastView: AppState['view'] = 'grid'
   private resizeStart: { pointerId: number; x: number; width: number } | null = null
   private resizeWidth = DEFAULT_SIDEBAR_WIDTH
+  private autoTourTimer = 0
+  private autoTourStarted = false
 
   constructor() {
     const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.files.el, this.agents.el, this.crew.el, this.skills.el, this.usage.el, this.work.el, this.settings.el, this.replay.el)
@@ -128,6 +131,15 @@ export class AppShell {
   }
 
   render(state: AppState): void {
+    if (!state.settings.tourSeen && state.settings.onboardingDismissed && state.settings.projects.length > 0 && !state.onboardingOpen && !this.autoTourStarted) {
+      this.autoTourStarted = true
+      this.autoTourTimer = window.setTimeout(() => {
+        if (store.state.settings.tourSeen || !store.state.settings.onboardingDismissed || store.state.settings.projects.length === 0 || document.querySelector('.tour-card')) return
+        store.set((current) => ({ ...current, settings: { ...current.settings, tourSeen: true } }))
+        void saveSettings({ tourSeen: true })
+        startTour()
+      }, 1200)
+    }
     const views = derivePanes(state)
     syncRecordingTitles(views)
     this.topbar.update(state, views)
