@@ -2,7 +2,7 @@ import { pathForms, tabMenu, treeMenu, type FileActionId, type FileMenuEntry } f
 import { statusLetter } from '../../shared/gitStatus'
 import { normalizeFolder } from '../../shared/folderKey'
 import { branchName, checkoutLabel, checkoutTabsKey, type FilesCheckout } from '../../shared/filesWorkspace'
-import { INSPECTOR_MIN_WIDTH, type InspectorTab } from '../../shared/filesLayout'
+import { INSPECTOR_MIN_WIDTH, type EditorPrefs, type InspectorTab } from '../../shared/filesLayout'
 import { blameLines, type BlameSource } from '../../shared/fileActivity'
 import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
 import { buildReviewMessage, draftCommitMessage, stepReview } from '../../shared/review'
@@ -45,7 +45,8 @@ import { PrPanel } from '../files/prPanel'
 import { PreviewPane } from '../files/previewPane'
 import { commitDialog } from '../files/commitDialog'
 import { locationEntries, sendEntries } from '../files/locationMenu'
-import { filesLayout, updateLayout } from '../files/filesPrefs'
+import { editorPrefs, filesLayout, updateEditorPrefs, updateLayout } from '../files/filesPrefs'
+import { EditorSettings } from '../files/editorSettings'
 import { reviewExtension, type DraftComment } from '../files/reviewEditor'
 import type { TreeTarget } from '../files/filesTree'
 import type { ReviewFile } from '../files/reviewPanel'
@@ -228,6 +229,7 @@ export class FilesViewComponent {
   private readonly conflict = h('div', { class: 'files-conflict', id: 'files-conflict', role: 'alert', hidden: true }, this.conflictText, this.reloadButton, this.keepButton)
   private readonly stage = h('div', { class: 'files-stage' })
   private readonly empty = h('div', { class: 'files-placeholder', id: 'files-empty' })
+  private readonly editorSettings = new EditorSettings({ prefs: editorPrefs, change: (next) => this.applyEditorPrefs(updateEditorPrefs(() => next)) })
   private readonly preview = new PreviewPane({
     openBrowser: () => void this.openActiveInBrowser(),
     openLink: (url) => void api.openExternal(url)
@@ -243,7 +245,7 @@ export class FilesViewComponent {
   })
 
   constructor() {
-    this.stage.append(this.empty, this.preview.el)
+    this.stage.append(this.empty, this.preview.el, this.editorSettings.el)
     this.main.append(this.tabs, this.bar.el, this.conflict, this.stage, this.panel.el, this.status)
     this.el.append(this.header, this.explorer.el, this.main, this.inspector.el)
     this.el.addEventListener('keydown', (event) => this.onKey(event))
@@ -277,6 +279,7 @@ export class FilesViewComponent {
 
   private readonly hooks: DocHooks = {
     theme: themeKind,
+    prefs: editorPrefs,
     changed: (doc) => this.docChanged(doc),
     edited: (doc) => this.pin(doc.path),
     cursor: (doc) => this.cursorMoved(doc),
@@ -1554,10 +1557,15 @@ export class FilesViewComponent {
     return doc.status === 'ready' || doc.previewKind === 'image'
   }
 
+  private applyEditorPrefs(prefs: EditorPrefs): void {
+    for (const set of this.sets.values()) for (const doc of set.docs.values()) doc.setPrefs(prefs)
+  }
+
   private renderStage(): void {
     const set = this.set
     const doc = this.active()
     const showPreview = this.previewing(doc)
+    this.editorSettings.setVisible(doc !== null && doc.status === 'ready' && !showPreview)
     for (const saved of this.sets.values()) for (const known of saved.docs.values()) known.show(saved === set && known === doc && known.status === 'ready' && !showPreview)
     if (!set) {
       this.preview.hide()

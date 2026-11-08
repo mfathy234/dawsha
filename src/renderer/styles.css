@@ -4863,10 +4863,11 @@ body.dragging-ui {
   background: color-mix(in srgb, var(--muted) 18%, transparent);
 }
 
-.charge.stage-ok i.on { background: var(--accent); }
-.charge.stage-warn i.on { background: var(--busy); }
-.charge.stage-high i.on { background: var(--needs-ring); }
-.charge.stage-critical i.on { background: var(--danger); }
+/* The filled cells carry a soft ring in their own colour, so a bar that is filling reads as lit. */
+.charge.stage-ok i.on { background: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+.charge.stage-warn i.on { background: var(--busy); box-shadow: 0 0 0 2px color-mix(in srgb, var(--busy) 22%, transparent); }
+.charge.stage-high i.on { background: var(--needs-ring); box-shadow: 0 0 0 2px color-mix(in srgb, var(--needs-ring) 22%, transparent); }
+.charge.stage-critical i.on { background: var(--danger); box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 22%, transparent); }
 
 /* ---------------------------------------------------------------------------
    Button revamp: one solid primary action, quieter tabs, shared icon buttons.
@@ -6811,6 +6812,7 @@ button.tl-event:hover { background: var(--raised); }
   inset: 0 auto 0 0;
   border-radius: var(--r-1);
   background: var(--busy);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--busy) 22%, transparent);
 }
 
 .replay-thumb {
