@@ -56,6 +56,7 @@
 
 .chat-turn-summary { align-self: flex-start; max-width: 76%; display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-card); background: var(--raised); }
 .chat-turn-head, .chat-turn-file { display: flex; align-items: center; gap: var(--sp-2); }
+.chat-turn-actions { display: flex; gap: var(--sp-3); }
 .chat-turn-file { width: 100%; min-width: 0; padding: 2px 0; border: 0; border-radius: var(--r-1); background: transparent; color: var(--text); text-align: start; cursor: pointer; }
 .chat-turn-file:hover { background: var(--hover); }
 .chat-turn-file b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

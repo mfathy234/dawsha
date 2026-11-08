@@ -33,6 +33,7 @@ export interface ThreadActions {
   dismissLimit(): void
   answer(answers: AskAnswer[]): void
   reviewChanges(): void
+  undoReply(summary: import('../../shared/turnSummary').TurnSummary): void
 }
 
 export interface PendingView {
@@ -62,6 +63,8 @@ export interface ThreadContext {
   session: ChatSessionRef | null
   /** The id of the pane's terminal tab, which file links resolve their folder from. */
   fileScope: string | null
+  /** Checkpoint ref per user message id. */
+  checkpointRefs?: Readonly<Record<string, string>>
   /** The session's background work, so the row that launched each can say whether it still runs. */
   background?: readonly BackgroundTask[]
   /** The bell on a running turn's user message. */
@@ -130,7 +133,7 @@ export class ChatThread {
 
   private items(items: readonly ChatItem[], ctx: ThreadContext): Node[] {
     const out: Node[] = []
-    const summaries = new Map(turnSummaries(items).map((summary) => [summary.messageId, summary]))
+    const summaries = new Map(turnSummaries(items, ctx.checkpointRefs).map((summary) => [summary.messageId, summary]))
     const timings = workedByReply(items)
     const lastUser = items.reduce((last, item, index) => item.kind === 'message' && item.role === 'user' ? index : last, -1)
     let tools: HTMLElement[] = []
@@ -168,7 +171,7 @@ export class ChatThread {
       const finished = !(index - 1 > lastUser && ctx.phase === 'working')
       const worked = finished && timings.has(item.id) ? workedLabel(timings.get(item.id)!) : undefined
       const summary = summaries.get(item.id)
-      if (summary && finished && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges, worked))
+      if (summary && finished && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges, (value) => ctx.actions.undoReply(value), worked))
       else if (worked) out.push(workedLine(timings.get(item.id)!))
     }
     flush()

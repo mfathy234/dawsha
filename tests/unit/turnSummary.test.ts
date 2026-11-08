@@ -12,7 +12,7 @@ const user = (id: string): ChatItem => ({ kind: 'message', id, role: 'user', tex
 describe('turnSummaries', () => {
   it('merges edits to a file and emits a summary at the finished agent reply', () => {
     expect(turnSummaries([user('u'), edit('e1', 'src/a.ts', 2, 1), edit('e2', 'src/a.ts', 3, 4), agent('a')])).toEqual([
-      { messageId: 'a', files: [{ path: 'src/a.ts', status: 'M', added: 5, removed: 5 }], added: 5, removed: 5 }
+      { messageId: 'a', userMessageId: 'u', files: [{ path: 'src/a.ts', status: 'M', added: 5, removed: 5 }], added: 5, removed: 5 }
     ])
   })
 
@@ -24,8 +24,8 @@ describe('turnSummaries', () => {
       { kind: 'tool', id: 'codex-patch', activity: 'edit', verb: 'Edited', target: 'src/x.ts', path: 'src/x.ts', added: 1, removed: 2, output: '', outputTruncated: false, done: true }, agent('a2')
     ]
     expect(turnSummaries(items)).toEqual([
-      { messageId: 'a1', files: [{ path: 'new.ts', status: 'A', added: 8, removed: 0 }], added: 8, removed: 0 },
-      { messageId: 'a2', files: [{ path: 'old.ts', status: 'D', added: 0, removed: 6 }, { path: 'src/x.ts', status: 'M', added: 1, removed: 2 }], added: 1, removed: 8 }
+      { messageId: 'a1', userMessageId: 'u1', files: [{ path: 'new.ts', status: 'A', added: 8, removed: 0 }], added: 8, removed: 0 },
+      { messageId: 'a2', userMessageId: 'u2', files: [{ path: 'old.ts', status: 'D', added: 0, removed: 6 }, { path: 'src/x.ts', status: 'M', added: 1, removed: 2 }], added: 1, removed: 8 }
     ])
   })
 })

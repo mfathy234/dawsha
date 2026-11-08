@@ -1,4 +1,13 @@
 /** Every word the chat view says that Dawsha writes itself (not the agent's own text). Short, plain, what is happening and what comes next. */
+const SHOWN_FILES = 5
+
+/** Up to five file names, then "and N more". */
+export function fileListText(names: readonly string[]): string {
+  const shown = names.slice(0, SHOWN_FILES)
+  const rest = names.length - shown.length
+  return rest > 0 ? `${shown.join(', ')} and ${rest} more` : shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}` : shown.join('')
+}
+
 export const CHAT_TEXT = {
   reading: 'Reading the session…',
   working: 'Working',
@@ -103,5 +112,15 @@ export const CHAT_TEXT = {
   saveTitle: 'Save prompt',
   saveName: 'Name',
   saveConfirm: 'Save',
-  saved: (name: string): string => `Saved "${name}". Find it under / in any chat.`
+  saved: (name: string): string => `Saved "${name}". Find it under / in any chat.`,
+  undoReply: 'Undo this reply',
+  undoQuestion: (agent: string, names: readonly string[]): string => `Undo ${agent}'s changes to ${fileListText(names)}? Other files stay as they are.`,
+  undoButton: (count: number): string => `Undo changes to ${count} file${count === 1 ? '' : 's'}`,
+  undoDone: 'Reply undone.',
+  undoFailed: 'Could not undo this reply.',
+  redo: 'Redo',
+  redoQuestion: (agent: string, names: readonly string[]): string => `Restore ${agent}'s changes to ${fileListText(names)}?`,
+  undoSkipped: (count: number): string => `${count} ignored file${count === 1 ? ' was' : 's were'} left as they are.`,
+  redoButton: (count: number): string => `Redo changes to ${count} file${count === 1 ? '' : 's'}`,
+  undoWhileWorking: (agent: string): string => `${agent} is still working. Wait for the reply to finish.`
 } as const

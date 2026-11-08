@@ -32,6 +32,7 @@ import { createSessionWorktree } from './sessionWorktree'
 import type { MergeBackRequest, WorktreeCommitRequest, WorktreeRemoveRequest } from '../shared/mergeBack'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
+import { listCheckpoints, prepareCheckpoint, restoreCheckpoint } from './checkpoints'
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
@@ -43,6 +44,7 @@ import { codeNavigation, installCodeNav } from './codeNav'
 import { editorConfig } from './editorConfig'
 import { registerCodeNavExtrasIpc } from './codeNavExtrasIpc'
 import { registerChatIpc } from './chatLog/ipc'
+import { isChatSessionWorking } from './chatLog/service'
 import { closeAgentFiles, refreshAgentFiles, unwatchAgentFiles, watchAgentFiles } from './agentFiles'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
@@ -222,6 +224,12 @@ export function registerIpc(
   ipcMain.handle(IPC.gitDiffSince, (_event, folder: unknown, path: unknown, baseline: unknown) => gated(folder, (root) => fileDiffSince(root, path, baseline)))
   ipcMain.handle(IPC.gitBaseline, (_event, folder: unknown) => gated(folder, sessionBaseline))
   ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => gated(folder, (root) => sessionStatus(root, baseline)))
+  ipcMain.handle(IPC.checkpointPrepare, (_event, folder: unknown, sessionId: unknown) => gated(folder, (root) => prepareCheckpoint(root, sessionId)))
+  ipcMain.handle(IPC.checkpointsList, (_event, folder: unknown, sessionId: unknown, ids: unknown) => gated(folder, (root) => listCheckpoints(root, sessionId, ids)))
+  ipcMain.handle(IPC.checkpointRestore, (_event, folder: unknown, sessionId: unknown, ref: unknown, paths: unknown) => gated(folder, (root) =>
+    typeof sessionId === 'string' && isChatSessionWorking(sessionId)
+      ? Promise.resolve({ ok: false as const, error: 'This agent is still working. Wait for the reply to finish.' })
+      : restoreCheckpoint(root, sessionId, ref, paths)))
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
   registerCodeNavExtrasIpc(known, getWindow)
   registerChatIpc()

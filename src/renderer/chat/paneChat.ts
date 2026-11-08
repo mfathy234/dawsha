@@ -22,6 +22,8 @@ import { ChatComplete } from './chatComplete'
 import { ChatFind } from './chatFind'
 import { ChatWatches } from './chatWatches'
 import { doneMessage, watchableMessageId } from '../../shared/chatNotify'
+import { loadCheckpoints, prepareCheckpoint, undoReply } from './chatUndo'
+import type { TurnSummary } from '../../shared/turnSummary'
 
 export interface ChatHost {
   showTerminal(): void
@@ -90,6 +92,9 @@ export class PaneChat {
   private history: string[] = []
   private historyIndex = -1
   private historyDraft = ''
+  private checkpointRefs: Readonly<Record<string, string>> = {}
+  private sendChain: Promise<unknown> = Promise.resolve()
+  private checkpointSession = ''
   private historySession = ''
   private readonly completion: ChatComplete
   private readonly find: ChatFind
@@ -100,6 +105,7 @@ export class PaneChat {
     this.feed = new ChatFeed(
       (snapshot) => {
         this.snapshot = snapshot
+        void this.refreshCheckpoints()
         this.render(false)
       },
       () => this.el.offsetParent !== null
@@ -164,6 +170,10 @@ export class PaneChat {
     }
     if (this.input && (this.input.agent !== input.agent || (this.input.sessionId && this.input.sessionId !== input.sessionId))) this.pending = []
     this.input = input
+    if (this.checkpointSession !== `${input.folder}:${input.sessionId ?? ''}`) {
+      this.checkpointSession = `${input.folder}:${input.sessionId ?? ''}`
+      this.checkpointRefs = {}
+    }
     this.loadHistory(input.sessionId)
     this.attachments.setSession(input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null)
     if (input.sessionId) this.feed.start({ agent: input.agent, sessionId: input.sessionId, folder: input.folder })
@@ -208,7 +218,7 @@ export class PaneChat {
     const release = releaseHeld(this.pending, working || input.exited, phase === 'approval', phase === 'menu')
     this.pending = release.pending
     if (release.message) {
-      this.host.send(release.message.text)
+      void this.deliver(release.message.text)
       this.note.hidden = true
     }
     this.pending = settlePending(this.pending, snapshot.items, Date.now(), working)
@@ -240,13 +250,15 @@ export class PaneChat {
       background: snapshot.background,
       bell: { messageId: watchableMessageId(snapshot.items, phase), watched: this.watches.watched, toggle: (id) => this.toggleWatch(id) },
       fileScope: input.tabId,
+      checkpointRefs: this.checkpointRefs,
       session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
         showTerminal: () => this.host.showTerminal(),
         continueIn: (to) => this.host.continueIn(to),
         dismissLimit: () => this.dismissLimit(),
         answer: (answers) => this.answerAsk(answers),
-        reviewChanges: () => this.host.reviewChanges()
+        reviewChanges: () => this.host.reviewChanges(),
+        undoReply: (summary) => this.undoReply(summary)
       }
     })
     this.strip.update(snapshot.background)
@@ -256,6 +268,34 @@ export class PaneChat {
     if (!force && (this.stickBottom || wasNear) && !this.find.searching) this.toBottom()
     this.updateJump()
     if (!force) this.stickBottom = false
+  }
+
+  /** Looks up the checkpoint of each user message in view, by message id, and redraws when the set changed. */
+  private async refreshCheckpoints(): Promise<void> {
+    const input = this.input
+    if (!input?.sessionId) return
+    const ids = this.snapshot.items.flatMap((item) => item.kind === 'message' && item.role === 'user' ? [item.id] : [])
+    const refs = await loadCheckpoints(input.folder, input.sessionId, ids)
+    if (this.input?.sessionId !== input.sessionId || JSON.stringify(refs) === JSON.stringify(this.checkpointRefs)) return
+    this.checkpointRefs = refs
+    this.render(true)
+  }
+
+  private undoReply(summary: TurnSummary): void {
+    const input = this.input
+    if (!input?.sessionId) return
+    const agentName = input.agent === 'claude' ? 'Claude' : 'Codex'
+    void undoReply({ folder: input.folder, sessionId: input.sessionId, agentName, working: input.working && !input.exited }, summary)
+  }
+
+  /** Snapshots the project, then types the message into the terminal; sends keep their order. */
+  private deliver(text: string): Promise<{ flattened: boolean }> {
+    const sent = this.sendChain.then(async () => {
+      if (isTracked(text) && this.input) await prepareCheckpoint(this.input.folder, this.input.sessionId)
+      return this.host.send(text)
+    })
+    this.sendChain = sent.catch(() => undefined)
+    return sent
   }
 
   private renderedSnapshot: FeedSnapshot | null = null
@@ -317,7 +357,7 @@ export class PaneChat {
     if (this.starting || !this.pending.some((message) => message.waiting)) return
     this.pending = this.pending.flatMap((message) => {
       if (!message.waiting) return [message]
-      this.host.send(message.text)
+      void this.deliver(message.text)
       return isTracked(message.text) ? [{ ...message, waiting: false, queued: working, at: Date.now() }] : []
     })
   }
@@ -457,9 +497,10 @@ export class PaneChat {
       if (isTracked(text)) this.pending = holdPending(this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, true))
       else this.host.send(text)
     } else {
-      const { flattened } = this.host.send(text)
-      this.note.hidden = !flattened
-      this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
+      void this.deliver(text).then(({ flattened }) => {
+        this.note.hidden = !flattened
+        this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
+      })
       if (isTracked(text)) {
         const working = (this.input?.working ?? false) && !this.input?.exited
         this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, working)]
