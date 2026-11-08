@@ -1,3 +1,4 @@
+import { isOverlayOpen } from '../overlayOpen'
 import { buildGroups, flatten, jumpGroup, type PaletteGroup, type PaletteRow } from '../../shared/palette'
 import { moveSelection } from '../../shared/quickPick'
 import { closePalette } from '../actions'
@@ -116,7 +117,7 @@ export class PaletteComponent {
     const previous = this.previous
     closePalette()
     requestAnimationFrame(() => {
-      if (!document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)')) previous?.focus()
+      if (!isOverlayOpen()) previous?.focus()
     })
   }
 
@@ -158,7 +159,7 @@ export class PaletteComponent {
   }
 
   private refocus(): void {
-    if (document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)')) return
+    if (isOverlayOpen()) return
     if (document.activeElement && document.activeElement !== document.body) return
     const { state } = store
     const pane = state.panes.find((p) => p.id === state.focusedId)

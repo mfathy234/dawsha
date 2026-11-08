@@ -1,3 +1,4 @@
+import { isOverlayOpen } from './overlayOpen'
 import { DEFAULT_FONT_SIZE } from '../shared/types'
 import { DEFAULT_PALETTE_SHORTCUT } from '../shared/settingsSchema'
 import { bind, formatShortcut, matchesBinding, parseShortcut, type KeyBinding, type KeyEventLike } from '../shared/shortcuts'
@@ -12,7 +13,7 @@ import { contextMenuOpen } from './components/contextMenu'
 import { requestFilesSearch } from './files/filesActions'
 import { openGlobalSearch } from './components/globalSearch'
 
-const overlayOpen = (): boolean => document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)') !== null
+const overlayOpen = isOverlayOpen
 
 const ALTERNATE_PALETTE = bind('Ctrl+Shift+P')
 

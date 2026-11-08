@@ -1,3 +1,4 @@
+import { isOverlayOpen } from '../overlayOpen'
 import { pickerRows, type BranchList, type PickerRow, type SwitchMode } from '../../shared/gitBranches'
 import { moveSelection } from '../../shared/quickPick'
 import { api } from '../api'
@@ -78,7 +79,7 @@ export async function openBranchPicker(folder: string): Promise<void> {
   const close = (): void => {
     leave(overlay)
     requestAnimationFrame(() => {
-      if (!document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)')) previous?.focus()
+      if (!isOverlayOpen()) previous?.focus()
     })
   }
 
