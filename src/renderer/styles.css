@@ -5817,7 +5817,6 @@ button.info-review { height: 20px; padding: 0 var(--sp-1); font-size: var(--fs-1
 @media (prefers-reduced-motion: reduce) { .pane.needs-you { transition: none; } }
 
 /* 1.8 shared skin: components use the same scale and semantic roles in every view. */
-* { scrollbar-color: color-mix(in srgb, var(--muted) 38%, transparent) transparent; }
 button, input, select, textarea { font-weight: var(--w-regular); }
 :where(h1, h2, h3, .dialog h2, .popover-title) { letter-spacing: 0; }
 body { font-family: var(--font-ui); font-size: var(--fs-2); line-height: var(--lh-2); -webkit-font-smoothing: antialiased; }
@@ -7454,3 +7453,17 @@ button.tl-event:hover { background: var(--raised); }
 /* The pane tab bar is a plain row: tabs fill its height so the underline sits inside it, with no tray or border. */
 :root .tabs { padding: 0 6px; border: 0; border-radius: 0; background: transparent; }
 :root .tabs .tab { min-height: 0; border-radius: var(--r-1); }
+
+/* 1.8.5 views polish. */
+/* Agents and Usage: the title row spans the page like Skills and Work, and the content shares its 32px inset. */
+:root :is(.agents-view, .usage-view) { padding: 0 0 var(--sp-6); }
+:root :is(.agents-view, .usage-view) > :not(.page-header) { margin-inline: var(--sp-7); }
+:root :is(.agents-view, .usage-view) > .page-header + * { margin-top: var(--sp-5); }
+@media (max-width: 1360px) { .usage-tables { grid-template-columns: minmax(0, 1fr); } }
+/* Skills: Installed skills / agents is a tab row like Projects, so it gets the same underline instead of a tray. */
+:root .skill-kinds { padding: 0; border: 0; background: transparent; }
+:root .skill-kind { position: relative; }
+:root .skill-kind[aria-pressed='true'] { background: transparent; box-shadow: none; color: var(--text); font-weight: 500; }
+:root .skill-kind[aria-pressed='true']::after { content: ''; position: absolute; inset-inline: 8px; bottom: 1px; height: 2px; border-radius: 2px; background: var(--accent-ink, var(--accent)); pointer-events: none; }
+/* Between 1100 and 1280px the top bar has no room for the long "no limits reported" line, which pushed New session off the window. */
+@media (max-width: 1280px) { .topbar-limits .limits-none { display: none; } }

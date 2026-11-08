@@ -29,13 +29,6 @@
   padding-inline: var(--sp-6);
 }
 
-/* The app-wide scrollbar-color switches Chromium to its native scrollbar, arrow buttons included; auto here brings back the thin ::-webkit-scrollbar skin from styles.css. */
-.chat-scroll,
-.chat-toolout,
-.chat-table {
-  scrollbar-color: auto;
-}
-
 .chat-thread {
   display: flex;
   flex-direction: column;

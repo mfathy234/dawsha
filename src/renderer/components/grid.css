@@ -161,6 +161,7 @@
 }
 
 @container pane (max-width: 420px) {
+  .pane-header .pane-project,
   .pane-header .chip-compare {
     display: none;
   }
