@@ -65,6 +65,7 @@ import type {
   SpawnRequest,
   SpawnResult,
   WorktreeRemoval,
+  WorktreeResult,
   WorktreesResult
 } from './types'
 
@@ -231,6 +232,7 @@ export interface GridApi {
   compareProbe(folder: string): Promise<RepoProbe>
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>
+  runWorktreeCreate(folder: string, short: string): Promise<WorktreeResult>
   compareRemove(request: WorktreeRemoval): Promise<GitResult>
   worktreeCreate(folder: string, short: string): Promise<SessionWorktreeResult>
   mergeOverview(request: MergeBackRequest): Promise<MergeOverviewResult>

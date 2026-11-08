@@ -42,6 +42,8 @@ import { installPresetCommands } from './commands/presets'
 import { installNotificationCommands } from './commands/notifications'
 import { installNeedsNotices } from './needsNotice'
 import { installReplayCommands } from './commands/replay'
+import { installQueueRunner } from './automation/queueRunner'
+import { installScheduler } from './automation/scheduler'
 import { installSettingsTransferCommands } from './commands/settingsTransfer'
 import { installKeyboard } from './keyboard'
 import { installInputMode } from './inputMode'
@@ -155,6 +157,8 @@ async function boot(): Promise<void> {
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()
   void clearLegacyModelCache(loaded.settings.legacyModelCacheCleared)
   await restoreWorkspace()
+  installScheduler()
+  installQueueRunner()
   installCrewLive()
   installLead()
   api.cliReady()

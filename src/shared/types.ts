@@ -142,6 +142,42 @@ export interface ProjectTask {
   events: { id: string; kind: 'note' | 'commit'; text: string; at: number }[]
 }
 
+export interface ScheduleRunRecord {
+  at: number
+  status: 'started' | 'failed'
+  paneId?: string
+  error?: string
+}
+
+export interface ScheduledRun {
+  id: string
+  name: string
+  projectId: string
+  agent: 'claude' | 'codex'
+  prompt: string
+  days: number[]
+  hour: number
+  minute: number
+  onceAt?: number
+  worktree: boolean
+  lastRunAt?: number
+  lastCheckedAt?: number
+  /** Newest first, at most 20. */
+  runs: ScheduleRunRecord[]
+}
+
+export interface QueuedPrompt {
+  id: string
+  projectId: string
+  name: string
+  prompt: string
+  agent?: 'claude' | 'codex'
+  state: 'queued' | 'running' | 'done' | 'failed'
+  paneId?: string
+  error?: string
+  createdAt: number
+}
+
 export interface SessionInfoSettings {
   notifications: boolean
   sound: boolean
@@ -192,6 +228,10 @@ export interface Settings {
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
   ticketNotes: import('./ticketNotes').TicketNotes
   tasks: ProjectTask[]
+  scheduledRuns: ScheduledRun[]
+  queuedPrompts: QueuedPrompt[]
+  queueConcurrency: number
+  queueAgent: 'claude' | 'codex'
   lastSeenVersion: string | null
   autoUpdateCheck: boolean
   paletteShortcut: string
@@ -405,6 +445,8 @@ export interface RepoProbe {
   hasCommits: boolean
   branch: string | null
 }
+
+export type WorktreeResult = { ok: true; side: CompareSide } | { ok: false; error: string }
 
 export type WorktreesResult = { ok: true; sides: CompareNames } | { ok: false; error: string }
 

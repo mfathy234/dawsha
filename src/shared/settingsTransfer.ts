@@ -56,6 +56,11 @@ export const EXCLUDED_KEYS = [
   'tasks',
   // Presets name this PC's projects, like run commands.
   'presets',
+  // Schedules and queued prompts refer to this PC's project folders and sessions.
+  'scheduledRuns',
+  'queuedPrompts',
+  'queueConcurrency',
+  'queueAgent',
   'lastSeenVersion',
   'onboardingDismissed',
   'tourSeen',

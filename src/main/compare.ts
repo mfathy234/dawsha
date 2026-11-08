@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { compareNames, isShortId } from '../shared/compare'
 import { isOwnBranch, isOwnWorktree } from '../shared/mergeBack'
 import type { WorktreeStatus } from '../shared/compare'
-import type { GitResult, RepoProbe, WorktreeRemoval, WorktreesResult } from '../shared/types'
+import type { GitResult, RepoProbe, WorktreeRemoval, WorktreeResult, WorktreesResult } from '../shared/types'
 
 const GIT_TIMEOUT_MS = 20_000
 const REMOVE_ATTEMPTS = 6
@@ -54,6 +54,15 @@ export async function createWorktrees(repo: string, short: string): Promise<Work
     return second
   }
   return { ok: true, sides }
+}
+
+/** One worktree on a new branch, for a scheduled run or a queued task; named like the A side of a compare so it can be removed the same way. */
+export async function createWorktree(repo: string, short: string): Promise<WorktreeResult> {
+  if (!isShortId(short)) return { ok: false, error: 'The worktree id is not valid.' }
+  const side = compareNames(repo, short).a
+  if (existsSync(side.path)) return { ok: false, error: `The folder ${side.path} already exists.` }
+  const made = await addWorktree(repo, side.path, side.branch)
+  return made.ok ? { ok: true, side } : made
 }
 
 export async function worktreeStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus> {

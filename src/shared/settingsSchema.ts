@@ -32,6 +32,9 @@ import {
   type KeptSession,
   type PaneWorktree,
   type ProjectTask,
+  type ScheduledRun,
+  type ScheduleRunRecord,
+  type QueuedPrompt,
   type Project,
   type RemoteAccessSettings,
   type SavedLayout,
@@ -107,6 +110,10 @@ export const defaultSettings = (): Settings => ({
   runCommands: [],
   ticketNotes: {},
   tasks: [],
+  scheduledRuns: [],
+  queuedPrompts: [],
+  queueConcurrency: 2,
+  queueAgent: 'claude',
   lastSeenVersion: null,
   autoUpdateCheck: true,
   paletteShortcut: DEFAULT_PALETTE_SHORTCUT,
@@ -357,6 +364,40 @@ function sanitizeTasks(value: unknown, projectIds: Set<string>): ProjectTask[] {
   return tasks.slice(0, 300)
 }
 
+function sanitizeRunRecords(value: unknown): ScheduleRunRecord[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item): ScheduleRunRecord[] => {
+    if (!isRecord(item) || typeof item.at !== 'number' || !Number.isFinite(item.at)) return []
+    return [{ at: item.at, status: item.status === 'failed' ? 'failed' : 'started', ...(typeof item.paneId === 'string' ? { paneId: item.paneId } : {}), ...(typeof item.error === 'string' ? { error: item.error.slice(0, 300) } : {}) }]
+  }).slice(0, 20)
+}
+
+function sanitizeScheduledRuns(value: unknown, projects: readonly Project[]): ScheduledRun[] {
+  if (!Array.isArray(value)) return []
+  const ids = new Set(projects.map((project) => project.id))
+  return value.flatMap((item): ScheduledRun[] => {
+    if (!isRecord(item) || typeof item.id !== 'string' || !ids.has(String(item.projectId)) || !['claude', 'codex'].includes(String(item.agent))) return []
+    const prompt = typeof item.prompt === 'string' ? item.prompt.trim().slice(0, 20_000) : ''
+    const name = typeof item.name === 'string' ? item.name.trim().slice(0, 120) : ''
+    const days = Array.isArray(item.days) ? [...new Set(item.days.filter((day): day is number => Number.isInteger(day) && day >= 0 && day <= 6))] : []
+    const hour = clampNumber(item.hour, 0, 23, -1)
+    const minute = clampNumber(item.minute, 0, 59, -1)
+    const onceAt = typeof item.onceAt === 'number' && Number.isFinite(item.onceAt) ? item.onceAt : undefined
+    if (!prompt || !name || (onceAt === undefined && (!days.length || hour < 0))) return []
+    return [{ id: item.id, name, projectId: String(item.projectId), agent: item.agent as 'claude' | 'codex', prompt, days, hour, minute, ...(onceAt === undefined ? {} : { onceAt }), worktree: item.worktree !== false, ...(typeof item.lastRunAt === 'number' ? { lastRunAt: item.lastRunAt } : {}), ...(typeof item.lastCheckedAt === 'number' ? { lastCheckedAt: item.lastCheckedAt } : {}), runs: sanitizeRunRecords(item.runs) }]
+  }).slice(0, 200)
+}
+
+function sanitizeQueuedPrompts(value: unknown, projects: readonly Project[]): QueuedPrompt[] {
+  if (!Array.isArray(value)) return []
+  const ids = new Set(projects.map((project) => project.id))
+  return value.flatMap((item): QueuedPrompt[] => {
+    if (!isRecord(item) || typeof item.id !== 'string' || !ids.has(String(item.projectId))) return []
+    const state = ['queued', 'running', 'done', 'failed'].includes(String(item.state)) ? item.state as QueuedPrompt['state'] : 'queued'
+    return [{ id: item.id, projectId: String(item.projectId), name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Task', prompt: typeof item.prompt === 'string' ? item.prompt.slice(0, 20_000) : '', ...(item.agent === 'claude' || item.agent === 'codex' ? { agent: item.agent } : {}), state, ...(typeof item.paneId === 'string' ? { paneId: item.paneId } : {}), ...(typeof item.error === 'string' ? { error: item.error.slice(0, 300) } : {}), createdAt: clampNumber(item.createdAt, 0, Date.now() + 86_400_000, Date.now()) }]
+  }).slice(0, 500)
+}
+
 function sanitizeProjectIds(value: unknown, projects: readonly Project[]): string[] {
   if (!Array.isArray(value)) return []
   const known = new Set(projects.map((p) => p.id))
@@ -425,6 +466,10 @@ export function migrateSettings(raw: unknown): Settings {
     runCommands: sanitizeRunOverrides(raw.runCommands).filter((entry) => projects.some((project) => project.id === entry.projectId)),
     ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),
+    scheduledRuns: sanitizeScheduledRuns(raw.scheduledRuns, projects),
+    queuedPrompts: sanitizeQueuedPrompts(raw.queuedPrompts, projects),
+    queueConcurrency: Math.floor(clampNumber(raw.queueConcurrency, 1, 10, 2)),
+    queueAgent: raw.queueAgent === 'codex' ? 'codex' : 'claude',
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
     autoUpdateCheck: raw.autoUpdateCheck !== false,
     paletteShortcut: sanitizeShortcut(raw.paletteShortcut),
