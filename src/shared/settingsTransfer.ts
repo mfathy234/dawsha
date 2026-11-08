@@ -52,6 +52,7 @@ export const EXCLUDED_KEYS = [
   'tasks',
   'lastSeenVersion',
   'onboardingDismissed',
+  'tourSeen',
   // Tracks this PC's local model cache, so it is never carried to another PC.
   'legacyModelCacheCleared',
   // Chat or terminal per session, keyed by this PC's session ids; the default view is a per-PC choice too.
