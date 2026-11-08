@@ -28,6 +28,8 @@ export interface PaneInfo {
   agent: TabAgent
   model: { label: string; family: ModelFamily } | null
   contextPercent: number | null
+  contextTokens: number | null
+  contextWindow: number | null
   limits: RateLimitWindow[]
   /** When the limit windows above were reported; null with no windows. */
   limitsAt: number | null
@@ -241,6 +243,8 @@ function claudeInfo(
     ...base,
     model: opsModel ?? liveModel,
     contextPercent: snapshot?.context?.percent ?? live?.contextPercent ?? null,
+    contextTokens: snapshot?.context?.tokens ?? null,
+    contextWindow: snapshot?.context?.window ?? null,
     limits: paneLimits(tab, live, snapshot, state.now),
     limitsAt: paneLimitReading(tab, live, snapshot, state.now)?.at ?? null,
     costUsd: live?.costUsd ?? null,
@@ -282,7 +286,7 @@ function baseInfoFor(
   opsLive: boolean
 ): PaneInfo {
   const changes = folder ? (state.gitChanges[folder] ?? null) : null
-  const empty: PaneInfo = { agent: tab.agent, model: null, contextPercent: null, limits: [], limitsAt: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [] }
+  const empty: PaneInfo = { agent: tab.agent, model: null, contextPercent: null, contextTokens: null, contextWindow: null, limits: [], limitsAt: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [] }
   if (tab.agent === 'claude') return claudeInfo(state, tab, matches, empty, snapshot, opsLive)
   if (tab.agent === 'codex') {
     const session = matches.codex.get(tab.id)

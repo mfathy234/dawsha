@@ -5,6 +5,7 @@ import { folderOfPane, store } from '../state'
 import { continueIn } from '../handoffActions'
 import type { PaneView } from '../derive'
 import { getTerminal } from '../terminals'
+import { openReviewInFiles } from '../files/filesActions'
 import { sessionIdOf } from '../transcriptActions'
 import { answerMenu } from './menuActions'
 import { interruptAgent, paneViewOf, primaryTab, rememberPending, sendChatMessage, setPaneView } from './chatActions'
@@ -22,7 +23,12 @@ export function chatHostFor(paneId: string, current: () => PaneView | null): Cha
     send: (text) => sendChatMessage(tabId(), current()?.agent ?? 'shell', text),
     interrupt: () => interruptAgent(tabId()),
     screenTail: () => getTerminal(tabId())?.tailText(MENU_ROWS) ?? '',
-    answer: (steps) => void answerMenu(tabId(), steps)
+    answer: (steps) => void answerMenu(tabId(), steps),
+    reviewChanges: () => {
+      const pane = store.state.panes.find((candidate) => candidate.id === paneId)
+      const folder = pane ? folderOfPane(store.state, pane) : null
+      if (pane && folder) openReviewInFiles({ projectId: pane.projectId, folder })
+    }
   }
 }
 
