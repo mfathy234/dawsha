@@ -236,6 +236,7 @@ export class TimelinePanel {
   }
 
   private applyIntent(intent: TimelineIntent): void {
+    if (intent.session) return this.openPast(intent.session, intent.target)
     const wasPast = this.past !== null
     this.past = null
     this.scope = intent.scope ?? 'session'
@@ -267,13 +268,18 @@ export class TimelinePanel {
       openTimelineWith(open.paneId, { query: this.query, target })
       return
     }
+    this.openPast(session, target)
+  }
+
+  /** Shows a session that is not open in any pane, jumping to one of its events when given. */
+  private openPast(session: ResumeSession, target: TimelineIntent['target']): void {
     const folder = store.state.settings.projects.find((entry) => entry.id === session.projectId)?.folder ?? ''
     this.past = { session, folder, request: folder ? { agent: session.agent, sessionId: session.id, folder } : null }
     this.pending = target ?? null
     this.filter = 'all'
     this.spotlight = null
     this.resetLog()
-    void this.fetch()
+    if (this.opened) void this.fetch()
     this.render(true)
   }
 
