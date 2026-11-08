@@ -41,6 +41,8 @@ import { AVATAR_LABELS, compareAvatarStates, stripSummary, type AvatarState } fr
 import { acknowledgeRun, liveRuns } from '../crewLive'
 import { crewAvatar } from './crewAvatar'
 import { openHandDialog } from './crewDialogs'
+import { startTour } from './tour'
+import { TOUR_TEXT } from '../../shared/tourSteps'
 import './topbar.css'
 import './topbarTools.css'
 
@@ -61,6 +63,7 @@ export class TopBarComponent {
       class: 'split-main',
       type: 'button',
       id: 'new-session',
+      'data-tour': 'new-session',
       'aria-haspopup': 'menu',
       'aria-label': `New session, ${formatShortcut(bind('Ctrl+N'))}`,
       'aria-expanded': 'false',
@@ -455,6 +458,8 @@ export class TopBarComponent {
     })
     this.moreItems = Object.fromEntries(entries) as unknown as Record<MoreView, HTMLElement>
     const items = entries.map(([, item]) => item)
+    const tourItem = h('button', { class: 'menu-item more-item', type: 'button', role: 'menuitem', id: 'take-tour-menu-item', onClick: () => { this.closeMoreMenu(); startTour() } }, TOUR_TEXT.menu)
+    items.push(tourItem)
     for (const [view] of entries) this.markMoreItem(view)
     this.moreMenu = h(
       'div',

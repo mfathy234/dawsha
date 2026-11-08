@@ -91,6 +91,7 @@ export const defaultSettings = (): Settings => ({
   focusMovesSelected: false,
   sessionInfo: { notifications: true, sound: false },
   onboardingDismissed: false,
+  tourSeen: false,
   workspace: { panes: [], focusedIndex: 0 },
   layouts: [],
   keptSessions: [],
@@ -395,6 +396,7 @@ export function migrateSettings(raw: unknown): Settings {
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound
     },
     onboardingDismissed: raw.onboardingDismissed === true,
+    tourSeen: raw.tourSeen === true,
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
     layouts: sanitizeLayouts(raw.layouts),
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),

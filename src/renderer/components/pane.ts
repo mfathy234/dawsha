@@ -141,7 +141,7 @@ export class PaneComponent {
     this.pin.append(icon(ICONS.pin))
     const header = h(
       'div',
-      { class: 'pane-header' },
+      { class: 'pane-header', 'data-tour': 'pane-header' },
       this.mark,
       h('div', { class: 'pane-titles' }, this.index, this.projectName, this.fresh),
       this.pin,
@@ -173,6 +173,7 @@ export class PaneComponent {
       const view = this.current
       if (view) void restartTab(paneId, view.tabs.find((t) => t.active)?.id ?? view.pane.activeTabId)
     })
+    this.info.setAttribute('data-tour', 'pane-meter')
     this.info.addEventListener('click', (event) => {
       const target = event.target as HTMLElement
       if (target.closest('.info-model, .info-context, .info-tokens, .info-cost')) {
