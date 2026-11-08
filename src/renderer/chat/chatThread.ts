@@ -20,12 +20,15 @@ import { dayLabel, dayStarts, fullTimeLabel, timeLabel } from '../../shared/chat
 import { renderDiff } from './chatDiffView'
 import { linkifyChat, openFileButton } from './chatLinks'
 import type { ChatSessionRef } from './chatImageCache'
+import { turnSummaries } from '../../shared/turnSummary'
+import { turnSummaryCard } from './chatTurnSummary'
 
 export interface ThreadActions {
   showTerminal(): void
   continueIn(to: AgentKind): void
   dismissLimit(): void
   answer(answers: AskAnswer[]): void
+  reviewChanges(): void
 }
 
 export interface PendingView {
@@ -120,6 +123,9 @@ export class ChatThread {
 
   private items(items: readonly ChatItem[], ctx: ThreadContext): Node[] {
     const out: Node[] = []
+    const summaries = new Map(turnSummaries(items).map((summary) => [summary.messageId, summary]))
+    const positions = new Map(items.map((item, index) => [item.id, index]))
+    const lastUser = items.reduce((last, item, index) => item.kind === 'message' && item.role === 'user' ? index : last, -1)
     let tools: HTMLElement[] = []
     const flush = (): void => {
       if (tools.length === 0) return
@@ -139,6 +145,9 @@ export class ChatThread {
       }
       flush()
       out.push(item.kind === 'message' ? this.message(item, ctx) : this.notice(item, index === items.length - 1, ctx))
+      const summary = item.kind === 'message' && item.role === 'agent' ? summaries.get(item.id) : undefined
+      const activeTurn = summary && positions.get(summary.messageId)! > lastUser
+      if (summary && !(activeTurn && ctx.phase === 'working') && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges))
     })
     flush()
     return out

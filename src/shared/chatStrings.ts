@@ -86,5 +86,8 @@ export const CHAT_TEXT = {
   backgroundFailed: 'Failed',
   backgroundStopped: 'Stopped',
   backgroundNoResult: 'No report was recorded.',
+  turnSummary: 'Turn changes',
+  turnChanged: (count: number): string => `Changed ${count} file${count === 1 ? '' : 's'}`,
+  reviewChanges: 'Review changes',
   running: (verb: string, target: string): string => `${verb} ${target}`.trim()
 } as const

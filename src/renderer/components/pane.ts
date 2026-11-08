@@ -46,6 +46,7 @@ import { SESSION_TAG_LABELS, type SessionTag } from '../../shared/sessionTags'
 import { openPaneBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
+import { openPaneMeter } from './paneMeter'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { crewSignature, identityMark } from './crewAvatar'
@@ -62,6 +63,7 @@ import { toggleTimeline } from '../timelineActions'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
 import './paneCalm.css'
+import './paneMeter.css'
 import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
 import { PaneChat } from '../chat/paneChat'
@@ -172,7 +174,18 @@ export class PaneComponent {
       if (view) void restartTab(paneId, view.tabs.find((t) => t.active)?.id ?? view.pane.activeTabId)
     })
     this.info.addEventListener('click', (event) => {
-      if (!this.el.classList.contains('maximized') || (event.target as HTMLElement).closest('button')) return
+      const target = event.target as HTMLElement
+      if (target.closest('.info-model, .info-context, .info-tokens, .info-cost')) {
+        if (this.current) openPaneMeter(this.info, this.current.info, () => {
+          if (this.chatShown) this.chat.sendCommand('/compact')
+          else {
+            const tabId = this.current?.primaryTabId
+            if (tabId) typeCompact(tabId)
+          }
+        })
+        return
+      }
+      if (!this.el.classList.contains('maximized') || target.closest('button')) return
       toggleDetails(paneId)
     })
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)

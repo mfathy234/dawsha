@@ -1,0 +1,3 @@
+.pane-meter-popover { z-index: 120; min-width: 220px; max-width: min(340px, calc(100vw - 16px)); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.meter-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-4); }
+.meter-row > :last-child { text-align: end; }

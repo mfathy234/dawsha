@@ -27,6 +27,7 @@ export interface ChatHost {
   /** The last rows on the agent's screen. */
   screenTail(): string
   answer(steps: KeyStep[]): void
+  reviewChanges(): void
 }
 
 export interface ChatInput {
@@ -153,6 +154,12 @@ export class PaneChat {
     if (!this.box.disabled) this.box.focus()
   }
 
+  sendCommand(text: string): void {
+    if (!this.input || this.input.exited || this.phase === 'approval' || this.phase === 'menu') return
+    this.host.send(text)
+    this.feed.nudge()
+  }
+
   dispose(): void {
     this.strip.dispose()
     this.setWatch(false)
@@ -213,7 +220,8 @@ export class PaneChat {
         showTerminal: () => this.host.showTerminal(),
         continueIn: (to) => this.host.continueIn(to),
         dismissLimit: () => this.dismissLimit(),
-        answer: (answers) => this.answerAsk(answers)
+        answer: (answers) => this.answerAsk(answers),
+        reviewChanges: () => this.host.reviewChanges()
       }
     })
     this.strip.update(snapshot.background)
