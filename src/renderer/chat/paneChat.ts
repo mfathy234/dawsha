@@ -18,6 +18,7 @@ import { holdPending, isTracked, newPending, pendingLabel, releaseHeld, removeHe
 import { appendHistory, historyAt } from '../../shared/chatHistory'
 import { planAnswers, type AskAnswer, type KeyStep } from '../../shared/menuAnswer'
 import type { AskPrompt } from '../../shared/chatAsk'
+import { ChatComplete } from './chatComplete'
 
 export interface ChatHost {
   showTerminal(): void
@@ -83,8 +84,9 @@ export class PaneChat {
   private historyIndex = -1
   private historyDraft = ''
   private historySession = ''
+  private readonly completion: ChatComplete
 
-  constructor(private readonly host: ChatHost, private readonly permission: HTMLElement, private readonly popupOpen: () => boolean = () => false) {
+  constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
     this.thread = new ChatThread(() => this.render(true))
     this.feed = new ChatFeed(
       (snapshot) => {
@@ -94,6 +96,7 @@ export class PaneChat {
       () => this.el.offsetParent !== null
     )
     this.scroller.append(this.thread.el)
+    this.completion = new ChatComplete(this.box, () => this.input?.folder ?? '', () => this.input?.agent ?? 'claude')
     this.el = h(
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
@@ -101,11 +104,13 @@ export class PaneChat {
       this.strip.el,
       h('div', { class: 'chat-composer' }, this.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.sendButton))
     )
+    this.el.querySelector('.chat-composer')?.insertBefore(this.completion.el, this.box.parentElement)
     this.box.addEventListener('keydown', (event) => this.onKey(event))
     this.box.addEventListener('input', () => {
       this.note.hidden = true
       this.updateSendButton()
       this.growBox()
+      void this.completion.refresh().catch((error) => console.error('Chat completion failed', error))
     })
     new ResizeObserver(() => this.input && this.updateComposer(this.input, this.phase)).observe(this.box)
     this.sendButton.addEventListener('click', () => this.phase === 'working' && this.box.value.trim() === '' ? this.host.interrupt() : this.submit())
@@ -331,6 +336,7 @@ export class PaneChat {
   }
 
   private onKey(event: KeyboardEvent): void {
+    if (this.completion.handleKey(event)) return
     if (this.handleHistoryKey(event)) return
     if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return
     event.preventDefault()
@@ -339,7 +345,7 @@ export class PaneChat {
 
   /** History keys stay isolated here so a composer popup can own them while open. */
   private handleHistoryKey(event: KeyboardEvent): boolean {
-    if (this.popupOpen()) return false
+    if (this.completion.isOpen()) return false
     if (event.key === 'Escape' && this.historyIndex >= 0) {
       event.preventDefault()
       event.stopPropagation()

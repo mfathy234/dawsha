@@ -139,6 +139,7 @@ export interface GridApi {
   /** Adds one folder to the repository's root .gitignore. */
   gitIgnoreAdd(request: IgnoreAddRequest): Promise<IgnoreAddResult>
   listResumable(agent: AgentKind, folder: string): Promise<ResumeEntry[]>
+  chatCommands(request: { agent: AgentKind; folder: string }): Promise<import('./chatComplete').CompletionItem[]>
   listAllResumable(query: ResumeQuery): Promise<ResumeSession[]>
   quickOpen(kind: QuickOpenKind, folder: string): Promise<void>
   findSolution(folder: string): Promise<string | null>

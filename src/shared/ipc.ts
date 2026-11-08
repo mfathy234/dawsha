@@ -36,6 +36,7 @@ export const IPC = {
   ptyExit: 'pty:exit',
   processActivityList: 'process-activity:list',
   skillsList: 'skills:list',
+  chatCommands: 'chat:commands',
   skillsOpen: 'skills:open',
   skillsExport: 'skills:export',
   skillsExportMany: 'skills:export-many',
