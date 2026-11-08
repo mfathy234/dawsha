@@ -60,6 +60,7 @@ import { detectPermissionPrompt, parsePermissionDetail, permissionPromptText, ty
 import { setStatePillSuffix, stateIcon, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
+import { openMergeBack, paneWorktree } from '../mergeBackActions'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
 import './paneCalm.css'
@@ -584,6 +585,8 @@ export class PaneComponent {
         if (label) label.textContent = paused ? 'Resume recording' : 'Pause recording'
       }, () => undefined)
     }
+    const worktree = paneWorktree(this.paneId)
+    const mergeItem = worktree ? [item('Merge back…', () => openMergeBack(this.paneId), ICONS.commit)] : []
     const closeItem = item('Close pane', () => closePane(this.paneId), ICONS.close)
     closeItem.classList.add('danger')
     const liveInfo = this.current?.agent === 'claude' && !store.state.bridge.installed
@@ -635,6 +638,7 @@ export class PaneComponent {
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Open and review'),
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
       changesItem,
+      ...mergeItem,
       ...liveInfo,
       h('div', { class: 'menu-separator', role: 'separator' }),
       closeItem

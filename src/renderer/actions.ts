@@ -17,6 +17,7 @@ import {
   type StatusInfo,
   type Settings,
   type KeptSession,
+  type PaneWorktree,
   type TabAgent
 } from '../shared/types'
 import { agentOf, AGENT_NAMES } from '../shared/agents'
@@ -241,6 +242,23 @@ export async function startSession(
   return (await openSession(projectId, agent, resumeId, chip, titleHint, kept, undefined, prompt, view))?.number ?? 0
 }
 
+export interface PresetStart {
+  projectId: string
+  agent: TabAgent
+  /** The worktree folder the session works in, when the preset made one. */
+  worktree?: PaneWorktree
+  prompt: string
+}
+
+/** Opens a preset's session. Agents take the first prompt as their start argument; a shell has it typed once it is up. */
+export async function startPresetSession(start: PresetStart): Promise<string | null> {
+  const prompt = start.prompt.trim() === '' ? undefined : start.prompt
+  const typed = start.agent === 'shell' && prompt ? `${prompt}
+` : undefined
+  const opened = await openSession(start.projectId, start.agent, undefined, false, undefined, undefined, start.worktree?.path, start.agent === 'shell' ? undefined : prompt, undefined, { typed, worktree: start.worktree })
+  return opened?.paneId ?? null
+}
+
 /** Starts a session in a given checkout of the project (its own folder when none) and returns the new pane's id. */
 export async function startSessionIn(projectId: string, folder?: string): Promise<string | null> {
   return (await openSession(projectId, undefined, undefined, false, undefined, undefined, folder))?.paneId ?? null
@@ -255,7 +273,8 @@ async function openSession(
   kept?: Pick<KeptSession, 'tag' | 'renamed'>,
   folder?: string,
   prompt?: string,
-  view?: ChatView
+  view?: ChatView,
+  extra: { typed?: string; worktree?: PaneWorktree } = {}
 ): Promise<{ number: number; paneId: string } | null> {
   const project = projectById(store.state, projectId)
   if (!project) return null
@@ -274,6 +293,7 @@ async function openSession(
     tabs: [tab],
     activeTabId: tab.id,
     ...(folder ? { folder } : {}),
+    ...(extra.worktree ? { worktree: extra.worktree } : {}),
     fontSize: clampFontSize(project.fontSize ?? DEFAULT_FONT_SIZE)
   }
   store.set((s) => ({
@@ -289,7 +309,8 @@ async function openSession(
   void refreshBranches()
   void refreshGitChanges()
   const number = store.state.panes.findIndex((p) => p.id === pane.id) + 1
-  void launch(pane.id, tab.id, resumeId !== undefined)
+  const launched = launch(pane.id, tab.id, resumeId !== undefined)
+  if (extra.typed) void launched.then(() => api.write(tab.id, extra.typed ?? ''))
   return { number, paneId: pane.id }
 }
 
@@ -1345,6 +1366,7 @@ export function buildPane(saved: SavedPane, project: Project): PaneState {
     fontSize: clampFontSize(saved.fontSize),
     folder: saved.folder,
     compare: saved.compare,
+    worktree: saved.worktree,
     pinned: saved.pinned === true ? true : undefined
   }
 }

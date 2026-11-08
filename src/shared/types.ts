@@ -52,6 +52,23 @@ export interface CompareLink {
   sides: CompareNames | null
 }
 
+/** A git worktree Dawsha made for one pane, so the pane can merge back into the checkout it came from. */
+export interface PaneWorktree {
+  repo: string
+  path: string
+  branch: string
+}
+
+/** A saved way to start a session: agent, project, an optional own worktree and an optional first prompt. */
+export interface SessionPreset {
+  id: string
+  name: string
+  agent: TabAgent
+  projectId: string
+  worktree: boolean
+  prompt: string
+}
+
 export interface SavedTab {
   agent: TabAgent
   label: string
@@ -71,6 +88,7 @@ export interface SavedPane {
   projectId: string
   folder?: string
   compare?: CompareLink
+  worktree?: PaneWorktree
   tabs: SavedTab[]
   activeIndex: number
   fontSize: number
@@ -189,6 +207,8 @@ export interface Settings {
   lead: LeadSettings
   /** The latest goals handed to the Lead, newest first. */
   crewGoals: CrewGoal[]
+  /** Saved ways to start a session; they name this PC's projects, so they are not exported. */
+  presets: SessionPreset[]
   legacyModelCacheCleared: boolean
 }
 

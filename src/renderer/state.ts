@@ -12,6 +12,7 @@ import type {
   AgentKind,
   AppInfo,
   CompareLink,
+  PaneWorktree,
   CodexSession,
   GeminiSession,
   GitChanges,
@@ -67,6 +68,7 @@ export interface PaneState {
   fontSize: number
   folder?: string
   compare?: CompareLink
+  worktree?: PaneWorktree
   pinned?: boolean
 }
 

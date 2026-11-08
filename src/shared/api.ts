@@ -7,6 +7,7 @@ import type { CliCommand, CliReply } from './cli'
 import type { FileRef } from './filePaths'
 import type { InstructionRead, InstructionWriteRequest, InstructionWriteResult } from './instructions'
 import type { WorktreeStatus } from './compare'
+import type { SessionWorktreeResult, MergeBackRequest, MergeOverviewResult, MergeResult, WorktreeCommitRequest, WorktreeRemoveRequest } from './mergeBack'
 import type { BranchListResult, DirtyReportResult, GitQuickRequest, GitQuickResult, SyncCounts } from './gitBranches'
 import type { IgnoreAddRequest, IgnoreAddResult, UntrackedFoldersResult } from './gitIgnore'
 import type { ProjectGroup } from './worktreeGroups'
@@ -231,6 +232,11 @@ export interface GridApi {
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>
   compareRemove(request: WorktreeRemoval): Promise<GitResult>
+  worktreeCreate(folder: string, short: string): Promise<SessionWorktreeResult>
+  mergeOverview(request: MergeBackRequest): Promise<MergeOverviewResult>
+  mergeCommit(request: WorktreeCommitRequest): Promise<GitCommitResult>
+  mergeInto(request: MergeBackRequest): Promise<MergeResult>
+  mergeRemove(request: WorktreeRemoveRequest): Promise<GitResult>
   listRecordings(): Promise<RecordingSummary[]>
   readRecording(id: string): Promise<string>
   recordingStats(): Promise<RecordingStats>

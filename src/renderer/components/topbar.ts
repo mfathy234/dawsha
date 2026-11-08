@@ -14,6 +14,8 @@ import { pillLabel, showUpdatePill } from '../../shared/updates'
 import { AGENTS, AGENT_NAMES, agentLabel } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
 import { openCompareDialog } from '../compareActions'
+import { startPreset } from '../presetActions'
+import { presetSummary } from '../../shared/sessionPresets'
 import { ICONS } from '../icons'
 import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
@@ -388,7 +390,25 @@ export class TopBarComponent {
       icon(ICONS.next),
       'Hand a job to an agent…'
     )
-    items.push(resume, compare, crewItem)
+    const presets = store.state.settings.presets.map((preset) =>
+      h(
+        'button',
+        {
+          class: 'menu-item',
+          type: 'button',
+          role: 'menuitem',
+          'data-preset': preset.id,
+          title: presetSummary(preset, store.state.settings.projects.find((project) => project.id === preset.projectId)?.name),
+          onClick: () => {
+            this.closeAgentMenu()
+            void startPreset(preset.id)
+          }
+        },
+        icon(ICONS.next),
+        `Start preset: ${preset.name}`
+      )
+    )
+    items.push(...presets, resume, compare, crewItem)
     this.agentMenu = h(
       'div',
       { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent' },

@@ -27,6 +27,9 @@ import { dirtyReport, untrackedFolders } from './gitDirty'
 import { addGitIgnore } from './gitIgnore'
 import type { IgnoreAddRequest } from '../shared/gitIgnore'
 import type { GitQuickRequest } from '../shared/gitBranches'
+import { commitWorktree, mergeBranch, mergeOverview, removeSessionWorktree } from './mergeBack'
+import { createSessionWorktree } from './sessionWorktree'
+import type { MergeBackRequest, WorktreeCommitRequest, WorktreeRemoveRequest } from '../shared/mergeBack'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
 import { createWatchRegistry } from './fileWatch'
@@ -208,6 +211,11 @@ export function registerIpc(
     whenKnown<T | typeof refusedGit>(settings.get().projects, folder, run, refusedGit)
   ipcMain.handle(IPC.gitStatus, (_event, folder: unknown) => gated(folder, repoStatus))
   ipcMain.handle(IPC.gitCommit, (_event, request: CommitRequest) => gated(request?.folder, () => commitFiles(request)))
+  ipcMain.handle(IPC.worktreeCreate, (_event, folder: unknown, short: unknown) => gated(folder, (root) => createSessionWorktree(root, short)))
+  ipcMain.handle(IPC.mergeOverview, (_event, request: MergeBackRequest) => gated(request?.repo, () => mergeOverview(request)))
+  ipcMain.handle(IPC.mergeCommit, (_event, request: WorktreeCommitRequest) => gated(request?.repo, () => commitWorktree(request)))
+  ipcMain.handle(IPC.mergeInto, (_event, request: MergeBackRequest) => gated(request?.repo, () => mergeBranch(request)))
+  ipcMain.handle(IPC.mergeRemove, (_event, request: WorktreeRemoveRequest) => gated(request?.repo, () => removeSessionWorktree(request)))
   ipcMain.handle(IPC.gitPush, (_event, folder: unknown) => gated(folder, pushBranch))
   ipcMain.handle(IPC.gitDiscard, (_event, request: DiscardRequest) => gated(request?.folder, () => discardFiles(request)))
   ipcMain.handle(IPC.gitDiff, (_event, folder: unknown, path: unknown) => gated(folder, (root) => fileDiff(root, path)))

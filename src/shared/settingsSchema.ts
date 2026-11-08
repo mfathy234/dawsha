@@ -3,6 +3,7 @@ import { checkoutTabsKey } from './filesWorkspace'
 import { defaultLayout, parseLayout } from './filesLayout'
 import { sanitizeRunOverrides } from './runCommands'
 import { isAgent } from './agents'
+import { sanitizePresets } from './sessionPresets'
 import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews, sanitizeSessionViews } from './chatLog'
 import { isSessionsLayout } from './board'
 import { DEFAULT_GRID_STYLE, isGridStyle } from './gridStyle'
@@ -29,6 +30,7 @@ import {
   type CompareNames,
   type FullAccess,
   type KeptSession,
+  type PaneWorktree,
   type ProjectTask,
   type Project,
   type RemoteAccessSettings,
@@ -116,6 +118,7 @@ export const defaultSettings = (): Settings => ({
   crewRuns: [],
   lead: defaultLead(),
   crewGoals: [],
+  presets: [],
   legacyModelCacheCleared: false
 })
 
@@ -202,6 +205,14 @@ function sanitizeCompare(value: unknown): CompareLink | null {
   return { id, slot: value.slot, prompt, repo, sides: sanitizeSides(value.sides) }
 }
 
+function sanitizeWorktree(value: unknown): PaneWorktree | null {
+  if (!isRecord(value)) return null
+  const repo = asString(value.repo)
+  const path = asString(value.path)
+  const branch = asString(value.branch)
+  return repo && path && branch ? { repo, path, branch } : null
+}
+
 function sanitizePane(item: unknown): SavedPane | null {
   if (!isRecord(item)) return null
   const projectId = asString(item.projectId)
@@ -217,6 +228,8 @@ function sanitizePane(item: unknown): SavedPane | null {
   if (folder) pane.folder = folder
   const compare = sanitizeCompare(item.compare)
   if (compare) pane.compare = compare
+  const worktree = sanitizeWorktree(item.worktree)
+  if (worktree) pane.worktree = worktree
   if (item.pinned === true) pane.pinned = true
   return pane
 }
@@ -423,6 +436,7 @@ export function migrateSettings(raw: unknown): Settings {
     crewRuns: sanitizeCrewRuns(raw.crewRuns),
     lead: sanitizeLead(raw.lead),
     crewGoals: sanitizeGoals(raw.crewGoals),
+    presets: sanitizePresets(raw.presets, new Set(projects.map((p) => p.id))),
     legacyModelCacheCleared: raw.legacyModelCacheCleared === true
   }
 }
