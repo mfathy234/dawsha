@@ -89,5 +89,19 @@ export const CHAT_TEXT = {
   backgroundNoResult: 'No report was recorded.',
   turnSummary: 'Turn changes',
   turnChanged: (count: number): string => `Changed ${count} file${count === 1 ? '' : 's'}`,
-  reviewChanges: 'Review changes'
+  reviewChanges: 'Review changes',
+  bellOff: 'Tell me when this is done',
+  bellOn: "You'll be told when this is done. Click to cancel.",
+  findLabel: 'Find in chat',
+  findPlaceholder: 'Find',
+  findPrevious: 'Previous match (Shift+Enter)',
+  findNext: 'Next match (Enter)',
+  findClose: 'Close find (Esc)',
+  savedGroup: 'Saved',
+  commandsGroup: 'Commands',
+  saveEmpty: 'Type the prompt first, then put /save in front of it.',
+  saveTitle: 'Save prompt',
+  saveName: 'Name',
+  saveConfirm: 'Save',
+  saved: (name: string): string => `Saved "${name}". Find it under / in any chat.`
 } as const

@@ -19,6 +19,9 @@ import { appendHistory, historyAt } from '../../shared/chatHistory'
 import { planAnswers, type AskAnswer, type KeyStep } from '../../shared/menuAnswer'
 import type { AskPrompt } from '../../shared/chatAsk'
 import { ChatComplete } from './chatComplete'
+import { ChatFind } from './chatFind'
+import { ChatWatches } from './chatWatches'
+import { doneMessage, watchableMessageId } from '../../shared/chatNotify'
 
 export interface ChatHost {
   showTerminal(): void
@@ -29,6 +32,8 @@ export interface ChatHost {
   screenTail(): string
   answer(steps: KeyStep[]): void
   reviewChanges(): void
+  /** A desktop notification that opens this pane when clicked. */
+  notify(title: string, body: string): void
 }
 
 export interface ChatInput {
@@ -87,6 +92,8 @@ export class PaneChat {
   private historyDraft = ''
   private historySession = ''
   private readonly completion: ChatComplete
+  private readonly find: ChatFind
+  private readonly watches: ChatWatches
 
   constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
     this.thread = new ChatThread(() => this.render(true))
@@ -98,11 +105,13 @@ export class PaneChat {
       () => this.el.offsetParent !== null
     )
     this.scroller.append(this.thread.el)
-    this.completion = new ChatComplete(this.box, () => this.input?.folder ?? '', () => this.input?.agent ?? 'claude')
+    this.completion = new ChatComplete(this.box, () => this.input?.folder ?? '', () => this.input?.agent ?? 'claude', () => store.state.settings.savedPrompts)
+    this.find = new ChatFind({ thread: this.thread, items: () => this.snapshot.items, closed: () => this.focusComposer() })
+    this.watches = new ChatWatches(() => this.phase, (ids) => this.announce(ids))
     this.el = h(
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
-      h('div', { class: 'chat-feedwrap' }, this.scroller, this.jump),
+      h('div', { class: 'chat-feedwrap' }, this.scroller, this.jump, this.find.el),
       this.strip.el,
       h('div', { class: 'chat-composer' }, this.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.sendButton))
     )
@@ -124,6 +133,12 @@ export class PaneChat {
     this.box.addEventListener('paste', (event) => this.onPaste(event))
     this.watchDrops()
     this.el.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        event.stopPropagation()
+        this.find.open()
+        return
+      }
       if (event.key === 'Escape' && this.phase === 'working') {
         event.preventDefault()
         this.host.interrupt()
@@ -168,6 +183,7 @@ export class PaneChat {
   }
 
   dispose(): void {
+    this.watches.dispose()
     this.strip.dispose()
     this.setWatch(false)
     this.feed.stop()
@@ -202,7 +218,7 @@ export class PaneChat {
     const views = this.pendingViews()
     const last = snapshot.items[snapshot.items.length - 1]
     if (last?.kind !== 'notice') this.limitDismissed = false
-    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', input.elapsed ?? '', views])
+    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', input.elapsed ?? '', views, [...this.watches.watched]])
     if (!force && snapshot === this.renderedSnapshot && key === this.renderKey) return
     this.renderedSnapshot = snapshot
     this.renderKey = key
@@ -222,6 +238,7 @@ export class PaneChat {
       starting: this.starting,
       elapsed: input.elapsed,
       background: snapshot.background,
+      bell: { messageId: watchableMessageId(snapshot.items, phase), watched: this.watches.watched, toggle: (id) => this.toggleWatch(id) },
       fileScope: input.tabId,
       session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
@@ -233,13 +250,33 @@ export class PaneChat {
       }
     })
     this.strip.update(snapshot.background)
+    this.find.sync()
+    this.watches.check()
     this.updateComposer(input, phase)
-    if (!force && (this.stickBottom || wasNear)) this.toBottom()
+    if (!force && (this.stickBottom || wasNear) && !this.find.searching) this.toBottom()
     this.updateJump()
     if (!force) this.stickBottom = false
   }
 
   private renderedSnapshot: FeedSnapshot | null = null
+
+  private toggleWatch(id: string): void {
+    this.watches.toggle(id)
+    this.render(true)
+  }
+
+  /** The turns someone asked about have finished: tell them, even if Dawsha is in the background. */
+  private announce(ids: readonly string[]): void {
+    const input = this.input
+    for (const id of ids) {
+      const item = this.snapshot.items.find((entry) => entry.id === id)
+      const text = item?.kind === 'message' ? item.text : ''
+      if (!input) continue
+      const message = doneMessage(AGENT_NAMES[input.agent], input.project, text)
+      this.host.notify(message.title, message.body)
+    }
+    this.render(true)
+  }
 
   /** Opens the launch row's report and brings it into view. False when the thread no longer holds that row. */
   private revealLaunch(launchId: string): boolean {

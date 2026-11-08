@@ -22,6 +22,10 @@ import { linkifyChat, openFileButton } from './chatLinks'
 import type { ChatSessionRef } from './chatImageCache'
 import { turnSummaries } from '../../shared/turnSummary'
 import { turnSummaryCard } from './chatTurnSummary'
+import { groupMembership, groupTools, type ToolGroup } from '../../shared/chatGroups'
+import { groupRow, workedByReply, workedLine } from './chatGroupRow'
+import { bellButton, type BellView } from './chatBell'
+import { workedLabel } from '../../shared/chatTiming'
 
 export interface ThreadActions {
   showTerminal(): void
@@ -60,6 +64,8 @@ export interface ThreadContext {
   fileScope: string | null
   /** The session's background work, so the row that launched each can say whether it still runs. */
   background?: readonly BackgroundTask[]
+  /** The bell on a running turn's user message. */
+  bell?: BellView
   actions: ThreadActions
 }
 
@@ -87,6 +93,8 @@ export class ChatThread {
   readonly el = h('div', { class: 'chat-thread' })
   private readonly open = new Set<string>()
   private card: { id: string; card: AskCard } | null = null
+  /** Which group each folded tool sits in, as of the last draw. */
+  membership: ReadonlyMap<string, string> = new Map()
 
   constructor(private readonly rerender: () => void) {}
 
@@ -123,7 +131,7 @@ export class ChatThread {
   private items(items: readonly ChatItem[], ctx: ThreadContext): Node[] {
     const out: Node[] = []
     const summaries = new Map(turnSummaries(items).map((summary) => [summary.messageId, summary]))
-    const positions = new Map(items.map((item, index) => [item.id, index]))
+    const timings = workedByReply(items)
     const lastUser = items.reduce((last, item, index) => item.kind === 'message' && item.role === 'user' ? index : last, -1)
     let tools: HTMLElement[] = []
     const flush = (): void => {
@@ -132,24 +140,60 @@ export class ChatThread {
       tools = []
     }
     const starts = new Set(dayStarts(items.map((item) => item.at)))
+    const entries = groupTools(items, starts)
+    this.membership = groupMembership(entries)
+    const live = ctx.phase === 'working' || ctx.phase === 'approval' || ctx.phase === 'menu'
     const now = Date.now()
-    items.forEach((item, index) => {
-      if (starts.has(index) && item.at !== undefined) {
+    let index = 0
+    for (const entry of entries) {
+      const first = entry.type === 'group' ? entry.group.tools[0] : entry.item
+      if (starts.has(index) && first.at !== undefined) {
         flush()
-        out.push(h('div', { class: 'chat-day', role: 'separator' }, h('span', {}, dayLabel(item.at, now))))
+        out.push(h('div', { class: 'chat-day', role: 'separator' }, h('span', {}, dayLabel(first.at, now))))
       }
+      if (entry.type === 'group') {
+        tools.push(...this.group(entry.group, live, ctx))
+        index += entry.group.tools.length
+        continue
+      }
+      const item = entry.item
+      index += 1
       if (item.kind === 'tool') {
-        tools.push(...this.tool(item, ctx.phase === 'working' || ctx.phase === 'approval' || ctx.phase === 'menu', ctx))
-        return
+        tools.push(...this.tool(item, live, ctx))
+        continue
       }
       flush()
-      out.push(item.kind === 'message' ? this.message(item, ctx) : this.notice(item, index === items.length - 1, ctx))
-      const summary = item.kind === 'message' && item.role === 'agent' ? summaries.get(item.id) : undefined
-      const activeTurn = summary && positions.get(summary.messageId)! > lastUser
-      if (summary && !(activeTurn && ctx.phase === 'working') && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges))
-    })
+      out.push(item.kind === 'message' ? this.message(item, ctx) : this.notice(item, index === items.length, ctx))
+      if (item.kind !== 'message' || item.role !== 'agent') continue
+      const finished = !(index - 1 > lastUser && ctx.phase === 'working')
+      const worked = finished && timings.has(item.id) ? workedLabel(timings.get(item.id)!) : undefined
+      const summary = summaries.get(item.id)
+      if (summary && finished && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges, worked))
+      else if (worked) out.push(workedLine(timings.get(item.id)!))
+    }
     flush()
     return out
+  }
+
+  private group(group: ToolGroup, live: boolean, ctx: ThreadContext): HTMLElement[] {
+    const opened = this.open.has(`g:${group.id}`)
+    return groupRow(group, opened, opened ? group.tools.flatMap((tool) => this.tool(tool, live, ctx)) : [], (key) => this.flip(key))
+  }
+
+  /** Opens folds from outside (find in chat). Returns the keys that were closed before. */
+  openKeys(keys: readonly string[]): string[] {
+    const added = keys.filter((key) => !this.open.has(key))
+    if (added.length === 0) return []
+    added.forEach((key) => this.open.add(key))
+    this.rerender()
+    return added
+  }
+
+  closeKeys(keys: readonly string[]): void {
+    const present = keys.filter((key) => this.open.has(key))
+    if (present.length === 0) return
+    present.forEach((key) => this.open.delete(key))
+    this.rerender()
   }
 
   private message(item: ChatMessage, ctx: ThreadContext): HTMLElement {
@@ -162,6 +206,8 @@ export class ChatThread {
     if (pictures) body.append(pictures)
     if (item.truncated) body.append(h('p', { class: 'chat-quiet' }, CHAT_TEXT.truncatedNote))
     if (item.text !== '') body.append(copyButton(() => item.text))
+    const bell = item.role === 'user' ? bellButton(item.id, ctx.bell) : null
+    if (bell) body.append(bell)
     if (item.at !== undefined) body.append(h('time', { class: 'chat-time', datetime: new Date(item.at).toISOString(), title: fullTimeLabel(item.at), 'data-time': timeLabel(item.at) }))
     return body
   }

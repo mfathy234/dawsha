@@ -1,12 +1,15 @@
 import { agentCommands } from '../../shared/agentCommands'
 import { completionToken, fileCompletionRows, rankCompletions, type CompletionItem, type CompletionToken } from '../../shared/chatComplete'
 import { fuzzyMatch } from '../../shared/palette'
+import { CHAT_TEXT } from '../../shared/chatStrings'
+import { savedCompletionRows, type SavedPrompt } from '../../shared/savedPrompts'
+import { saveFromBox } from './chatSaved'
 import { api } from '../api'
 import { h } from '../dom'
 import { fileIndex, recentFiles, type FileIndex } from '../files/fileIndex'
 import './chatComplete.css'
 
-interface Row { name: string; description: string; kind: string; path?: string; directory?: boolean }
+interface Row { name: string; description: string; kind: string; path?: string; directory?: boolean; saved?: 'prompt' | 'save'; id?: string }
 const rowsByIndex = new WeakMap<FileIndex, ReturnType<typeof fileCompletionRows>>()
 
 export class ChatComplete {
@@ -16,7 +19,7 @@ export class ChatComplete {
   private token: CompletionToken | null = null
   private generation = 0
 
-  constructor(private readonly box: HTMLTextAreaElement, private readonly folder: () => string, private readonly agent: () => 'claude' | 'codex' | 'gemini') {
+  constructor(private readonly box: HTMLTextAreaElement, private readonly folder: () => string, private readonly agent: () => 'claude' | 'codex' | 'gemini', private readonly prompts: () => readonly SavedPrompt[] = () => []) {
     box.addEventListener('blur', () => window.setTimeout(() => this.close(), 0))
   }
 
@@ -32,7 +35,8 @@ export class ChatComplete {
       const custom = await api.chatCommands({ agent: this.agent(), folder: this.folder() })
       if (generation !== this.generation) return
       const commands: CompletionItem[] = [...agentCommands(this.agent()).map((item) => ({ ...item, kind: 'built-in' as const })), ...custom]
-      this.rows = rankCompletions(commands, token.query).map((item) => ({ ...item, kind: item.kind ?? 'built-in' }))
+      const saved = savedCompletionRows(this.prompts(), token.query).map((row): Row => ({ name: row.name, description: row.description, kind: '', saved: row.kind === 'save' ? 'save' : 'prompt', id: row.id }))
+      this.rows = [...saved, ...rankCompletions(commands, token.query).map((item) => ({ ...item, kind: item.kind ?? 'built-in' }))]
     } else {
       const index = await fileIndex(this.folder())
       if (generation !== this.generation) return
@@ -63,11 +67,20 @@ export class ChatComplete {
   private render(token: CompletionToken): void {
     if (this.rows.length === 0) return this.close()
     this.el.hidden = false
-    this.el.replaceChildren(...this.rows.map((row, index) => h('div', {
+    const grouped = this.rows.some((row) => row.saved)
+    this.el.replaceChildren(...this.rows.flatMap((row, index) => [...this.heading(row, index, grouped), h('div', {
       class: `chat-complete-row${index === this.selected ? ' selected' : ''}`, role: 'option', 'aria-selected': String(index === this.selected),
       onMousedown: (event: Event) => event.preventDefault(), onClick: () => { this.selected = index; this.pick() }
-    }, h('span', { class: 'chat-complete-name' }, ...this.marked(row.kind === 'file' && row.path ? row.path.slice(row.path.lastIndexOf('/') + 1) : row.name, token.query)), h('span', { class: 'chat-complete-description' }, row.description), ...(token.kind === 'command' ? [h('span', { class: 'chat-complete-kind' }, row.kind)] : []))))
+    }, h('span', { class: 'chat-complete-name' }, ...this.marked(row.kind === 'file' && row.path ? row.path.slice(row.path.lastIndexOf('/') + 1) : row.name, token.query)), h('span', { class: 'chat-complete-description' }, row.description), ...(token.kind === 'command' && row.kind ? [h('span', { class: 'chat-complete-kind' }, row.kind)] : []))]))
     this.el.querySelector('.chat-complete-row.selected')?.scrollIntoView({ block: 'nearest' })
+  }
+
+  /** With saved prompts in the list, the first row of each part gets a small heading. */
+  private heading(row: Row, index: number, grouped: boolean): HTMLElement[] {
+    if (!grouped) return []
+    const startsPart = index === 0 || Boolean(this.rows[index - 1].saved) !== Boolean(row.saved)
+    if (!startsPart) return []
+    return [h('div', { class: 'chat-complete-group', role: 'presentation' }, row.saved ? CHAT_TEXT.savedGroup : CHAT_TEXT.commandsGroup)]
   }
 
   private marked(name: string, query: string): Node[] {
@@ -79,11 +92,26 @@ export class ChatComplete {
     const row = this.rows[this.selected]
     const token = this.token
     if (!row || !token) return
+    if (row.saved) return this.pickSaved(row, token)
     const command = row.name.startsWith('/') ? row.name : `/${row.name}`
     const insert = token.kind === 'command' ? `${command} ` : row.directory ? `@${row.path}` : `@${row.path} `
     this.box.setRangeText(insert, token.start, token.end, 'end')
     this.box.dispatchEvent(new Event('input', { bubbles: true }))
     if (row.directory) void this.refresh()
     else this.close()
+  }
+
+  /** A saved prompt replaces the typed command with its text; the save row hands the box to the save flow. */
+  private pickSaved(row: Row, token: CompletionToken): void {
+    if (row.saved === 'save') {
+      this.close()
+      void saveFromBox(this.box, token)
+      return
+    }
+    const prompt = this.prompts().find((entry) => entry.id === row.id)
+    if (!prompt) return
+    this.box.setRangeText(prompt.text, token.start, token.end, 'end')
+    this.box.dispatchEvent(new Event('input', { bubbles: true }))
+    this.close()
   }
 }

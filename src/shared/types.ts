@@ -144,6 +144,8 @@ export interface Settings {
   sessionViews: SessionViews
   /** The view each session was last left in, by agent and session id, so a resume opens the same way. */
   chatViews: Record<string, ChatView>
+  /** Prompts the person named and kept, offered first in the chat's / list. */
+  savedPrompts: import('./savedPrompts').SavedPrompt[]
   colorSessionsByTag: boolean
   sidebarWidth: number
   othersCollapsed: boolean

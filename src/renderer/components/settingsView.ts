@@ -60,6 +60,7 @@ import { setDefaultView } from '../chat/chatActions'
 import { ViewSwitch } from '../chat/viewSwitch'
 import type { ChatAgent, SessionViews } from '../../shared/chatLog'
 import { agentMark } from './agentMark'
+import { savedPromptsRow } from './savedPromptsSettings'
 import '../chat/chat.css'
 import '../chat/chatChoice.css'
 
@@ -174,6 +175,7 @@ export class SettingsViewComponent {
       state.settings.paletteShortcut,
       state.settings.sidebarCollapsed,
       state.settings.sessionViews,
+      state.settings.savedPrompts,
       state.settings.fullAccess,
       state.settings.sessionInfo,
       state.settings.autoUpdateCheck,
@@ -435,6 +437,7 @@ export class SettingsViewComponent {
       ),
       row('Sessions', checkbox('dim-other-panes', "Dim sessions you're not working in", state.settings.dimOtherPanes, false, setDimOtherPanes), h('p', { class: 'hint' }, 'Keep the focused session clear while the others stay visible.')),
       row('Open sessions as', null, this.sessionViewRows(state.settings.sessionViews), h('p', { class: 'hint' }, 'Gemini and shells always open as terminals. New session can override it, and each session remembers its own choice.')),
+      savedPromptsRow(state.settings.savedPrompts),
       row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag), h('p', { class: 'hint' }, 'Use a tag colour on each session pane.')),
       row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),
