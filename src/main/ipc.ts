@@ -20,7 +20,7 @@ import { existingFiles, openFile, resolveFile } from './fileOpen'
 import { projectFolder, readInstruction, writeInstruction } from './instructionFiles'
 import { isInstructionName, type InstructionWriteRequest } from '../shared/instructions'
 import type { FileRef } from '../shared/filePaths'
-import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
+import { createWorktree, createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
 import { changedFiles, currentBranch, gitChanges, gitSync } from './git'
 import { listBranches, runGitQuick } from './gitQuick'
 import { dirtyReport, untrackedFolders } from './gitDirty'
@@ -417,6 +417,7 @@ export function registerIpc(
   ipcMain.handle(IPC.compareProbe, (_event, folder: string) => probeRepo(folder))
   ipcMain.handle(IPC.compareCreate, (_event, folder: string, short: string) => createWorktrees(folder, short))
   ipcMain.handle(IPC.compareStatus, (_event, repo: string, path: string, branch: string) => worktreeStatus(repo, path, branch))
+  ipcMain.handle(IPC.worktreeCreate, (_event, folder: string, short: string) => createWorktree(folder, short))
   ipcMain.handle(IPC.compareRemove, (_event, request: WorktreeRemoval) => removeWorktree(request))
   ipcMain.handle(IPC.clipboardRead, () => readClipboardContent())
   ipcMain.handle(IPC.clipboardWrite, (_event, text: string) => clipboard.writeText(String(text)))

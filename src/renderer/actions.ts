@@ -241,6 +241,11 @@ export async function startSession(
   return (await openSession(projectId, agent, resumeId, chip, titleHint, kept, undefined, prompt, view))?.number ?? 0
 }
 
+/** Starts an agent on a prompt without taking over the screen or the focus; returns the new pane's id. */
+export async function startPromptSession(projectId: string, agent: AgentKind, prompt: string, folder?: string): Promise<string | null> {
+  return (await openSession(projectId, agent, undefined, false, undefined, undefined, folder, prompt, undefined, true))?.paneId ?? null
+}
+
 /** Starts a session in a given checkout of the project (its own folder when none) and returns the new pane's id. */
 export async function startSessionIn(projectId: string, folder?: string): Promise<string | null> {
   return (await openSession(projectId, undefined, undefined, false, undefined, undefined, folder))?.paneId ?? null
@@ -255,7 +260,8 @@ async function openSession(
   kept?: Pick<KeptSession, 'tag' | 'renamed'>,
   folder?: string,
   prompt?: string,
-  view?: ChatView
+  view?: ChatView,
+  quiet = false
 ): Promise<{ number: number; paneId: string } | null> {
   const project = projectById(store.state, projectId)
   if (!project) return null
@@ -279,9 +285,9 @@ async function openSession(
   store.set((s) => ({
     ...s,
     largePaneId: largeOf(s), panes: [...s.panes, pane],
-    focusedId: pane.id,
-    maximizedId: s.maximizedId ? pane.id : null,
-    view: 'grid',
+    focusedId: quiet ? s.focusedId : pane.id,
+    maximizedId: quiet || !s.maximizedId ? s.maximizedId : pane.id,
+    view: quiet ? s.view : 'grid',
     quickPickOpen: false,
     sidebarOverride: null
   }))

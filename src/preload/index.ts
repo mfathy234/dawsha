@@ -185,6 +185,7 @@ const api: GridApi = {
   compareProbe: (folder) => ipcRenderer.invoke(IPC.compareProbe, folder),
   compareCreate: (folder, short) => ipcRenderer.invoke(IPC.compareCreate, folder, short),
   compareStatus: (repo, path, branch) => ipcRenderer.invoke(IPC.compareStatus, repo, path, branch),
+  worktreeCreate: (folder, short) => ipcRenderer.invoke(IPC.worktreeCreate, folder, short),
   compareRemove: (request) => ipcRenderer.invoke(IPC.compareRemove, request),
   listRecordings: () => ipcRenderer.invoke(IPC.recordingsList),
   readRecording: (id) => ipcRenderer.invoke(IPC.recordingsRead, id),

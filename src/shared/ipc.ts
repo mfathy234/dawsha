@@ -144,6 +144,7 @@ export const IPC = {
   compareProbe: 'compare:probe',
   compareCreate: 'compare:create',
   compareStatus: 'compare:status',
+  worktreeCreate: 'worktree:create',
   compareRemove: 'compare:remove',
   recordingsList: 'recordings:list',
   recordingsRead: 'recordings:read',

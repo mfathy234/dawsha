@@ -50,6 +50,11 @@ export const EXCLUDED_KEYS = [
   // Keyed by this PC's project ids and branches, like closed sessions.
   'ticketNotes',
   'tasks',
+  // Schedules and queued prompts refer to this PC's project folders and sessions.
+  'scheduledRuns',
+  'queuedPrompts',
+  'queueConcurrency',
+  'queueAgent',
   'lastSeenVersion',
   'onboardingDismissed',
   'tourSeen',

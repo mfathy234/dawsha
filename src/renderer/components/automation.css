@@ -1,0 +1,7 @@
+.queue-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); margin: var(--s-3) 0; }
+.queue-setting { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--muted); font-size: var(--fs-ui); }
+.queue-setting .select-menu { width: 120px; }
+.schedule-when { display: flex; flex-direction: column; gap: var(--sp-3); }
+.schedule-when[hidden] { display: none; }
+.schedule-days { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.work-view .work-ticket-head .btn.small { padding: var(--s-1) var(--s-2); }
