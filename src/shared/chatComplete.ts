@@ -1,3 +1,4 @@
+import { frontMatterDescription } from './frontMatter'
 import { fuzzyMatch } from './palette'
 import { isAgent } from './agents'
 import type { AgentKind } from './types'
@@ -40,7 +41,7 @@ export function fileCompletionRows(files: readonly string[]): FileCompletionItem
 
 export function parseCommandFile(text: string): string {
   const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
-  const description = front && /^description:\s*(.+)$/mi.exec(front[1])?.[1]
+  const description = front ? frontMatterDescription(front[1]) : undefined
   const line = description ?? text.split(/\r?\n/).find((entry) => entry.trim() && !entry.startsWith('#') && !entry.startsWith('---'))
   return (line ?? '').trim().replace(/^['"]|['"]$/g, '').slice(0, 180)
 }
