@@ -995,6 +995,11 @@ export function setShowRecap(showRecap: boolean): void {
   void saveSettings({ showRecap })
 }
 
+export function setSleepHiddenTerminals(sleepHiddenTerminals: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, sleepHiddenTerminals } }))
+  void saveSettings({ sleepHiddenTerminals })
+}
+
 export function setDimOtherPanes(dimOtherPanes: boolean): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, dimOtherPanes } }))
   void saveSettings({ dimOtherPanes })

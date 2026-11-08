@@ -2,6 +2,7 @@ import type { PaneInfo } from '../derive'
 import { formatCost, formatPercent } from '../../shared/statusLine'
 import { formatTokens } from '../../shared/usage'
 import { h } from '../dom'
+import { formatMemory } from '../../shared/paneMemory'
 
 function row(label: string, value: string): HTMLElement {
   return h('div', { class: 'meter-row' }, h('span', { class: 'chat-quiet' }, label), h('span', {}, value))
@@ -23,6 +24,7 @@ export function openPaneMeter(anchor: HTMLElement, info: PaneInfo, compact: () =
     rows.push(row('Context used', `${formatPercent(info.contextPercent)}${amount}`))
   }
   if (info.tokens !== null) rows.push(row('Tokens', formatTokens(info.tokens)))
+  if (info.memoryBytes !== null) rows.push(row('Session memory', formatMemory(info.memoryBytes)))
   if (info.agent === 'claude' && info.costUsd !== null) rows.push(row('Cost', formatCost(info.costUsd)))
   for (const limit of info.limits) {
     const reset = limit.resetsAt === null ? '' : ` · resets ${new Date(limit.resetsAt).toLocaleString()}`

@@ -16,6 +16,7 @@ import {
   setDimOtherPanes,
   setFocusMovesSelected,
   setShowRecap,
+  setSleepHiddenTerminals,
   setSidebarCollapsed,
   showSettingsSection,
   showView,
@@ -179,6 +180,7 @@ export class SettingsViewComponent {
       state.settings.autoUpdateCheck,
       state.settings.highlights,
       state.settings.recordings,
+      state.settings.sleepHiddenTerminals,
       this.remoteAccess,
       this.remoteError,
       this.remoteBusy,
@@ -437,6 +439,7 @@ export class SettingsViewComponent {
       row('Open sessions as', null, this.sessionViewRows(state.settings.sessionViews), h('p', { class: 'hint' }, 'Gemini and shells always open as terminals. New session can override it, and each session remembers its own choice.')),
       row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag), h('p', { class: 'hint' }, 'Use a tag colour on each session pane.')),
       row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
+      row('Terminal rendering', checkbox('sleep-hidden-terminals', 'Sleep hidden terminals', state.settings.sleepHiddenTerminals, false, setSleepHiddenTerminals), h('p', { class: 'hint' }, 'Release WebGL rendering after a hidden terminal has been out of view for 10 minutes.')),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),
       row(
         'Getting started',

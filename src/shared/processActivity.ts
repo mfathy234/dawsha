@@ -5,6 +5,7 @@ export interface ProcessActivity {
   parentPid: number | null
   startedAt: number | null
   alive: boolean
+  memoryBytes: number
 }
 
 export interface ProcessRoot {

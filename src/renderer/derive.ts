@@ -4,6 +4,7 @@ import type { Attention } from '../shared/attention'
 import { matchSessions, sessionDisplayName, sessionStatus, sessionWaiting } from '../shared/sessionMatch'
 import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsFeed'
 import type { ProcessActivity } from '../shared/processActivity'
+import { sumProcessMemory } from '../shared/paneMemory'
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { formatDuration, sessionUsage } from '../shared/sessionCost'
 import { autoTag, autoTagSource, type SessionTag } from '../shared/sessionTags'
@@ -40,6 +41,7 @@ export interface PaneInfo {
   changes: GitChanges | null
   ops: PaneOpsInfo | null
   geminiTools: { name: string; at: number }[]
+  memoryBytes: number | null
 }
 
 const LIMIT_FRESH_MS = 30 * 60_000
@@ -286,7 +288,8 @@ function baseInfoFor(
   opsLive: boolean
 ): PaneInfo {
   const changes = folder ? (state.gitChanges[folder] ?? null) : null
-  const empty: PaneInfo = { agent: tab.agent, model: null, contextPercent: null, contextTokens: null, contextWindow: null, limits: [], limitsAt: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [] }
+  const memoryBytes = sumProcessMemory((state.processActivity[tab.id] ?? []).filter((process) => process.alive).map((process) => ({ tabId: tab.id, bytes: process.memoryBytes })))[tab.id] ?? null
+  const empty: PaneInfo = { agent: tab.agent, model: null, contextPercent: null, contextTokens: null, contextWindow: null, limits: [], limitsAt: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [], memoryBytes }
   if (tab.agent === 'claude') return claudeInfo(state, tab, matches, empty, snapshot, opsLive)
   if (tab.agent === 'codex') {
     const session = matches.codex.get(tab.id)

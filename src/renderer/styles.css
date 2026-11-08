@@ -5718,7 +5718,8 @@ button.info-review { height: 20px; padding: 0 var(--sp-1); font-size: var(--fs-1
 @container pane-foot (max-width: 980px) {
   .pane-foot .info-reset,
   .pane-foot .info-age,
-  .pane-foot .info-tokens {
+  .pane-foot .info-tokens,
+  .pane-foot .info-memory {
     display: none;
   }
 }
