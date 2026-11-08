@@ -7,8 +7,8 @@ import { unrecognised, type ChatLineReader } from './reader'
 import type { ImageEntry } from './imageTable'
 import { LogTail } from './tail'
 
-function createReader(agent: TabAgent): ChatLineReader {
-  return agent === 'codex' ? new CodexChatReader() : new ClaudeChatReader()
+function createReader(agent: TabAgent, folder?: string): ChatLineReader {
+  return agent === 'codex' ? new CodexChatReader(folder) : new ClaudeChatReader(folder)
 }
 
 /** The state of one session's log: the file position and what has been read from it. */
@@ -17,8 +17,8 @@ export class ChatSession {
   private readonly tail: LogTail
   private counter = 0
 
-  constructor(private readonly agent: TabAgent, maxBytes?: number) {
-    this.reader = createReader(agent)
+  constructor(private readonly agent: TabAgent, maxBytes?: number, private readonly folder?: string) {
+    this.reader = createReader(agent, folder)
     this.tail = new LogTail(maxBytes)
   }
 
@@ -29,7 +29,7 @@ export class ChatSession {
   /** Reads what the file gained; true when the thread changed. */
   async refresh(path: string): Promise<boolean> {
     const read = await this.tail.read(path)
-    if (read.reset) this.reader = createReader(this.agent)
+    if (read.reset) this.reader = createReader(this.agent, this.folder)
     if (read.text !== '') this.reader.feed(read.text)
     const changed = read.reset || read.text !== ''
     if (changed) this.counter += 1

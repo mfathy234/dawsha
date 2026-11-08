@@ -42,6 +42,8 @@ export interface ChatInput {
   exited: boolean
   status: 'starting' | 'running' | 'exited'
   startedAt: number
+  /** How long the session has been working, for the line under the thread. */
+  elapsed?: string
   /** The pane's terminal tab: file links in the thread resolve against its folder. */
   tabId: string
 }
@@ -200,7 +202,7 @@ export class PaneChat {
     const views = this.pendingViews()
     const last = snapshot.items[snapshot.items.length - 1]
     if (last?.kind !== 'notice') this.limitDismissed = false
-    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', views])
+    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', input.elapsed ?? '', views])
     if (!force && snapshot === this.renderedSnapshot && key === this.renderKey) return
     this.renderedSnapshot = snapshot
     this.renderKey = key
@@ -218,6 +220,7 @@ export class PaneChat {
       ask: this.ask,
       pending: views,
       starting: this.starting,
+      elapsed: input.elapsed,
       background: snapshot.background,
       fileScope: input.tabId,
       session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,

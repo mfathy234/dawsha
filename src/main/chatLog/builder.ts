@@ -21,7 +21,7 @@ export interface ToolResult {
 
 function noteFor(tool: ChatTool, output: string, failed: boolean | undefined): string | undefined {
   if (tool.verb !== 'Ran') return failed ? 'failed' : tool.note
-  if (isTestCommand(tool.target)) {
+  if (isTestCommand(tool.command ?? tool.target)) {
     const counts = parseTestCounts(output)
     if (counts) return testSummary(counts, failed === undefined ? undefined : !failed)
   }
@@ -106,6 +106,8 @@ export class ChatBuilder {
       activity: shape.kind,
       verb: shape.verb,
       target: shape.target,
+      ...(shape.command ? { command: shape.command } : {}),
+      ...(shape.described ? { described: true } : {}),
       added: shape.added,
       removed: shape.removed,
       output,

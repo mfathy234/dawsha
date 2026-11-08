@@ -2,6 +2,7 @@
 export const CHAT_TEXT = {
   reading: 'Reading the session…',
   working: 'Working',
+  workingFor: (elapsed?: string): string => (elapsed ? `Working · ${elapsed}` : 'Working'),
   interruptHint: 'Esc to interrupt',
   earlier: (count: number): string => `${count} earlier message${count === 1 ? '' : 's'} not shown`,
   emptyTitle: (agent: string): string => `Tell ${agent} what to do`,
@@ -88,6 +89,5 @@ export const CHAT_TEXT = {
   backgroundNoResult: 'No report was recorded.',
   turnSummary: 'Turn changes',
   turnChanged: (count: number): string => `Changed ${count} file${count === 1 ? '' : 's'}`,
-  reviewChanges: 'Review changes',
-  running: (verb: string, target: string): string => `${verb} ${target}`.trim()
+  reviewChanges: 'Review changes'
 } as const

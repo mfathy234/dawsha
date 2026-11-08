@@ -24,8 +24,16 @@
 .chat-scroll {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  /* The thread never scrolls sideways: wide things scroll inside their own block. */
+  overflow: hidden auto;
   padding-inline: var(--sp-6);
+}
+
+/* The app-wide scrollbar-color switches Chromium to its native scrollbar, arrow buttons included; auto here brings back the thin ::-webkit-scrollbar skin from styles.css. */
+.chat-scroll,
+.chat-toolout,
+.chat-table {
+  scrollbar-color: auto;
 }
 
 .chat-thread {
@@ -216,6 +224,7 @@
 
 .chat-tools {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1px;
   margin-top: calc(var(--sp-1) * -1);
 }
@@ -274,6 +283,14 @@
   font-size: var(--fs-1);
 }
 
+.chat-tool-desc {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
 .chat-tool bdi {
   min-width: 0;
   flex: 0 1 auto;
@@ -317,11 +334,16 @@
   color: var(--text-2);
 }
 
-.chat-working > span:last-child {
+.chat-working > span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chat-working .chat-hint {
+  color: var(--text-3);
+  font-size: var(--fs-1);
 }
 
 .chat-notice {
@@ -439,6 +461,12 @@
   line-height: 22px;
   resize: none;
   overflow: hidden;
+}
+
+/* The app-wide 32px minimum for text fields would leave the line riding high in a one-line box. */
+.chat-box .chat-input {
+  min-height: 0;
+  background: none;
 }
 
 .chat-input:focus-visible {

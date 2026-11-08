@@ -83,6 +83,10 @@ export interface ChatTool {
   activity: ToolKind
   verb: string
   target: string
+  /** The raw shell command, when the row shows something shorter or a description. */
+  command?: string
+  /** The target is a plain-language description, drawn in the UI font. */
+  described?: boolean
   added?: number
   removed?: number
   note?: string

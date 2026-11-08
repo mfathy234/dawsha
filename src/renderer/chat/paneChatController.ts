@@ -4,6 +4,7 @@ import type { AgentKind } from '../../shared/types'
 import { folderOfPane, store } from '../state'
 import { continueIn } from '../handoffActions'
 import type { PaneView } from '../derive'
+import { timeInState } from '../stateClock'
 import { getTerminal } from '../terminals'
 import { openReviewInFiles } from '../files/filesActions'
 import { sessionIdOf } from '../transcriptActions'
@@ -59,6 +60,7 @@ export function syncPaneChat(paneId: string, view: PaneView, state: SessionState
           exited: tab.status === 'exited',
           status: tab.status,
           startedAt: tab.startedAt,
+          elapsed: state === 'working' ? timeInState(paneId, state, view.now) : '',
           tabId: tab.id
         }
       : null
