@@ -162,7 +162,11 @@ export function registerIpc(
   ipcMain.handle(IPC.geminiList, () => readGeminiSessions())
   ipcMain.handle(IPC.statusList, () => status.current())
   ipcMain.handle(IPC.opsList, () => ops.current())
-  ipcMain.handle(IPC.processActivityList, () => collectProcessActivity(ptys.activityRoots()))
+  ipcMain.handle(IPC.processActivityList, (_event, ids: unknown) => {
+    if (!Array.isArray(ids) || ids.length > 256 || ids.some((id) => typeof id !== 'string' || id.length > 128)) return []
+    const selected = new Set(ids as string[])
+    return collectProcessActivity(ptys.activityRoots().filter((root) => selected.has(root.tabId)))
+  })
   ipcMain.handle(IPC.skillsList, () => listSkills(skillLocations()))
   ipcMain.handle(IPC.chatCommands, (_event, request: unknown) => {
     if (!validCommandsRequest(request) || !checkFolder(request.folder).ok) throw new Error('Invalid chat command request.')

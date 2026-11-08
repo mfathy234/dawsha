@@ -14,9 +14,13 @@ import { registerFileLinks, type FileLinkHost, type FileLinks } from './terminal
 import { TerminalSearch } from './terminalSearch'
 import type { ThemeBundle } from './themeManager'
 import { TERMINAL_FONT } from './terminalFont'
+import { terminalShouldSleep } from '../shared/terminalSleep'
 
 const SHIFT_ENTER = '\x1b\r'
 
+
+/** A terminal hidden this long drops its GPU renderer until it is shown again. */
+const TERMINAL_SLEEP_MS = 10 * 60_000
 export interface TerminalCallbacks {
   onInput(data: string): void
   onResize(cols: number, rows: number): void
@@ -29,6 +33,7 @@ export interface TerminalCallbacks {
   highlights: HighlightHost
   /** How the program in this terminal writes right-to-left text. */
   textOrder(): TextOrder
+  sleepingEnabled(): boolean
 }
 
 export class TerminalView {
@@ -46,6 +51,9 @@ export class TerminalView {
   private frame = 0
   private lent: HTMLElement | null = null
   private bundleTerm: ThemeBundle['theme']['term']
+  private hiddenSince: number | null = null
+  private visible = false
+  private requestedVisible = false
 
   constructor(
     readonly id: string,
@@ -243,11 +251,26 @@ export class TerminalView {
   }
 
   setVisible(visible: boolean): void {
-    const shown = visible || this.lent !== null
-    this.el.classList.toggle('active', shown)
-    if (shown) {
+    this.requestedVisible = visible || this.lent !== null
+    this.refreshVisibility()
+  }
+
+  refreshVisibility(): void {
+    this.visible = this.requestedVisible && document.visibilityState === 'visible'
+    this.el.classList.toggle('active', this.visible)
+    if (this.visible) {
+      this.hiddenSince = null
       this.loadWebgl()
       this.scheduleFit()
+    } else if (this.hiddenSince === null) this.hiddenSince = Date.now()
+    this.updateRenderer()
+  }
+
+  updateRenderer(): void {
+    const timeoutMs = TERMINAL_SLEEP_MS
+    if (terminalShouldSleep({ visible: this.visible, hiddenSince: this.hiddenSince }, Date.now(), timeoutMs, this.callbacks.sleepingEnabled())) {
+      this.webgl?.dispose()
+      this.webgl = null
     }
   }
 

@@ -7,21 +7,22 @@ export interface ProcessRecord {
   parentPid: number | null
   name: string
   startedAt: number | null
+  memoryBytes: number
 }
 
 const execFileAsync = promisify(execFile)
 const MAX_RECORDS = 4096
 const MAX_PER_ROOT = 128
 const ROOT_START_TOLERANCE_MS = 60_000
-const SCRIPT = `$ErrorActionPreference='Stop'; @(Get-CimInstance Win32_Process | ForEach-Object { [pscustomobject]@{ pid=[int]$_.ProcessId; parentPid=[int]$_.ParentProcessId; name=[string]$_.Name; startedAt=([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } }) | ConvertTo-Json -Compress`
-const POSIX_PS_FORMAT = 'pid=,ppid=,etime=,comm='
+const SCRIPT = `$ErrorActionPreference='Stop'; @(Get-CimInstance Win32_Process | ForEach-Object { [pscustomobject]@{ pid=[int]$_.ProcessId; parentPid=[int]$_.ParentProcessId; name=[string]$_.Name; startedAt=([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds(); memoryBytes=[double]$_.WorkingSetSize } }) | ConvertTo-Json -Compress`
+const POSIX_PS_FORMAT = 'pid=,ppid=,etime=,rss=,comm='
 
 function validRecord(raw: unknown): raw is ProcessRecord {
   if (!raw || typeof raw !== 'object') return false
   const value = raw as Record<string, unknown>
   return Number.isInteger(value.pid) && (value.pid as number) > 0 &&
     Number.isInteger(value.parentPid) && typeof value.name === 'string' &&
-    (value.name as string).length <= 120 && Number.isFinite(value.startedAt)
+    (value.name as string).length <= 120 && Number.isFinite(value.startedAt) && Number.isFinite(value.memoryBytes)
 }
 
 export async function readWindowsProcesses(): Promise<ProcessRecord[]> {
@@ -47,11 +48,11 @@ function elapsedMilliseconds(value: string): number | null {
 export function parsePosixProcesses(output: string, now = Date.now()): ProcessRecord[] {
   const records: ProcessRecord[] = []
   for (const line of output.split(/\r?\n/)) {
-    const match = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.+?)\s*$/.exec(line)
+    const match = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(\d+)\s+(.+?)\s*$/.exec(line)
     if (!match) continue
     const elapsed = elapsedMilliseconds(match[3])
     if (elapsed === null) continue
-    records.push({ pid: Number(match[1]), parentPid: Number(match[2]), name: match[4].slice(0, 120), startedAt: now - elapsed })
+    records.push({ pid: Number(match[1]), parentPid: Number(match[2]), name: match[5].slice(0, 120), startedAt: now - elapsed, memoryBytes: Number(match[4]) * 1024 })
     if (records.length >= MAX_RECORDS) break
   }
   return records
@@ -86,7 +87,7 @@ export function selectProcessActivity(roots: readonly ProcessRoot[], records: re
       const current = pending.shift()!
       if (seen.has(current.pid)) continue
       seen.add(current.pid)
-      found.push({ tabId: root.tabId, pid: current.pid, name: current.name, parentPid: current.parentPid, startedAt: current.startedAt, alive: true })
+      found.push({ tabId: root.tabId, pid: current.pid, name: current.name, parentPid: current.parentPid, startedAt: current.startedAt, alive: true, memoryBytes: current.memoryBytes })
       for (const child of children.get(current.pid) ?? []) {
         if (child.startedAt !== null && current.startedAt !== null && child.startedAt >= current.startedAt) pending.push(child)
       }

@@ -188,7 +188,7 @@ export interface GridApi {
   onData(listener: (id: string, data: string) => void): () => void
   onExit(listener: (id: string, exitCode: number) => void): () => void
   onRemoteSessionStarted(listener: (session: RemoteSessionStarted) => void): () => void
-  listProcessActivity(): Promise<ProcessActivity[]>
+  listProcessActivity(visibleTabIds?: string[]): Promise<ProcessActivity[]>
   listSkills(): Promise<SkillEntry[]>
   openSkill(id: string): Promise<void>
   exportSkill(id: string): Promise<string | null>

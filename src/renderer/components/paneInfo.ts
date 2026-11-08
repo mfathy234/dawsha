@@ -2,6 +2,7 @@ import { formatChanges } from '../../shared/gitChanges'
 import { formatAge, formatCost, formatPercent, gaugeStage } from '../../shared/statusLine'
 import { formatTokens } from '../../shared/usage'
 import { contextLevel } from '../../shared/contextWarning'
+import { formatMemory } from '../../shared/paneMemory'
 import type { PaneInfo } from '../derive'
 import { h } from '../dom'
 import { chargeBar } from './chargeBar'
@@ -57,6 +58,7 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
     )
   }
   if (info.elapsed !== null) items.push(h('span', { class: 'info-elapsed', title: 'Session time' }, info.elapsed))
+  if (info.memoryBytes !== null) items.push(h('span', { class: 'info-memory', title: 'Session process memory' }, formatMemory(info.memoryBytes)))
   if (info.tokens !== null) items.push(h('span', { class: 'info-tokens', title: 'Session tokens' }, `${formatTokens(info.tokens)} tokens`))
   if (info.costUsd !== null) items.push(h('span', { class: 'info-cost', title: 'Session cost' }, formatCost(info.costUsd)))
   if (info.changes) {

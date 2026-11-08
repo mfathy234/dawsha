@@ -176,7 +176,7 @@ export class PaneComponent {
     this.info.setAttribute('data-tour', 'pane-meter')
     this.info.addEventListener('click', (event) => {
       const target = event.target as HTMLElement
-      if (target.closest('.info-model, .info-context, .info-tokens, .info-cost')) {
+      if (target.closest('.info-model, .info-context, .info-tokens, .info-cost, .info-memory')) {
         if (this.current) openPaneMeter(this.info, this.current.info, () => {
           if (this.chatShown) this.chat.sendCommand('/compact')
           else {

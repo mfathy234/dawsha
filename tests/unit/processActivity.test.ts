@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { collectProcessActivity, parsePosixProcesses, selectProcessActivity, type ProcessRecord } from '../../src/main/processActivity'
 
 const records: ProcessRecord[] = [
-  { pid: 100, parentPid: 1, name: 'cmd.exe', startedAt: 1000 },
-  { pid: 101, parentPid: 100, name: 'node.exe', startedAt: 1100 },
-  { pid: 102, parentPid: 101, name: 'helper.exe', startedAt: 1200 },
-  { pid: 300, parentPid: 1, name: 'unrelated.exe', startedAt: 1000 }
+  { pid: 100, parentPid: 1, name: 'cmd.exe', startedAt: 1000, memoryBytes: 100 },
+  { pid: 101, parentPid: 100, name: 'node.exe', startedAt: 1100, memoryBytes: 200 },
+  { pid: 102, parentPid: 101, name: 'helper.exe', startedAt: 1200, memoryBytes: 300 },
+  { pid: 300, parentPid: 1, name: 'unrelated.exe', startedAt: 1000, memoryBytes: 10 }
 ]
 
 describe('native process activity', () => {
   it('parses macOS ps rows and converts elapsed time to process start times', () => {
-    const parsed = parsePosixProcesses('  100     1  00:12.50 /bin/zsh\n  101   100  1-02:03:04 node')
+    const parsed = parsePosixProcesses('  100     1  00:12.50 2048 /bin/zsh\n  101   100  1-02:03:04 4096 node')
     expect(parsed).toHaveLength(2)
     expect(parsed[0]).toMatchObject({ pid: 100, parentPid: 1, name: '/bin/zsh' })
     expect(parsed[0].startedAt).toBeGreaterThan(0)
@@ -27,7 +27,7 @@ describe('native process activity', () => {
   it('rejects missing or reused root PIDs and children older than their parent', () => {
     expect(selectProcessActivity([{ tabId: 'missing', pid: 999, startedAt: 1000 }], records)).toEqual([])
     expect(selectProcessActivity([{ tabId: 'reused', pid: 100, startedAt: 100_000 }], records)).toEqual([])
-    const staleChild = { pid: 103, parentPid: 100, name: 'old.exe', startedAt: 500 }
+    const staleChild = { pid: 103, parentPid: 100, name: 'old.exe', startedAt: 500, memoryBytes: 10 }
     expect(selectProcessActivity([{ tabId: 'tab-a', pid: 100, startedAt: 1000 }], [...records, staleChild]).some((p) => p.pid === 103)).toBe(false)
   })
 
