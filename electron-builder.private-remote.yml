@@ -7,6 +7,20 @@ files:
   - out/renderer-private/**
   - package.json
   - build/icon.png
+  # typescript is used at runtime only through lib/tsserver.js (language server) and lib/typescript.js (symbol worker)
+  - '!node_modules/typescript/bin/**'
+  - '!node_modules/typescript/lib/{cs,de,es,fr,it,ja,ko,pl,pt-br,ru,tr,zh-cn,zh-tw}/**'
+  - '!node_modules/typescript/lib/{_tsc.js,tsc.js,tsserverlibrary.js,tsserverlibrary.d.ts,typescript.d.ts}'
+  # packages that only the renderer uses; vite already bundles them into out/renderer
+  - '!node_modules/{@codemirror,@lezer,@fontsource}/**'
+  - '!node_modules/@xterm/{xterm,addon-fit,addon-search,addon-web-links,addon-webgl}/**'
+  - '!node_modules/{bidi-js,qrcode-generator,@marijn,crelt,style-mod,w3c-keyname}/**'
+  # node-pty: build-from-source inputs are not needed, the prebuilt binaries are used
+  - '!node_modules/node-pty/{src,deps,scripts,third_party,typings,binding.gyp}/**'
+  - '!node_modules/node-addon-api/**'
+  # docs, maps and test folders inside runtime packages
+  - '!node_modules/**/*.{map,md,markdown}'
+  - '!node_modules/**/{test,tests,__tests__,example,examples,docs}/**'
 win:
   artifactName: Dawsha-Remote-Private-Setup-${version}.${ext}
 nsis:
