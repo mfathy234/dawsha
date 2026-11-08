@@ -7,8 +7,10 @@ export interface PendingMessage {
   at: number
   /** Not typed yet: the agent is still starting. */
   waiting: boolean
-  /** Typed while the agent was busy, so it waits in the agent's own queue. */
+  /** Waiting to be sent after the agent becomes idle. */
   queued: boolean
+  /** Held by Dawsha until the agent is idle. */
+  held?: boolean
   /** Ids of the user messages the log had when this was sent, so only a newer one can settle it. */
   seen: string[]
 }
@@ -29,6 +31,20 @@ export function newPending(id: string, text: string, now: number, items: readonl
 
 export const pendingLabel = (message: PendingMessage): PendingLabel => (message.waiting ? 'waiting' : message.queued ? 'queued' : 'sending')
 
+export const holdPending = (pending: readonly PendingMessage[], message: PendingMessage): PendingMessage[] => [...pending, { ...message, held: true, queued: true }]
+
+export function removeHeld(pending: readonly PendingMessage[], id: string): PendingMessage[] {
+  return pending.filter((message) => message.id !== id || !message.held)
+}
+
+export function releaseHeld(pending: readonly PendingMessage[], working: boolean, approval: boolean, menu: boolean): { pending: PendingMessage[]; message: PendingMessage | null } {
+  if (working || approval || menu || pending.some((message) => !message.held && !message.waiting)) return { pending: [...pending], message: null }
+  const message = pending.find((entry) => entry.held)
+  if (!message) return { pending: [...pending], message: null }
+  const released = { ...message, held: false, queued: false, waiting: false }
+  return { pending: pending.map((entry) => entry.id === message.id ? released : entry), message: released }
+}
+
 /**
  * Drops the messages the log now shows as user turns (each log turn settles one message, oldest first),
  * and the ones that have waited a long time with the agent idle, which are not coming.
@@ -36,7 +52,7 @@ export const pendingLabel = (message: PendingMessage): PendingLabel => (message.
 export function settlePending(pending: readonly PendingMessage[], items: readonly ChatItem[], now: number, working: boolean): PendingMessage[] {
   const taken = new Set<string>()
   return pending.filter((message) => {
-    if (message.waiting) return true
+    if (message.waiting || message.held) return true
     const known = new Set(message.seen)
     const wanted = normalize(message.text)
     const hit = items.find((item) => item.kind === 'message' && item.role === 'user' && !known.has(item.id) && !taken.has(item.id) && normalize(item.text) === wanted)

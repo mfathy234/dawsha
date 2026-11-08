@@ -14,7 +14,8 @@ import { ChatThread, type PendingView } from './chatThread'
 import { askPromptFor } from '../../shared/menuPrompt'
 import { detectTerminalMenu } from '../../shared/terminalMenu'
 import { isStarting } from '../../shared/agentReady'
-import { isTracked, newPending, pendingLabel, settlePending, type PendingMessage } from '../../shared/chatPending'
+import { holdPending, isTracked, newPending, pendingLabel, releaseHeld, removeHeld, settlePending, type PendingMessage } from '../../shared/chatPending'
+import { appendHistory, historyAt } from '../../shared/chatHistory'
 import { planAnswers, type AskAnswer, type KeyStep } from '../../shared/menuAnswer'
 import type { AskPrompt } from '../../shared/chatAsk'
 
@@ -77,8 +78,12 @@ export class PaneChat {
   private starting = false
   private watch = 0
   private counter = 0
+  private history: string[] = []
+  private historyIndex = -1
+  private historyDraft = ''
+  private historySession = ''
 
-  constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
+  constructor(private readonly host: ChatHost, private readonly permission: HTMLElement, private readonly popupOpen: () => boolean = () => false) {
     this.thread = new ChatThread(() => this.render(true))
     this.feed = new ChatFeed(
       (snapshot) => {
@@ -98,10 +103,11 @@ export class PaneChat {
     this.box.addEventListener('keydown', (event) => this.onKey(event))
     this.box.addEventListener('input', () => {
       this.note.hidden = true
+      this.updateSendButton()
       this.growBox()
     })
     new ResizeObserver(() => this.input && this.updateComposer(this.input, this.phase)).observe(this.box)
-    this.sendButton.addEventListener('click', () => this.submit())
+    this.sendButton.addEventListener('click', () => this.phase === 'working' && this.box.value.trim() === '' ? this.host.interrupt() : this.submit())
     this.scroller.addEventListener('scroll', () => this.updateJump(), { passive: true })
     this.jump.addEventListener('click', () => {
       this.toBottom()
@@ -135,6 +141,7 @@ export class PaneChat {
     }
     if (this.input && (this.input.agent !== input.agent || (this.input.sessionId && this.input.sessionId !== input.sessionId))) this.pending = []
     this.input = input
+    this.loadHistory(input.sessionId)
     this.attachments.setSession(input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null)
     if (input.sessionId) this.feed.start({ agent: input.agent, sessionId: input.sessionId, folder: input.folder })
     else this.feed.stop()
@@ -168,6 +175,12 @@ export class PaneChat {
     const phase = chatPhase({ items: snapshot.items, working, needsApproval: input.needsApproval, menuOpen })
     this.starting = isStarting({ agent: input.agent, status: input.status, startedAt: input.startedAt, now: Date.now(), tail, working })
     this.flushWaiting(working)
+    const release = releaseHeld(this.pending, working || input.exited, phase === 'approval', phase === 'menu')
+    this.pending = release.pending
+    if (release.message) {
+      this.host.send(release.message.text)
+      this.note.hidden = true
+    }
     this.pending = settlePending(this.pending, snapshot.items, Date.now(), working)
     this.ask = phase === 'menu' ? askPromptFor(snapshot.items, tail) : null
     this.setWatch(this.starting || this.pending.length > 0)
@@ -243,7 +256,7 @@ export class PaneChat {
   }
 
   private pendingViews(): PendingView[] {
-    return this.pending.map((message) => ({ id: message.id, text: message.text, label: pendingLabel(message) }))
+    return this.pending.map((message) => ({ id: message.id, text: message.text, label: pendingLabel(message), held: message.held, edit: () => this.editHeld(message.id), cancel: () => this.cancelHeld(message.id) }))
   }
 
   /** Messages typed while the agent was starting go in as soon as its input box is up. */
@@ -272,7 +285,7 @@ export class PaneChat {
     const wasBlocked = this.box.disabled
     this.box.disabled = blocked !== ''
     this.sendButton.disabled = blocked !== ''
-    this.showSend()
+    this.updateSendButton()
     if (wasBlocked && !this.box.disabled && this.active && this.focusIsFree()) this.focusComposer()
     const roomy = this.box.clientWidth >= LONG_HINT_MIN_PX
     this.box.placeholder = blocked || (this.starting ? CHAT_TEXT.composerStarting(name) : roomy ? CHAT_TEXT.messagePlaceholderLong(name) : CHAT_TEXT.messagePlaceholder(name))
@@ -286,7 +299,13 @@ export class PaneChat {
   }
 
   private showSend(): void {
-    this.sendButton.hidden = this.box.disabled || (this.box.value.trim() === '' && this.attachments.items.length === 0)
+    this.updateSendButton()
+  }
+
+  private updateSendButton(): void {
+    const stopping = this.phase === 'working' && this.box.value.trim() === '' && this.attachments.items.length === 0
+    this.sendButton.textContent = stopping ? CHAT_TEXT.stop : CHAT_TEXT.send
+    this.sendButton.hidden = this.box.disabled || (!stopping && this.box.value.trim() === '' && this.attachments.items.length === 0)
   }
 
   /** The button shows only when the thread is scrolled up and there is more below. */
@@ -304,18 +323,85 @@ export class PaneChat {
   }
 
   private onKey(event: KeyboardEvent): void {
+    if (this.handleHistoryKey(event)) return
     if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return
     event.preventDefault()
     this.submit()
+  }
+
+  /** History keys stay isolated here so a composer popup can own them while open. */
+  private handleHistoryKey(event: KeyboardEvent): boolean {
+    if (this.popupOpen()) return false
+    if (event.key === 'Escape' && this.historyIndex >= 0) {
+      event.preventDefault()
+      event.stopPropagation()
+      this.box.value = this.historyDraft
+      this.historyIndex = -1
+      this.growBox()
+      return true
+    }
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return false
+    const start = this.box.selectionStart
+    if (event.key === 'ArrowUp' && this.box.value.slice(0, start).includes('\n')) return false
+    if (event.key === 'ArrowDown' && this.box.value.slice(start).includes('\n')) return false
+    if (!this.history.length) return false
+    if (this.historyIndex < 0) this.historyDraft = this.box.value
+    const result = historyAt(this.history, this.historyIndex, this.historyDraft, event.key === 'ArrowUp' ? -1 : 1)
+    event.preventDefault()
+    this.historyIndex = result.index
+    this.box.value = result.value
+    this.box.setSelectionRange(result.value.length, result.value.length)
+    this.growBox()
+    return true
+  }
+
+  private loadHistory(sessionId: string | null): void {
+    const key = sessionId ?? ''
+    if (key === this.historySession) return
+    this.historySession = key
+    this.historyIndex = -1
+    try {
+      const stored: unknown = key ? JSON.parse(localStorage.getItem(`chat-history:${key}`) ?? '[]') : []
+      this.history = Array.isArray(stored) ? stored.filter((entry): entry is string => typeof entry === 'string').slice(-50) : []
+    } catch (error) {
+      this.history = []
+      console.warn('Could not read chat history.', error)
+    }
+  }
+
+  private saveHistory(text: string): void {
+    if (!this.historySession) return
+    this.history = appendHistory(this.history, text)
+    try { localStorage.setItem(`chat-history:${this.historySession}`, JSON.stringify(this.history)) } catch (error) { console.warn('Could not save chat history.', error) }
+    this.historyIndex = -1
+  }
+
+  private editHeld(id: string): void {
+    const message = this.pending.find((entry) => entry.id === id && entry.held)
+    if (!message) return
+    this.pending = removeHeld(this.pending, id)
+    this.box.value = message.text
+    this.box.focus()
+    this.growBox()
+    this.render(true)
+  }
+
+  private cancelHeld(id: string): void {
+    this.pending = removeHeld(this.pending, id)
+    this.render(true)
   }
 
   private submit(): void {
     const typed = this.box.value
     if ((typed.trim() === '' && this.attachments.items.length === 0) || this.box.disabled) return
     const text = messageWithAttachments(this.input?.agent, this.attachments.items, typed, store.state.info.shellCommand)
+    this.saveHistory(text)
     this.note.hidden = true
     if (this.starting) {
       this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, true, false)]
+    } else if ((this.input?.working ?? false) && !this.input?.exited) {
+      if (isTracked(text)) this.pending = holdPending(this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, true))
+      else this.host.send(text)
     } else {
       const { flattened } = this.host.send(text)
       this.note.hidden = !flattened

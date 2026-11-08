@@ -32,6 +32,9 @@ export interface PendingView {
   id: string
   text: string
   label: PendingLabel
+  held?: boolean
+  edit?: () => void
+  cancel?: () => void
 }
 
 export interface ThreadContext {
@@ -264,7 +267,7 @@ export class ChatThread {
 
   private pendingMessage(item: PendingView): HTMLElement {
     const note = item.label === 'queued' ? CHAT_TEXT.queued : item.label === 'waiting' ? CHAT_TEXT.waitingToStart : CHAT_TEXT.sending
-    return h('div', { class: 'chat-you pending', 'data-pending': item.label, dir: textDirection(item.text) }, ...richText(item.text), h('span', { class: 'chat-pend', role: 'status' }, note))
+    return h('div', { class: 'chat-you pending', 'data-pending': item.label, dir: textDirection(item.text) }, ...richText(item.text), h('span', { class: 'chat-pend', role: 'status' }, note), item.held ? h('span', { class: 'chat-pend-actions' }, h('button', { class: 'chat-text-btn', type: 'button', onClick: item.edit }, CHAT_TEXT.edit), h('button', { class: 'chat-text-btn', type: 'button', onClick: item.cancel }, CHAT_TEXT.cancel)) : null)
   }
 
   private button(label: string, onClick: () => void, primary: boolean): HTMLElement {
