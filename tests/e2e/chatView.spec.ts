@@ -796,6 +796,7 @@ test('a prompt saved with /save is offered first in the / list, inserts its text
     await expect(page.locator('.dialog')).toContainText('"Review change"')
     await expect(page.locator('.dialog [data-confirm]')).toHaveText('Delete "Review change"')
     await page.locator('.dialog').getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.locator('.dialog')).toHaveCount(0)
     await expect(entry).toHaveCount(1)
     await entry.getByRole('button', { name: 'Delete Review change' }).click()
     await page.locator('.dialog [data-confirm]').click()
