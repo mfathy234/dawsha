@@ -5,6 +5,7 @@ import { toolKind, type ToolKind } from '../../shared/chatKind'
 import { CHAT_OUTPUT_LINES, CHAT_OUTPUT_MAX, CHAT_TARGET_MAX, boundText } from '../../shared/chatLog'
 import { parseAskQuestions, type AskQuestion } from '../../shared/chatAsk'
 import { CHAT_TEXT } from '../../shared/chatStrings'
+import { shellLabel } from '../../shared/shellLabel'
 import { cleanText, flat, isRecord, toolArg, type Json } from '../../shared/transcript'
 
 export interface ToolShape {
@@ -24,6 +25,10 @@ export interface ToolShape {
   line?: number
   todos?: TodoEntry[]
   plan?: string
+  /** The raw command, when the row shows a description or a shortened form of it. */
+  command?: string
+  /** The target is a plain-language description of the command. */
+  described?: boolean
 }
 
 const CREATE_TOOLS = new Set(['write', 'create_file', 'write_file'])
@@ -93,8 +98,14 @@ export function mcpParts(name: string): { server: string; tool: string } | null 
   return match ? { server: flat(match[1], 40), tool: flat(match[2], 80) } : null
 }
 
+/** A shell call: the row says what it is for, or the command without its folder `cd`; the raw command opens with it. */
+export function shellShape(command: string, description: string | undefined, folder: string | undefined): ToolShape {
+  const label = shellLabel({ command, description, folder })
+  return { kind: 'shell', verb: 'Ran', target: label.text, preview: command.includes('\n') ? command : '', ...(label.command ? { command: label.command } : {}), ...(label.described ? { described: true } : {}) }
+}
+
 /** One line for a tool call: a verb, what it touches, and for an edit how many lines it adds and removes. */
-export function toolShape(rawName: unknown, rawInput: unknown): ToolShape {
+export function toolShape(rawName: unknown, rawInput: unknown, folder?: string): ToolShape {
   const name = (typeof rawName === 'string' ? rawName : '').toLowerCase()
   const input = isRecord(rawInput) ? rawInput : {}
   const tool = classifyTool(rawName, rawInput)
@@ -105,8 +116,7 @@ export function toolShape(rawName: unknown, rawInput: unknown): ToolShape {
     return { kind: search ? 'search' : 'read', verb: search ? 'Searched' : 'Read', target, preview: '', ...(search || tool.paths.length !== 1 ? {} : { path: tool.paths[0], ...lineOf(input.offset) }) }
   }
   if (tool?.kind === 'command') {
-    const line = tool.command.split('\n')[0]
-    return { kind: 'shell', verb: 'Ran', target: flat(line, CHAT_TARGET_MAX), preview: tool.command.includes('\n') ? tool.command : '' }
+    return shellShape(tool.command, str(input.description), folder)
   }
   if (name === 'todowrite') return todoShape(input)
   if (name === 'exitplanmode') return { kind: 'todo', verb: 'Plan', target: CHAT_TEXT.planTarget, preview: '', plan: parsePlan(input) }

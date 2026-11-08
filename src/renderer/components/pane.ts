@@ -235,11 +235,12 @@ export class PaneComponent {
     this.updateInfo(view, maximized)
     this.foot.hidden = this.info.hidden && this.branch.hidden
     this.updateRecap(view)
-    this.recap.hidden = !store.state.settings.showRecap || this.recapText === ''
     this.updateHint(view)
     const asking = state === 'needs' || (this.chatShown && detectPermissionPrompt(permissionTail(this.paneId)))
     this.updatePermission(view, asking ? 'needs' : state)
     this.updateChat(view, state, asking)
+    // Chat already shows the last reply; the recap line is scraped from the terminal screen and only repeats it, stale.
+    this.recap.hidden = !store.state.settings.showRecap || this.recapText === '' || this.chatShown
     this.updateDetails(view, maximized)
     this.timeline.update(view, maximized && view.timelineOpen)
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)

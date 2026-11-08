@@ -48,7 +48,7 @@ async function pathOf(request: ChatReadRequest, entry: Entry, now: number): Prom
 
 async function load(request: ChatReadRequest): Promise<ChatReadResult> {
   const key = keyOf(request.agent, request.sessionId)
-  const entry = entries.get(key) ?? { session: new ChatSession(request.agent), path: null, checkedAt: 0, folder: request.folder }
+  const entry = entries.get(key) ?? { session: new ChatSession(request.agent, undefined, request.folder), path: null, checkedAt: 0, folder: request.folder }
   entry.folder = request.folder
   remember(key, entry)
   try {

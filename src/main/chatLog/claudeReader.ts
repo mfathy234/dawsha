@@ -41,6 +41,8 @@ function resultText(content: unknown): string {
 
 /** Reads Claude Code's session log: one record per content block, whole text blocks, tool results as user records. */
 export class ClaudeChatReader implements ChatLineReader {
+  constructor(private readonly folder?: string) {}
+
   private readonly builder = new ChatBuilder()
   private readonly collector = new ImageCollector()
   private readonly tracker = new BackgroundTracker()
@@ -180,7 +182,7 @@ export class ClaudeChatReader implements ChatLineReader {
         this.builder.thought(this.nextId(record), part.thinking, at)
       } else if (part.type === 'tool_use' && typeof part.id === 'string') {
         this.tracker.use(part.id, part.name, part.input)
-        this.builder.call(part.id, toolShape(part.name, part.input), at)
+        this.builder.call(part.id, toolShape(part.name, part.input, this.folder), at)
       }
     }
   }

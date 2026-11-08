@@ -46,6 +46,8 @@ export interface ThreadContext {
   ask: AskPrompt | null
   pending: readonly PendingView[]
   starting: boolean
+  /** How long the session has been working, e.g. "3m"; empty under a minute. */
+  elapsed?: string
   /** Which session the thread shows, so its pictures can be fetched. */
   session: ChatSessionRef | null
   /** The id of the pane's terminal tab, which file links resolve their folder from. */
@@ -71,11 +73,8 @@ const TOOL_ICONS: Record<ToolKind, string> = {
 
 const PRESENT: Record<string, string> = { Ran: 'Running', Edited: 'Editing', Created: 'Creating', Read: 'Reading', Searched: 'Searching', Deleted: 'Deleting', Used: 'Using' }
 
-function workingText(items: readonly ChatItem[]): string {
-  const last = items[items.length - 1]
-  if (last?.kind !== 'tool' || last.done) return CHAT_TEXT.working
-  return CHAT_TEXT.running(PRESENT[last.verb] ?? last.verb, last.target)
-}
+/** The verb of a row: present tense while it runs, so the row itself says what is happening. */
+const verbOf = (item: ChatTool, running: boolean): string => (running ? (PRESENT[item.verb] ?? item.verb) : item.verb)
 
 /** Draws the conversation. Everything from a log goes in as text, never as markup. */
 export class ChatThread {
@@ -96,7 +95,7 @@ export class ChatThread {
   private body(feed: FeedSnapshot, ctx: ThreadContext): (Node | null)[] {
     const bare = feed.items.length === 0 && ctx.pending.length === 0
     if (bare && ctx.phase !== 'approval' && ctx.phase !== 'menu' && !ctx.starting) return [this.empty(ctx)]
-    return [feed.earlier > 0 ? h('p', { class: 'chat-quiet' }, CHAT_TEXT.earlier(feed.earlier)) : null, ...this.items(feed.items, ctx), ...ctx.pending.map((item) => this.pendingMessage(item)), ...this.tail(feed.items, ctx)]
+    return [feed.earlier > 0 ? h('p', { class: 'chat-quiet' }, CHAT_TEXT.earlier(feed.earlier)) : null, ...this.items(feed.items, ctx), ...ctx.pending.map((item) => this.pendingMessage(item)), ...this.tail(ctx)]
   }
 
   private empty(ctx: ThreadContext): HTMLElement {
@@ -168,10 +167,10 @@ export class ChatThread {
     const task = ctx.background?.find((entry) => entry.launchId === item.id)
     const row = h(
       'button',
-      { class: `chat-tool${item.failed ? ' failed' : ''}${!item.done && live ? ' running' : ''}`, 'data-kind': item.activity, type: 'button', 'aria-expanded': String(expanded), title: item.target, 'data-tool': item.id, onClick: () => this.flip(`t:${item.id}`) },
+      { class: `chat-tool${item.failed ? ' failed' : ''}${!item.done && live ? ' running' : ''}`, 'data-kind': item.activity, type: 'button', 'aria-expanded': String(expanded), title: item.command ?? item.target, 'data-tool': item.id, onClick: () => this.flip(`t:${item.id}`) },
       icon(!item.done && live ? ICONS.toolRunning : TOOL_ICONS[item.activity] ?? ICONS.toolOther),
-      h('span', {}, item.verb),
-      h('bdi', { dir: 'ltr' }, h('code', {}, item.target)),
+      h('span', {}, verbOf(item, !item.done && live)),
+      item.described ? h('bdi', { dir: 'auto' }, h('span', { class: 'chat-tool-desc' }, item.target)) : h('bdi', { dir: 'ltr' }, h('code', {}, item.target)),
       item.done && !task ? this.toolNote(item) : null,
       task ? h('span', { class: `chat-badge ${task.status}`, 'data-bg-badge': task.status }, BACKGROUND_STATUS_TEXT[task.status]) : null
     )
@@ -190,7 +189,8 @@ export class ChatThread {
     }
     if (item.plan) return markdownCard(item.plan)
     if (item.activity === 'agent' && item.output !== '') return markdownCard(item.outputTruncated ? `${item.output}\n\n${CHAT_TEXT.outputTooLarge}` : item.output)
-    const text = item.output === '' ? CHAT_TEXT.noOutput : item.output
+    const out = item.output === '' ? CHAT_TEXT.noOutput : item.output
+    const text = item.command ? [`$ ${item.command}`, out].join('\n\n') : out
     return h('pre', { class: 'chat-toolout', dir: 'ltr' }, item.outputTruncated ? `${text}\n${CHAT_TEXT.outputTooLarge}` : text)
   }
 
@@ -231,7 +231,7 @@ export class ChatThread {
     )
   }
 
-  private tail(items: readonly ChatItem[], ctx: ThreadContext): (Node | null)[] {
+  private tail(ctx: ThreadContext): (Node | null)[] {
     if (ctx.phase === 'approval') return [ctx.permission]
     if (ctx.phase === 'menu' && ctx.ask) return [this.askCard(ctx.ask, ctx)]
     if (ctx.phase === 'menu') {
@@ -249,7 +249,7 @@ export class ChatThread {
       return [h('div', { class: 'chat-working', role: 'status' }, icon(ICONS.toolRunning), h('span', { dir: 'auto' }, `${CHAT_TEXT.starting(ctx.agentName)} ${ctx.pending.length > 0 ? CHAT_TEXT.startingWait : ''}`.trim()))]
     }
     if (ctx.phase === 'working') {
-      return [h('div', { class: 'chat-working', role: 'status' }, stateIcon('working'), h('span', { dir: 'auto' }, `${workingText(items)}. ${CHAT_TEXT.interruptHint}.`))]
+      return [h('div', { class: 'chat-working', role: 'status' }, stateIcon('working'), h('span', { dir: 'auto' }, CHAT_TEXT.workingFor(ctx.elapsed)), h('span', { class: 'chat-hint' }, CHAT_TEXT.interruptHint))]
     }
     return []
   }

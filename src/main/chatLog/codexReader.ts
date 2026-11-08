@@ -7,7 +7,7 @@ import { CHAT_TEXT } from '../../shared/chatStrings'
 import { ChatBuilder } from './builder'
 import { ImageCollector, type ImageEntry } from './imageTable'
 import type { ChatLineReader, ReaderStats } from './reader'
-import type { ToolShape } from './toolShape'
+import { shellShape, type ToolShape } from './toolShape'
 
 const KNOWN = new Set(['session_meta', 'event_msg', 'response_item', 'turn_context'])
 const WRAPPER = /^(?:bash|sh|zsh|pwsh|powershell|cmd)(?:\.exe)?$/i
@@ -70,6 +70,8 @@ function changeShape(path: string, change: Json): ToolShape {
 
 /** Reads a Codex rollout: finished items arrive as event_msg item_completed records, the user and agent messages among them. */
 export class CodexChatReader implements ChatLineReader {
+  constructor(private readonly folder?: string) {}
+
   private readonly builder = new ChatBuilder()
   private readonly collector = new ImageCollector()
   /** Pictures of a user message that arrived before the message's own record. */
@@ -200,8 +202,7 @@ export class CodexChatReader implements ChatLineReader {
 
   private command(id: string, item: Json, at: number | undefined): void {
     const command = commandOf(item)
-    const preview = command.includes('\n') ? command : ''
-    this.builder.call(id, { kind: 'shell', verb: 'Ran', target: flat(command.split('\n')[0], CHAT_TARGET_MAX), preview }, at)
+    this.builder.call(id, shellShape(command, undefined, this.folder), at)
     const code = typeof item.exit_code === 'number' ? item.exit_code : 0
     this.builder.result(id, { output: str(item.aggregated_output), failed: item.status === 'failed' || code !== 0 })
   }
