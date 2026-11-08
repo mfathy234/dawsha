@@ -4,7 +4,7 @@
 .projects-view > .page-header .pv-filter { width: 220px; max-width: 220px; }
 .projects-view .pv-list { border-top: 0; }
 .projects-view .pv-head,
-.projects-view .pv-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 150px 110px auto; column-gap: var(--s-4); align-items: center; }
+.projects-view .pv-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 150px 110px 232px; column-gap: var(--s-4); align-items: center; }
 .projects-view .pv-head { padding: var(--s-2) var(--s-2); color: var(--muted); font-size: var(--fs-ui); font-weight: 500; }
 .projects-view .pv-row { padding: var(--s-3) var(--s-2); box-shadow: 0 -1px 0 var(--line); }
 .projects-view .pv-row.pv-worktree { padding-inline-start: var(--s-6); }
