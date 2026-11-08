@@ -4,6 +4,23 @@ export const PANEL_MAX_FRACTION = 0.7
 /** Below this window width the inspector hides itself, whatever the toggle says. */
 export const INSPECTOR_MIN_WIDTH = 1180
 
+export const EDITOR_FONT_MIN = 11
+export const EDITOR_FONT_MAX = 20
+export const EDITOR_FONT_DEFAULT = 13
+
+export interface EditorPrefs {
+  fontSize: number
+  wrap: boolean
+}
+
+export const defaultEditorPrefs = (): EditorPrefs => ({ fontSize: EDITOR_FONT_DEFAULT, wrap: false })
+
+/** A font size as a whole number inside the range the editor offers; anything else is the default. */
+export function clampFontSize(size: unknown): number {
+  if (typeof size !== 'number' || !Number.isFinite(size)) return EDITOR_FONT_DEFAULT
+  return Math.min(Math.max(Math.round(size), EDITOR_FONT_MIN), EDITOR_FONT_MAX)
+}
+
 export type InspectorTab = 'outline' | 'activity'
 export type SectionId = 'changes' | 'open' | 'tree'
 
@@ -12,13 +29,15 @@ export interface FilesLayout {
   inspector: { open: boolean; tab: InspectorTab }
   explorer: { open: boolean }
   panel: { minimised: boolean; height: number }
+  editor: EditorPrefs
 }
 
 export const defaultLayout = (): FilesLayout => ({
   sections: { changes: true, open: true, tree: true },
   inspector: { open: true, tab: 'outline' },
   explorer: { open: true },
-  panel: { minimised: true, height: PANEL_DEFAULT_HEIGHT }
+  panel: { minimised: true, height: PANEL_DEFAULT_HEIGHT },
+  editor: defaultEditorPrefs()
 })
 
 /** The panel height that fits: not under its minimum, and never more than most of the main area. */
@@ -36,6 +55,7 @@ export function parseLayout(raw: unknown): FilesLayout {
   const sections = typeof value.sections === 'object' && value.sections !== null ? (value.sections as Record<string, unknown>) : {}
   const inspector = typeof value.inspector === 'object' && value.inspector !== null ? (value.inspector as Record<string, unknown>) : {}
   const explorer = typeof value.explorer === 'object' && value.explorer !== null ? (value.explorer as Record<string, unknown>) : {}
+  const editor = typeof value.editor === 'object' && value.editor !== null ? (value.editor as Record<string, unknown>) : {}
   const panel = typeof value.panel === 'object' && value.panel !== null ? (value.panel as Record<string, unknown>) : {}
   return {
     sections: {
@@ -51,6 +71,7 @@ export function parseLayout(raw: unknown): FilesLayout {
     panel: {
       minimised: typeof panel.minimised === 'boolean' ? panel.minimised : base.panel.minimised,
       height: typeof panel.height === 'number' && Number.isFinite(panel.height) ? Math.min(Math.max(Math.round(panel.height), PANEL_MIN_HEIGHT), 2000) : base.panel.height
-    }
+    },
+    editor: { fontSize: clampFontSize(editor.fontSize), wrap: typeof editor.wrap === 'boolean' ? editor.wrap : base.editor.wrap }
   }
 }

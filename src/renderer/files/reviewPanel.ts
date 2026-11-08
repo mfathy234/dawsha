@@ -107,12 +107,21 @@ export class ReviewPanel {
     target?.focus()
   }
 
+  private renderProgress(done: number, total: number): void {
+    if (total === 0) {
+      this.progress.replaceChildren('Nothing to review. The agents have not changed any files yet.')
+      return
+    }
+    const fill = h('span', { class: `files-review-meter-fill${done > 0 ? ' lit' : ''}`, style: `width:${Math.round((done / total) * 100)}%` })
+    this.progress.replaceChildren(`${done} of ${total} viewed`, h('span', { class: 'files-review-meter', 'aria-hidden': 'true' }, fill))
+  }
+
   render(model: ReviewModel): void {
     this.current = model.current
     this.last = model
     const total = model.files.length
     const done = model.files.filter((file) => model.viewed.has(file.path)).length
-    this.progress.textContent = total === 0 ? 'Nothing to review. The agents have not changed any files yet.' : `${done} of ${total} viewed`
+    this.renderProgress(done, total)
     // With nothing to review, the stepping buttons and the note, commit and discard controls have nothing to act on.
     this.head.classList.toggle('empty', total === 0)
     this.prev.hidden = total === 0

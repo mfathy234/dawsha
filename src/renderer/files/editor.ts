@@ -1,5 +1,5 @@
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
-import { EditorView, drawSelection, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
+import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { bracketMatching, codeFolding, ensureSyntaxTree, foldGutter, foldKeymap, indentUnit, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
@@ -29,6 +29,8 @@ export interface EditorOptions {
   path: string
   readOnly: boolean
   theme: EditorTheme
+  /** Wrap long lines instead of scrolling sideways. */
+  wrap?: boolean
 }
 
 export interface CursorInfo {
@@ -45,6 +47,8 @@ export interface FileEditor {
   getText(): string
   setReadOnly(readOnly: boolean): void
   setTheme(theme: EditorTheme): void
+  /** Wraps long lines, or lets them run on. Also re-measures: the font size is set on the host and changes line heights. */
+  setWrap(wrap: boolean): void
   showChanges(baseText: string | null): void
   showFile(): void
   /** Extra gutters and widgets (review comments, blame) for the Changes view. */
@@ -97,15 +101,16 @@ export function baseTheme(dark: boolean): Extension {
   return [
     EditorView.theme(
     {
-      '&': { height: '100%', color: colors.foreground, backgroundColor: colors.background, fontSize: '13px' },
+      '&': { height: '100%', color: colors.foreground, backgroundColor: colors.background, fontSize: 'var(--editor-font-size, 13px)' },
       '&.cm-focused': { outline: 'none' },
-      '.cm-scroller': { fontFamily: CODE_FONT, lineHeight: '1.6', overflow: 'auto' },
+      '.cm-scroller': { fontFamily: CODE_FONT, lineHeight: '1.7', overflow: 'auto' },
       '.cm-content': { caretColor: colors.caret, padding: '8px 0', fontVariantLigatures: 'none', fontFeatureSettings: '"liga" 0, "calt" 0' },
-      '.cm-line': { padding: '0 16px 0 8px' },
+      '.cm-line': { padding: '0 16px 0 14px' },
       '.cm-gutters': { backgroundColor: colors.background, color: colors.gutter, border: 'none' },
-      '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 16px', minWidth: '3ch' },
-      '.cm-activeLine': { backgroundColor: colors.activeLine },
-      '.cm-activeLineGutter': { backgroundColor: 'transparent', color: colors.gutterActive },
+      '.cm-lineNumbers .cm-gutterElement': { padding: '0 10px 0 16px', minWidth: '3ch', opacity: '0.55' },
+      '.cm-lineNumbers .cm-gutterElement.cm-activeLineGutter': { opacity: '1', color: colors.gutterActive, fontWeight: '700' },
+      '.cm-activeLine': { backgroundColor: colors.activeLine, border: 'none', outline: 'none' },
+      '.cm-activeLineGutter': { backgroundColor: 'transparent' },
       '.cm-cursor': { borderLeftColor: colors.caret },
       '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
         backgroundColor: colors.selection
@@ -145,6 +150,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
   const merge = new Compartment()
   const annotations = new Compartment()
   const indent = new Compartment()
+  const wrapping = new Compartment()
   const gotoListeners: Array<(pos: number) => void> = []
   let hoverProvider: HoverProvider | null = null
   let outlineOf: () => OutlineItem[] = () => []
@@ -190,6 +196,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
         history(),
         drawSelection(),
         highlightActiveLine(),
+        highlightActiveLineGutter(),
+        wrapping.of(options.wrap ? EditorView.lineWrapping : []),
         bracketMatching(),
         highlightSelectionMatches(),
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeys, ...foldKeymap, indentWithTab]),
@@ -259,6 +267,10 @@ export function createEditor(host: HTMLElement, options: EditorOptions): FileEdi
     getText: () => textForSave(view.state),
     setTheme(next) {
       view.dispatch({ effects: theme.reconfigure(baseTheme(next === 'dark')) })
+    },
+    setWrap(wrap) {
+      view.dispatch({ effects: wrapping.reconfigure(wrap ? EditorView.lineWrapping : []) })
+      view.requestMeasure()
     },
     setReadOnly(next) {
       readOnly = next
