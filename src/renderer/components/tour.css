@@ -1,6 +1,6 @@
 .tour-scrim { position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
 .tour-spotlight { position: fixed; z-index: 1001; border-radius: var(--radius, 8px); box-shadow: 0 0 0 9999px color-mix(in srgb, var(--bg) 72%, transparent); pointer-events: none; }
-.tour-card { position: fixed; z-index: 1002; width: min(380px, calc(100vw - 24px)); padding: var(--s-4, 20px); border-radius: var(--r-2); background: var(--surface-pop, var(--surface)); color: var(--text); box-shadow: var(--e2); }
+.tour-card { position: fixed; z-index: 1002; pointer-events: auto; width: min(380px, calc(100vw - 24px)); padding: var(--s-4, 20px); border-radius: var(--r-2); background: var(--surface-pop, var(--surface)); color: var(--text); box-shadow: var(--e2); }
 .tour-progress { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 5px; margin-bottom: var(--s-4, 16px); }
 .tour-progress span { height: 4px; border-radius: 4px; background: var(--line-strong); }
 .tour-progress span.done, .tour-progress span.current { background: var(--accent); }
