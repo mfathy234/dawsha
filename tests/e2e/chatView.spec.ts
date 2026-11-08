@@ -676,3 +676,132 @@ test('the background strip shows an agent as running, then done, and a click ope
     await closeApp(app)
   }
 })
+
+const iso = (base: number, seconds: number): string => new Date(base + seconds * 1000).toISOString()
+const looked = (id: string, name: string, input: unknown, base: number, seconds: number, output: string): unknown[] => [
+  { type: 'assistant', uuid: `${id}-a`, timestamp: iso(base, seconds), message: { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] } },
+  { type: 'user', uuid: `${id}-r`, timestamp: iso(base, seconds + 1), message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: output }] } }
+]
+
+test('looking around folds into one line, a finished turn says how long it took, and Ctrl+F finds text inside folded rows', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const base = Date.now() - 600_000
+    writeLog(sandbox, [
+      { type: 'user', uuid: 'g1', timestamp: iso(base, 0), message: { role: 'user', content: 'Look around the sender' } },
+      ...looked('r1', 'Read', { file_path: 'src/a.ts' }, base, 5, 'alpha NEEDLE-ONE'),
+      ...looked('r2', 'Read', { file_path: 'src/b.ts' }, base, 8, 'beta'),
+      ...looked('r3', 'Grep', { pattern: 'retry' }, base, 11, 'gamma NEEDLE-TWO'),
+      ...looked('r4', 'Read', { file_path: 'src/c.ts' }, base, 14, 'delta'),
+      ...looked('e1', 'Edit', { file_path: 'src/a.ts', old_string: 'a', new_string: 'b' }, base, 20, 'ok'),
+      { type: 'assistant', uuid: 'g9', timestamp: iso(base, 134), message: { role: 'assistant', content: [{ type: 'text', text: 'All done, the needle-one is in a.ts.' }] } }
+    ])
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    const group = chat.locator('.chat-group')
+    await expect(group).toHaveCount(1, { timeout: 15_000 })
+    await expect(group).toHaveText('Read 3 files, searched 1 time · 15s')
+    await expect(chat.locator('.chat-tool:not(.chat-group)')).toHaveCount(1)
+    await expect(chat.locator('.chat-tool:not(.chat-group)')).toContainText('src/a.ts')
+    await expect(chat.locator('[data-worked]')).toHaveText(/^Worked 2m 14s · 5 tools$/)
+
+    await group.click()
+    await expect(chat.locator('.chat-group-body .chat-tool')).toHaveCount(4)
+    await group.click()
+    await expect(chat.locator('.chat-group-body')).toHaveCount(0)
+
+    const box = chat.getByRole('textbox', { name: 'Message' })
+    await box.click()
+    await page.keyboard.press('Control+f')
+    const find = chat.locator('.chat-find')
+    await expect(find).toBeVisible()
+    await page.keyboard.type('needle')
+    await expect(find.locator('.term-find-count')).toHaveText('1 of 3')
+    await expect(chat.locator('.chat-group-body .chat-tool')).toHaveCount(4)
+    await expect(chat.locator('.chat-toolout')).toHaveCount(2)
+    expect(await page.evaluate(() => CSS.highlights.has('chat-find') && CSS.highlights.has('chat-find-current'))).toBe(true)
+    await page.keyboard.press('Enter')
+    await expect(find.locator('.term-find-count')).toHaveText('2 of 3')
+    await page.keyboard.press('Shift+Enter')
+    await expect(find.locator('.term-find-count')).toHaveText('1 of 3')
+    await page.keyboard.press('Escape')
+    await expect(find).toBeHidden()
+    await expect(chat.locator('.chat-toolout')).toHaveCount(0)
+    await expect(chat.locator('.chat-group-body')).toHaveCount(0)
+    expect(await page.evaluate(() => CSS.highlights.has('chat-find'))).toBe(false)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('the bell on a running turn raises a desktop notification when it finishes', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    writeLog(sandbox, [{ type: 'user', uuid: 'w1', timestamp: new Date().toISOString(), message: { role: 'user', content: 'Refactor the sender' } }])
+    const pane = await startClaude(page, sandbox, 'busy')
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    const bell = chat.locator('.chat-you [data-bell]')
+    await expect(bell).toBeVisible({ timeout: 15_000 })
+    await expect(bell).toHaveAttribute('aria-pressed', 'false')
+    await bell.click()
+    await expect(bell).toHaveAttribute('aria-pressed', 'true')
+    writeSession(sandbox, 'idle')
+    appendFileSync(logPath(sandbox), line({ type: 'assistant', uuid: 'w2', timestamp: new Date().toISOString(), message: { role: 'assistant', content: [{ type: 'text', text: 'Refactored.' }] } }))
+    await expect.poll(() => (existsSync(sandbox.notifyLog) ? readFileSync(sandbox.notifyLog, 'utf8') : ''), { timeout: 20_000 }).toContain('Claude is done')
+    expect(readFileSync(sandbox.notifyLog, 'utf8')).toContain('Refactor the sender')
+    await expect(chat.locator('[data-bell]')).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('a prompt saved with /save is offered first in the / list, inserts its text, and is managed in Settings', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    writeLog(sandbox, seedConversation.slice(0, 2))
+    const pane = await startClaude(page, sandbox)
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    const box = chat.getByRole('textbox', { name: 'Message' })
+    await expect(chat.locator('.chat-say')).toContainText('RetryPolicy', { timeout: 15_000 })
+    await box.fill('/save Review the latest change for bugs')
+    await box.evaluate((el: HTMLTextAreaElement) => {
+      el.setSelectionRange(5, 5)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await expect(chat.locator('.chat-complete-group').first()).toHaveText('Saved')
+    await expect(chat.locator('.chat-complete-row').first()).toContainText('save')
+    await box.press('Enter')
+    await page.locator('.dialog input').fill('Review change')
+    await page.locator('.dialog [data-confirm]').click()
+    await expect(box).toHaveValue('Review the latest change for bugs')
+    await expect.poll(() => readSettings(sandbox).savedPrompts?.[0]?.name).toBe('Review change')
+
+    await box.fill('')
+    await box.pressSequentially('/rev')
+    await expect(chat.locator('.chat-complete-group').first()).toHaveText('Saved')
+    await expect(chat.locator('.chat-complete-row').first()).toContainText('Review change')
+    await box.press('Enter')
+    await expect(box).toHaveValue('Review the latest change for bugs')
+
+    await openSettings(page, 'general')
+    const entry = page.locator('#saved-prompts [data-saved-prompt]')
+    await expect(entry).toContainText('Review change')
+    await entry.getByRole('button', { name: 'Delete Review change' }).click()
+    await expect(page.locator('.dialog')).toContainText('"Review change"')
+    await expect(page.locator('.dialog [data-confirm]')).toHaveText('Delete "Review change"')
+    await page.locator('.dialog').getByRole('button', { name: 'Cancel' }).click()
+    await expect(entry).toHaveCount(1)
+    await entry.getByRole('button', { name: 'Delete Review change' }).click()
+    await page.locator('.dialog [data-confirm]').click()
+    await expect(entry).toHaveCount(0)
+    await expect.poll(() => readSettings(sandbox).savedPrompts).toEqual([])
+  } finally {
+    await closeApp(app)
+  }
+})

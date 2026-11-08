@@ -1,5 +1,6 @@
 import { migrateSettings, MAX_LAYOUTS } from './settingsSchema'
 import { isGridStyle } from './gridStyle'
+import { mergeSavedPrompts } from './savedPrompts'
 import type { CrewMember, CrewSettings } from './crew'
 import type { Project, SavedLayout, Settings } from './types'
 
@@ -28,7 +29,9 @@ export const INCLUDED_KEYS = [
   'showRecap',
   'colorSessionsByTag',
   'sidebarWidth',
-  'othersCollapsed'
+  'othersCollapsed',
+  // Personal and portable: a prompt carries no ids from this PC.
+  'savedPrompts'
 ] as const satisfies readonly (keyof Settings)[]
 
 export const EXCLUDED_KEYS = [
@@ -138,6 +141,7 @@ function checkShapes(data: Raw): string | null {
   for (const key of BOOLEAN_KEYS) {
     if (data[key] !== undefined && typeof data[key] !== 'boolean') return `"${key}" must be true or false.`
   }
+  if (data.savedPrompts !== undefined && !Array.isArray(data.savedPrompts)) return '"savedPrompts" must be a list.'
   if (data.paletteShortcut !== undefined && typeof data.paletteShortcut !== 'string') return '"paletteShortcut" must be text.'
   if (data.sessionsLayout !== undefined && data.sessionsLayout !== 'grid' && data.sessionsLayout !== 'board') {
     return '"sessionsLayout" must be grid or board.'
@@ -243,7 +247,8 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['showRecap', 'Session recap'],
   ['colorSessionsByTag', 'Tag colours'],
   ['sidebarWidth', 'Sidebar'],
-  ['othersCollapsed', 'Sidebar']
+  ['othersCollapsed', 'Sidebar'],
+  ['savedPrompts', 'Saved prompts']
 ]
 
 export function preferenceLabels(data: Partial<TransferData>): string[] {
@@ -277,6 +282,7 @@ function preferencePatch(current: Settings, data: Partial<TransferData>, mode: T
     if (key === 'projects' || key === 'layouts' || data[key] === undefined) continue
     if (key === 'theme') patch.theme = { ...current.theme, id: data.theme!.id }
     else if (key === 'crew') patch.crew = mergeCrew(current.crew, data.crew!, mode, keepFullAccess)
+    else if (key === 'savedPrompts') patch.savedPrompts = mergeSavedPrompts(current.savedPrompts, data.savedPrompts!, mode)
     else Object.assign(patch, { [key]: data[key] })
   }
   return patch

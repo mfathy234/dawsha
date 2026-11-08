@@ -6,6 +6,7 @@ import { isAgent } from './agents'
 import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews, sanitizeSessionViews } from './chatLog'
 import { isSessionsLayout } from './board'
 import { DEFAULT_GRID_STYLE, isGridStyle } from './gridStyle'
+import { sanitizeSavedPrompts } from './savedPrompts'
 import { isSidebarSort } from './sidebarModel'
 import { sanitizeBaseline } from './gitStatus'
 import { DEFAULT_THEME_ID, resolveThemeId } from './themes'
@@ -83,6 +84,7 @@ export const defaultSettings = (): Settings => ({
   showRecap: true,
   sessionViews: { claude: DEFAULT_CHAT_VIEW, codex: DEFAULT_CHAT_VIEW },
   chatViews: {},
+  savedPrompts: [],
   colorSessionsByTag: true,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   othersCollapsed: false,
@@ -385,6 +387,7 @@ export function migrateSettings(raw: unknown): Settings {
     showRecap: raw.showRecap !== false,
     sessionViews: sanitizeSessionViews(raw.sessionViews, raw.sessionView),
     chatViews: sanitizeChatViews(raw.chatViews),
+    savedPrompts: sanitizeSavedPrompts(raw.savedPrompts),
     colorSessionsByTag: raw.colorSessionsByTag !== false,
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,
