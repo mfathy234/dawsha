@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.8.0</a>
+      <a href="#new">New in 1.8.5</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,8 +97,38 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.8.0</h2>
-      <p class="section-lead">1.8.0 is a full redesign: one type, colour and spacing system, one style for every control, a top bar with the pages in it, two ways to lay out sessions, and an approval card that shows what an agent is asking. It also carries the 1.7.6 and 1.7.5 changes.</p>
+      <h2 id="new-h">New in 1.8.5</h2>
+      <p class="section-lead">1.8.5 makes chat the easy way to work with Claude Code and Codex, lets you undo a reply, runs prompts on a schedule and keeps an eye on what you spend. Below it is the 1.8.0 redesign and what came with it.</p>
+      <div class="feat-row" id="chat-composer">
+        <div class="feat-copy">
+          <h3>A chat box that keeps up</h3>
+          <p>Type / for the agent's commands and your own, or @ for a file in the project.</p>
+          <ul><li>Up and Down bring back what you sent, and Stop interrupts the agent.</li><li>Messages waiting in the queue can be edited or removed before they go.</li><li>Runs of reads and searches fold into one line, and each turn says how long it took.</li><li>Ctrl+F finds text in the conversation, and a bell can ring when the agent finishes.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/chat-autocomplete.png" width="1168" height="668" alt="Chat view with the message box suggesting slash commands, a project command and a built in one, above a finished reply">
+        </figure>
+      </div>
+      <div class="feat-wide" id="undo-reply">
+        <div class="feat-copy">
+          <h3>See what a reply changed, and undo it</h3>
+          <p>After each reply a card lists the files it changed with their added and removed lines, how long it worked, and Review changes.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/chat-summary.png" width="1168" height="668" alt="A finished Claude reply in chat with a card listing three changed files, their line counts, Review changes and how long it worked">
+        </figure>
+        <ul class="feat-cols"><li>Dawsha takes a snapshot just before each message you send from chat.</li><li>Undo this reply puts back only the files that reply changed, after a confirm that names them.</li><li>Your branch, your staged files and other edits are left alone, and Redo is one click away.</li></ul>
+      </div>
+      <div class="feat-wide" id="work-budget">
+        <div class="feat-copy">
+          <h3>Work that runs on its own, within a budget</h3>
+          <p>In Work, schedule a Claude or Codex prompt for a time or for chosen days, or queue several prompts to run one after another.</p>
+        </div>
+        <figure class="shot framed narrow">
+          <img loading="lazy" src="assets/new-session-menu.png" width="400" height="300" alt="The New session menu with Claude, Codex and Gemini sessions above Resume a session, Ask two agents and Hand a job to an agent">
+        </figure>
+        <ul class="feat-cols four"><li>Save a project, agent and first message as a preset, and start it from the New session menu.</li><li>Give a project a daily or weekly spending limit. Dawsha warns at 80% and at 100%.</li><li>Ctrl+Shift+. pauses every working agent after one confirm.</li><li>Desktop notifications say what the agent wants to run or edit, and the project it is in.</li></ul>
+      </div>
       <div class="feat-row" id="redesign">
         <div class="feat-copy">
           <h3>A new look, one style</h3>

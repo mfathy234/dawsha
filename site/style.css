@@ -266,6 +266,7 @@ html.lenis { scroll-behavior: auto; }
 .feat-row.flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
 .feat-row.flip .feat-copy { order: 2; }
 .feat-row .narrow { max-width: 460px; }
+.feat-wide .narrow { max-width: 460px; margin-inline: auto; }
 .feat-copy h3 { font-size: 1.5rem; }
 .feat-copy p { color: var(--muted); margin-top: 12px; }
 .feat-copy ul { margin: 20px 0 0; padding: 0; list-style: none; display: grid; gap: 14px; }
