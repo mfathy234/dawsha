@@ -20,8 +20,11 @@ const FUNCTION_KEY = /^F([1-9]|1[0-2])$/i
 const runtimePlatform = (): string => typeof navigator === 'undefined' ? '' : navigator.platform
 const isMac = (platform = runtimePlatform()): boolean => platform.toLowerCase().includes('mac') || platform === 'darwin'
 
+/** What a US keyboard reports for a punctuation key while Shift is held, so Ctrl+Shift+. still matches '.'. */
+const SHIFTED: Readonly<Record<string, string>> = { _: '-', '>': '.' }
+
 function normalizeKey(raw: string): string | null {
-  if (raw.length === 1) return /[a-z0-9]/i.test(raw) ? raw.toLowerCase() : null
+  if (raw.length === 1) return /[a-z0-9.]/i.test(raw) ? raw.toLowerCase() : null
   const named = NAMED_KEYS.find((name) => name.toLowerCase() === raw.toLowerCase())
   if (named) return named
   return FUNCTION_KEY.test(raw) ? raw.toUpperCase() : null
@@ -53,7 +56,7 @@ export function matchesBinding(event: KeyEventLike, binding: KeyBinding, platfor
   const mac = isMac(platform) && !binding.physicalCtrl
   const primary = mac ? event.metaKey : event.ctrlKey
   if (primary !== binding.ctrl || (mac ? event.ctrlKey : event.metaKey) || event.shiftKey !== binding.shift || event.altKey !== binding.alt) return false
-  const pressed = event.key === ' ' ? 'Space' : binding.key === '-' && event.shiftKey && event.key === '_' ? '-' : event.key
+  const pressed = event.key === ' ' ? 'Space' : event.shiftKey && SHIFTED[event.key] === binding.key ? binding.key : event.key
   return binding.key.length === 1 ? pressed.toLowerCase() === binding.key : pressed === binding.key
 }
 

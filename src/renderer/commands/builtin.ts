@@ -55,6 +55,7 @@ import { paneById, store, type AppState } from '../state'
 import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
 import { SIDEBAR_FILTER_EVENT } from '../../shared/sidebarModel'
 import { registerCommands, registerProvider, type Command } from './registry'
+import { editSpendLimit, pauseAllAgents } from '../spendActions'
 
 const hasPane = (state: AppState): boolean => paneById(state, state.focusedId) !== undefined
 
@@ -282,6 +283,18 @@ export function installBuiltinCommands(): void {
     },
     focusedAction('terminal.clear-scrollback', 'Clear the terminal scrollback', clearScrollback, 'history wipe screen output'),
     focusedAction('pane.instructions', 'Edit project instructions', openInstructionsForPane, 'claude agents gemini md rules'),
+    {
+      id: 'agents.pause-all',
+      title: 'Pause all working agents…',
+      group: 'Actions',
+      keywords: 'interrupt stop escape everything halt',
+      ...withKeys('Ctrl+Shift+.'),
+      run: () => void pauseAllAgents()
+    },
+    focusedAction('project.spend-limit', 'Set a spending limit for this project…', (id) => {
+      const projectId = paneById(store.state, id)?.projectId
+      if (projectId) void editSpendLimit(projectId)
+    }, 'cost budget dollars money warn daily weekly'),
     focusedAction('pane.vscode', 'Open in VS Code', (id) => openPaneFolder(id, 'vscode'), 'editor folder'),
     focusedAction('pane.explorer', 'Open in Explorer', (id) => openPaneFolder(id, 'explorer'), 'folder files'),
     focusedAction('pane.terminal', 'Open a terminal here', (id) => addTab(id, 'shell'), 'shell tab'),

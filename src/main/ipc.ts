@@ -420,7 +420,7 @@ export function registerIpc(
     return { ...accounts, codex: { ...accounts.codex, plan: (await readCodexLimitsCached()).plan } }
   })
   ipcMain.handle(IPC.knownLimits, async () => ({ claude: usage.lastClaudeLimits(), codex: (await readCodexLimitsCached()).entry }))
-  ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
+  ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects, settings.get().spendLimits))
   const work = new WorkService()
   ipcMain.handle(IPC.workGet, async (_event, period: unknown, offset: unknown) => {
     const valid: WorkPeriod = period === 'week' || period === 'month' ? period : 'today'

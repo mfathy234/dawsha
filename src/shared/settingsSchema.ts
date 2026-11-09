@@ -81,6 +81,7 @@ export const defaultImage = (): BackgroundImage => ({ enabled: false, path: null
 export const defaultSettings = (): Settings => ({
   version: 2,
   projects: [],
+  spendLimits: {},
   theme: { id: DEFAULT_THEME_ID, image: defaultImage() },
   sidebarCollapsed: false,
   sidebarSort: 'recent',
@@ -431,9 +432,14 @@ export function migrateSettings(raw: unknown): Settings {
   const projects = sanitizeProjects(raw.projects)
   const theme = isRecord(raw.theme) ? raw.theme : {}
   const info = isRecord(raw.sessionInfo) ? raw.sessionInfo : {}
+  const spendLimits: Settings['spendLimits'] = {}
+  if (isRecord(raw.spendLimits)) for (const [id, limit] of Object.entries(raw.spendLimits)) {
+    if (projects.some((project) => project.id === id) && isRecord(limit) && typeof limit.amountUsd === 'number' && Number.isFinite(limit.amountUsd) && limit.amountUsd > 0 && (limit.period === 'day' || limit.period === 'week')) spendLimits[id] = { amountUsd: Math.min(1_000_000, limit.amountUsd), period: limit.period }
+  }
   return {
     version: 2,
     projects,
+    spendLimits,
     theme: { id: resolveThemeId(asString(theme.id) ?? defaults.theme.id), image: sanitizeImage(theme.image) },
     sidebarCollapsed: raw.sidebarCollapsed === true,
     sidebarSort: isSidebarSort(raw.sidebarSort) ? raw.sidebarSort : 'recent',

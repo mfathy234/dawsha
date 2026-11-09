@@ -1,4 +1,5 @@
 import { installUsageSnapshot } from './usageSnapshot'
+import { installSpendWarnings } from './spendActions'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import './components/controls.css'
@@ -135,6 +136,7 @@ async function boot(): Promise<void> {
   installNeedsNotices()
   guardWindowDrops()
   installUsageSnapshot()
+  installSpendWarnings()
   void installOps()
   installProcessActivity()
   installBuiltinCommands()

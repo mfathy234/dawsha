@@ -15,6 +15,8 @@ export interface UsageSnapshot {
   generatedAt: number
   sessions: Record<string, UsageTotals>
   projectsToday: Record<string, ProjectToday>
+  /** Known spend in each project's current limit window (day or week), for projects that have a spending limit. */
+  spend?: Record<string, number>
 }
 
 export interface SnapshotInput {

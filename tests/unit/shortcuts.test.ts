@@ -79,3 +79,15 @@ describe('primaryModifierPressed', () => {
     expect(primaryModifierPressed(event('c', { metaKey: true }), 'win32')).toBe(false)
   })
 })
+
+describe('Ctrl+Shift+period', () => {
+  const binding = { key: '.', ctrl: true, shift: true, alt: false }
+  it('matches the character a US keyboard sends for Shift+period', () => {
+    expect(matchesBinding({ key: '>', ctrlKey: true, shiftKey: true, altKey: false, metaKey: false }, binding, 'win32')).toBe(true)
+    expect(matchesBinding({ key: '.', ctrlKey: true, shiftKey: true, altKey: false, metaKey: false }, binding, 'win32')).toBe(true)
+    expect(matchesBinding({ key: '.', ctrlKey: true, shiftKey: false, altKey: false, metaKey: false }, binding, 'win32')).toBe(false)
+  })
+  it('prints as Ctrl+Shift+.', () => {
+    expect(formatShortcut(binding, 'win32')).toBe('Ctrl+Shift+.')
+  })
+})

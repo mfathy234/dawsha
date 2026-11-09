@@ -43,6 +43,7 @@ export const EXCLUDED_KEYS = [
   // Keyed by this PC's project ids, like closed sessions.
   'foldedProjects',
   'foldedClosedSessions',
+  'spendLimits',
   'filesLayout',
   'filesTabs',
   'runCommands',
