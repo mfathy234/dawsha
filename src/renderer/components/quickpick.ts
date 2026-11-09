@@ -105,7 +105,7 @@ export class QuickPickComponent {
       h(
         'div',
         { class: 'popover-foot nd-foot' },
-        h('span', { class: 'nd-hint' }, 'Enter starts a session. Tab switches agent. ', keycaps(MAC ? 'Cmd+R' : 'Ctrl+R'), ' resumes'),
+        h('span', { class: 'nd-hint' }, 'Tab switches agent'),
         h('span', { class: 'spacer' }),
         h('button', { class: 'btn ghost', type: 'button', id: 'save-preset', onClick: () => this.saveAsPreset() }, 'Save as preset…'),
         h('button', { class: 'btn ghost', type: 'button', onClick: () => closeQuickPick() }, 'Cancel'),
@@ -275,7 +275,7 @@ export class QuickPickComponent {
                 h('span', { class: 'nd-limit' }, h('span', { class: 'nd-limit-label' }, window.label), chargeBar(window.percent), formatPercent(window.percent))
               )
             )
-          : h('span', { class: 'nd-note' }, agent === 'gemini' ? "Doesn't report usage limits" : 'Limits show once a session reports them')
+          : null
       )
       this.agents.append(card)
     }

@@ -346,7 +346,7 @@ export class TopBarComponent {
     const resume = h(
       'button',
       {
-        class: 'menu-item menu-resume',
+        class: 'menu-item',
         type: 'button',
         role: 'menuitem',
         id: 'resume-menu-item',
@@ -387,7 +387,7 @@ export class TopBarComponent {
           openHandDialog()
         }
       },
-      icon(ICONS.next),
+      icon(ICONS.navAgents),
       'Hand a job to an agent…'
     )
     const presets = store.state.settings.presets.map((preset) =>
@@ -404,15 +404,17 @@ export class TopBarComponent {
             void startPreset(preset.id)
           }
         },
-        icon(ICONS.next),
+        icon(ICONS.play),
         `Start preset: ${preset.name}`
       )
     )
+    const separator = (): HTMLElement => h('div', { class: 'menu-separator', role: 'separator' })
+    const groups = [items.slice(), presets, [resume, compare, crewItem]].filter((group) => group.length > 0)
     items.push(...presets, resume, compare, crewItem)
     this.agentMenu = h(
       'div',
-      { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent' },
-      ...items
+      { class: 'popover menu floating new-session-menu', role: 'menu', 'aria-label': 'Choose agent' },
+      ...groups.flatMap((group, index) => (index === 0 ? group : [separator(), ...group]))
     )
     this.agentMenu.addEventListener('keydown', (event) => this.onMenuKey(event, items))
     this.newSession.setAttribute('aria-expanded', 'true')

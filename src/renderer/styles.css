@@ -7470,3 +7470,31 @@ button.tl-event:hover { background: var(--raised); }
 :root .skill-kind[aria-pressed='true']::after { content: ''; position: absolute; inset-inline: 8px; bottom: 1px; height: 2px; border-radius: 2px; background: var(--accent-ink, var(--accent)); pointer-events: none; }
 /* Between 1100 and 1280px the top bar has no room for the long "no limits reported" line, which pushed New session off the window. */
 @media (max-width: 1280px) { .topbar-limits .limits-none { display: none; } }
+
+/* 1.8.5 calmer surfaces.
+   Settings sits on the app's own background like every other page: no second shade for the content and no raised rail. */
+:root .settings-view { background: transparent; }
+:root .settings-rail { background: transparent; box-shadow: none; }
+:root .settings-tab.selected { background: var(--hover); box-shadow: none; font-weight: 500; }
+
+/* Selected rows in pickers and menus are a plain fill, without the light line across their top. */
+:root .rp-row.selected,
+:root .new-dialog .option.selected,
+:root .nd-agent.selected,
+:root .files-branch-menu .files-bm-item[aria-current='true'] { box-shadow: none; }
+/* On the picker's own surface a raised fill is invisible, so selection is one step above hover. */
+:root .rp-row.selected,
+:root .new-dialog .option.selected,
+:root .nd-agent.selected { background: var(--press); }
+:root .nd-agent.selected:focus-visible { box-shadow: inset 0 0 0 1px var(--focus-ring); }
+
+/* New session: both columns on the dialog's surface, and footer buttons that never wrap. */
+:root .nd-agent-col { background: transparent; }
+:root .nd-foot .btn { white-space: nowrap; }
+:root .nd-hint { font-size: var(--fs-12); color: var(--text-3); }
+
+/* The New session menu: one 16px icon column, shortcuts as quiet text instead of boxed keys. */
+:root .new-session-menu { min-width: 248px; }
+:root .new-session-menu .menu-item { gap: 10px; }
+:root .new-session-menu .menu-item > :is(.icon, .agent-mark, svg) { flex: none; width: 16px; height: 16px; }
+:root .new-session-menu .kbd { margin-inline-start: auto; padding: 0; border: 0; background: none; color: var(--text-3); font-family: inherit; font-size: var(--fs-12); }

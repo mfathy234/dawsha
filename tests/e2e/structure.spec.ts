@@ -293,8 +293,10 @@ for (const [mode, themeId] of THEMES) {
       await page.locator('#layout-grid').click()
 
       await openSettings(page, 'general')
+      // Settings sits on the app's own background: neither the rail nor the page paints a second shade.
       const nav = await style(page, '.settings-rail', ['background-color'])
-      expect(nav['background-color']).toBe(rgb(mode === 'dark' ? '#0e1116' : '#eaedf2'))
+      expect(nav['background-color']).toBe('rgba(0, 0, 0, 0)')
+      expect((await style(page, '.settings-view', ['background-color']))['background-color']).toBe('rgba(0, 0, 0, 0)')
       expect(await page.getByRole('switch').first().evaluate((el) => getComputedStyle(el).width)).toBe('36px')
       await shot(page, `${mode}-settings`)
       await page.locator('#settings-button').click()
