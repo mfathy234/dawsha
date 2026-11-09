@@ -9,6 +9,9 @@
 :root .rp-filters { flex-wrap: nowrap; }
 :root .rp-filters .rp-search-wrap { flex: 1 1 auto; flex-basis: auto; }
 :root .rp-subfilters { display: flex; align-items: center; gap: var(--s-4); min-height: 28px; }
+/* The project dropdown matches the search box beside it: one hairline, no inset shadow or outer ring. */
+:root .quickpick .rp-filters .select-menu-trigger { background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); }
+:root .quickpick .rp-filters .select-menu-trigger:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--focus-ring); }
 :root .rp-scope { gap: var(--s-2); color: var(--text-2); font-size: var(--fs-12); cursor: pointer; }
 :root .rp-scope:hover { color: var(--text); }
 
