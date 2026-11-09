@@ -7,6 +7,7 @@ import { logicalText, visualFromLogical } from '../shared/visualOrder'
 import { insertionData } from '../shared/insertText'
 import { primaryModifierPressed } from '../shared/shortcuts'
 import { h } from './dom'
+import { PromptSelection } from './promptSelection'
 import { TerminalPrompts } from './terminalPrompts'
 import { TerminalArabic } from './terminalArabic'
 import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
@@ -43,6 +44,7 @@ export class TerminalView {
   private readonly observer: ResizeObserver
   private readonly search: TerminalSearch
   readonly prompts: TerminalPrompts
+  private readonly promptSelection: PromptSelection
   private readonly highlights: TerminalHighlights
   private readonly fileLinks: FileLinks
   private readonly arabic: TerminalArabic
@@ -80,8 +82,10 @@ export class TerminalView {
     this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.prompts = new TerminalPrompts(this.term)
     this.arabic = new TerminalArabic(this.term, () => callbacks.textOrder())
+    this.promptSelection = new PromptSelection(this.term, (data) => callbacks.onInput(data))
     this.term.onData((data) => {
       this.prompts.noteInput(data)
+      this.promptSelection.noteInput(data)
       callbacks.onInput(data)
     })
     this.term.onResize(({ cols, rows }) => callbacks.onResize(cols, rows))
@@ -354,6 +358,10 @@ export class TerminalView {
 
   private handleKey(event: KeyboardEvent): boolean {
     if (event.type !== 'keydown') return true
+    if (!this.promptSelection.handleKey(event)) {
+      event.preventDefault()
+      return false
+    }
     const key = event.key.toLowerCase()
     if (primaryModifierPressed(event) && !event.altKey && key === 'c' && this.term.hasSelection()) {
       void this.callbacks.writeClipboard(this.selection())
