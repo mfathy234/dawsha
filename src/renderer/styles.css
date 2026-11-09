@@ -67,7 +67,7 @@
   --dur-1: 100ms; --dur-2: 160ms; --dur-3: 220ms; --dur-4: 320ms;
   --ease-out: cubic-bezier(.23, 1, .32, 1); --ease-in-out: cubic-bezier(.77, 0, .175, 1); --ease-drawer: cubic-bezier(.32, .72, 0, 1);
   --h-sm: 24px; --h-md: 28px; --h-lg: 32px;
-  --bg: #090b0f; --sidebar: #0e1116; --surface: #14181f; --raised: #1b212a; --surface-pop: #232a35; --well: #0a0c10;
+  --bg: #121419; --sidebar: #16191f; --surface: #1b1f26; --raised: #20252d; --surface-pop: #272d37; --well: #0f1115;
   --text: #e8ebf1; --text-2: #aab3c3; --text-3: #8c96a8;
   --accent: #34d399; --on-accent: #04261b; --accent-ink: #4ade9f; --focus: #6ee7b7;
   --st-working: #72b4ff; --st-needs: #ffa54f; --st-done: #4ade9f; --st-idle: #8c96a8; --st-error: #ff8080;
@@ -79,16 +79,16 @@
   --e3: 0 24px 64px rgb(0 0 0 / .6), 0 0 0 1px var(--line-strong);
   --scrim: rgb(5 7 10 / .62);
   /* Surface ladder, set per theme by themeManager: canvas < chrome < pane < raised < overlay, with the well recessed into a pane. */
-  --bg: #090b0f;
+  --bg: #121419;
   --canvas: var(--bg);
-  --sidebar: #0e1116;
+  --sidebar: #16191f;
   --chrome: var(--sidebar);
-  --surface: #14181f;
+  --surface: #1b1f26;
   --pane: var(--surface);
-  --raised: #1b212a;
-  --surface-pop: #232a35;
+  --raised: #20252d;
+  --surface-pop: #272d37;
   --overlay: var(--surface-pop);
-  --well: #0a0c10;
+  --well: #0f1115;
   --term-bg: var(--well);
   --border: #232833;
   /* A seam only where whole regions meet; the ring is the quiet edge of a pane or card. */
