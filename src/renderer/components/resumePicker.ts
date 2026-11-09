@@ -95,10 +95,10 @@ export class ResumePickerComponent {
       'div',
       { class: 'popover quickpick resume-picker', role: 'dialog', 'aria-label': 'Start or resume a session' },
       h('div', { class: 'rp-head' }, h('div', { class: 'rp-top' }, modeTabs('resume'), h('span', { class: 'spacer' }), hint, popupDismissButton(() => closeQuickPick())),
-        h('div', { class: 'rp-filters' }, h('div', { class: 'rp-search-wrap' }, icon(ICONS.search), this.search), selectMenu(this.projectSelect),
-          h('label', { class: 'rp-scope', for: 'rp-all-projects' }, this.allProjects, 'Search all projects'),
-          h('label', { class: 'rp-scope', for: 'rp-show-automatic', title: 'Sessions other tools started, such as automatic summaries and safety reviews' }, this.showAutomatic, 'Show automatic sessions')),
-        this.chips),
+        h('div', { class: 'rp-filters' }, h('div', { class: 'rp-search-wrap' }, icon(ICONS.search), this.search), selectMenu(this.projectSelect)),
+        h('div', { class: 'rp-subfilters' }, this.chips, h('span', { class: 'spacer' }),
+          h('label', { class: 'rp-scope', for: 'rp-all-projects' }, this.allProjects, 'All projects'),
+          h('label', { class: 'rp-scope', for: 'rp-show-automatic', title: 'Sessions other tools started, such as automatic summaries and safety reviews' }, this.showAutomatic, 'Automatic sessions'))),
       h('div', { class: 'rp-body' }, this.list, this.preview),
       this.foot
     )
@@ -315,7 +315,7 @@ export class ResumePickerComponent {
         h(
           'div',
           { class: 'rp-row-meta' },
-          h('span', { class: 'rp-project-chip' }, project?.name ?? ''),
+          this.allProjects?.checked && project ? h('span', { class: 'rp-project-chip' }, project.name) : null,
           h('span', {}, messageWord(session.messageCount)),
           session.matchExcerpt ? h('span', { class: 'rp-match-chip' }, 'content match') : null,
           open ? h('span', { class: 'rp-open' }, `open in pane ${open.number}`) : null
@@ -348,7 +348,8 @@ export class ResumePickerComponent {
     const parts: (HTMLElement | null)[] = [
       h('div', { class: 'rp-pv-head' }, agentMark(session.agent), h('h2', { class: 'rp-pv-title', dir: 'auto' }, session.title)),
       h('p', { class: 'rp-pv-sub' }, [agentLabel(session.agent), session.model].filter(Boolean).join(' · ')),
-      h('p', { class: 'rp-pv-sub' }, project?.name ?? '', project ? ' ' : '', h('span', { class: 'mono' }, project?.folder ?? '')),
+      project ? h('p', { class: 'rp-pv-sub' }, project.name) : null,
+      project ? h('p', { class: 'rp-pv-path', title: project.folder }, project.folder) : null,
       h('p', { class: 'rp-facts', 'aria-label': 'Session facts' }, facts.join(' · ')),
       field('What it was about', session.firstPrompt, 5),
       field('Where it ended', session.lastAssistant, 7),

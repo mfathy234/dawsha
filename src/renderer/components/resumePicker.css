@@ -3,3 +3,39 @@
 .rp-field p { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.5; }
 .rp-field + .rp-field { margin-top: var(--s-1); }
 .rp-match p { padding: var(--s-2) var(--s-2); background: var(--well); border-radius: var(--radius); }
+
+/* 1.8.5 calmer picker. The :root prefix keeps these ahead of the older rules in styles.css whatever order the CSS loads in.
+   Search and project share one row; agent tabs and the two scope options share the next. */
+:root .rp-filters { flex-wrap: nowrap; }
+:root .rp-filters .rp-search-wrap { flex: 1 1 auto; flex-basis: auto; }
+:root .rp-subfilters { display: flex; align-items: center; gap: var(--s-4); min-height: 28px; }
+:root .rp-scope { gap: var(--s-2); color: var(--text-2); font-size: var(--fs-12); cursor: pointer; }
+:root .rp-scope:hover { color: var(--text); }
+
+/* Agent filter: the same underline tabs as every other tab row, not filled chips. */
+:root .rp-chips { gap: 2px; }
+:root .rp-chip { position: relative; height: 28px; padding: 0 var(--s-2); gap: 6px; background: transparent; box-shadow: none; color: var(--text-2); }
+:root .rp-chip:hover { background: var(--hover); color: var(--text); }
+:root .rp-chip.selected,
+:root .rp-chip[aria-pressed='true'] { background: transparent; box-shadow: none; color: var(--text); font-weight: 500; }
+:root .rp-chip.selected:hover { background: var(--hover); }
+:root .rp-chip.selected::after {
+  content: ''; position: absolute; inset-inline: 8px; bottom: 1px; height: 2px; border-radius: 2px; background: var(--accent-ink, var(--accent));
+  pointer-events: none;
+}
+
+/* Rows: plain text separated by dots, no badges. */
+:root .rp-group { margin-top: var(--s-2); font-size: var(--fs-12); color: var(--text-3); }
+:root .rp-group:first-child { margin-top: 0; }
+:root .rp-row { align-items: center; gap: var(--s-3); padding: 7px var(--s-2); }
+:root .rp-row-meta { gap: 0; font-size: var(--fs-12); color: var(--text-3); }
+:root .rp-row-meta > span:not(.rp-open) + span::before { content: '·'; margin-inline: 6px; color: var(--text-3); }
+:root .rp-project-chip { padding: 0; background: none; border-radius: 0; font-family: inherit; font-size: inherit; color: var(--text-2); }
+:root .rp-match-chip { padding: 0; background: none; color: var(--text-2); }
+:root .rp-open { font-size: var(--fs-12); color: var(--accent-ink, var(--accent)); }
+:root .rp-age { font-size: var(--fs-12); color: var(--text-3); }
+
+/* Preview: the folder sits on its own quiet line instead of wrapping inside the project name. */
+:root .rp-pv-path { margin: 2px 0 0; font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-3); overflow-wrap: anywhere; }
+:root .rp-field h3 { font-size: var(--fs-12); color: var(--text-3); }
+:root .rp-foot { font-size: var(--fs-12); color: var(--text-3); }
