@@ -71,7 +71,7 @@ export class ChatComplete {
     this.el.replaceChildren(...this.rows.flatMap((row, index) => [...this.heading(row, index, grouped), h('div', {
       class: `chat-complete-row${index === this.selected ? ' selected' : ''}`, role: 'option', 'aria-selected': String(index === this.selected),
       onMousedown: (event: Event) => event.preventDefault(), onClick: () => { this.selected = index; this.pick() }
-    }, h('span', { class: 'chat-complete-name' }, ...this.marked(row.kind === 'file' && row.path ? row.path.slice(row.path.lastIndexOf('/') + 1) : row.name, token.query)), h('span', { class: 'chat-complete-description' }, row.description), ...(token.kind === 'command' && row.kind ? [h('span', { class: 'chat-complete-kind' }, row.kind)] : []))]))
+    }, h('span', { class: 'chat-complete-name' }, ...this.marked(this.label(row, token), token.query)), h('span', { class: 'chat-complete-description' }, row.description), ...(token.kind === 'command' && row.kind ? [h('span', { class: 'chat-complete-kind' }, row.kind)] : []))]))
     this.el.querySelector('.chat-complete-row.selected')?.scrollIntoView({ block: 'nearest' })
   }
 
@@ -81,6 +81,13 @@ export class ChatComplete {
     const startsPart = index === 0 || Boolean(this.rows[index - 1].saved) !== Boolean(row.saved)
     if (!startsPart) return []
     return [h('div', { class: 'chat-complete-group', role: 'presentation' }, row.saved ? CHAT_TEXT.savedGroup : CHAT_TEXT.commandsGroup)]
+  }
+
+  /** What the row shows: a file's name, or a command as it will be typed, with its slash. Saved prompts show their title. */
+  private label(row: Row, token: CompletionToken): string {
+    if (row.kind === 'file' && row.path) return row.path.slice(row.path.lastIndexOf('/') + 1)
+    if (token.kind === 'command' && !row.saved && !row.name.startsWith('/')) return `/${row.name}`
+    return row.name
   }
 
   private marked(name: string, query: string): Node[] {
