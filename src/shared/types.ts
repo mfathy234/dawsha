@@ -410,6 +410,8 @@ export interface NotifyRequest {
   paneId: string
   title: string
   body: string
+  /** Project and agent, shown in small type under the body on Windows. */
+  attribution?: string
   sound: boolean
 }
 
