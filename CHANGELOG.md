@@ -21,6 +21,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **Scheduled runs and a task queue.** In Work, schedule a Claude or Codex prompt to run once or on chosen days at a set time, or queue several prompts to run one after another, each in its own session.
 - **MCP servers in Settings.** One list of the MCP servers Claude Code, Codex and Gemini use, with how each connects. Turn a server on or off, or open the file it is set in. Secret values stay hidden until you click Show.
 - **Search all sessions.** Ctrl+Shift+F, where nothing else claims it, searches the output of every open session.
+- **Select words in the agent's input box.** In the terminal, Ctrl+Shift+Left selects the word before the caret, and each press adds one more, up to the whole prompt. Ctrl+Shift+Right gives words back. Backspace removes the selection, typing replaces it, and Ctrl+C copies it.
 - **A guided tour.** New users get a short tour of the main parts of Dawsha. Take the tour, in the top bar's More menu, shows it again.
 
 ### Changed
@@ -28,6 +29,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **Smaller installer.** The Windows installer is about 15 MB smaller: unused languages, TypeScript files and packages only the page needs are left out.
 - **Hidden terminals sleep.** A terminal that has been out of sight for 10 minutes drops its GPU renderer and gets it back when shown. The agent keeps running. Turn this off in Settings.
 - **One tab style.** Every tab row underlines the selected tab, like Sessions.
+- **Clearer desktop notifications.** The notification says what the agent is asking, such as "Wants to run npm test", or how its reply ended, with the project and agent in small type underneath.
+- **A calmer Resume picker.** Search and project share one row, the agent filter uses underline tabs, and rows show the project only when you search all projects.
 - **A roomier Files editor** with a settings gear for font size and word wrap, and a soft glow on progress bars.
 - **Calmer chat view.** No sideways scrolling, a thin scrollbar, shell commands described in words, and one "working" line.
 - Thin scrollbars everywhere, and layout fixes in the top bar, Agents, Usage, Skills, Projects and narrow panes.
