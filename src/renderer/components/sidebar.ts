@@ -832,12 +832,12 @@ export class SidebarComponent {
       item(`Resume in ${project.name}…`, () => openResumePicker(projectId)),
       item('Open in Files', () => openFolderInFiles({ projectId, folder: project.folder })),
       item('Open terminal here', () => void startSession(projectId, 'shell')),
+      item(this.lastState?.settings.spendLimits?.[projectId] ? 'Change spending limit…' : 'Set spending limit…', () => void editSpendLimit(projectId)),
       h('div', { class: 'pv-menu-sep', role: 'separator' }),
       arrange(project.pinned === true ? 'Unpin' : 'Pin to top', () => pinProject(projectId, project.pinned !== true)),
       manual && canMoveProject(stored, projectId, -1) ? arrange('Move up', () => moveProjectInList(projectId, -1)) : null,
       manual && canMoveProject(stored, projectId, 1) ? arrange('Move down', () => moveProjectInList(projectId, 1)) : null,
       item('Rename…', () => void this.renameProject(project)),
-      item(this.lastState?.settings.spendLimits?.[projectId] ? 'Change spending limit…' : 'Set spending limit…', () => void editSpendLimit(projectId)),
       h('div', { class: 'pv-menu-sep', role: 'separator' }),
       h('button', { class: 'menu-item danger', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); void removeProject(projectId) } }, `Remove ${project.name} from Dawsha…`)
     ], `Actions for ${project.name}`)
