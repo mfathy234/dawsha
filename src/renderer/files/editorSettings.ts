@@ -16,21 +16,22 @@ export class EditorSettings {
   private readonly smaller = iconButton('Smaller text', ICONS.minus, () => this.step(-1), 'small')
   private readonly larger = iconButton('Larger text', ICONS.plus, () => this.step(1), 'small')
   private readonly wrap = h('button', { class: 'toggle', type: 'button', id: 'files-editor-wrap', role: 'switch', 'aria-label': 'Word wrap', onClick: () => this.toggleWrap() })
-  private readonly popover = h('div', { class: 'popover editor-popover', id: 'files-editor-popover', role: 'dialog', 'aria-label': 'Editor settings', hidden: true },
+  private readonly popover = h('div', { class: 'popover editor-popover', id: 'files-editor-popover', role: 'dialog', 'aria-label': 'Editor settings' },
     h('div', { class: 'editor-row' }, h('span', { class: 'editor-label' }, 'Font size'), h('span', { class: 'editor-stepper' }, this.smaller, this.size, this.larger)),
     h('div', { class: 'editor-row' }, h('span', { class: 'editor-label' }, 'Word wrap'), this.wrap)
   )
 
   constructor(private readonly hooks: EditorSettingsHooks) {
-    this.el.append(this.gear, this.popover)
+    // The popover joins the page only while open, so a closed one never counts as an open dialog.
+    this.el.append(this.gear)
     this.el.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape' || this.popover.hidden) return
+      if (event.key !== 'Escape' || !this.popover.isConnected) return
       event.stopPropagation()
       this.close()
       this.gear.focus()
     })
     document.addEventListener('pointerdown', (event) => {
-      if (!this.popover.hidden && !this.el.contains(event.target as Node)) this.close()
+      if (this.popover.isConnected && !this.el.contains(event.target as Node)) this.close()
     }, true)
     this.render()
   }
@@ -42,13 +43,14 @@ export class EditorSettings {
   }
 
   private toggle(): void {
-    if (this.popover.hidden) this.render()
-    this.popover.hidden = !this.popover.hidden
-    this.gear.setAttribute('aria-expanded', String(!this.popover.hidden))
+    if (this.popover.isConnected) return this.close()
+    this.render()
+    this.el.append(this.popover)
+    this.gear.setAttribute('aria-expanded', 'true')
   }
 
   private close(): void {
-    this.popover.hidden = true
+    this.popover.remove()
     this.gear.setAttribute('aria-expanded', 'false')
   }
 
