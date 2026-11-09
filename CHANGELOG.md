@@ -3,6 +3,40 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.5] - 2026-11-09
+
+### Added
+
+- **Autocomplete in the chat box.** Type `/` for the agent's slash commands and your own commands and skills, or `@` for files in the project. Arrow keys pick, Tab or Enter inserts, Esc closes without interrupting the agent.
+- **Message history and a Stop button.** Up and Down bring back messages you sent. Stop interrupts the agent from chat, and messages waiting in the queue can be edited or removed before they go.
+- **A summary after each reply.** A card lists the files the reply changed with their added and removed lines, how long it worked, and Review changes.
+- **Undo this reply.** Dawsha takes a snapshot of the project just before each chat message. Undo puts back only the files that reply changed, after a confirm that names them, and offers Redo. Your branch, staged files and other edits are not touched.
+- **More in chat.** Runs of tool calls fold into one row, each turn shows how long it took, a bell can ring when the agent finishes, Ctrl+F finds text in the conversation, and prompts you use often can be saved and reused.
+- **Usage on the pane footer.** Click the cost on a pane's footer for tokens, cost and limits by agent, and the memory the session uses.
+- **Memory per session.** Each pane shows how much memory its agent and the processes it started use.
+- **Spending limits.** Give a project a daily or weekly limit in dollars from its menu. Dawsha warns at 80% and at 100%, and the 100% notice offers to pause that project's agents.
+- **Pause all working agents.** Ctrl+Shift+. interrupts every agent that is working, after a confirm that says how many.
+- **Session presets.** Save a project, an agent, a first message and whether to use its own worktree as a preset, and start sessions from it.
+- **Merge back.** A session working in its own worktree can merge its branch back into the branch it came from, with a preview first.
+- **Scheduled runs and a task queue.** In Work, schedule a Claude or Codex prompt to run once or on chosen days at a set time, or queue several prompts to run one after another, each in its own session.
+- **MCP servers in Settings.** One list of the MCP servers Claude Code, Codex and Gemini use, with how each connects. Turn a server on or off, or open the file it is set in. Secret values stay hidden until you click Show.
+- **Search all sessions.** Ctrl+Shift+F, where nothing else claims it, searches the output of every open session.
+- **A guided tour.** New users get a short tour of the main parts of Dawsha. Take the tour, in the top bar's More menu, shows it again.
+
+### Changed
+
+- **Smaller installer.** The Windows installer is about 15 MB smaller: unused languages, TypeScript files and packages only the page needs are left out.
+- **Hidden terminals sleep.** A terminal that has been out of sight for 10 minutes drops its GPU renderer and gets it back when shown. The agent keeps running. Turn this off in Settings.
+- **One tab style.** Every tab row underlines the selected tab, like Sessions.
+- **A roomier Files editor** with a settings gear for font size and word wrap, and a soft glow on progress bars.
+- **Calmer chat view.** No sideways scrolling, a thin scrollbar, shell commands described in words, and one "working" line.
+- Thin scrollbars everywhere, and layout fixes in the top bar, Agents, Usage, Skills, Projects and narrow panes.
+
+### Fixed
+
+- A hidden menu kept in the page no longer blocks Ctrl+K and other shortcuts.
+- Skills and commands whose description is written over several lines in YAML now show it.
+
 ## [1.8.4] - 2026-11-02
 
 ### Added
