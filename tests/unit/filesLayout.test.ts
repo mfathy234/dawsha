@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PANEL_DEFAULT_HEIGHT, PANEL_MIN_HEIGHT, clampPanelHeight, defaultLayout, parseLayout } from '../../src/shared/filesLayout'
+import { EDITOR_FONT_MAX, EDITOR_FONT_MIN, PANEL_DEFAULT_HEIGHT, PANEL_MIN_HEIGHT, clampFontSize, clampPanelHeight, defaultLayout, parseLayout } from '../../src/shared/filesLayout'
 
 describe('parseLayout', () => {
   it('falls back to the default for anything that is not a layout', () => {
@@ -33,5 +33,21 @@ describe('explorer visibility', () => {
     expect(defaultLayout().explorer.open).toBe(true)
     expect(parseLayout({ explorer: { open: false } }).explorer.open).toBe(false)
     expect(parseLayout({ explorer: { open: 'no' } }).explorer.open).toBe(true)
+  })
+})
+
+describe('editor prefs', () => {
+  it('start at 13px with wrapping off', () => {
+    expect(defaultLayout().editor).toEqual({ fontSize: 13, wrap: false })
+  })
+  it('keep a saved size and wrap, and clamp or repair the rest', () => {
+    expect(parseLayout({ editor: { fontSize: 16, wrap: true } }).editor).toEqual({ fontSize: 16, wrap: true })
+    expect(parseLayout({ editor: { fontSize: 99, wrap: 'yes' } }).editor).toEqual({ fontSize: EDITOR_FONT_MAX, wrap: false })
+    expect(parseLayout({ editor: { fontSize: 2 } }).editor.fontSize).toBe(EDITOR_FONT_MIN)
+    expect(parseLayout({ editor: { fontSize: 'big' } }).editor.fontSize).toBe(13)
+  })
+  it('round a fractional size', () => {
+    expect(clampFontSize(13.6)).toBe(14)
+    expect(clampFontSize(NaN)).toBe(13)
   })
 })

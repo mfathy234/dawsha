@@ -1,3 +1,4 @@
+import { isOverlayOpen } from '../overlayOpen'
 import { agentLabel } from '../../shared/agents'
 import { filterRecordings, formatBytes, formatDuration, recordingSeconds, type RecordingSummary } from '../../shared/recordings'
 import { api } from '../api'
@@ -112,7 +113,7 @@ export class ReplayPickerComponent {
     const previous = this.previous
     closeReplayPicker()
     requestAnimationFrame(() => {
-      if (!document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)')) previous?.focus()
+      if (!isOverlayOpen()) previous?.focus()
     })
   }
 

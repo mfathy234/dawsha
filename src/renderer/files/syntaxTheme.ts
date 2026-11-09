@@ -2,7 +2,9 @@ import { HighlightStyle } from '@codemirror/language'
 import { tags as t, type Tag } from '@lezer/highlight'
 import { SYNTAX_COLORS, type SyntaxKind, type SyntaxRole } from '../../shared/syntaxPalette'
 
-type Look = { role: SyntaxRole | null; italic?: boolean; bold?: boolean; underline?: boolean; strike?: boolean }
+const DIM_OPACITY = 0.8
+
+type Look = { role: SyntaxRole | null; italic?: boolean; dim?: boolean; bold?: boolean; underline?: boolean; strike?: boolean }
 
 // One table for every language pack: the Lezer packs and the legacy modes (clike, shell, powershell) both name their
 // tokens with these tags, so a tag is coloured the same wherever it comes from. Children inherit from their parent tag.
@@ -26,8 +28,8 @@ const LOOKS: readonly (readonly [Tag, Look])[] = [
   [t.deleted, { role: 'string' }],
   [t.regexp, { role: 'regexp' }],
   [t.escape, { role: 'escape' }],
-  [t.comment, { role: 'comment', italic: true }],
-  [t.documentMeta, { role: 'comment', italic: true }],
+  [t.comment, { role: 'comment', italic: true, dim: true }],
+  [t.documentMeta, { role: 'comment', italic: true, dim: true }],
   [t.quote, { role: 'comment', italic: true }],
   [t.variableName, { role: 'variable' }],
   [t.special(t.variableName), { role: 'variable' }],
@@ -75,6 +77,7 @@ export function highlightStyleFor(kind: SyntaxKind): HighlightStyle {
     tag,
     ...(look.role ? { color: colors[look.role] } : {}),
     ...(look.italic ? { fontStyle: 'italic' } : {}),
+    ...(look.dim ? { opacity: String(DIM_OPACITY) } : {}),
     ...(look.bold ? { fontWeight: '600' } : {}),
     ...(look.underline ? { textDecoration: 'underline' } : {}),
     ...(look.strike ? { textDecoration: 'line-through' } : {})

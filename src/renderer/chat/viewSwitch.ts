@@ -13,7 +13,7 @@ export class ViewSwitch {
     const button = (view: ChatView): HTMLButtonElement =>
       h('button', { type: 'button', 'data-view': view, 'aria-pressed': 'false', onClick: () => this.pick(view) }, LABELS[view])
     this.buttons = { terminal: button('terminal'), chat: button('chat') }
-    this.el = h('span', { class: `chat-seg ${extraClass}`.trim(), role: 'group', 'aria-label': label }, this.buttons.terminal, this.buttons.chat)
+    this.el = h('span', { class: `chat-seg ${extraClass}`.trim(), role: 'group', 'aria-label': label, 'data-tour': extraClass === 'pane-view' ? 'chat-switch' : undefined }, this.buttons.terminal, this.buttons.chat)
   }
 
   update(view: ChatView | null, pick: (view: ChatView) => void): void {

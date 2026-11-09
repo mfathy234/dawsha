@@ -27,8 +27,8 @@ function foundationTheme(theme: Theme): Theme {
   if (theme.id === 'grid-dark') {
     return {
       ...theme,
-      app: { ...theme.app, background: '#090b0f', sidebar: '#0e1116', surface: '#14181f', raised: '#1b212a', overlay: '#232a35', well: '#0a0c10', border: '#343b48', text: '#e8ebf1', muted: '#aab3c3', accent: '#34d399', onAccent: '#04261b', busy: '#ffa54f', idle: '#8c96a8', exited: '#ff8080', danger: '#ff8080', onDanger: '#ffffff' },
-      term: { ...theme.term, background: '#0a0c10', foreground: '#d9dee8', cursor: '#34d399', cursorAccent: '#0a0c10', red: '#ff8f8f', green: '#4ade9f', yellow: '#f5b54a', blue: '#86bdff', white: '#d9dee8', brightBlack: '#8e98aa', brightRed: '#ff8f8f', brightGreen: '#4ade9f', brightYellow: '#f5b54a', brightBlue: '#86bdff' }
+      app: { ...theme.app, background: '#121419', sidebar: '#16191f', surface: '#1b1f26', raised: '#20252d', overlay: '#272d37', well: '#0f1115', border: '#343b48', text: '#e8ebf1', muted: '#aab3c3', accent: '#34d399', onAccent: '#04261b', busy: '#ffa54f', idle: '#8c96a8', exited: '#ff8080', danger: '#ff8080', onDanger: '#ffffff' },
+      term: { ...theme.term, background: '#0f1115', foreground: '#d9dee8', cursor: '#34d399', cursorAccent: '#0f1115', red: '#ff8f8f', green: '#4ade9f', yellow: '#f5b54a', blue: '#86bdff', white: '#d9dee8', brightBlack: '#8e98aa', brightRed: '#ff8f8f', brightGreen: '#4ade9f', brightYellow: '#f5b54a', brightBlue: '#86bdff' }
     }
   }
   if (theme.id === 'dawsha-daylight' || theme.id === 'dawsha-daylight-dark') {

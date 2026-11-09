@@ -57,7 +57,8 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     openLink: (url) => void api.openExternal(url),
     fileLinks: fileLinkHost(id),
     highlights: highlightHost(),
-    textOrder: () => textOrderFor(tabAgent(id))
+    textOrder: () => textOrderFor(tabAgent(id)),
+    sleepingEnabled: () => store.state.settings.sleepHiddenTerminals
   })
   views.set(id, view)
   for (const chunk of pending.take(id)) view.write(chunk)
@@ -65,6 +66,10 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
 }
 
 watchHighlights(() => views.values())
+setInterval(() => { for (const view of views.values()) view.updateRenderer() }, 15_000)
+document.addEventListener('visibilitychange', () => {
+  for (const view of views.values()) view.refreshVisibility()
+})
 
 export const getTerminal = (id: string): TerminalView | undefined => views.get(id)
 

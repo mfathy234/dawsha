@@ -20,15 +20,19 @@ import { existingFiles, openFile, resolveFile } from './fileOpen'
 import { projectFolder, readInstruction, writeInstruction } from './instructionFiles'
 import { isInstructionName, type InstructionWriteRequest } from '../shared/instructions'
 import type { FileRef } from '../shared/filePaths'
-import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
+import { createWorktree, createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
 import { changedFiles, currentBranch, gitChanges, gitSync } from './git'
 import { listBranches, runGitQuick } from './gitQuick'
 import { dirtyReport, untrackedFolders } from './gitDirty'
 import { addGitIgnore } from './gitIgnore'
 import type { IgnoreAddRequest } from '../shared/gitIgnore'
 import type { GitQuickRequest } from '../shared/gitBranches'
+import { commitWorktree, mergeBranch, mergeOverview, removeSessionWorktree } from './mergeBack'
+import { createSessionWorktree } from './sessionWorktree'
+import type { MergeBackRequest, WorktreeCommitRequest, WorktreeRemoveRequest } from '../shared/mergeBack'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
+import { listCheckpoints, prepareCheckpoint, restoreCheckpoint } from './checkpoints'
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
@@ -40,6 +44,7 @@ import { codeNavigation, installCodeNav } from './codeNav'
 import { editorConfig } from './editorConfig'
 import { registerCodeNavExtrasIpc } from './codeNavExtrasIpc'
 import { registerChatIpc } from './chatLog/ipc'
+import { isChatSessionWorking } from './chatLog/service'
 import { closeAgentFiles, refreshAgentFiles, unwatchAgentFiles, watchAgentFiles } from './agentFiles'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
@@ -51,6 +56,8 @@ import { readLinked, scanSources } from './crewSources'
 import { exportSkill, exportSkills, listSkills, resolveSkill, type SkillLocations } from './skillInventory'
 import { listAllSessions } from './sessionIndex'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
+import { validCommandsRequest } from '../shared/chatComplete'
+import { chatCommands } from './chatCommands'
 import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type BridgeLocations } from './statusBridge'
 import type { OpsWatcher } from './opsWatcher'
 import type { StatusWatcher } from './statusWatcher'
@@ -160,8 +167,16 @@ export function registerIpc(
   ipcMain.handle(IPC.geminiList, () => readGeminiSessions())
   ipcMain.handle(IPC.statusList, () => status.current())
   ipcMain.handle(IPC.opsList, () => ops.current())
-  ipcMain.handle(IPC.processActivityList, () => collectProcessActivity(ptys.activityRoots()))
+  ipcMain.handle(IPC.processActivityList, (_event, ids: unknown) => {
+    if (!Array.isArray(ids) || ids.length > 256 || ids.some((id) => typeof id !== 'string' || id.length > 128)) return []
+    const selected = new Set(ids as string[])
+    return collectProcessActivity(ptys.activityRoots().filter((root) => selected.has(root.tabId)))
+  })
   ipcMain.handle(IPC.skillsList, () => listSkills(skillLocations()))
+  ipcMain.handle(IPC.chatCommands, (_event, request: unknown) => {
+    if (!validCommandsRequest(request) || !checkFolder(request.folder).ok) throw new Error('Invalid chat command request.')
+    return chatCommands(request.agent, request.folder, skillLocations())
+  })
   ipcMain.handle(IPC.skillsOpen, async (_event, id: unknown) => {
     const skill = resolveSkill(skillLocations(), id)
     if (!skill) throw new Error('Skill is no longer available.')
@@ -198,12 +213,23 @@ export function registerIpc(
     whenKnown<T | typeof refusedGit>(settings.get().projects, folder, run, refusedGit)
   ipcMain.handle(IPC.gitStatus, (_event, folder: unknown) => gated(folder, repoStatus))
   ipcMain.handle(IPC.gitCommit, (_event, request: CommitRequest) => gated(request?.folder, () => commitFiles(request)))
+  ipcMain.handle(IPC.worktreeCreate, (_event, folder: unknown, short: unknown) => gated(folder, (root) => createSessionWorktree(root, short)))
+  ipcMain.handle(IPC.mergeOverview, (_event, request: MergeBackRequest) => gated(request?.repo, () => mergeOverview(request)))
+  ipcMain.handle(IPC.mergeCommit, (_event, request: WorktreeCommitRequest) => gated(request?.repo, () => commitWorktree(request)))
+  ipcMain.handle(IPC.mergeInto, (_event, request: MergeBackRequest) => gated(request?.repo, () => mergeBranch(request)))
+  ipcMain.handle(IPC.mergeRemove, (_event, request: WorktreeRemoveRequest) => gated(request?.repo, () => removeSessionWorktree(request)))
   ipcMain.handle(IPC.gitPush, (_event, folder: unknown) => gated(folder, pushBranch))
   ipcMain.handle(IPC.gitDiscard, (_event, request: DiscardRequest) => gated(request?.folder, () => discardFiles(request)))
   ipcMain.handle(IPC.gitDiff, (_event, folder: unknown, path: unknown) => gated(folder, (root) => fileDiff(root, path)))
   ipcMain.handle(IPC.gitDiffSince, (_event, folder: unknown, path: unknown, baseline: unknown) => gated(folder, (root) => fileDiffSince(root, path, baseline)))
   ipcMain.handle(IPC.gitBaseline, (_event, folder: unknown) => gated(folder, sessionBaseline))
   ipcMain.handle(IPC.gitSessionStatus, (_event, folder: unknown, baseline: unknown) => gated(folder, (root) => sessionStatus(root, baseline)))
+  ipcMain.handle(IPC.checkpointPrepare, (_event, folder: unknown, sessionId: unknown) => gated(folder, (root) => prepareCheckpoint(root, sessionId)))
+  ipcMain.handle(IPC.checkpointsList, (_event, folder: unknown, sessionId: unknown, ids: unknown) => gated(folder, (root) => listCheckpoints(root, sessionId, ids)))
+  ipcMain.handle(IPC.checkpointRestore, (_event, folder: unknown, sessionId: unknown, ref: unknown, paths: unknown) => gated(folder, (root) =>
+    typeof sessionId === 'string' && isChatSessionWorking(sessionId)
+      ? Promise.resolve({ ok: false as const, error: 'This agent is still working. Wait for the reply to finish.' })
+      : restoreCheckpoint(root, sessionId, ref, paths)))
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
   registerCodeNavExtrasIpc(known, getWindow)
   registerChatIpc()
@@ -394,7 +420,7 @@ export function registerIpc(
     return { ...accounts, codex: { ...accounts.codex, plan: (await readCodexLimitsCached()).plan } }
   })
   ipcMain.handle(IPC.knownLimits, async () => ({ claude: usage.lastClaudeLimits(), codex: (await readCodexLimitsCached()).entry }))
-  ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
+  ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects, settings.get().spendLimits))
   const work = new WorkService()
   ipcMain.handle(IPC.workGet, async (_event, period: unknown, offset: unknown) => {
     const valid: WorkPeriod = period === 'week' || period === 'month' ? period : 'today'
@@ -411,6 +437,7 @@ export function registerIpc(
   ipcMain.handle(IPC.compareProbe, (_event, folder: string) => probeRepo(folder))
   ipcMain.handle(IPC.compareCreate, (_event, folder: string, short: string) => createWorktrees(folder, short))
   ipcMain.handle(IPC.compareStatus, (_event, repo: string, path: string, branch: string) => worktreeStatus(repo, path, branch))
+  ipcMain.handle(IPC.runWorktreeCreate, (_event, folder: unknown, short: unknown) => gated(folder, (root) => createWorktree(root, String(short))))
   ipcMain.handle(IPC.compareRemove, (_event, request: WorktreeRemoval) => removeWorktree(request))
   ipcMain.handle(IPC.clipboardRead, () => readClipboardContent())
   ipcMain.handle(IPC.clipboardWrite, (_event, text: string) => clipboard.writeText(String(text)))

@@ -1,4 +1,5 @@
 import { installUsageSnapshot } from './usageSnapshot'
+import { installSpendWarnings } from './spendActions'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import './components/controls.css'
@@ -38,9 +39,12 @@ import { installCompareCommands } from './commands/compare'
 import { installHandoffCommands } from './commands/handoff'
 import { installClosedSessionCommands } from './commands/closedSessions'
 import { installLayoutCommands } from './commands/layouts'
+import { installPresetCommands } from './commands/presets'
 import { installNotificationCommands } from './commands/notifications'
 import { installNeedsNotices } from './needsNotice'
 import { installReplayCommands } from './commands/replay'
+import { installQueueRunner } from './automation/queueRunner'
+import { installScheduler } from './automation/scheduler'
 import { installSettingsTransferCommands } from './commands/settingsTransfer'
 import { installKeyboard } from './keyboard'
 import { installInputMode } from './inputMode'
@@ -132,10 +136,12 @@ async function boot(): Promise<void> {
   installNeedsNotices()
   guardWindowDrops()
   installUsageSnapshot()
+  installSpendWarnings()
   void installOps()
   installProcessActivity()
   installBuiltinCommands()
   installLayoutCommands()
+  installPresetCommands()
   installNotificationCommands()
   installCompareCommands()
   installHandoffCommands()
@@ -153,6 +159,8 @@ async function boot(): Promise<void> {
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()
   void clearLegacyModelCache(loaded.settings.legacyModelCacheCleared)
   await restoreWorkspace()
+  installScheduler()
+  installQueueRunner()
   installCrewLive()
   installLead()
   api.cliReady()

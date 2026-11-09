@@ -4,6 +4,7 @@ import type { Attention } from '../shared/attention'
 import { matchSessions, sessionDisplayName, sessionStatus, sessionWaiting } from '../shared/sessionMatch'
 import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsFeed'
 import type { ProcessActivity } from '../shared/processActivity'
+import { sumProcessMemory } from '../shared/paneMemory'
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { formatDuration, sessionUsage } from '../shared/sessionCost'
 import { autoTag, autoTagSource, type SessionTag } from '../shared/sessionTags'
@@ -28,6 +29,8 @@ export interface PaneInfo {
   agent: TabAgent
   model: { label: string; family: ModelFamily } | null
   contextPercent: number | null
+  contextTokens: number | null
+  contextWindow: number | null
   limits: RateLimitWindow[]
   /** When the limit windows above were reported; null with no windows. */
   limitsAt: number | null
@@ -38,6 +41,7 @@ export interface PaneInfo {
   changes: GitChanges | null
   ops: PaneOpsInfo | null
   geminiTools: { name: string; at: number }[]
+  memoryBytes: number | null
 }
 
 const LIMIT_FRESH_MS = 30 * 60_000
@@ -241,6 +245,8 @@ function claudeInfo(
     ...base,
     model: opsModel ?? liveModel,
     contextPercent: snapshot?.context?.percent ?? live?.contextPercent ?? null,
+    contextTokens: snapshot?.context?.tokens ?? null,
+    contextWindow: snapshot?.context?.window ?? null,
     limits: paneLimits(tab, live, snapshot, state.now),
     limitsAt: paneLimitReading(tab, live, snapshot, state.now)?.at ?? null,
     costUsd: live?.costUsd ?? null,
@@ -282,7 +288,8 @@ function baseInfoFor(
   opsLive: boolean
 ): PaneInfo {
   const changes = folder ? (state.gitChanges[folder] ?? null) : null
-  const empty: PaneInfo = { agent: tab.agent, model: null, contextPercent: null, limits: [], limitsAt: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [] }
+  const memoryBytes = sumProcessMemory((state.processActivity[tab.id] ?? []).filter((process) => process.alive).map((process) => ({ tabId: tab.id, bytes: process.memoryBytes })))[tab.id] ?? null
+  const empty: PaneInfo = { agent: tab.agent, model: null, contextPercent: null, contextTokens: null, contextWindow: null, limits: [], limitsAt: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null, geminiTools: [], memoryBytes }
   if (tab.agent === 'claude') return claudeInfo(state, tab, matches, empty, snapshot, opsLive)
   if (tab.agent === 'codex') {
     const session = matches.codex.get(tab.id)

@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { createRunPreload } from './runCommands'
 import { createFilesToolsPreload } from './filesTools'
+import { createMcpPreload } from './mcp'
 import { createChatPreload } from './chat'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
@@ -29,6 +30,7 @@ async function invokeRemote(channel: string, ...args: unknown[]): Promise<Remote
 const api: GridApi = {
   runs: createRunPreload(),
   tools: createFilesToolsPreload(),
+  mcp: createMcpPreload(),
   chat: createChatPreload(),
   ...(isRemoteControlBuild ? {
     remoteAccess: {
@@ -80,6 +82,9 @@ const api: GridApi = {
   gitDiffSince: (folder, path, baseline) => ipcRenderer.invoke(IPC.gitDiffSince, folder, path, baseline),
   gitBaseline: (folder) => ipcRenderer.invoke(IPC.gitBaseline, folder),
   gitSessionStatus: (folder, baseline) => ipcRenderer.invoke(IPC.gitSessionStatus, folder, baseline),
+  checkpointPrepare: (folder, sessionId) => ipcRenderer.invoke(IPC.checkpointPrepare, folder, sessionId),
+  listCheckpoints: (folder, sessionId, messageIds) => ipcRenderer.invoke(IPC.checkpointsList, folder, sessionId, messageIds),
+  restoreCheckpoint: (folder, sessionId, ref, paths) => ipcRenderer.invoke(IPC.checkpointRestore, folder, sessionId, ref, paths),
   projectFiles: (folder) => ipcRenderer.invoke(IPC.projectFiles, folder),
   projectFile: (folder, path) => ipcRenderer.invoke(IPC.projectFile, folder, path),
   writeProjectFile: (folder, path, text, expectedMtime) => ipcRenderer.invoke(IPC.projectFileWrite, folder, path, text, expectedMtime),
@@ -143,8 +148,9 @@ const api: GridApi = {
   onData: (listener) => subscribe<[string, string]>(IPC.ptyData, listener),
   onExit: (listener) => subscribe<[string, number]>(IPC.ptyExit, listener),
   onRemoteSessionStarted: (listener) => subscribe<[RemoteSessionStarted]>(IPC.remoteSessionStarted, listener),
-  listProcessActivity: () => ipcRenderer.invoke(IPC.processActivityList),
+  listProcessActivity: (ids?: string[]) => ipcRenderer.invoke(IPC.processActivityList, ids),
   listSkills: () => ipcRenderer.invoke(IPC.skillsList),
+  chatCommands: (request) => ipcRenderer.invoke(IPC.chatCommands, request),
   openSkill: (id) => ipcRenderer.invoke(IPC.skillsOpen, id),
   exportSkill: (id) => ipcRenderer.invoke(IPC.skillsExport, id),
   exportSkills: (ids) => ipcRenderer.invoke(IPC.skillsExportMany, ids),
@@ -184,7 +190,13 @@ const api: GridApi = {
   compareProbe: (folder) => ipcRenderer.invoke(IPC.compareProbe, folder),
   compareCreate: (folder, short) => ipcRenderer.invoke(IPC.compareCreate, folder, short),
   compareStatus: (repo, path, branch) => ipcRenderer.invoke(IPC.compareStatus, repo, path, branch),
+  worktreeCreate: (folder, short) => ipcRenderer.invoke(IPC.worktreeCreate, folder, short),
   compareRemove: (request) => ipcRenderer.invoke(IPC.compareRemove, request),
+  runWorktreeCreate: (folder, short) => ipcRenderer.invoke(IPC.runWorktreeCreate, folder, short),
+  mergeOverview: (request) => ipcRenderer.invoke(IPC.mergeOverview, request),
+  mergeCommit: (request) => ipcRenderer.invoke(IPC.mergeCommit, request),
+  mergeInto: (request) => ipcRenderer.invoke(IPC.mergeInto, request),
+  mergeRemove: (request) => ipcRenderer.invoke(IPC.mergeRemove, request),
   listRecordings: () => ipcRenderer.invoke(IPC.recordingsList),
   readRecording: (id) => ipcRenderer.invoke(IPC.recordingsRead, id),
   recordingStats: () => ipcRenderer.invoke(IPC.recordingsStats),

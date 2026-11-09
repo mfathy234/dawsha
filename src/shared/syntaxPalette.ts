@@ -32,11 +32,11 @@ export interface EditorColors {
 export const EDITOR_COLORS: Record<SyntaxKind, EditorColors> = {
   dark: {
     background: '#1e1e1e', foreground: '#d4d4d4', gutter: '#858585', gutterActive: '#c6c6c6', caret: '#aeafad', selection: '#264f78',
-    activeLine: 'rgb(255 255 255 / .05)'
+    activeLine: 'rgb(255 255 255 / .035)'
   },
   light: {
     background: '#ffffff', foreground: '#000000', gutter: '#237893', gutterActive: '#0b216f', caret: '#000000', selection: '#add6ff',
-    activeLine: 'rgb(0 0 0 / .045)'
+    activeLine: 'rgb(0 0 0 / .03)'
   }
 }
 

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { frontMatterDescription } from '../shared/frontMatter'
 import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import type { BulkSkillExport, SkillEntry } from '../shared/skills'
@@ -99,8 +100,8 @@ export function descriptionOf(path: string): string | undefined {
     const file = isFile(path) ? path : join(path, 'SKILL.md')
     const text = readFileSync(file, 'utf8').slice(0, 4096)
     const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
-    const keyed = front ? /^description:\s*(.+)$/m.exec(front[1]) : null
-    const line = keyed ? keyed[1] : text.split(/\r?\n/).find((item) => item.trim() !== '' && !item.startsWith('#') && !item.startsWith('---'))
+    const keyed = front ? frontMatterDescription(front[1]) : undefined
+    const line = keyed !== undefined ? keyed : text.split(/\r?\n/).find((item) => item.trim() !== '' && !item.startsWith('#') && !item.startsWith('---'))
     const value = line?.trim().replace(/^["']|["']$/g, '').slice(0, 240)
     return value ? value : undefined
   } catch {

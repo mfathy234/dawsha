@@ -4,6 +4,7 @@ import { delimiter, dirname, join } from 'node:path'
 import { BrowserWindow, Notification, app, nativeImage, shell } from 'electron'
 import { OVERLAY_SIZE, badgeWindowTitle, normalizeBadgeCount, overlayBitmap } from '../shared/attentionBadge'
 import { safeLink } from '../shared/markdown'
+import { toastXml } from '../shared/notifyContent'
 import { platformExecutableDirs, resolveExecutable } from './executables'
 import type { NotifyRequest, QuickOpenKind } from '../shared/types'
 
@@ -97,14 +98,33 @@ function keepAlive(notification: Notification): void {
   notification.on('failed', release)
 }
 
-export function notifyUser(getWindow: () => BrowserWindow | null, request: NotifyRequest, onClick: (paneId: string) => void): void {
+const MAX_NOTIFY_TEXT = 300
+
+const notifyString = (value: unknown): string => (typeof value === 'string' ? value.slice(0, MAX_NOTIFY_TEXT) : '')
+
+/** The renderer's request, reduced to known string fields of a sane length. */
+function cleanRequest(raw: NotifyRequest): NotifyRequest {
+  const attribution = notifyString(raw?.attribution)
+  return { paneId: notifyString(raw?.paneId), title: notifyString(raw?.title), body: notifyString(raw?.body), sound: raw?.sound === true, ...(attribution ? { attribution } : {}) }
+}
+
+function createNotification(request: NotifyRequest): Notification {
+  if (process.platform !== 'win32') {
+    const body = request.attribution ? `${request.body}\n${request.attribution}` : request.body
+    return new Notification({ title: request.title, body, silent: !request.sound })
+  }
+  return new Notification({ toastXml: toastXml({ title: request.title, body: request.body, attribution: request.attribution, silent: !request.sound }) })
+}
+
+export function notifyUser(getWindow: () => BrowserWindow | null, raw: NotifyRequest, onClick: (paneId: string) => void): void {
+  const request = cleanRequest(raw)
   const window = getWindow()
   const unfocused = !window || window.isDestroyed() || !window.isFocused()
   const log = process.env.DAWSHA_NOTIFY_LOG
   if (log) return logTo(log, JSON.stringify({ ...request, flash: unfocused }))
   if (window && !window.isDestroyed() && unfocused) window.flashFrame(true)
   if (!Notification.isSupported()) return
-  const notification = new Notification({ title: request.title, body: request.body, silent: !request.sound })
+  const notification = createNotification(request)
   notification.on('click', () => {
     liveNotifications.delete(notification)
     const activeWindow = getWindow()

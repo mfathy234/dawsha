@@ -7,6 +7,7 @@ import { logicalText, visualFromLogical } from '../shared/visualOrder'
 import { insertionData } from '../shared/insertText'
 import { primaryModifierPressed } from '../shared/shortcuts'
 import { h } from './dom'
+import { PromptSelection } from './promptSelection'
 import { TerminalPrompts } from './terminalPrompts'
 import { TerminalArabic } from './terminalArabic'
 import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
@@ -14,9 +15,13 @@ import { registerFileLinks, type FileLinkHost, type FileLinks } from './terminal
 import { TerminalSearch } from './terminalSearch'
 import type { ThemeBundle } from './themeManager'
 import { TERMINAL_FONT } from './terminalFont'
+import { terminalShouldSleep } from '../shared/terminalSleep'
 
 const SHIFT_ENTER = '\x1b\r'
 
+
+/** A terminal hidden this long drops its GPU renderer until it is shown again. */
+const TERMINAL_SLEEP_MS = 10 * 60_000
 export interface TerminalCallbacks {
   onInput(data: string): void
   onResize(cols: number, rows: number): void
@@ -29,6 +34,7 @@ export interface TerminalCallbacks {
   highlights: HighlightHost
   /** How the program in this terminal writes right-to-left text. */
   textOrder(): TextOrder
+  sleepingEnabled(): boolean
 }
 
 export class TerminalView {
@@ -38,6 +44,7 @@ export class TerminalView {
   private readonly observer: ResizeObserver
   private readonly search: TerminalSearch
   readonly prompts: TerminalPrompts
+  private readonly promptSelection: PromptSelection
   private readonly highlights: TerminalHighlights
   private readonly fileLinks: FileLinks
   private readonly arabic: TerminalArabic
@@ -46,6 +53,9 @@ export class TerminalView {
   private frame = 0
   private lent: HTMLElement | null = null
   private bundleTerm: ThemeBundle['theme']['term']
+  private hiddenSince: number | null = null
+  private visible = false
+  private requestedVisible = false
 
   constructor(
     readonly id: string,
@@ -72,8 +82,10 @@ export class TerminalView {
     this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.prompts = new TerminalPrompts(this.term)
     this.arabic = new TerminalArabic(this.term, () => callbacks.textOrder())
+    this.promptSelection = new PromptSelection(this.term, (data) => callbacks.onInput(data))
     this.term.onData((data) => {
       this.prompts.noteInput(data)
+      this.promptSelection.noteInput(data)
       callbacks.onInput(data)
     })
     this.term.onResize(({ cols, rows }) => callbacks.onResize(cols, rows))
@@ -243,11 +255,26 @@ export class TerminalView {
   }
 
   setVisible(visible: boolean): void {
-    const shown = visible || this.lent !== null
-    this.el.classList.toggle('active', shown)
-    if (shown) {
+    this.requestedVisible = visible || this.lent !== null
+    this.refreshVisibility()
+  }
+
+  refreshVisibility(): void {
+    this.visible = this.requestedVisible && document.visibilityState === 'visible'
+    this.el.classList.toggle('active', this.visible)
+    if (this.visible) {
+      this.hiddenSince = null
       this.loadWebgl()
       this.scheduleFit()
+    } else if (this.hiddenSince === null) this.hiddenSince = Date.now()
+    this.updateRenderer()
+  }
+
+  updateRenderer(): void {
+    const timeoutMs = TERMINAL_SLEEP_MS
+    if (terminalShouldSleep({ visible: this.visible, hiddenSince: this.hiddenSince }, Date.now(), timeoutMs, this.callbacks.sleepingEnabled())) {
+      this.webgl?.dispose()
+      this.webgl = null
     }
   }
 
@@ -331,6 +358,10 @@ export class TerminalView {
 
   private handleKey(event: KeyboardEvent): boolean {
     if (event.type !== 'keydown') return true
+    if (!this.promptSelection.handleKey(event)) {
+      event.preventDefault()
+      return false
+    }
     const key = event.key.toLowerCase()
     if (primaryModifierPressed(event) && !event.altKey && key === 'c' && this.term.hasSelection()) {
       void this.callbacks.writeClipboard(this.selection())

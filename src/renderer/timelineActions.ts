@@ -1,3 +1,4 @@
+import type { ResumeSession } from '../shared/types'
 import type { TimelineKind, TimelineRequest } from '../shared/timeline'
 import { paneById, folderOfPane, store } from './state'
 import { derivePanes } from './derive'
@@ -42,6 +43,8 @@ export function timelineRequest(paneId: string): TimelineRequest | null {
 export interface TimelineIntent {
   scope?: 'all'
   query?: string
+  /** A session that is not open in a pane: the panel shows its log, as when a search result is picked there. */
+  session?: ResumeSession
   target?: { at: number; kind: TimelineKind; text: string }
 }
 

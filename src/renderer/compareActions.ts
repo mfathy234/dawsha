@@ -65,6 +65,7 @@ export async function startCompare(request: CompareRequest): Promise<CompareResu
       activeTabId: tab.id,
       fontSize: clampFontSize(project.fontSize ?? DEFAULT_FONT_SIZE),
       folder: sides?.[slot].path,
+      worktree: sides ? { repo: project.folder, path: sides[slot].path, branch: sides[slot].branch } : undefined,
       compare: { id: link, slot, prompt: request.prompt, repo: project.folder, sides }
     }
   }

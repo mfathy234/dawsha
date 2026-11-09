@@ -24,7 +24,8 @@
 .chat-scroll {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  /* The thread never scrolls sideways: wide things scroll inside their own block. */
+  overflow: hidden auto;
   padding-inline: var(--sp-6);
 }
 
@@ -52,6 +53,13 @@
 .chat-you:not(:first-child) {
   margin-top: var(--sp-3);
 }
+
+.chat-turn-summary { align-self: flex-start; max-width: 76%; display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-card); background: var(--raised); }
+.chat-turn-head, .chat-turn-file { display: flex; align-items: center; gap: var(--sp-2); }
+.chat-turn-actions { display: flex; gap: var(--sp-3); }
+.chat-turn-file { width: 100%; min-width: 0; padding: 2px 0; border: 0; border-radius: var(--r-1); background: transparent; color: var(--text); text-align: start; cursor: pointer; }
+.chat-turn-file:hover { background: var(--hover); }
+.chat-turn-file b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .chat-say {
   font-size: var(--fs-3);
@@ -210,6 +218,7 @@
 
 .chat-tools {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1px;
   margin-top: calc(var(--sp-1) * -1);
 }
@@ -268,6 +277,14 @@
   font-size: var(--fs-1);
 }
 
+.chat-tool-desc {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
 .chat-tool bdi {
   min-width: 0;
   flex: 0 1 auto;
@@ -311,11 +328,16 @@
   color: var(--text-2);
 }
 
-.chat-working > span:last-child {
+.chat-working > span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chat-working .chat-hint {
+  color: var(--text-3);
+  font-size: var(--fs-1);
 }
 
 .chat-notice {
@@ -435,6 +457,12 @@
   overflow: hidden;
 }
 
+/* The app-wide 32px minimum for text fields would leave the line riding high in a one-line box. */
+.chat-box .chat-input {
+  min-height: 0;
+  background: none;
+}
+
 .chat-input:focus-visible {
   outline: none;
 }
@@ -532,6 +560,25 @@
   color: var(--text-3);
   font-size: var(--fs-1);
   text-align: end;
+}
+
+.chat-pend-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+.chat-text-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+
+.chat-text-btn:hover {
+  color: var(--text);
 }
 
 .chat-ask {

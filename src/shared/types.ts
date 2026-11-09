@@ -52,6 +52,23 @@ export interface CompareLink {
   sides: CompareNames | null
 }
 
+/** A git worktree Dawsha made for one pane, so the pane can merge back into the checkout it came from. */
+export interface PaneWorktree {
+  repo: string
+  path: string
+  branch: string
+}
+
+/** A saved way to start a session: agent, project, an optional own worktree and an optional first prompt. */
+export interface SessionPreset {
+  id: string
+  name: string
+  agent: TabAgent
+  projectId: string
+  worktree: boolean
+  prompt: string
+}
+
 export interface SavedTab {
   agent: TabAgent
   label: string
@@ -71,6 +88,7 @@ export interface SavedPane {
   projectId: string
   folder?: string
   compare?: CompareLink
+  worktree?: PaneWorktree
   tabs: SavedTab[]
   activeIndex: number
   fontSize: number
@@ -124,6 +142,42 @@ export interface ProjectTask {
   events: { id: string; kind: 'note' | 'commit'; text: string; at: number }[]
 }
 
+export interface ScheduleRunRecord {
+  at: number
+  status: 'started' | 'failed'
+  paneId?: string
+  error?: string
+}
+
+export interface ScheduledRun {
+  id: string
+  name: string
+  projectId: string
+  agent: 'claude' | 'codex'
+  prompt: string
+  days: number[]
+  hour: number
+  minute: number
+  onceAt?: number
+  worktree: boolean
+  lastRunAt?: number
+  lastCheckedAt?: number
+  /** Newest first, at most 20. */
+  runs: ScheduleRunRecord[]
+}
+
+export interface QueuedPrompt {
+  id: string
+  projectId: string
+  name: string
+  prompt: string
+  agent?: 'claude' | 'codex'
+  state: 'queued' | 'running' | 'done' | 'failed'
+  paneId?: string
+  error?: string
+  createdAt: number
+}
+
 export interface SessionInfoSettings {
   notifications: boolean
   sound: boolean
@@ -132,6 +186,7 @@ export interface SessionInfoSettings {
 export interface Settings {
   version: 2
   projects: Project[]
+  spendLimits: Record<string, { amountUsd: number; period: 'day' | 'week' }>
   theme: ThemeSettings
   sidebarCollapsed: boolean
   /** How the sidebar orders projects: by recent activity, by name, or the stored (manual) order. */
@@ -140,10 +195,13 @@ export interface Settings {
   sidebarHideEmpty: boolean
   dimOtherPanes: boolean
   showRecap: boolean
+  sleepHiddenTerminals: boolean
   /** How a new session of each agent opens: as its terminal or as a chat drawn from its log. */
   sessionViews: SessionViews
   /** The view each session was last left in, by agent and session id, so a resume opens the same way. */
   chatViews: Record<string, ChatView>
+  /** Prompts the person named and kept, offered first in the chat's / list. */
+  savedPrompts: import('./savedPrompts').SavedPrompt[]
   colorSessionsByTag: boolean
   sidebarWidth: number
   othersCollapsed: boolean
@@ -154,6 +212,7 @@ export interface Settings {
   focusMovesSelected: boolean
   sessionInfo: SessionInfoSettings
   onboardingDismissed: boolean
+  tourSeen: boolean
   workspace: Workspace
   layouts: SavedLayout[]
   keptSessions: KeptSession[]
@@ -170,6 +229,10 @@ export interface Settings {
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
   ticketNotes: import('./ticketNotes').TicketNotes
   tasks: ProjectTask[]
+  scheduledRuns: ScheduledRun[]
+  queuedPrompts: QueuedPrompt[]
+  queueConcurrency: number
+  queueAgent: 'claude' | 'codex'
   lastSeenVersion: string | null
   autoUpdateCheck: boolean
   paletteShortcut: string
@@ -185,6 +248,8 @@ export interface Settings {
   lead: LeadSettings
   /** The latest goals handed to the Lead, newest first. */
   crewGoals: CrewGoal[]
+  /** Saved ways to start a session; they name this PC's projects, so they are not exported. */
+  presets: SessionPreset[]
   legacyModelCacheCleared: boolean
 }
 
@@ -345,6 +410,8 @@ export interface NotifyRequest {
   paneId: string
   title: string
   body: string
+  /** Project and agent, shown in small type under the body on Windows. */
+  attribution?: string
   sound: boolean
 }
 
@@ -381,6 +448,8 @@ export interface RepoProbe {
   hasCommits: boolean
   branch: string | null
 }
+
+export type WorktreeResult = { ok: true; side: CompareSide } | { ok: false; error: string }
 
 export type WorktreesResult = { ok: true; sides: CompareNames } | { ok: false; error: string }
 

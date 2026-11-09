@@ -12,6 +12,7 @@ import type {
   AgentKind,
   AppInfo,
   CompareLink,
+  PaneWorktree,
   CodexSession,
   GeminiSession,
   GitChanges,
@@ -67,6 +68,7 @@ export interface PaneState {
   fontSize: number
   folder?: string
   compare?: CompareLink
+  worktree?: PaneWorktree
   pinned?: boolean
 }
 
@@ -79,7 +81,7 @@ export interface ReplayRef {
   returnView: View
 }
 
-export type SettingsSection = 'general' | 'appearance' | 'notifications' | 'agents' | 'import' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
+export type SettingsSection = 'general' | 'appearance' | 'notifications' | 'agents' | 'mcp' | 'import' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
 
 export type ProjectsTab = 'projects' | 'tasks' | 'instructions'
 

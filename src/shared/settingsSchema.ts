@@ -3,9 +3,11 @@ import { checkoutTabsKey } from './filesWorkspace'
 import { defaultLayout, parseLayout } from './filesLayout'
 import { sanitizeRunOverrides } from './runCommands'
 import { isAgent } from './agents'
+import { sanitizePresets } from './sessionPresets'
 import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews, sanitizeSessionViews } from './chatLog'
 import { isSessionsLayout } from './board'
 import { DEFAULT_GRID_STYLE, isGridStyle } from './gridStyle'
+import { sanitizeSavedPrompts } from './savedPrompts'
 import { isSidebarSort } from './sidebarModel'
 import { sanitizeBaseline } from './gitStatus'
 import { DEFAULT_THEME_ID, resolveThemeId } from './themes'
@@ -28,7 +30,11 @@ import {
   type CompareNames,
   type FullAccess,
   type KeptSession,
+  type PaneWorktree,
   type ProjectTask,
+  type ScheduledRun,
+  type ScheduleRunRecord,
+  type QueuedPrompt,
   type Project,
   type RemoteAccessSettings,
   type SavedLayout,
@@ -75,14 +81,17 @@ export const defaultImage = (): BackgroundImage => ({ enabled: false, path: null
 export const defaultSettings = (): Settings => ({
   version: 2,
   projects: [],
+  spendLimits: {},
   theme: { id: DEFAULT_THEME_ID, image: defaultImage() },
   sidebarCollapsed: false,
   sidebarSort: 'recent',
   sidebarHideEmpty: false,
   dimOtherPanes: false,
   showRecap: true,
+  sleepHiddenTerminals: true,
   sessionViews: { claude: DEFAULT_CHAT_VIEW, codex: DEFAULT_CHAT_VIEW },
   chatViews: {},
+  savedPrompts: [],
   colorSessionsByTag: true,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   othersCollapsed: false,
@@ -91,6 +100,7 @@ export const defaultSettings = (): Settings => ({
   focusMovesSelected: false,
   sessionInfo: { notifications: true, sound: false },
   onboardingDismissed: false,
+  tourSeen: false,
   workspace: { panes: [], focusedIndex: 0 },
   layouts: [],
   keptSessions: [],
@@ -101,6 +111,10 @@ export const defaultSettings = (): Settings => ({
   runCommands: [],
   ticketNotes: {},
   tasks: [],
+  scheduledRuns: [],
+  queuedPrompts: [],
+  queueConcurrency: 2,
+  queueAgent: 'claude',
   lastSeenVersion: null,
   autoUpdateCheck: true,
   paletteShortcut: DEFAULT_PALETTE_SHORTCUT,
@@ -112,6 +126,7 @@ export const defaultSettings = (): Settings => ({
   crewRuns: [],
   lead: defaultLead(),
   crewGoals: [],
+  presets: [],
   legacyModelCacheCleared: false
 })
 
@@ -198,6 +213,14 @@ function sanitizeCompare(value: unknown): CompareLink | null {
   return { id, slot: value.slot, prompt, repo, sides: sanitizeSides(value.sides) }
 }
 
+function sanitizeWorktree(value: unknown): PaneWorktree | null {
+  if (!isRecord(value)) return null
+  const repo = asString(value.repo)
+  const path = asString(value.path)
+  const branch = asString(value.branch)
+  return repo && path && branch ? { repo, path, branch } : null
+}
+
 function sanitizePane(item: unknown): SavedPane | null {
   if (!isRecord(item)) return null
   const projectId = asString(item.projectId)
@@ -213,6 +236,8 @@ function sanitizePane(item: unknown): SavedPane | null {
   if (folder) pane.folder = folder
   const compare = sanitizeCompare(item.compare)
   if (compare) pane.compare = compare
+  const worktree = sanitizeWorktree(item.worktree)
+  if (worktree) pane.worktree = worktree
   if (item.pinned === true) pane.pinned = true
   return pane
 }
@@ -340,6 +365,40 @@ function sanitizeTasks(value: unknown, projectIds: Set<string>): ProjectTask[] {
   return tasks.slice(0, 300)
 }
 
+function sanitizeRunRecords(value: unknown): ScheduleRunRecord[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item): ScheduleRunRecord[] => {
+    if (!isRecord(item) || typeof item.at !== 'number' || !Number.isFinite(item.at)) return []
+    return [{ at: item.at, status: item.status === 'failed' ? 'failed' : 'started', ...(typeof item.paneId === 'string' ? { paneId: item.paneId } : {}), ...(typeof item.error === 'string' ? { error: item.error.slice(0, 300) } : {}) }]
+  }).slice(0, 20)
+}
+
+function sanitizeScheduledRuns(value: unknown, projects: readonly Project[]): ScheduledRun[] {
+  if (!Array.isArray(value)) return []
+  const ids = new Set(projects.map((project) => project.id))
+  return value.flatMap((item): ScheduledRun[] => {
+    if (!isRecord(item) || typeof item.id !== 'string' || !ids.has(String(item.projectId)) || !['claude', 'codex'].includes(String(item.agent))) return []
+    const prompt = typeof item.prompt === 'string' ? item.prompt.trim().slice(0, 20_000) : ''
+    const name = typeof item.name === 'string' ? item.name.trim().slice(0, 120) : ''
+    const days = Array.isArray(item.days) ? [...new Set(item.days.filter((day): day is number => Number.isInteger(day) && day >= 0 && day <= 6))] : []
+    const hour = clampNumber(item.hour, 0, 23, -1)
+    const minute = clampNumber(item.minute, 0, 59, -1)
+    const onceAt = typeof item.onceAt === 'number' && Number.isFinite(item.onceAt) ? item.onceAt : undefined
+    if (!prompt || !name || (onceAt === undefined && (!days.length || hour < 0))) return []
+    return [{ id: item.id, name, projectId: String(item.projectId), agent: item.agent as 'claude' | 'codex', prompt, days, hour, minute, ...(onceAt === undefined ? {} : { onceAt }), worktree: item.worktree !== false, ...(typeof item.lastRunAt === 'number' ? { lastRunAt: item.lastRunAt } : {}), ...(typeof item.lastCheckedAt === 'number' ? { lastCheckedAt: item.lastCheckedAt } : {}), runs: sanitizeRunRecords(item.runs) }]
+  }).slice(0, 200)
+}
+
+function sanitizeQueuedPrompts(value: unknown, projects: readonly Project[]): QueuedPrompt[] {
+  if (!Array.isArray(value)) return []
+  const ids = new Set(projects.map((project) => project.id))
+  return value.flatMap((item): QueuedPrompt[] => {
+    if (!isRecord(item) || typeof item.id !== 'string' || !ids.has(String(item.projectId))) return []
+    const state = ['queued', 'running', 'done', 'failed'].includes(String(item.state)) ? item.state as QueuedPrompt['state'] : 'queued'
+    return [{ id: item.id, projectId: String(item.projectId), name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Task', prompt: typeof item.prompt === 'string' ? item.prompt.slice(0, 20_000) : '', ...(item.agent === 'claude' || item.agent === 'codex' ? { agent: item.agent } : {}), state, ...(typeof item.paneId === 'string' ? { paneId: item.paneId } : {}), ...(typeof item.error === 'string' ? { error: item.error.slice(0, 300) } : {}), createdAt: clampNumber(item.createdAt, 0, Date.now() + 86_400_000, Date.now()) }]
+  }).slice(0, 500)
+}
+
 function sanitizeProjectIds(value: unknown, projects: readonly Project[]): string[] {
   if (!Array.isArray(value)) return []
   const known = new Set(projects.map((p) => p.id))
@@ -373,17 +432,24 @@ export function migrateSettings(raw: unknown): Settings {
   const projects = sanitizeProjects(raw.projects)
   const theme = isRecord(raw.theme) ? raw.theme : {}
   const info = isRecord(raw.sessionInfo) ? raw.sessionInfo : {}
+  const spendLimits: Settings['spendLimits'] = {}
+  if (isRecord(raw.spendLimits)) for (const [id, limit] of Object.entries(raw.spendLimits)) {
+    if (projects.some((project) => project.id === id) && isRecord(limit) && typeof limit.amountUsd === 'number' && Number.isFinite(limit.amountUsd) && limit.amountUsd > 0 && (limit.period === 'day' || limit.period === 'week')) spendLimits[id] = { amountUsd: Math.min(1_000_000, limit.amountUsd), period: limit.period }
+  }
   return {
     version: 2,
     projects,
+    spendLimits,
     theme: { id: resolveThemeId(asString(theme.id) ?? defaults.theme.id), image: sanitizeImage(theme.image) },
     sidebarCollapsed: raw.sidebarCollapsed === true,
     sidebarSort: isSidebarSort(raw.sidebarSort) ? raw.sidebarSort : 'recent',
     sidebarHideEmpty: raw.sidebarHideEmpty === true,
     dimOtherPanes: raw.dimOtherPanes === true,
     showRecap: raw.showRecap !== false,
+    sleepHiddenTerminals: raw.sleepHiddenTerminals !== false,
     sessionViews: sanitizeSessionViews(raw.sessionViews, raw.sessionView),
     chatViews: sanitizeChatViews(raw.chatViews),
+    savedPrompts: sanitizeSavedPrompts(raw.savedPrompts),
     colorSessionsByTag: raw.colorSessionsByTag !== false,
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,
@@ -395,6 +461,9 @@ export function migrateSettings(raw: unknown): Settings {
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound
     },
     onboardingDismissed: raw.onboardingDismissed === true,
+    // Settings saved before the tour existed belong to people who already know Dawsha: the tour is for new users,
+    // and it would otherwise open on top of the What's new dialog right after the update.
+    tourSeen: raw.tourSeen === true || (raw.tourSeen === undefined && typeof raw.lastSeenVersion === 'string'),
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
     layouts: sanitizeLayouts(raw.layouts),
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
@@ -405,6 +474,10 @@ export function migrateSettings(raw: unknown): Settings {
     runCommands: sanitizeRunOverrides(raw.runCommands).filter((entry) => projects.some((project) => project.id === entry.projectId)),
     ticketNotes: sanitizeTicketNotes(raw.ticketNotes),
     tasks: sanitizeTasks(raw.tasks, new Set(projects.map((p) => p.id))),
+    scheduledRuns: sanitizeScheduledRuns(raw.scheduledRuns, projects),
+    queuedPrompts: sanitizeQueuedPrompts(raw.queuedPrompts, projects),
+    queueConcurrency: Math.floor(clampNumber(raw.queueConcurrency, 1, 10, 2)),
+    queueAgent: raw.queueAgent === 'codex' ? 'codex' : 'claude',
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
     autoUpdateCheck: raw.autoUpdateCheck !== false,
     paletteShortcut: sanitizeShortcut(raw.paletteShortcut),
@@ -416,6 +489,7 @@ export function migrateSettings(raw: unknown): Settings {
     crewRuns: sanitizeCrewRuns(raw.crewRuns),
     lead: sanitizeLead(raw.lead),
     crewGoals: sanitizeGoals(raw.crewGoals),
+    presets: sanitizePresets(raw.presets, new Set(projects.map((p) => p.id))),
     legacyModelCacheCleared: raw.legacyModelCacheCleared === true
   }
 }

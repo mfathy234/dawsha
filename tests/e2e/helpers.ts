@@ -59,6 +59,8 @@ export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
   const settings = {
     version: 2,
     lastSeenVersion: APP_VERSION,
+    // A seeded profile is an existing user: no guided tour on launch, as no What's new dialog.
+    tourSeen: true,
     projects: [
       { id: 'smoke', name: 'Smoke', folder: projectFolder },
       { id: 'gone', name: 'Missing', folder: join(root, 'does-not-exist') }
@@ -93,6 +95,8 @@ export async function launchApp(
   const app = await electron.launch({
     args: [resolve(__dirname, '../../out/main/index.js'), '--force-device-scale-factor=1', ...chromiumArgs],
     env: {
+      // Shared skills and agents stay inside the sandbox, so no run reads the ~/.agents of whoever runs the tests.
+      DAWSHA_SHARED_HOME: join(sandbox.root, 'shared-home'),
       ...env,
       DAWSHA_USER_DATA: sandbox.userData,
       DAWSHA_APP_VERSION: APP_VERSION,
@@ -250,7 +254,7 @@ export function runCli(sandbox: Sandbox, args: string[], cwd: string = sandbox.r
   })
 }
 
-export type SettingsSectionId = 'general' | 'appearance' | 'notifications' | 'agents' | 'import' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
+export type SettingsSectionId = 'general' | 'appearance' | 'notifications' | 'agents' | 'mcp' | 'import' | 'updates' | 'highlights' | 'changelog' | 'about' | 'remote'
 
 export async function openSettings(page: Page, section: SettingsSectionId = 'general'): Promise<void> {
   const button = page.locator('#settings-button')

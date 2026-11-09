@@ -1,5 +1,6 @@
 import { migrateSettings, MAX_LAYOUTS } from './settingsSchema'
 import { isGridStyle } from './gridStyle'
+import { mergeSavedPrompts } from './savedPrompts'
 import type { CrewMember, CrewSettings } from './crew'
 import type { Project, SavedLayout, Settings } from './types'
 
@@ -26,9 +27,12 @@ export const INCLUDED_KEYS = [
   'sidebarHideEmpty',
   'dimOtherPanes',
   'showRecap',
+  'sleepHiddenTerminals',
   'colorSessionsByTag',
   'sidebarWidth',
-  'othersCollapsed'
+  'othersCollapsed',
+  // Personal and portable: a prompt carries no ids from this PC.
+  'savedPrompts'
 ] as const satisfies readonly (keyof Settings)[]
 
 export const EXCLUDED_KEYS = [
@@ -39,6 +43,7 @@ export const EXCLUDED_KEYS = [
   // Keyed by this PC's project ids, like closed sessions.
   'foldedProjects',
   'foldedClosedSessions',
+  'spendLimits',
   'filesLayout',
   'filesTabs',
   'runCommands',
@@ -50,8 +55,16 @@ export const EXCLUDED_KEYS = [
   // Keyed by this PC's project ids and branches, like closed sessions.
   'ticketNotes',
   'tasks',
+  // Presets name this PC's projects, like run commands.
+  'presets',
+  // Schedules and queued prompts refer to this PC's project folders and sessions.
+  'scheduledRuns',
+  'queuedPrompts',
+  'queueConcurrency',
+  'queueAgent',
   'lastSeenVersion',
   'onboardingDismissed',
+  'tourSeen',
   // Tracks this PC's local model cache, so it is never carried to another PC.
   'legacyModelCacheCleared',
   // Chat or terminal per session, keyed by this PC's session ids; the default view is a per-PC choice too.
@@ -123,7 +136,7 @@ const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
 const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew'] as const
-const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected'] as const
+const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected'] as const
 
 function checkShapes(data: Raw): string | null {
   for (const key of LIST_KEYS) {
@@ -137,6 +150,7 @@ function checkShapes(data: Raw): string | null {
   for (const key of BOOLEAN_KEYS) {
     if (data[key] !== undefined && typeof data[key] !== 'boolean') return `"${key}" must be true or false.`
   }
+  if (data.savedPrompts !== undefined && !Array.isArray(data.savedPrompts)) return '"savedPrompts" must be a list.'
   if (data.paletteShortcut !== undefined && typeof data.paletteShortcut !== 'string') return '"paletteShortcut" must be text.'
   if (data.sessionsLayout !== undefined && data.sessionsLayout !== 'grid' && data.sessionsLayout !== 'board') {
     return '"sessionsLayout" must be grid or board.'
@@ -240,9 +254,11 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['sidebarHideEmpty', 'Sidebar'],
   ['dimOtherPanes', 'Dim others'],
   ['showRecap', 'Session recap'],
+  ['sleepHiddenTerminals', 'Sleep hidden terminals'],
   ['colorSessionsByTag', 'Tag colours'],
   ['sidebarWidth', 'Sidebar'],
-  ['othersCollapsed', 'Sidebar']
+  ['othersCollapsed', 'Sidebar'],
+  ['savedPrompts', 'Saved prompts']
 ]
 
 export function preferenceLabels(data: Partial<TransferData>): string[] {
@@ -276,6 +292,7 @@ function preferencePatch(current: Settings, data: Partial<TransferData>, mode: T
     if (key === 'projects' || key === 'layouts' || data[key] === undefined) continue
     if (key === 'theme') patch.theme = { ...current.theme, id: data.theme!.id }
     else if (key === 'crew') patch.crew = mergeCrew(current.crew, data.crew!, mode, keepFullAccess)
+    else if (key === 'savedPrompts') patch.savedPrompts = mergeSavedPrompts(current.savedPrompts, data.savedPrompts!, mode)
     else Object.assign(patch, { [key]: data[key] })
   }
   return patch

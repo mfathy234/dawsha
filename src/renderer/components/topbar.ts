@@ -14,6 +14,8 @@ import { pillLabel, showUpdatePill } from '../../shared/updates'
 import { AGENTS, AGENT_NAMES, agentLabel } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
 import { openCompareDialog } from '../compareActions'
+import { startPreset } from '../presetActions'
+import { presetSummary } from '../../shared/sessionPresets'
 import { ICONS } from '../icons'
 import faviconSvg from '../../../site/favicon.svg?raw'
 import { agentMark } from './agentMark'
@@ -41,6 +43,8 @@ import { AVATAR_LABELS, compareAvatarStates, stripSummary, type AvatarState } fr
 import { acknowledgeRun, liveRuns } from '../crewLive'
 import { crewAvatar } from './crewAvatar'
 import { openHandDialog } from './crewDialogs'
+import { startTour } from './tour'
+import { TOUR_TEXT } from '../../shared/tourSteps'
 import './topbar.css'
 import './topbarTools.css'
 
@@ -61,6 +65,7 @@ export class TopBarComponent {
       class: 'split-main',
       type: 'button',
       id: 'new-session',
+      'data-tour': 'new-session',
       'aria-haspopup': 'menu',
       'aria-label': `New session, ${formatShortcut(bind('Ctrl+N'))}`,
       'aria-expanded': 'false',
@@ -341,7 +346,7 @@ export class TopBarComponent {
     const resume = h(
       'button',
       {
-        class: 'menu-item menu-resume',
+        class: 'menu-item',
         type: 'button',
         role: 'menuitem',
         id: 'resume-menu-item',
@@ -382,14 +387,34 @@ export class TopBarComponent {
           openHandDialog()
         }
       },
-      icon(ICONS.next),
+      icon(ICONS.navAgents),
       'Hand a job to an agent…'
     )
-    items.push(resume, compare, crewItem)
+    const presets = store.state.settings.presets.map((preset) =>
+      h(
+        'button',
+        {
+          class: 'menu-item',
+          type: 'button',
+          role: 'menuitem',
+          'data-preset': preset.id,
+          title: presetSummary(preset, store.state.settings.projects.find((project) => project.id === preset.projectId)?.name),
+          onClick: () => {
+            this.closeAgentMenu()
+            void startPreset(preset.id)
+          }
+        },
+        icon(ICONS.play),
+        `Start preset: ${preset.name}`
+      )
+    )
+    const separator = (): HTMLElement => h('div', { class: 'menu-separator', role: 'separator' })
+    const groups = [items.slice(), presets, [resume, compare, crewItem]].filter((group) => group.length > 0)
+    items.push(...presets, resume, compare, crewItem)
     this.agentMenu = h(
       'div',
-      { class: 'popover menu floating', role: 'menu', 'aria-label': 'Choose agent' },
-      ...items
+      { class: 'popover menu floating new-session-menu', role: 'menu', 'aria-label': 'Choose agent' },
+      ...groups.flatMap((group, index) => (index === 0 ? group : [separator(), ...group]))
     )
     this.agentMenu.addEventListener('keydown', (event) => this.onMenuKey(event, items))
     this.newSession.setAttribute('aria-expanded', 'true')
@@ -455,6 +480,8 @@ export class TopBarComponent {
     })
     this.moreItems = Object.fromEntries(entries) as unknown as Record<MoreView, HTMLElement>
     const items = entries.map(([, item]) => item)
+    const tourItem = h('button', { class: 'menu-item more-item', type: 'button', role: 'menuitem', id: 'take-tour-menu-item', onClick: () => { this.closeMoreMenu(); startTour() } }, TOUR_TEXT.menu)
+    items.push(tourItem)
     for (const [view] of entries) this.markMoreItem(view)
     this.moreMenu = h(
       'div',

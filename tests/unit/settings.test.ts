@@ -30,7 +30,7 @@ describe('migrateSettings', () => {
   it('persists the Files layout through a settings reload and repairs a bad one', () => {
     const file = tempFile()
     const store = new SettingsStore(file)
-    const layout = { sections: { changes: false, open: true, tree: true }, inspector: { open: false, tab: 'activity' as const }, explorer: { open: false }, panel: { minimised: false, height: 260 } }
+    const layout = { sections: { changes: false, open: true, tree: true }, inspector: { open: false, tab: 'activity' as const }, explorer: { open: false }, panel: { minimised: false, height: 260 }, editor: { fontSize: 15, wrap: true } }
     store.update({ filesLayout: layout })
     expect(new SettingsStore(file).load().settings.filesLayout).toEqual(layout)
     expect(migrateSettings({ filesLayout: 'nope' }).filesLayout.panel.minimised).toBe(true)
@@ -240,6 +240,17 @@ describe('migrateSettings', () => {
     const [kept, dropped] = result.workspace.panes[0].tabs
     expect(kept.baseline).toEqual({ ref: 'a1b2c3d4e5f6', at: 1_760_000_000_000, untracked: ['notes.txt'] })
     expect(dropped.baseline).toBeUndefined()
+  })
+})
+
+describe('guided tour on upgrade', () => {
+  it('counts settings saved before the tour existed as having seen it', () => {
+    expect(migrateSettings({ version: 2, lastSeenVersion: '1.8.4', projects: [] }).tourSeen).toBe(true)
+  })
+  it('keeps the tour for new users and keeps an explicit answer', () => {
+    expect(migrateSettings({ version: 2, projects: [] }).tourSeen).toBe(false)
+    expect(migrateSettings({ version: 2, lastSeenVersion: '1.8.5', tourSeen: false, projects: [] }).tourSeen).toBe(false)
+    expect(migrateSettings({ version: 2, tourSeen: true, projects: [] }).tourSeen).toBe(true)
   })
 })
 

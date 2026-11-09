@@ -5,6 +5,7 @@ import { projectStatus, projectStatusLabel } from '../../shared/projectStatus'
 import { filterSidebar, type SidebarEntry } from '../../shared/sidebarFilter'
 import { projectTodayLabel, projectTodayShort, projectTodayTooltip } from '../../shared/sessionCost'
 import type { AgentKind, KeptSession, Project } from '../../shared/types'
+import { editSpendLimit } from '../spendActions'
 import { addProject, clearClosedSessions, closePane, locateProject, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeKeptSession, removeProject, renameKeptSession, renameSession, reopenKeptSessions, reorderProjectFromDisplay, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagKeptSession, tagSession, toggleClosedSessions, toggleClosedShowAll, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
 import { CLOSED_PREVIEW_COUNT, closedAgoShort, closedDayLabel, closedUsageShort, closedUsageTooltip, groupClosedByDay, reopenGroupLabel } from '../../shared/keptSessions'
 import { autoTag, autoTagSource, cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
@@ -831,6 +832,7 @@ export class SidebarComponent {
       item(`Resume in ${project.name}…`, () => openResumePicker(projectId)),
       item('Open in Files', () => openFolderInFiles({ projectId, folder: project.folder })),
       item('Open terminal here', () => void startSession(projectId, 'shell')),
+      item(this.lastState?.settings.spendLimits?.[projectId] ? 'Change spending limit…' : 'Set spending limit…', () => void editSpendLimit(projectId)),
       h('div', { class: 'pv-menu-sep', role: 'separator' }),
       arrange(project.pinned === true ? 'Unpin' : 'Pin to top', () => pinProject(projectId, project.pinned !== true)),
       manual && canMoveProject(stored, projectId, -1) ? arrange('Move up', () => moveProjectInList(projectId, -1)) : null,

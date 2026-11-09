@@ -1,8 +1,9 @@
 import { stepContextNotice, type ContextNotice } from '../shared/contextWarning'
 import { initialAttention, stepAttention, type Attention, type AttentionMemory } from '../shared/attention'
-import { detectPermissionPrompt } from '../shared/permissionPrompt'
+import { detectPermissionPrompt, parsePermissionDetail } from '../shared/permissionPrompt'
+import { askingLine, notifyAttribution, replySnippet } from '../shared/notifyContent'
 import { api } from './api'
-import { focusPaneFromNotification } from './actions'
+import { focusPaneFromNotification, permissionTail } from './actions'
 import { derivePanes, type PaneView } from './derive'
 import { store, type AppState } from './state'
 import { getTerminal } from './terminals'
@@ -22,11 +23,15 @@ function paneVisible(state: AppState, view: PaneView): boolean {
   return state.maximizedId === null || state.maximizedId === view.pane.id
 }
 
-function notifyText(view: PaneView, kind: 'done' | 'needs'): { title: string; body: string } {
-  const project = view.project?.name ?? 'Dawsha'
-  return kind === 'done'
-    ? { title: `${view.title} is done`, body: `${project}: the session finished and is waiting for you.` }
-    : { title: `${view.title} needs you`, body: `${project}: the session is waiting on a permission prompt.` }
+function notifyText(view: PaneView, kind: 'done' | 'needs'): { title: string; body: string; attribution: string } {
+  const attribution = notifyAttribution(view.project?.name, view.agent)
+  if (kind === 'needs') {
+    const detail = parsePermissionDetail(permissionTail(view.pane.id))
+    return { title: `${view.title} needs you`, body: askingLine(detail), attribution }
+  }
+  const reply = getTerminal(view.primaryTabId)?.prompts.replyText()
+  const snippet = reply && !reply.fromScreen ? replySnippet(reply.text) : null
+  return { title: `${view.title} is done`, body: snippet ?? 'Finished and waiting for you.', attribution }
 }
 
 function notifyContext(state: AppState, view: PaneView): void {
@@ -38,7 +43,8 @@ function notifyContext(state: AppState, view: PaneView): void {
   api.notify({
     paneId: view.pane.id,
     title: `${view.title} context is ${Math.round(view.info.contextPercent)}% full`,
-    body: `${view.project?.name ?? 'Dawsha'}: /compact or start a fresh session.`,
+    body: 'Run /compact or start a fresh session.',
+    attribution: notifyAttribution(view.project?.name, view.agent),
     sound: state.settings.sessionInfo.sound
   })
 }

@@ -12,6 +12,7 @@ import { lineCount } from './lineCount'
 import type { ProblemMark } from './problemMarks'
 import type { HoverTip } from './hoverTip'
 import type { SideBySide } from './sideBySide'
+import type { EditorPrefs } from '../../shared/filesLayout'
 
 type EditorModule = typeof import('./editor')
 type StatModule = typeof import('./diffStat')
@@ -40,6 +41,8 @@ export type DocStatus = 'idle' | 'loading' | 'ready' | 'binary' | 'large' | 'mis
 
 export interface DocHooks {
   theme(): EditorTheme
+  /** The remembered editor look: font size and word wrap. */
+  prefs(): EditorPrefs
   /** Something the view shows changed: dirty, mode, conflict, status. */
   changed(doc: FileDoc): void
   /** The first edit pins a preview tab. */
@@ -51,6 +54,8 @@ export interface DocHooks {
   /** What resting the pointer on the name at a position shows. */
   hover(doc: FileDoc, pos: number): Promise<HoverTip | null>
 }
+
+const FONT_VAR = '--editor-font-size'
 
 export type SaveOutcome = 'saved' | 'conflict' | 'failed'
 
@@ -177,7 +182,9 @@ export class FileDoc {
   }
 
   private mount(module: EditorModule, text: string, readOnly: boolean): void {
-    const editor = module.createEditor(this.host, { text, path: this.path, readOnly, theme: this.hooks.theme() })
+    const prefs = this.hooks.prefs()
+    this.host.style.setProperty(FONT_VAR, `${prefs.fontSize}px`)
+    const editor = module.createEditor(this.host, { text, path: this.path, readOnly, theme: this.hooks.theme(), wrap: prefs.wrap })
     editor.onDirty(() => {
       const dirty = editor.getText() !== this.savedText
       if (dirty && !this.dirty) this.hooks.edited(this)
@@ -428,6 +435,11 @@ export class FileDoc {
     this.hooks.outlineChanged(this)
     void this.refreshStat()
     this.hooks.changed(this)
+  }
+
+  setPrefs(prefs: EditorPrefs): void {
+    this.host.style.setProperty(FONT_VAR, `${prefs.fontSize}px`)
+    this.editor?.setWrap(prefs.wrap)
   }
 
   setTheme(theme: EditorTheme): void {

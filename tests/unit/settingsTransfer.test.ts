@@ -352,3 +352,26 @@ describe('importDialogOptions', () => {
     expect(options.title).toBe('Import settings')
   })
 })
+
+describe('saved prompts', () => {
+  const prompts = [{ id: 'p1', name: 'Review', text: 'Review this change' }]
+
+  it('are exported and read back from a file', () => {
+    expect(INCLUDED_KEYS).toContain('savedPrompts')
+    const exported = buildTransferData({ ...defaultSettings(), savedPrompts: prompts })
+    expect(exported.savedPrompts).toEqual(prompts)
+    expect(parsed({ savedPrompts: [...prompts, { bad: true }] }).savedPrompts).toEqual(prompts)
+  })
+
+  it('replace takes the file list and merge adds only new names', () => {
+    const current = { ...defaultSettings(), savedPrompts: [{ id: 'x', name: 'review', text: 'mine' }] }
+    const incoming = parsed({ savedPrompts: [...prompts, { id: 'p2', name: 'Ship', text: 'Write the notes' }] })
+    expect(run(current, incoming, 'replace').patch.savedPrompts?.map((p) => p.name)).toEqual(['Review', 'Ship'])
+    expect(run(current, incoming, 'merge').patch.savedPrompts?.map((p) => p.name)).toEqual(['review', 'Ship'])
+  })
+
+  it('refuses a file where they are not a list', () => {
+    const result = parseTransfer(wrap({ savedPrompts: 'nope' }))
+    expect(result.ok).toBe(false)
+  })
+})

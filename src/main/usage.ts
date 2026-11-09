@@ -23,6 +23,7 @@ import {
 } from '../shared/usage'
 import type { AgentLimitEntry } from '../shared/agentLimits'
 import { buildUsageSnapshot, type UsageSnapshot } from '../shared/sessionCost'
+import { spendProjects, spendTotals, type SpendLimit } from '../shared/spendLimits'
 import { codexHome, geminiHome } from './agentLaunch'
 import { listGeminiChatFiles } from './geminiWatcher'
 import { claudeProjectsDir } from './paths'
@@ -229,17 +230,19 @@ export class UsageService {
     return job
   }
 
-  snapshot(projects: Project[]): Promise<UsageSnapshot> {
-    this.snapshotJob ??= this.buildSnapshot(projects).finally(() => {
+  snapshot(projects: Project[], limits: Readonly<Record<string, SpendLimit>> = {}): Promise<UsageSnapshot> {
+    this.snapshotJob ??= this.buildSnapshot(projects, limits).finally(() => {
       this.snapshotJob = null
     })
     return this.snapshotJob
   }
 
-  private async buildSnapshot(projects: Project[]): Promise<UsageSnapshot> {
+  private async buildSnapshot(projects: Project[], limits: Readonly<Record<string, SpendLimit>>): Promise<UsageSnapshot> {
     const now = Date.now()
     const scan = await scanUsage(rangeWindow('today', now).start)
-    return buildUsageSnapshot({ now, files: scan.files, projects, history: this.history })
+    const snapshot = buildUsageSnapshot({ now, files: scan.files, projects, history: this.history })
+    const spend = spendTotals(spendProjects(projects, limits), Object.values(this.history.costs), now)
+    return { ...snapshot, spend }
   }
 
   private async build(range: UsageRange, projects: Project[]): Promise<UsageReport> {

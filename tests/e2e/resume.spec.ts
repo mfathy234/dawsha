@@ -63,7 +63,7 @@ test('the resume picker lists sessions of all agents, filters them and resumes i
     await expect(page.locator('.rp-group')).toHaveText(['Today', 'This week'])
     await expect(page.locator('.rp-row').first()).toContainText('Add dark mode toggle')
     await expect(page.locator('.rp-row').nth(1)).toContainText('Fix flaky login test')
-    await expect(page.locator('.rp-row').first().locator('.rp-project-chip')).toHaveText('Smoke')
+    await expect(page.locator('.rp-preview .rp-pv-sub').nth(1)).toHaveText('Smoke')
     await expect(page.locator('.rp-preview')).toContainText('Claude Code · Opus')
     await expect(page.locator('.rp-preview')).toContainText('Add a dark mode toggle to the settings page')
     await expect(page.locator('.rp-preview')).toContainText('The toggle now lives in Settings.')

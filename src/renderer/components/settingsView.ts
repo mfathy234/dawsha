@@ -16,6 +16,7 @@ import {
   setDimOtherPanes,
   setFocusMovesSelected,
   setShowRecap,
+  setSleepHiddenTerminals,
   setSidebarCollapsed,
   showSettingsSection,
   showView,
@@ -54,12 +55,15 @@ import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
 import { pageHeader } from './pageHeader'
+import { McpServersPanel } from './mcpPanel'
 import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
 import { setGridStyle } from '../sessionsLayout'
 import { setDefaultView } from '../chat/chatActions'
 import { ViewSwitch } from '../chat/viewSwitch'
 import type { ChatAgent, SessionViews } from '../../shared/chatLog'
 import { agentMark } from './agentMark'
+import { savedPromptsRow } from './savedPromptsSettings'
+import { presetsSettings } from './presetsSettings'
 import '../chat/chat.css'
 import '../chat/chatChoice.css'
 
@@ -68,6 +72,7 @@ const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'appearance', label: 'Appearance', lede: 'Choose a theme and terminal background.' },
   { id: 'notifications', label: 'Notifications', lede: 'What Dawsha shows and tells you while sessions run.' },
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
+  { id: 'mcp', label: 'MCP', lede: 'The MCP servers each agent is set up with.' },
   { id: 'import', label: 'Import', lede: 'Bring settings from another Dawsha installation.' },
   ...(isRemoteControlBuild ? [{ id: 'remote' as const, label: 'Remote access', lede: 'Reach this Dawsha installation from your own devices.' }] : []),
   { id: 'updates', label: 'Updates', lede: 'Keep Dawsha current.' },
@@ -121,6 +126,7 @@ export class SettingsViewComponent {
   private readonly lede = h('p', { class: 'lede' })
   private signature = ''
   private importPath = ''
+  private readonly mcp = new McpServersPanel()
   private navSection: string | null = null
   private shortcutDraft: string | null = null
   private shortcutError: string | null = null
@@ -174,11 +180,14 @@ export class SettingsViewComponent {
       state.settings.paletteShortcut,
       state.settings.sidebarCollapsed,
       state.settings.sessionViews,
+      state.settings.savedPrompts,
       state.settings.fullAccess,
+      state.settings.presets,
       state.settings.sessionInfo,
       state.settings.autoUpdateCheck,
       state.settings.highlights,
       state.settings.recordings,
+      state.settings.sleepHiddenTerminals,
       this.remoteAccess,
       this.remoteError,
       this.remoteBusy,
@@ -289,6 +298,9 @@ export class SettingsViewComponent {
         return [...this.notifications(state), ...this.highlights(state)]
       case 'agents':
         return this.agents(state)
+      case 'mcp':
+        this.mcp.activate()
+        return [this.mcp.el]
       case 'updates':
         return this.updates(state)
       case 'highlights':
@@ -435,8 +447,10 @@ export class SettingsViewComponent {
       ),
       row('Sessions', checkbox('dim-other-panes', "Dim sessions you're not working in", state.settings.dimOtherPanes, false, setDimOtherPanes), h('p', { class: 'hint' }, 'Keep the focused session clear while the others stay visible.')),
       row('Open sessions as', null, this.sessionViewRows(state.settings.sessionViews), h('p', { class: 'hint' }, 'Gemini and shells always open as terminals. New session can override it, and each session remembers its own choice.')),
+      savedPromptsRow(state.settings.savedPrompts),
       row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag), h('p', { class: 'hint' }, 'Use a tag colour on each session pane.')),
       row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
+      row('Terminal rendering', checkbox('sleep-hidden-terminals', 'Sleep hidden terminals', state.settings.sleepHiddenTerminals, false, setSleepHiddenTerminals), h('p', { class: 'hint' }, 'Release WebGL rendering after a hidden terminal has been out of view for 10 minutes.')),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),
       row(
         'Getting started',
@@ -511,7 +525,7 @@ export class SettingsViewComponent {
       h('button', { class: 'btn ghost small', type: 'button', id: 'settings-manage-agents', onClick: () => showView('agents') }, 'Manage installs in Agent tools'),
       h('p', { class: 'hint' }, 'Install or update the command-line agents.')
     )
-    return [...rows, manage]
+    return [...rows, manage, ...presetsSettings(state)]
   }
 
   private updates(state: AppState): HTMLElement[] {

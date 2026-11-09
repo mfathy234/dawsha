@@ -117,7 +117,7 @@
 .files-badge.b-D { color: var(--danger); }
 .files-badge.b-R, .files-badge.b-C, .files-badge.b-T { color: var(--muted); }
 .files-badge.b-\! { color: var(--danger); }
-.files-empty { padding: var(--s-1) var(--s-3) var(--s-2) var(--s-4); color: var(--muted); font-size: var(--fs-status); line-height: 1.5; }
+.files-empty { padding: var(--s-1) var(--s-3) var(--s-2) calc(var(--s-1) + 11px + var(--s-2)); color: var(--muted); font-size: var(--fs-status); line-height: 1.5; }
 
 /* Search */
 .files-search-box { position: relative; flex: none; }
@@ -153,8 +153,11 @@
 .files-hit-mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; border-radius: 2px; text-decoration: underline; text-underline-offset: 2px; }
 
 /* Review */
-.files-review-head { display: flex; align-items: center; gap: var(--s-1); flex: none; }
-.files-review-progress { flex: 1; min-width: 0; padding: var(--s-1); color: var(--muted); font-size: var(--fs-ui); }
+.files-review-head { display: flex; align-items: flex-start; gap: var(--s-1); flex: none; }
+.files-review-progress { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-1); color: var(--muted); font-size: var(--fs-ui); }
+.files-review-meter { height: 4px; margin: 0 2px; border-radius: var(--r-round); background: color-mix(in srgb, var(--muted) 18%, transparent); }
+.files-review-meter-fill.lit { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+.files-review-meter-fill { display: block; height: 100%; border-radius: var(--r-round); background: var(--accent); transition: width var(--t-feedback); }
 .files-review-head .icon-btn[hidden] { display: none; }
 .files-review-head .icon-btn:disabled { opacity: 0.5; }
 .files-review-list { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow: auto; flex: 1 1 auto; }
@@ -269,6 +272,7 @@
 .files-status[hidden] { display: none; }
 .files-status .spacer { flex: 1; }
 .files-status-run { color: var(--text); }
+.files-status-mode { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* Previews */
 .files-preview { position: absolute; inset: 0; overflow: auto; display: flex; flex-direction: column; background: var(--editor-bg); }
@@ -608,7 +612,7 @@
 @keyframes nav-flash { from { background-color: color-mix(in srgb, var(--accent) 28%, transparent); } }
 .cm-nav-link { text-decoration: underline; cursor: pointer; color: #6cb6ff !important; }
 :root[data-kind="light"] .cm-nav-link { color: #006ab1 !important; }
-.cm-indent-guides { background-image: linear-gradient(90deg, color-mix(in srgb, var(--text) 12%, transparent) 1px, transparent 1px); background-repeat: repeat-x; }
+.cm-indent-guides { background-image: linear-gradient(90deg, color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px); background-repeat: repeat-x; }
 .cm-foldGutter .cm-gutterElement { padding: 0 4px; opacity: 0; cursor: pointer; font-family: var(--font-sans); font-size: 10px; text-align: center; }
 .cm-editor:hover .cm-foldGutter .cm-gutterElement, .cm-foldGutter .cm-gutterElement:has(span[title="Unfold line"]) { opacity: 1; }
 .cm-foldPlaceholder { padding: 0 4px; margin-left: 4px; border: 0; border-radius: var(--r-micro); background: var(--hover); color: var(--muted); font-size: 11px; }

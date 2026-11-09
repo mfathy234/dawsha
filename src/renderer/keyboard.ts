@@ -1,17 +1,19 @@
+import { isOverlayOpen } from './overlayOpen'
 import { DEFAULT_FONT_SIZE } from '../shared/types'
 import { DEFAULT_PALETTE_SHORTCUT } from '../shared/settingsSchema'
 import { bind, formatShortcut, matchesBinding, parseShortcut, type KeyBinding, type KeyEventLike } from '../shared/shortcuts'
 import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, startSession, zoomPane } from './actions'
 import { pickedAgent } from '../shared/quickPick'
 import { commandForEvent } from './commands/registry'
-import { store, type AppState } from './state'
+import { paneById, store, type AppState } from './state'
 import { closeTimeline } from './timelineActions'
 import { closePeek } from './boardActions'
 import { boardShowing } from './sessionsLayout'
 import { contextMenuOpen } from './components/contextMenu'
 import { requestFilesSearch } from './files/filesActions'
+import { openGlobalSearch } from './components/globalSearch'
 
-const overlayOpen = (): boolean => document.querySelector('.overlay:not(.leaving), .popover:not(.leaving)') !== null
+const overlayOpen = isOverlayOpen
 
 const ALTERNATE_PALETTE = bind('Ctrl+Shift+P')
 
@@ -75,6 +77,12 @@ function onKeyDown(event: KeyboardEvent): void {
   if (state.view === 'files' && event.shiftKey && !event.altKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
     consume(event)
     requestFilesSearch()
+    return
+  }
+  // Search all sessions: Ctrl+Shift+F where nothing else claims it. Files searches files; a focused pane searches its terminal.
+  if (state.view !== 'files' && !(state.view === 'grid' && paneById(state, state.focusedId)) && event.shiftKey && !event.altKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+    consume(event)
+    openGlobalSearch()
     return
   }
   if (isPaletteShortcut(event, state)) {

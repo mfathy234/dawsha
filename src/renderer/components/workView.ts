@@ -14,10 +14,13 @@ import { selectMenu } from './selectMenu'
 import { formatWorkSummary } from '../../shared/workSummary'
 import { toast } from './toast'
 import { pageHeader } from './pageHeader'
+import { scheduledSection } from './scheduledSection'
+import { queueSection, queueViewKey } from './queueSection'
 import './workView.css'
+import './automation.css'
 
-type WorkMode = 'sessions' | 'tickets'
-const MODES: { value: WorkMode; label: string }[] = [{ value: 'sessions', label: 'Sessions' }, { value: 'tickets', label: 'Tickets' }]
+type WorkMode = 'sessions' | 'tickets' | 'scheduled'
+const MODES: { value: WorkMode; label: string }[] = [{ value: 'sessions', label: 'Sessions' }, { value: 'tickets', label: 'Tickets' }, { value: 'scheduled', label: 'Scheduled' }]
 const UNIT: Record<WorkPeriod, string> = { today: 'day', week: 'week', month: 'month' }
 const PERIODS: { value: WorkPeriod; label: string }[] = [{ value: 'today', label: 'Today' }, { value: 'week', label: 'This week' }, { value: 'month', label: 'This month' }]
 const duration = (ms: number): string => {
@@ -41,6 +44,7 @@ export class WorkViewComponent {
   /** Periods back from now: 0 is now, -1 the day, week or month before. */
   private offset = 0
   private notes: TicketNotes = {}
+  private automationKey = ''
   private readonly tickets = new TicketsPanel()
 
   /** An item's active time inside the shown period, the same measure the per-project totals use. */
@@ -82,6 +86,11 @@ export class WorkViewComponent {
       this.notes = state.settings.ticketNotes
       if (visible && this.visible) this.render()
     }
+    const key = this.mode === 'scheduled' ? JSON.stringify([state.settings.scheduledRuns, state.settings.queuedPrompts, state.settings.queueConcurrency, state.settings.queueAgent, state.settings.projects, queueViewKey()]) : ''
+    if (key !== this.automationKey) {
+      this.automationKey = key
+      if (visible && this.visible) this.render()
+    }
     if (visible === this.visible) return
     this.visible = visible
     window.clearInterval(this.timer)
@@ -118,7 +127,7 @@ export class WorkViewComponent {
   private async copySummary(): Promise<void> {
     if (!this.report || this.loading) return
     const text = formatWorkSummary(this.report, {
-      now: Date.now(), periodLabel: this.periodLabel(), mode: this.mode,
+      now: Date.now(), periodLabel: this.periodLabel(), mode: this.mode === 'tickets' ? 'tickets' : 'sessions',
       query: this.search, projectId: this.projectId, notes: this.notes
     })
     try {
@@ -163,6 +172,7 @@ export class WorkViewComponent {
 
   private bodyNodes(): Node[] {
     const nodes: Node[] = [this.toolbar()]
+    if (this.mode === 'scheduled') return [...nodes, scheduledSection(), queueSection()]
     if (this.projectId) nodes.push(this.selectedProject())
     if (this.error) nodes.push(h('p', { class: 'field-error', role: 'alert' }, this.error))
     const source = this.report
@@ -197,10 +207,10 @@ export class WorkViewComponent {
     return h('div', { class: 'work-toolbar' },
       h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Count by' }, ...MODES.map(m => h('button', {
         class: `rp-tab${this.mode === m.value ? ' selected' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(this.mode === m.value), id: `work-mode-${m.value}`,
-        onClick: () => { this.mode = m.value; this.render() }
+        onClick: () => { this.mode = m.value; this.automationKey = ''; this.render() }
       }, m.label))),
       h('span', { class: 'spacer' }),
-      this.filters())
+      this.mode === 'scheduled' ? null : this.filters())
   }
 
   private stats(report: WorkReport): HTMLElement {

@@ -1,0 +1,22 @@
+/* Find in chat: the bar is the terminal's (.term-find); only the match colours are drawn here. */
+::highlight(chat-find) { background-color: color-mix(in srgb, var(--term-warn) 30%, transparent); color: inherit; }
+::highlight(chat-find-current) { background-color: color-mix(in srgb, var(--term-warn) 65%, transparent); color: inherit; }
+
+.chat-group-body { display: grid; gap: 1px; margin-inline-start: var(--sp-3); }
+
+.chat-worked { align-self: flex-start; font-size: var(--fs-1); color: var(--text-3); }
+.chat-turn-summary .chat-worked { margin-top: var(--sp-1); }
+
+.chat-bell { position: absolute; inset-block-start: 0; inset-inline-end: 28px; display: inline-flex; padding: 1px var(--sp-2); border: 0; border-radius: 5px; background: var(--surface); color: var(--text-3); cursor: pointer; }
+.chat-bell:hover { color: var(--text); }
+.chat-bell.on { color: var(--accent-ink, var(--accent)); }
+.chat-bell .icon { width: 14px; height: 14px; }
+
+.chat-complete-group { padding: var(--s-2) var(--s-3) 0; color: var(--text-3); font-size: var(--fs-1); }
+.chat-complete-group:not(:first-child) { margin-top: var(--sp-1); }
+
+.set-saved { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.set-saved-text { min-width: 0; display: grid; }
+.set-saved-text b, .set-saved-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-saved-text span { color: var(--text-3); font-size: var(--fs-1); }
+.set-saved-acts { display: flex; flex: none; gap: var(--sp-2); }

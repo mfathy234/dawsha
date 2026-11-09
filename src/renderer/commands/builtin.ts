@@ -48,12 +48,14 @@ import { exportTranscript } from '../transcriptActions'
 import { replayPane } from '../replayActions'
 import { openShortcutsSheet } from '../components/shortcutsSheet'
 import { toggleQuickOpen } from '../components/quickOpen'
+import { openGlobalSearch } from '../components/globalSearch'
 import { filesTarget, openFolderInFiles, requestFilesCommand, type FilesCommand } from '../files/filesActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
 import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
 import { SIDEBAR_FILTER_EVENT } from '../../shared/sidebarModel'
 import { registerCommands, registerProvider, type Command } from './registry'
+import { editSpendLimit, pauseAllAgents } from '../spendActions'
 
 const hasPane = (state: AppState): boolean => paneById(state, state.focusedId) !== undefined
 
@@ -281,6 +283,18 @@ export function installBuiltinCommands(): void {
     },
     focusedAction('terminal.clear-scrollback', 'Clear the terminal scrollback', clearScrollback, 'history wipe screen output'),
     focusedAction('pane.instructions', 'Edit project instructions', openInstructionsForPane, 'claude agents gemini md rules'),
+    {
+      id: 'agents.pause-all',
+      title: 'Pause all working agents…',
+      group: 'Actions',
+      keywords: 'interrupt stop escape everything halt',
+      ...withKeys('Ctrl+Shift+.'),
+      run: () => void pauseAllAgents()
+    },
+    focusedAction('project.spend-limit', 'Set a spending limit for this project…', (id) => {
+      const projectId = paneById(store.state, id)?.projectId
+      if (projectId) void editSpendLimit(projectId)
+    }, 'cost budget dollars money warn daily weekly'),
     focusedAction('pane.vscode', 'Open in VS Code', (id) => openPaneFolder(id, 'vscode'), 'editor folder'),
     focusedAction('pane.explorer', 'Open in Explorer', (id) => openPaneFolder(id, 'explorer'), 'folder files'),
     focusedAction('pane.terminal', 'Open a terminal here', (id) => addTab(id, 'shell'), 'shell tab'),
@@ -363,6 +377,15 @@ export function installBuiltinCommands(): void {
       run: () => requestFilesCommand('switch-branch')
     },
     ...filesNavigationCommands(),
+    {
+      id: 'view.sessionSearch',
+      title: 'Search all sessions',
+      group: 'Actions',
+      keywords: 'find past history prompts replies transcript timeline everywhere',
+      ...withKeys('Ctrl+Shift+H'),
+      enabled: (state) => state.view !== 'files',
+      run: () => openGlobalSearch()
+    },
     { id: 'view.quickopen', title: 'Find a file…', group: 'Actions', keywords: 'quick open ctrl p files search project fuzzy', ...withKeys('Ctrl+P'), run: () => toggleQuickOpen() },
     { id: 'view.agents', title: 'Open Agent tools', group: 'Actions', keywords: 'agents install update cli', run: () => showView('agents') },
     { id: 'view.crew', title: 'Open Agents', group: 'Actions', keywords: 'agents crew members run lead maya', ...withKeys('Ctrl+Shift+L'), run: () => showView('crew') },

@@ -4,7 +4,7 @@ import type { CrewIdentity } from './crew'
 import type { ChatView } from './chatLog'
 import { sanitizeSplits } from './splits'
 import { LAYOUT_NAME_MAX, MAX_LAYOUTS } from './settingsSchema'
-import type { AgentKind, CompareLink, GridSplits, Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
+import type { AgentKind, CompareLink, GridSplits, PaneWorktree, Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
 
 export interface SnapshotTab {
   id: string
@@ -26,6 +26,7 @@ export interface SnapshotPane {
   projectId: string
   folder?: string
   compare?: CompareLink
+  worktree?: PaneWorktree
   fontSize: number
   activeTabId: string
   pinned?: boolean
@@ -52,7 +53,7 @@ export function snapshotWorkspace(
   const workspace: Workspace = {
     focusedIndex,
     panes: kept.map((pane): SavedPane => {
-      const detached = options.portable === true && (pane.compare !== undefined || pane.folder !== undefined)
+      const detached = options.portable === true && (pane.compare !== undefined || pane.folder !== undefined || pane.worktree !== undefined)
       const saved: SavedPane = {
         projectId: pane.projectId,
         fontSize: pane.fontSize,
@@ -73,6 +74,7 @@ export function snapshotWorkspace(
       if (options.portable !== true) {
         if (pane.folder) saved.folder = pane.folder
         if (pane.compare) saved.compare = pane.compare
+        if (pane.worktree) saved.worktree = pane.worktree
       }
       if (pane.pinned === true) saved.pinned = true
       return saved

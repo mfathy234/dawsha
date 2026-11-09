@@ -7,6 +7,7 @@ import type { CliCommand, CliReply } from './cli'
 import type { FileRef } from './filePaths'
 import type { InstructionRead, InstructionWriteRequest, InstructionWriteResult } from './instructions'
 import type { WorktreeStatus } from './compare'
+import type { SessionWorktreeResult, MergeBackRequest, MergeOverviewResult, MergeResult, WorktreeCommitRequest, WorktreeRemoveRequest } from './mergeBack'
 import type { BranchListResult, DirtyReportResult, GitQuickRequest, GitQuickResult, SyncCounts } from './gitBranches'
 import type { IgnoreAddRequest, IgnoreAddResult, UntrackedFoldersResult } from './gitIgnore'
 import type { ProjectGroup } from './worktreeGroups'
@@ -64,12 +65,14 @@ import type {
   SpawnRequest,
   SpawnResult,
   WorktreeRemoval,
+  WorktreeResult,
   WorktreesResult
 } from './types'
 
 export interface GridApi {
   runs: import('./runCommands').RunApi
   tools: import('./filesTools').FilesToolsApi
+  mcp: import('./mcp').McpApi
   chat: import('./chatLog').ChatApi
   getSettings(): Promise<SettingsLoadResult>
   updateSettings(patch: Partial<Settings>): Promise<Settings>
@@ -119,6 +122,9 @@ export interface GridApi {
   gitDiffSince(folder: string, path: string, baseline: SessionBaseline): Promise<GitDiffResult>
   gitBaseline(folder: string): Promise<SessionBaselineResult>
   gitSessionStatus(folder: string, baseline: SessionBaseline): Promise<SessionStatusResult>
+  checkpointPrepare(folder: string, sessionId: string): Promise<boolean>
+  listCheckpoints(folder: string, sessionId: string, messageIds: string[]): Promise<Record<string, string>>
+  restoreCheckpoint(folder: string, sessionId: string, ref: string, paths: string[]): Promise<{ ok: true; beforeUndo: string | null; skipped: string[] } | { ok: false; error: string }>
   projectFiles(folder: string): Promise<ProjectFilesResult>
   projectFile(folder: string, path: string): Promise<ProjectFileResult>
   writeProjectFile(folder: string, path: string, text: string, expectedMtime: number): Promise<ProjectFileWriteResult>
@@ -139,6 +145,7 @@ export interface GridApi {
   /** Adds one folder to the repository's root .gitignore. */
   gitIgnoreAdd(request: IgnoreAddRequest): Promise<IgnoreAddResult>
   listResumable(agent: AgentKind, folder: string): Promise<ResumeEntry[]>
+  chatCommands(request: { agent: AgentKind; folder: string }): Promise<import('./chatComplete').CompletionItem[]>
   listAllResumable(query: ResumeQuery): Promise<ResumeSession[]>
   quickOpen(kind: QuickOpenKind, folder: string): Promise<void>
   findSolution(folder: string): Promise<string | null>
@@ -187,7 +194,7 @@ export interface GridApi {
   onData(listener: (id: string, data: string) => void): () => void
   onExit(listener: (id: string, exitCode: number) => void): () => void
   onRemoteSessionStarted(listener: (session: RemoteSessionStarted) => void): () => void
-  listProcessActivity(): Promise<ProcessActivity[]>
+  listProcessActivity(visibleTabIds?: string[]): Promise<ProcessActivity[]>
   listSkills(): Promise<SkillEntry[]>
   openSkill(id: string): Promise<void>
   exportSkill(id: string): Promise<string | null>
@@ -228,7 +235,13 @@ export interface GridApi {
   compareProbe(folder: string): Promise<RepoProbe>
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>
+  runWorktreeCreate(folder: string, short: string): Promise<WorktreeResult>
   compareRemove(request: WorktreeRemoval): Promise<GitResult>
+  worktreeCreate(folder: string, short: string): Promise<SessionWorktreeResult>
+  mergeOverview(request: MergeBackRequest): Promise<MergeOverviewResult>
+  mergeCommit(request: WorktreeCommitRequest): Promise<GitCommitResult>
+  mergeInto(request: MergeBackRequest): Promise<MergeResult>
+  mergeRemove(request: WorktreeRemoveRequest): Promise<GitResult>
   listRecordings(): Promise<RecordingSummary[]>
   readRecording(id: string): Promise<string>
   recordingStats(): Promise<RecordingStats>

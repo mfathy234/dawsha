@@ -46,6 +46,7 @@ import { SESSION_TAG_LABELS, type SessionTag } from '../../shared/sessionTags'
 import { openPaneBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
+import { openPaneMeter } from './paneMeter'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { crewSignature, identityMark } from './crewAvatar'
@@ -59,9 +60,11 @@ import { detectPermissionPrompt, parsePermissionDetail, permissionPromptText, ty
 import { setStatePillSuffix, stateIcon, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
+import { openMergeBack, paneWorktree } from '../mergeBackActions'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
 import './paneCalm.css'
+import './paneMeter.css'
 import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
 import { PaneChat } from '../chat/paneChat'
@@ -139,7 +142,7 @@ export class PaneComponent {
     this.pin.append(icon(ICONS.pin))
     const header = h(
       'div',
-      { class: 'pane-header' },
+      { class: 'pane-header', 'data-tour': 'pane-header' },
       this.mark,
       h('div', { class: 'pane-titles' }, this.index, this.projectName, this.fresh),
       this.pin,
@@ -171,8 +174,20 @@ export class PaneComponent {
       const view = this.current
       if (view) void restartTab(paneId, view.tabs.find((t) => t.active)?.id ?? view.pane.activeTabId)
     })
+    this.info.setAttribute('data-tour', 'pane-meter')
     this.info.addEventListener('click', (event) => {
-      if (!this.el.classList.contains('maximized') || (event.target as HTMLElement).closest('button')) return
+      const target = event.target as HTMLElement
+      if (target.closest('.info-model, .info-context, .info-tokens, .info-cost, .info-memory')) {
+        if (this.current) openPaneMeter(this.info, this.current.info, () => {
+          if (this.chatShown) this.chat.sendCommand('/compact')
+          else {
+            const tabId = this.current?.primaryTabId
+            if (tabId) typeCompact(tabId)
+          }
+        })
+        return
+      }
+      if (!this.el.classList.contains('maximized') || target.closest('button')) return
       toggleDetails(paneId)
     })
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
@@ -235,11 +250,12 @@ export class PaneComponent {
     this.updateInfo(view, maximized)
     this.foot.hidden = this.info.hidden && this.branch.hidden
     this.updateRecap(view)
-    this.recap.hidden = !store.state.settings.showRecap || this.recapText === ''
     this.updateHint(view)
     const asking = state === 'needs' || (this.chatShown && detectPermissionPrompt(permissionTail(this.paneId)))
     this.updatePermission(view, asking ? 'needs' : state)
     this.updateChat(view, state, asking)
+    // Chat already shows the last reply; the recap line is scraped from the terminal screen and only repeats it, stale.
+    this.recap.hidden = !store.state.settings.showRecap || this.recapText === '' || this.chatShown
     this.updateDetails(view, maximized)
     this.timeline.update(view, maximized && view.timelineOpen)
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
@@ -569,6 +585,8 @@ export class PaneComponent {
         if (label) label.textContent = paused ? 'Resume recording' : 'Pause recording'
       }, () => undefined)
     }
+    const worktree = paneWorktree(this.paneId)
+    const mergeItem = worktree ? [item('Merge back…', () => openMergeBack(this.paneId), ICONS.commit)] : []
     const closeItem = item('Close pane', () => closePane(this.paneId), ICONS.close)
     closeItem.classList.add('danger')
     const liveInfo = this.current?.agent === 'claude' && !store.state.bridge.installed
@@ -620,6 +638,7 @@ export class PaneComponent {
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Open and review'),
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
       changesItem,
+      ...mergeItem,
       ...liveInfo,
       h('div', { class: 'menu-separator', role: 'separator' }),
       closeItem

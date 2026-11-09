@@ -14,9 +14,16 @@ import { ChatThread, type PendingView } from './chatThread'
 import { askPromptFor } from '../../shared/menuPrompt'
 import { detectTerminalMenu } from '../../shared/terminalMenu'
 import { isStarting } from '../../shared/agentReady'
-import { isTracked, newPending, pendingLabel, settlePending, type PendingMessage } from '../../shared/chatPending'
+import { holdPending, isTracked, newPending, pendingLabel, releaseHeld, removeHeld, settlePending, type PendingMessage } from '../../shared/chatPending'
+import { appendHistory, historyAt } from '../../shared/chatHistory'
 import { planAnswers, type AskAnswer, type KeyStep } from '../../shared/menuAnswer'
 import type { AskPrompt } from '../../shared/chatAsk'
+import { ChatComplete } from './chatComplete'
+import { ChatFind } from './chatFind'
+import { ChatWatches } from './chatWatches'
+import { doneMessage, watchableMessageId } from '../../shared/chatNotify'
+import { loadCheckpoints, prepareCheckpoint, undoReply } from './chatUndo'
+import type { TurnSummary } from '../../shared/turnSummary'
 
 export interface ChatHost {
   showTerminal(): void
@@ -26,6 +33,9 @@ export interface ChatHost {
   /** The last rows on the agent's screen. */
   screenTail(): string
   answer(steps: KeyStep[]): void
+  reviewChanges(): void
+  /** A desktop notification that opens this pane when clicked. */
+  notify(title: string, body: string): void
 }
 
 export interface ChatInput {
@@ -39,6 +49,8 @@ export interface ChatInput {
   exited: boolean
   status: 'starting' | 'running' | 'exited'
   startedAt: number
+  /** How long the session has been working, for the line under the thread. */
+  elapsed?: string
   /** The pane's terminal tab: file links in the thread resolve against its folder. */
   tabId: string
 }
@@ -77,31 +89,48 @@ export class PaneChat {
   private starting = false
   private watch = 0
   private counter = 0
+  private history: string[] = []
+  private historyIndex = -1
+  private historyDraft = ''
+  private checkpointRefs: Readonly<Record<string, string>> = {}
+  private sendChain: Promise<unknown> = Promise.resolve()
+  private checkpointSession = ''
+  private historySession = ''
+  private readonly completion: ChatComplete
+  private readonly find: ChatFind
+  private readonly watches: ChatWatches
 
   constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
     this.thread = new ChatThread(() => this.render(true))
     this.feed = new ChatFeed(
       (snapshot) => {
         this.snapshot = snapshot
+        void this.refreshCheckpoints()
         this.render(false)
       },
       () => this.el.offsetParent !== null
     )
     this.scroller.append(this.thread.el)
+    this.completion = new ChatComplete(this.box, () => this.input?.folder ?? '', () => this.input?.agent ?? 'claude', () => store.state.settings.savedPrompts)
+    this.find = new ChatFind({ thread: this.thread, items: () => this.snapshot.items, closed: () => this.focusComposer() })
+    this.watches = new ChatWatches(() => this.phase, (ids) => this.announce(ids))
     this.el = h(
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
-      h('div', { class: 'chat-feedwrap' }, this.scroller, this.jump),
+      h('div', { class: 'chat-feedwrap' }, this.scroller, this.jump, this.find.el),
       this.strip.el,
       h('div', { class: 'chat-composer' }, this.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.sendButton))
     )
+    this.el.querySelector('.chat-composer')?.insertBefore(this.completion.el, this.box.parentElement)
     this.box.addEventListener('keydown', (event) => this.onKey(event))
     this.box.addEventListener('input', () => {
       this.note.hidden = true
+      this.updateSendButton()
       this.growBox()
+      void this.completion.refresh().catch((error) => console.error('Chat completion failed', error))
     })
     new ResizeObserver(() => this.input && this.updateComposer(this.input, this.phase)).observe(this.box)
-    this.sendButton.addEventListener('click', () => this.submit())
+    this.sendButton.addEventListener('click', () => this.phase === 'working' && this.box.value.trim() === '' ? this.host.interrupt() : this.submit())
     this.scroller.addEventListener('scroll', () => this.updateJump(), { passive: true })
     this.jump.addEventListener('click', () => {
       this.toBottom()
@@ -110,6 +139,12 @@ export class PaneChat {
     this.box.addEventListener('paste', (event) => this.onPaste(event))
     this.watchDrops()
     this.el.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        event.stopPropagation()
+        this.find.open()
+        return
+      }
       if (event.key === 'Escape' && this.phase === 'working') {
         event.preventDefault()
         this.host.interrupt()
@@ -135,6 +170,11 @@ export class PaneChat {
     }
     if (this.input && (this.input.agent !== input.agent || (this.input.sessionId && this.input.sessionId !== input.sessionId))) this.pending = []
     this.input = input
+    if (this.checkpointSession !== `${input.folder}:${input.sessionId ?? ''}`) {
+      this.checkpointSession = `${input.folder}:${input.sessionId ?? ''}`
+      this.checkpointRefs = {}
+    }
+    this.loadHistory(input.sessionId)
     this.attachments.setSession(input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null)
     if (input.sessionId) this.feed.start({ agent: input.agent, sessionId: input.sessionId, folder: input.folder })
     else this.feed.stop()
@@ -146,7 +186,14 @@ export class PaneChat {
     if (!this.box.disabled) this.box.focus()
   }
 
+  sendCommand(text: string): void {
+    if (!this.input || this.input.exited || this.phase === 'approval' || this.phase === 'menu') return
+    this.host.send(text)
+    this.feed.nudge()
+  }
+
   dispose(): void {
+    this.watches.dispose()
     this.strip.dispose()
     this.setWatch(false)
     this.feed.stop()
@@ -168,6 +215,12 @@ export class PaneChat {
     const phase = chatPhase({ items: snapshot.items, working, needsApproval: input.needsApproval, menuOpen })
     this.starting = isStarting({ agent: input.agent, status: input.status, startedAt: input.startedAt, now: Date.now(), tail, working })
     this.flushWaiting(working)
+    const release = releaseHeld(this.pending, working || input.exited, phase === 'approval', phase === 'menu')
+    this.pending = release.pending
+    if (release.message) {
+      void this.deliver(release.message.text)
+      this.note.hidden = true
+    }
     this.pending = settlePending(this.pending, snapshot.items, Date.now(), working)
     this.ask = phase === 'menu' ? askPromptFor(snapshot.items, tail) : null
     this.setWatch(this.starting || this.pending.length > 0)
@@ -175,7 +228,7 @@ export class PaneChat {
     const views = this.pendingViews()
     const last = snapshot.items[snapshot.items.length - 1]
     if (last?.kind !== 'notice') this.limitDismissed = false
-    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', views])
+    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', input.elapsed ?? '', views, [...this.watches.watched]])
     if (!force && snapshot === this.renderedSnapshot && key === this.renderKey) return
     this.renderedSnapshot = snapshot
     this.renderKey = key
@@ -193,24 +246,77 @@ export class PaneChat {
       ask: this.ask,
       pending: views,
       starting: this.starting,
+      elapsed: input.elapsed,
       background: snapshot.background,
+      bell: { messageId: watchableMessageId(snapshot.items, phase), watched: this.watches.watched, toggle: (id) => this.toggleWatch(id) },
       fileScope: input.tabId,
+      checkpointRefs: this.checkpointRefs,
       session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
         showTerminal: () => this.host.showTerminal(),
         continueIn: (to) => this.host.continueIn(to),
         dismissLimit: () => this.dismissLimit(),
-        answer: (answers) => this.answerAsk(answers)
+        answer: (answers) => this.answerAsk(answers),
+        reviewChanges: () => this.host.reviewChanges(),
+        undoReply: (summary) => this.undoReply(summary)
       }
     })
     this.strip.update(snapshot.background)
+    this.find.sync()
+    this.watches.check()
     this.updateComposer(input, phase)
-    if (!force && (this.stickBottom || wasNear)) this.toBottom()
+    if (!force && (this.stickBottom || wasNear) && !this.find.searching) this.toBottom()
     this.updateJump()
     if (!force) this.stickBottom = false
   }
 
+  /** Looks up the checkpoint of each user message in view, by message id, and redraws when the set changed. */
+  private async refreshCheckpoints(): Promise<void> {
+    const input = this.input
+    if (!input?.sessionId) return
+    const ids = this.snapshot.items.flatMap((item) => item.kind === 'message' && item.role === 'user' ? [item.id] : [])
+    const refs = await loadCheckpoints(input.folder, input.sessionId, ids)
+    if (this.input?.sessionId !== input.sessionId || JSON.stringify(refs) === JSON.stringify(this.checkpointRefs)) return
+    this.checkpointRefs = refs
+    this.render(true)
+  }
+
+  private undoReply(summary: TurnSummary): void {
+    const input = this.input
+    if (!input?.sessionId) return
+    const agentName = input.agent === 'claude' ? 'Claude' : 'Codex'
+    void undoReply({ folder: input.folder, sessionId: input.sessionId, agentName, working: input.working && !input.exited }, summary)
+  }
+
+  /** Snapshots the project, then types the message into the terminal; sends keep their order. */
+  private deliver(text: string): Promise<{ flattened: boolean }> {
+    const sent = this.sendChain.then(async () => {
+      if (isTracked(text) && this.input) await prepareCheckpoint(this.input.folder, this.input.sessionId)
+      return this.host.send(text)
+    })
+    this.sendChain = sent.catch(() => undefined)
+    return sent
+  }
+
   private renderedSnapshot: FeedSnapshot | null = null
+
+  private toggleWatch(id: string): void {
+    this.watches.toggle(id)
+    this.render(true)
+  }
+
+  /** The turns someone asked about have finished: tell them, even if Dawsha is in the background. */
+  private announce(ids: readonly string[]): void {
+    const input = this.input
+    for (const id of ids) {
+      const item = this.snapshot.items.find((entry) => entry.id === id)
+      const text = item?.kind === 'message' ? item.text : ''
+      if (!input) continue
+      const message = doneMessage(AGENT_NAMES[input.agent], input.project, text)
+      this.host.notify(message.title, message.body)
+    }
+    this.render(true)
+  }
 
   /** Opens the launch row's report and brings it into view. False when the thread no longer holds that row. */
   private revealLaunch(launchId: string): boolean {
@@ -243,7 +349,7 @@ export class PaneChat {
   }
 
   private pendingViews(): PendingView[] {
-    return this.pending.map((message) => ({ id: message.id, text: message.text, label: pendingLabel(message) }))
+    return this.pending.map((message) => ({ id: message.id, text: message.text, label: pendingLabel(message), held: message.held, edit: () => this.editHeld(message.id), cancel: () => this.cancelHeld(message.id) }))
   }
 
   /** Messages typed while the agent was starting go in as soon as its input box is up. */
@@ -251,7 +357,7 @@ export class PaneChat {
     if (this.starting || !this.pending.some((message) => message.waiting)) return
     this.pending = this.pending.flatMap((message) => {
       if (!message.waiting) return [message]
-      this.host.send(message.text)
+      void this.deliver(message.text)
       return isTracked(message.text) ? [{ ...message, waiting: false, queued: working, at: Date.now() }] : []
     })
   }
@@ -272,7 +378,7 @@ export class PaneChat {
     const wasBlocked = this.box.disabled
     this.box.disabled = blocked !== ''
     this.sendButton.disabled = blocked !== ''
-    this.showSend()
+    this.updateSendButton()
     if (wasBlocked && !this.box.disabled && this.active && this.focusIsFree()) this.focusComposer()
     const roomy = this.box.clientWidth >= LONG_HINT_MIN_PX
     this.box.placeholder = blocked || (this.starting ? CHAT_TEXT.composerStarting(name) : roomy ? CHAT_TEXT.messagePlaceholderLong(name) : CHAT_TEXT.messagePlaceholder(name))
@@ -286,7 +392,13 @@ export class PaneChat {
   }
 
   private showSend(): void {
-    this.sendButton.hidden = this.box.disabled || (this.box.value.trim() === '' && this.attachments.items.length === 0)
+    this.updateSendButton()
+  }
+
+  private updateSendButton(): void {
+    const stopping = this.phase === 'working' && this.box.value.trim() === '' && this.attachments.items.length === 0
+    this.sendButton.textContent = stopping ? CHAT_TEXT.stop : CHAT_TEXT.send
+    this.sendButton.hidden = this.box.disabled || (!stopping && this.box.value.trim() === '' && this.attachments.items.length === 0)
   }
 
   /** The button shows only when the thread is scrolled up and there is more below. */
@@ -304,22 +416,91 @@ export class PaneChat {
   }
 
   private onKey(event: KeyboardEvent): void {
+    if (this.completion.handleKey(event)) return
+    if (this.handleHistoryKey(event)) return
     if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return
     event.preventDefault()
     this.submit()
+  }
+
+  /** History keys stay isolated here so a composer popup can own them while open. */
+  private handleHistoryKey(event: KeyboardEvent): boolean {
+    if (this.completion.isOpen()) return false
+    if (event.key === 'Escape' && this.historyIndex >= 0) {
+      event.preventDefault()
+      event.stopPropagation()
+      this.box.value = this.historyDraft
+      this.historyIndex = -1
+      this.growBox()
+      return true
+    }
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return false
+    const start = this.box.selectionStart
+    if (event.key === 'ArrowUp' && this.box.value.slice(0, start).includes('\n')) return false
+    if (event.key === 'ArrowDown' && this.box.value.slice(start).includes('\n')) return false
+    if (!this.history.length) return false
+    if (this.historyIndex < 0) this.historyDraft = this.box.value
+    const result = historyAt(this.history, this.historyIndex, this.historyDraft, event.key === 'ArrowUp' ? -1 : 1)
+    event.preventDefault()
+    this.historyIndex = result.index
+    this.box.value = result.value
+    this.box.setSelectionRange(result.value.length, result.value.length)
+    this.growBox()
+    return true
+  }
+
+  private loadHistory(sessionId: string | null): void {
+    const key = sessionId ?? ''
+    if (key === this.historySession) return
+    this.historySession = key
+    this.historyIndex = -1
+    try {
+      const stored: unknown = key ? JSON.parse(localStorage.getItem(`chat-history:${key}`) ?? '[]') : []
+      this.history = Array.isArray(stored) ? stored.filter((entry): entry is string => typeof entry === 'string').slice(-50) : []
+    } catch (error) {
+      this.history = []
+      console.warn('Could not read chat history.', error)
+    }
+  }
+
+  private saveHistory(text: string): void {
+    if (!this.historySession) return
+    this.history = appendHistory(this.history, text)
+    try { localStorage.setItem(`chat-history:${this.historySession}`, JSON.stringify(this.history)) } catch (error) { console.warn('Could not save chat history.', error) }
+    this.historyIndex = -1
+  }
+
+  private editHeld(id: string): void {
+    const message = this.pending.find((entry) => entry.id === id && entry.held)
+    if (!message) return
+    this.pending = removeHeld(this.pending, id)
+    this.box.value = message.text
+    this.box.focus()
+    this.growBox()
+    this.render(true)
+  }
+
+  private cancelHeld(id: string): void {
+    this.pending = removeHeld(this.pending, id)
+    this.render(true)
   }
 
   private submit(): void {
     const typed = this.box.value
     if ((typed.trim() === '' && this.attachments.items.length === 0) || this.box.disabled) return
     const text = messageWithAttachments(this.input?.agent, this.attachments.items, typed, store.state.info.shellCommand)
+    this.saveHistory(text)
     this.note.hidden = true
     if (this.starting) {
       this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, true, false)]
+    } else if ((this.input?.working ?? false) && !this.input?.exited) {
+      if (isTracked(text)) this.pending = holdPending(this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, true))
+      else this.host.send(text)
     } else {
-      const { flattened } = this.host.send(text)
-      this.note.hidden = !flattened
-      this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
+      void this.deliver(text).then(({ flattened }) => {
+        this.note.hidden = !flattened
+        this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
+      })
       if (isTracked(text)) {
         const working = (this.input?.working ?? false) && !this.input?.exited
         this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, working)]

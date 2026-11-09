@@ -1,0 +1,12 @@
+.mcp-panel { display: flex; flex-direction: column; gap: var(--sp-3); }
+.mcp-agent { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-4) 0 0; font-size: var(--fs-3); font-weight: 600; }
+.mcp-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2); color: var(--muted); font-size: var(--fs-1); }
+.mcp-transport { margin: 0; font-family: var(--font-mono); font-size: var(--fs-1); color: var(--muted); overflow-wrap: anywhere; user-select: text; }
+.mcp-off .set-name { color: var(--muted); }
+.mcp-details > summary { width: fit-content; color: var(--muted); font-size: var(--fs-1); cursor: pointer; }
+.mcp-details[open] > summary { margin-bottom: var(--sp-2); }
+.mcp-entry { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2); font-family: var(--font-mono); font-size: var(--fs-1); }
+.mcp-entry-key { color: var(--muted); }
+.mcp-raw { margin: var(--sp-2) 0 0; padding: var(--sp-3) var(--sp-4); background: var(--surface); border-radius: var(--r-1); font-family: var(--font-mono); font-size: var(--fs-1); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.mcp-toolbar { display: flex; justify-content: flex-end; }
+.mcp-edit { display: flex; align-items: center; gap: var(--sp-3); color: var(--muted); font-size: var(--fs-1); }

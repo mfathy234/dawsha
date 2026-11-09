@@ -1,7 +1,17 @@
 /** Every word the chat view says that Dawsha writes itself (not the agent's own text). Short, plain, what is happening and what comes next. */
+const SHOWN_FILES = 5
+
+/** Up to five file names, then "and N more". */
+export function fileListText(names: readonly string[]): string {
+  const shown = names.slice(0, SHOWN_FILES)
+  const rest = names.length - shown.length
+  return rest > 0 ? `${shown.join(', ')} and ${rest} more` : shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}` : shown.join('')
+}
+
 export const CHAT_TEXT = {
   reading: 'Reading the session…',
   working: 'Working',
+  workingFor: (elapsed?: string): string => (elapsed ? `Working · ${elapsed}` : 'Working'),
   interruptHint: 'Esc to interrupt',
   earlier: (count: number): string => `${count} earlier message${count === 1 ? '' : 's'} not shown`,
   emptyTitle: (agent: string): string => `Tell ${agent} what to do`,
@@ -26,6 +36,8 @@ export const CHAT_TEXT = {
   startingWait: 'Your message is sent when it is ready.',
   composerStarting: (agent: string): string => `${agent} is starting. You can type now.`,
   queued: 'Queued',
+  edit: 'Edit',
+  cancel: 'Cancel',
   sending: 'Sending…',
   waitingToStart: 'Waiting to start',
   failedTitle: "Chat can't read this session",
@@ -36,6 +48,7 @@ export const CHAT_TEXT = {
   interrupted: 'Stopped',
   codexLimit: 'Codex reached its usage limit.',
   send: 'Send',
+  stop: 'Stop',
   flattened: "Sent as one line. This terminal can't take line breaks.",
   messagePlaceholder: (agent: string): string => `Message ${agent}`,
   messagePlaceholderLong: (agent: string): string => `Message ${agent}. Enter to send, Shift+Enter for a new line`,
@@ -83,5 +96,31 @@ export const CHAT_TEXT = {
   backgroundFailed: 'Failed',
   backgroundStopped: 'Stopped',
   backgroundNoResult: 'No report was recorded.',
-  running: (verb: string, target: string): string => `${verb} ${target}`.trim()
+  turnSummary: 'Turn changes',
+  turnChanged: (count: number): string => `Changed ${count} file${count === 1 ? '' : 's'}`,
+  reviewChanges: 'Review changes',
+  bellOff: 'Tell me when this is done',
+  bellOn: "You'll be told when this is done. Click to cancel.",
+  findLabel: 'Find in chat',
+  findPlaceholder: 'Find',
+  findPrevious: 'Previous match (Shift+Enter)',
+  findNext: 'Next match (Enter)',
+  findClose: 'Close find (Esc)',
+  savedGroup: 'Saved',
+  commandsGroup: 'Commands',
+  saveEmpty: 'Type the prompt first, then put /save in front of it.',
+  saveTitle: 'Save prompt',
+  saveName: 'Name',
+  saveConfirm: 'Save',
+  saved: (name: string): string => `Saved "${name}". Find it under / in any chat.`,
+  undoReply: 'Undo this reply',
+  undoQuestion: (agent: string, names: readonly string[]): string => `Undo ${agent}'s changes to ${fileListText(names)}? Other files stay as they are.`,
+  undoButton: (count: number): string => `Undo changes to ${count} file${count === 1 ? '' : 's'}`,
+  undoDone: 'Reply undone.',
+  undoFailed: 'Could not undo this reply.',
+  redo: 'Redo',
+  redoQuestion: (agent: string, names: readonly string[]): string => `Restore ${agent}'s changes to ${fileListText(names)}?`,
+  undoSkipped: (count: number): string => `${count} ignored file${count === 1 ? ' was' : 's were'} left as they are.`,
+  redoButton: (count: number): string => `Redo changes to ${count} file${count === 1 ? '' : 's'}`,
+  undoWhileWorking: (agent: string): string => `${agent} is still working. Wait for the reply to finish.`
 } as const
