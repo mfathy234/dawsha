@@ -59,6 +59,8 @@ export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
   const settings = {
     version: 2,
     lastSeenVersion: APP_VERSION,
+    // A seeded profile is an existing user: no guided tour on launch, as no What's new dialog.
+    tourSeen: true,
     projects: [
       { id: 'smoke', name: 'Smoke', folder: projectFolder },
       { id: 'gone', name: 'Missing', folder: join(root, 'does-not-exist') }

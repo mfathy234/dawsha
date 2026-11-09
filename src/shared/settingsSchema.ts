@@ -461,7 +461,9 @@ export function migrateSettings(raw: unknown): Settings {
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound
     },
     onboardingDismissed: raw.onboardingDismissed === true,
-    tourSeen: raw.tourSeen === true,
+    // Settings saved before the tour existed belong to people who already know Dawsha: the tour is for new users,
+    // and it would otherwise open on top of the What's new dialog right after the update.
+    tourSeen: raw.tourSeen === true || (raw.tourSeen === undefined && typeof raw.lastSeenVersion === 'string'),
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
     layouts: sanitizeLayouts(raw.layouts),
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),

@@ -243,6 +243,17 @@ describe('migrateSettings', () => {
   })
 })
 
+describe('guided tour on upgrade', () => {
+  it('counts settings saved before the tour existed as having seen it', () => {
+    expect(migrateSettings({ version: 2, lastSeenVersion: '1.8.4', projects: [] }).tourSeen).toBe(true)
+  })
+  it('keeps the tour for new users and keeps an explicit answer', () => {
+    expect(migrateSettings({ version: 2, projects: [] }).tourSeen).toBe(false)
+    expect(migrateSettings({ version: 2, lastSeenVersion: '1.8.5', tourSeen: false, projects: [] }).tourSeen).toBe(false)
+    expect(migrateSettings({ version: 2, tourSeen: true, projects: [] }).tourSeen).toBe(true)
+  })
+})
+
 describe('agent settings migration', () => {
   it('defaults a missing or invalid defaultAgent to claude and keeps codex and gemini', () => {
     const result = migrateSettings({
