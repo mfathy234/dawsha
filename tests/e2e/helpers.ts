@@ -95,6 +95,8 @@ export async function launchApp(
   const app = await electron.launch({
     args: [resolve(__dirname, '../../out/main/index.js'), '--force-device-scale-factor=1', ...chromiumArgs],
     env: {
+      // Shared skills and agents stay inside the sandbox, so no run reads the ~/.agents of whoever runs the tests.
+      DAWSHA_SHARED_HOME: join(sandbox.root, 'shared-home'),
       ...env,
       DAWSHA_USER_DATA: sandbox.userData,
       DAWSHA_APP_VERSION: APP_VERSION,
