@@ -3,6 +3,32 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.6] - 2026-11-11
+
+### Added
+
+- **Rewind to any message.** Hover a message you sent for Rewind to here. Dawsha puts back every file that message's reply and the later replies changed, after a confirm that lists them. New files are marked as ones that will be deleted, and files you changed yourself since are kept. Redo brings them back. Your branch, staged files and the agent's conversation are not touched.
+- **Edit a message and send it again.** Edit turns your message into a box in place. Send puts the files back to before it, then sends the new text.
+- **Try another way.** Start a second session from any message you sent, in its own worktree with the files as they were then, and optionally with the conversation up to that point. Both attempts keep running, and Compare is one click away.
+- **Diffs in the reply summary.** Each changed file in a reply's summary opens its diff in place, with line numbers. Long diffs show the first 40 lines, with Show all and Open in Review.
+- **Commit this reply.** Commit only the files a reply changed, with a suggested message. The card says how many other changes stay out. Afterwards it shows the commit with Push and Open pull request.
+- **Checks after each reply.** Pick a project's test or build commands to run after any reply that changes files. Results show on the reply's card, and failures go back to the agent in one click, or automatically if you turn that on.
+- **Context meter.** The chat box shows how full the context window is. Click it for the numbers, Compact or Clear. Past 85%, a note offers to compact before the agent does it mid-task.
+- **Model and effort in the chat box.** Change the model and effort from the chat box. The change shows as a quiet row in the thread.
+- **Keep going when a limit is reached.** When Claude or Codex hits a usage limit, chat offers to continue in the other agent, send your message when the limit resets, or remind you then.
+- **The plan stays in view.** When the agent keeps a todo list, one line at the top of chat shows how far along it is and what it is doing now. Click it for the whole list.
+- **Chat on your phone.** Remote Control gets a Chat tab for Claude and Codex sessions. Sending needs the Terminal input permission; without it the chat is read-only.
+- **Clean up worktrees.** Remove the worktrees left behind by closed sessions from the project menu. The dialog shows each worktree's size, age and whether it is merged, leaves ones with uncommitted changes unticked, and can also delete merged branches.
+- **Export usage.** Usage can export a CSV for a chosen range, grouped by day, project, agent or session. The file stays on your computer.
+
+### Changed
+
+- **A roomier sidebar.** It is wider and can be resized.
+  - Each session shows what it is doing on a second line, and long names wrap instead of being cut.
+  - Projects show one dot per session instead of the branch.
+  - "Needs you" lists a session once, and a find field sits at the top.
+- **Closed sessions** fold into one line per project that opens the Resume picker. Rename, tag, remove, Reopen all and Clear are now in the Resume picker.
+
 ## [1.8.5] - 2026-11-09
 
 ### Added
