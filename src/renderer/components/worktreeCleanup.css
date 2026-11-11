@@ -1,0 +1,25 @@
+.wtc-dialog { width: 520px; }
+
+.wtc-list { display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow-y: auto; }
+
+.wtc-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-1);
+  font-size: var(--fs-2);
+  cursor: pointer;
+}
+.wtc-row:hover { background: var(--hover); }
+.wtc-row:has(:focus-visible) { background: var(--hover); }
+
+.wtc-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wtc-detail { color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wtc-warn { color: var(--term-warn); white-space: nowrap; }
+.wtc-warn:empty { display: none; }
+
+.wtc-opt { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-2); color: var(--text-2); cursor: pointer; }
+.wtc-opt input:disabled + span { color: var(--text-3); }
+
+.wtc-box:focus-visible, .wtc-opt input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
