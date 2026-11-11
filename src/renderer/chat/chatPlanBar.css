@@ -9,9 +9,9 @@
   gap: var(--sp-3);
   width: 100%;
   min-height: 32px;
-  padding: 0 var(--sp-3);
+  padding: 0 var(--sp-6);
   border: 0;
-  background: transparent;
+  background: var(--surface);
   color: var(--text-2);
   font: inherit;
   font-size: var(--fs-12);
@@ -59,14 +59,18 @@
 
 .plan-list {
   max-height: 40vh;
-  padding: 0 var(--sp-3) var(--sp-2);
+  padding: var(--sp-2) var(--sp-6) var(--sp-3);
+  background: var(--surface);
   overflow-y: auto;
 }
 
 .plan-list .chat-todos {
-  padding-inline: 0;
+  padding: 0;
   background: transparent;
 }
+
+/* Done items are just quiet, not struck through. */
+.plan-list .chat-todos .todo.completed .txt { text-decoration: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .plan-bar { transition: none; }
