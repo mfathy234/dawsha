@@ -1,4 +1,5 @@
 import { AGENT_NAMES } from '../shared/agents'
+import { withStoppedMessage } from '../shared/chatLimit'
 import { buildHandoff, buildTranscriptHandoff, type HandoffCheck } from '../shared/handoff'
 import { DEFAULT_FONT_SIZE, clampFontSize, type AgentKind } from '../shared/types'
 import { largeOf, launch, makeTerm, persistWorkspace, refreshBranches, refreshGitChanges } from './actions'
@@ -88,13 +89,13 @@ export async function startHandoff(paneId: string, to: AgentKind, text: string, 
   void launch(pane.id, tab.id, false)
 }
 
-export async function continueIn(paneId: string, to: AgentKind): Promise<void> {
+export async function continueIn(paneId: string, to: AgentKind, stoppedMessage: string | null = null): Promise<void> {
   const summary = await summaryFor(paneId)
   if (!summary) {
     toast('Only a pane with an agent session can be continued in another agent.', 'info')
     return
   }
-  const text = await handoffDialog({ from: summary.from, to, text: summary.text, transcriptPath: summary.transcriptPath })
+  const text = await handoffDialog({ from: summary.from, to, text: withStoppedMessage(summary.text, stoppedMessage), transcriptPath: summary.transcriptPath })
   if (text === null) return
   await startHandoff(paneId, to, text, summary.from)
 }

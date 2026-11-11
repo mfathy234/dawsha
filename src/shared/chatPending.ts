@@ -11,6 +11,8 @@ export interface PendingMessage {
   queued: boolean
   /** Held by Dawsha until the agent is idle. */
   held?: boolean
+  /** A held message that waits for this time (a usage limit reset) before it is sent. */
+  sendAt?: number
   /** Ids of the user messages the log had when this was sent, so only a newer one can settle it. */
   seen: string[]
 }
@@ -37,9 +39,11 @@ export function removeHeld(pending: readonly PendingMessage[], id: string): Pend
   return pending.filter((message) => message.id !== id || !message.held)
 }
 
-export function releaseHeld(pending: readonly PendingMessage[], working: boolean, approval: boolean, menu: boolean): { pending: PendingMessage[]; message: PendingMessage | null } {
+export const holdUntil = (pending: readonly PendingMessage[], message: PendingMessage, sendAt: number): PendingMessage[] => [...pending, { ...message, held: true, queued: true, sendAt }]
+
+export function releaseHeld(pending: readonly PendingMessage[], working: boolean, approval: boolean, menu: boolean, now: number = Date.now()): { pending: PendingMessage[]; message: PendingMessage | null } {
   if (working || approval || menu || pending.some((message) => !message.held && !message.waiting)) return { pending: [...pending], message: null }
-  const message = pending.find((entry) => entry.held)
+  const message = pending.find((entry) => entry.held && (entry.sendAt === undefined || entry.sendAt <= now))
   if (!message) return { pending: [...pending], message: null }
   const released = { ...message, held: false, queued: false, waiting: false }
   return { pending: pending.map((entry) => entry.id === message.id ? released : entry), message: released }

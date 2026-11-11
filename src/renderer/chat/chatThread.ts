@@ -26,14 +26,17 @@ import { groupMembership, groupTools, type ToolGroup } from '../../shared/chatGr
 import { groupRow, workedByReply, workedLine } from './chatGroupRow'
 import { bellButton, type BellView } from './chatBell'
 import { workedLabel } from '../../shared/chatTiming'
+import { limitCard, type LimitActions } from './chatLimitCard'
+import type { LimitSituation } from '../../shared/chatLimit'
 
 export interface ThreadActions {
   showTerminal(): void
-  continueIn(to: AgentKind): void
+  continueIn(to: AgentKind, message?: string | null): void
   dismissLimit(): void
   answer(answers: AskAnswer[]): void
   reviewChanges(): void
   undoReply(summary: import('../../shared/turnSummary').TurnSummary): void
+  limit: LimitActions
 }
 
 export interface PendingView {
@@ -41,6 +44,8 @@ export interface PendingView {
   text: string
   label: PendingLabel
   held?: boolean
+  /** Replaces the usual line under the message, e.g. "Sends at 15:40". */
+  note?: string
   edit?: () => void
   cancel?: () => void
 }
@@ -69,6 +74,10 @@ export interface ThreadContext {
   background?: readonly BackgroundTask[]
   /** The bell on a running turn's user message. */
   bell?: BellView
+  /** What a usage limit stopped, for the card at the end of the thread. */
+  limit?: { situation: LimitSituation; now: number; scheduled: boolean; reminded: boolean }
+  /** Quiet centred rows after the log, e.g. "Model set to Sonnet". */
+  quiet?: readonly string[]
   actions: ThreadActions
 }
 
@@ -112,7 +121,7 @@ export class ChatThread {
   private body(feed: FeedSnapshot, ctx: ThreadContext): (Node | null)[] {
     const bare = feed.items.length === 0 && ctx.pending.length === 0
     if (bare && ctx.phase !== 'approval' && ctx.phase !== 'menu' && !ctx.starting) return [this.empty(ctx)]
-    return [feed.earlier > 0 ? h('p', { class: 'chat-quiet' }, CHAT_TEXT.earlier(feed.earlier)) : null, ...this.items(feed.items, ctx), ...ctx.pending.map((item) => this.pendingMessage(item)), ...this.tail(ctx)]
+    return [feed.earlier > 0 ? h('p', { class: 'chat-quiet' }, CHAT_TEXT.earlier(feed.earlier)) : null, ...this.items(feed.items, ctx), ...ctx.pending.map((item) => this.pendingMessage(item)), ...(ctx.quiet ?? []).map((text) => h('p', { class: 'chat-quiet chat-set' }, text)), ...this.tail(ctx)]
   }
 
   private empty(ctx: ThreadContext): HTMLElement {
@@ -267,16 +276,8 @@ export class ChatThread {
   private notice(item: ChatNotice, last: boolean, ctx: ThreadContext): HTMLElement {
     if (item.notice === 'interrupted') return h('p', { class: 'chat-quiet' }, item.text)
     if (item.notice === 'compact') return this.compacted(item)
-    const actions =
-      item.notice === 'limit' && last && ctx.phase === 'limit' && !ctx.limitDismissed
-        ? h(
-            'div',
-            { class: 'chat-acts' },
-            this.button(CHAT_TEXT.continueIn(ctx.otherName), () => ctx.actions.continueIn(ctx.otherAgent), true),
-            this.button(CHAT_TEXT.waitForReset, ctx.actions.dismissLimit, false)
-          )
-        : null
-    return h('div', { class: 'chat-notice' }, h('b', { dir: 'auto' }, item.text), actions)
+    if (item.notice === 'limit' && last && ctx.phase === 'limit' && ctx.limit) return limitCard({ agentName: ctx.agentName, otherAgent: ctx.otherAgent, otherName: ctx.otherName, ...ctx.limit, actions: ctx.actions.limit })
+    return h('div', { class: 'chat-notice' }, h('b', { dir: 'auto' }, item.text))
   }
 
   /** A compaction: one quiet line, with the summary it left folded away. */
@@ -324,7 +325,7 @@ export class ChatThread {
   }
 
   private pendingMessage(item: PendingView): HTMLElement {
-    const note = item.label === 'queued' ? CHAT_TEXT.queued : item.label === 'waiting' ? CHAT_TEXT.waitingToStart : CHAT_TEXT.sending
+    const note = item.note ?? (item.label === 'queued' ? CHAT_TEXT.queued : item.label === 'waiting' ? CHAT_TEXT.waitingToStart : CHAT_TEXT.sending)
     return h('div', { class: 'chat-you pending', 'data-pending': item.label, dir: textDirection(item.text) }, ...richText(item.text), h('span', { class: 'chat-pend', role: 'status' }, note), item.held ? h('span', { class: 'chat-pend-actions' }, h('button', { class: 'chat-text-btn', type: 'button', onClick: item.edit }, CHAT_TEXT.edit), h('button', { class: 'chat-text-btn', type: 'button', onClick: item.cancel }, CHAT_TEXT.cancel)) : null)
   }
 
