@@ -11,6 +11,8 @@ import { ChatAttachments } from './chatAttachments'
 import { ChatFeed, LOADING, type FeedSnapshot } from './chatFeed'
 import { BackgroundStrip } from './chatBackground'
 import { ChatThread, type PendingView } from './chatThread'
+import { ChatPlanBar } from './chatPlanBar'
+import { latestTodos } from '../../shared/planProgress'
 import { askPromptFor } from '../../shared/menuPrompt'
 import { detectTerminalMenu } from '../../shared/terminalMenu'
 import { isStarting } from '../../shared/agentReady'
@@ -36,6 +38,8 @@ export interface ChatHost {
   reviewChanges(): void
   /** A desktop notification that opens this pane when clicked. */
   notify(title: string, body: string): void
+  /** The plan's progress ("3 of 7"), or empty when there is none, for the sidebar. */
+  plan(label: string): void
 }
 
 export interface ChatInput {
@@ -73,6 +77,7 @@ export class PaneChat {
   private readonly sendButton = h('button', { class: 'chat-btn', type: 'button', hidden: true }, CHAT_TEXT.send)
   private readonly jump = h('button', { class: 'chat-jump', type: 'button', hidden: true }, CHAT_TEXT.jumpLatest)
   private readonly note = h('p', { class: 'chat-quiet', role: 'status', hidden: true })
+  private readonly planBar = new ChatPlanBar()
   private readonly strip = new BackgroundStrip({ reveal: (task) => this.revealLaunch(task.launchId) })
   private readonly attachments = new ChatAttachments(() => this.showSend())
   private snapshot: FeedSnapshot = LOADING
@@ -117,6 +122,7 @@ export class PaneChat {
     this.el = h(
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
+      this.planBar.el,
       h('div', { class: 'chat-feedwrap' }, this.scroller, this.jump, this.find.el),
       this.strip.el,
       h('div', { class: 'chat-composer' }, this.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.sendButton))
@@ -232,6 +238,7 @@ export class PaneChat {
     if (!force && snapshot === this.renderedSnapshot && key === this.renderKey) return
     this.renderedSnapshot = snapshot
     this.renderKey = key
+    this.host.plan(this.planBar.update(latestTodos(snapshot.items)))
     this.phase = phase
     const wasNear = this.nearBottom()
     this.thread.render(snapshot, {

@@ -220,190 +220,130 @@ test('dragging a project onto another moves it within its group, shows a drop li
 
 const KEPT_ID = (i: number): string => `00000000-0000-4000-8000-00000000050${i}`
 
-test('F2 and double click rename closed and open sessions; Enter and blur save, Esc and empty cancel', async () => {
+test('F2 and double click rename open sessions; Enter and blur save, Esc and empty cancel', async () => {
   const sandbox = createSandbox()
-  const now = Date.now()
-  writeSettings(sandbox, {
-    keptSessions: ['Alpha', 'Beta'].map((title, i) => ({ projectId: 'smoke', agent: 'claude', sessionId: KEPT_ID(i), title, closedAt: now - (2 - i) * 1_000 }))
-  })
   let session = await launchApp(sandbox)
   try {
     const { page } = session
-    await openQuietProject(page)
-    const names = page.locator('.kept-session-row.closed .sess-name')
-    await expect(names).toHaveText(['Beta', 'Alpha'])
-
-    await page.locator(`[data-nav="c:claude:${KEPT_ID(1)}"]`).dblclick()
-    const field = page.getByRole('textbox', { name: 'Rename Beta' })
-    await expect(field).toBeFocused()
-    await expect(field).toHaveAttribute('dir', 'auto')
-    await expect(page.locator('.pane')).toHaveCount(0)
-    mkdirSync(SCREENS, { recursive: true })
-    await page.locator('.sidebar').screenshot({ path: join(SCREENS, '162-sidebar-rename.png') })
-    await field.fill('Beta renamed')
-    await page.keyboard.press('Enter')
-    await expect(names).toHaveText(['Beta renamed', 'Alpha'])
-    expect(await focusedNav(page)).toBe(`c:claude:${KEPT_ID(1)}`)
-    await expect.poll(() => readSettings(sandbox.userData).keptSessions.find((s: any) => s.sessionId === KEPT_ID(1))).toMatchObject({ title: 'Beta renamed', renamed: true })
-
-    await page.locator(`[data-nav="c:claude:${KEPT_ID(0)}"]`).focus()
-    await page.keyboard.press('F2')
-    await page.getByRole('textbox', { name: 'Rename Alpha' }).fill('Never saved')
-    await page.keyboard.press('Escape')
-    await expect(names).toHaveText(['Beta renamed', 'Alpha'])
-    expect(await focusedNav(page)).toBe(`c:claude:${KEPT_ID(0)}`)
-
-    await page.keyboard.press('F2')
-    await page.getByRole('textbox', { name: 'Rename Alpha' }).fill('   ')
-    await page.keyboard.press('Enter')
-    await expect(names).toHaveText(['Beta renamed', 'Alpha'])
-
-    await page.keyboard.press('F2')
-    await page.getByRole('textbox', { name: 'Rename Alpha' }).fill('عنوان الجلسة')
-    await page.locator('.sidebar-head').click()
-    await expect(names).toHaveText(['Beta renamed', 'عنوان الجلسة'])
-
     await page.getByRole('button', { name: 'Project actions for Smoke' }).click()
     await page.getByRole('menuitem', { name: 'Gemini session' }).click()
     const open = page.locator('.kept-session-row:not(.closed) .sess-row')
-    await expect(open.locator('.sess-name')).toHaveText('Gemini session 1')
+    const name = open.locator('.sess-name')
+    await expect(name).toHaveText('Gemini session 1')
+
+    await open.dblclick()
+    const field = page.getByRole('textbox', { name: /^Rename/ })
+    await expect(field).toBeFocused()
+    await expect(field).toHaveAttribute('dir', 'auto')
+    mkdirSync(SCREENS, { recursive: true })
+    await field.fill('Never saved')
+    await page.keyboard.press('Escape')
+    await expect(name).toHaveText('Gemini session 1')
+    expect(await focusedNav(page)).toMatch(/^s:/)
+
+    await page.keyboard.press('F2')
+    await page.getByRole('textbox', { name: /^Rename/ }).fill('   ')
+    await page.keyboard.press('Enter')
+    await expect(name).toHaveText('Gemini session 1')
+
+    await page.keyboard.press('F2')
+    await page.getByRole('textbox', { name: /^Rename/ }).fill('عنوان الجلسة')
+    await page.locator('.sidebar-head').click()
+    await expect(name).toHaveText('عنوان الجلسة')
+
     await open.focus()
     await page.keyboard.press('F2')
-    const openField = page.getByRole('textbox', { name: 'Rename Smoke' })
+    const openField = page.getByRole('textbox', { name: /^Rename/ })
     await openField.fill('x'.repeat(200))
     await expect(openField).toHaveValue('x'.repeat(160))
     await openField.fill('Release notes')
     await page.keyboard.press('Enter')
-    await expect(open.locator('.sess-name')).toHaveText('Release notes')
+    await expect(name).toHaveText('Release notes')
     await expect(page.locator('.pane-title')).toContainText('Release notes')
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.[0]?.name, { timeout: 15_000 }).toBe('Release notes')
 
     await closeFirstPane(page)
     await expect(page.locator('.pane')).toHaveCount(0)
-    await expect(names.first()).toHaveText('Release notes')
     await expect.poll(() => readSettings(sandbox.userData).keptSessions.some((s: any) => s.title === 'Release notes' && s.renamed === true)).toBe(true)
-    await page.locator('.kept-session-row.closed', { hasText: 'Release notes' }).locator('.sess-row').click()
-    await expect(page.locator('.pane-title')).toContainText('Release notes')
-  } finally {
-    await closeApp(session.app)
-  }
-  session = await launchApp(sandbox)
-  try {
-    await expect(session.page.locator('.pane-title')).toContainText('Release notes')
   } finally {
     await closeApp(session.app)
   }
 })
 
-test('a session row keeps time and cost on their own line and the close button stays hidden until hover', async () => {
+test('a session row wraps its title, keeps the time on the right and shows its actions only on hover', async () => {
   const sandbox = createSandbox()
-  const now = Date.now()
-  writeSettings(sandbox, {
-    sidebarWidth: 208,
-    keptSessions: [{ projectId: 'smoke', agent: 'claude', sessionId: KEPT_ID(0), title: 'Trial of a rather long session name', closedAt: now - 33 * 60_000 }]
-  })
-  writeFileSync(join(sandbox.userData, 'usage-history.json'), JSON.stringify({ v: 1, limits: [], costs: { [KEPT_ID(0)]: { at: now - 1000, usd: 8.69, cwd: sandbox.projectFolder } } }), 'utf8')
   const { app, page } = await launchApp(sandbox)
   try {
-    await openQuietProject(page)
-    const row = page.locator('.kept-session-row.closed')
-    const cost = row.locator('.sess-cost')
-    await expect(cost).toHaveText('$8.69', { timeout: 20_000 })
+    await page.getByRole('button', { name: NEW_IN_SMOKE }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    const row = page.locator('.kept-session-row:not(.closed)').first()
+    const longName = 'Reworking the projects sidebar so every long session name stays readable on two lines'
+    await row.locator('.sess-row').dblclick()
+    await page.getByRole('textbox', { name: /^Rename/ }).fill(longName)
+    await page.keyboard.press('Enter')
+    const name = row.locator('.sess-name')
+    await expect(name).toHaveText(longName)
+    const lineHeight = parseFloat(await name.evaluate((node) => getComputedStyle(node).lineHeight))
+    const nameBox = (await name.boundingBox())!
+    expect(nameBox.height, 'the title wraps instead of being cut').toBeGreaterThan(lineHeight * 1.5)
+    expect(await name.evaluate((node) => node.scrollHeight <= node.clientHeight + 1)).toBe(true)
+
+    const more = row.locator('.sess-more')
     const close = row.locator('.sess-close')
+    await page.locator('.pane .pane-title').first().click()
+    await page.mouse.move(700, 500)
     await expect(close).toHaveCSS('opacity', '0')
-    const name = (await row.locator('.sess-name').boundingBox())!
-    const meta = (await row.locator('.sess-meta').boundingBox())!
-    expect(meta.y).toBeGreaterThanOrEqual(name.y + name.height - 1)
+    await expect(more).toHaveCSS('opacity', '0')
     await row.hover()
     await expect(close).toHaveCSS('opacity', '1')
-    const costBox = (await cost.boundingBox())!
-    const closeBox = (await close.boundingBox())!
-    expect(costBox.x + costBox.width).toBeLessThanOrEqual(closeBox.x)
+    await expect(more).toHaveCSS('opacity', '1')
     mkdirSync(SCREENS, { recursive: true })
-    await page.locator('.sidebar').screenshot({ path: join(SCREENS, '17-sidebar-rows.png') })
+    await page.locator('.sidebar').screenshot({ path: join(SCREENS, '186-sidebar-rows.png') })
   } finally {
     await closeApp(app)
   }
 })
 
-test('Reopen all brings a day of closed sessions back, asking first when it is a crowd', async () => {
+test('closed sessions fold into one line per project that opens Resume for that project', async () => {
   const sandbox = createSandbox()
   const now = Date.now()
-  const date = new Date()
-  const yesterday = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1, 12).getTime()
-  const items = [
-    ['One', now - 4_000], ['Two', now - 3_000], ['Three', now - 2_000], ['Old A', yesterday], ['Old B', yesterday - 1_000]
-  ] as const
   writeSettings(sandbox, {
-    keptSessions: items.map(([title, closedAt], i) => ({ projectId: 'smoke', agent: 'claude', sessionId: KEPT_ID(i), title, closedAt }))
+    keptSessions: ['Alpha', 'Beta'].map((title, i) => ({ projectId: 'smoke', agent: 'claude', sessionId: KEPT_ID(i), title, closedAt: now - (2 - i) * 1_000 }))
   })
   const { app, page } = await launchApp(sandbox)
   try {
     await openQuietProject(page)
-    const today = page.getByRole('button', { name: 'Reopen 3 sessions from Today in Smoke' })
-    const older = page.getByRole('button', { name: 'Reopen 2 sessions from Yesterday in Smoke' })
-    await expect(today).toHaveCount(1)
-    await expect(older).toHaveCount(1)
-    await page.locator('.closed-day-row').first().hover()
-    mkdirSync(SCREENS, { recursive: true })
-    await page.locator('.sidebar').screenshot({ path: join(SCREENS, '162-sidebar-reopen-all.png') })
-
-    await older.click()
-    await expect(page.locator('.pane')).toHaveCount(2)
-    await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Three', 'Two', 'One'])
-    expect(await page.locator('.kept-session-row:not(.closed) .sess-name').count()).toBe(2)
-
-    await today.click()
-    await expect(page.locator('.pane')).toHaveCount(5)
     await expect(page.locator('.kept-session-row.closed')).toHaveCount(0)
+    const line = page.locator('.closed-line')
+    await expect(line).toHaveText('2 closed today')
+    await line.click()
+    await expect(page.getByRole('dialog', { name: 'Start or resume a session' })).toBeVisible()
+    await expect(page.locator('#rp-project')).toHaveValue('smoke')
+    await expect(page.locator('#rp-all-projects')).not.toBeChecked()
   } finally {
     await closeApp(app)
   }
-
-  const crowd = createSandbox()
-  writeSettings(crowd, {
-    keptSessions: [0, 1, 2, 3, 4].map((i) => ({ projectId: 'smoke', agent: 'claude', sessionId: KEPT_ID(i), title: `Crowd ${i}`, closedAt: Date.now() - (5 - i) * 1_000 }))
-  })
-  const second = await launchApp(crowd)
-  try {
-    const { page } = second
-    await openQuietProject(page)
-    await page.getByRole('button', { name: 'Reopen 5 sessions from Today in Smoke' }).click()
-    const dialog = page.getByRole('alertdialog')
-    await expect(dialog).toContainText('Reopen 5 sessions in Smoke?')
-    await dialog.getByRole('button', { name: 'Cancel' }).click()
-    await expect(page.locator('.pane')).toHaveCount(0)
-    await page.getByRole('button', { name: 'Reopen 5 sessions from Today in Smoke' }).click()
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Reopen 5 sessions' }).click()
-    await expect(page.locator('.pane')).toHaveCount(5, { timeout: 30_000 })
-  } finally {
-    await closeApp(second.app)
-  }
 })
 
-test('arrow keys walk the sidebar list, fold projects and remove closed sessions with an undo', async () => {
+test('arrow keys walk the sidebar list and fold projects', async () => {
   const sandbox = createSandbox()
   const now = Date.now()
-  const kept = ['First', 'Second', 'Third'].map((title, i) => ({
+  const kept = ['First', 'Second'].map((title, i) => ({
     projectId: 'smoke',
     agent: 'claude',
     sessionId: `00000000-0000-4000-8000-00000000020${i}`,
     title,
-    closedAt: now - (3 - i) * 1_000
+    closedAt: now - (2 - i) * 1_000
   }))
   writeSettings(sandbox, { keptSessions: kept })
   const { app, page } = await launchApp(sandbox)
   try {
     await openQuietProject(page)
-    const key = (i: number): string => `c:claude:00000000-0000-4000-8000-00000000020${i}`
-    await page.getByRole('button', { name: 'Filter projects and sessions' }).click()
+    await page.locator('#sidebar-project-filter').focus()
     await page.keyboard.press('ArrowDown')
     expect(await focusedNav(page)).toBe('p:smoke')
     await page.keyboard.press('ArrowDown')
     expect(await focusedNav(page)).toBe('ct:smoke')
-    await page.keyboard.press('ArrowDown')
-    expect(await focusedNav(page)).toBe(key(2))
-    await page.keyboard.press('ArrowUp')
     await page.keyboard.press('ArrowUp')
     expect(await focusedNav(page)).toBe('p:smoke')
     await page.keyboard.press('End')
@@ -417,28 +357,6 @@ test('arrow keys walk the sidebar list, fold projects and remove closed sessions
     await page.keyboard.press('ArrowRight')
     await expect(page.getByRole('button', { name: 'Hide sessions for Smoke' })).toBeVisible()
     expect(await focusedNav(page)).toBe('p:smoke')
-
-    await page.keyboard.press('ArrowDown')
-    await page.keyboard.press('ArrowDown')
-    await page.keyboard.press('ArrowDown')
-    expect(await focusedNav(page)).toBe(key(1))
-    await page.keyboard.press('Delete')
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove Second', exact: true }).click()
-    await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Third', 'First'])
-    expect(await focusedNav(page)).toBe(key(0))
-    const toast = page.locator('.toast', { hasText: 'Removed Second' })
-    await expect(toast).toBeVisible()
-    await toast.getByRole('button', { name: 'Undo' }).click()
-    await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Third', 'Second', 'First'])
-
-    await page.locator('[data-nav="p:smoke"]').focus()
-    await page.keyboard.press('End')
-    await page.keyboard.press('ArrowUp')
-    expect(await focusedNav(page)).toBe(key(0))
-    await page.keyboard.press('Backspace')
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove First', exact: true }).click()
-    await expect(page.locator('.kept-session-row.closed .sess-name')).toHaveText(['Third', 'Second'])
-    expect(await focusedNav(page)).toBe(key(1))
   } finally {
     await closeApp(app)
   }

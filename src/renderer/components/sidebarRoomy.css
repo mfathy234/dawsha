@@ -1,0 +1,177 @@
+/* Dawsha 1.8.6 sidebar: each row has one job. Line 1 says what the session is (and wraps), line 2 what it is doing. */
+
+/* Head: a find field, then + and collapse. */
+.sidebar-head { gap: var(--sp-1); padding: var(--sp-3) var(--sp-2) var(--sp-2) var(--sp-3); }
+
+.sb-find {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 30px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-control);
+  background: var(--hover);
+  color: var(--text-3);
+  cursor: text;
+}
+
+.sb-find:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sb-find > .icon { flex: none; }
+
+.sb-find-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-2);
+  outline: none;
+}
+
+.sb-find-input { unicode-bidi: plaintext; }
+.sb-find-input::placeholder { color: var(--text-3); }
+.sb-find-hint { flex: none; color: var(--text-3); font-size: var(--fs-1); }
+.sb-find:focus-within .sb-find-hint,
+.sb-find:has(.sb-find-input:not(:placeholder-shown)) .sb-find-hint { display: none; }
+
+/* Section heads: Needs you, Projects. */
+.side-sec { margin-top: var(--sp-2); }
+.side-sec.needs { margin-top: var(--sp-1); color: var(--state-needs); }
+.needs-group .side-sec,
+.needs-group .side-sec.needs { color: var(--state-needs); }
+.needs-group .side-sec-count { color: var(--state-needs); font-family: inherit; }
+
+/* Project row: chevron, name, and one dot per live session. */
+.proj-list .proj-row { margin-top: var(--sp-1); }
+.proj-list .proj-toggle { gap: var(--sp-2); }
+.proj-list .proj-title { flex: 0 1 auto; max-width: none; min-width: 0; display: flex; align-items: center; gap: var(--sp-2); }
+.proj-list .proj-title .proj-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-toggle { flex: 1; }
+
+.proj-dots { flex: none; display: inline-flex; align-items: center; gap: 3px; padding-inline: var(--sp-2); }
+.proj-dots i { width: 6px; height: 6px; border-radius: 50%; }
+.proj-dots .dot-w { background: var(--st-working); }
+.proj-dots .dot-n { background: var(--st-needs); }
+.proj-dots .dot-d { background: var(--accent); }
+.proj-none { flex: none; padding-inline: var(--sp-2); color: var(--text-3); font-size: var(--fs-1); }
+
+.proj-row:hover .proj-dots,
+.proj-row:focus-within .proj-dots,
+.proj-row:hover .proj-none,
+.proj-row:focus-within .proj-none { opacity: 0; }
+
+.proj-list .quiet-toggle .proj-name { max-width: none; }
+.proj-list .proj-row.quiet-row .proj-name { color: var(--text-2); font-weight: var(--w-regular); }
+.proj-list .proj-row.quiet-row .quiet-toggle { align-items: center; padding-inline-start: var(--sp-2); }
+
+/* Session rows: mark, text, time. */
+.proj-list .kept-session-row:not(.waiting-row) { margin-inline-start: 0; }
+.proj-group .kept-session-row { margin-inline-start: 0; }
+.kept-session-row .sess-row {
+  align-items: flex-start;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 6px var(--sp-2) 6px 24px;
+  border-radius: var(--r-control);
+  text-align: start;
+}
+
+.kept-session-row .sess-row:hover { background: var(--hover); }
+
+.kept-session-row.selected .sess-row,
+.kept-session-row .sess-row.selected {
+  background: var(--press);
+  box-shadow: none;
+}
+
+.kept-session-row .sess-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+/* The title wraps instead of being cut. */
+.kept-session-row .sess-body .sess-name,
+.kept-session-row:not(.waiting-row) .sess-name {
+  display: block;
+  flex: none;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  -webkit-line-clamp: unset;
+  line-height: 18px;
+  font-size: var(--fs-13);
+  font-weight: var(--w-regular);
+  color: var(--text);
+}
+
+.kept-session-row .sess-body .sess-meta {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  line-height: 16px;
+  font-size: var(--fs-12);
+  color: var(--text-2);
+}
+
+.kept-session-row .sess-meta .sess-state { flex: 0 1 auto; min-width: 0; gap: var(--sp-1); color: var(--text-2); }
+.kept-session-row .sess-meta .sess-state.state-working > .state-icon { color: var(--st-working); }
+.kept-session-row .sess-meta .sess-state-word,
+.kept-session-row .sess-meta .sess-extra { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }
+.kept-session-row .sess-meta .sess-extra { flex: none; }
+.kept-session-row .sess-meta .sess-state.state-done .sess-state-word { color: var(--accent-ink); }
+.kept-session-row .sess-meta .sess-state.state-needs .sess-state-word { color: var(--state-needs); }
+
+.kept-session-row .sess-row > .sess-age {
+  flex: none;
+  margin-inline-start: 0;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Needs you: line 2 is what it asks in needs colour, then the project. */
+.kept-session-row.waiting-row .sess-row { padding-inline-start: var(--sp-2); }
+.kept-session-row .sess-meta .needs-t { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--state-needs); }
+.kept-session-row .sess-meta .needs-project { flex: 0 100 auto; max-width: 50%; min-width: 0; color: var(--text-3); font-size: var(--fs-12); }
+.kept-session-row .sess-meta .needs-project::before { content: '\00b7'; margin-inline: var(--sp-1); }
+
+/* A session listed under Needs you is dimmed where it belongs. */
+.kept-session-row.dimmed .sess-row { opacity: 0.5; }
+
+/* The time gives way to the actions on hover and keyboard focus; they are the only things that appear. */
+.kept-session-row:hover .sess-row > .sess-age,
+.kept-session-row:focus-within .sess-row > .sess-age,
+.kept-session-row:has(.sess-more[aria-expanded='true']) .sess-row > .sess-age { visibility: hidden; }
+
+.kept-session-row .icon-btn.sess-more,
+.kept-session-row .icon-btn.sess-close { top: 6px; transform: none; width: 24px; height: 24px; }
+.kept-session-row .icon-btn.sess-close { inset-inline-end: var(--sp-1); }
+.kept-session-row .icon-btn.sess-more { inset-inline-end: 28px; }
+
+/* Closed sessions fold into one quiet line per project. */
+.closed-line {
+  display: block;
+  width: 100%;
+  padding: 4px var(--sp-2) 4px 24px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: none;
+  color: var(--text-3);
+  font: inherit;
+  font-size: var(--fs-12);
+  text-align: start;
+  cursor: pointer;
+}
+
+.closed-line:hover { background: var(--hover); color: var(--text-2); }
+.closed-line:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.proj-group { margin-bottom: var(--sp-1); }

@@ -9,6 +9,13 @@ export function timeInState(paneId: string, state: SessionState, now: number): s
   return formatTimeInState(now - clock.since)
 }
 
+/** When the pane entered its current state, in epoch ms. */
+export function stateSince(paneId: string, state: SessionState, now: number): number {
+  const clock = stepStateClock(clocks.get(paneId), state, now)
+  clocks.set(paneId, clock)
+  return clock.since
+}
+
 export function forgetStateClocks(liveIds: ReadonlySet<string>): void {
   for (const id of clocks.keys()) if (!liveIds.has(id)) clocks.delete(id)
 }
