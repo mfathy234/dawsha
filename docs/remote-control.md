@@ -21,6 +21,10 @@ Safety rules, applied by the Dawsha app on your computer and not by the phone:
 - Edits to CI workflows, configuration files, `.git` and `.claude` can only be denied from the phone by default. Open Dawsha to allow them.
 - Approvals follow the same pairing, 30 day expiry and revoke controls as the rest of Remote Control, and answers are listed in a short history with the device that gave them.
 
+## Phone chat
+
+Paired browsers get a **Chat** tab next to Sessions and Approvals. It shows any running Claude or Codex session the way the desktop chat does: your messages as bubbles, one line per tool call, the replies as text, and "Changed N files" with the lines added and removed. It is drawn from the same session log as the desktop chat and updates while the tab is open. Only short plain text is sent to the phone, never tool output or markup. The message box at the bottom sends the same way the desktop chat does, and needs the **Terminal input** permission for that browser; Dawsha checks it on every send, and sends are limited per device and in length. Without the permission the tab is read only and says how to turn it on. Images and attachments are not sent from the phone.
+
 ## Network and privacy limits
 
 Quick Tunnels are intended for development and testing, and this feature remains beta. The URL is public-facing while active, so share it only with the browser you are pairing. Cloudflare terminates browser HTTPS and can process proxied traffic; this is neither end-to-end encrypted nor peer-to-peer. Pairing and the separate permissions still apply. The optional Cloudflare email PIN adds a gate, but there is an [open report of PIN sessions expiring before follow-up requests](https://github.com/cloudflare/cloudflared/issues/1752).

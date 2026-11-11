@@ -14,6 +14,8 @@ import { startRemoteServer, type RemoteServerHandle, type RemoteServerOptions } 
 import { startRemoteSession } from './remoteSessions'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
 import { createRemoteCrewHost, type RemoteCrewBridge, type RemoteCrewHost } from './remoteCrew'
+import { createRemoteChatHost } from './remoteChat'
+import { readChat } from './chatLog/service'
 import { createRemoteApprovals, type RemoteApprovals } from './remoteApprovals'
 import { clampAwayMinutes } from '../shared/settingsSchema'
 import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
@@ -54,7 +56,9 @@ const SAFE_REMOTE_PATHS = new Set([
   '/dawsha/api/approvals/answer',
   '/dawsha/api/approvals/stream',
   '/dawsha/api/crew',
-  '/dawsha/api/crew/run'
+  '/dawsha/api/crew/run',
+  '/dawsha/api/chat',
+  '/dawsha/api/chat/send'
 ])
 
 const FIRST_REACHABLE_WINDOW_MS = 45_000
@@ -145,6 +149,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
   let stopping = false
   let stoppingOperation: Promise<void> | null = null
   const remoteSessionIds = new Set<string>()
+  const resumedSessions = new Map<string, string>()
   const crewHost: RemoteCrewHost | undefined = options.crew ? createRemoteCrewHost({ settings: options.settings, bridge: options.crew }) : undefined
   const approvals: RemoteApprovals = createRemoteApprovals({
     terminals: {
@@ -158,6 +163,14 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
       return { allowConfigEdits: access.approvalsAllowConfigEdits, notify: access.approvalsNotify, onlyWhenAway: access.approvalsOnlyWhenAway, awayMinutes: access.approvalsAwayMinutes }
     },
     idleSeconds: () => options.idleSeconds?.() ?? 0
+  })
+
+  const chatHost = createRemoteChatHost({
+    terminals: { snapshot: (id) => options.ptys.remoteSnapshot(id), tail: (id) => options.ptys.remoteTail(id), write: (id, data) => options.ptys.write(id, data) },
+    getProjects: () => options.settings.get().projects,
+    listSessions: (project, agent) => sessions(project, agent),
+    readChat,
+    knownSession: (id) => resumedSessions.get(id)
   })
 
   async function sessions(project: Project, agent: AgentKind) {
@@ -449,6 +462,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
             focusHost,
             authorizeStart,
             onStarted: (session) => {
+              if (session.sessionId) resumedSessions.set(session.id, session.sessionId)
               const window = options.getWindow()
               if (window && !window.isDestroyed()) window.webContents.send(IPC.remoteSessionStarted, session)
             }
@@ -459,11 +473,13 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
         stopSession: (id) => {
           if (!remoteSessionIds.has(id) || !options.ptys.remoteSnapshot(id).length) return false
           remoteSessionIds.delete(id)
+          resumedSessions.delete(id)
           options.ptys.kill(id)
           return true
         },
         approvals,
         crew: crewHost,
+        chat: chatHost,
         onActivity: (entry) => activity.record(entry),
         assetDirectory: options.assetDirectory,
         onRequestError: (error, method, pathname) => {
@@ -549,6 +565,7 @@ export function createRemoteAccessController(options: RemoteAccessControllerOpti
     approvals.stop()
     for (const id of remoteSessionIds) options.ptys.kill(id)
     remoteSessionIds.clear()
+    resumedSessions.clear()
     let failure: unknown
     const activeTunnel = tunnel
     tunnel = null

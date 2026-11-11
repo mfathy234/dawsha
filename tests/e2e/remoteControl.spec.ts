@@ -942,7 +942,7 @@ test('phone refresh: tabs, connection line, filled approval cards with a 1:1.4 b
       await page.goto(url)
       await expect(page.locator('#approvals-view')).toBeVisible()
       await expect(page.locator('#connection-label')).toHaveText('Connected to your PC')
-      await expect(page.getByRole('tab')).toHaveText(['Needs you2', 'Agents', 'Sessions', 'Projects'])
+      await expect(page.getByRole('tab')).toHaveText(['Needs you2', 'Agents', 'Sessions', 'Chat', 'Projects'])
       await expect(page.locator('#remote-nav-approvals')).toHaveAttribute('aria-selected', 'true')
       const first = page.locator('.approval-card').first()
       await expect(first.locator('.approval-head .agent-badge svg')).toHaveCount(1)

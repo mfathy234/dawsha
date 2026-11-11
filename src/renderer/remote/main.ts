@@ -6,6 +6,7 @@ import { deviceNameFromAgent, pairingCodeFromHash } from '../../shared/remotePai
 import { DEFAULT_THEME_ID, findTheme } from '../../shared/themes'
 import type { AgentKind } from '../../shared/types'
 import { TERMINAL_FONT } from '../terminalFont'
+import { initChat, refreshChat, setChatVisible } from './chat'
 import { initApprovals, reconnectApprovals, refresh as refreshApprovals, setApprovalsEnabled, setApprovalsVisible } from './approvals'
 import { initCrew, refresh as refreshCrew, setCrewEnabled, setCrewVisible } from './crew'
 import './remote.css'
@@ -19,7 +20,7 @@ interface RemoteState {
   terminals: RemoteTerminal[]
   permissions: { read: boolean; terminalInput: boolean; sessionControl: boolean; approvals?: boolean; crew?: boolean; commands?: boolean; answers?: boolean; fullOutput?: boolean }
 }
-type BrowserView = 'sessions' | 'projects' | 'terminal' | 'approvals' | 'crew'
+type BrowserView = 'sessions' | 'projects' | 'terminal' | 'approvals' | 'crew' | 'chat'
 type TabView = Exclude<BrowserView, 'terminal'>
 
 // To add a tab, add an entry here and a section with the matching id in remote.html.
@@ -27,6 +28,7 @@ const TABS: ReadonlyArray<{ id: TabView; label: string; badge?: boolean }> = [
   { id: 'approvals', label: 'Needs you', badge: true },
   { id: 'crew', label: 'Agents' },
   { id: 'sessions', label: 'Sessions' },
+  { id: 'chat', label: 'Chat' },
   { id: 'projects', label: 'Projects' }
 ]
 const CONNECTION_ICONS = {
@@ -51,6 +53,7 @@ const sessionsView = document.querySelector<HTMLElement>('#sessions-view')!
 const projectsView = document.querySelector<HTMLElement>('#projects-view')!
 const terminalView = document.querySelector<HTMLElement>('#terminal-view')!
 const approvalsView = document.querySelector<HTMLElement>('#approvals-view')!
+const chatView = document.querySelector<HTMLElement>('#chat-view')!
 const crewView = document.querySelector<HTMLElement>('#crew-view')!
 const connection = document.querySelector<HTMLElement>('#connection')!
 const connectionIcon = document.querySelector<HTMLElement>('#connection-icon')!
@@ -878,6 +881,8 @@ function render(): void {
   approvalsView.hidden = currentView !== 'approvals'
   setApprovalsEnabled(state.permissions.approvals === true)
   setApprovalsVisible(currentView === 'approvals')
+  chatView.hidden = currentView !== 'chat'
+  setChatVisible(currentView === 'chat')
   crewView.hidden = currentView !== 'crew'
   setCrewEnabled(state.permissions.crew === true)
   setCrewVisible(currentView === 'crew')
@@ -947,6 +952,20 @@ initApprovals({
     onUnpaired: () => showPair('This browser was revoked from Dawsha. Pair again to reconnect.')
   }
 })
+initChat({
+  root: document.querySelector<HTMLElement>('#chat-root')!,
+  host: {
+    request: apiRequest,
+    sessions: () => (state?.terminals ?? []).filter((item) => item.agent === 'claude' || item.agent === 'codex').map((item) => {
+      const project = state?.projects.find((candidate) => candidate.id === item.projectId)
+      return { id: item.id, agent: item.agent!, label: [AGENT_NAMES[item.agent!], project?.name].filter(Boolean).join(' · ') }
+    }),
+    preferred: () => activeTerminalId,
+    canSend: () => state?.permissions.terminalInput === true,
+    refreshState: () => { void loadState(false) },
+    onUnpaired: () => showPair('This browser pairing has expired or was revoked.')
+  }
+})
 initCrew({
   root: document.querySelector<HTMLElement>('#crew-root')!,
   host: {
@@ -957,7 +976,7 @@ initCrew({
     onUnpaired: () => showPair('This browser was revoked from Dawsha. Pair again to reconnect.')
   }
 })
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { reconnectApprovals(); void refreshApprovals(); void refreshCrew() } })
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { reconnectApprovals(); void refreshApprovals(); void refreshCrew(); refreshChat() } })
 document.querySelector<HTMLButtonElement>('#remote-new-session')!.addEventListener('click', () => showSessionDialog(activeProjectId ?? undefined))
 document.querySelector<HTMLButtonElement>('#empty-new-session')!.addEventListener('click', () => showSessionDialog(activeProjectId ?? undefined))
 document.querySelector<HTMLButtonElement>('#terminal-back')!.addEventListener('click', () => setView('sessions'))
