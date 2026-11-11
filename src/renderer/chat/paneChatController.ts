@@ -6,6 +6,7 @@ import { folderOfPane, store } from '../state'
 import { continueIn } from '../handoffActions'
 import type { PaneView } from '../derive'
 import { timeInState } from '../stateClock'
+import { setSessionNote } from '../sessionNotes'
 import { getTerminal } from '../terminals'
 import { openReviewInFiles } from '../files/filesActions'
 import { sessionIdOf } from '../transcriptActions'
@@ -26,6 +27,7 @@ export function chatHostFor(paneId: string, current: () => PaneView | null): Cha
     interrupt: () => interruptAgent(tabId()),
     screenTail: () => getTerminal(tabId())?.tailText(MENU_ROWS) ?? '',
     answer: (steps) => void answerMenu(tabId(), steps),
+    plan: (label) => setSessionNote(paneId, { plan: label }),
     notify: (title, body) => api.notify({ paneId, title, body, sound: store.state.settings.sessionInfo.sound }),
     reviewChanges: () => {
       const pane = store.state.panes.find((candidate) => candidate.id === paneId)

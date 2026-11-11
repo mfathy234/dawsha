@@ -131,10 +131,10 @@ describe('migrateSettings', () => {
   })
 
   it('clamps the persisted project panel width and supplies a default', () => {
-    expect(migrateSettings({}).sidebarWidth).toBe(248)
-    expect(migrateSettings({ sidebarWidth: 150 }).sidebarWidth).toBe(208)
-    expect(migrateSettings({ sidebarWidth: 999 }).sidebarWidth).toBe(420)
-    expect(migrateSettings({ sidebarWidth: 'wide' }).sidebarWidth).toBe(248)
+    expect(migrateSettings({}).sidebarWidth).toBe(272)
+    expect(migrateSettings({ sidebarWidth: 150 }).sidebarWidth).toBe(220)
+    expect(migrateSettings({ sidebarWidth: 999 }).sidebarWidth).toBe(400)
+    expect(migrateSettings({ sidebarWidth: 'wide' }).sidebarWidth).toBe(272)
   })
 
   it('keeps a valid palette shortcut in a normal form and falls back to Ctrl+K otherwise', () => {

@@ -67,6 +67,8 @@ import './paneCalm.css'
 import './paneMeter.css'
 import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
+import { toolLineFromScreen } from '../../shared/sessionLine'
+import { setSessionNote } from '../sessionNotes'
 import { PaneChat } from '../chat/paneChat'
 import { chatCapable } from '../../shared/chatLog'
 import { ViewSwitch } from '../chat/viewSwitch'
@@ -415,15 +417,14 @@ export class PaneComponent {
 
   // Read off the visible screen, so no file is read; at most once per RECAP_REFRESH_MS for each pane.
   private updateRecap(view: PaneView): void {
-    if (!store.state.settings.showRecap) {
-      this.recapAt = 0
-      return
-    }
     const now = Date.now()
     if (now - this.recapAt < RECAP_REFRESH_MS) return
     this.recapAt = now
-    const text = recapFromScreen(getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? '')
-    if (text === this.recapText) return
+    const screen = getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? ''
+    const text = recapFromScreen(screen)
+    // The sidebar's second line reads these even when the pane's own recap line is switched off.
+    setSessionNote(this.paneId, { recap: text, tool: toolLineFromScreen(screen) })
+    if (!store.state.settings.showRecap || text === this.recapText) return
     this.recapText = text
     this.recap.textContent = text
     this.recap.title = text

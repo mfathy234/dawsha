@@ -1,4 +1,5 @@
 import { forgetStateClocks } from '../stateClock'
+import { forgetSessionNotes } from '../sessionNotes'
 import { forgetTimelineLogs } from '../timelineLog'
 import { closePane, focusPane, largeOf, openQuickPick, setSplits, showView } from '../actions'
 import { OthersPanelComponent } from './othersPanel'
@@ -96,6 +97,7 @@ export class GridComponent {
   private syncPanes(views: PaneView[]): void {
     const ids = new Set(views.map((v) => v.pane.id))
     forgetStateClocks(ids)
+    forgetSessionNotes(ids)
     forgetTimelineLogs(ids)
     for (const [id, component] of this.panes) {
       if (!ids.has(id)) {
