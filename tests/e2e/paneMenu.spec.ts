@@ -26,10 +26,11 @@ test('the pane menu is short and grouped, and the rest of the actions are in the
     await page.getByRole('button', { name: 'Pane actions' }).click()
     const menu = page.getByRole('menu', { name: 'Pane actions' })
     // 1.8.4 brought back the copy actions and handing the session to another agent.
-    for (const name of ['Move pane…', 'Show session timeline', 'Replay session', 'Copy last reply', 'Copy current prompt', 'Clear scrollback', 'Continue in Codex', 'Close pane']) {
+    // 1.8.6 added Copy session name.
+    for (const name of ['Move pane…', 'Show session timeline', 'Replay session', 'Copy session name', 'Copy last reply', 'Copy current prompt', 'Clear scrollback', 'Continue in Codex', 'Close pane']) {
       await expect(menu.getByRole('menuitem', { name })).toBeVisible()
     }
-    expect(await menu.getByRole('menuitem').count()).toBeLessThanOrEqual(18)
+    expect(await menu.getByRole('menuitem').count()).toBeLessThanOrEqual(19)
     await expect(menu.getByRole('menuitem', { name: /^Changes/ }).locator('.menu-kbd')).toHaveText('Ctrl+Shift+G')
     await expect(menu.getByRole('menuitem', { name: /^Find/ }).locator('.menu-kbd')).toHaveText('Ctrl+Shift+F')
     await expect(menu.locator('.menu-item .menu-icon svg').first()).toBeVisible()
