@@ -70,7 +70,8 @@ export function syncPaneChat(paneId: string, view: PaneView, state: SessionState
           model: view.info.model?.label ?? null,
           contextPercent: view.info.contextPercent,
           contextTokens: view.info.contextTokens,
-          contextWindow: view.info.contextWindow
+          contextWindow: view.info.contextWindow,
+          ...(tab.triedFrom ? { triedFrom: tab.triedFrom } : {})
         }
       : null
   )

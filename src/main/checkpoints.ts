@@ -14,7 +14,7 @@ const SAMPLE_KEY = '0000000000000000'
 const IDENTITY = { GIT_AUTHOR_NAME: 'Dawsha', GIT_AUTHOR_EMAIL: 'dawsha@localhost', GIT_COMMITTER_NAME: 'Dawsha', GIT_COMMITTER_EMAIL: 'dawsha@localhost' }
 
 /** Runs git with literal pathspecs (check-ignore cannot take them); `index` points git at a throwaway index so the real one is never read or written. */
-const run = (cwd: string, args: string[], index?: string, literal = true): Promise<string> => exec('git', [...(literal ? ['--literal-pathspecs'] : []), '-c', 'core.quotepath=false', ...args], {
+export const run = (cwd: string, args: string[], index?: string, literal = true): Promise<string> => exec('git', [...(literal ? ['--literal-pathspecs'] : []), '-c', 'core.quotepath=false', ...args], {
   cwd, windowsHide: true, timeout: 30_000, maxBuffer: 16 * 1024 * 1024,
   env: { ...process.env, ...IDENTITY, GIT_TERMINAL_PROMPT: '0', ...(index ? { GIT_INDEX_FILE: index } : {}) }
 }).then(({ stdout }) => stdout)
@@ -24,7 +24,7 @@ const pending = new Map<string, Pending>()
 
 export const checkpointKey = (messageId: string): string => createHash('sha1').update(messageId).digest('hex').slice(0, 16)
 
-async function withTempIndex<T>(work: (index: string) => Promise<T>): Promise<T> {
+export async function withTempIndex<T>(work: (index: string) => Promise<T>): Promise<T> {
   const dir = await mkdtemp(join(tmpdir(), 'dawsha-checkpoint-'))
   try {
     return await work(join(dir, 'index'))

@@ -35,6 +35,7 @@ import { createSessionWorktree } from './sessionWorktree'
 import type { MergeBackRequest, WorktreeCommitRequest, WorktreeRemoveRequest } from '../shared/mergeBack'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
+import { applyCheckpointToWorktree, rewindInfo } from './checkpointRewind'
 import { listCheckpoints, prepareCheckpoint, restoreCheckpoint } from './checkpoints'
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder, whenKnown } from './knownFolder'
@@ -241,6 +242,8 @@ export function registerIpc(
     typeof sessionId === 'string' && isChatSessionWorking(sessionId)
       ? Promise.resolve({ ok: false as const, error: 'This agent is still working. Wait for the reply to finish.' })
       : restoreCheckpoint(root, sessionId, ref, paths)))
+  ipcMain.handle(IPC.checkpointRewindInfo, (_event, folder: unknown, sessionId: unknown, ref: unknown, files: unknown) => gated(folder, (root) => rewindInfo(root, sessionId, ref, files)))
+  ipcMain.handle(IPC.checkpointToWorktree, (_event, folder: unknown, sessionId: unknown, ref: unknown, worktree: unknown) => gated(folder, (root) => applyCheckpointToWorktree(root, sessionId, ref, worktree)))
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
   registerCodeNavExtrasIpc(known, getWindow)
   registerChatIpc()

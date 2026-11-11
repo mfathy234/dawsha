@@ -63,6 +63,8 @@ export const IPC = {
   checkpointPrepare: 'checkpoints:prepare',
   checkpointsList: 'checkpoints:list',
   checkpointRestore: 'checkpoints:restore',
+  checkpointRewindInfo: 'checkpoints:rewind-info',
+  checkpointToWorktree: 'checkpoints:to-worktree',
   projectFiles: 'project:files',
   projectFile: 'project:file',
   projectFileWrite: 'project:file-write',

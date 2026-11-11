@@ -127,6 +127,8 @@ export interface GridApi {
   gitSessionStatus(folder: string, baseline: SessionBaseline): Promise<SessionStatusResult>
   checkpointPrepare(folder: string, sessionId: string): Promise<boolean>
   listCheckpoints(folder: string, sessionId: string, messageIds: string[]): Promise<Record<string, string>>
+  rewindInfo(folder: string, sessionId: string, ref: string, files: Array<{ path: string; touchedAt?: number }>): Promise<{ ok: true; files: import('./rewind').RewindFileInfo[] } | { ok: false; error: string }>
+  checkpointToWorktree(folder: string, sessionId: string, ref: string, worktree: string): Promise<{ ok: true; files: number } | { ok: false; error: string }>
   restoreCheckpoint(folder: string, sessionId: string, ref: string, paths: string[]): Promise<{ ok: true; beforeUndo: string | null; skipped: string[] } | { ok: false; error: string }>
   projectFiles(folder: string): Promise<ProjectFilesResult>
   projectFile(folder: string, path: string): Promise<ProjectFileResult>

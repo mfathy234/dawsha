@@ -137,6 +137,8 @@ export interface HandoffTranscriptRequest {
   projectId: string
   agent: AgentKind
   sessionId: string
+  /** Keep only what was said before this user message; `laterSame` is how many identical ones follow it. */
+  cut?: { text: string; laterSame: number }
 }
 
 export type HandoffTranscriptResult =
@@ -147,11 +149,15 @@ export type HandoffTranscriptResult =
 /** Checks what crossed the IPC boundary; the renderer never names a folder or a file. */
 export function parseHandoffRequest(value: unknown): HandoffTranscriptRequest | null {
   if (typeof value !== 'object' || value === null) return null
-  const { projectId, agent, sessionId } = value as Record<string, unknown>
+  const { projectId, agent, sessionId, cut } = value as Record<string, unknown>
   if (typeof projectId !== 'string' || projectId === '' || projectId.length > 128) return null
   if (typeof agent !== 'string' || !HANDOFF_AGENTS.includes(agent)) return null
   if (typeof sessionId !== 'string' || !SESSION_ID.test(sessionId)) return null
-  return { projectId, agent: agent as AgentKind, sessionId }
+  const parsed = { projectId, agent: agent as AgentKind, sessionId }
+  if (cut === undefined) return parsed
+  const { text, laterSame } = (typeof cut === 'object' && cut !== null ? cut : {}) as Record<string, unknown>
+  if (typeof text !== 'string' || text === '' || text.length > 100_000 || typeof laterSame !== 'number' || !Number.isInteger(laterSame) || laterSame < 0 || laterSame > 10_000) return null
+  return { ...parsed, cut: { text, laterSame } }
 }
 
 const two = (value: number): string => String(value).padStart(2, '0')
