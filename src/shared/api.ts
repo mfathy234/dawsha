@@ -38,6 +38,8 @@ import type { TimelineSearchRequest, TimelineSearchResult } from './timelineSear
 import type { TranscriptRequest, TranscriptResult } from './transcript'
 import type { HandoffTranscriptRequest, HandoffTranscriptResult } from './handoff'
 import type { UsageRange, UsageReport } from './usage'
+import type { CleanupListResult, CleanupRequest, CleanupResult } from './worktreeCleanup'
+import type { ExportGrouping, ExportRange, UsageExportResult } from './usageCsv'
 import type {
   AgentKind,
   AppInfo,
@@ -242,6 +244,11 @@ export interface GridApi {
   mergeCommit(request: WorktreeCommitRequest): Promise<GitCommitResult>
   mergeInto(request: MergeBackRequest): Promise<MergeResult>
   mergeRemove(request: WorktreeRemoveRequest): Promise<GitResult>
+  worktreeCleanupList(folder: string, openPaths: string[]): Promise<CleanupListResult>
+  worktreeCleanupCount(folder: string, openPaths: string[]): Promise<number>
+  worktreeCleanupRun(request: CleanupRequest): Promise<CleanupResult>
+  usageExport(request: { range: ExportRange; grouping: ExportGrouping }): Promise<UsageExportResult>
+  usageExportReveal(path: string): Promise<boolean>
   listRecordings(): Promise<RecordingSummary[]>
   readRecording(id: string): Promise<string>
   recordingStats(): Promise<RecordingStats>

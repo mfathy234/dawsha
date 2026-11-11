@@ -40,6 +40,8 @@ import { installHandoffCommands } from './commands/handoff'
 import { installClosedSessionCommands } from './commands/closedSessions'
 import { installLayoutCommands } from './commands/layouts'
 import { installPresetCommands } from './commands/presets'
+import { installWorktreeCleanupCommands } from './commands/worktreeCleanup'
+import { installWorktreeNudge } from './worktreeCleanupActions'
 import { installNotificationCommands } from './commands/notifications'
 import { installNeedsNotices } from './needsNotice'
 import { installReplayCommands } from './commands/replay'
@@ -142,6 +144,7 @@ async function boot(): Promise<void> {
   installBuiltinCommands()
   installLayoutCommands()
   installPresetCommands()
+  installWorktreeCleanupCommands()
   installNotificationCommands()
   installCompareCommands()
   installHandoffCommands()
@@ -161,6 +164,7 @@ async function boot(): Promise<void> {
   await restoreWorkspace()
   installScheduler()
   installQueueRunner()
+  installWorktreeNudge()
   installCrewLive()
   installLead()
   api.cliReady()
