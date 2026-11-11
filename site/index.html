@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.8.5</a>
+      <a href="#new">New in 1.8.6</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,8 +97,38 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.8.5</h2>
-      <p class="section-lead">1.8.5 makes chat the easy way to work with Claude Code and Codex, lets you undo a reply, runs prompts on a schedule and keeps an eye on what you spend. Below it is the 1.8.0 redesign and what came with it.</p>
+      <h2 id="new-h">New in 1.8.6</h2>
+      <p class="section-lead">1.8.6 lets you rewind a chat to any message, shows what each reply did and runs your tests after it, and gives the sidebar more room. Below it are 1.8.5 and the 1.8.0 redesign.</p>
+      <div class="feat-row" id="rewind-retry">
+        <div class="feat-copy">
+          <h3>Rewind and try again</h3>
+          <p>Rewind a chat to any message and the files go back to how they were, after a confirm that lists each one.</p>
+          <ul><li>Edit a message you sent and send it again. Dawsha puts the files back first, then sends your new text.</li><li>Or try another way in a second session, so the first one stays as it is.</li><li>Files you changed yourself after that point are left alone, and Redo brings the rewound work back.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/rewind-confirm.png" width="1168" height="668" alt="The Rewind confirm in chat naming the message and listing three files that go back, two changed files with line counts and one new file that will be deleted">
+        </figure>
+      </div>
+      <div class="feat-wide" id="reply-checks">
+        <div class="feat-copy">
+          <h3>Know what a reply did</h3>
+          <p>Each reply's summary opens its diffs in place, so you can read a change without leaving chat.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/reply-summary.png" width="1168" height="668" alt="A reply summary in chat with one file's diff open, a passed build check, a failed test check with its output, and the Send failures to Claude and Commit buttons">
+        </figure>
+        <ul class="feat-cols"><li>Commit just that reply's files. Other changes in the project stay uncommitted.</li><li>Run your tests after every reply, with a row for each check and how it went.</li><li>Failures can go back to the agent with one click, or automatically.</li></ul>
+      </div>
+      <div class="feat-row flip" id="calmer-sidebar">
+        <div class="feat-copy">
+          <h3>A calmer sidebar</h3>
+          <p>The sidebar is roomier, and each session says what it is doing.</p>
+          <ul><li>The agent's plan stays pinned above the chat, with how far along it is.</li><li>The chat box shows how full the context is.</li><li>Model and effort are a click away in the chat box.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/sidebar-plan-context.png" width="1168" height="668" alt="The sidebar with a session saying 3 of 6 and Working, and a chat with the plan pinned above it, a to do list and a context meter at 62 percent beside the model name">
+        </figure>
+      </div>
       <div class="feat-row" id="chat-composer">
         <div class="feat-copy">
           <h3>A chat box that keeps up</h3>

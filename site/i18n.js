@@ -1,5 +1,22 @@
 (() => {
   const translations = {
+    "New in 1.8.6": "الجديد في 1.8.6",
+    "1.8.6 lets you rewind a chat to any message, shows what each reply did and runs your tests after it, and gives the sidebar more room. Below it are 1.8.5 and the 1.8.0 redesign.": "يتيح 1.8.6 الرجوع بالمحادثة إلى أي رسالة، ويُظهر ما فعله كل رد ويشغّل اختباراتك بعده، ويمنح الشريط الجانبي مساحة أرحب. وتحته 1.8.5 وإعادة تصميم 1.8.0.",
+    "Rewind and try again": "ارجع وجرّب من جديد",
+    "Rewind a chat to any message and the files go back to how they were, after a confirm that lists each one.": "ارجع بالمحادثة إلى أي رسالة فتعود الملفات إلى ما كانت عليه، بعد تأكيد يذكر كل ملف.",
+    "Edit a message you sent and send it again. Dawsha puts the files back first, then sends your new text.": "عدّل رسالة أرسلتها وأرسلها مرة أخرى. تعيد دوشة الملفات أولًا ثم ترسل نصك الجديد.",
+    "Or try another way in a second session, so the first one stays as it is.": "أو جرّب طريقة أخرى في جلسة ثانية، فتبقى الأولى كما هي.",
+    "Files you changed yourself after that point are left alone, and Redo brings the rewound work back.": "لا تُمس الملفات التي غيّرتها بنفسك بعد تلك النقطة، ويعيد زر الإعادة العمل الذي تم الرجوع عنه.",
+    "Know what a reply did": "اعرف ما فعله الرد",
+    "Each reply's summary opens its diffs in place, so you can read a change without leaving chat.": "يفتح ملخص كل رد فروقه في مكانها، فتقرأ التغيير دون مغادرة المحادثة.",
+    "Commit just that reply's files. Other changes in the project stay uncommitted.": "احفظ ملفات ذلك الرد فقط في كوميت. وتبقى بقية تغييرات المشروع دون كوميت.",
+    "Run your tests after every reply, with a row for each check and how it went.": "شغّل اختباراتك بعد كل رد، مع سطر لكل فحص ونتيجته.",
+    "Failures can go back to the agent with one click, or automatically.": "يمكن إرسال حالات الفشل إلى الوكيل بنقرة واحدة، أو تلقائيًا.",
+    "A calmer sidebar": "شريط جانبي أهدأ",
+    "The sidebar is roomier, and each session says what it is doing.": "الشريط الجانبي أرحب، وتقول كل جلسة ما الذي تفعله.",
+    "The agent's plan stays pinned above the chat, with how far along it is.": "تبقى خطة الوكيل مثبتة فوق المحادثة مع مدى تقدمها.",
+    "The chat box shows how full the context is.": "يُظهر صندوق المحادثة مدى امتلاء السياق.",
+    "Model and effort are a click away in the chat box.": "النموذج ومستوى الجهد على بعد نقرة في صندوق المحادثة.",
     "New in 1.8.5": "الجديد في 1.8.5",
     "1.8.5 makes chat the easy way to work with Claude Code and Codex, lets you undo a reply, runs prompts on a schedule and keeps an eye on what you spend. Below it is the 1.8.0 redesign and what came with it.": "يجعل 1.8.5 المحادثة أسهل طريقة للعمل مع Claude Code وCodex، ويتيح لك التراجع عن رد، ويشغّل الطلبات في مواعيد تحددها، ويراقب ما تنفقه. وتحته إعادة تصميم 1.8.0 وما جاء معها.",
     "A chat box that keeps up": "صندوق محادثة يواكبك",
@@ -247,6 +264,9 @@
 
   const attributeTranslations = {
     "Dawsha home": "الصفحة الرئيسية لدوشة",
+    "The Rewind confirm in chat naming the message and listing three files that go back, two changed files with line counts and one new file that will be deleted": "تأكيد الرجوع في المحادثة يذكر الرسالة ويعرض ثلاثة ملفات ستعود: ملفان تغيّرا مع عدد الأسطر وملف جديد سيُحذف",
+    "A reply summary in chat with one file's diff open, a passed build check, a failed test check with its output, and the Send failures to Claude and Commit buttons": "ملخص رد في المحادثة وفروق ملف واحد مفتوحة، وفحص بناء ناجح، وفحص اختبارات فاشل مع مخرجاته، وزرا إرسال الفشل إلى Claude وكوميت",
+    "The sidebar with a session saying 3 of 6 and Working, and a chat with the plan pinned above it, a to do list and a context meter at 62 percent beside the model name": "الشريط الجانبي وجلسة تقول 3 من 6 وتعمل، ومحادثة تعلوها الخطة المثبتة وقائمة مهام وعداد للسياق عند 62 بالمئة بجوار اسم النموذج",
     "Chat view with the message box suggesting slash commands, a project command and a built in one, above a finished reply": "عرض المحادثة وصندوق الرسالة يقترح أوامر تبدأ بشرطة مائلة، أمرًا للمشروع وآخر مدمجًا، فوق رد مكتمل",
     "A finished Claude reply in chat with a card listing three changed files, their line counts, Review changes and how long it worked": "رد مكتمل من Claude في المحادثة مع بطاقة تعرض ثلاثة ملفات تغيّرت وعدد أسطرها وزر مراجعة التغييرات ومدة العمل",
     "The New session menu with Claude, Codex and Gemini sessions above Resume a session, Ask two agents and Hand a job to an agent": "قائمة جلسة جديدة بجلسات Claude وCodex وGemini فوق استئناف جلسة وسؤال وكيلين وتسليم مهمة لوكيل",
