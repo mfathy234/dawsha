@@ -36,6 +36,10 @@ export function currentChoice(agent: TabAgent, modelName: string | null): ModelC
   return modelChoices(agent).find((choice) => lower.includes(choice.id)) ?? null
 }
 
+/** What the menu calls a choice: the agent's own name with its version ("Opus 5.5") for the model in use, the plain family name otherwise. */
+export const choiceLabel = (choice: ModelChoice, current: ModelChoice | null, modelName: string | null): string =>
+  choice.id === current?.id && modelName ? modelName : choice.label
+
 export function modelCommand(agent: TabAgent, id: string): string {
   return agent === 'claude' ? `/model ${id}` : CODEX_MODEL_COMMAND
 }
