@@ -21,7 +21,7 @@ export function chatHostFor(paneId: string, current: () => PaneView | null): Cha
   const tabId = (): string => current()?.primaryTabId ?? ''
   return {
     showTerminal: () => setPaneView(paneId, 'terminal'),
-    continueIn: (to: AgentKind) => void continueIn(paneId, to),
+    continueIn: (to: AgentKind, message?: string | null) => void continueIn(paneId, to, message),
     send: (text) => sendChatMessage(tabId(), current()?.agent ?? 'shell', text),
     interrupt: () => interruptAgent(tabId()),
     screenTail: () => getTerminal(tabId())?.tailText(MENU_ROWS) ?? '',
@@ -63,7 +63,12 @@ export function syncPaneChat(paneId: string, view: PaneView, state: SessionState
           status: tab.status,
           startedAt: tab.startedAt,
           elapsed: state === 'working' ? timeInState(paneId, state, view.now) : '',
-          tabId: tab.id
+          tabId: tab.id,
+          title: view.title,
+          model: view.info.model?.label ?? null,
+          contextPercent: view.info.contextPercent,
+          contextTokens: view.info.contextTokens,
+          contextWindow: view.info.contextWindow
         }
       : null
   )

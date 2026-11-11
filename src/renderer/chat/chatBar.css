@@ -1,0 +1,231 @@
+/* The chat box holds the text above and a bar below: model and effort on the left, context and send on the right. */
+.chat-composer .chat-box {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-1);
+}
+
+.chat-composer .chat-box .chat-input {
+  flex: none;
+  width: 100%;
+}
+
+.chat-box-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--h-md);
+}
+
+.chat-box-spacer {
+  flex: 1;
+}
+
+.chat-pick,
+.chat-ctx {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  height: var(--h-md);
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: var(--fs-1);
+  cursor: pointer;
+}
+
+.chat-pick[hidden],
+.chat-ctx[hidden] {
+  display: none;
+}
+
+.chat-pick:hover:not(:disabled),
+.chat-ctx:hover,
+.chat-pick[aria-expanded='true'],
+.chat-ctx[aria-expanded='true'] {
+  background: var(--hover);
+  color: var(--text-2);
+}
+
+.chat-pick:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.chat-pick .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.chat-ctx-bar {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--press);
+  overflow: hidden;
+}
+
+.chat-ctx-bar i {
+  display: block;
+  height: 100%;
+  background: var(--text-3);
+}
+
+.chat-ctx.warn {
+  color: var(--busy);
+}
+
+.chat-ctx.warn .chat-ctx-bar i {
+  background: var(--busy);
+}
+
+.chat-box-bar .chat-btn {
+  height: var(--h-sm);
+}
+
+.chat-ctx-note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 720px;
+  margin: 0 auto var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-1);
+}
+
+.chat-ctx-note[hidden] {
+  display: none;
+}
+
+.chat-ctx-note-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-ctx-note b {
+  color: var(--text);
+  font-weight: var(--w-medium);
+}
+
+.chat-pop {
+  z-index: var(--z-pop);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 240px;
+  max-width: 320px;
+  padding: var(--sp-1);
+  border: 0;
+  border-radius: var(--r-pop);
+  background: var(--surface-pop);
+  box-shadow: var(--shadow-pop);
+  color: var(--text);
+}
+
+.chat-pop-head {
+  padding: var(--sp-2) var(--sp-3) var(--sp-1);
+  color: var(--text-3);
+  font-size: var(--fs-1);
+}
+
+.chat-pop-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 32px;
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-pop-item:hover,
+.chat-pop-item:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+.chat-pop-item.selected {
+  background: var(--press);
+}
+
+.chat-pop-item .icon {
+  width: 14px;
+  height: 14px;
+  margin-inline-start: auto;
+  color: var(--accent);
+}
+
+.chat-pop-quiet {
+  margin-inline-start: auto;
+  color: var(--text-3);
+  font-size: var(--fs-1);
+}
+
+.chat-pop-item .chat-pop-quiet + .icon {
+  margin-inline-start: 0;
+}
+
+.chat-pop-sep {
+  height: 1px;
+  margin: var(--sp-1) var(--sp-2);
+  background: var(--hover);
+}
+
+.chat-pop-tabs {
+  display: flex;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-3) var(--sp-1);
+}
+
+.chat-pop-tab {
+  padding: var(--sp-1) 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: var(--fs-1);
+  cursor: pointer;
+}
+
+.chat-pop-tab:hover {
+  color: var(--text-2);
+}
+
+.chat-pop-tab.on {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+.chat-pop-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.chat-pop-foot {
+  padding: var(--sp-2) var(--sp-3);
+  color: var(--text-3);
+  font-size: var(--fs-1);
+}
+
+.chat-set {
+  text-align: center;
+}
+
+.chat-notice .chat-acts {
+  margin-top: var(--sp-1);
+}

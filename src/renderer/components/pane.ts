@@ -71,6 +71,7 @@ import { PaneChat } from '../chat/paneChat'
 import { chatCapable } from '../../shared/chatLog'
 import { ViewSwitch } from '../chat/viewSwitch'
 import { chatHostFor, syncPaneChat } from '../chat/paneChatController'
+import { LIMIT_PANE_STATE } from '../../shared/chatLimit'
 import '../chat/chat.css'
 import '../chat/chatMedia.css'
 
@@ -321,6 +322,7 @@ export class PaneComponent {
   private updateChat(view: PaneView, state: SessionState, asking: boolean): void {
     const shown = syncPaneChat(this.paneId, view, state, asking, this.viewSwitch, this.chat)
     this.body.classList.toggle('chat-on', shown)
+    if (shown && this.chat.limitReached) this.stateHost.querySelector('.state-pill-text')?.replaceChildren(LIMIT_PANE_STATE)
     this.el.classList.toggle('has-view-switch', chatCapable(view.agent))
     if (!this.chat.holdsPermission && this.permission.parentElement !== this.el) this.el.insertBefore(this.permission, this.foot)
     if (shown !== this.chatShown) {
