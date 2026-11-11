@@ -1,6 +1,6 @@
 import type { ChatItem } from '../../shared/chatLog'
 import { timeLabel } from '../../shared/chatTime'
-import { rewindPlan, splitRewind, type RewindPlan, type RewindRow } from '../../shared/rewind'
+import { displayPath, rewindPlan, splitRewind, type RewindPlan, type RewindRow } from '../../shared/rewind'
 import { REWIND_TEXT } from '../../shared/rewindStrings'
 import { api } from '../api'
 import { confirmDialog } from '../components/dialogs'
@@ -35,14 +35,16 @@ function fail(message: string): null {
 
 const when = (at: number | undefined): string | null => (at === undefined ? null : timeLabel(at))
 
-const rowLine = (row: RewindRow): HTMLElement =>
-  h('div', { class: 'rewind-li' }, h('span', { class: 'rewind-path', dir: 'ltr', title: row.path }, row.path),
+const rowLine = (row: RewindRow, folder: string): HTMLElement => {
+  const shown = displayPath(folder, row.path)
+  return h('div', { class: 'rewind-li' }, h('span', { class: 'rewind-path', dir: 'ltr', title: row.path }, h('span', { class: 'rewind-name' }, shown.name), shown.dir ? h('span', { class: 'rewind-dir' }, shown.dir) : null),
     row.isNew ? h('span', { class: 'rewind-tag' }, REWIND_TEXT.isNew) : row.changedSince ? h('span', { class: 'rewind-tag' }, REWIND_TEXT.keptTag) : h('span', { class: 'rewind-n' }, h('span', { class: 'add' }, `+${row.added}`), ' ', h('span', { class: 'del' }, `-${row.removed}`)))
+}
 
-function fileList(put: readonly RewindRow[], kept: readonly RewindRow[]): HTMLElement {
+function fileList(put: readonly RewindRow[], kept: readonly RewindRow[], folder: string): HTMLElement {
   return h('div', { class: 'rewind-files' },
-    h('div', { class: 'rewind-list', role: 'list', 'aria-label': 'Files to put back' }, ...put.map(rowLine)),
-    kept.length ? h('div', { class: 'rewind-kept' }, h('p', { class: 'rewind-kept-h' }, REWIND_TEXT.keptHeading), h('div', { class: 'rewind-list', role: 'list', 'aria-label': REWIND_TEXT.keptHeading }, ...kept.map(rowLine))) : null)
+    h('div', { class: 'rewind-list', role: 'list', 'aria-label': 'Files to put back' }, ...put.map((row) => rowLine(row, folder))),
+    kept.length ? h('div', { class: 'rewind-kept' }, h('p', { class: 'rewind-kept-h' }, REWIND_TEXT.keptHeading), h('div', { class: 'rewind-list', role: 'list', 'aria-label': REWIND_TEXT.keptHeading }, ...kept.map((row) => rowLine(row, folder)))) : null)
 }
 
 async function lookUp(target: RewindTarget, ref: string, plan: RewindPlan) {
@@ -66,11 +68,11 @@ export async function rewindToMessage(target: RewindTarget, items: readonly Chat
   if (!preview) return null
   const { plan, put, kept } = preview
   if (put.length === 0) {
-    if (options.confirm) toast(plan.files.length === 0 ? REWIND_TEXT.nothingToPutBack : REWIND_TEXT.allChanged, 'info')
+    if (options.confirm) toast(kept.length === 0 ? REWIND_TEXT.nothingToPutBack : REWIND_TEXT.allChanged, 'info')
     return options.confirm ? null : { messageId, messageAt: plan.messageAt, paths: [], count: 0, beforeUndo: null }
   }
   if (options.confirm) {
-    const ok = await confirmDialog({ title: REWIND_TEXT.confirmTitle(plan.messageText), body: REWIND_TEXT.confirmBody(put.length, when(plan.messageAt)), confirmLabel: REWIND_TEXT.putBack(put.length), danger: false, content: fileList(put, kept) })
+    const ok = await confirmDialog({ title: REWIND_TEXT.confirmTitle(plan.messageText), body: REWIND_TEXT.confirmBody(put.length, when(plan.messageAt)), confirmLabel: REWIND_TEXT.putBack(put.length), danger: false, content: fileList(put, kept, target.folder) })
     if (!ok) return null
   }
   const paths = put.map((row) => row.path)

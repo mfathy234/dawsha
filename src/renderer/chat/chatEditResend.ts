@@ -43,6 +43,12 @@ export class EditBox {
     if (grab) this.input.setSelectionRange(this.input.value.length, this.input.value.length)
   }
 
+  /** While the files are being put back, Send waits. */
+  setBusy(busy: boolean): void {
+    this.sendButton.disabled = busy || this.input.value.trim() === ''
+    this.el.setAttribute('aria-busy', String(busy))
+  }
+
   private grow(): void {
     this.input.style.height = 'auto'
     this.input.style.height = `${Math.min(this.input.scrollHeight, 240)}px`
@@ -50,7 +56,7 @@ export class EditBox {
 
   private submit(): void {
     const text = this.input.value.trim()
-    if (text !== '') this.options.send(text)
+    if (text !== '' && !this.sendButton.disabled) this.options.send(text)
   }
 
   private onKey(event: KeyboardEvent): void {

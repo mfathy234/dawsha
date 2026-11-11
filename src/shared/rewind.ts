@@ -80,12 +80,12 @@ export interface RewindSplit {
 
 const slash = (path: string): string => path.replace(/\\/g, '/')
 
-/** Joins the plan's files with what the main process found; changed-since files are kept, the rest are put back. */
+/** Joins the plan's files with what the main process found; changed-since files are kept, the rest are put back. A file the main process did not report (outside the repository) is left out. */
 export function splitRewind(files: readonly RewindFile[], infos: readonly RewindFileInfo[]): RewindSplit {
   const byPath = new Map(infos.map((info) => [slash(info.path), info]))
-  const rows = files.map((file): RewindRow => {
+  const rows = files.flatMap((file): RewindRow[] => {
     const info = byPath.get(slash(file.path))
-    return { ...file, isNew: info?.isNew ?? false, changedSince: info?.changedSince ?? false }
+    return info ? [{ ...file, isNew: info.isNew, changedSince: info.changedSince }] : []
   })
   return { put: rows.filter((row) => !row.changedSince), kept: rows.filter((row) => row.changedSince) }
 }
@@ -93,4 +93,14 @@ export function splitRewind(files: readonly RewindFile[], infos: readonly Rewind
 export function shortText(text: string, limit = 60): string {
   const line = text.replace(/\s+/g, ' ').trim()
   return line.length > limit ? `${line.slice(0, limit - 1)}…` : line
+}
+
+/** A file's name and the folder it is in, the folder shown relative to the project when the path lies inside it. */
+export function displayPath(folder: string, path: string): { name: string; dir: string } {
+  const full = slash(path)
+  const root = slash(folder).replace(/\/+$/, '')
+  const inside = root !== '' && full.toLowerCase().startsWith(`${root.toLowerCase()}/`)
+  const rel = inside ? full.slice(root.length + 1) : full
+  const cut = rel.lastIndexOf('/')
+  return { name: cut < 0 ? rel : rel.slice(cut + 1), dir: cut < 0 ? '' : rel.slice(0, cut) }
 }

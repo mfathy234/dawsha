@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChatItem } from '../../src/shared/chatLog'
-import { changedSince, rewindPlan, splitRewind } from '../../src/shared/rewind'
+import { changedSince, displayPath, rewindPlan, splitRewind } from '../../src/shared/rewind'
 import { cutTranscript, laterSameCount, nextTryNumber, triedTitle, tryPrompt } from '../../src/shared/tryAgain'
 
 const user = (id: string, text: string, at?: number): ChatItem => ({ kind: 'message', id, role: 'user', text, ...(at !== undefined ? { at } : {}) }) as ChatItem
@@ -88,5 +88,13 @@ describe('try another way', () => {
     const text = tryPrompt({ from: 'claude', projectName: 'p', transcriptPath: 'C:/t.md', message: 'hi' })
     expect(text).toContain('C:/t.md')
     expect(text.endsWith('hi')).toBe(true)
+  })
+})
+
+describe('displayPath', () => {
+  it('shows the folder relative to the project and the name apart', () => {
+    expect(displayPath('C:\\work\\app', 'C:\\work\\app\\src\\upload\\client.ts')).toEqual({ name: 'client.ts', dir: 'src/upload' })
+    expect(displayPath('/a', 'top.txt')).toEqual({ name: 'top.txt', dir: '' })
+    expect(displayPath('/a', '/b/x/y.ts')).toEqual({ name: 'y.ts', dir: '/b/x' })
   })
 })

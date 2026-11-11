@@ -36,6 +36,7 @@ export class ChatRewind {
   private readonly marks = new Map<string, Mark>()
   private editing: Editing | null = null
   private editingSession = ''
+  private sending = false
 
   constructor(private readonly deps: RewindDeps) {}
 
@@ -56,9 +57,9 @@ export class ChatRewind {
 
   view(): RewindView | undefined {
     const input = this.deps.input()
-    if (!input?.sessionId) return undefined
-    this.dropStale(input.sessionId)
-    const mark = this.mark()
+    if (!input) return undefined
+    if (input.sessionId) this.dropStale(input.sessionId)
+    const mark = input.sessionId ? this.mark() : undefined
     const items = this.deps.items()
     const at = mark ? userMessage(items, mark.messageId)?.at : undefined
     return {
@@ -146,13 +147,20 @@ export class ChatRewind {
   private async sendEdit(id: string, text: string): Promise<void> {
     const target = this.target()
     const ref = this.snapshotOf(id)
-    if (!target || !ref) return
+    if (!target || !ref || this.sending) return
     if (target.working) return void toast(REWIND_TEXT.stopFirst, 'error')
-    const done = await rewindToMessage(target, this.deps.items(), id, ref, { confirm: false })
-    if (!done) return
-    this.marks.delete(target.sessionId)
-    this.editing = null
-    this.deps.resend(text)
+    this.sending = true
+    this.editing?.box.setBusy(true)
+    try {
+      const done = await rewindToMessage(target, this.deps.items(), id, ref, { confirm: false })
+      if (!done) return
+      this.marks.delete(target.sessionId)
+      this.editing = null
+      this.deps.resend(text)
+    } finally {
+      this.sending = false
+      this.editing?.box.setBusy(false)
+    }
   }
 
   private async tryAgain(id: string): Promise<void> {

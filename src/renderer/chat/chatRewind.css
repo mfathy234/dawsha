@@ -21,7 +21,9 @@
 .rewind-files { margin: 0 0 var(--sp-4); }
 .rewind-list { padding: 6px 0; border-radius: var(--r-control); background: var(--well); max-height: 240px; overflow: auto; }
 .rewind-li { display: flex; align-items: center; gap: var(--sp-2); padding: 3px var(--sp-3); font: 12.5px/20px var(--font-mono); }
-.rewind-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rewind-path { flex: 1; min-width: 0; display: flex; gap: var(--sp-2); overflow: hidden; white-space: nowrap; }
+.rewind-name { flex: none; }
+.rewind-dir { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-3); direction: rtl; text-align: left; }
 .rewind-tag { font: var(--fs-1) var(--font-ui); color: var(--text-3); }
 .rewind-n .add { color: var(--term-add); }
 .rewind-n .del { color: var(--term-del); }

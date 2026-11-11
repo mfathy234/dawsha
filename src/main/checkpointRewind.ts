@@ -14,21 +14,25 @@ const MAX_FILES = 200
 const CHUNK = 100
 
 interface Wanted {
+  /** The path as the caller named it; the answer is keyed by it. */
+  original: string
   path: string
   touchedAt?: number
 }
 
+/** The files that lie inside the repository. One outside it (a plan file, say) is left out, not a reason to refuse the rest. */
 function parseWanted(root: string, value: unknown): Wanted[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > MAX_FILES) return null
   const out: Wanted[] = []
   for (const entry of value) {
     const raw = typeof entry === 'object' && entry !== null ? (entry as Record<string, unknown>) : null
-    const clean = normalizeRestorePaths(root, raw ? [raw.path] : null)
-    if (!clean.ok) return null
-    const touchedAt = typeof raw?.touchedAt === 'number' && Number.isFinite(raw.touchedAt) ? raw.touchedAt : undefined
-    out.push({ path: clean.paths[0], ...(touchedAt !== undefined ? { touchedAt } : {}) })
+    if (typeof raw?.path !== 'string') return null
+    const clean = normalizeRestorePaths(root, [raw.path])
+    if (!clean.ok) continue
+    const touchedAt = typeof raw.touchedAt === 'number' && Number.isFinite(raw.touchedAt) ? raw.touchedAt : undefined
+    out.push({ original: raw.path, path: clean.paths[0], ...(touchedAt !== undefined ? { touchedAt } : {}) })
   }
-  return out
+  return out.length ? out : null
 }
 
 const mtimeOf = (root: string, path: string): Promise<number | null> => lstat(join(root, path)).then((info) => info.mtimeMs, () => null)
@@ -43,7 +47,7 @@ export async function rewindInfo(folder: unknown, sessionId: unknown, ref: unkno
   if (!(await git(root, ['show-ref', '--verify', '--quiet', ref])).ok) return { ok: false, error: 'Checkpoint no longer exists.' }
   try {
     const held = new Set((await run(root, ['ls-tree', '-r', '-z', '--name-only', ref, '--', ...wanted.map((item) => item.path)])).split('\0').filter(Boolean))
-    const infos = await Promise.all(wanted.map(async (item): Promise<RewindFileInfo> => ({ path: item.path, isNew: !held.has(item.path), changedSince: changedSince(await mtimeOf(root, item.path), item.touchedAt) })))
+    const infos = await Promise.all(wanted.map(async (item): Promise<RewindFileInfo> => ({ path: item.original, isNew: !held.has(item.path), changedSince: changedSince(await mtimeOf(root, item.path), item.touchedAt) })))
     return { ok: true, files: infos }
   } catch (error) {
     return { ok: false, error: `Could not check the files: ${(error as Error).message}` }
