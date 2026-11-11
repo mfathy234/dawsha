@@ -19,6 +19,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **The plan stays in view.** When the agent keeps a todo list, one line at the top of chat shows how far along it is and what it is doing now. Click it for the whole list.
 - **Chat on your phone.** Remote Control gets a Chat tab for Claude and Codex sessions. Sending needs the Terminal input permission; without it the chat is read-only.
 - **Clean up worktrees.** Remove the worktrees left behind by closed sessions from the project menu. The dialog shows each worktree's size, age and whether it is merged, leaves ones with uncommitted changes unticked, and can also delete merged branches.
+- **Copy session name.** The pane menu, the sidebar's session menu and the Resume picker's row menu can copy a session's name.
 - **Export usage.** Usage can export a CSV for a chosen range, grouped by day, project, agent or session. The file stays on your computer.
 
 ### Changed

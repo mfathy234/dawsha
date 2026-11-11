@@ -10,6 +10,7 @@ import { openWorktreeCleanup } from '../worktreeCleanupActions'
 import { addProject, closePane, locateProject, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeProject, renameSession, reorderProjectFromDisplay, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagSession, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
 import { cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
 import { editTurnChecks } from './turnChecksDialog'
+import { COPY_SESSION_NAME, copySessionName } from '../copySessionName'
 import type { PaneView } from '../derive'
 import { clear, h, icon, iconButton } from '../dom'
 import { enableDrag } from '../drag'
@@ -488,7 +489,7 @@ export class SidebarComponent {
       : sessionRowButton(view, facts, { key, selected, dimmed: listedAbove, onClick: () => focusPane(view.pane.id) })
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}${listedAbove ? ' dimmed' : ''}` },
       main,
-      this.sessionMenuButton(key, view.title, project, view.tagAuto ? null : view.tag, (tag) => tagSession(view.pane.id, tag), 'Close', () => void closePane(view.pane.id)),
+      this.sessionMenuButton(key, view.title, project, view.tagAuto ? null : view.tag, (tag) => tagSession(view.pane.id, tag), 'Close', () => void closePane(view.pane.id), sessionLabel(view)),
       iconButton(`Close ${view.title} in ${project.name}`, ICONS.close, () => void closePane(view.pane.id), 'small sess-close')
     )
   }
@@ -565,20 +566,21 @@ export class SidebarComponent {
     return button
   }
 
-  private sessionMenuButton(navKey: string, title: string, project: Project, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void, removeLabel: string, remove: () => void): HTMLElement {
+  private sessionMenuButton(navKey: string, title: string, project: Project, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void, removeLabel: string, remove: () => void, copyName = title): HTMLElement {
     const key = `sm:${navKey}`
-    const button = iconButton(`Actions for ${title} in ${project.name}`, ICONS.more, () => this.toggleSessionMenu(key, navKey, title, tag, setTag, removeLabel, remove), 'small sess-more')
+    const button = iconButton(`Actions for ${title} in ${project.name}`, ICONS.more, () => this.toggleSessionMenu(key, navKey, title, tag, setTag, removeLabel, remove, copyName), 'small sess-more')
     button.setAttribute('aria-haspopup', 'menu')
     button.dataset.menuKey = key
     return button
   }
 
-  private toggleSessionMenu(key: string, navKey: string, title: string, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void, removeLabel: string, remove: () => void): void {
+  private toggleSessionMenu(key: string, navKey: string, title: string, tag: SessionTag | null, setTag: (tag: SessionTag | null) => void, removeLabel: string, remove: () => void, copyName = title): void {
     if (this.popup.isOpenFor(key)) return this.popup.close()
     const rename = h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); this.startRename(navKey) } }, 'Rename')
+    const copy = h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); void copySessionName(copyName) } }, COPY_SESSION_NAME)
     const tags = tagMenuItems(tag, (next) => { this.popup.close(); this.focusAfterRender(navKey); setTag(next) })
     const drop = h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); remove() } }, removeLabel)
-    this.popup.open(key, [rename, h('div', { class: 'pv-menu-sep', role: 'separator' }), ...tags, h('div', { class: 'pv-menu-sep', role: 'separator' }), drop], `Actions for ${title}`)
+    this.popup.open(key, [rename, copy, h('div', { class: 'pv-menu-sep', role: 'separator' }), ...tags, h('div', { class: 'pv-menu-sep', role: 'separator' }), drop], `Actions for ${title}`)
   }
 
   private async renameProject(project: Project): Promise<void> {

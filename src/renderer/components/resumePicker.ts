@@ -8,6 +8,7 @@ import { confirmRemoveClosed } from '../closedActions'
 import { closedFor, closedTitle, reopenAllLabel, reopenTargets } from '../../shared/resumeClosed'
 import { closedSessionsFor, closedUsageShort } from '../../shared/keptSessions'
 import { api } from '../api'
+import { copySessionName } from '../copySessionName'
 import { clear, h, icon, iconButton, leave } from '../dom'
 import { openContextMenu } from './contextMenu'
 import { closedMenuEntries, renameField } from './resumeClosedUi'
@@ -300,6 +301,7 @@ export class ResumePickerComponent {
       returnFocus: this.search,
       entries: closedMenuEntries(kept, {
         rename: () => this.startRename(session),
+        copyName: () => void copySessionName(closedTitle(session, kept)),
         tag: (tag) => tagKeptSession(session.agent, session.id, tag),
         remove: () => void this.removeClosed(kept)
       })
