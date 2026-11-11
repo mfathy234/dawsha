@@ -1,0 +1,35 @@
+/* Phone Chat tab: one background, filled bubbles, no borders or rings. */
+.chat-view { display: flex; flex-direction: column; width: min(100%, 720px); margin: 0 auto; padding: 0; min-height: calc(var(--app-height, 100dvh) - var(--header-height)); }
+#chat-root { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ch-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px 8px; }
+.ch-title { color: var(--strong); font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+.ch-select { width: 100%; min-height: 44px; border: 0; border-radius: 12px; padding: 0 12px; color: var(--strong); background: var(--raised); font-size: 16px; }
+.ch-thread { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; overflow-x: hidden; padding: 8px 16px 16px; max-height: calc(var(--app-height, 100dvh) - var(--header-height) - 150px); overscroll-behavior: contain; }
+.ch-thread:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ch-you { align-self: flex-end; max-width: 85%; padding: 8px 12px; border-radius: 16px; color: var(--strong); background: var(--raised); overflow-wrap: anywhere; white-space: pre-wrap; }
+.ch-say { color: var(--text); line-height: 1.5; overflow-wrap: anywhere; }
+.ch-say p { margin: 0 0 8px; white-space: pre-wrap; }
+.ch-say p:last-child { margin-bottom: 0; }
+.ch-tool { display: flex; align-items: baseline; gap: 6px; min-width: 0; color: var(--muted); font-size: 13px; }
+.ch-ic { flex: none; width: 16px; text-align: center; color: var(--subtle); }
+.ch-verb { flex: none; }
+.ch-target { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-family: var(--font-mono); font-size: 12px; }
+.ch-add { flex: none; color: var(--accent); font-size: 12px; }
+.ch-del { flex: none; color: var(--danger); font-size: 12px; }
+.ch-sum { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--surface); color: var(--strong); font-size: 14px; }
+.ch-sum b { font-weight: 500; }
+.ch-quiet { color: var(--muted); font-size: 13px; }
+.ch-sent { align-self: flex-end; }
+.ch-note { margin: 0; }
+.ch-empty { margin: 0; padding: 24px 16px; }
+.ch-earlier { margin: 0; text-align: center; }
+.ch-comp { flex: none; padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); }
+.ch-box { display: flex; align-items: flex-end; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 22px; background: var(--surface); }
+.ch-box:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.ch-input { flex: 1; min-width: 0; min-height: 36px; max-height: 140px; resize: none; border: 0; padding: 8px 0; color: var(--strong); background: transparent; font-size: 16px; line-height: 1.35; }
+.ch-input:focus-visible { outline: none; }
+.ch-send { flex: none; width: 44px; height: 44px; border: 0; border-radius: 50%; color: var(--on-accent); background: var(--accent); font-size: 18px; }
+.ch-send:disabled { opacity: .5; }
+.ch-status { margin: 0 8px 6px; color: var(--muted); font-size: 13px; }
+.ch-status.error { color: var(--danger); }
+.ch-perm { margin: 0; padding: 12px 14px; border-radius: 12px; color: var(--muted); background: var(--surface); font-size: 13px; line-height: 1.45; }

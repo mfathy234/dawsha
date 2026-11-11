@@ -127,7 +127,7 @@ test('phone Agents tab: the grid, a run card with fields, project and model, run
     for (const scheme of ['dark', 'light'] as const) {
       const mock: PhoneMock = { crew: true, fullOutput: false, runs: [], crewCalls: 0, runError: null }
       const page = await openPhone(browser, url, mock, scheme)
-      await expect(page.getByRole('tab')).toHaveText(['Needs you', 'Agents', 'Sessions', 'Projects'])
+      await expect(page.getByRole('tab')).toHaveText(['Needs you', 'Agents', 'Sessions', 'Chat', 'Projects'])
       await expect(page.locator('#remote-nav-crew')).toHaveAttribute('aria-selected', 'true')
       await expect(page.locator('.pc-member')).toHaveCount(4)
       const columns = await page.locator('.pc-grid').evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length)
