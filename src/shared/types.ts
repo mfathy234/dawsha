@@ -187,6 +187,8 @@ export interface Settings {
   version: 2
   projects: Project[]
   spendLimits: Record<string, { amountUsd: number; period: 'day' | 'week' }>
+  /** Per project: the run commands to run after each reply that changed files. */
+  turnChecks: import('./turnChecks').TurnChecksSettings
   theme: ThemeSettings
   sidebarCollapsed: boolean
   /** How the sidebar orders projects: by recent activity, by name, or the stored (manual) order. */
