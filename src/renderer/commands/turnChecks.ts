@@ -7,6 +7,7 @@ function checksCommands(state: AppState): Command[] {
     id: `checks:${project.id}`,
     title: `Checks after each reply in ${project.name}`,
     group: 'Projects',
+    searchOnly: true,
     keywords: 'tests lint build run commands after reply agent',
     run: () => editTurnChecks(project.id)
   }))
