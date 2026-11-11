@@ -22,6 +22,7 @@ import { linkifyChat, openFileButton } from './chatLinks'
 import type { ChatSessionRef } from './chatImageCache'
 import { turnSummaries } from '../../shared/turnSummary'
 import { turnSummaryCard } from './chatTurnSummary'
+import { replyContext, type TurnExtras } from './turnExtras'
 import { groupMembership, groupTools, type ToolGroup } from '../../shared/chatGroups'
 import { groupRow, workedByReply, workedLine } from './chatGroupRow'
 import { bellButton, type BellView } from './chatBell'
@@ -78,6 +79,8 @@ export interface ThreadContext {
   limit?: { situation: LimitSituation; now: number; scheduled: boolean; reminded: boolean }
   /** Quiet centred rows after the log, e.g. "Model set to Sonnet". */
   quiet?: readonly string[]
+  /** Diffs, commit and checks on the summary cards. */
+  turns?: TurnExtras
   actions: ThreadActions
 }
 
@@ -142,7 +145,8 @@ export class ChatThread {
 
   private items(items: readonly ChatItem[], ctx: ThreadContext): Node[] {
     const out: Node[] = []
-    const summaries = new Map(turnSummaries(items, ctx.checkpointRefs).map((summary) => [summary.messageId, summary]))
+    const ordered = turnSummaries(items, ctx.checkpointRefs)
+    const summaries = new Map(ordered.map((summary) => [summary.messageId, summary]))
     const timings = workedByReply(items)
     const lastUser = items.reduce((last, item, index) => item.kind === 'message' && item.role === 'user' ? index : last, -1)
     let tools: HTMLElement[] = []
@@ -155,6 +159,7 @@ export class ChatThread {
     const entries = groupTools(items, starts)
     this.membership = groupMembership(entries)
     const live = ctx.phase === 'working' || ctx.phase === 'approval' || ctx.phase === 'menu'
+    ctx.turns?.begin(ctx.session ? `${ctx.session.agent}:${ctx.session.sessionId}` : '', live, ordered.map((summary) => summary.messageId))
     const now = Date.now()
     let index = 0
     for (const entry of entries) {
@@ -180,7 +185,9 @@ export class ChatThread {
       const finished = !(index - 1 > lastUser && ctx.phase === 'working')
       const worked = finished && timings.has(item.id) ? workedLabel(timings.get(item.id)!) : undefined
       const summary = summaries.get(item.id)
-      if (summary && finished && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges, (value) => ctx.actions.undoReply(value), worked))
+      const undo = (value: import('../../shared/turnSummary').TurnSummary): void => ctx.actions.undoReply(value)
+      if (summary && finished && ctx.fileScope && ctx.turns) out.push(ctx.turns.card(summary, { scope: ctx.fileScope, review: ctx.actions.reviewChanges, undo, worked, ...replyContext(items, summary, item) }))
+      else if (summary && finished && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges, undo, worked))
       else if (worked) out.push(workedLine(timings.get(item.id)!))
     }
     flush()

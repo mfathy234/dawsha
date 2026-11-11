@@ -36,6 +36,7 @@ import { runCliCommand } from './cliHost'
 import { installRemoteCrew } from './remoteCrewSync'
 import { installBuiltinCommands } from './commands/builtin'
 import { installCompareCommands } from './commands/compare'
+import { installTurnChecksCommands } from './commands/turnChecks'
 import { installHandoffCommands } from './commands/handoff'
 import { installClosedSessionCommands } from './commands/closedSessions'
 import { installLayoutCommands } from './commands/layouts'
@@ -147,6 +148,7 @@ async function boot(): Promise<void> {
   installWorktreeCleanupCommands()
   installNotificationCommands()
   installCompareCommands()
+  installTurnChecksCommands()
   installHandoffCommands()
   installClosedSessionCommands()
   installReplayCommands()

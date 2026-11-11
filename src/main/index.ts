@@ -11,6 +11,7 @@ import { notifyUser } from './desktop'
 import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
 import { registerToolsIpc } from './toolsIpc'
+import { registerTurnIpc } from './turnIpc'
 import { registerMcpIpc } from './mcpIpc'
 import { PtyManager } from './ptyManager'
 import { Recorder } from './recorder'
@@ -243,6 +244,7 @@ app.whenReady().then(async () => {
   registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings)
   const stopRunCommands = registerRunIpc(() => mainWindow, store)
   const closeBrowserPane = registerToolsIpc(() => mainWindow, store)
+  const stopTurnChecks = registerTurnIpc(() => mainWindow, store)
   registerMcpIpc(() => mainWindow, store)
   recordings.startSchedule()
   mainWindow = createWindow()
@@ -272,6 +274,7 @@ app.whenReady().then(async () => {
       usage.flush()
       recordings.stopSchedule()
       await stopRunCommands()
+      await stopTurnChecks()
       await remoteAccess?.stop()
     },
     flushRenderer,

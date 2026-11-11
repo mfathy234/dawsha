@@ -30,6 +30,7 @@ import { ComposerBar } from './chatComposerBar'
 import { LimitReminders } from './chatLimitSchedule'
 import { limitSituation, sendsAtNote } from '../../shared/chatLimit'
 import { toast } from '../components/toast'
+import { TurnExtras, type TurnInput } from './turnExtras'
 
 export interface ChatHost {
   showTerminal(): void
@@ -119,6 +120,7 @@ export class PaneChat {
   private readonly completion: ChatComplete
   private readonly find: ChatFind
   private readonly watches: ChatWatches
+  private readonly turns = new TurnExtras({ input: () => this.turnInput(), send: (text) => this.sendFromCard(text) })
 
   constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
     this.thread = new ChatThread(() => this.render(true))
@@ -221,6 +223,7 @@ export class PaneChat {
   }
 
   dispose(): void {
+    this.turns.dispose()
     this.watches.dispose()
     this.reminders.dispose()
     this.strip.dispose()
@@ -285,6 +288,7 @@ export class PaneChat {
       bell: { messageId: watchableMessageId(snapshot.items, phase), watched: this.watches.watched, toggle: (id) => this.toggleWatch(id) },
       fileScope: input.tabId,
       checkpointRefs: this.checkpointRefs,
+      turns: this.turns,
       session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
         showTerminal: () => this.host.showTerminal(),
@@ -349,6 +353,22 @@ export class PaneChat {
     const shown = this.reminders.set(at, name, (title, body) => this.host.notify(title, body))
     toast(`You will get a notification at ${shown}, if Dawsha is still open.`, 'info')
     this.render(true)
+  }
+
+  private turnInput(): TurnInput | null {
+    const input = this.input
+    if (!input) return null
+    const projectId = store.state.panes.find((pane) => pane.tabs.some((tab) => tab.id === input.tabId))?.projectId ?? null
+    return { folder: input.folder, sessionId: input.sessionId, projectId, agentName: AGENT_NAMES[input.agent], branch: input.branch }
+  }
+
+  /** A message from a summary card (failed checks) goes in as typed text, and only while the agent can take it. */
+  private sendFromCard(text: string): boolean {
+    const input = this.input
+    if (!input || input.exited || input.working || this.phase === 'approval' || this.phase === 'menu') return false
+    void this.deliver(text)
+    this.feed.nudge()
+    return true
   }
 
   private undoReply(summary: TurnSummary): void {

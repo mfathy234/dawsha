@@ -1,0 +1,62 @@
+/* Summary card extras: file diffs, the commit box and the checks after a reply. */
+.chat-turn-summary { min-width: 0; }
+.chat-turn-summary:has(.turn-diff, .turn-commit, .turn-checks) { width: min(100%, 640px); max-width: 100%; }
+.chat-turn-summary .mono, .turn-pick .mono, .turn-output-dialog .mono { font-family: var(--font-mono); }
+.turn-spacer { flex: 1; }
+.turn-chev { width: 12px; flex: none; color: var(--text-3); font-size: 10px; }
+.chat-turn-actions { flex-wrap: wrap; }
+.chat-turn-actions .turn-ink { color: var(--text); font-weight: var(--w-medium); }
+
+/* Diff, on the well */
+.turn-diff { margin: 2px 0 var(--sp-1); border-radius: var(--r-control); background: var(--well); font: 12px/18px var(--font-mono); overflow: hidden; }
+.turn-diff-body { max-height: 440px; overflow: auto; padding: var(--sp-1) 0; }
+.turn-hunk { padding: 0 var(--sp-3); color: var(--text-3); white-space: pre; }
+.turn-ln { display: flex; gap: var(--sp-2); padding: 0 var(--sp-3); white-space: pre; color: var(--text-2); }
+.turn-ln.add { background: color-mix(in srgb, var(--term-add) 14%, transparent); color: var(--text); }
+.turn-ln.del { background: color-mix(in srgb, var(--term-del) 14%, transparent); color: var(--text); }
+.turn-ln .no { flex: none; min-width: 2ch; text-align: end; color: var(--text-3); user-select: none; }
+.turn-ln .sg { flex: none; width: 1ch; user-select: none; }
+.turn-ln.add .sg { color: var(--term-add); }
+.turn-ln.del .sg { color: var(--term-del); }
+.turn-ln .tx { min-width: 0; }
+.turn-diff-note { padding: var(--sp-2) var(--sp-3); font: var(--fs-1) var(--font-ui, inherit); }
+.turn-diff-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; padding: 2px var(--sp-2) 2px var(--sp-3); color: var(--text-3); font: var(--fs-1) var(--font-ui, inherit); }
+.turn-diff-acts { display: inline-flex; gap: var(--sp-1); }
+
+/* Commit box */
+.turn-commit { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-1); }
+.turn-commit-box { width: 100%; min-height: 0; padding: var(--sp-2) var(--sp-3); border: 0; border-radius: var(--r-control); background: var(--well); color: var(--text); font: 13px/18px var(--font-mono); resize: vertical; box-sizing: border-box; }
+.turn-commit-files { display: flex; flex-direction: column; gap: 2px; }
+.turn-commit-file { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-1); }
+.turn-commit-file .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.turn-commit-foot { display: flex; align-items: center; gap: var(--sp-2); }
+.turn-commit-note { flex: 1; min-width: 0; font-size: var(--fs-1); }
+.turn-commit-error { margin: 0; color: var(--danger); font-size: var(--fs-1); }
+
+/* Checks */
+.turn-checks { display: flex; flex-direction: column; gap: 2px; margin-top: var(--sp-1); }
+.turn-check { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-1); }
+.turn-check-cmd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 12.5px; }
+.turn-check-state { flex: none; color: var(--text-3); }
+.turn-check-state.fail { color: var(--danger); }
+.turn-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.turn-dot.passed { background: var(--term-add); }
+.turn-dot.failed { background: var(--danger); }
+.turn-dot.running { background: var(--accent); }
+.turn-check-out { margin: 2px 0 var(--sp-1); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-control); background: var(--well); color: var(--text-2); font: 12px/18px var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Dialogs */
+.turn-pick { width: 400px; max-width: calc(100vw - 32px); }
+.turn-pick-list { display: flex; flex-direction: column; gap: 2px; margin: var(--sp-2) 0; max-height: 260px; overflow: auto; }
+.turn-pick-row, .turn-pick-auto { display: flex; align-items: center; gap: var(--sp-2); padding: 4px var(--sp-2); border-radius: var(--r-control); cursor: pointer; }
+.turn-pick-row:hover { background: var(--hover); }
+.turn-pick-name { font-family: var(--font-mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.turn-pick-auto { margin-bottom: var(--sp-2); color: var(--text-2); font-size: var(--fs-1); }
+.turn-output-dialog { width: 640px; max-width: calc(100vw - 32px); }
+.turn-output-dialog h3 { margin: var(--sp-3) 0 var(--sp-1); font-size: var(--fs-1); font-weight: var(--w-medium); }
+.turn-output { max-height: 280px; margin: 0; padding: var(--sp-2) var(--sp-3); overflow: auto; border-radius: var(--r-control); background: var(--well); color: var(--text-2); font: 12px/18px var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .turn-dot.running { animation: turn-pulse 1.2s ease-in-out infinite; }
+}
+@keyframes turn-pulse { 50% { opacity: .35; } }

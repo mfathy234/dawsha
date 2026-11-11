@@ -9,6 +9,7 @@ import { editSpendLimit } from '../spendActions'
 import { openWorktreeCleanup } from '../worktreeCleanupActions'
 import { addProject, closePane, locateProject, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeProject, renameSession, reorderProjectFromDisplay, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagSession, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
 import { cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
+import { editTurnChecks } from './turnChecksDialog'
 import type { PaneView } from '../derive'
 import { clear, h, icon, iconButton } from '../dom'
 import { enableDrag } from '../drag'
@@ -641,6 +642,7 @@ export class SidebarComponent {
       item('Open terminal here', () => void startSession(projectId, 'shell')),
       item(this.lastState?.settings.spendLimits?.[projectId] ? 'Change spending limit…' : 'Set spending limit…', () => void editSpendLimit(projectId)),
       item('Clean up worktrees…', () => void openWorktreeCleanup(projectId)),
+      item('Checks after each reply…', () => void editTurnChecks(projectId)),
       h('div', { class: 'pv-menu-sep', role: 'separator' }),
       arrange(project.pinned === true ? 'Unpin' : 'Pin to top', () => pinProject(projectId, project.pinned !== true)),
       manual && canMoveProject(stored, projectId, -1) ? arrange('Move up', () => moveProjectInList(projectId, -1)) : null,

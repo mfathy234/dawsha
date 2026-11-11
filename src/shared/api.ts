@@ -74,6 +74,7 @@ import type {
 export interface GridApi {
   runs: import('./runCommands').RunApi
   tools: import('./filesTools').FilesToolsApi
+  turn: import('./turnApi').TurnApi
   mcp: import('./mcp').McpApi
   chat: import('./chatLog').ChatApi
   getSettings(): Promise<SettingsLoadResult>

@@ -44,6 +44,7 @@ export const EXCLUDED_KEYS = [
   'foldedProjects',
   'foldedClosedSessions',
   'spendLimits',
+  'turnChecks',
   'filesLayout',
   'filesTabs',
   'runCommands',
