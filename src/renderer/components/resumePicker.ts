@@ -138,7 +138,7 @@ export class ResumePickerComponent {
 
   private readonly outside = (event: Event): void => {
     const target = event.target as HTMLElement
-    if (target.closest?.('.overlay, .select-menu-popover, .ctx-menu')) return
+    if (target.closest?.('.overlay, .select-menu-popover, .ctx-menu, .toast')) return
     if (this.root && !this.root.contains(target) && !this.anchor().contains(target)) closeQuickPick()
   }
 
