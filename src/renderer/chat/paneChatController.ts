@@ -63,7 +63,8 @@ export function syncPaneChat(paneId: string, view: PaneView, state: SessionState
           status: tab.status,
           startedAt: tab.startedAt,
           elapsed: state === 'working' ? timeInState(paneId, state, view.now) : '',
-          tabId: tab.id
+          tabId: tab.id,
+          ...(tab.triedFrom ? { triedFrom: tab.triedFrom } : {})
         }
       : null
   )

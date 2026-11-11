@@ -1,0 +1,37 @@
+/* Rewind, edit and try another way. Quiet text actions, no new chrome. */
+.chat-you.has-acts { margin-bottom: var(--sp-3); }
+.chat-you.has-acts > .chat-copy, .chat-you.has-acts > .chat-time { display: none; }
+.chat-msg-acts { position: absolute; inset-block-start: 100%; inset-inline-end: 0; display: flex; align-items: center; gap: var(--sp-3); padding-block-start: 2px; white-space: nowrap; color: var(--text-3); font-size: var(--fs-1); line-height: 16px; opacity: 0; transition: opacity var(--dur-2) var(--ease-out); z-index: 1; }
+.chat-you:hover > .chat-msg-acts, .chat-msg-acts:focus-within { opacity: 1; }
+.chat-msg-acts .chat-text-btn { font-size: var(--fs-1); }
+.chat-msg-acts .chat-text-btn:disabled { color: var(--text-3); cursor: default; }
+.chat-msg-acts .chat-text-btn:focus-visible, .chat-rewind-mark .chat-text-btn:focus-visible, .chat-tried .chat-text-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-micro); }
+@media (prefers-reduced-motion: reduce) { .chat-msg-acts { transition: none; } }
+
+.chat-undone { opacity: .45; }
+.chat-rewind-mark { display: flex; align-items: center; gap: var(--sp-3); color: var(--text-2); font-size: var(--fs-1); }
+.chat-rewind-mark::before, .chat-rewind-mark::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.chat-tried { text-align: center; }
+
+.chat-edit { align-self: stretch; margin-inline-start: 18%; display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-card); background: var(--raised); }
+.chat-edit-input { width: 100%; box-sizing: border-box; min-height: 22px; padding: 0; border: 0; outline: none; resize: none; background: transparent; color: var(--text); font: inherit; line-height: 22px; }
+.chat-edit-foot { display: flex; align-items: center; gap: var(--sp-2); }
+.chat-edit-note { flex: 1; color: var(--text-3); font-size: var(--fs-1); }
+
+.rewind-files { margin: 0 0 var(--sp-4); }
+.rewind-list { padding: 6px 0; border-radius: var(--r-control); background: var(--well); max-height: 240px; overflow: auto; }
+.rewind-li { display: flex; align-items: center; gap: var(--sp-2); padding: 3px var(--sp-3); font: 12.5px/20px var(--font-mono); }
+.rewind-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rewind-tag { font: var(--fs-1) var(--font-ui); color: var(--text-3); }
+.rewind-n .add { color: var(--term-add); }
+.rewind-n .del { color: var(--term-del); }
+.rewind-kept-h { margin: var(--sp-3) 0 var(--sp-1); color: var(--text-2); font-size: var(--fs-1); }
+
+.try-dialog { width: 500px; max-width: calc(100vw - 32px); }
+.try-tabs { display: flex; gap: var(--sp-3); margin-block-end: var(--sp-3); }
+.try-tab { padding: 4px 0; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--text-2); font: inherit; cursor: pointer; }
+.try-tab:hover { color: var(--text); }
+.try-tab.on { color: var(--text); border-bottom-color: var(--accent); }
+.try-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-micro); }
+.try-opt { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-3) 0 var(--sp-4); color: var(--text-2); }
+.try-opt input { accent-color: var(--accent); }

@@ -8,6 +8,8 @@ export interface ConfirmOptions {
   confirmLabel: string
   cancelLabel?: string
   danger?: boolean
+  /** Extra content under the message, such as a list of the items affected. */
+  content?: Node
 }
 
 export interface ChoiceOption<T> {
@@ -108,6 +110,7 @@ export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
     { class: 'dialog', role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': titleId, 'aria-describedby': bodyId },
     h('h2', { id: titleId }, options.title),
     h('p', { id: bodyId }, options.body),
+    options.content ?? null,
     h('div', { class: 'dialog-actions' }, cancel, confirm)
   )
   const shown = present(dialog, false, cancel)

@@ -58,6 +58,8 @@ export interface TermState {
   /** What the first start of a crew run needs; spent after the spawn. */
   crewLaunch?: CrewLaunch
   crewFullAccess?: boolean
+  /** Set on a session started with Try another way: where it came from, until Dawsha restarts. */
+  triedFrom?: { title: string; at?: number; number: number }
 }
 
 export interface PaneState {

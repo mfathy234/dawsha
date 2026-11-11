@@ -24,6 +24,7 @@ import { ChatWatches } from './chatWatches'
 import { doneMessage, watchableMessageId } from '../../shared/chatNotify'
 import { loadCheckpoints, prepareCheckpoint, undoReply } from './chatUndo'
 import type { TurnSummary } from '../../shared/turnSummary'
+import { ChatRewind } from './chatRewind'
 
 export interface ChatHost {
   showTerminal(): void
@@ -53,6 +54,8 @@ export interface ChatInput {
   elapsed?: string
   /** The pane's terminal tab: file links in the thread resolve against its folder. */
   tabId: string
+  /** Set on a session started with Try another way. */
+  triedFrom?: { title: string; at?: number; number: number }
 }
 
 const NEAR_BOTTOM_PX = 96
@@ -99,6 +102,7 @@ export class PaneChat {
   private readonly completion: ChatComplete
   private readonly find: ChatFind
   private readonly watches: ChatWatches
+  private readonly rewind: ChatRewind
 
   constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
     this.thread = new ChatThread(() => this.render(true))
@@ -113,6 +117,7 @@ export class PaneChat {
     this.scroller.append(this.thread.el)
     this.completion = new ChatComplete(this.box, () => this.input?.folder ?? '', () => this.input?.agent ?? 'claude', () => store.state.settings.savedPrompts)
     this.find = new ChatFind({ thread: this.thread, items: () => this.snapshot.items, closed: () => this.focusComposer() })
+    this.rewind = new ChatRewind({ input: () => this.input, items: () => this.snapshot.items, refs: () => this.checkpointRefs, rerender: () => this.render(true), resend: (text) => this.resend(text) })
     this.watches = new ChatWatches(() => this.phase, (ids) => this.announce(ids))
     this.el = h(
       'div',
@@ -228,7 +233,7 @@ export class PaneChat {
     const views = this.pendingViews()
     const last = snapshot.items[snapshot.items.length - 1]
     if (last?.kind !== 'notice') this.limitDismissed = false
-    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', input.elapsed ?? '', views, [...this.watches.watched]])
+    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', input.elapsed ?? '', views, [...this.watches.watched], this.rewind.key()])
     if (!force && snapshot === this.renderedSnapshot && key === this.renderKey) return
     this.renderedSnapshot = snapshot
     this.renderKey = key
@@ -251,6 +256,7 @@ export class PaneChat {
       bell: { messageId: watchableMessageId(snapshot.items, phase), watched: this.watches.watched, toggle: (id) => this.toggleWatch(id) },
       fileScope: input.tabId,
       checkpointRefs: this.checkpointRefs,
+      rewind: this.rewind.view(),
       session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
         showTerminal: () => this.host.showTerminal(),
@@ -261,6 +267,7 @@ export class PaneChat {
         undoReply: (summary) => this.undoReply(summary)
       }
     })
+    this.rewind.afterRender()
     this.strip.update(snapshot.background)
     this.find.sync()
     this.watches.check()
@@ -497,18 +504,32 @@ export class PaneChat {
       if (isTracked(text)) this.pending = holdPending(this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, true))
       else this.host.send(text)
     } else {
-      void this.deliver(text).then(({ flattened }) => {
-        this.note.hidden = !flattened
-        this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
-      })
-      if (isTracked(text)) {
-        const working = (this.input?.working ?? false) && !this.input?.exited
-        this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, working)]
-      }
+      this.sendNow(text)
     }
     this.box.value = ''
     this.attachments.clear()
     this.growBox()
+    this.stickBottom = true
+    this.feed.nudge()
+    this.render(false)
+  }
+
+  private sendNow(text: string): void {
+    void this.deliver(text).then(({ flattened }) => {
+      this.note.hidden = !flattened
+      this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
+    })
+    if (isTracked(text)) {
+      const working = (this.input?.working ?? false) && !this.input?.exited
+      this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, working)]
+    }
+  }
+
+  /** Sends text that did not come from the box (an edited message) the same way a typed one goes. */
+  private resend(text: string): void {
+    if (this.starting || (this.input?.working && !this.input.exited)) return
+    this.saveHistory(text)
+    this.sendNow(text)
     this.stickBottom = true
     this.feed.nudge()
     this.render(false)

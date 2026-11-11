@@ -26,6 +26,7 @@ import { groupMembership, groupTools, type ToolGroup } from '../../shared/chatGr
 import { groupRow, workedByReply, workedLine } from './chatGroupRow'
 import { bellButton, type BellView } from './chatBell'
 import { workedLabel } from '../../shared/chatTiming'
+import { decorateRewind, messageActions, type RewindView } from './chatRewindView'
 
 export interface ThreadActions {
   showTerminal(): void
@@ -69,6 +70,8 @@ export interface ThreadContext {
   background?: readonly BackgroundTask[]
   /** The bell on a running turn's user message. */
   bell?: BellView
+  /** Rewind, edit and try another way for the messages you sent. */
+  rewind?: RewindView
   actions: ThreadActions
 }
 
@@ -105,6 +108,7 @@ export class ChatThread {
     const children: (Node | null)[] =
       feed.state === 'failed' ? [this.failed(feed.reason, ctx)] : feed.state === 'loading' ? [h('p', { class: 'chat-quiet' }, CHAT_TEXT.reading)] : this.body(feed, ctx)
     this.el.replaceChildren(...children.filter((child): child is Node => child !== null))
+    decorateRewind(this.el, ctx.rewind)
     const scope = ctx.fileScope
     if (scope) this.el.querySelectorAll<HTMLElement>('.chat-say').forEach((reply) => linkifyChat(reply, scope))
   }
@@ -200,6 +204,7 @@ export class ChatThread {
   }
 
   private message(item: ChatMessage, ctx: ThreadContext): HTMLElement {
+    if (item.role === 'user' && ctx.rewind?.editing?.id === item.id) return ctx.rewind.editing.el
     const folded = foldLines(item.text)
     const opened = this.open.has(`m:${item.id}`)
     const shown = opened || folded.hidden === 0 ? item.text : folded.head
@@ -211,6 +216,11 @@ export class ChatThread {
     if (item.text !== '') body.append(copyButton(() => item.text))
     const bell = item.role === 'user' ? bellButton(item.id, ctx.bell) : null
     if (bell) body.append(bell)
+    if (item.role === 'user' && ctx.rewind) {
+      body.dataset.msgId = item.id
+      body.classList.add('has-acts')
+      body.append(messageActions(item.id, item.at, ctx.rewind))
+    }
     if (item.at !== undefined) body.append(h('time', { class: 'chat-time', datetime: new Date(item.at).toISOString(), title: fullTimeLabel(item.at), 'data-time': timeLabel(item.at) }))
     return body
   }
