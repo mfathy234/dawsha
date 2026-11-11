@@ -1,4 +1,4 @@
-import { MODEL_FOOT, MODEL_LOCKED_TIP, choosesInPicker, currentChoice, effortCommand, effortLevels, modelChoices, modelCommand, modelLine, modelSetText, type ModelChoice } from '../../shared/chatModels'
+import { MODEL_FOOT, MODEL_LOCKED_TIP, choiceLabel, choosesInPicker, currentChoice, effortCommand, effortLevels, modelChoices, modelCommand, modelLine, modelSetText, type ModelChoice } from '../../shared/chatModels'
 import type { TabAgent } from '../../shared/types'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
@@ -77,7 +77,7 @@ export class ModelPicker {
     const here = currentChoice(state.agent, state.model)
     return [
       h('div', { class: 'chat-pop-head' }, 'Model'),
-      ...modelChoices(state.agent).map((choice) => this.modelRow(state, choice, choice.id === here?.id)),
+      ...modelChoices(state.agent).map((choice) => this.modelRow(state, choice, choice.id === here?.id, choiceLabel(choice, here, state.model))),
       h('div', { class: 'chat-pop-sep' }),
       h('div', { class: 'chat-pop-head' }, 'Effort'),
       this.effortTabs(state, here)
@@ -92,11 +92,11 @@ export class ModelPicker {
     ]
   }
 
-  private modelRow(state: PickerState, choice: ModelChoice, selected: boolean): HTMLElement {
+  private modelRow(state: PickerState, choice: ModelChoice, selected: boolean, label: string): HTMLElement {
     return h(
       'button',
       { class: `chat-pop-item${selected ? ' selected' : ''}`, type: 'button', role: 'menuitemradio', 'aria-checked': String(selected), onClick: () => this.chooseModel(state, choice) },
-      h('span', {}, choice.label),
+      h('span', {}, label),
       choice.hint ? h('span', { class: 'chat-pop-quiet' }, choice.hint) : null,
       selected ? icon(ICONS.check) : null
     )

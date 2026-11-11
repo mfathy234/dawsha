@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canPickModel, currentChoice, effortCommand, effortLevels, modelChoices, modelCommand, modelLine, modelSetText } from '../../src/shared/chatModels'
+import { canPickModel, choiceLabel, currentChoice, effortCommand, effortLevels, modelChoices, modelCommand, modelLine, modelSetText } from '../../src/shared/chatModels'
 
 describe('chat model picker logic', () => {
   it('offers Claude models and efforts, and nothing for Gemini', () => {
@@ -14,6 +14,14 @@ describe('chat model picker logic', () => {
     expect(currentChoice('claude', 'claude-sonnet-5-5')?.id).toBe('sonnet')
     expect(currentChoice('claude', 'something-else')).toBeNull()
     expect(currentChoice('claude', null)).toBeNull()
+  })
+
+  it('shows the version in the menu only for the model in use', () => {
+    const [opus, sonnet] = modelChoices('claude')
+    const here = currentChoice('claude', 'Opus 5.5')
+    expect(choiceLabel(opus, here, 'Opus 5.5')).toBe('Opus 5.5')
+    expect(choiceLabel(sonnet, here, 'Opus 5.5')).toBe('Sonnet')
+    expect(choiceLabel(opus, null, null)).toBe('Opus')
   })
 
   it('drives the agent with its own commands', () => {
