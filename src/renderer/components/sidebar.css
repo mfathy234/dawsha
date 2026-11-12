@@ -388,7 +388,8 @@ aside.sidebar.rail { width: 56px; }
 
 /* Dawsha 1.8 sidebar (mockup Direction A, project tree). The resize handle sits above the sessions toolbar (z-sticky), so its drag target is never covered. */
 .sidebar {
-  width: var(--sidebar-width, 272px);
+  /* Default: 272px when the window has room, down to 248px on narrow windows (1024px wide gets 248). */
+  width: var(--sidebar-width, clamp(248px, 24vw, 272px));
   flex: none;
   display: flex;
   flex-direction: column;

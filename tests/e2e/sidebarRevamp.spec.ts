@@ -18,6 +18,8 @@ function git(folder: string, ...args: string[]): void {
 async function makeNeedsYou(page: Page): Promise<string> {
   const pane = page.locator('.pane').first()
   const id = (await pane.locator('.term-host.active').getAttribute('data-term-id'))!
+  // Wait for the real shell's prompt first: on Windows, ConPTY repaints the screen when the shell starts and would wipe a prompt fed earlier.
+  await expect.poll(async () => (await bufferText(page, id)).replace(/\n/g, '').trimEnd(), { timeout: 30_000 }).toMatch(/[>$#%]$/)
   await expect(async () => {
     await feedTerminal(page, id, ['● Bash(npm run migrate)', 'Do you want to proceed?', '1. Yes', '3. No, and tell Claude what to do differently', ''].join('\r\n'))
     await expect.poll(() => bufferText(page, id), { timeout: 1500 }).toContain('1. Yes')

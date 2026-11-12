@@ -81,7 +81,9 @@ export class AppShell {
 
   private setSidebarWidth(width: number): void {
     this.resizeWidth = clampSidebarWidth(width)
-    this.el.style.setProperty('--sidebar-width', `${this.resizeWidth}px`)
+    // The untouched default is left to CSS, which narrows it on small windows so the panes keep their room.
+    if (this.resizeWidth === DEFAULT_SIDEBAR_WIDTH) this.el.style.removeProperty('--sidebar-width')
+    else this.el.style.setProperty('--sidebar-width', `${this.resizeWidth}px`)
     this.sidebarResize.setAttribute('aria-valuenow', String(this.resizeWidth))
   }
 

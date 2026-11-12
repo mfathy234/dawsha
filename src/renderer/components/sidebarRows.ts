@@ -30,14 +30,25 @@ export interface RowFacts {
   tooltip: string
 }
 
+// The last ask read for each waiting pane. A terminal repaint (a resize, ConPTY redrawing) can clear the
+// prompt from the screen while the session still waits, so the row keeps what it read until the wait ends.
+const lastAsk = new Map<string, string>()
+
+function waitingAsk(paneId: string, state: SessionState): string {
+  if (state !== 'needs') {
+    lastAsk.delete(paneId)
+    return ''
+  }
+  const tail = permissionTail(paneId)
+  const ask = needsAsk(parsePermissionDetail(tail), permissionPromptText(tail))
+  if (ask !== '') lastAsk.set(paneId, ask)
+  return ask || (lastAsk.get(paneId) ?? '')
+}
+
 export function rowFacts(app: AppState, view: PaneView): RowFacts {
   const state = viewState(view)
   const note = sessionNote(view.pane.id)
-  let ask = ''
-  if (state === 'needs') {
-    const tail = permissionTail(view.pane.id)
-    ask = needsAsk(parsePermissionDetail(tail), permissionPromptText(tail))
-  }
+  const ask = waitingAsk(view.pane.id, state)
   const line = sessionLine({ state, ask, recap: note.recap, tool: note.tool, plan: note.plan, changed: view.info.changes?.files ?? null, agents: view.info.ops?.running.length ?? 0 })
   const time = sessionTime(state, stateSince(view.pane.id, state, app.now), app.now)
   const tooltip = [sessionLabel(view), view.branch ? `Branch ${view.branch}` : '', view.tag ? tagTooltip(view.tag, view.tagAuto) : '', line].filter(Boolean).join('\n')
