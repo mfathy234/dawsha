@@ -46,6 +46,8 @@ export interface ChatHost {
   notify(title: string, body: string): void
   /** The plan's progress ("3 of 7"), or empty when there is none, for the sidebar. */
   plan(label: string): void
+  /** The usage limit started or stopped the session, so the pane header can say so at once. */
+  limitChanged?(): void
 }
 
 export interface ChatInput {
@@ -272,7 +274,9 @@ export class PaneChat {
     this.renderedSnapshot = snapshot
     this.renderKey = key
     this.host.plan(this.planBar.update(latestTodos(snapshot.items)))
+    const limitFlipped = (this.phase === 'limit') !== (phase === 'limit')
     this.phase = phase
+    if (limitFlipped) this.host.limitChanged?.()
     const wasNear = this.nearBottom()
     this.thread.render(snapshot, {
       agentName: AGENT_NAMES[input.agent],

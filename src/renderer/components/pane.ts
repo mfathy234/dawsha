@@ -200,7 +200,8 @@ export class PaneComponent {
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
     this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, content, this.permission, this.foot)
-    this.chat = new PaneChat(chatHostFor(paneId, () => this.current), this.permission)
+    // The chat can learn of a usage limit after the pane last rendered, so it tells the pane to update its pill.
+    this.chat = new PaneChat({ ...chatHostFor(paneId, () => this.current), limitChanged: () => this.chatShown && this.showLimitState() }, this.permission)
     this.body.append(this.chat.el)
     this.watchFileDrops()
     // Header buttons (menu, details, maximize, close) act on this pane without making it the focused one,
@@ -326,7 +327,7 @@ export class PaneComponent {
   private updateChat(view: PaneView, state: SessionState, asking: boolean): void {
     const shown = syncPaneChat(this.paneId, view, state, asking, this.viewSwitch, this.chat)
     this.body.classList.toggle('chat-on', shown)
-    if (shown && this.chat.limitReached) this.stateHost.querySelector('.state-pill-text')?.replaceChildren(LIMIT_PANE_STATE)
+    if (shown && this.chat.limitReached) this.showLimitState()
     this.el.classList.toggle('has-view-switch', chatCapable(view.agent))
     if (!this.chat.holdsPermission && this.permission.parentElement !== this.el) this.el.insertBefore(this.permission, this.foot)
     if (shown !== this.chatShown) {
@@ -334,6 +335,10 @@ export class PaneComponent {
       if (shown) this.chat.focusComposer()
       else getTerminal(view.primaryTabId)?.focus()
     }
+  }
+
+  private showLimitState(): void {
+    if (this.chat.limitReached) this.stateHost.querySelector('.state-pill-text')?.replaceChildren(LIMIT_PANE_STATE)
   }
 
   private approvalChildren(view: PaneView, detail: PermissionDetail, prompt: string, project: string): HTMLElement[] {
