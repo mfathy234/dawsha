@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dawsha 1.8.6 mockups</title>
+<style>
+/* Tokens copied from src/renderer/styles.css (default dark, 1.8.5 charcoal). */
+:root {
+  --font-ui: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+  --fs-1: 12px; --fs-2: 13px; --fs-3: 14px; --fs-4: 20px;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 48px;
+  --r-micro: 4px; --r-control: 8px; --r-card: 12px;
+  --h-sm: 24px; --h-md: 28px; --h-lg: 32px;
+  --bg: #121419; --chrome: #16191f; --surface: #1b1f26; --raised: #20252d; --surface-pop: #272d37; --well: #0f1115;
+  --border: #232833;
+  --text: #e8ebf1; --text-2: #aab3c3; --text-3: #8c96a8;
+  --accent: #34d399; --on-accent: #04261b; --accent-ink: #4ade9f;
+  --st-working: #72b4ff; --st-needs: #ffa54f; --danger: #ff8080; --danger-fill: #d6393f;
+  --term-add: #4ade9f; --term-del: #ff8f8f; --term-warn: #f5b54a;
+  --hover: color-mix(in srgb, var(--text) 7%, transparent);
+  --press: color-mix(in srgb, var(--text) 12%, transparent);
+  --sel-ring: 0 0 0 1px rgb(255 255 255 / .12);
+  --e2: 0 8px 24px rgb(0 0 0 / .45), 0 0 0 1px rgb(255 255 255 / .18);
+  --e3: 0 24px 64px rgb(0 0 0 / .6), 0 0 0 1px rgb(255 255 255 / .18);
+  --scrim: rgb(5 7 10 / .62);
+  --ag-claude-bg: #d97757; --ag-claude-fg: #1d0f09;
+  --ag-codex-bg: #cfd5e1; --ag-codex-fg: #11151c;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: var(--fs-2)/20px var(--font-ui); }
+button { font: inherit; }
+code, .mono { font-family: var(--font-mono); }
+
+/* ---------- page shell for the mockups (not app UI) ---------- */
+.doc { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
+.toc { position: sticky; top: 0; height: 100vh; overflow: auto; padding: var(--sp-6) var(--sp-4); background: var(--bg); border-inline-end: 1px solid var(--border); }
+.toc h1 { margin: 0 0 var(--sp-1); font-size: var(--fs-3); font-weight: 500; }
+.toc p { margin: 0 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-1); }
+.toc h2 { margin: var(--sp-4) 0 var(--sp-1); color: var(--text-3); font-size: var(--fs-1); font-weight: 400; }
+.toc a { display: block; padding: 4px var(--sp-2); margin-inline: calc(var(--sp-2) * -1); border-radius: var(--r-control); color: var(--text-2); text-decoration: none; }
+.toc a:hover { background: var(--hover); color: var(--text); }
+main { padding: var(--sp-7) var(--sp-8) 120px; max-width: 1240px; }
+section.mock { padding-bottom: var(--sp-8); margin-bottom: var(--sp-8); border-bottom: 1px solid var(--border); }
+section.mock > h2 { margin: 0; font-size: var(--fs-4); font-weight: 500; line-height: 28px; }
+.lede { margin: var(--sp-2) 0 var(--sp-5); max-width: 720px; color: var(--text-2); font-size: var(--fs-3); line-height: 22px; }
+.row { display: flex; flex-wrap: wrap; gap: var(--sp-6); align-items: flex-start; }
+.cap { margin: var(--sp-2) 0 0; color: var(--text-3); font-size: var(--fs-1); max-width: 520px; }
+.notes { margin: var(--sp-5) 0 0; padding-inline-start: 18px; color: var(--text-2); max-width: 760px; }
+.notes li + li { margin-top: 4px; }
+.notes b { color: var(--text); font-weight: 500; }
+.q { color: var(--term-warn); }
+
+/* ---------- pane (from grid.css / chat.css) ---------- */
+.pane { width: 640px; max-width: 100%; border-radius: var(--r-card); overflow: hidden; background: var(--surface); box-shadow: 0 0 0 1px rgb(255 255 255 / .06); display: flex; flex-direction: column; }
+.pane.narrow { width: 520px; }
+.pane-header { display: flex; align-items: center; gap: var(--sp-2); height: 40px; padding: 0 var(--sp-2) 0 var(--sp-3); background: var(--raised); flex: none; }
+.mark { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; font: 600 11px var(--font-ui); flex: none; }
+.mark.claude { background: var(--ag-claude-bg); color: var(--ag-claude-fg); }
+.mark.codex { background: var(--ag-codex-bg); color: var(--ag-codex-fg); }
+.pane-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pane-project { color: var(--text-3); white-space: nowrap; }
+.state { color: var(--text-2); font-size: var(--fs-1); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+.dot.working { background: var(--st-working); } .dot.done { background: var(--accent); } .dot.needs { background: var(--st-needs); }
+.spacer { flex: 1; }
+.seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--r-card); background: var(--hover); }
+.seg button { height: var(--h-sm); padding: 0 10px; border: 0; border-radius: var(--r-control); background: transparent; color: var(--text-2); }
+.seg button.on { background: var(--surface-pop); box-shadow: var(--sel-ring); color: var(--text); font-weight: 500; }
+.chat { background: var(--well); display: flex; flex-direction: column; min-height: 0; position: relative; }
+.chat-thread { display: flex; flex-direction: column; gap: var(--sp-3); max-width: 720px; padding: var(--sp-5) var(--sp-6) var(--sp-4); }
+.you { align-self: flex-end; max-width: 76%; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-card); background: var(--raised); overflow-wrap: anywhere; }
+.you-wrap { align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; max-width: 76%; }
+.you-wrap .you { max-width: 100%; }
+.msg-acts { display: flex; gap: var(--sp-3); color: var(--text-3); font-size: var(--fs-1); }
+.msg-acts button { padding: 0; border: 0; background: none; color: var(--text-2); cursor: pointer; }
+.msg-acts button:hover { color: var(--text); }
+.say { font-size: var(--fs-3); line-height: 22px; }
+.say p { margin: 0; }
+.say p + p { margin-top: var(--sp-2); }
+.say code, .chat code { padding: 1px var(--sp-1); border-radius: var(--r-micro); background: var(--hover); font-size: 12.5px; }
+.tool { display: flex; align-items: center; gap: var(--sp-2); height: 26px; color: var(--text-2); white-space: nowrap; }
+.tool .ic { width: 16px; color: var(--text-3); text-align: center; }
+.tool .n { font: var(--fs-1) var(--font-mono); }
+.chat .tool code { padding: 0; background: none; font-size: var(--fs-1); color: var(--text); }
+.add { color: var(--term-add); } .del { color: var(--term-del); }
+.quiet { color: var(--text-3); font-size: var(--fs-1); }
+.turn-time { color: var(--text-3); font-size: var(--fs-1); }
+
+/* summary card */
+.summary { align-self: flex-start; width: 76%; display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-card); background: var(--raised); }
+.summary.wide { width: 100%; }
+.sum-head, .sum-file { display: flex; align-items: center; gap: var(--sp-2); }
+.sum-file { padding: 2px 4px; margin-inline: -4px; border-radius: var(--r-control); cursor: pointer; }
+.sum-file:hover { background: var(--hover); }
+.sum-file .chev { width: 12px; color: var(--text-3); font-size: 10px; }
+.sum-file b { font-weight: 400; font-family: var(--font-mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sum-file .n { font: var(--fs-1) var(--font-mono); }
+.sum-acts { display: flex; gap: var(--sp-3); margin-top: var(--sp-1); }
+.diff { margin: 2px 0 var(--sp-2) 0; border-radius: var(--r-control); background: var(--well); font: 12px/18px var(--font-mono); overflow: hidden; }
+.diff .ln { display: grid; grid-template-columns: 36px 36px 14px minmax(0, 1fr); white-space: pre; }
+.diff .ln span:nth-child(-n+2) { color: var(--text-3); text-align: end; padding-inline-end: 8px; }
+.diff .ln.a { background: color-mix(in srgb, var(--term-add) 12%, transparent); }
+.diff .ln.d { background: color-mix(in srgb, var(--term-del) 12%, transparent); }
+.diff .ln.a span:nth-child(3) { color: var(--term-add); } .diff .ln.d span:nth-child(3) { color: var(--term-del); }
+.diff .hunk { padding: 2px 8px; color: var(--text-3); background: var(--hover); }
+.diff-foot { display: flex; justify-content: space-between; padding: 4px 8px; color: var(--text-3); font: var(--fs-1) var(--font-ui); }
+
+/* buttons */
+.tbtn { padding: 0; border: 0; background: none; color: var(--text-2); cursor: pointer; }
+.tbtn:hover { color: var(--text); }
+.tbtn.ink { color: var(--accent-ink); }
+.btn { height: var(--h-md); padding: 0 var(--sp-3); border: 0; border-radius: var(--r-control); background: var(--hover); color: var(--text); cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--press); }
+.btn.primary { background: var(--accent); color: var(--on-accent); font-weight: 500; }
+.btn.danger { background: var(--danger-fill); color: #fff; font-weight: 500; }
+.btn.sm { height: var(--h-sm); padding: 0 10px; font-size: var(--fs-1); }
+
+/* composer */
+.composer { padding: 0 var(--sp-6) var(--sp-4); }
+.composer-note { display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 var(--sp-2); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-card); background: var(--surface); }
+.composer-note .grow { flex: 1; color: var(--text-2); }
+.composer-note b { color: var(--text); font-weight: 500; }
+.box { display: flex; flex-direction: column; gap: 6px; padding: var(--sp-2) 10px; border-radius: var(--r-card); background: var(--raised); }
+.box-input { min-height: 22px; line-height: 22px; color: var(--text); }
+.box-input.ph { color: var(--text-3); }
+.box-bar { display: flex; align-items: center; gap: var(--sp-3); color: var(--text-3); font-size: var(--fs-1); }
+.box-bar .pick { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 6px; margin-inline-start: -6px; border-radius: 6px; color: var(--text-2); cursor: pointer; }
+.box-bar .pick:hover, .box-bar .pick.open { background: var(--hover); color: var(--text); }
+.box-bar .caret { font-size: 11px; color: var(--text-3); }
+.send { width: 26px; height: 26px; border-radius: 8px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-weight: 700; }
+.ctx { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 6px; border-radius: 6px; cursor: pointer; }
+.ctx:hover, .ctx.open { background: var(--hover); color: var(--text); }
+.ctx .bar { width: 36px; height: 4px; border-radius: 2px; background: var(--hover); overflow: hidden; }
+.ctx .bar i { display: block; height: 100%; background: var(--text-3); }
+.ctx.warn { color: var(--term-warn); }
+.ctx.warn .bar i { background: var(--term-warn); }
+
+/* popovers & menus (selectMenu / contextMenu look) */
+.pop { position: absolute; z-index: 5; min-width: 220px; padding: 4px; border-radius: var(--r-card); background: var(--surface-pop); box-shadow: var(--e2); }
+.pop-h { padding: 6px 10px 4px; color: var(--text-3); font-size: var(--fs-1); }
+.mi { display: flex; align-items: center; gap: var(--sp-2); height: 30px; padding: 0 10px; border-radius: var(--r-control); color: var(--text); cursor: pointer; }
+.mi:hover { background: var(--hover); }
+.mi.sel { background: var(--press); }
+.mi .sub { color: var(--text-3); font-size: var(--fs-1); }
+.mi .kbd { margin-inline-start: auto; color: var(--text-3); font-size: var(--fs-1); }
+.mi .check { margin-inline-start: auto; color: var(--text-2); }
+.sep { height: 1px; margin: 4px 6px; background: var(--border); }
+.utabs { display: flex; gap: var(--sp-3); padding: 2px 10px 6px; }
+.utabs span { padding: 4px 0; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }
+.utabs span.on { color: var(--text); border-bottom-color: var(--accent); }
+.pop-foot { padding: 6px 10px; color: var(--text-3); font-size: var(--fs-1); }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px var(--sp-4); padding: 4px 10px 8px; }
+.kv span:nth-child(even) { text-align: end; font-variant-numeric: tabular-nums; color: var(--text); }
+.kv span:nth-child(odd) { color: var(--text-2); }
+.meter { height: 6px; margin: 4px 10px 8px; border-radius: 3px; background: var(--hover); display: flex; overflow: hidden; }
+.meter i { display: block; height: 100%; }
+
+/* rewound turns */
+.undone { opacity: .45; }
+.rewind-mark { display: flex; align-items: center; gap: var(--sp-3); color: var(--text-2); font-size: var(--fs-1); }
+.rewind-mark::before, .rewind-mark::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* inline edit of a sent message */
+.edit-box { align-self: stretch; margin-inline-start: 18%; display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-card); background: var(--raised); }
+.edit-box .txt { line-height: 22px; }
+.edit-box .caret-line { display: inline-block; width: 1px; height: 16px; margin-inline-start: 1px; vertical-align: -3px; background: var(--text); }
+.edit-foot { display: flex; align-items: center; gap: var(--sp-2); }
+.edit-foot .grow { flex: 1; color: var(--text-3); font-size: var(--fs-1); }
+
+/* dialog (dialogs.ts look) */
+.dialog-stage { position: relative; padding: var(--sp-6); border-radius: var(--r-card); background: var(--scrim); }
+.dialog { width: 460px; max-width: 100%; padding: var(--sp-5); border-radius: 14px; background: var(--surface-pop); box-shadow: var(--e3); }
+.dialog h3 { margin: 0 0 var(--sp-2); font-size: 15px; font-weight: 500; line-height: 22px; }
+.dialog p { margin: 0 0 var(--sp-3); color: var(--text-2); }
+.dialog .list { margin: 0 0 var(--sp-4); padding: 6px 0; border-radius: var(--r-control); background: var(--well); }
+.dialog .li { display: flex; align-items: center; gap: var(--sp-2); padding: 3px var(--sp-3); font: 12.5px/20px var(--font-mono); }
+.dialog .li .grow { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dialog .li .tag { font: var(--fs-1) var(--font-ui); color: var(--text-3); }
+.dialog .li input { margin: 0; accent-color: var(--accent); }
+.dialog .acts { display: flex; justify-content: flex-end; gap: var(--sp-2); }
+.dialog .opt { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-4); color: var(--text-2); }
+.dialog .opt input { accent-color: var(--accent); }
+
+/* pages (Work / Usage) */
+.page { width: 760px; max-width: 100%; padding: var(--sp-6); border-radius: var(--r-card); background: var(--bg); box-shadow: 0 0 0 1px rgb(255 255 255 / .06); }
+.page-h { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.page-h h3 { margin: 0; font-size: var(--fs-4); font-weight: 500; }
+.ptabs { display: flex; gap: var(--sp-5); margin-bottom: var(--sp-4); border-bottom: 1px solid var(--border); }
+.ptabs span { padding: 6px 0; color: var(--text-2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.ptabs span.on { color: var(--text); border-bottom-color: var(--accent); }
+.sched { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-2); border-radius: var(--r-control); }
+.sched:hover { background: var(--hover); }
+.sched .main { flex: 1; min-width: 0; }
+.sched .main b { font-weight: 500; }
+.sched .meta { color: var(--text-2); font-size: var(--fs-1); }
+.runs { margin: 0 0 var(--sp-3) 30px; }
+.run { display: grid; grid-template-columns: 130px 92px 64px 64px minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); height: 32px; padding: 0 var(--sp-2); border-radius: var(--r-control); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.run:hover { background: var(--hover); }
+.run .st { display: inline-flex; align-items: center; gap: 6px; }
+.run .st.ok { color: var(--text); }
+.run .st.fail { color: var(--danger); }
+.run .st.skip { color: var(--term-warn); }
+.run .why { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }
+.notice { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 14px; margin-bottom: var(--sp-3); border-radius: var(--r-card); background: var(--surface); }
+.notice .grow { flex: 1; color: var(--text-2); }
+.notice b { color: var(--text); font-weight: 500; }
+.qitem { display: flex; align-items: center; gap: var(--sp-3); height: 36px; padding: 0 var(--sp-2); border-radius: var(--r-control); color: var(--text-2); }
+.qitem .n { width: 18px; color: var(--text-3); font: var(--fs-1) var(--font-mono); }
+.qitem .grow { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qitem.wait .grow { color: var(--text-2); }
+
+/* usage */
+.uhead { display: flex; align-items: baseline; gap: var(--sp-2); margin-bottom: var(--sp-4); color: var(--text-2); }
+.uhead .big { color: var(--text); font-size: 28px; line-height: 32px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.utable { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.utable th { text-align: start; color: var(--text-3); font-weight: 400; font-size: var(--fs-1); padding: 4px 8px; }
+.utable td { padding: 6px 8px; border-top: 1px solid var(--border); }
+.utable td.r, .utable th.r { text-align: end; }
+.field { display: grid; gap: 4px; margin-bottom: var(--sp-3); }
+.field label { color: var(--text-2); font-size: var(--fs-1); }
+.selbox { display: flex; align-items: center; justify-content: space-between; height: var(--h-lg); padding: 0 10px; border-radius: var(--r-control); background: var(--well); box-shadow: inset 0 1px 3px rgb(0 0 0 / .4), 0 0 0 1px rgb(255 255 255 / .28); }
+
+/* phone */
+.phone { width: 330px; height: 640px; padding: 10px; border-radius: 38px; background: #050608; box-shadow: 0 0 0 1px rgb(255 255 255 / .1); }
+.phone-in { display: flex; flex-direction: column; height: 100%; border-radius: 30px; overflow: hidden; background: var(--well); }
+.ph-top { display: flex; align-items: center; gap: var(--sp-2); padding: 34px var(--sp-3) var(--sp-2); background: var(--raised); }
+.ph-top .back { color: var(--text-2); font-size: 18px; }
+.ph-tabs { display: flex; gap: var(--sp-4); padding: 0 var(--sp-3); background: var(--raised); }
+.ph-tabs span { padding: 6px 0; color: var(--text-2); border-bottom: 2px solid transparent; font-size: var(--fs-1); }
+.ph-tabs span.on { color: var(--text); border-bottom-color: var(--accent); }
+.ph-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3); }
+.ph-body .you { max-width: 86%; }
+.ph-body .say { font-size: var(--fs-2); line-height: 20px; }
+.ph-comp { padding: var(--sp-2) var(--sp-3) var(--sp-4); }
+.ph-comp .box { flex-direction: row; align-items: center; }
+.ph-comp .box-input { flex: 1; }
+.perm-note { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-card); background: var(--surface); color: var(--text-2); font-size: var(--fs-1); }
+
+.txtarea { min-height: 66px; padding: 8px 10px; border-radius: var(--r-control); background: var(--well); box-shadow: inset 0 1px 3px rgb(0 0 0 / .4), 0 0 0 1px rgb(255 255 255 / .28); line-height: 20px; }
+.txtarea code { padding: 1px 4px; border-radius: 4px; background: var(--hover); font-size: 12px; }
+.review { align-self: stretch; display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-card); background: var(--surface); }
+.finding { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.f-main { flex: 1; display: grid; gap: 2px; color: var(--text); }
+.f-sev { color: var(--text-2); font-size: var(--fs-1); }
+.f-sev.hi { color: var(--danger); }
+.checks { display: grid; gap: 2px; margin-top: var(--sp-1); padding-top: var(--sp-2); border-top: 1px solid var(--border); }
+.check-row { display: flex; align-items: center; gap: var(--sp-2); height: 24px; font-size: 12.5px; }
+.fail-t { color: var(--danger); font-size: var(--fs-1); }
+.check-out { margin: 2px 0 4px; padding: 6px 10px; border-radius: var(--r-control); background: var(--well); color: var(--text-2); font: 12px/18px var(--font-mono); }
+.chat-notice { display: grid; gap: var(--sp-2); padding: var(--sp-3) 14px; border-radius: var(--r-card); background: var(--surface); }
+.chat-notice b { font-weight: 500; }
+.chat-notice .muted { color: var(--text-2); }
+.chat-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.utable td.dim { color: var(--text-2); }
+.t-proj { margin: var(--sp-4) 0 var(--sp-1); padding: 0 var(--sp-2); color: var(--text-3); font-size: var(--fs-1); }
+
+.commit-box { display: grid; gap: var(--sp-2); margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--border); }
+.plan-bar { display: flex; align-items: center; gap: var(--sp-3); height: 34px; padding: 0 var(--sp-6); background: var(--surface); color: var(--text-2); font-size: var(--fs-1); cursor: pointer; }
+.plan-bar:hover { color: var(--text); }
+.plan-bar .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: var(--fs-2); }
+.plan-n { font-variant-numeric: tabular-nums; }
+.plan-prog { width: 48px; height: 4px; border-radius: 2px; background: var(--hover); overflow: hidden; }
+.plan-prog i { display: block; height: 100%; background: var(--accent); }
+.plan-bar .caret { color: var(--text-3); }
+.plan-list { list-style: none; margin: 0; padding: var(--sp-2) var(--sp-6) var(--sp-3); background: var(--surface); display: grid; gap: 2px; }
+.plan-list li { color: var(--text-2); }
+.plan-list li.done { color: var(--text-3); }
+.plan-list li.now { color: var(--text); }
+.mk-tools { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.mk-canvas { padding: var(--sp-3); border-radius: var(--r-control); background: var(--well); }
+.shot { position: relative; height: 230px; border-radius: 6px; background: #f4f6f9; overflow: hidden; }
+.shot-bar { height: 28px; background: #e3e7ee; }
+.shot-row { display: flex; gap: 12px; margin: 18px 20px 0; }
+.shot-row span { height: 12px; flex: 1; border-radius: 3px; background: #d5dbe5; }
+.shot-row span.short { flex: .4; }
+.shot-btns { position: absolute; right: 20px; bottom: 22px; display: flex; gap: 8px; }
+.shot-btns i { width: 76px; height: 26px; border-radius: 6px; background: #d5dbe5; }
+.shot-btns i.p { background: #3b6fe0; margin-left: -40px; opacity: .9; }
+.mk-box { position: absolute; right: 12px; bottom: 14px; width: 132px; height: 42px; border: 2px solid #e5484d; border-radius: 4px; }
+.mk-note { position: absolute; right: 152px; bottom: 26px; padding: 3px 8px; border-radius: 4px; background: #e5484d; color: #fff; font-size: 12px; }
+
+.sb-now { width: 250px; height: 640px; overflow: hidden; border-radius: var(--r-card); box-shadow: 0 0 0 1px rgb(255 255 255 / .06); }
+.sb-now img { display: block; margin: -50px 0 0 0; width: 1600px; max-width: none; }
+.sb { width: 272px; height: 640px; display: flex; flex-direction: column; padding: var(--sp-3) var(--sp-2); border-radius: var(--r-card); background: var(--chrome); box-shadow: 0 0 0 1px rgb(255 255 255 / .06); overflow: hidden; }
+.sb-head { display: flex; align-items: center; gap: 4px; padding: 0 2px var(--sp-2); }
+.sb-find { flex: 1; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; border-radius: var(--r-control); background: var(--hover); color: var(--text-3); }
+.sb-find .ph { flex: 1; }
+.sb-ic { width: 28px; height: 28px; border: 0; border-radius: var(--r-control); background: none; color: var(--text-2); cursor: pointer; }
+.sb-ic:hover { background: var(--hover); color: var(--text); }
+.sb-ic.sm { width: 22px; height: 22px; font-size: 12px; }
+.sb-sec { display: flex; align-items: center; gap: 6px; height: 28px; margin-top: var(--sp-2); padding: 0 8px; color: var(--text-3); font-size: var(--fs-1); }
+.sb-sec.needs { color: var(--st-needs); }
+.sb-sec .cnt { font-variant-numeric: tabular-nums; }
+.sb-proj { display: flex; align-items: center; gap: 6px; height: 30px; margin-top: 6px; padding: 0 8px; border-radius: var(--r-control); color: var(--text); font-weight: 500; cursor: pointer; }
+.sb-proj:hover { background: var(--hover); }
+.sb-proj .chev { width: 10px; color: var(--text-3); font-size: 10px; }
+.sb-proj.quiet-p .pname { color: var(--text-2); font-weight: 400; }
+.pdots { display: inline-flex; gap: 3px; }
+.pdots i { width: 6px; height: 6px; border-radius: 50%; }
+.pdots i.w { background: var(--st-working); } .pdots i.n { background: var(--st-needs); } .pdots i.d { background: var(--accent); }
+.sb-row { display: flex; align-items: flex-start; gap: 10px; padding: 6px 8px 6px 24px; border-radius: var(--r-control); cursor: pointer; }
+.sb-row .mark { margin-top: 1px; }
+.sb-sec.needs + .sb-row { padding-inline-start: 8px; }
+.sb-row:hover, .sb-row.hover { background: var(--hover); }
+.sb-row.sel { background: var(--press); }
+.sb-row.dimmed { opacity: .5; }
+.sb-txt { flex: 1; min-width: 0; }
+.sb-txt .l1 { color: var(--text); line-height: 18px; overflow-wrap: anywhere; }
+.sb-txt .l2 { color: var(--text-2); font-size: var(--fs-1); line-height: 16px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.needs-t { color: var(--st-needs); }
+.done-t { color: var(--accent-ink); }
+.spin { color: var(--st-working); }
+.sb-time { flex: none; color: var(--text-3); font-size: var(--fs-1); font-variant-numeric: tabular-nums; line-height: 18px; }
+.sb-acts { display: inline-flex; gap: 0; margin: -2px -4px 0 0; }
+.sb-closed { padding: 4px 8px 4px 24px; color: var(--text-3); font-size: var(--fs-1); cursor: pointer; }
+.sb-closed:hover { color: var(--text-2); }
+.sb-foot { display: flex; align-items: center; margin-top: auto; padding: var(--sp-2) 8px 0; border-top: 1px solid var(--border); }
+
+@media (max-width: 900px) {
+  .doc { grid-template-columns: 1fr; }
+  .toc { position: static; height: auto; }
+  main { padding: var(--sp-5) var(--sp-4) 80px; }
+}
+</style>
+</head>
+<body>
+<div class="doc">
+<nav class="toc" aria-label="Mockups">
+  <h1>Dawsha 1.8.6</h1>
+  <p>Mockups, default dark theme. Static, nothing here is wired.</p>
+  <h2>Chat</h2>
+  <a href="#rewind">1. Rewind to any turn</a>
+  <a href="#edit">2. Edit and send again</a>
+  <a href="#context">3. Context meter</a>
+  <a href="#model">4. Model and effort</a>
+  <a href="#diffs">5. Diffs in the summary</a>
+  <h2>Approved</h2>
+  <a href="#worktrees">6. Clean up worktrees</a>
+  <a href="#phone">7. Chat on your phone</a>
+  <a href="#export">8. Export usage</a>
+  <h2>New, to approve</h2>
+  <a href="#fork">9. Try another way</a>
+  <a href="#second">10. Second opinion</a>
+  <a href="#checks">11. Checks after each reply</a>
+  <a href="#limit">12. Limit reached, keep going</a>
+  <a href="#perms">13. Permissions</a>
+  <a href="#today">14. Today</a>
+  <a href="#commit">15. Commit this reply</a>
+  <a href="#plan">16. The plan stays in view</a>
+  <a href="#sidebar">17. A roomier sidebar</a>
+  <h2>Decide</h2>
+  <a href="#questions">Open questions</a>
+</nav>
+
+<main>
+
+<!-- ============ 1. REWIND ============ -->
+<section class="mock" id="rewind">
+  <h2>1. Rewind to any turn</h2>
+  <p class="lede">Undo in 1.8.5 only covers the last reply. Every message already has a snapshot, so hovering any message you sent shows <b>Rewind to here</b>. It puts the project back to just before that message, after a confirm that lists the files.</p>
+  <div class="row">
+    <div>
+      <div class="pane">
+        <div class="pane-header">
+          <span class="mark claude">C</span><span class="pane-title">Upload retries</span><span class="pane-project">api-gateway</span>
+          <span class="state"><span class="dot done"></span>Done</span><span class="spacer"></span>
+          <div class="seg"><button>Terminal</button><button class="on">Chat</button></div>
+        </div>
+        <div class="chat"><div class="chat-thread">
+          <div class="you-wrap">
+            <div class="you">Add retry with backoff to the upload client</div>
+            <div class="msg-acts"><span>10:42</span><button>Edit</button><button>Rewind to here</button><button>Copy</button></div>
+          </div>
+          <div class="tool"><span class="ic">✎</span>Edited <code>src/upload/client.ts</code><span class="n add">+38</span><span class="n del">−6</span></div>
+          <div class="say"><p>Uploads now retry up to 3 times with exponential backoff.</p></div>
+          <div class="you">Also log each retry with the attempt number</div>
+          <div class="tool"><span class="ic">✎</span>Edited 2 files<span class="n add">+12</span><span class="n del">−1</span></div>
+          <div class="say"><p>Each retry logs <code>upload.retry</code> with <code>attempt</code> and <code>delayMs</code>.</p></div>
+          <div class="you">Write tests for it</div>
+          <div class="tool"><span class="ic">+</span>Created <code>tests/upload/retry.test.ts</code><span class="n add">+64</span></div>
+          <div class="say"><p>Added 4 tests. All pass.</p></div>
+        </div></div>
+      </div>
+      <p class="cap">Hovering a sent message shows quiet text actions under it, like the time and copy buttons today. No new chrome.</p>
+    </div>
+
+    <div>
+      <div class="dialog-stage">
+        <div class="dialog" role="dialog">
+          <h3>Rewind to before “Add retry with backoff to the upload client”?</h3>
+          <p>These 4 files go back to how they were at 10:42. Files you changed yourself after that are left alone.</p>
+          <div class="list">
+            <div class="li"><span class="grow">src/upload/client.ts</span><span class="add">+50</span><span class="del">−7</span></div>
+            <div class="li"><span class="grow">src/upload/log.ts</span><span class="add">+4</span><span class="del">−0</span></div>
+            <div class="li"><span class="grow">src/upload/index.ts</span><span class="add">+1</span><span class="del">−0</span></div>
+            <div class="li"><span class="grow">tests/upload/retry.test.ts</span><span class="tag">new, will be deleted</span></div>
+          </div>
+          <div class="acts"><button class="btn">Cancel</button><button class="btn primary">Put back 4 files</button></div>
+        </div>
+      </div>
+      <p class="cap">The confirm names the message and every file. The button gives the count.</p>
+    </div>
+
+    <div>
+      <div class="pane narrow">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Upload retries</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span></div>
+        <div class="chat"><div class="chat-thread">
+          <div class="rewind-mark">Rewound to 10:42 · 4 files put back · <button class="tbtn ink">Redo</button></div>
+          <div class="you undone">Add retry with backoff to the upload client</div>
+          <div class="say undone"><p>Uploads now retry up to 3 times with exponential backoff.</p></div>
+          <div class="you undone">Write tests for it</div>
+          <div class="say undone"><p>Added 4 tests. All pass.</p></div>
+        </div>
+        <div class="composer"><div class="box"><div class="box-input ph">Tell Claude what to do instead…</div></div></div></div>
+      </div>
+      <p class="cap">Afterwards the later turns stay readable but dimmed, under one line with Redo.</p>
+    </div>
+  </div>
+  <ul class="notes">
+    <li><b>Files only.</b> Like Undo, this does not touch the branch, staged files or edits made outside the agent.</li>
+    <li>If a file changed after the snapshot outside the agent, it is left out and listed under it as “changed since, kept”.</li>
+    <li class="q">Open: should rewinding also rewind Claude's conversation (its own <code>/rewind</code>)? See open questions.</li>
+  </ul>
+</section>
+
+<!-- ============ 2. EDIT ============ -->
+<section class="mock" id="edit">
+  <h2>2. Edit an earlier message and send it again</h2>
+  <p class="lede"><b>Edit</b> turns your bubble into a text box in place. Sending rewinds the files to that message's snapshot first, then sends the new text. One step instead of rewind plus retype.</p>
+  <div class="row">
+    <div>
+      <div class="pane">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Upload retries</span><span class="pane-project">api-gateway</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span>
+          <div class="seg"><button>Terminal</button><button class="on">Chat</button></div></div>
+        <div class="chat"><div class="chat-thread">
+          <div class="edit-box">
+            <div class="txt">Add retry with backoff to the upload client, but cap the total wait at 10 seconds and skip retries on 4xx<span class="caret-line"></span></div>
+            <div class="edit-foot">
+              <span class="grow">Puts back 4 files this and later replies changed, then sends</span>
+              <button class="btn sm">Cancel</button><button class="btn sm primary">Send</button>
+            </div>
+          </div>
+          <div class="tool undone"><span class="ic">✎</span>Edited <code>src/upload/client.ts</code><span class="n add">+38</span><span class="n del">−6</span></div>
+          <div class="say undone"><p>Uploads now retry up to 3 times with exponential backoff.</p></div>
+          <div class="you undone">Also log each retry with the attempt number</div>
+        </div></div>
+      </div>
+      <p class="cap">Later turns dim while you edit, so you can see what will be replaced. Esc cancels; Ctrl+Enter sends.</p>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>Nothing goes to the agent until Send. The file list behind “4 files” is the same list the rewind confirm shows, available on hover.</li>
+    <li>If the agent is working, Edit is disabled with the tooltip “Stop the agent first”.</li>
+  </ul>
+</section>
+
+<!-- ============ 3. CONTEXT ============ -->
+<section class="mock" id="context">
+  <h2>3. Context meter</h2>
+  <p class="lede">The bar under the chat box shows how full the context window is. Click it for a breakdown. Past 85% a quiet note offers <b>Compact now</b>, so the agent doesn't auto-compact in the middle of a task.</p>
+  <div class="row">
+    <div>
+      <div class="pane">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Billing refactor</span><span class="pane-project">web-app</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span></div>
+        <div class="chat" style="min-height: 330px; justify-content: flex-end;">
+          <div class="chat-thread"><div class="say"><p>Moved invoice totals into <code>billing/totals.ts</code> and updated 9 callers.</p></div></div>
+          <div class="composer">
+            <div class="box">
+              <div class="box-input ph">Message Claude…</div>
+              <div class="box-bar">
+                <span class="pick">Opus 5.5 · medium <span class="caret">▾</span></span>
+                <span class="spacer"></span>
+                <span class="ctx open"><span class="bar"><i style="width: 62%"></i></span>62%</span>
+                <span class="send">↑</span>
+              </div>
+            </div>
+          </div>
+          <div class="pop" style="right: 64px; bottom: 74px; width: 270px;">
+            <div class="pop-h">Context · 124k of 200k tokens</div>
+            <div class="meter"><i style="width: 9%; background: #8c96a8"></i><i style="width: 14%; background: #72b4ff"></i><i style="width: 39%; background: #34d399"></i></div>
+            <div class="kv">
+              <span>System and tools</span><span>18k</span>
+              <span>Files read</span><span>28k</span>
+              <span>Conversation</span><span>78k</span>
+              <span>Free</span><span>76k</span>
+            </div>
+            <div class="sep"></div>
+            <div class="mi">Compact now<span class="kbd">/compact</span></div>
+            <div class="mi">Clear and start fresh<span class="kbd">/clear</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">At rest it is grey and small. The popover reuses the selectMenu look; the commands are shown as quiet grey text.</p>
+    </div>
+
+    <div>
+      <div class="pane narrow">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Billing refactor</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span></div>
+        <div class="chat" style="min-height: 330px; justify-content: flex-end;">
+          <div class="composer">
+            <div class="composer-note"><span class="grow"><b>Context is 88% full.</b> Compact now so Claude doesn't do it in the middle of the next task.</span><button class="btn sm">Not now</button><button class="btn sm primary">Compact</button></div>
+            <div class="box">
+              <div class="box-input ph">Message Claude…</div>
+              <div class="box-bar"><span class="pick">Opus 5.5 · medium <span class="caret">▾</span></span><span class="spacer"></span><span class="ctx warn"><span class="bar"><i style="width: 88%"></i></span>88%</span><span class="send">↑</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">One note, shown once per session at 85%. Not now hides it until the next compact.</p>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>Claude reports usage per turn in its log. Codex reports it in its rollout. Gemini shows no meter.</li>
+    <li class="q">Open: the breakdown needs per-category counts. If the log only gives a total, the popover shows the total and the two actions.</li>
+  </ul>
+</section>
+
+<!-- ============ 4. MODEL ============ -->
+<section class="mock" id="model">
+  <h2>4. Model and effort in the chat box</h2>
+  <p class="lede">The bottom-left of the chat box shows the session's model and effort. Clicking opens a short menu. Choosing sends <code>/model</code> (Claude) or the Codex equivalent for you, and the change shows as a quiet row in the thread.</p>
+  <div class="row">
+    <div>
+      <div class="pane">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Billing refactor</span><span class="pane-project">web-app</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span></div>
+        <div class="chat" style="min-height: 380px; justify-content: flex-end;">
+          <div class="chat-thread"><div class="quiet" style="text-align:center">Model set to Sonnet 5.5 · high</div></div>
+          <div class="composer">
+            <div class="box">
+              <div class="box-input ph">Message Claude…</div>
+              <div class="box-bar"><span class="pick open">Opus 5.5 · medium <span class="caret">▾</span></span><span class="spacer"></span><span class="ctx"><span class="bar"><i style="width: 31%"></i></span>31%</span><span class="send">↑</span></div>
+            </div>
+          </div>
+          <div class="pop" style="left: 28px; bottom: 74px; width: 290px;">
+            <div class="pop-h">Model</div>
+            <div class="mi sel">Opus 5.5<span class="sub">default</span><span class="check">✓</span></div>
+            <div class="mi">Sonnet 5.5</div>
+            <div class="mi">Haiku 5.5</div>
+            <div class="mi">Fable 5.2</div>
+            <div class="sep"></div>
+            <div class="pop-h">Effort</div>
+            <div class="utabs"><span>low</span><span class="on">medium</span><span>high</span><span>xhigh</span><span>max</span></div>
+            <div class="pop-foot">Applies from your next message</div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">The selected model is a pressed background, and effort uses the underline tabs. No outlined chips.</p>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>The list comes from what the agent itself offers (the <code>/model</code> picker we already read for chat), so it never goes stale.</li>
+    <li>Disabled while the agent is working, with the tooltip “Changes after this reply”.</li>
+  </ul>
+</section>
+
+<!-- ============ 5. DIFFS ============ -->
+<section class="mock" id="diffs">
+  <h2>5. Diffs inside the reply summary</h2>
+  <p class="lede">Each file row in the summary card opens its diff right there. Small changes can be checked without leaving chat. Review is still one click away for the full view.</p>
+  <div class="row">
+    <div>
+      <div class="pane">
+        <div class="pane-header"><span class="mark codex">X</span><span class="pane-title">Fix date parsing</span><span class="pane-project">web-app</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span>
+          <div class="seg"><button>Terminal</button><button class="on">Chat</button></div></div>
+        <div class="chat"><div class="chat-thread">
+          <div class="say"><p>Dates without a time zone are now read as UTC.</p></div>
+          <div class="summary wide">
+            <div class="sum-head"><b style="font-weight:500">Changed 3 files</b><span class="add">+14</span><span class="del">−5</span><span class="spacer"></span><span class="turn-time">1m 12s</span></div>
+            <div class="sum-file"><span class="chev">▾</span><b>src/lib/parseDate.ts</b><span class="spacer"></span><span class="n add">+6</span><span class="n del">−3</span></div>
+            <div class="diff">
+              <div class="hunk">@@ parseDate(input: string) @@</div>
+              <div class="ln"><span>12</span><span>12</span><span> </span><span>  const trimmed = input.trim()</span></div>
+              <div class="ln d"><span>13</span><span></span><span>−</span><span>  return new Date(trimmed)</span></div>
+              <div class="ln a"><span></span><span>13</span><span>+</span><span>  const hasZone = /[zZ]|[+-]\d\d:?\d\d$/.test(trimmed)</span></div>
+              <div class="ln a"><span></span><span>14</span><span>+</span><span>  return new Date(hasZone ? trimmed : `${trimmed}Z`)</span></div>
+              <div class="ln"><span>14</span><span>15</span><span> </span><span>}</span></div>
+              <div class="diff-foot"><span>1 of 2 changes</span><button class="tbtn">Open in Files</button></div>
+            </div>
+            <div class="sum-file"><span class="chev">▸</span><b>src/lib/parseDate.test.ts</b><span class="spacer"></span><span class="n add">+7</span><span class="n del">−0</span></div>
+            <div class="sum-file"><span class="chev">▸</span><b>CHANGELOG.md</b><span class="spacer"></span><span class="n add">+1</span><span class="n del">−2</span></div>
+            <div class="sum-acts"><button class="tbtn">Review changes</button><button class="tbtn">Undo this reply</button></div>
+          </div>
+        </div></div>
+      </div>
+      <p class="cap">Same card as 1.8.5, with a chevron per file. Long diffs show the first 40 lines, then “Show all” and “Open in Review”.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. WORKTREES ============ -->
+<section class="mock" id="worktrees">
+  <h2>6. Clean up worktrees from closed sessions</h2>
+  <p class="lede">Sessions with their own worktree leave folders behind. The project menu gets <b>Clean up worktrees…</b>, and a notice offers it when there are more than 3 left over.</p>
+  <div class="dialog-stage">
+    <div class="dialog" role="dialog" style="width: 520px">
+      <h3>Remove 3 worktrees from closed sessions in api-gateway?</h3>
+      <p>Their folders are deleted. Branches stay unless you tick the box. Worktrees with uncommitted changes are not ticked.</p>
+      <div class="list">
+        <div class="li"><input type="checkbox" checked><span class="grow">feat/upload-retries</span><span class="tag">merged · 214 MB · 3 days</span></div>
+        <div class="li"><input type="checkbox" checked><span class="grow">fix/null-tenant</span><span class="tag">merged · 198 MB · 6 days</span></div>
+        <div class="li"><input type="checkbox" checked><span class="grow">try/new-logger</span><span class="tag">not merged · 205 MB · 9 days</span></div>
+        <div class="li"><input type="checkbox"><span class="grow">feat/billing-v2</span><span class="tag" style="color:var(--term-warn)">4 uncommitted files</span></div>
+      </div>
+      <label class="opt"><input type="checkbox"> Also delete the merged branches (feat/upload-retries, fix/null-tenant)</label>
+      <div class="acts"><button class="btn">Cancel</button><button class="btn danger">Remove 3 worktrees</button></div>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>Only worktrees Dawsha created for sessions are listed. Ones you made yourself never are.</li>
+    <li>The button count follows the ticks, and the branch option names the branches it would delete.</li>
+  </ul>
+</section>
+
+<!-- ============ 10. PHONE ============ -->
+<section class="mock" id="phone">
+  <h2>7. Chat on your phone (Remote Control)</h2>
+  <p class="lede">Paired browsers get the same chat view for any session, not just Approvals. Sending needs the existing “Terminal input” permission. Without it, the thread is read-only and says so.</p>
+  <div class="row">
+    <div>
+      <div class="phone"><div class="phone-in">
+        <div class="ph-top"><span class="back">‹</span><span class="mark claude">C</span><span class="pane-title">Upload retries</span><span class="spacer"></span><span class="state"><span class="dot working"></span>Working</span></div>
+        <div class="ph-tabs"><span>Sessions</span><span class="on">Chat</span><span>Approvals</span></div>
+        <div class="ph-body">
+          <div class="you">Write tests for it</div>
+          <div class="tool"><span class="ic">+</span>Created <code>retry.test.ts</code><span class="n add">+64</span></div>
+          <div class="tool"><span class="ic">▸</span>Ran the tests</div>
+          <div class="say"><p>4 tests pass. Want me to add one for the 4xx case too?</p></div>
+          <div class="you">Yes, and then commit</div>
+          <div class="quiet" style="text-align:end">Sent</div>
+        </div>
+        <div class="ph-comp"><div class="box"><div class="box-input ph">Message Claude…</div><span class="send">↑</span></div></div>
+      </div></div>
+      <p class="cap">Phone with input allowed.</p>
+    </div>
+    <div>
+      <div class="phone"><div class="phone-in">
+        <div class="ph-top"><span class="back">‹</span><span class="mark codex">X</span><span class="pane-title">Fix date parsing</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span></div>
+        <div class="ph-tabs"><span>Sessions</span><span class="on">Chat</span><span>Approvals</span></div>
+        <div class="ph-body">
+          <div class="say"><p>Dates without a time zone are now read as UTC.</p></div>
+          <div class="summary" style="width:100%"><div class="sum-head"><b style="font-weight:500">Changed 3 files</b><span class="add">+14</span><span class="del">−5</span></div></div>
+        </div>
+        <div class="ph-comp"><div class="perm-note">Read only. Turn on “Terminal input” for this browser in Dawsha's Settings › Remote Access to send messages.</div></div>
+      </div></div>
+      <p class="cap">Phone without the permission.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11. EXPORT ============ -->
+<section class="mock" id="export">
+  <h2>8. Export usage</h2>
+  <p class="lede">Usage gets an <b>Export CSV</b> button. Pick a range and how to group the rows. The file is saved where you choose, and nothing leaves the machine.</p>
+  <div class="row">
+    <div class="page" style="width: 560px">
+      <div class="page-h"><h3>Usage</h3><span class="spacer"></span><button class="btn">Export CSV</button></div>
+      <div class="uhead"><span class="big">$142.80</span><span>this month · 18.4M tokens</span></div>
+      <table class="utable">
+        <tr><th>Project</th><th>Agent</th><th class="r">Tokens</th><th class="r">Cost</th></tr>
+        <tr><td>web-app</td><td>Claude</td><td class="r">9.1M</td><td class="r">$71.20</td></tr>
+        <tr><td>api-gateway</td><td>Claude</td><td class="r">5.6M</td><td class="r">$44.05</td></tr>
+        <tr><td>web-app</td><td>Codex</td><td class="r">3.7M</td><td class="r">$27.55</td></tr>
+      </table>
+    </div>
+    <div class="dialog-stage">
+      <div class="dialog" role="dialog" style="width: 380px">
+        <h3>Export usage</h3>
+        <div class="field"><label>Range</label><div class="selbox">This month<span class="quiet">▾</span></div></div>
+        <div class="field"><label>One row per</label><div class="selbox">Day, project and agent<span class="quiet">▾</span></div></div>
+        <p class="quiet" style="margin: 0 0 var(--sp-4)">Columns: date, project, agent, model, input, output, cache read, cache write, cost.</p>
+        <div class="acts"><button class="btn">Cancel</button><button class="btn primary">Save CSV…</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ QUESTIONS ============ -->
+<!-- ============ 9. FORK ============ -->
+<section class="mock" id="fork">
+  <h2>9. Try another way from here</h2>
+  <p class="lede">Rewind throws the later turns away. <b>Try another way</b> keeps them: it starts a second session in its own worktree, from the snapshot before that message. Both attempts then run side by side, and Compare shows which one did better.</p>
+  <div class="row">
+    <div class="dialog-stage">
+      <div class="dialog" role="dialog" style="width: 500px">
+        <h3>Try another way from “Add retry with backoff to the upload client”</h3>
+        <p>A new session starts in its own worktree, with the files as they were at 10:42. This session keeps going untouched.</p>
+        <div class="utabs" style="padding: 0 0 var(--sp-3)"><span class="on">Claude</span><span>Codex</span><span>Gemini</span></div>
+        <div class="field"><label>Message</label><div class="txtarea">Add retry to the upload client using the existing <code>withRetry</code> helper in <code>src/lib</code> instead of new code</div></div>
+        <label class="opt"><input type="checkbox" checked> Bring the conversation up to this message</label>
+        <div class="acts"><button class="btn">Cancel</button><button class="btn primary">Start try 2</button></div>
+      </div>
+    </div>
+    <div>
+      <div class="pane narrow">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Upload retries · try 2</span><span class="pane-project">feat/upload-retries-2</span><span class="spacer"></span><span class="state"><span class="dot working"></span>Working</span></div>
+        <div class="chat"><div class="chat-thread">
+          <div class="quiet" style="text-align:center">Tried from “Upload retries” at 10:42 · <button class="tbtn">Compare with try 1</button></div>
+          <div class="you">Add retry to the upload client using the existing <code>withRetry</code> helper in <code>src/lib</code> instead of new code</div>
+          <div class="tool"><span class="ic">◎</span>Read <code>src/lib/withRetry.ts</code></div>
+          <div class="tool"><span class="ic">✎</span>Editing <code>src/upload/client.ts</code></div>
+        </div></div>
+      </div>
+      <p class="cap">The new pane says where it came from. Compare opens the compare view we already have, with both worktrees.</p>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>Sits next to Rewind in a message's hover actions: Edit · Rewind to here · Try another way · Copy.</li>
+    <li>When one try wins, Merge back takes it home, and the other's worktree shows up in Clean up worktrees.</li>
+  </ul>
+</section>
+
+<!-- ============ 10. SECOND OPINION ============ -->
+<section class="mock" id="second">
+  <h2>10. Second opinion</h2>
+  <p class="lede">From a reply's summary card, ask another agent to review what changed. It runs in the background, without opening a pane, and its findings come back as a card. Each finding can go to the working agent in one click.</p>
+  <div class="row">
+    <div>
+      <div class="pane">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Billing refactor</span><span class="pane-project">web-app</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span>
+          <div class="seg"><button>Terminal</button><button class="on">Chat</button></div></div>
+        <div class="chat"><div class="chat-thread">
+          <div class="summary wide">
+            <div class="sum-head"><b style="font-weight:500">Changed 4 files</b><span class="add">+61</span><span class="del">−38</span><span class="spacer"></span><span class="turn-time">3m 05s</span></div>
+            <div class="sum-file"><span class="chev">▸</span><b>src/billing/totals.ts</b><span class="spacer"></span><span class="n add">+44</span><span class="n del">−0</span></div>
+            <div class="sum-file"><span class="chev">▸</span><b>src/billing/invoice.ts</b><span class="spacer"></span><span class="n add">+9</span><span class="n del">−31</span></div>
+            <div class="sum-acts"><button class="tbtn">Review changes</button><button class="tbtn">Second opinion</button><button class="tbtn">Undo this reply</button></div>
+          </div>
+          <div class="review">
+            <div class="sum-head"><span class="mark codex">X</span><b style="font-weight:500">Codex reviewed this reply</b><span class="spacer"></span><span class="quiet">48s · $0.09</span></div>
+            <div class="finding">
+              <div class="f-main"><span class="f-sev hi">Likely bug</span><span><code>totals.ts:31</code> rounds each line before summing, so totals can be off by a cent from the old code.</span></div>
+              <button class="btn sm">Send to Claude</button>
+            </div>
+            <div class="finding">
+              <div class="f-main"><span class="f-sev">Worth a look</span><span><code>invoice.ts</code> no longer handles an empty <code>lines</code> array; the old code returned 0.</span></div>
+              <button class="btn sm">Send to Claude</button>
+            </div>
+            <div class="sum-acts"><button class="tbtn">Send both</button><button class="tbtn">Dismiss</button></div>
+          </div>
+        </div></div>
+      </div>
+      <p class="cap">The review card sits in the thread like a summary card. Severity is coloured words, not badges.</p>
+    </div>
+    <div style="position: relative; width: 260px; height: 190px;">
+      <div class="pop" style="left: 0; top: 0; width: 260px;">
+        <div class="pop-h">Ask for a second opinion</div>
+        <div class="mi sel"><span class="mark codex">X</span>Codex</div>
+        <div class="mi"><span class="mark" style="background:#a78bfa;color:#180f33">G</span>Gemini</div>
+        <div class="mi"><span class="mark claude">C</span>Claude, fresh session</div>
+        <div class="pop-foot">Reads only the diff and your message. Makes no changes.</div>
+      </div>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>Runs the reviewer headless (<code>codex exec</code>, <code>gemini -p</code>, <code>claude -p</code>) in read-only mode, with the diff and your original message. Its cost counts toward the project's spending limit.</li>
+  </ul>
+</section>
+
+<!-- ============ 11. CHECKS ============ -->
+<section class="mock" id="checks">
+  <h2>11. Checks after each reply</h2>
+  <p class="lede">Pick a few of the project's run commands, such as tests, lint or build, to run whenever an agent finishes a reply that changed files. The results land on the summary card. Failures go back to the agent in one click, or automatically if you turn that on.</p>
+  <div class="row">
+    <div>
+      <div class="pane">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Fix date parsing</span><span class="pane-project">web-app</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span></div>
+        <div class="chat"><div class="chat-thread">
+          <div class="summary wide">
+            <div class="sum-head"><b style="font-weight:500">Changed 2 files</b><span class="add">+9</span><span class="del">−3</span><span class="spacer"></span><span class="turn-time">52s</span></div>
+            <div class="sum-file"><span class="chev">▸</span><b>src/lib/parseDate.ts</b><span class="spacer"></span><span class="n add">+6</span><span class="n del">−3</span></div>
+            <div class="checks">
+              <div class="check-row"><span class="dot done"></span><span class="mono">npm run lint</span><span class="spacer"></span><span class="quiet">passed · 6s</span></div>
+              <div class="check-row"><span class="dot" style="background:var(--danger)"></span><span class="mono">npm test</span><span class="spacer"></span><span class="fail-t">2 of 148 failed · 38s</span></div>
+              <div class="check-out">✕ parseDate › keeps an explicit offset<br>&nbsp;&nbsp;Expected: 2026-11-11T08:00:00.000Z<br>&nbsp;&nbsp;Received: 2026-11-11T10:00:00.000Z</div>
+            </div>
+            <div class="sum-acts"><button class="tbtn ink">Send failures to Claude</button><button class="tbtn">Show full output</button><button class="tbtn">Review changes</button></div>
+          </div>
+        </div></div>
+      </div>
+      <p class="cap">While a check is running, its row shows “running…”. A reply that changed no files runs no checks.</p>
+    </div>
+    <div class="dialog-stage">
+      <div class="dialog" role="dialog" style="width: 400px">
+        <h3>Checks after each reply in web-app</h3>
+        <p>These run in the session's folder after any reply that changes files.</p>
+        <div class="list">
+          <div class="li"><input type="checkbox" checked><span class="grow">npm run lint</span></div>
+          <div class="li"><input type="checkbox" checked><span class="grow">npm test</span></div>
+          <div class="li"><input type="checkbox"><span class="grow">npm run build</span></div>
+          <div class="li"><input type="checkbox"><span class="grow">npm run e2e</span></div>
+        </div>
+        <label class="opt"><input type="checkbox"> Send failures to the agent automatically, up to 2 times in a row</label>
+        <div class="acts"><button class="btn">Cancel</button><button class="btn primary">Save</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 12. LIMIT ============ -->
+<section class="mock" id="limit">
+  <h2>12. Limit reached, keep going</h2>
+  <p class="lede">When Claude or Codex hits a usage limit, chat explains it in one card and gives the three things you'd do anyway: carry on in another agent with the existing Continue in…, send the message when the limit resets, or get a reminder.</p>
+  <div class="pane">
+    <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Billing refactor</span><span class="pane-project">web-app</span><span class="spacer"></span><span class="state"><span class="dot needs"></span>Limit reached</span></div>
+    <div class="chat"><div class="chat-thread">
+      <div class="you">Now update the invoice PDF to use the new totals</div>
+      <div class="chat-notice">
+        <b>Claude's 5-hour limit is reached.</b>
+        <span class="muted">It resets at 15:40, in 2h 10m. Your message above was not sent.</span>
+        <div class="chat-acts"><button class="btn primary">Continue in Codex</button><button class="btn">Send at 15:40</button><button class="btn">Notify me at 15:40</button></div>
+      </div>
+    </div></div>
+  </div>
+  <ul class="notes">
+    <li>Continue in Codex opens the handoff dialog we already have, with this message filled in.</li>
+    <li>Send at 15:40 keeps the message in the queue with “Sends at 15:40” under it. You can edit or remove it until then.</li>
+  </ul>
+</section>
+
+<!-- ============ 13. PERMISSIONS ============ -->
+<section class="mock" id="perms">
+  <h2>13. Permissions in Settings</h2>
+  <p class="lede">One list of what each agent may do without asking, read from the files the agents use: Claude's <code>settings.json</code> at user, project and local level, and Codex's <code>config.toml</code>. Dawsha also suggests rules from what you keep approving.</p>
+  <div class="page">
+    <div class="page-h"><h3>Permissions</h3><span class="spacer"></span><button class="btn">Add rule</button></div>
+    <div class="ptabs"><span class="on">Claude</span><span>Codex</span></div>
+    <div class="notice"><span class="grow"><b>You allowed <code>git status</code> 14 times this week.</b> Always allow it in web-app?</span><button class="btn sm">Not now</button><button class="btn sm primary">Always allow</button></div>
+    <table class="utable">
+      <tr><th>Rule</th><th>Effect</th><th>Set in</th><th></th></tr>
+      <tr><td class="mono">Bash(npm test:*)</td><td>Allow</td><td class="dim">web-app · project</td><td class="r"><button class="tbtn">⋯</button></td></tr>
+      <tr><td class="mono">Bash(npm run lint)</td><td>Allow</td><td class="dim">web-app · project</td><td class="r"><button class="tbtn">⋯</button></td></tr>
+      <tr><td class="mono">Read(~/.ssh/**)</td><td style="color:var(--danger)">Deny</td><td class="dim">User</td><td class="r"><button class="tbtn">⋯</button></td></tr>
+      <tr><td class="mono">Bash(git push:*)</td><td style="color:var(--st-needs)">Ask</td><td class="dim">User</td><td class="r"><button class="tbtn">⋯</button></td></tr>
+      <tr><td class="mono">WebFetch(domain:docs.stripe.com)</td><td>Allow</td><td class="dim">web-app · local</td><td class="r"><button class="tbtn">⋯</button></td></tr>
+    </table>
+    <p class="quiet" style="margin-top: var(--sp-3)">Project: web-app ▾ · The ⋯ menu has Edit, Move to another file, Open the file and Remove.</p>
+  </div>
+  <ul class="notes">
+    <li>Remove asks first and names the rule and its file: “Remove <code>Bash(npm test:*)</code> from web-app/.claude/settings.json?”.</li>
+    <li>Codex has fewer knobs (approval policy and sandbox mode), so its tab shows those two settings plus its trusted folders.</li>
+  </ul>
+</section>
+
+<!-- ============ 14. TODAY ============ -->
+<section class="mock" id="today">
+  <h2>14. Today</h2>
+  <p class="lede">A Today tab in Work: what every agent did today, by project, with sessions that need you first. <b>Copy as notes</b> turns it into a short Markdown summary for a standup or a PR.</p>
+  <div class="page">
+    <div class="page-h"><h3>Work</h3><span class="spacer"></span><button class="btn">Copy as notes</button></div>
+    <div class="ptabs"><span class="on">Today</span><span>Tasks</span><span>Scheduled</span><span>Queue</span></div>
+    <div class="uhead"><span class="big">7</span><span>sessions · 41 files changed · 3h 12m of agent time · $18.20</span></div>
+    <div class="t-proj">Needs you</div>
+    <div class="sched"><span class="mark claude">C</span><div class="main"><b>Billing refactor</b><div class="meta">web-app · Wants to run <code>npm run migrate</code> · 6 min</div></div><button class="tbtn ink">Open</button></div>
+    <div class="t-proj">web-app</div>
+    <div class="sched"><span class="mark codex">X</span><div class="main"><b>Fix date parsing</b><div class="meta">Dates without a time zone are read as UTC · 2 files · $0.84</div></div><span class="quiet">Done 11:20</span></div>
+    <div class="sched"><span class="mark claude">C</span><div class="main"><b>Invoice table loading states</b><div class="meta">Skeleton rows and an empty state · 6 files · $4.10</div></div><span class="quiet">Merged 13:05</span></div>
+    <div class="t-proj">api-gateway</div>
+    <div class="sched"><span class="mark claude">C</span><div class="main"><b>Upload retries</b><div class="meta">Retry with backoff, logs per attempt, 4 tests · 4 files · $2.95</div></div><span class="quiet">Done 10:58</span></div>
+  </div>
+  <ul class="notes">
+    <li>The one-line outcome is the first line of the session's last reply. Nothing is generated or sent anywhere.</li>
+  </ul>
+</section>
+
+<!-- ============ 15. COMMIT ============ -->
+<section class="mock" id="commit">
+  <h2>15. Commit this reply</h2>
+  <p class="lede">The summary card gets <b>Commit</b>. It stages only the files this reply changed and suggests a message built from your request and the agent's answer. Your other edits stay out of the commit.</p>
+  <div class="row">
+    <div>
+      <div class="pane">
+        <div class="pane-header"><span class="mark codex">X</span><span class="pane-title">Fix date parsing</span><span class="pane-project">web-app</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span></div>
+        <div class="chat"><div class="chat-thread">
+          <div class="summary wide">
+            <div class="sum-head"><b style="font-weight:500">Changed 2 files</b><span class="add">+13</span><span class="del">−3</span><span class="spacer"></span><span class="turn-time">52s</span></div>
+            <div class="sum-file"><span class="chev">▸</span><b>src/lib/parseDate.ts</b><span class="spacer"></span><span class="n add">+6</span><span class="n del">−3</span></div>
+            <div class="sum-file"><span class="chev">▸</span><b>src/lib/parseDate.test.ts</b><span class="spacer"></span><span class="n add">+7</span><span class="n del">−0</span></div>
+            <div class="commit-box">
+              <div class="txtarea" style="min-height: 0">fix: read dates without a time zone as UTC</div>
+              <div class="edit-foot"><span class="grow">Commits these 2 files on fix/date-parsing. 3 other changed files stay uncommitted.</span><button class="btn sm">Cancel</button><button class="btn sm primary">Commit 2 files</button></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+      <p class="cap">Commit opens in place on the card. The note says how many other changes are left out, so nothing is committed by surprise.</p>
+    </div>
+    <div>
+      <div class="pane narrow">
+        <div class="pane-header"><span class="mark codex">X</span><span class="pane-title">Fix date parsing</span><span class="spacer"></span><span class="state"><span class="dot done"></span>Done</span></div>
+        <div class="chat"><div class="chat-thread">
+          <div class="summary wide">
+            <div class="sum-head"><b style="font-weight:500">Changed 2 files</b><span class="add">+13</span><span class="del">−3</span><span class="spacer"></span><span class="quiet">Committed <span class="mono">a41c9e2</span></span></div>
+            <div class="sum-acts"><button class="tbtn">Push</button><button class="tbtn">Open pull request</button><button class="tbtn">Review changes</button></div>
+          </div>
+        </div></div>
+      </div>
+      <p class="cap">Afterwards the card shows the commit, and Push and Open pull request use the PR flow we already have.</p>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>If a file was also edited by you or another session since the reply, it is listed with “also has other changes” and left unticked.</li>
+    <li>Undo this reply hides once the reply is committed, and the card says to use Revert in Files instead.</li>
+  </ul>
+</section>
+
+<!-- ============ 16. PLAN ============ -->
+<section class="mock" id="plan">
+  <h2>16. The plan stays in view</h2>
+  <p class="lede">When the agent keeps a todo list, its latest state is pinned to the top of chat as one line: what it is doing now and how far along it is. Click to open the whole list. It no longer scrolls away with the conversation.</p>
+  <div class="row">
+    <div>
+      <div class="pane">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Billing refactor</span><span class="pane-project">web-app</span><span class="spacer"></span><span class="state"><span class="dot working"></span>Working</span>
+          <div class="seg"><button>Terminal</button><button class="on">Chat</button></div></div>
+        <div class="chat">
+          <div class="plan-bar"><span class="plan-n">3 of 7</span><span class="plan-prog"><i style="width: 43%"></i></span><span class="grow">Updating callers in <span class="mono">invoice.ts</span></span><span class="caret">▾</span></div>
+          <div class="chat-thread">
+            <div class="tool"><span class="ic">✎</span>Edited <code>src/billing/totals.ts</code><span class="n add">+44</span></div>
+            <div class="tool running"><span class="ic" style="color:var(--accent-ink)">✎</span>Editing <code>src/billing/invoice.ts</code></div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">Collapsed: one quiet row under the pane header.</p>
+    </div>
+    <div>
+      <div class="pane narrow">
+        <div class="pane-header"><span class="mark claude">C</span><span class="pane-title">Billing refactor</span><span class="spacer"></span><span class="state"><span class="dot working"></span>Working</span></div>
+        <div class="chat">
+          <div class="plan-bar open"><span class="plan-n">3 of 7</span><span class="plan-prog"><i style="width: 43%"></i></span><span class="grow">Updating callers in <span class="mono">invoice.ts</span></span><span class="caret">▴</span></div>
+          <ul class="plan-list">
+            <li class="done">☑ Find every place totals are computed</li>
+            <li class="done">☑ Move the math into billing/totals.ts</li>
+            <li class="done">☑ Add tests for rounding</li>
+            <li class="now">◐ Update callers in invoice.ts</li>
+            <li>☐ Update callers in the PDF export</li>
+            <li>☐ Remove the old helpers</li>
+            <li>☐ Run the full test suite</li>
+          </ul>
+        </div>
+      </div>
+      <p class="cap">Open: the same checklist as the todo card, with each state also said in words for screen readers.</p>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>The bar hides when every item is done, or when the list is cleared. Board cards and the pane footer can show the same “3 of 7”.</li>
+  </ul>
+</section>
+
+<!-- ============ 17. SIDEBAR ============ -->
+<section class="mock" id="sidebar">
+  <h2>17. A roomier sidebar</h2>
+  <p class="lede">Today the open sidebar crams up to four facts into each 240px row, so names and branches get cut off (“feature…”, “mobile-sh…”, “fix/…”), “now” repeats on every row, and a waiting session is listed twice. The redesign gives each row one job: <b>the first line says what the session is, the second what it's doing</b>.</p>
+  <div class="row">
+    <div>
+      <div class="sb-now"><img src="1.8.6-sidebar-now.png" alt="The sidebar in 1.8.5"></div>
+      <p class="cap">Now (1.8.5).</p>
+    </div>
+
+    <div>
+      <aside class="sb">
+        <div class="sb-head">
+          <div class="sb-find"><span class="ic">⌕</span><span class="ph">Find a session</span><span class="quiet">Ctrl+K</span></div>
+          <button class="sb-ic" title="Add project">+</button><button class="sb-ic" title="Collapse">«</button>
+        </div>
+
+        <div class="sb-sec needs">Needs you <span class="cnt">1</span></div>
+        <div class="sb-row">
+          <span class="mark claude">C</span>
+          <div class="sb-txt"><div class="l1">Refactor invoice export</div><div class="l2"><span class="needs-t">Run npm run migrate?</span> · billing-api</div></div>
+          <span class="sb-time">2m</span>
+        </div>
+
+        <div class="sb-sec">Projects <span class="spacer"></span><button class="sb-ic sm" title="Sort">⇅</button></div>
+
+        <div class="sb-proj"><span class="chev">▾</span><span class="pname">acme-web</span><span class="spacer"></span><span class="pdots"><i class="w"></i></span></div>
+        <div class="sb-row sel">
+          <span class="mark claude">C</span>
+          <div class="sb-txt"><div class="l1">Add dark mode toggle</div><div class="l2"><span class="spin">◌</span> Running the test suite</div></div>
+          <span class="sb-time">12s</span>
+        </div>
+        <div class="sb-closed">2 closed today</div>
+
+        <div class="sb-proj"><span class="chev">▾</span><span class="pname">billing-api</span><span class="spacer"></span><span class="pdots"><i class="n"></i></span></div>
+        <div class="sb-row dimmed">
+          <span class="mark claude">C</span>
+          <div class="sb-txt"><div class="l1">Refactor invoice export</div><div class="l2">Waiting, listed above</div></div>
+        </div>
+
+        <div class="sb-proj"><span class="chev">▾</span><span class="pname">mobile-shell</span><span class="spacer"></span><span class="pdots"><i class="w"></i></span></div>
+        <div class="sb-row hover">
+          <span class="mark codex">X</span>
+          <div class="sb-txt"><div class="l1">Fix flaky login test</div><div class="l2"><span class="spin">◌</span> Replacing the sleep with a wait</div></div>
+          <span class="sb-acts"><button class="sb-ic sm">⋯</button><button class="sb-ic sm">✕</button></span>
+        </div>
+
+        <div class="sb-proj"><span class="chev">▾</span><span class="pname">docs-site</span><span class="spacer"></span><span class="pdots"><i class="d"></i></span></div>
+        <div class="sb-row">
+          <span class="mark" style="background:#a78bfa;color:#180f33">G</span>
+          <div class="sb-txt"><div class="l1">Rewrite the getting started guide</div><div class="l2"><span class="done-t">Done</span> · 4 files changed</div></div>
+          <span class="sb-time">3m</span>
+        </div>
+
+        <div class="sb-proj quiet-p"><span class="chev">▸</span><span class="pname">infra</span><span class="spacer"></span><span class="quiet">no sessions</span></div>
+
+        <div class="sb-foot"><button class="tbtn">+ Add project</button><span class="spacer"></span><button class="tbtn">Manage</button></div>
+      </aside>
+      <p class="cap">Proposed. Shown with the selected row (a plain fill) and a row under the mouse (its actions appear).</p>
+    </div>
+
+    <div style="max-width: 420px">
+      <ul class="notes" style="margin-top: 0">
+        <li><b>Wider, and you can resize it.</b> 272px by default, drag the edge between 220 and 400. Long names wrap to a second line instead of being cut.</li>
+        <li><b>Project row is just the name.</b> The branch moves to the session's hover card and the pane footer, where it belongs (each worktree can have its own). “1 live” becomes a small coloured dot per session state: blue working, orange needs you, green done.</li>
+        <li><b>Session line 2 says what it's doing,</b> taken from the agent's own recap or its last tool line: “Running the test suite”, “Run npm run migrate?”, “Done · 4 files changed”. Tags move to the hover card.</li>
+        <li><b>Time only when it means something:</b> how long it has worked or waited, or since it finished. No “now” on every row.</li>
+        <li><b>Needs you is listed once.</b> In its project the session is dimmed with “Waiting, listed above”, so nothing is shown twice in full.</li>
+        <li><b>Find at the top.</b> The search icon becomes a field that filters sessions and projects as you type. Ctrl+K still opens the palette.</li>
+        <li><b>Closed sessions fold into one line</b> per project, “2 closed today”, which opens the Resume picker for that project.</li>
+        <li><b>Quiet rows.</b> Selection is a background fill, no outlines or side bars. Close and ⋯ show on hover and keyboard focus only.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="mock" id="questions" style="border-bottom: 0">
+  <h2>Open questions</h2>
+  <ul class="notes" style="font-size: var(--fs-3); line-height: 24px;">
+    <li><b>Rewind and the conversation.</b> Files go back, but the agent still remembers the later turns. For Claude we could also drive its own <code>/rewind</code> so its memory matches. That's more fragile, since it means driving a picker in the terminal. Ship files-only first?</li>
+    <li><b>Edit and send for Codex.</b> Codex has no rewind of its own. Should Edit for Codex start the edited message with “Ignore my earlier request: …”, or only offer Rewind?</li>
+    <li><b>Context meter detail.</b> Total plus actions only, or the breakdown too if we can get it reliably?</li>
+    <li><b>Second opinion and checks cost money and time.</b> Both are off until you turn them on per project, as drawn. OK?</li>
+    <li><b>Permissions writes.</b> This edits the agents' own settings files. Is that OK, or should 1.8.6 show the rules read-only with Open the file?</li>
+    <li><b>Scope.</b> 1–8 are approved. Pick which of 9–17 go into 1.8.6. My pick: 9, 11, 12, 15, 16 and 17, since they build on what exists, and 10, 13 and 14 for 1.8.7.</li>
+  </ul>
+</section>
+
+</main>
+</div>
+</body>
+</html>

@@ -38,6 +38,8 @@ import type { TimelineSearchRequest, TimelineSearchResult } from './timelineSear
 import type { TranscriptRequest, TranscriptResult } from './transcript'
 import type { HandoffTranscriptRequest, HandoffTranscriptResult } from './handoff'
 import type { UsageRange, UsageReport } from './usage'
+import type { CleanupListResult, CleanupRequest, CleanupResult } from './worktreeCleanup'
+import type { ExportGrouping, ExportRange, UsageExportResult } from './usageCsv'
 import type {
   AgentKind,
   AppInfo,
@@ -72,6 +74,7 @@ import type {
 export interface GridApi {
   runs: import('./runCommands').RunApi
   tools: import('./filesTools').FilesToolsApi
+  turn: import('./turnApi').TurnApi
   mcp: import('./mcp').McpApi
   chat: import('./chatLog').ChatApi
   getSettings(): Promise<SettingsLoadResult>
@@ -124,6 +127,8 @@ export interface GridApi {
   gitSessionStatus(folder: string, baseline: SessionBaseline): Promise<SessionStatusResult>
   checkpointPrepare(folder: string, sessionId: string): Promise<boolean>
   listCheckpoints(folder: string, sessionId: string, messageIds: string[]): Promise<Record<string, string>>
+  rewindInfo(folder: string, sessionId: string, ref: string, files: Array<{ path: string; touchedAt?: number }>): Promise<{ ok: true; files: import('./rewind').RewindFileInfo[] } | { ok: false; error: string }>
+  checkpointToWorktree(folder: string, sessionId: string, ref: string, worktree: string): Promise<{ ok: true; files: number } | { ok: false; error: string }>
   restoreCheckpoint(folder: string, sessionId: string, ref: string, paths: string[]): Promise<{ ok: true; beforeUndo: string | null; skipped: string[] } | { ok: false; error: string }>
   projectFiles(folder: string): Promise<ProjectFilesResult>
   projectFile(folder: string, path: string): Promise<ProjectFileResult>
@@ -242,6 +247,11 @@ export interface GridApi {
   mergeCommit(request: WorktreeCommitRequest): Promise<GitCommitResult>
   mergeInto(request: MergeBackRequest): Promise<MergeResult>
   mergeRemove(request: WorktreeRemoveRequest): Promise<GitResult>
+  worktreeCleanupList(folder: string, openPaths: string[]): Promise<CleanupListResult>
+  worktreeCleanupCount(folder: string, openPaths: string[]): Promise<number>
+  worktreeCleanupRun(request: CleanupRequest): Promise<CleanupResult>
+  usageExport(request: { range: ExportRange; grouping: ExportGrouping }): Promise<UsageExportResult>
+  usageExportReveal(path: string): Promise<boolean>
   listRecordings(): Promise<RecordingSummary[]>
   readRecording(id: string): Promise<string>
   recordingStats(): Promise<RecordingStats>

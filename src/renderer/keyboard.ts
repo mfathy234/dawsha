@@ -64,6 +64,8 @@ function onKeyDown(event: KeyboardEvent): void {
   if (event.isComposing) return
   if (contextMenuOpen() || (event.target as HTMLElement | null)?.closest?.('[role="menu"]:not(.leaving)')) return
   if (overlayOpen() || inFindBar(event)) return
+  // Ctrl+Enter sends an edited message, so it is not a shortcut while the edit box has focus.
+  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && (event.target as HTMLElement | null)?.closest?.('.chat-edit')) return
   const state = store.state
   // State changes immediately; the picker mounts on the next animation frame. A fast Enter
   // in that gap still starts its default choice instead of reaching the old terminal.

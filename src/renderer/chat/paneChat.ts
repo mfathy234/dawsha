@@ -11,10 +11,12 @@ import { ChatAttachments } from './chatAttachments'
 import { ChatFeed, LOADING, type FeedSnapshot } from './chatFeed'
 import { BackgroundStrip } from './chatBackground'
 import { ChatThread, type PendingView } from './chatThread'
+import { ChatPlanBar } from './chatPlanBar'
+import { latestTodos } from '../../shared/planProgress'
 import { askPromptFor } from '../../shared/menuPrompt'
 import { detectTerminalMenu } from '../../shared/terminalMenu'
 import { isStarting } from '../../shared/agentReady'
-import { holdPending, isTracked, newPending, pendingLabel, releaseHeld, removeHeld, settlePending, type PendingMessage } from '../../shared/chatPending'
+import { holdPending, holdUntil, isTracked, newPending, pendingLabel, releaseHeld, removeHeld, settlePending, type PendingMessage } from '../../shared/chatPending'
 import { appendHistory, historyAt } from '../../shared/chatHistory'
 import { planAnswers, type AskAnswer, type KeyStep } from '../../shared/menuAnswer'
 import type { AskPrompt } from '../../shared/chatAsk'
@@ -24,10 +26,16 @@ import { ChatWatches } from './chatWatches'
 import { doneMessage, watchableMessageId } from '../../shared/chatNotify'
 import { loadCheckpoints, prepareCheckpoint, undoReply } from './chatUndo'
 import type { TurnSummary } from '../../shared/turnSummary'
+import { ComposerBar } from './chatComposerBar'
+import { LimitReminders } from './chatLimitSchedule'
+import { limitSituation, sendsAtNote } from '../../shared/chatLimit'
+import { toast } from '../components/toast'
+import { TurnExtras, type TurnInput } from './turnExtras'
+import { ChatRewind } from './chatRewind'
 
 export interface ChatHost {
   showTerminal(): void
-  continueIn(to: AgentKind): void
+  continueIn(to: AgentKind, message?: string | null): void
   send(text: string): { flattened: boolean }
   interrupt(): void
   /** The last rows on the agent's screen. */
@@ -36,6 +44,10 @@ export interface ChatHost {
   reviewChanges(): void
   /** A desktop notification that opens this pane when clicked. */
   notify(title: string, body: string): void
+  /** The plan's progress ("3 of 7"), or empty when there is none, for the sidebar. */
+  plan(label: string): void
+  /** The usage limit started or stopped the session, so the pane header can say so at once. */
+  limitChanged?(): void
 }
 
 export interface ChatInput {
@@ -53,6 +65,15 @@ export interface ChatInput {
   elapsed?: string
   /** The pane's terminal tab: file links in the thread resolve against its folder. */
   tabId: string
+  /** The session's name, for the clear confirm. */
+  title: string
+  /** The model as the agent reports it, e.g. "Opus 5.5". */
+  model: string | null
+  contextPercent: number | null
+  contextTokens: number | null
+  contextWindow: number | null
+  /** Set on a session started with Try another way. */
+  triedFrom?: { title: string; at?: number; number: number }
 }
 
 const NEAR_BOTTOM_PX = 96
@@ -73,8 +94,13 @@ export class PaneChat {
   private readonly sendButton = h('button', { class: 'chat-btn', type: 'button', hidden: true }, CHAT_TEXT.send)
   private readonly jump = h('button', { class: 'chat-jump', type: 'button', hidden: true }, CHAT_TEXT.jumpLatest)
   private readonly note = h('p', { class: 'chat-quiet', role: 'status', hidden: true })
+  private readonly planBar = new ChatPlanBar()
   private readonly strip = new BackgroundStrip({ reveal: (task) => this.revealLaunch(task.launchId) })
   private readonly attachments = new ChatAttachments(() => this.showSend())
+  private readonly bar: ComposerBar
+  private readonly reminders = new LimitReminders()
+  private quiet: readonly string[] = []
+  private quietSession = ''
   private snapshot: FeedSnapshot = LOADING
   private input: ChatInput | null = null
   private phase: ChatPhase = 'empty'
@@ -99,6 +125,8 @@ export class PaneChat {
   private readonly completion: ChatComplete
   private readonly find: ChatFind
   private readonly watches: ChatWatches
+  private readonly turns = new TurnExtras({ input: () => this.turnInput(), send: (text) => this.sendFromCard(text) })
+  private readonly rewind: ChatRewind
 
   constructor(private readonly host: ChatHost, private readonly permission: HTMLElement) {
     this.thread = new ChatThread(() => this.render(true))
@@ -113,13 +141,16 @@ export class PaneChat {
     this.scroller.append(this.thread.el)
     this.completion = new ChatComplete(this.box, () => this.input?.folder ?? '', () => this.input?.agent ?? 'claude', () => store.state.settings.savedPrompts)
     this.find = new ChatFind({ thread: this.thread, items: () => this.snapshot.items, closed: () => this.focusComposer() })
+    this.rewind = new ChatRewind({ input: () => this.input, items: () => this.snapshot.items, refs: () => this.checkpointRefs, rerender: () => this.render(true), resend: (text) => this.resend(text) })
     this.watches = new ChatWatches(() => this.phase, (ids) => this.announce(ids))
+    this.bar = new ComposerBar({ command: (text) => this.sendCommand(text), announce: (text) => this.announceChange(text) }, this.sendButton)
     this.el = h(
       'div',
       { class: 'chat', hidden: true, role: 'region', 'aria-label': 'Chat' },
+      this.planBar.el,
       h('div', { class: 'chat-feedwrap' }, this.scroller, this.jump, this.find.el),
       this.strip.el,
-      h('div', { class: 'chat-composer' }, this.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.sendButton))
+      h('div', { class: 'chat-composer' }, this.note, this.bar.note, this.attachments.el, h('div', { class: 'chat-box' }, this.box, this.bar.el))
     )
     this.el.querySelector('.chat-composer')?.insertBefore(this.completion.el, this.box.parentElement)
     this.box.addEventListener('keydown', (event) => this.onKey(event))
@@ -175,11 +206,17 @@ export class PaneChat {
       this.checkpointRefs = {}
     }
     this.loadHistory(input.sessionId)
+    this.refreshBar(input)
     this.attachments.setSession(input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null)
     if (input.sessionId) this.feed.start({ agent: input.agent, sessionId: input.sessionId, folder: input.folder })
     else this.feed.stop()
     if (!wasActive) this.stickBottom = true
     this.render(false)
+  }
+
+  /** The usage limit has stopped the session: the pane header says so. */
+  get limitReached(): boolean {
+    return this.active && this.phase === 'limit'
   }
 
   focusComposer(): void {
@@ -193,7 +230,9 @@ export class PaneChat {
   }
 
   dispose(): void {
+    this.turns.dispose()
     this.watches.dispose()
+    this.reminders.dispose()
     this.strip.dispose()
     this.setWatch(false)
     this.feed.stop()
@@ -228,11 +267,16 @@ export class PaneChat {
     const views = this.pendingViews()
     const last = snapshot.items[snapshot.items.length - 1]
     if (last?.kind !== 'notice') this.limitDismissed = false
-    const key = JSON.stringify([phase, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', input.elapsed ?? '', views, [...this.watches.watched]])
+    const situation = phase === 'limit' ? limitSituation(snapshot.items) : null
+    const minute = situation ? Math.floor(Date.now() / 60_000) : 0
+    const key = JSON.stringify([phase, minute, this.quiet, this.reminders.size, this.limitDismissed, input.project, input.branch, input.exited, input.agent, this.starting, this.ask?.id ?? '', input.elapsed ?? '', views, [...this.watches.watched], this.rewind.key()])
     if (!force && snapshot === this.renderedSnapshot && key === this.renderKey) return
     this.renderedSnapshot = snapshot
     this.renderKey = key
+    this.host.plan(this.planBar.update(latestTodos(snapshot.items)))
+    const limitFlipped = (this.phase === 'limit') !== (phase === 'limit')
     this.phase = phase
+    if (limitFlipped) this.host.limitChanged?.()
     const wasNear = this.nearBottom()
     this.thread.render(snapshot, {
       agentName: AGENT_NAMES[input.agent],
@@ -248,19 +292,29 @@ export class PaneChat {
       starting: this.starting,
       elapsed: input.elapsed,
       background: snapshot.background,
+      limit: situation ? { situation, now: Date.now(), scheduled: this.pending.some((message) => message.sendAt !== undefined), reminded: situation.resetsAt !== null && this.reminders.has(situation.resetsAt) } : undefined,
+      quiet: this.quiet,
       bell: { messageId: watchableMessageId(snapshot.items, phase), watched: this.watches.watched, toggle: (id) => this.toggleWatch(id) },
       fileScope: input.tabId,
       checkpointRefs: this.checkpointRefs,
+      turns: this.turns,
+      rewind: this.rewind.view(),
       session: input.sessionId ? { agent: input.agent, sessionId: input.sessionId } : null,
       actions: {
         showTerminal: () => this.host.showTerminal(),
-        continueIn: (to) => this.host.continueIn(to),
+        continueIn: (to, message) => this.host.continueIn(to, message),
         dismissLimit: () => this.dismissLimit(),
         answer: (answers) => this.answerAsk(answers),
         reviewChanges: () => this.host.reviewChanges(),
-        undoReply: (summary) => this.undoReply(summary)
+        undoReply: (summary) => this.undoReply(summary),
+        limit: {
+          continueIn: (to, message) => this.host.continueIn(to, message),
+          sendAt: (text, at) => this.scheduleSend(text, at),
+          notifyAt: (at) => this.remindAt(at)
+        }
       }
     })
+    this.rewind.afterRender()
     this.strip.update(snapshot.background)
     this.find.sync()
     this.watches.check()
@@ -279,6 +333,53 @@ export class PaneChat {
     if (this.input?.sessionId !== input.sessionId || JSON.stringify(refs) === JSON.stringify(this.checkpointRefs)) return
     this.checkpointRefs = refs
     this.render(true)
+  }
+
+  private refreshBar(input: ChatInput): void {
+    const session = `${input.agent}:${input.sessionId ?? ''}`
+    if (session !== this.quietSession) {
+      this.quietSession = session
+      this.quiet = []
+    }
+    this.bar.update({ ...input, working: input.working && !input.exited })
+  }
+
+  /** A quiet row in the thread for a model or effort change the log prints no row for. */
+  private announceChange(text: string): void {
+    this.quiet = [...this.quiet, text].slice(-3)
+    this.render(true)
+  }
+
+  /** Keeps the message the limit stopped, and sends it once the limit has reset. */
+  private scheduleSend(text: string, at: number): void {
+    this.pending = holdUntil(this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, true), at)
+    this.setWatch(true)
+    this.render(true)
+  }
+
+  private remindAt(at: number): void {
+    const input = this.input
+    if (!input) return
+    const name = AGENT_NAMES[input.agent]
+    const shown = this.reminders.set(at, name, (title, body) => this.host.notify(title, body))
+    toast(`You will get a notification at ${shown}, if Dawsha is still open.`, 'info')
+    this.render(true)
+  }
+
+  private turnInput(): TurnInput | null {
+    const input = this.input
+    if (!input) return null
+    const projectId = store.state.panes.find((pane) => pane.tabs.some((tab) => tab.id === input.tabId))?.projectId ?? null
+    return { folder: input.folder, sessionId: input.sessionId, projectId, agentName: AGENT_NAMES[input.agent], branch: input.branch }
+  }
+
+  /** A message from a summary card (failed checks) goes in as typed text, and only while the agent can take it. */
+  private sendFromCard(text: string): boolean {
+    const input = this.input
+    if (!input || input.exited || input.working || this.phase === 'approval' || this.phase === 'menu') return false
+    void this.deliver(text)
+    this.feed.nudge()
+    return true
   }
 
   private undoReply(summary: TurnSummary): void {
@@ -349,7 +450,7 @@ export class PaneChat {
   }
 
   private pendingViews(): PendingView[] {
-    return this.pending.map((message) => ({ id: message.id, text: message.text, label: pendingLabel(message), held: message.held, edit: () => this.editHeld(message.id), cancel: () => this.cancelHeld(message.id) }))
+    return this.pending.map((message) => ({ id: message.id, text: message.text, label: pendingLabel(message), held: message.held, ...(message.held && message.sendAt !== undefined ? { note: sendsAtNote(message.sendAt) } : {}), edit: () => this.editHeld(message.id), cancel: () => this.cancelHeld(message.id) }))
   }
 
   /** Messages typed while the agent was starting go in as soon as its input box is up. */
@@ -497,18 +598,32 @@ export class PaneChat {
       if (isTracked(text)) this.pending = holdPending(this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, true))
       else this.host.send(text)
     } else {
-      void this.deliver(text).then(({ flattened }) => {
-        this.note.hidden = !flattened
-        this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
-      })
-      if (isTracked(text)) {
-        const working = (this.input?.working ?? false) && !this.input?.exited
-        this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, working)]
-      }
+      this.sendNow(text)
     }
     this.box.value = ''
     this.attachments.clear()
     this.growBox()
+    this.stickBottom = true
+    this.feed.nudge()
+    this.render(false)
+  }
+
+  private sendNow(text: string): void {
+    void this.deliver(text).then(({ flattened }) => {
+      this.note.hidden = !flattened
+      this.note.textContent = flattened ? CHAT_TEXT.flattened : ''
+    })
+    if (isTracked(text)) {
+      const working = (this.input?.working ?? false) && !this.input?.exited
+      this.pending = [...this.pending, newPending(`p${(this.counter += 1)}`, text.trim(), Date.now(), this.snapshot.items, false, working)]
+    }
+  }
+
+  /** Sends text that did not come from the box (an edited message) the same way a typed one goes. */
+  private resend(text: string): void {
+    if (this.starting || (this.input?.working && !this.input.exited)) return
+    this.saveHistory(text)
+    this.sendNow(text)
     this.stickBottom = true
     this.feed.nudge()
     this.render(false)

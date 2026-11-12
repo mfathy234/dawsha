@@ -37,6 +37,8 @@ import { continueIn, continueLabel } from '../handoffActions'
 import { exportTranscript } from '../transcriptActions'
 import { replayPane, toggleRecordingPause } from '../replayActions'
 import { api } from '../api'
+import { COPY_SESSION_NAME, copySessionName } from '../copySessionName'
+import { sessionLabel as sessionRowName } from './sidebarRows'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
@@ -67,10 +69,13 @@ import './paneCalm.css'
 import './paneMeter.css'
 import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
+import { toolLineFromScreen } from '../../shared/sessionLine'
+import { setSessionNote } from '../sessionNotes'
 import { PaneChat } from '../chat/paneChat'
 import { chatCapable } from '../../shared/chatLog'
 import { ViewSwitch } from '../chat/viewSwitch'
 import { chatHostFor, syncPaneChat } from '../chat/paneChatController'
+import { LIMIT_PANE_STATE } from '../../shared/chatLimit'
 import '../chat/chat.css'
 import '../chat/chatMedia.css'
 
@@ -195,7 +200,8 @@ export class PaneComponent {
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
     this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, content, this.permission, this.foot)
-    this.chat = new PaneChat(chatHostFor(paneId, () => this.current), this.permission)
+    // The chat can learn of a usage limit after the pane last rendered, so it tells the pane to update its pill.
+    this.chat = new PaneChat({ ...chatHostFor(paneId, () => this.current), limitChanged: () => this.chatShown && this.showLimitState() }, this.permission)
     this.body.append(this.chat.el)
     this.watchFileDrops()
     // Header buttons (menu, details, maximize, close) act on this pane without making it the focused one,
@@ -321,6 +327,7 @@ export class PaneComponent {
   private updateChat(view: PaneView, state: SessionState, asking: boolean): void {
     const shown = syncPaneChat(this.paneId, view, state, asking, this.viewSwitch, this.chat)
     this.body.classList.toggle('chat-on', shown)
+    if (shown && this.chat.limitReached) this.showLimitState()
     this.el.classList.toggle('has-view-switch', chatCapable(view.agent))
     if (!this.chat.holdsPermission && this.permission.parentElement !== this.el) this.el.insertBefore(this.permission, this.foot)
     if (shown !== this.chatShown) {
@@ -328,6 +335,10 @@ export class PaneComponent {
       if (shown) this.chat.focusComposer()
       else getTerminal(view.primaryTabId)?.focus()
     }
+  }
+
+  private showLimitState(): void {
+    if (this.chat.limitReached) this.stateHost.querySelector('.state-pill-text')?.replaceChildren(LIMIT_PANE_STATE)
   }
 
   private approvalChildren(view: PaneView, detail: PermissionDetail, prompt: string, project: string): HTMLElement[] {
@@ -413,15 +424,14 @@ export class PaneComponent {
 
   // Read off the visible screen, so no file is read; at most once per RECAP_REFRESH_MS for each pane.
   private updateRecap(view: PaneView): void {
-    if (!store.state.settings.showRecap) {
-      this.recapAt = 0
-      return
-    }
     const now = Date.now()
     if (now - this.recapAt < RECAP_REFRESH_MS) return
     this.recapAt = now
-    const text = recapFromScreen(getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? '')
-    if (text === this.recapText) return
+    const screen = getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? ''
+    const text = recapFromScreen(screen)
+    // The sidebar's second line reads these even when the pane's own recap line is switched off.
+    setSessionNote(this.paneId, { recap: text, tool: toolLineFromScreen(screen) })
+    if (!store.state.settings.showRecap || text === this.recapText) return
     this.recapText = text
     this.recap.textContent = text
     this.recap.title = text
@@ -626,6 +636,7 @@ export class PaneComponent {
       item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
       item('Replay session', () => replayPane(this.paneId), ICONS.replay, 'pane.replay'),
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
+      item(COPY_SESSION_NAME, () => void copySessionName(this.current ? sessionRowName(this.current) : ''), ICONS.copy),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
       item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),
       item('Clear scrollback', () => clearScrollback(this.paneId), ICONS.eraser),

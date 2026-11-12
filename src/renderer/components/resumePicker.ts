@@ -1,11 +1,18 @@
 import { AGENTS, AGENT_NAMES, agentLabel } from '../../shared/agents'
 import { groupSessions, messageWord, sessionFacts, sessionSummary } from '../../shared/resumeIndex'
 import { formatAge } from '../../shared/statusLine'
-import type { AgentKind, ResumeQuery, ResumeSession } from '../../shared/types'
+import type { AgentKind, KeptSession, ResumeQuery, ResumeSession } from '../../shared/types'
 import { primaryModifierPressed } from '../../shared/shortcuts'
-import { closeQuickPick, findOpenSession, openQuickPick, resumeInFocusedPane, resumeInNewPane, setQuickPickMode } from '../actions'
+import { clearClosedSessions, closeQuickPick, findOpenSession, openQuickPick, openSessionKeys, renameKeptSession, reopenKeptSessions, resumeInFocusedPane, resumeInNewPane, setQuickPickMode, tagKeptSession } from '../actions'
+import { confirmRemoveClosed } from '../closedActions'
+import { closedFor, closedTitle, reopenAllLabel, reopenTargets } from '../../shared/resumeClosed'
+import { closedSessionsFor, closedUsageShort } from '../../shared/keptSessions'
 import { api } from '../api'
-import { clear, h, icon, leave } from '../dom'
+import { copySessionName } from '../copySessionName'
+import { clear, h, icon, iconButton, leave } from '../dom'
+import { openContextMenu } from './contextMenu'
+import { closedMenuEntries, renameField } from './resumeClosedUi'
+import { sidebarTagWord } from './sessionTagUi'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { keycaps } from './keycaps'
@@ -49,14 +56,17 @@ export class ResumePickerComponent {
   private token = 0
   private timer: number | undefined
   private latest: AppState | null = null
+  private renamingKey = ''
 
   constructor(private readonly anchor: () => HTMLElement) {}
 
   update(state: AppState): void {
+    const changed = this.latest?.settings.keptSessions !== state.settings.keptSessions || this.latest?.panes !== state.panes
     this.latest = state
     const wanted = state.quickPickOpen && state.quickPickMode === 'resume'
     if (wanted && !this.root) this.open(state)
     if (!wanted && this.root) this.close(state.quickPickOpen)
+    else if (wanted && this.root && changed) this.renderAll()
   }
 
   private open(state: AppState): void {
@@ -129,7 +139,7 @@ export class ResumePickerComponent {
 
   private readonly outside = (event: Event): void => {
     const target = event.target as HTMLElement
-    if (target.closest?.('.overlay, .select-menu-popover')) return
+    if (target.closest?.('.overlay, .select-menu-popover, .ctx-menu, .toast')) return
     if (this.root && !this.root.contains(target) && !this.anchor().contains(target)) closeQuickPick()
   }
 
@@ -199,6 +209,8 @@ export class ResumePickerComponent {
 
   private onKey(event: KeyboardEvent): void {
     if ((event.target as HTMLElement).closest('.popup-x') && event.key !== 'Escape') return
+    if ((event.target as HTMLElement).closest('.rp-rename')) return
+    if (this.onClosedKey(event)) return
     const onSelect = (event.target as HTMLElement).closest('.select-menu') !== null
     const ordered = this.ordered()
     const index = ordered.findIndex((s) => `${s.agent}:${s.id}` === this.selectedId)
@@ -227,6 +239,73 @@ export class ResumePickerComponent {
       this.agent = order[(order.indexOf(this.agent) + 1) % order.length]
       this.load()
     }
+  }
+
+  private selectedSession(): ResumeSession | undefined {
+    return this.sessions.find((s) => `${s.agent}:${s.id}` === this.selectedId)
+  }
+
+  private keptFor(session: ResumeSession): KeptSession | undefined {
+    return this.latest ? closedFor(session, this.latest.settings.keptSessions, openSessionKeys(this.latest)) : undefined
+  }
+
+  /** F2 renames, Delete removes and the menu key opens the actions for the selected closed session. */
+  private onClosedKey(event: KeyboardEvent): boolean {
+    const session = this.selectedSession()
+    const kept = session ? this.keptFor(session) : undefined
+    if (!session || !kept) return false
+    const atEnd = !this.search?.value || this.search.selectionStart === this.search.value.length
+    if (event.key === 'F2') this.startRename(session)
+    else if (event.key === 'Delete' && (event.target !== this.search || atEnd)) void this.removeClosed(kept)
+    else if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
+      const rect = this.list?.querySelector('.rp-row.selected')?.getBoundingClientRect()
+      this.openRowMenu(session, kept, { x: (rect?.left ?? 0) + 40, y: rect?.bottom ?? 0 })
+    } else return false
+    event.preventDefault()
+    event.stopPropagation()
+    return true
+  }
+
+  private startRename(session: ResumeSession): void {
+    this.renamingKey = `${session.agent}:${session.id}`
+    this.selectedId = this.renamingKey
+    this.renderList(true)
+    const input = this.list?.querySelector<HTMLInputElement>('.rp-rename')
+    input?.focus()
+    input?.select()
+  }
+
+  private finishRename(session: ResumeSession, name: string | null): void {
+    this.renamingKey = ''
+    if (name !== null) renameKeptSession(session.agent, session.id, name)
+    this.renderAll()
+    this.search?.focus()
+  }
+
+  private async removeClosed(kept: KeptSession): Promise<void> {
+    const project = this.latest?.settings.projects.find((p) => p.id === kept.projectId)
+    await confirmRemoveClosed(kept, project)
+    this.search?.focus()
+  }
+
+  private async clearClosed(projectId: string): Promise<void> {
+    await clearClosedSessions(projectId)
+    this.search?.focus()
+  }
+
+  private openRowMenu(session: ResumeSession, kept: KeptSession, at: { x: number; y: number }, anchor?: DOMRect): void {
+    openContextMenu({
+      ...at,
+      anchor,
+      label: `Actions for ${closedTitle(session, kept)}`,
+      returnFocus: this.search,
+      entries: closedMenuEntries(kept, {
+        rename: () => this.startRename(session),
+        copyName: () => void copySessionName(closedTitle(session, kept)),
+        tag: (tag) => tagKeptSession(session.agent, session.id, tag),
+        remove: () => void this.removeClosed(kept)
+      })
+    })
   }
 
   private renderAll(): void {
@@ -258,8 +337,9 @@ export class ResumePickerComponent {
     this.chips.replaceChildren(chip(null), ...AGENTS.map((agent) => chip(agent)))
   }
 
-  private renderList(): void {
+  private renderList(force = false): void {
     if (!this.list || !this.search) return
+    if (this.renamingKey && !force) return
     const list = this.list
     clear(list)
     const ordered = this.ordered()
@@ -272,10 +352,23 @@ export class ResumePickerComponent {
       return
     }
     for (const group of groupSessions(this.sessions, Date.now())) {
-      list.append(h('div', { class: 'rp-group', role: 'presentation' }, group.label))
+      list.append(this.groupHeader(group.label, group.sessions))
       for (const session of group.sessions) list.append(this.row(session))
     }
     this.search.setAttribute('aria-activedescendant', `rp-${this.selectedId}`)
+  }
+
+  private groupHeader(label: string, sessions: ResumeSession[]): HTMLElement {
+    const state = this.latest
+    const target = state ? reopenTargets(sessions, state.settings.keptSessions, openSessionKeys(state)) : null
+    const project = state?.settings.projects.find((p) => p.id === target?.projectId)
+    if (!target || !project) return h('div', { class: 'rp-group', role: 'presentation' }, label)
+    const reopen = h('button', {
+      class: 'link rp-reopen', type: 'button', tabindex: '-1',
+      'aria-label': reopenAllLabel(target.sessions.length, label, project.name),
+      onClick: () => void reopenKeptSessions(project, target.sessions, label)
+    }, 'Reopen all')
+    return h('div', { class: 'rp-group', role: 'presentation' }, h('span', {}, label), reopen)
   }
 
   private emptyState(): HTMLElement {
@@ -298,6 +391,9 @@ export class ResumePickerComponent {
     const selected = key === this.selectedId
     const project = this.latest?.settings.projects.find((p) => p.id === session.projectId)
     const open = this.latest ? findOpenSession(this.latest, session.agent, session.id) : null
+    const kept = this.keptFor(session)
+    const title = closedTitle(session, kept)
+    const used = kept && this.latest ? closedUsageShort(this.latest.usage.sessions[session.id]) : null
     const row = h(
       'div',
       {
@@ -311,25 +407,48 @@ export class ResumePickerComponent {
       h(
         'div',
         { class: 'rp-row-main' },
-        h('div', { class: 'rp-row-title' }, h('span', { class: 'rp-title' }, session.title), h('span', { class: 'rp-age' }, age(session))),
+        h('div', { class: 'rp-row-title' }, this.renamingKey === key
+          ? renameField(title, (name) => this.finishRename(session, name))
+          : h('span', { class: 'rp-title', dir: 'auto' }, title),
+          h('span', { class: 'rp-age' }, age(session)),
+          kept ? this.moreButton(session, kept, title) : null),
         h(
           'div',
           { class: 'rp-row-meta' },
           this.allProjects?.checked && project ? h('span', { class: 'rp-project-chip' }, project.name) : null,
           h('span', {}, messageWord(session.messageCount)),
           session.matchExcerpt ? h('span', { class: 'rp-match-chip' }, 'content match') : null,
+          kept?.tag ? sidebarTagWord(kept.tag) : null,
+          used ? h('span', {}, used) : null,
           open ? h('span', { class: 'rp-open' }, `open in pane ${open.number}`) : null
         )
       )
     )
+    row.addEventListener('contextmenu', (event) => {
+      if (!kept) return
+      event.preventDefault()
+      this.selectedId = key
+      this.openRowMenu(session, kept, { x: event.clientX, y: event.clientY })
+    })
     row.addEventListener('mousemove', () => {
-      if (this.selectedId === key) return
+      if (this.selectedId === key || this.renamingKey) return
       this.selectedId = key
       this.renderList()
       this.renderPreview()
     })
     row.addEventListener('click', () => this.choose(session, false))
     return row
+  }
+
+  private moreButton(session: ResumeSession, kept: KeptSession, title: string): HTMLElement {
+    const button = iconButton(`Actions for ${title}`, ICONS.more, () => {
+      this.selectedId = `${session.agent}:${session.id}`
+      this.openRowMenu(session, kept, { x: 0, y: 0 }, button.getBoundingClientRect())
+    }, 'small rp-more')
+    button.setAttribute('aria-haspopup', 'menu')
+    button.tabIndex = -1
+    button.addEventListener('click', (event) => event.stopPropagation())
+    return button
   }
 
   private renderPreview(): void {
@@ -377,8 +496,15 @@ export class ResumePickerComponent {
   private renderFoot(): void {
     if (!this.foot) return
     const projects = new Set(this.sessions.map((s) => s.projectId)).size
+    const projectId = this.allProjects?.checked ? '' : (this.projectSelect?.value ?? '')
+    const state = this.latest
+    const closed = state && projectId ? closedSessionsFor(state.settings.keptSessions, projectId, openSessionKeys(state)).length : 0
+    const name = state?.settings.projects.find((p) => p.id === projectId)?.name ?? ''
     this.foot.replaceChildren(
       h('span', { class: 'rp-count' }, this.sessions.length > 0 ? sessionSummary(this.sessions.length, projects) : ''),
+      closed > 0
+        ? h('button', { class: 'link rp-clear', type: 'button', id: 'rp-clear-closed', onClick: () => void this.clearClosed(projectId) }, `Clear ${closed} closed in ${name}`)
+        : '',
       h('span', { class: 'spacer' }),
       h('span', {}, '↑ ↓ move · Esc closes')
     )

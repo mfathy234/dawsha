@@ -208,10 +208,8 @@ test('a new session, a limit and Arabic read correctly', async () => {
       })
     )
     const notice = chat.locator('.chat-notice')
-    await expect(notice).toContainText('hit your session limit', { timeout: 15_000 })
+    await expect(notice).toContainText("Claude's usage limit is reached.", { timeout: 15_000 })
     await expect(notice.getByRole('button', { name: 'Continue in Codex' })).toBeVisible()
-    await notice.getByRole('button', { name: 'Wait for the reset' }).click()
-    await expect(notice.getByRole('button')).toHaveCount(0)
   } finally {
     await closeApp(app)
   }

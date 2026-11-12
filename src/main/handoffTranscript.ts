@@ -10,6 +10,7 @@ import {
   type HandoffTranscriptResult
 } from '../shared/handoff'
 import type { Project } from '../shared/types'
+import { cutTranscript } from '../shared/tryAgain'
 import { renderTranscript } from '../shared/transcript'
 import { buildTranscriptDoc } from './transcriptExport'
 
@@ -41,8 +42,14 @@ export async function writeHandoffTranscript(projects: Project[], dir: string, v
       sessionId: request.sessionId,
       folder: project.folder,
       projectName: project.name
-    })
+    }, request.cut === undefined)
     if (!doc) return { status: 'no-session' }
+    if (request.cut) {
+      const entries = cutTranscript(doc.entries, request.cut.text, request.cut.laterSame)
+      if (entries === null) return { status: 'error', message: 'That message is not in the saved conversation.' }
+      if (entries.length === 0) return { status: 'no-session' }
+      doc.entries = entries
+    }
     await mkdir(dir, { recursive: true })
     const path = join(dir, handoffFileName(project.name, request.agent, new Date()))
     await writeFile(path, renderTranscript(doc, 'md'), 'utf8')

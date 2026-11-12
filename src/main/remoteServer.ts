@@ -12,6 +12,8 @@ import { KIND_OFF_MESSAGE } from './remoteApprovals'
 import type { ApprovalsPayload } from '../shared/approvals'
 import type { RemoteActivityInput } from '../shared/remoteActivity'
 import type { RemoteCrewHost } from './remoteCrew'
+import type { RemoteChatHost } from './remoteChat'
+import { REMOTE_CHAT_READ_ONLY, REMOTE_CHAT_SENDS_PER_MINUTE, checkChatSend, isTerminalId } from '../shared/remoteChat'
 import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
 
 const REMOTE_PREFIX = '/dawsha'
@@ -29,7 +31,9 @@ const REMOTE_API_PATHS = new Set([
   `${REMOTE_PREFIX}/api/approvals/answer`,
   `${REMOTE_PREFIX}/api/approvals/stream`,
   `${REMOTE_PREFIX}/api/crew`,
-  `${REMOTE_PREFIX}/api/crew/run`
+  `${REMOTE_PREFIX}/api/crew/run`,
+  `${REMOTE_PREFIX}/api/chat`,
+  `${REMOTE_PREFIX}/api/chat/send`
 ])
 const MAX_BODY_BYTES = 16 * 1024
 const MAX_TERMINAL_INPUT = 4096
@@ -64,6 +68,7 @@ export interface RemoteServerOptions {
   }
   approvals?: RemoteApprovals
   crew?: RemoteCrewHost
+  chat?: RemoteChatHost
   startSession(input: unknown, authorizeStart: () => boolean): Promise<{ ok: boolean; error?: string; id?: string }>
   stopSession(id: string): boolean
   assetDirectory?: string
@@ -446,6 +451,57 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         return
       }
       sendJson(response, 200, { ok: true, reasonSent: result.reasonSent, ...(result.reasonFailure ? { reasonFailure: result.reasonFailure } : {}) })
+      return
+    }
+
+    if (path === '/api/chat' && request.method === 'GET') {
+      if (!options.chat) {
+        sendJson(response, 404, { error: 'Not found.' })
+        return
+      }
+      if (!withinRateLimit(device.id, 'chat', 150)) {
+        sendJson(response, 429, { error: 'Too many requests. Try again shortly.' })
+        return
+      }
+      const id = url.searchParams.get('id')
+      if (!isTerminalId(id)) {
+        sendJson(response, 400, { error: 'Invalid session.' })
+        return
+      }
+      sendJson(response, 200, await options.chat.read(id, url.searchParams.get('version') ?? undefined))
+      return
+    }
+
+    if (path === '/api/chat/send' && request.method === 'POST') {
+      if (!options.chat) {
+        sendJson(response, 404, { error: 'Not found.' })
+        return
+      }
+      if (!options.auth.can(token, 'messages')) {
+        record({ device: device.name, action: 'blocked', session: null, detail: 'sending a message' })
+        sendJson(response, 403, { error: REMOTE_CHAT_READ_ONLY })
+        return
+      }
+      if (!withinRateLimit(device.id, 'chat-send', REMOTE_CHAT_SENDS_PER_MINUTE)) {
+        sendJson(response, 429, { error: 'Too many messages. Try again shortly.' })
+        return
+      }
+      const body = await readJson(request, response)
+      if (body === null || response.writableEnded) return
+      const checked = checkChatSend(body)
+      if (!checked.ok) {
+        sendJson(response, 400, { error: checked.error })
+        return
+      }
+      const allowed = (): boolean => Boolean(options.auth.authorize(token)) && options.auth.can(token, 'messages')
+      const result = options.chat.send(checked.id, checked.text, allowed)
+      if (!result.ok) {
+        if (result.status === 403) record({ device: device.name, action: 'blocked', session: sessionLabel(checked.id), detail: 'sending a message' })
+        sendJson(response, result.status, { error: result.error })
+        return
+      }
+      record({ device: device.name, action: 'message', session: sessionLabel(checked.id), detail: '' })
+      sendJson(response, 200, { ok: true })
       return
     }
 

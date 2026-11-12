@@ -26,6 +26,7 @@ import { visibleLimitAgents } from '../../shared/visibleAgents'
 import { agentMark } from './agentMark'
 import { buildBars, buildLegend, type ChartMode } from './usageChart'
 import { pageHeader } from './pageHeader'
+import { exportUsageCsv } from '../usageExportActions'
 
 const REFRESH_MS = 30_000
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -174,7 +175,10 @@ export class UsageViewComponent {
     return pageHeader({
       title: 'Usage',
       subtitle: "Read from your agents' folders. Nothing leaves this computer.",
-      actions: h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Range' }, ...USAGE_RANGES.map((entry) => tab(entry.value, entry.label)))
+      actions: [
+        h('div', { class: 'rp-tabs', role: 'tablist', 'aria-label': 'Range' }, ...USAGE_RANGES.map((entry) => tab(entry.value, entry.label))),
+        h('button', { class: 'btn', type: 'button', id: 'usage-export', onClick: () => void exportUsageCsv() }, 'Export CSV')
+      ]
     })
   }
 

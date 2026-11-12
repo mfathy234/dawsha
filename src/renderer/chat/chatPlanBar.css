@@ -1,0 +1,77 @@
+/* The plan pinned above the thread: one quiet row, and the checklist under it when opened. */
+.chat-plan {
+  flex: none;
+}
+
+.plan-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: 32px;
+  padding: 0 var(--sp-6);
+  border: 0;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-12);
+  text-align: start;
+  cursor: pointer;
+}
+
+.plan-bar:hover { background: var(--hover); }
+.plan-bar:active { background: var(--press); }
+.plan-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.plan-n {
+  flex: none;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-prog {
+  flex: none;
+  width: 56px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--press);
+  overflow: hidden;
+}
+
+.plan-prog i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.plan-now {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-bar > .icon {
+  flex: none;
+  color: var(--text-3);
+}
+
+.plan-list {
+  max-height: 40vh;
+  padding: var(--sp-2) var(--sp-6) var(--sp-3);
+  background: var(--surface);
+  overflow-y: auto;
+}
+
+.plan-list .chat-todos {
+  padding: 0;
+  background: transparent;
+}
+
+/* Done items are just quiet, not struck through. */
+.plan-list .chat-todos .todo.completed .txt { text-decoration: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-bar { transition: none; }
+}

@@ -164,12 +164,12 @@ test('project panel can be resized by pointer and keyboard, with its width saved
   const { app, page } = await launchApp(sandbox)
   try {
     const separator = page.getByRole('separator', { name: 'Resize project panel' })
-    await expect(separator).toHaveAttribute('aria-valuenow', '248')
+    await expect(separator).toHaveAttribute('aria-valuenow', '272')
 
     await separator.focus()
     await page.keyboard.press('ArrowRight')
-    await expect(separator).toHaveAttribute('aria-valuenow', '258')
-    await expect.poll(() => readSettings(sandbox.userData).sidebarWidth).toBe(258)
+    await expect(separator).toHaveAttribute('aria-valuenow', '282')
+    await expect.poll(() => readSettings(sandbox.userData).sidebarWidth).toBe(282)
 
     const bounds = await separator.boundingBox()
     if (!bounds) throw new Error('Project panel resize handle is not visible')

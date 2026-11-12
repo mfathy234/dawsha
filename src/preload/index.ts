@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { createRunPreload } from './runCommands'
 import { createFilesToolsPreload } from './filesTools'
+import { createTurnPreload } from './turn'
 import { createMcpPreload } from './mcp'
 import { createChatPreload } from './chat'
 import type { GridApi } from '../shared/api'
@@ -30,6 +31,7 @@ async function invokeRemote(channel: string, ...args: unknown[]): Promise<Remote
 const api: GridApi = {
   runs: createRunPreload(),
   tools: createFilesToolsPreload(),
+  turn: createTurnPreload(),
   mcp: createMcpPreload(),
   chat: createChatPreload(),
   ...(isRemoteControlBuild ? {
@@ -84,6 +86,8 @@ const api: GridApi = {
   gitSessionStatus: (folder, baseline) => ipcRenderer.invoke(IPC.gitSessionStatus, folder, baseline),
   checkpointPrepare: (folder, sessionId) => ipcRenderer.invoke(IPC.checkpointPrepare, folder, sessionId),
   listCheckpoints: (folder, sessionId, messageIds) => ipcRenderer.invoke(IPC.checkpointsList, folder, sessionId, messageIds),
+  rewindInfo: (folder, sessionId, ref, files) => ipcRenderer.invoke(IPC.checkpointRewindInfo, folder, sessionId, ref, files),
+  checkpointToWorktree: (folder, sessionId, ref, worktree) => ipcRenderer.invoke(IPC.checkpointToWorktree, folder, sessionId, ref, worktree),
   restoreCheckpoint: (folder, sessionId, ref, paths) => ipcRenderer.invoke(IPC.checkpointRestore, folder, sessionId, ref, paths),
   projectFiles: (folder) => ipcRenderer.invoke(IPC.projectFiles, folder),
   projectFile: (folder, path) => ipcRenderer.invoke(IPC.projectFile, folder, path),
@@ -197,6 +201,11 @@ const api: GridApi = {
   mergeCommit: (request) => ipcRenderer.invoke(IPC.mergeCommit, request),
   mergeInto: (request) => ipcRenderer.invoke(IPC.mergeInto, request),
   mergeRemove: (request) => ipcRenderer.invoke(IPC.mergeRemove, request),
+  worktreeCleanupList: (folder, openPaths) => ipcRenderer.invoke(IPC.worktreeCleanupList, folder, openPaths),
+  worktreeCleanupCount: (folder, openPaths) => ipcRenderer.invoke(IPC.worktreeCleanupCount, folder, openPaths),
+  worktreeCleanupRun: (request) => ipcRenderer.invoke(IPC.worktreeCleanupRun, request),
+  usageExport: (request) => ipcRenderer.invoke(IPC.usageExport, request),
+  usageExportReveal: (path) => ipcRenderer.invoke(IPC.usageExportReveal, path),
   listRecordings: () => ipcRenderer.invoke(IPC.recordingsList),
   readRecording: (id) => ipcRenderer.invoke(IPC.recordingsRead, id),
   recordingStats: () => ipcRenderer.invoke(IPC.recordingsStats),

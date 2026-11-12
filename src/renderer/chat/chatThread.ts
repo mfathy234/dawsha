@@ -22,18 +22,23 @@ import { linkifyChat, openFileButton } from './chatLinks'
 import type { ChatSessionRef } from './chatImageCache'
 import { turnSummaries } from '../../shared/turnSummary'
 import { turnSummaryCard } from './chatTurnSummary'
+import { replyContext, type TurnExtras } from './turnExtras'
 import { groupMembership, groupTools, type ToolGroup } from '../../shared/chatGroups'
 import { groupRow, workedByReply, workedLine } from './chatGroupRow'
 import { bellButton, type BellView } from './chatBell'
 import { workedLabel } from '../../shared/chatTiming'
+import { limitCard, type LimitActions } from './chatLimitCard'
+import type { LimitSituation } from '../../shared/chatLimit'
+import { decorateRewind, messageActions, type RewindView } from './chatRewindView'
 
 export interface ThreadActions {
   showTerminal(): void
-  continueIn(to: AgentKind): void
+  continueIn(to: AgentKind, message?: string | null): void
   dismissLimit(): void
   answer(answers: AskAnswer[]): void
   reviewChanges(): void
   undoReply(summary: import('../../shared/turnSummary').TurnSummary): void
+  limit: LimitActions
 }
 
 export interface PendingView {
@@ -41,6 +46,8 @@ export interface PendingView {
   text: string
   label: PendingLabel
   held?: boolean
+  /** Replaces the usual line under the message, e.g. "Sends at 15:40". */
+  note?: string
   edit?: () => void
   cancel?: () => void
 }
@@ -69,6 +76,14 @@ export interface ThreadContext {
   background?: readonly BackgroundTask[]
   /** The bell on a running turn's user message. */
   bell?: BellView
+  /** What a usage limit stopped, for the card at the end of the thread. */
+  limit?: { situation: LimitSituation; now: number; scheduled: boolean; reminded: boolean }
+  /** Quiet centred rows after the log, e.g. "Model set to Sonnet". */
+  quiet?: readonly string[]
+  /** Diffs, commit and checks on the summary cards. */
+  turns?: TurnExtras
+  /** Rewind, edit and try another way for the messages you sent. */
+  rewind?: RewindView
   actions: ThreadActions
 }
 
@@ -105,6 +120,7 @@ export class ChatThread {
     const children: (Node | null)[] =
       feed.state === 'failed' ? [this.failed(feed.reason, ctx)] : feed.state === 'loading' ? [h('p', { class: 'chat-quiet' }, CHAT_TEXT.reading)] : this.body(feed, ctx)
     this.el.replaceChildren(...children.filter((child): child is Node => child !== null))
+    decorateRewind(this.el, ctx.rewind)
     const scope = ctx.fileScope
     if (scope) this.el.querySelectorAll<HTMLElement>('.chat-say').forEach((reply) => linkifyChat(reply, scope))
   }
@@ -112,7 +128,7 @@ export class ChatThread {
   private body(feed: FeedSnapshot, ctx: ThreadContext): (Node | null)[] {
     const bare = feed.items.length === 0 && ctx.pending.length === 0
     if (bare && ctx.phase !== 'approval' && ctx.phase !== 'menu' && !ctx.starting) return [this.empty(ctx)]
-    return [feed.earlier > 0 ? h('p', { class: 'chat-quiet' }, CHAT_TEXT.earlier(feed.earlier)) : null, ...this.items(feed.items, ctx), ...ctx.pending.map((item) => this.pendingMessage(item)), ...this.tail(ctx)]
+    return [feed.earlier > 0 ? h('p', { class: 'chat-quiet' }, CHAT_TEXT.earlier(feed.earlier)) : null, ...this.items(feed.items, ctx), ...ctx.pending.map((item) => this.pendingMessage(item)), ...(ctx.quiet ?? []).map((text) => h('p', { class: 'chat-quiet chat-set' }, text)), ...this.tail(ctx)]
   }
 
   private empty(ctx: ThreadContext): HTMLElement {
@@ -133,7 +149,8 @@ export class ChatThread {
 
   private items(items: readonly ChatItem[], ctx: ThreadContext): Node[] {
     const out: Node[] = []
-    const summaries = new Map(turnSummaries(items, ctx.checkpointRefs).map((summary) => [summary.messageId, summary]))
+    const ordered = turnSummaries(items, ctx.checkpointRefs)
+    const summaries = new Map(ordered.map((summary) => [summary.messageId, summary]))
     const timings = workedByReply(items)
     const lastUser = items.reduce((last, item, index) => item.kind === 'message' && item.role === 'user' ? index : last, -1)
     let tools: HTMLElement[] = []
@@ -146,6 +163,7 @@ export class ChatThread {
     const entries = groupTools(items, starts)
     this.membership = groupMembership(entries)
     const live = ctx.phase === 'working' || ctx.phase === 'approval' || ctx.phase === 'menu'
+    ctx.turns?.begin(ctx.session ? `${ctx.session.agent}:${ctx.session.sessionId}` : '', live, ordered.map((summary) => summary.messageId))
     const now = Date.now()
     let index = 0
     for (const entry of entries) {
@@ -171,7 +189,9 @@ export class ChatThread {
       const finished = !(index - 1 > lastUser && ctx.phase === 'working')
       const worked = finished && timings.has(item.id) ? workedLabel(timings.get(item.id)!) : undefined
       const summary = summaries.get(item.id)
-      if (summary && finished && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges, (value) => ctx.actions.undoReply(value), worked))
+      const undo = (value: import('../../shared/turnSummary').TurnSummary): void => ctx.actions.undoReply(value)
+      if (summary && finished && ctx.fileScope && ctx.turns) out.push(ctx.turns.card(summary, { scope: ctx.fileScope, review: ctx.actions.reviewChanges, undo, worked, ...replyContext(items, summary, item) }))
+      else if (summary && finished && ctx.fileScope) out.push(turnSummaryCard(summary, ctx.fileScope, ctx.actions.reviewChanges, undo, worked))
       else if (worked) out.push(workedLine(timings.get(item.id)!))
     }
     flush()
@@ -200,6 +220,7 @@ export class ChatThread {
   }
 
   private message(item: ChatMessage, ctx: ThreadContext): HTMLElement {
+    if (item.role === 'user' && ctx.rewind?.editing?.id === item.id) return ctx.rewind.editing.el
     const folded = foldLines(item.text)
     const opened = this.open.has(`m:${item.id}`)
     const shown = opened || folded.hidden === 0 ? item.text : folded.head
@@ -211,6 +232,11 @@ export class ChatThread {
     if (item.text !== '') body.append(copyButton(() => item.text))
     const bell = item.role === 'user' ? bellButton(item.id, ctx.bell) : null
     if (bell) body.append(bell)
+    if (item.role === 'user' && ctx.rewind) {
+      body.dataset.msgId = item.id
+      body.classList.add('has-acts')
+      body.append(messageActions(item.id, item.at, ctx.rewind))
+    }
     if (item.at !== undefined) body.append(h('time', { class: 'chat-time', datetime: new Date(item.at).toISOString(), title: fullTimeLabel(item.at), 'data-time': timeLabel(item.at) }))
     return body
   }
@@ -267,16 +293,8 @@ export class ChatThread {
   private notice(item: ChatNotice, last: boolean, ctx: ThreadContext): HTMLElement {
     if (item.notice === 'interrupted') return h('p', { class: 'chat-quiet' }, item.text)
     if (item.notice === 'compact') return this.compacted(item)
-    const actions =
-      item.notice === 'limit' && last && ctx.phase === 'limit' && !ctx.limitDismissed
-        ? h(
-            'div',
-            { class: 'chat-acts' },
-            this.button(CHAT_TEXT.continueIn(ctx.otherName), () => ctx.actions.continueIn(ctx.otherAgent), true),
-            this.button(CHAT_TEXT.waitForReset, ctx.actions.dismissLimit, false)
-          )
-        : null
-    return h('div', { class: 'chat-notice' }, h('b', { dir: 'auto' }, item.text), actions)
+    if (item.notice === 'limit' && last && ctx.phase === 'limit' && ctx.limit) return limitCard({ agentName: ctx.agentName, otherAgent: ctx.otherAgent, otherName: ctx.otherName, ...ctx.limit, actions: ctx.actions.limit })
+    return h('div', { class: 'chat-notice' }, h('b', { dir: 'auto' }, item.text))
   }
 
   /** A compaction: one quiet line, with the summary it left folded away. */
@@ -324,7 +342,7 @@ export class ChatThread {
   }
 
   private pendingMessage(item: PendingView): HTMLElement {
-    const note = item.label === 'queued' ? CHAT_TEXT.queued : item.label === 'waiting' ? CHAT_TEXT.waitingToStart : CHAT_TEXT.sending
+    const note = item.note ?? (item.label === 'queued' ? CHAT_TEXT.queued : item.label === 'waiting' ? CHAT_TEXT.waitingToStart : CHAT_TEXT.sending)
     return h('div', { class: 'chat-you pending', 'data-pending': item.label, dir: textDirection(item.text) }, ...richText(item.text), h('span', { class: 'chat-pend', role: 'status' }, note), item.held ? h('span', { class: 'chat-pend-actions' }, h('button', { class: 'chat-text-btn', type: 'button', onClick: item.edit }, CHAT_TEXT.edit), h('button', { class: 'chat-text-btn', type: 'button', onClick: item.cancel }, CHAT_TEXT.cancel)) : null)
   }
 

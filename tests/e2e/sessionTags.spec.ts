@@ -29,7 +29,7 @@ async function pickTag(page: Page, menuButton: string, item: string, role: 'menu
   await page.getByRole(role, { name: item }).click()
 }
 
-test('a session tag follows the session: sidebar, pane header, board card, close, reopen and restart', async () => {
+test('a session tag follows the session: sidebar tooltip, pane header, board card and restart', async () => {
   const sandbox = createSandbox()
   let session = await launchApp(sandbox)
   try {
@@ -59,17 +59,6 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     await page.locator('.board-view').screenshot({ path: join(SCREENS, '162-sidebar-board-card-tag.png') })
     await page.locator('#layout-grid').click()
 
-    await closeFirstPane(page)
-    await expect(page.locator('.pane')).toHaveCount(0)
-    await expect.poll(() => readSettings(sandbox.userData).keptSessions[0]?.tag).toBe('review')
-    await openQuietProject(page)
-    const closed = page.locator('.kept-session-row.closed')
-    await expect(closed.locator('.sess-row')).toHaveAttribute('title', /Tag: Review/)
-    await expect(closed.locator('.tag-word')).toHaveCount(0)
-
-    await closed.locator('.sess-row').click()
-    await expect(page.locator('.pane')).toHaveCount(1)
-    await expect(page.locator('.pane-tag .tag-word')).toHaveText('review')
   } finally {
     await closeApp(session.app)
   }
@@ -86,31 +75,6 @@ test('a session tag follows the session: sidebar, pane header, board card, close
     await expect.poll(() => readSettings(sandbox.userData).workspace.panes[0].tabs[0].tag).toBeUndefined()
   } finally {
     await closeApp(session.app)
-  }
-})
-
-test('closed sessions take a tag from their menu and a right click opens it', async () => {
-  const sandbox = createSandbox()
-  const id = '00000000-0000-4000-8000-000000000301'
-  writeSettings(sandbox, { keptSessions: [{ projectId: 'smoke', agent: 'claude', sessionId: id, title: 'Plan the release', closedAt: Date.now() - 5_000 }] })
-  const { app, page } = await launchApp(sandbox)
-  try {
-    await openQuietProject(page)
-    const row = page.locator('.kept-session-row.closed')
-    await row.locator('.sess-row').click({ button: 'right' })
-    const menu = page.getByRole('menu', { name: 'Actions for Plan the release' })
-    await expect(menu).toBeVisible()
-    await menu.getByRole('menuitemradio', { name: 'Tag as Docs' }).click()
-    await expect(row.locator('.sess-row')).toHaveAttribute('title', /Tag: Docs/)
-    await expect.poll(() => readSettings(sandbox.userData).keptSessions[0].tag).toBe('docs')
-    expect(await focusedNav(page)).toBe(`c:claude:${id}`)
-    await row.hover()
-    await page.getByRole('button', { name: 'Actions for Plan the release in Smoke' }).click()
-    await page.getByRole('menuitem', { name: 'Remove tag' }).click()
-    await expect(row.locator('.sess-row')).not.toHaveAttribute('title', /Tag:/)
-    await expect.poll(() => readSettings(sandbox.userData).keptSessions[0].tag).toBeUndefined()
-  } finally {
-    await closeApp(app)
   }
 })
 
@@ -156,7 +120,7 @@ test('a session takes its tag from the branch, a manual tag wins, and the settin
 })
 
 for (const [theme, name] of [['dawsha-night', 'dark'], ['dawsha-daylight', 'light']] as const) {
-  test(`tags, cost and the reopen affordance look right in the ${name} theme`, async () => {
+  test(`tags and the closed line look right in the ${name} theme`, async () => {
     const sandbox = createSandbox()
     const now = Date.now()
     const date = new Date()
@@ -185,11 +149,9 @@ for (const [theme, name] of [['dawsha-night', 'dark'], ['dawsha-daylight', 'ligh
       }
       await startGemini(page)
       await pickTag(page, 'Actions for Smoke in Smoke', 'Tag as Feature')
-      await page.getByRole('button', { name: 'Show all 6' }).click()
-      await page.locator('.closed-day-row').first().hover()
+      await expect(page.locator('.closed-line')).toHaveText('6 closed')
       mkdirSync(SCREENS, { recursive: true })
       await page.locator('.sidebar').screenshot({ path: join(SCREENS, `162-sidebar-tags-${name}.png`) })
-      await expect(page.getByRole('button', { name: 'Reopen 3 sessions from Today in Smoke' })).toBeVisible()
       await page.locator('.pane-header').first().screenshot({ path: join(SCREENS, `162-sidebar-pane-tag-${name}.png`) })
     } finally {
       await closeApp(app)

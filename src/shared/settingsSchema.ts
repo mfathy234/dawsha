@@ -2,6 +2,7 @@ import { sanitizeTicketNotes } from './ticketNotes'
 import { checkoutTabsKey } from './filesWorkspace'
 import { defaultLayout, parseLayout } from './filesLayout'
 import { sanitizeRunOverrides } from './runCommands'
+import { sanitizeTurnChecks } from './turnChecks'
 import { isAgent } from './agents'
 import { sanitizePresets } from './sessionPresets'
 import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews, sanitizeSessionViews } from './chatLog'
@@ -82,6 +83,7 @@ export const defaultSettings = (): Settings => ({
   version: 2,
   projects: [],
   spendLimits: {},
+  turnChecks: {},
   theme: { id: DEFAULT_THEME_ID, image: defaultImage() },
   sidebarCollapsed: false,
   sidebarSort: 'recent',
@@ -440,6 +442,7 @@ export function migrateSettings(raw: unknown): Settings {
     version: 2,
     projects,
     spendLimits,
+    turnChecks: sanitizeTurnChecks(raw.turnChecks, projects.map((project) => project.id)),
     theme: { id: resolveThemeId(asString(theme.id) ?? defaults.theme.id), image: sanitizeImage(theme.image) },
     sidebarCollapsed: raw.sidebarCollapsed === true,
     sidebarSort: isSidebarSort(raw.sidebarSort) ? raw.sidebarSort : 'recent',

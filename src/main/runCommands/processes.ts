@@ -85,7 +85,7 @@ export function prepareRunCommand(command: RunCommand): LaunchSpec {
   }
 }
 
-async function killRunTree(pid: number): Promise<void> {
+export async function killRunTree(pid: number): Promise<void> {
   if (!Number.isInteger(pid) || pid <= 0)
     throw new Error('Run has no process to stop.')
   if (process.platform === 'win32') {

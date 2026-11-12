@@ -42,3 +42,22 @@
 :root .rp-pv-path { margin: 2px 0 0; font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-3); overflow-wrap: anywhere; }
 :root .rp-field h3 { font-size: var(--fs-12); color: var(--text-3); }
 :root .rp-foot { font-size: var(--fs-12); color: var(--text-3); }
+
+/* 1.8.6 closed sessions: tag word, row menu, inline rename and the quiet text actions. */
+:root .rp-row-meta .sess-tag { color: var(--tag); }
+:root[data-tag-colors='off'] .rp-row-meta .sess-tag { color: var(--text-3); }
+:root .rp-row { position: relative; }
+:root .rp-more { flex: none; opacity: 0; }
+:root .rp-row:hover .rp-more,
+:root .rp-row.selected .rp-more,
+:root .rp-more:focus-visible,
+:root .rp-more[aria-expanded='true'] { opacity: 1; }
+:root .rp-rename.text-input { flex: 1; min-width: 0; height: 24px; padding: 0 var(--sp-2); font-size: var(--fs-ui); }
+:root .rp-group { justify-content: space-between; }
+:root .rp-reopen,
+:root .rp-clear { color: var(--text-3); font-size: var(--fs-12); }
+:root .rp-reopen:hover,
+:root .rp-clear:hover { color: var(--text); }
+:root .rp-reopen:focus-visible,
+:root .rp-clear:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 2px; }
+:root .rp-foot .rp-clear { margin-inline-start: var(--s-4); }

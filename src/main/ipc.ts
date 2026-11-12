@@ -27,11 +27,15 @@ import { dirtyReport, untrackedFolders } from './gitDirty'
 import { addGitIgnore } from './gitIgnore'
 import type { IgnoreAddRequest } from '../shared/gitIgnore'
 import type { GitQuickRequest } from '../shared/gitBranches'
+import { countCleanup, listCleanup, runCleanup } from './worktreeCleanup'
+import { exportUsage, revealExport } from './usageExport'
+import type { CleanupRequest } from '../shared/worktreeCleanup'
 import { commitWorktree, mergeBranch, mergeOverview, removeSessionWorktree } from './mergeBack'
 import { createSessionWorktree } from './sessionWorktree'
 import type { MergeBackRequest, WorktreeCommitRequest, WorktreeRemoveRequest } from '../shared/mergeBack'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
+import { applyCheckpointToWorktree, rewindInfo } from './checkpointRewind'
 import { listCheckpoints, prepareCheckpoint, restoreCheckpoint } from './checkpoints'
 import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder, whenKnown } from './knownFolder'
@@ -218,6 +222,14 @@ export function registerIpc(
   ipcMain.handle(IPC.mergeCommit, (_event, request: WorktreeCommitRequest) => gated(request?.repo, () => commitWorktree(request)))
   ipcMain.handle(IPC.mergeInto, (_event, request: MergeBackRequest) => gated(request?.repo, () => mergeBranch(request)))
   ipcMain.handle(IPC.mergeRemove, (_event, request: WorktreeRemoveRequest) => gated(request?.repo, () => removeSessionWorktree(request)))
+  ipcMain.handle(IPC.worktreeCleanupList, (_event, folder: unknown, open: unknown) => gated(folder, (root) => listCleanup(root, open)))
+  ipcMain.handle(IPC.worktreeCleanupCount, async (_event, folder: unknown, open: unknown) => {
+    const counted = await gated(folder, (root) => countCleanup(root, open))
+    return typeof counted === 'number' ? counted : 0
+  })
+  ipcMain.handle(IPC.worktreeCleanupRun, (_event, request: CleanupRequest) => gated(request?.repo, () => runCleanup(request)))
+  ipcMain.handle(IPC.usageExport, (_event, request: unknown) => exportUsage(getWindow(), request, usage, settings.get().projects))
+  ipcMain.handle(IPC.usageExportReveal, (_event, path: unknown) => revealExport(path))
   ipcMain.handle(IPC.gitPush, (_event, folder: unknown) => gated(folder, pushBranch))
   ipcMain.handle(IPC.gitDiscard, (_event, request: DiscardRequest) => gated(request?.folder, () => discardFiles(request)))
   ipcMain.handle(IPC.gitDiff, (_event, folder: unknown, path: unknown) => gated(folder, (root) => fileDiff(root, path)))
@@ -230,6 +242,8 @@ export function registerIpc(
     typeof sessionId === 'string' && isChatSessionWorking(sessionId)
       ? Promise.resolve({ ok: false as const, error: 'This agent is still working. Wait for the reply to finish.' })
       : restoreCheckpoint(root, sessionId, ref, paths)))
+  ipcMain.handle(IPC.checkpointRewindInfo, (_event, folder: unknown, sessionId: unknown, ref: unknown, files: unknown) => gated(folder, (root) => rewindInfo(root, sessionId, ref, files)))
+  ipcMain.handle(IPC.checkpointToWorktree, (_event, folder: unknown, sessionId: unknown, ref: unknown, worktree: unknown) => gated(folder, (root) => applyCheckpointToWorktree(root, sessionId, ref, worktree)))
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(settings.get().projects, folder)
   registerCodeNavExtrasIpc(known, getWindow)
   registerChatIpc()

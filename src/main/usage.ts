@@ -38,7 +38,7 @@ interface Cached {
   file: UsageFile
 }
 
-interface Candidate {
+export interface Candidate {
   agent: AgentKind
   path: string
   mtimeMs: number
@@ -151,6 +151,12 @@ export interface UsageScan {
   sources: UsageSource[]
 }
 
+/** Every agent history file changed since a time, for readers that parse the files themselves (the CSV export). */
+export async function usageCandidates(since: number): Promise<Candidate[]> {
+  const [claude, codex, gemini] = await Promise.all([claudeCandidates(claudeProjectsDir(), since), codexCandidates(codexHome(), since), geminiCandidates(geminiHome(), since)])
+  return [...claude.list, ...codex.list, ...gemini.list]
+}
+
 export async function scanUsage(since: number): Promise<UsageScan> {
   const found = {
     claude: await claudeCandidates(claudeProjectsDir(), since),
@@ -203,6 +209,11 @@ export class UsageService {
     if (next === this.history) return
     this.history = next
     if (!this.timer) this.timer = setTimeout(() => this.flush(), SAVE_DELAY_MS)
+  }
+
+  /** The session costs Claude reported, with the id each belongs to. */
+  costEntries(): [string, { at: number; usd: number; cwd: string | null }][] {
+    return Object.entries(this.history.costs)
   }
 
   lastClaudeLimits(): AgentLimitEntry | null {

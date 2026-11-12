@@ -6,6 +6,7 @@ import { folderOfPane, store } from '../state'
 import { continueIn } from '../handoffActions'
 import type { PaneView } from '../derive'
 import { timeInState } from '../stateClock'
+import { setSessionNote } from '../sessionNotes'
 import { getTerminal } from '../terminals'
 import { openReviewInFiles } from '../files/filesActions'
 import { sessionIdOf } from '../transcriptActions'
@@ -21,11 +22,12 @@ export function chatHostFor(paneId: string, current: () => PaneView | null): Cha
   const tabId = (): string => current()?.primaryTabId ?? ''
   return {
     showTerminal: () => setPaneView(paneId, 'terminal'),
-    continueIn: (to: AgentKind) => void continueIn(paneId, to),
+    continueIn: (to: AgentKind, message?: string | null) => void continueIn(paneId, to, message),
     send: (text) => sendChatMessage(tabId(), current()?.agent ?? 'shell', text),
     interrupt: () => interruptAgent(tabId()),
     screenTail: () => getTerminal(tabId())?.tailText(MENU_ROWS) ?? '',
     answer: (steps) => void answerMenu(tabId(), steps),
+    plan: (label) => setSessionNote(paneId, { plan: label }),
     notify: (title, body) => api.notify({ paneId, title, body, sound: store.state.settings.sessionInfo.sound }),
     reviewChanges: () => {
       const pane = store.state.panes.find((candidate) => candidate.id === paneId)
@@ -63,7 +65,13 @@ export function syncPaneChat(paneId: string, view: PaneView, state: SessionState
           status: tab.status,
           startedAt: tab.startedAt,
           elapsed: state === 'working' ? timeInState(paneId, state, view.now) : '',
-          tabId: tab.id
+          tabId: tab.id,
+          title: view.title,
+          model: view.info.model?.label ?? null,
+          contextPercent: view.info.contextPercent,
+          contextTokens: view.info.contextTokens,
+          contextWindow: view.info.contextWindow,
+          ...(tab.triedFrom ? { triedFrom: tab.triedFrom } : {})
         }
       : null
   )

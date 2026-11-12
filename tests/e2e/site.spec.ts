@@ -237,7 +237,7 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
   for (const toggle of await page.locator('.demo-toggle').all()) await expect(toggle).toBeHidden()
 })
 
-const releaseRows = ['chat-composer', 'undo-reply', 'work-budget', 'redesign', 'grid-styles', 'settings-sections', 'agent-roster', 'agents-crew', 'agent-states', 'lead-maya', 'phone-agents', 'from-1-7-5']
+const releaseRows = ['rewind-retry', 'reply-checks', 'calmer-sidebar', 'chat-composer', 'undo-reply', 'work-budget', 'redesign', 'grid-styles', 'settings-sections', 'agent-roster', 'agents-crew', 'agent-states', 'lead-maya', 'phone-agents', 'from-1-7-5']
 
 test('the hero is three text elements with a readable crop of the app and no pill or platform row', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -265,11 +265,17 @@ test('the page has no em or en dashes, no uppercase labels and no decorative bad
   }
 })
 
-test('New in 1.8.5 leads the page with sized lazy screenshots and no run of three splits', async ({ page }) => {
+test('New in 1.8.6 leads the page with sized lazy screenshots and no run of three splits', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
-  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.8.5')
-  await expect(page.locator('#new-h')).toHaveText('New in 1.8.5')
+  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.8.6')
+  await expect(page.locator('#new-h')).toHaveText('New in 1.8.6')
+  await expect(page.locator('#new #rewind-retry h3')).toHaveText('Rewind and try again')
+  await expect(page.locator('#new #rewind-retry')).toContainText('Edit a message you sent and send it again')
+  await expect(page.locator('#new #reply-checks h3')).toHaveText('Know what a reply did')
+  await expect(page.locator('#new #reply-checks')).toContainText('Run your tests after every reply')
+  await expect(page.locator('#new #calmer-sidebar h3')).toHaveText('A calmer sidebar')
+  await expect(page.locator('#new #calmer-sidebar')).toContainText('how full the context is')
   await expect(page.locator('#new #chat-composer h3')).toHaveText('A chat box that keeps up')
   await expect(page.locator('#new #undo-reply')).toContainText('Undo this reply puts back only the files that reply changed')
   await expect(page.locator('#new #work-budget')).toContainText('daily or weekly spending limit')
@@ -352,7 +358,10 @@ test('the remote section keeps its phone screenshots and says Remote Control is 
 
 test('the Arabic page translates the 1.8 sections, the earlier releases and the demo, and neither page scrolls sideways at 375px', async ({ page }) => {
   await page.goto(arabicUrl)
-  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.8.5')
+  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.8.6')
+  await expect(page.locator('#rewind-retry h3')).toHaveText('ارجع وجرّب من جديد')
+  await expect(page.locator('#reply-checks h3')).toHaveText('اعرف ما فعله الرد')
+  await expect(page.locator('#calmer-sidebar h3')).toHaveText('شريط جانبي أهدأ')
   await expect(page.locator('#chat-composer h3')).toHaveText('صندوق محادثة يواكبك')
   await expect(page.locator('#undo-reply h3')).toHaveText('اعرف ما غيّره الرد وتراجع عنه')
   await expect(page.locator('#work-budget h3')).toHaveText('عمل يجري وحده في حدود ميزانيتك')

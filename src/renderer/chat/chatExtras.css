@@ -7,7 +7,8 @@
 .chat-worked { align-self: flex-start; font-size: var(--fs-1); color: var(--text-3); }
 .chat-turn-summary .chat-worked { margin-top: var(--sp-1); }
 
-.chat-bell { position: absolute; inset-block-start: 0; inset-inline-end: 28px; display: inline-flex; padding: 1px var(--sp-2); border: 0; border-radius: 5px; background: var(--surface); color: var(--text-3); cursor: pointer; }
+/* Sits just outside the bubble, on the side away from the edge, so it never covers a short message's text. */
+.chat-bell { position: absolute; inset-block-start: 50%; inset-inline-end: calc(100% + var(--sp-1)); transform: translateY(-50%); display: inline-flex; padding: 1px var(--sp-2); border: 0; border-radius: 5px; background: transparent; color: var(--text-3); cursor: pointer; }
 .chat-bell:hover { color: var(--text); }
 .chat-bell.on { color: var(--accent-ink, var(--accent)); }
 .chat-bell .icon { width: 14px; height: 14px; }
