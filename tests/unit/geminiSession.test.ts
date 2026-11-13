@@ -21,6 +21,8 @@ describe('parseGeminiChat', () => {
       startedAt: Date.parse('2026-10-08T12:00:00.000Z'),
       updatedAt: Date.parse('2026-10-08T12:00:20.500Z'),
       name: 'Explain the build script',
+      nameSource: 'prompt',
+      firstPrompt: 'Explain   the build\nscript',
       model: 'gemini-2.5-pro',
       hasConversation: true,
       recentTools: []

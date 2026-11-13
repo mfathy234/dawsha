@@ -4,6 +4,8 @@ const NAME_MAX = 100
 const CHAT_FILE = /^session-.*\.jsonl?$/i
 
 export interface GeminiChat {
+  firstPrompt?: string
+  nameSource?: string
   sessionId: string
   startedAt: number
   updatedAt: number
@@ -91,6 +93,8 @@ function finish(acc: Accumulator): GeminiChat | null {
     startedAt,
     updatedAt: acc.updatedAt ?? startedAt,
     name: name || undefined,
+    firstPrompt: acc.firstUser,
+    nameSource: acc.summary ? 'ai' : 'prompt',
     model: acc.model,
     hasConversation: acc.sawMessage,
     recentTools: acc.recentTools
@@ -137,6 +141,8 @@ export function toGeminiSession(chat: GeminiChat, modifiedAt: number): GeminiSes
   return {
     sessionId: chat.sessionId,
     name: chat.name,
+    firstPrompt: chat.firstPrompt,
+    nameSource: chat.nameSource,
     startedAt: chat.startedAt,
     updatedAt: Math.max(chat.updatedAt, Math.round(modifiedAt)),
     model: chat.model,

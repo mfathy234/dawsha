@@ -2,7 +2,7 @@ import { open, readFile, readdir, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { SessionFile } from '../shared/types'
-import { claudeProjectSlug, sessionTitle } from '../shared/projectSessions'
+import { claudeProjectSlug, sessionTitleInfo } from '../shared/projectSessions'
 import { claudeProjectsDir } from './paths'
 
 const POLL_MS = 3000
@@ -65,7 +65,6 @@ export async function readSessions(dir: string = sessionsDir()): Promise<Session
     else if (state === 'denied') found.push({ ...session, permissionDenied: true })
   }
   return Promise.all(found.map(async (session) => {
-    if (session.name?.trim() && session.nameSource !== 'derived') return session
     const transcript = join(claudeProjectsDir(), claudeProjectSlug(session.cwd), `${session.sessionId}.jsonl`)
     try {
       const info = await stat(transcript)
@@ -84,8 +83,10 @@ export async function readSessions(dir: string = sessionsDir()): Promise<Session
       } finally {
         await handle.close()
       }
-      const title = sessionTitle(head, tail)
-      return title ? { ...session, name: title, nameSource: 'transcript' } : session
+      const titleInfo = sessionTitleInfo(head, tail)
+      const named = session.name?.trim() && session.nameSource !== 'derived'
+      // The session file's explicit name wins; transcript metadata still supplies its full first message.
+      return { ...session, ...(!named ? titleInfo : { firstPrompt: titleInfo.firstPrompt }) }
     } catch {
       return session
     }

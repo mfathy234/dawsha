@@ -10,6 +10,7 @@ import {
   type RolloutMeta
 } from '../shared/codexSession'
 import type { CodexSession } from '../shared/types'
+import { codexDetail } from '../shared/sessionDetail'
 
 const POLL_MS = 3000
 const RECENT_MS = 3 * 24 * 60 * 60 * 1000
@@ -17,6 +18,7 @@ const META_BYTES = 512 * 1024
 const TAIL_BYTES = 256 * 1024
 
 const metaCache = new Map<string, RolloutMeta | null>()
+const promptCache = new Map<string, string>()
 
 export async function readRange(path: string, start: number, length: number): Promise<string> {
   const handle = await open(path, 'r')
@@ -30,8 +32,10 @@ export async function readRange(path: string, start: number, length: number): Pr
 }
 
 async function readMeta(path: string, size: number): Promise<RolloutMeta | null> {
-  if (metaCache.has(path)) return metaCache.get(path) ?? null
+  if (metaCache.has(path) && promptCache.has(path)) return metaCache.get(path) ?? null
   const head = await readRange(path, 0, Math.min(size, META_BYTES))
+  const prompt = codexDetail(head, 1, true).firstPrompt
+  if (prompt) promptCache.set(path, prompt)
   const newline = head.indexOf('\n')
   const complete = newline >= 0 || size > META_BYTES
   const meta = newline < 0 && complete ? null : parseRolloutMeta(newline < 0 ? head : head.slice(0, newline))
@@ -77,6 +81,8 @@ async function readOne(path: string, names: Map<string, string>, now: number): P
       sessionId: meta.sessionId,
       cwd: meta.cwd,
       name: names.get(meta.sessionId),
+      firstPrompt: promptCache.get(path),
+      nameSource: names.has(meta.sessionId) ? 'ai' : 'prompt',
       startedAt: meta.startedAt,
       updatedAt: Math.round(info.mtimeMs),
       status: codexStatusFromTail(tail, info.mtimeMs, now),
@@ -112,7 +118,7 @@ export class CodexWatcher {
 
   private async tick(): Promise<void> {
     const sessions = await readCodexSessions()
-    const signature = JSON.stringify(sessions.map((s) => [s.sessionId, s.cwd, s.name, s.status, s.startedAt, s.model, s.contextPercent, s.updatedAt]))
+    const signature = JSON.stringify(sessions.map((s) => [s.sessionId, s.cwd, s.name, s.firstPrompt, s.status, s.startedAt, s.model, s.contextPercent, s.updatedAt]))
     if (signature === this.last) return
     this.last = signature
     this.onChange(sessions)

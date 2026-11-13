@@ -2,6 +2,7 @@ import { matchCodexSessions } from '../shared/codexSession'
 import type { SyncCounts } from '../shared/gitBranches'
 import type { Attention } from '../shared/attention'
 import { matchSessions, sessionDisplayName, sessionStatus, sessionWaiting } from '../shared/sessionMatch'
+import { resolveSessionTitle, uniqueSessionTitles } from '../shared/sessionTitle'
 import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsFeed'
 import type { ProcessActivity } from '../shared/processActivity'
 import { sumProcessMemory } from '../shared/paneMemory'
@@ -20,6 +21,7 @@ export type PaneStatus = 'busy' | 'idle' | 'exited'
 export interface TabView {
   id: string
   label: string
+  fullTitle?: string
   active: boolean
   exited: boolean
   agent: TabAgent
@@ -68,6 +70,8 @@ export interface PaneView {
   project: Project | undefined
   index: number
   title: string
+  fullTitle?: string
+  renameTitle?: string
   named: boolean
   tag: SessionTag | null
   tagAuto: 'branch' | 'conversation' | null
@@ -176,15 +180,21 @@ function statusOf(tab: TermState, matches: Matches, now: number): PaneStatus {
   return 'idle'
 }
 
-function titleFor(pane: PaneState, matches: Matches, project: Project | undefined) {
+function tabTitle(tab: TermState, matches: Matches, index: number, fallback?: string) {
+  const session = tab.agent === 'claude' ? matches.claude.get(tab.id) : tab.agent === 'codex' ? matches.codex.get(tab.id) : tab.agent === 'gemini' ? matches.gemini.get(tab.id) : undefined
+  return resolveSessionTitle({ name: session?.name ?? nameOf(tab, matches) ?? tab.titleHint, nameSource: session?.nameSource,
+    firstPrompt: session?.firstPrompt, renamed: tab.name, agent: tab.agent, fallback, index })
+}
+
+function titleFor(pane: PaneState, matches: Matches, index: number, project: Project | undefined) {
   const ordered = [primaryTab(pane), ...pane.tabs].filter((t) => t.agent !== 'shell')
   const own = ordered.find((t) => t.name)
-  if (own?.name) return { title: own.name, named: true }
+  if (own?.name) return tabTitle(own, matches, index)
   for (const tab of ordered) {
-    const name = nameOf(tab, matches)
-    if (name) return { title: name, named: true }
+    const title = tabTitle(tab, matches, index)
+    if (title.named) return title
   }
-  return { title: project?.name ?? 'Session', named: false }
+  return tabTitle(primaryTab(pane), matches, index, project?.name ?? 'Session')
 }
 
 function ageSince(now: number, ...times: (number | undefined)[]): number | null {
@@ -325,11 +335,14 @@ function infoFor(
 
 export function derivePanes(state: AppState): PaneView[] {
   const matches = matchAll(state)
+  const titles = state.panes.map((pane, index) => titleFor(pane, matches, index + 1, projectById(state, pane.projectId)))
+  const unique = uniqueSessionTitles(titles.map((title, index) => ({ ...title, projectId: state.panes[index].projectId })))
   return state.panes.map((pane, index) => {
     const project = projectById(state, pane.projectId)
     const folder = workFolderOfPane(state, pane, matches)
     const primary = primaryTab(pane)
-    const { title, named } = titleFor(pane, matches, project)
+    const { named, fullTitle, renameText } = titles[index]
+    const title = unique[index]
     const active = pane.tabs.find((t) => t.id === pane.activeTabId) ?? pane.tabs[0]
     const status = statusOf(primary, matches, state.now)
     const snapshot = opsSnapshotFor(state, primary, matches)
@@ -342,6 +355,8 @@ export function derivePanes(state: AppState): PaneView[] {
       project,
       index,
       title,
+      fullTitle,
+      renameTitle: renameText,
       named,
       tag: primary.tag ?? autoTag(branch, named ? title : ''),
       tagAuto,
@@ -367,7 +382,8 @@ export function derivePanes(state: AppState): PaneView[] {
         agent: tab.agent,
         active: tab.id === active.id,
         exited: tab.status === 'exited',
-        label: nameOf(tab, matches) || tab.label
+        label: tab.agent === 'shell' ? tab.label : tab.id === primary.id && named ? title : tabTitle(tab, matches, index + 1, tab.label).title,
+        fullTitle: tab.agent === 'shell' ? tab.label : tabTitle(tab, matches, index + 1, tab.label).fullTitle
       }))
     }
   })
