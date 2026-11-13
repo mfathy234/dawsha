@@ -8,6 +8,7 @@ import { registerIpc } from './ipc'
 import { stopCodeNavigation } from './codeNav'
 import { closeAgentFiles, refreshAgentFiles } from './agentFiles'
 import { notifyUser } from './desktop'
+import { handleDesktopLaunch, installDesktopLaunch, refreshJumpList } from './desktopLaunch'
 import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
 import { registerToolsIpc } from './toolsIpc'
@@ -62,6 +63,7 @@ if (!gotLock) {
   app.exit(0)
 } else {
   app.on('second-instance', (_event, argv, workingDirectory) => {
+    if (handleDesktopLaunch(argv)) return
     if (!mainWindow || mainWindow.isDestroyed()) return
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.focus()
@@ -249,9 +251,11 @@ app.whenReady().then(async () => {
   recordings.startSchedule()
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
+  installDesktopLaunch(() => store.get(), cli)
+  refreshJumpList(store.get())
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
   app.on('will-quit', () => { void stopCliServer(cliServer) })
-  void cli.executeFromArgv(process.argv, process.cwd())
+  if (!handleDesktopLaunch(process.argv)) void cli.executeFromArgv(process.argv, process.cwd())
   mainWindow.webContents.once('did-finish-load', () => {
     watcher.start()
     codexWatcher.start()

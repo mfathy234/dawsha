@@ -41,6 +41,7 @@ export const EXCLUDED_KEYS = [
   'remoteAccess',
   'workspace',
   'miniWindow',
+  'recentProjectIds',
   'keptSessions',
   // Keyed by this PC's project ids, like closed sessions.
   'foldedProjects',

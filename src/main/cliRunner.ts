@@ -42,6 +42,13 @@ export class CliRunner {
     window.focus()
   }
 
+  async openSessionPicker(): Promise<void> {
+    if (!(await this.whenReady())) return
+    this.reveal()
+    const window = this.getWindow()
+    if (window && !window.isDestroyed()) window.webContents.send(IPC.desktopNewSession)
+  }
+
   private forward(command: CliCommand): Promise<CliReply> {
     const window = this.getWindow()
     if (!window || window.isDestroyed()) return Promise.resolve({ ok: false, exit: 1, out: 'dawsha: the window is not open.' })

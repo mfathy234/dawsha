@@ -141,6 +141,7 @@ const api: GridApi = {
   notify: (request) => ipcRenderer.send(IPC.notify, request),
   onNotifyClick: (listener) => subscribe<[string]>(IPC.notifyClick, listener),
   setAttentionBadge: (count, waitingIds) => ipcRenderer.send(IPC.attentionBadge, count, waitingIds),
+  onDesktopNewSession: (listener) => { ipcRenderer.on(IPC.desktopNewSession, () => listener()) },
   bridgePreview: () => ipcRenderer.invoke(IPC.bridgePreview),
   bridgeStatus: () => ipcRenderer.invoke(IPC.bridgeStatus),
   bridgeInstall: () => ipcRenderer.invoke(IPC.bridgeInstall),

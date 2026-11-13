@@ -10,6 +10,7 @@ import {
   focusPane,
   handleTerminalExit,
   openOnboarding,
+  openQuickPick,
   refreshBranches,
   refreshAgentTools,
   refreshBridge,
@@ -160,6 +161,7 @@ async function boot(): Promise<void> {
   api.onFlushRequest(flushWorkspace)
   api.onCloseCheck(confirmQuitWithUnsavedFiles)
   api.onCliRun(runCliCommand)
+  api.onDesktopNewSession(openQuickPick)
   api.onCliNotice((text, ok) => toast(text, ok ? 'info' : 'error'))
   if (loaded.warning) toast(loaded.warning, 'info')
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()

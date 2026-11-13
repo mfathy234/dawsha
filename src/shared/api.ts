@@ -188,6 +188,7 @@ export interface GridApi {
   notify(request: NotifyRequest): void
   onNotifyClick(listener: (paneId: string) => void): () => void
   setAttentionBadge(count: number, waitingIds?: string[]): void
+  onDesktopNewSession(listener: () => void): void
   bridgePreview(): Promise<BridgePreview>
   bridgeStatus(): Promise<BridgeStatus>
   bridgeInstall(): Promise<BridgeResult>

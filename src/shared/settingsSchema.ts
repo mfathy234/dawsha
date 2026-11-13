@@ -83,6 +83,7 @@ export const defaultImage = (): BackgroundImage => ({ enabled: false, path: null
 export const defaultSettings = (): Settings => ({
   version: 2,
   projects: [],
+  recentProjectIds: [],
   spendLimits: {},
   turnChecks: {},
   theme: { id: DEFAULT_THEME_ID, image: defaultImage() },
@@ -444,6 +445,7 @@ export function migrateSettings(raw: unknown): Settings {
   return {
     version: 2,
     projects,
+    recentProjectIds: sanitizeProjectIds(raw.recentProjectIds, projects).slice(0, 5),
     spendLimits,
     turnChecks: sanitizeTurnChecks(raw.turnChecks, projects.map((project) => project.id)),
     theme: { id: resolveThemeId(asString(theme.id) ?? defaults.theme.id), image: sanitizeImage(theme.image) },
