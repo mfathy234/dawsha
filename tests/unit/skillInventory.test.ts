@@ -78,7 +78,7 @@ describe('skill inventory', () => {
     symlinkSync(sync, join(claude, 'skills', 'Review'), 'junction')
     const locations = { claude, codex: join(root, '.codex'), gemini: join(root, '.gemini'), shared: join(root, '.agents'), projects: [] }
     const [skill] = listSkills(locations)
-    expect(skill).toMatchObject({ name: 'Review', agent: 'claude', scope: 'user', linked: true, linkTarget: realpathSync(sync) })
+    expect(skill).toMatchObject({ name: 'Review', agent: 'claude', scope: 'user', linked: true, linkTarget: realpathSync.native(sync) })
     expect(skill.path).toBe(join(claude, 'skills', 'Review'))
     expect(resolveSkill(locations, skill.id)?.name).toBe('Review')
   })
