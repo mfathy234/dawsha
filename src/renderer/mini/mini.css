@@ -10,9 +10,13 @@ body.mini-window { margin: 0; background: var(--chrome); color: var(--text); ove
 .mini-needs { color: var(--needs); font-size: var(--fs-1); flex: 1; white-space: nowrap; }
 .mini-count:last-of-type { margin-right: auto; }
 .mini-header .icon-btn, .mini-open { flex: none; width: 28px; height: 28px; min-width: 28px; display: grid; place-items: center; padding: 0; color: var(--text-2); background: transparent; }
-.mini-content { overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--sp-2); min-height: 0; flex: 1; }
+.mini-content { position: relative; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--sp-2); min-height: 0; flex: 1; }
 .mini-detail, .mini-empty { flex: none; }
-.mini-card { flex: none; padding: var(--sp-3); background: var(--pane); border-radius: var(--r-3); }
+.mini-card { position: relative; flex: none; padding: var(--sp-3); background: var(--pane); border-radius: var(--r-3); }
+.mini-ghosts { position: absolute; top: 0; left: 0; right: 0; height: 0; pointer-events: none; }
+.mini-ghost { position: absolute; left: 0; right: 0; }
+.mini-ring { position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 3px var(--needs-ring); opacity: 0; pointer-events: none; }
+.mini-card-foot { display: flex; padding-top: 2px; padding-inline-start: calc(36px + var(--sp-3)); }
 .mini-card[data-state="needs"] { box-shadow: inset 0 0 0 1.5px var(--needs-ring); }
 .mini-card-row { display: flex; align-items: flex-start; gap: 4px; }
 .mini-window .mini-select { display: flex; gap: var(--sp-3); text-align: start; padding: 0; background: transparent; border-radius: var(--r-1); min-width: 0; flex: 1; }
@@ -22,27 +26,55 @@ body.mini-window { margin: 0; background: var(--chrome); color: var(--text); ove
 .mini-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .mini-info strong { font-size: 15px; line-height: 20px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 .mini-line, .mini-project { color: var(--text-2); overflow-wrap: anywhere; }
+.mini-line { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
+.mini-line > span:last-child { min-width: 0; }
+.mini-spin { flex: none; width: 12px; height: 12px; margin-top: 4px; border: 1.5px solid var(--st-working); border-right-color: transparent; border-radius: 50%; animation: mini-spin 900ms linear infinite; animation-delay: var(--phase, 0ms); }
 [data-state="needs"] .mini-line { color: var(--needs); }
 [data-state="done"] .mini-line { color: var(--st-done); }
 .mini-progress { color: var(--text-2); margin-top: 2px; }
+.mini-detail .mini-progress { margin: 12px 4px 0; }
 .mini-progress b { color: var(--accent-ink); font-weight: 600; }
 .mini-track { height: 4px; border-radius: var(--r-micro); background: rgb(255 255 255 / .08); margin-top: 6px; overflow: hidden; }
-.mini-track i { display: block; height: 4px; border-radius: inherit; background: var(--accent); }
+.mini-track i { display: block; width: 100%; height: 4px; border-radius: inherit; background: var(--accent); transform-origin: left center; transform: scaleX(var(--p, 0)); transition: transform var(--dur-4) var(--ease-out); }
 .mini-permission, .mini-terminal { margin-top: var(--sp-3); padding: 10px 12px; background: var(--well); border-radius: var(--r-2); }
 .mini-window pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font: var(--fs-1)/18px var(--font-mono); }
 .mini-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .mini-window .mini-allow { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .mini-window .mini-open-text { background: transparent; color: var(--text-2); padding-inline: 4px; }
+.mini-detail { display: flex; flex-direction: column; }
 .mini-detail-title { display: flex; gap: 14px; padding: 4px 4px 12px; box-shadow: inset 0 -1px 0 var(--seam); }
+.mini-now { padding: 12px 4px 0; color: var(--text); }
+[data-state="needs"] .mini-now { color: var(--needs); }
+[data-state="done"] .mini-now { color: var(--st-done); }
+.mini-detail .mini-permission { margin-inline: 0; }
+.mini-block { display: flex; flex-direction: column; gap: 2px; padding: 12px 4px 0; }
+.mini-label { color: var(--text-2); font-size: var(--fs-1); }
+.mini-clamp { margin: 0; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.mini-asked { -webkit-line-clamp: 2; }
+.mini-reply { -webkit-line-clamp: 3; }
+.mini-changes { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 4px 0; }
+.mini-window .mini-review { background: transparent; color: var(--accent-ink); padding: 2px 4px; font-weight: 600; }
+.mini-window .mini-review:hover { background: var(--overlay); }
+.mini-usage { padding: 12px 4px 0; color: var(--text-2); font-size: var(--fs-1); }
+.mini-compose { position: sticky; bottom: 0; margin-top: 12px; padding-top: 8px; background: var(--chrome); display: flex; flex-direction: column; gap: 4px; }
+.mini-compose-row { display: flex; align-items: flex-end; gap: 6px; }
+.mini-input { flex: 1; min-width: 0; resize: none; font: inherit; color: var(--text); background: var(--well); border: 0; border-radius: var(--r-2); padding: 7px 10px; line-height: 20px; max-height: 96px; overflow-y: auto; -webkit-app-region: no-drag; }
+.mini-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.mini-input:disabled { opacity: .55; }
+.mini-window .mini-send { flex: none; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; background: var(--accent); color: var(--on-accent); border-radius: var(--r-2); }
+.mini-window .mini-send:hover { background: var(--accent); filter: brightness(1.08); }
+.mini-window .mini-send:disabled { opacity: .45; cursor: default; filter: none; }
+.mini-compose-note { color: var(--text-2); font-size: var(--fs-1); padding-inline: 4px; }
 .mini-detail h1 { font-size: 18px; line-height: 24px; margin: 0; overflow-wrap: anywhere; font-weight: 600; }
 .mini-switch { display: flex; flex: 1; gap: 6px; overflow-x: auto; -webkit-app-region: no-drag; }
 .mini-switch button { padding: 0; background: transparent; }
-.mini-plan { list-style: none; padding: 4px; margin: 12px 0; display: flex; flex-direction: column; gap: 10px; }
+.mini-plan { list-style: none; padding: 4px; margin: 8px 0 0; display: flex; flex-direction: column; gap: 10px; }
 .mini-plan li { display: flex; gap: 10px; align-items: flex-start; color: var(--text-2); overflow-wrap: anywhere; }
 .mini-plan [data-status="completed"] { opacity: .7; }
 .mini-plan [data-status="in_progress"] { color: var(--text); }
 .mini-step { display: grid; place-items: center; border: 1.5px solid currentColor; border-radius: 50%; width: 18px; height: 18px; flex: none; margin-top: 1px; }
-[data-status="in_progress"] .mini-step { border-color: var(--st-working); border-right-color: transparent; animation: mini-spin 1s linear infinite; }
+[data-status="in_progress"] .mini-step { border-color: var(--st-working); border-right-color: transparent; animation: mini-spin 900ms linear infinite; animation-delay: var(--phase, 0ms); }
+.mini-detail .mini-terminal { margin-top: 12px; }
 .mini-terminal-label { display: flex; gap: 6px; color: var(--text-2); margin-bottom: 6px; }
 .mini-folded { justify-content: center; }
 .mini-folded .mini-header { gap: 4px; }
@@ -53,4 +85,7 @@ body.mini-window { margin: 0; background: var(--chrome); color: var(--text); ove
 .mini-stacked .mini-tile { box-shadow: 0 0 0 2px var(--chrome); border-radius: 6px; }
 .mini-empty { padding: var(--sp-6) var(--sp-3); text-align: center; color: var(--text-2); }
 @keyframes mini-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .mini-window *, .mini-window *::before, .mini-window *::after { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .mini-window *, .mini-window *::before, .mini-window *::after { animation: none !important; transition: none !important; }
+  .mini-spin { border-right-color: var(--st-working); }
+}
