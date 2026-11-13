@@ -17,6 +17,7 @@ import { formatShortcut, parseShortcut } from './shortcuts'
 import { isVersion } from './version'
 import { sanitizeSplits } from './splits'
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './sidebarWidth'
+import { DEFAULT_SIDE_PANEL, sanitizeSidePanel } from './sidePanel'
 import { defaultHighlights, sanitizeHighlights } from './highlights'
 import { defaultRecordings, sanitizeRecordings } from './recordings'
 import { defaultCapabilities, sanitizeCapabilities } from './remoteCapabilities'
@@ -101,6 +102,7 @@ export const defaultSettings = (): Settings => ({
   sessionsLayout: 'grid',
   appearance: DEFAULT_APPEARANCE,
   miniWindow: DEFAULT_MINI_WINDOW,
+  sidePanel: DEFAULT_SIDE_PANEL,
   gridStyle: DEFAULT_GRID_STYLE,
   focusMovesSelected: false,
   sessionInfo: { notifications: true, sound: false },
@@ -270,6 +272,7 @@ function sanitizeWorkspace(value: unknown, projectIds: Set<string>): Workspace {
   const panes = singlePin(sanitizePanes(value.panes).filter((pane) => projectIds.has(pane.projectId)))
   const workspace: Workspace = { panes, focusedIndex: focusedIn(value.focusedIndex, panes.length) }
   if (typeof value.largeIndex === 'number' && Number.isInteger(value.largeIndex) && value.largeIndex >= 0 && value.largeIndex < panes.length) workspace.largeIndex = value.largeIndex
+  if (typeof value.maximizedIndex === 'number' && Number.isInteger(value.maximizedIndex) && value.maximizedIndex >= 0 && value.maximizedIndex < panes.length) workspace.maximizedIndex = value.maximizedIndex
   const splits = sanitizeSplits(value.splits)
   if (splits) workspace.splits = splits
   return workspace
@@ -462,6 +465,7 @@ export function migrateSettings(raw: unknown): Settings {
     sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
     appearance: sanitizeAppearance(raw.appearance),
     miniWindow: sanitizeMiniWindow(raw.miniWindow),
+    sidePanel: sanitizeSidePanel(raw.sidePanel),
     gridStyle: isGridStyle(raw.gridStyle) ? raw.gridStyle : DEFAULT_GRID_STYLE,
     focusMovesSelected: raw.focusMovesSelected === true,
     sessionInfo: {

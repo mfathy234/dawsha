@@ -11,7 +11,7 @@ import { store } from '../state'
 import { turnSummaryCard } from './chatTurnSummary'
 import { openCommitBox, pushCommitted, submitCommit, type CommitPort } from './turnCommitFlow'
 import { showFullOutput } from './turnChecks'
-import { emptyCard, type CardActions, type CardState, type DiffEntry } from './turnState'
+import { emptyCard, type CardActions, type CardState, type ChecksState, type DiffEntry } from './turnState'
 
 const PR_TAB_DELAY_MS = 400
 
@@ -57,6 +57,8 @@ interface Entry {
   args: CardArgs
   state: CardState
   el: HTMLElement | null
+  /** The same card drawn in the Side panel, when it shows this reply. */
+  panelEl: HTMLElement | null
   box: HTMLTextAreaElement
   runId: string | null
 }
@@ -141,7 +143,7 @@ export class TurnExtras {
     const old = this.entries.get(summary.messageId)
     const entry: Entry = old
       ? { ...old, summary, args }
-      : { summary, args, state: emptyCard(), el: null, runId: null, box: this.newBox(summary.messageId) }
+      : { summary, args, state: emptyCard(), el: null, panelEl: null, runId: null, box: this.newBox(summary.messageId) }
     this.entries.set(summary.messageId, entry)
     // The snapshot is looked up after the card first shows; diffs that were waiting for it load now.
     if (old && !old.summary.checkpointRef && summary.checkpointRef) for (const path of old.state.expanded) void this.loadDiff(summary.messageId, path)
@@ -154,18 +156,49 @@ export class TurnExtras {
     return box
   }
 
+  /** The card of the latest reply for the Side panel; kept in step with the one in the thread. */
+  panelCard(): { id: string; el: HTMLElement; files: number } | null {
+    const last = [...this.entries.values()].pop()
+    if (!last) return null
+    const id = last.summary.messageId
+    const files = last.summary.files.length
+    if (last.panelEl?.isConnected) return { id, el: last.panelEl, files }
+    const el = this.draw(last)
+    this.entries.set(id, { ...(this.entries.get(id) ?? last), panelEl: el })
+    return { id, el, files }
+  }
+
+  latestChecks(): ChecksState | null {
+    return [...this.entries.values()].pop()?.state.checks ?? null
+  }
+
+  /** Runs the checks again for the latest reply. */
+  rerunChecks(): void {
+    const last = [...this.entries.values()].pop()
+    if (last) void this.startChecks(last)
+  }
+
+  showLatestOutput(): void {
+    const checks = this.latestChecks()
+    if (checks) showFullOutput(checks)
+  }
+
   private build(entry: Entry): HTMLElement {
+    const el = this.draw(entry)
+    this.entries.set(entry.summary.messageId, { ...(this.entries.get(entry.summary.messageId) ?? entry), el })
+    return el
+  }
+
+  private draw(entry: Entry): HTMLElement {
     const input = this.host.input()
     const id = entry.summary.messageId
-    const el = turnSummaryCard(entry.summary, entry.args.scope, entry.args.review, entry.args.undo, entry.args.worked, {
+    return turnSummaryCard(entry.summary, entry.args.scope, entry.args.review, entry.args.undo, entry.args.worked, {
       state: entry.state,
       actions: this.actions(id),
       agentName: input?.agentName ?? 'the agent',
       canCommit: !!input?.sessionId && !!input.folder,
       box: entry.box
     })
-    this.entries.set(id, { ...(this.entries.get(id) ?? entry), el })
-    return el
   }
 
   private patch(id: string, change: Partial<CardState>): void {
@@ -179,19 +212,29 @@ export class TurnExtras {
   /** Swaps one card for a fresh draw, keeping the commit box's focus and caret. */
   private redrawIn(id: string, keepFocusOnly: boolean): void {
     const entry = this.entries.get(id)
-    if (!entry?.el?.isConnected) return
+    if (!entry) return
+    const surfaces = [entry.el, entry.panelEl].filter((el): el is HTMLElement => el?.isConnected === true)
+    if (surfaces.length === 0) return
     if (keepFocusOnly) {
       // Typing only changes the Commit button's state; the box itself stays where it is.
       const commit = entry.state.commit
-      const button = entry.el.querySelector<HTMLButtonElement>('.turn-commit-foot .primary')
-      if (button && commit.phase === 'editing') button.disabled = entry.box.value.trim() === '' || !commit.rows.some((row) => row.ticked)
+      for (const el of surfaces) {
+        const button = el.querySelector<HTMLButtonElement>('.turn-commit-foot .primary')
+        if (button && commit.phase === 'editing') button.disabled = entry.box.value.trim() === '' || !commit.rows.some((row) => row.ticked)
+      }
       return
     }
     const focused = document.activeElement === entry.box
     const start = entry.box.selectionStart
     const end = entry.box.selectionEnd
-    const next = this.build(entry)
-    entry.el.replaceWith(next)
+    const redrawn = { ...entry }
+    for (const el of surfaces) {
+      const next = this.draw(entry)
+      el.replaceWith(next)
+      if (el === entry.el) redrawn.el = next
+      else redrawn.panelEl = next
+    }
+    this.entries.set(id, { ...(this.entries.get(id) ?? entry), el: redrawn.el, panelEl: redrawn.panelEl })
     if (focused) {
       entry.box.focus()
       entry.box.setSelectionRange(start, end)

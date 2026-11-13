@@ -8,6 +8,8 @@ export function setSessionsLayout(layout: SessionsLayout): void {
   store.set((state) => ({
     ...state,
     view: 'grid',
+    // The Side panel shows the focused session on its own, so it keeps a maximized pane; the other layouts start from the grid.
+    maximizedId: layout === 'panel' ? (state.focusedId ?? state.panes[0]?.id ?? null) : state.settings.sessionsLayout === 'panel' ? null : state.maximizedId,
     boardPeekId: layout === 'board' ? state.boardPeekId : null,
     settings: { ...state.settings, sessionsLayout: layout }
   }))
@@ -17,6 +19,15 @@ export function setSessionsLayout(layout: SessionsLayout): void {
 export function toggleSessionsLayout(): void {
   setSessionsLayout(store.state.settings.sessionsLayout === 'board' ? 'grid' : 'board')
 }
+
+/** Grid, Board or Side panel, in the order the switch lists them. */
+export const SESSION_LAYOUTS: readonly { id: SessionsLayout; label: string; title: string }[] = [
+  { id: 'grid', label: 'Grid', title: 'Show sessions as a grid' },
+  { id: 'board', label: 'Board', title: 'Show sessions as a board' },
+  { id: 'panel', label: 'Side panel', title: 'Show one session with its changes, plan and checks beside it' }
+]
+
+export const panelShowing = (state = store.state): boolean => state.view === 'grid' && state.settings.sessionsLayout === 'panel'
 
 export const boardShowing = (state = store.state): boolean => state.view === 'grid' && state.settings.sessionsLayout === 'board'
 

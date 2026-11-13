@@ -33,7 +33,7 @@ import { syncAttentionBadge } from '../attentionBadge'
 import type { AppState } from '../state'
 
 export function isSidebarCollapsed(state: AppState): boolean {
-  const maximized = state.view === 'grid' && state.maximizedId !== null
+  const maximized = state.view === 'grid' && state.maximizedId !== null && state.settings.sessionsLayout !== 'panel'
   // Files has its own project switcher, so a sidebar that also holds the tabs shrinks to its icons there.
   const framedFiles = state.settings.appearance.frame === 'sidebar' && state.view === 'files'
   return state.sidebarOverride ?? (maximized || framedFiles || state.settings.sidebarCollapsed)

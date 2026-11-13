@@ -38,3 +38,20 @@ export function planProgress(todos: readonly TodoEntry[]): PlanProgress | null {
   const active = todos.find((todo) => todo.status === 'in_progress') ?? todos.find((todo) => todo.status !== 'completed')
   return { done, total, label: `${done} of ${total}`, percent: Math.round((done / total) * 100), current: active?.text ?? '' }
 }
+
+export interface PlanCount {
+  done: number
+  total: number
+  /** 0 to 100. */
+  percent: number
+}
+
+/** A "3 of 7" label read back into numbers, or null for anything else. */
+export function parsePlanLabel(label: string): PlanCount | null {
+  const match = /^(\d+) of (\d+)$/.exec(label.trim())
+  if (!match) return null
+  const done = Number(match[1])
+  const total = Number(match[2])
+  if (total <= 0 || done > total) return null
+  return { done, total, percent: Math.round((done / total) * 100) }
+}

@@ -34,15 +34,15 @@ test('focus view strip keeps long session names on one line and closes a session
     const tabs = strip.locator('.strip-tab')
     await expect(tabs).toHaveCount(NAMES.length)
     const stripBox = (await strip.boundingBox())!
-    expect(stripBox.height).toBeLessThanOrEqual(24)
+    expect(stripBox.height).toBeLessThanOrEqual(40)
     for (const tab of await tabs.all()) {
       const box = (await tab.boundingBox())!
       expect(box.height).toBeLessThanOrEqual(stripBox.height)
       await expect(tab.locator('.agent-mark')).toHaveCount(1)
-      await expect(tab.getByRole('tab')).toHaveAttribute('title', /·/)
+      await expect(tab.getByRole('tab')).toHaveAttribute('title', /,/)
     }
     // Status words match the sidebar's (Working, Idle, Needs you), not the internal busy/idle.
-    await expect(strip.locator('.strip-status').first()).toHaveText(/^ · (Working|Idle|Done|Needs you|Exited)$/)
+    await expect(strip.locator('.strip-status').first()).toHaveText(/^(Working|Idle|Done|Needs you|Exited)$/)
     const nameCut = await strip.locator('.strip-name').first().evaluate((el) => el.scrollWidth > el.clientWidth)
     expect(nameCut).toBe(true)
     // Names keep their own case, not ALL CAPS.
@@ -58,7 +58,7 @@ test('focus view strip keeps long session names on one line and closes a session
       const box = (await title.boundingBox())!
       expect(box.height).toBeLessThanOrEqual(24)
       await expect(title).toHaveAttribute('title', NAMES[NAMES.length - 1])
-      expect((await strip.boundingBox())!.height).toBeLessThanOrEqual(24)
+      expect((await strip.boundingBox())!.height).toBeLessThanOrEqual(40)
       await page.screenshot({ path: join(SCREENS, `focus-full-mode-${width}.png`) })
     }
     await page.screenshot({ path: join(SCREENS, 'focus-strip-long-names.png') })

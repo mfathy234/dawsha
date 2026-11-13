@@ -41,7 +41,7 @@ import { canMakeLarge, paneUnitIds, resolveLargePane } from '../shared/gridStyle
 import { moveById, moveItem } from '../shared/reorder'
 import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
-import { leaveBoard } from './sessionsLayout'
+import { leaveBoard, setSessionsLayout } from './sessionsLayout'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { AgentPreset } from '../shared/quickPick'
 import { defaultHighlightRules, describeRules, sameRules, type HighlightSettings } from '../shared/highlights'
@@ -130,7 +130,7 @@ export function largeOf(state: AppState): string | null {
 function saveWorkspace(): Promise<void> {
   const { panes, focusedId, splits } = store.state
   const sessionFor = workspaceSessionFor(matchAll(store.state))
-  return saveSettings({ workspace: snapshotWorkspace(panes, focusedId, { splits, largeId: largeOf(store.state), sessionFor }) })
+  return saveSettings({ workspace: snapshotWorkspace(panes, focusedId, { splits, largeId: largeOf(store.state), maximizedId: store.state.maximizedId, sessionFor }) })
 }
 
 export function persistWorkspace(): void {
@@ -774,12 +774,12 @@ export function focusPaneAt(index: number): void {
   if (pane) focusPane(pane.id)
 }
 
-export function movePane(paneId: string, toIndex: number): void {
+export function movePane(paneId: string, toIndex: number, focus = true): void {
   const panes = store.state.panes
   const from = panes.findIndex((p) => p.id === paneId)
   const to = Math.max(0, Math.min(panes.length - 1, toIndex))
   if (from < 0 || from === to) return
-  store.patch({ panes: moveItem(panes, from, to), focusedId: paneId })
+  store.patch(focus ? { panes: moveItem(panes, from, to), focusedId: paneId } : { panes: moveItem(panes, from, to) })
   persistWorkspace()
 }
 
@@ -820,6 +820,7 @@ export function movePaneBy(paneId: string, delta: number): void {
 }
 
 export function toggleMaximize(paneId?: string): void {
+  if (store.state.settings.sessionsLayout === 'panel') return setSessionsLayout('grid')
   queueMicrotask(() => void refreshGitChanges())
   const target = paneId ?? store.state.focusedId
   if (!target || !paneById(store.state, target)) return
@@ -833,11 +834,14 @@ export function toggleMaximize(paneId?: string): void {
     timelinePaneId: null,
     sidebarOverride: null
   }))
+  persistWorkspace()
 }
 
 export function restoreGrid(): void {
+  if (store.state.settings.sessionsLayout === 'panel') return setSessionsLayout('grid')
   if (store.state.maximizedId) {
     store.set((s) => ({ ...s, maximizedId: null, detailsPaneId: null, timelinePaneId: null, sidebarOverride: null }))
+    persistWorkspace()
   }
 }
 
@@ -846,6 +850,7 @@ export function openDetails(paneId: string): void {
   leaveBoard()
   queueMicrotask(() => void refreshGitChanges())
   store.set((s) => ({ ...s, focusedId: paneId, view: 'grid', maximizedId: paneId, detailsPaneId: paneId, timelinePaneId: null, sidebarOverride: null }))
+  persistWorkspace()
 }
 
 export function closeDetails(): void {
@@ -1392,6 +1397,7 @@ export async function restoreWorkspace(): Promise<void> {
     panes: restored.map((pane, index) => (pane.pinned && index !== pinned ? { ...pane, pinned: undefined } : pane)),
     focusedId: focused.id,
     largePaneId: restored[settings.workspace.largeIndex ?? -1]?.id ?? focused.id,
+    maximizedId: settings.sessionsLayout === 'panel' ? focused.id : (restored[settings.workspace.maximizedIndex ?? -1]?.id ?? null),
     splits: settings.workspace.splits ?? {}
   })
   void refreshBranches()

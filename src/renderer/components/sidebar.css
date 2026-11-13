@@ -631,3 +631,9 @@ aside.sidebar.rail { width: 56px; }
 .kept-session-row .sess-row.selected,
 :root[data-kind='light'] .kept-session-row.selected .sess-row,
 :root[data-kind='light'] .kept-session-row .sess-row.selected { background: var(--surface-pop, var(--raised)); box-shadow: var(--sel-hl); }
+
+/* Plan progress under a session's second line: "5/7" in accent and a thin bar. */
+.sess-plan { display: flex; align-items: center; gap: var(--s-2); margin-top: 2px; }
+.sess-plan-n { flex: none; color: var(--accent); font-weight: var(--w-semi); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
+.sess-plan-bar { flex: 1; min-width: 24px; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.sess-plan-bar i { display: block; height: 3px; border-radius: 3px; background: var(--accent); }
