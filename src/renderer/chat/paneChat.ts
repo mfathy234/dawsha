@@ -45,7 +45,7 @@ export interface ChatHost {
   /** A desktop notification that opens this pane when clicked. */
   notify(title: string, body: string): void
   /** The plan's progress ("3 of 7"), or empty when there is none, for the sidebar. */
-  plan(label: string): void
+  plan(label: string, current: string): void
   /** The usage limit started or stopped the session, so the pane header can say so at once. */
   limitChanged?(): void
 }
@@ -273,7 +273,7 @@ export class PaneChat {
     if (!force && snapshot === this.renderedSnapshot && key === this.renderKey) return
     this.renderedSnapshot = snapshot
     this.renderKey = key
-    this.host.plan(this.planBar.update(latestTodos(snapshot.items)))
+    this.host.plan(this.planBar.update(latestTodos(snapshot.items)), this.planBar.current)
     const limitFlipped = (this.phase === 'limit') !== (phase === 'limit')
     this.phase = phase
     if (limitFlipped) this.host.limitChanged?.()

@@ -55,9 +55,12 @@ import { entryBlock } from './whatsNew'
 import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
 import { pageHeader } from './pageHeader'
+import './appearance.css'
 import { McpServersPanel } from './mcpPanel'
 import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
 import { setGridStyle } from '../sessionsLayout'
+import { DEFAULT_APPEARANCE, FRAME_STYLE_LABELS, OPENING_LAYOUT_LABELS, PANE_STYLE_LABELS, TONE_LABELS, isDesktopAppStyle, sameAppearance } from '../../shared/appearance'
+import { backToClassic, setAppearance, setOpeningLayout, useDesktopAppStyle } from '../appearanceActions'
 import { setDefaultView } from '../chat/chatActions'
 import { ViewSwitch } from '../chat/viewSwitch'
 import type { ChatAgent, SessionViews } from '../../shared/chatLog'
@@ -69,7 +72,7 @@ import '../chat/chatChoice.css'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
-  { id: 'appearance', label: 'Appearance', lede: 'Choose a theme and terminal background.' },
+  { id: 'appearance', label: 'Appearance', lede: 'Each style works in both Terminal and Chat. Mix them as you like.' },
   { id: 'notifications', label: 'Notifications', lede: 'What Dawsha shows and tells you while sessions run.' },
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
   { id: 'mcp', label: 'MCP', lede: 'The MCP servers each agent is set up with.' },
@@ -282,6 +285,8 @@ export class SettingsViewComponent {
         return this.general(state)
       case 'appearance':
         return [
+          this.desktopStyleCard(state),
+          ...this.appearanceRows(state),
           row('Theme', h('button', { class: 'btn', type: 'button', id: 'settings-theme-picker', onClick: () => toggleThemePicker() }, 'Choose theme'), h('p', { class: 'hint' }, 'Choose a theme and terminal background.')),
           row('Sessions grid', this.gridStyles(state.settings.gridStyle), h('p', { class: 'hint' }, 'Choose between one focused session and a grid of equal tiles.')),
           row('Large session', checkbox('focus-moves-selected', 'Move the session I pick to the large spot', state.settings.focusMovesSelected, false, setFocusMovesSelected), h('p', { class: 'hint' }, state.settings.focusMovesSelected ? 'On: the session you select becomes the large one.' : 'Off: the large session stays put. Selecting a side session just focuses it there. Applies to Calm focus.'))
@@ -324,6 +329,34 @@ export class SettingsViewComponent {
         switcher.update(views[agent], (view) => setDefaultView(agent, view))
         return h('div', { class: 'set-view' }, h('span', { class: 'set-view-name' }, agentMark(agent), AGENT_NAMES[agent]), switcher.el)
       })
+    )
+  }
+
+  private desktopStyleCard(state: AppState): HTMLElement {
+    const on = isDesktopAppStyle(state.settings.appearance)
+    return h('div', { class: 'set-style-card', id: 'settings-desktop-style' },
+      h('div', { class: 'set-main' },
+        h('div', { class: 'set-name' }, 'Desktop app style'),
+        h('p', { class: 'hint' }, 'Turns on Quiet panes, Sidebar frame and Warm tone in one step.')
+      ),
+      h('button', { class: 'btn primary', type: 'button', id: 'appearance-use-desktop', disabled: on, onClick: () => useDesktopAppStyle() }, 'Use it'),
+      h('button', { class: 'btn ghost', type: 'button', id: 'appearance-back-classic', disabled: sameAppearance(state.settings.appearance, DEFAULT_APPEARANCE), onClick: () => backToClassic() }, 'Back to Classic')
+    )
+  }
+
+  private appearanceRows(state: AppState): HTMLElement[] {
+    const { appearance, sessionsLayout } = state.settings
+    return [
+      row('Panes', this.choice('appearance-panes', 'Panes', PANE_STYLE_LABELS, appearance.panes, (panes) => setAppearance({ panes })), h('p', { class: 'hint' }, 'Quiet: rounded panes, a calmer header, and one line that sums up the last reply with Review, Commit and Undo.')),
+      row('Frame', this.choice('appearance-frame', 'Frame', FRAME_STYLE_LABELS, appearance.frame, (frame) => setAppearance({ frame })), h('p', { class: 'hint' }, 'Sidebar: New session, Search and the Sessions, Agents, Files, Work and Skills tabs move into the sidebar, and the top bar goes away.')),
+      row('Tone', this.choice('appearance-tone', 'Tone', TONE_LABELS, appearance.tone, (tone) => setAppearance({ tone })), h('p', { class: 'hint' }, "Warm: neutral greys instead of blue greys. Your theme's accent stays.")),
+      row('Layout when Dawsha opens', this.choice('appearance-layout', 'Layout when Dawsha opens', OPENING_LAYOUT_LABELS, sessionsLayout, setOpeningLayout), h('p', { class: 'hint' }, 'You can switch at any time from the View menu.'))
+    ]
+  }
+
+  private choice<T extends string>(id: string, label: string, labels: Readonly<Record<T, string>>, selected: T, pick: (value: T) => void): HTMLElement {
+    return h('div', { class: 'segmented', id, role: 'group', 'aria-label': label },
+      ...(Object.keys(labels) as T[]).map((value) => h('button', { class: 'tab', type: 'button', 'data-value': value, 'aria-pressed': String(value === selected), onClick: () => pick(value) }, labels[value]))
     )
   }
 

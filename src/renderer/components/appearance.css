@@ -1,0 +1,8 @@
+/* Settings > Appearance: the Desktop app style card. */
+.set-style-card { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); padding: var(--sp-4); border-radius: 12px; background: var(--raised); }
+.set-style-card .set-main { flex: 1 1 auto; min-width: 0; }
+.set-style-card .btn { flex: none; }
+.set-style-card .btn.primary { border-color: transparent; background: var(--accent); color: var(--on-accent); font-weight: 500; }
+.set-style-card .btn.primary:disabled { opacity: 0.5; }
+.set-style-card .btn.ghost { border-color: transparent; background: transparent; color: var(--text-2); }
+.set-style-card .btn:disabled { cursor: default; }

@@ -1,0 +1,10 @@
+/* The Chat view in Quiet panes: your message a soft bubble, replies as plain text, the composer a floating card. */
+.panes-quiet .chat { background: var(--surface); }
+.panes-quiet .chat-scroll { padding-inline: var(--sp-5); }
+.panes-quiet .chat-you { padding: 8px 14px; border-radius: 16px; background: color-mix(in srgb, var(--text) 8%, var(--surface)); }
+.panes-quiet .chat-say { background: transparent; }
+.panes-quiet .chat-turn-summary { background: transparent; box-shadow: inset 0 0 0 1px var(--line); border-radius: 12px; }
+.panes-quiet .chat-composer { padding: 0 var(--sp-4) var(--sp-3); }
+.panes-quiet .chat-box,
+.panes-quiet .chat-box:focus-within { padding: 10px 12px; border-radius: 16px; background: var(--raised); box-shadow: 0 8px 24px rgb(var(--shadow-rgb) / .28), inset 0 0 0 1px var(--line); }
+.panes-quiet .chat-plan { background: transparent; }

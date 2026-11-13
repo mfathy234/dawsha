@@ -21,6 +21,7 @@ import { SettingsViewComponent } from './settingsView'
 import { SkillsViewComponent } from './skillsView'
 import { CrewViewComponent } from './crewView'
 import { SidebarComponent } from './sidebar'
+import { SidebarFrame } from './sidebarFrame'
 import { ThemePickerComponent } from './themePicker'
 import { UpdatePopoverComponent } from './updatePopover'
 import { WhatsNewComponent } from './whatsNew'
@@ -34,6 +35,8 @@ export class AppShell {
   readonly el: HTMLElement
   private readonly topbar = new TopBarComponent()
   private readonly sidebar = new SidebarComponent()
+  private readonly frame = new SidebarFrame()
+  private framed = false
   private readonly sidebarResize = h('div', {
     class: 'sidebar-resize-handle',
     role: 'separator',
@@ -77,6 +80,25 @@ export class AppShell {
     this.sidebarResize.addEventListener('pointercancel', this.onResizeEnd)
     this.sidebarResize.addEventListener('keydown', this.onResizeKeyDown)
     this.el = h('div', { class: 'app' }, this.topbar.el, h('div', { class: 'body' }, this.sidebar.el, this.sidebarResize, main))
+  }
+
+  /** The three style options are classes on the root, so a change shows at once and Classic carries no extra rules. */
+  private applyAppearance(state: AppState): void {
+    const { panes, frame, tone } = state.settings.appearance
+    this.el.classList.toggle('panes-quiet', panes === 'quiet')
+    this.el.classList.toggle('tone-warm', tone === 'warm')
+    const framed = frame === 'sidebar'
+    this.el.classList.toggle('frame-sidebar', framed)
+    if (framed !== this.framed) {
+      this.framed = framed
+      if (framed) this.frame.mount(this.topbar.frameParts)
+      else {
+        this.frame.unmount(this.topbar.frameParts)
+        this.topbar.layOut()
+      }
+      this.sidebar.setFrame(framed ? this.frame : null)
+    }
+    this.topbar.el.hidden = framed
   }
 
   private setSidebarWidth(width: number): void {
@@ -144,12 +166,13 @@ export class AppShell {
     }
     const views = derivePanes(state)
     syncRecordingTitles(views)
+    this.applyAppearance(state)
     this.topbar.update(state, views)
     this.sidebar.update(state, views)
     this.setSidebarWidth(state.settings.sidebarWidth)
     // Files has its own project switcher, so the projects sidebar steps aside there (the saved collapsed setting is untouched).
-    this.sidebar.el.hidden = state.view === 'files'
-    this.sidebarResize.hidden = isSidebarCollapsed(state) || state.view === 'files'
+    this.sidebar.el.hidden = state.view === 'files' && !this.framed
+    this.sidebarResize.hidden = isSidebarCollapsed(state) || (state.view === 'files' && !this.framed)
     const boardShown = state.view === 'grid' && state.settings.sessionsLayout === 'board'
     this.grid.el.hidden = state.view !== 'grid' || boardShown
     this.projects.el.hidden = state.view !== 'projects'

@@ -1,0 +1,61 @@
+/* Quiet panes (Settings > Appearance > Panes). Every rule hangs on .panes-quiet, so Classic carries none of it. */
+
+.pane-plan { display: none; }
+
+.panes-quiet .grid { gap: 8px; padding: 8px; }
+
+.panes-quiet .pane { --quiet-radius: 14px; border-radius: var(--quiet-radius); background: var(--surface); }
+.panes-quiet .pane:not(.needs-you):not(.focused) { box-shadow: none; }
+.panes-quiet .pane.focused:not(.needs-you) { box-shadow: inset 0 0 0 1px var(--line-strong); }
+.panes-quiet .pane.needs-you { box-shadow: inset 0 0 0 1px var(--needs-ring); }
+.panes-quiet .pane.drop-target { box-shadow: inset 0 0 0 2px var(--accent); }
+
+.panes-quiet .pane-header { height: 44px; gap: 10px; padding: 0 var(--sp-2) 0 14px; background: transparent; }
+.panes-quiet .pane-header .pane-titles { gap: 10px; }
+.panes-quiet .pane-header .pane-num { display: none; }
+.panes-quiet .pane-header .pane-title { font-size: var(--fs-13); font-weight: 600; color: var(--text); }
+.panes-quiet .pane-header .pane-project,
+.panes-quiet .pane-header .pane-fresh { color: var(--text-3); }
+.panes-quiet .pane-header > .pane-state { margin-inline-start: auto; font-size: var(--fs-12); }
+.panes-quiet .pane-header .chip-resumed,
+.panes-quiet .pane-header .chip-from { background: transparent; box-shadow: none; color: var(--text-3); }
+.panes-quiet .pane-header .chat-seg { padding: 2px; border-radius: 8px; background: var(--well); box-shadow: none; }
+.panes-quiet .pane-header .chat-seg button { border-radius: 6px; }
+.panes-quiet .pane-header .chat-seg button[aria-pressed='true'] { background: var(--raised); box-shadow: none; color: var(--text); }
+
+.panes-quiet .pane-plan:not([hidden]) { display: flex; align-items: center; gap: 10px; flex: none; padding: 0 14px 8px; margin-top: -4px; font-size: var(--fs-12); }
+.panes-quiet .pane-plan-n { flex: none; color: var(--accent-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.panes-quiet .pane-plan-now { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+.panes-quiet .pane-plan-bar { flex: 1 1 40px; height: 3px; border-radius: 3px; background: var(--hover); overflow: hidden; }
+.panes-quiet .pane-plan-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+
+.panes-quiet .pane-recap { padding-inline: 14px; }
+
+.panes-quiet .pane-body { margin: 0 6px 6px; border-top: 0; border-radius: 10px; background: var(--term-bg); }
+.panes-quiet .pane-body .term-host .xterm { padding: var(--sp-3) var(--sp-4); }
+.panes-quiet .pane-body.chat-on { margin: 0; border-radius: 0; background: transparent; }
+.panes-quiet .pane:has(.pane-reply:not([hidden])) .pane-body { margin-bottom: 0; }
+.panes-quiet .pane:has(.pane-reply:not([hidden])) .pane-body.chat-on { margin-bottom: 0; }
+
+.panes-quiet .pane-foot { padding-inline: 14px; }
+
+/* The approval card looks the same in the terminal view and in the chat. */
+.panes-quiet .pane-permission { gap: 10px; margin: 0 6px 6px; padding: 14px; border-radius: 12px; background: var(--raised); box-shadow: 0 12px 32px rgb(var(--shadow-rgb) / .35); }
+.panes-quiet .chat-thread .pane-permission { margin: 0; background: var(--raised); box-shadow: 0 12px 32px rgb(var(--shadow-rgb) / .25); }
+.panes-quiet .pane-permission-head .state-icon,
+.panes-quiet .pane-permission-tool,
+.panes-quiet .pane-permission-meta { display: none; }
+.panes-quiet .pane-permission-title { font-size: var(--fs-13); font-weight: 500; white-space: normal; }
+.panes-quiet .pane-permission-command { padding: 8px 10px; border-radius: 8px; background: var(--well); font-size: var(--fs-12); }
+.panes-quiet .pane-permission-actions { flex-wrap: wrap; gap: 8px; }
+.panes-quiet .pane-permission-actions .btn { height: 30px; min-height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; box-shadow: none; font-size: var(--fs-13); font-weight: 400; }
+.panes-quiet .pane-permission-actions .btn.primary { padding: 0 14px; background: var(--text); color: var(--canvas); font-weight: 500; }
+.panes-quiet .pane-permission-actions .btn.primary:hover { background: color-mix(in srgb, var(--text) 88%, var(--canvas)); }
+.panes-quiet .pane-permission-actions .btn:not(.primary):hover { background: var(--hover); }
+.panes-quiet .pane-permission-actions .btn.ghost { margin-inline-start: 0; color: var(--text-2); }
+.panes-quiet .pane-permission-gap { flex: 1 1 0; }
+.panes-quiet .pane-permission-key { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .panes-quiet .pane.needs-you { animation: none; }
+}

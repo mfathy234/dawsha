@@ -35,6 +35,10 @@ export function sanitizeAppearance(value: unknown): AppearanceSettings {
   }
 }
 
+export const sameAppearance = (a: AppearanceSettings, b: AppearanceSettings): boolean => a.panes === b.panes && a.frame === b.frame && a.tone === b.tone
+
+export const OPENING_LAYOUT_LABELS: Record<'grid' | 'board' | 'panel', string> = { grid: 'Grid', board: 'Board', panel: 'Side panel' }
+
 export const isDesktopAppStyle = (appearance: AppearanceSettings): boolean =>
   appearance.panes === DESKTOP_APP_STYLE.panes && appearance.frame === DESKTOP_APP_STYLE.frame && appearance.tone === DESKTOP_APP_STYLE.tone
 

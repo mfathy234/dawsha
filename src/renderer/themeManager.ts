@@ -4,6 +4,8 @@ import { findTheme, type Theme } from '../shared/themes'
 import { EDITOR_COLORS } from '../shared/syntaxPalette'
 import { needsColours } from '../shared/themeLadder'
 import type { ThemeSettings } from '../shared/types'
+import type { Tone } from '../shared/appearance'
+import { toneApp, toneTerminalBackground } from '../shared/tone'
 
 export interface ThemeBundle {
   theme: Theme
@@ -16,6 +18,7 @@ export interface ThemeBundle {
 type Listener = (bundle: ThemeBundle) => void
 
 const listeners = new Set<Listener>()
+let currentTone: Tone = 'cool'
 let current: ThemeBundle = buildBundle({ id: 'grid-dark', image: { enabled: false, path: null, dim: 60, blur: 0 } })
 let imageVersion = 0
 
@@ -64,8 +67,14 @@ const VARIABLES: Record<string, Exclude<keyof Theme['app'], 'faint' | 'done'>> =
   '--on-danger': 'onDanger'
 }
 
+function toned(theme: Theme, tone: Tone): Theme {
+  if (tone === 'cool') return theme
+  const background = toneTerminalBackground(theme.term.background, tone, theme.kind)
+  return { ...theme, app: toneApp(theme.app, theme.kind, tone), term: { ...theme.term, background, cursorAccent: background } }
+}
+
 function buildBundle(settings: ThemeSettings): ThemeBundle {
-  const theme = foundationTheme(findTheme(settings.id))
+  const theme = toned(foundationTheme(findTheme(settings.id)), currentTone)
   const { image } = settings
   const imageActive = image.enabled && image.path !== null
   const background = imageActive ? withAlpha(theme.term.background, image.dim / 100) : theme.term.background
@@ -143,6 +152,13 @@ export function applyTheme(settings: ThemeSettings, imageChanged = false): Theme
   applyCss(current, settings)
   for (const listener of listeners) listener(current)
   return current
+}
+
+/** Switches the surface tone and repaints at once; the theme and its accent are untouched. */
+export function setTone(tone: Tone, settings?: ThemeSettings): void {
+  if (tone === currentTone && !settings) return
+  currentTone = tone
+  if (settings) applyTheme(settings)
 }
 
 export const currentBundle = (): ThemeBundle => current
