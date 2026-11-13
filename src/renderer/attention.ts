@@ -66,7 +66,7 @@ function evaluate(state: AppState): void {
     notifyContext(state, view)
     next[paneId] = step.memory.attention
     if (step.notify && state.settings.sessionInfo.notifications) {
-      api.notify({ paneId, ...notifyText(view, step.notify), sound: state.settings.sessionInfo.sound })
+      api.notify({ paneId, ...notifyText(view, step.notify), sound: state.settings.sessionInfo.sound, flash: step.notify !== 'needs' })
     }
   }
   for (const id of [...memories.keys()]) if (!(id in next)) memories.delete(id)

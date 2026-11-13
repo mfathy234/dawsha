@@ -1,5 +1,5 @@
-import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from 'electron'
-import { validBounds, type BrowserCommand, type BrowserResult } from '../shared/browserPane'
+import { ipcMain, session, type BrowserWindow, type IpcMainInvokeEvent } from 'electron'
+import { BROWSER_PARTITION, validBounds, type BrowserCommand, type BrowserResult } from '../shared/browserPane'
 import { TOOLS_IPC } from '../shared/filesTools'
 import type { PrRequest } from '../shared/prFlow'
 import { BrowserPane } from './browserPane'
@@ -19,7 +19,7 @@ function fromAppWindow(window: BrowserWindow | null, event: IpcMainInvokeEvent):
 }
 
 /** Config, pull request and browser handlers for the Files panel. Returns a function that closes the browser. */
-export function registerToolsIpc(getWindow: () => BrowserWindow | null, store: ToolsStore): () => void {
+export function registerToolsIpc(getWindow: () => BrowserWindow | null, store: ToolsStore): () => Promise<void> {
   const pane = new BrowserPane(getWindow, (state) => {
     const window = getWindow()
     if (window && !window.isDestroyed() && !window.webContents.isDestroyed()) window.webContents.send(TOOLS_IPC.browserState, state)
@@ -74,7 +74,8 @@ export function registerToolsIpc(getWindow: () => BrowserWindow | null, store: T
     return { ok: false, error: 'Unknown browser command.' }
   }
 
-  return () => {
+  return async () => {
     pane.close()
+    await session.fromPartition(BROWSER_PARTITION).closeAllConnections()
   }
 }

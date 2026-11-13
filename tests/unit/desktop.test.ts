@@ -11,13 +11,28 @@ vi.mock('electron', () => {
     on(event: string, handler: () => void): this { this.handlers[event] = handler; return this }
     show(): void {}
   }
-  return { BrowserWindow: vi.fn(), Notification, shell: { openPath: vi.fn() } }
+  return { BrowserWindow: vi.fn(), Notification, shell: { openPath: vi.fn() }, app: { setBadgeCount: vi.fn() }, nativeImage: { createFromBitmap: vi.fn() } }
 })
 vi.mock('../../src/main/executables', () => ({
   resolveExecutable: () => '/usr/bin/code', platformExecutableDirs: () => ['/usr/bin']
 }))
 
-import { liveNotificationCount, notifyUser, quickOpen } from '../../src/main/desktop'
+import { applyAttentionBadge, liveNotificationCount, notifyUser, onAttentionCount, quickOpen } from '../../src/main/desktop'
+
+it('publishes count changes and flashes once for each newly waiting session', () => {
+  applyAttentionBadge(null, 0, [])
+  const counts: number[] = []
+  const unsubscribe = onAttentionCount(count => counts.push(count))
+  const window = { isDestroyed: () => false, isFocused: () => false, flashFrame: vi.fn(), setTitle: vi.fn(), setOverlayIcon: vi.fn() }
+  applyAttentionBadge(window as never, 1, ['a'])
+  applyAttentionBadge(window as never, 1, ['a'])
+  applyAttentionBadge(window as never, 1, ['b'])
+  expect(window.flashFrame.mock.calls).toEqual([[true], [true]])
+  expect(counts).toEqual([0, 1])
+  unsubscribe()
+  applyAttentionBadge(null, 0, [])
+  expect(counts).toEqual([0, 1])
+})
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs() })
 

@@ -8,6 +8,7 @@ import { registerIpc } from './ipc'
 import { stopCodeNavigation } from './codeNav'
 import { closeAgentFiles, refreshAgentFiles } from './agentFiles'
 import { notifyUser } from './desktop'
+import { handleDesktopLaunch, installDesktopLaunch, refreshJumpList } from './desktopLaunch'
 import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
 import { registerToolsIpc } from './toolsIpc'
@@ -25,7 +26,7 @@ import { bridgeDirs, claudeSettingsPath, legacyUserDataDir, opsDirs } from './pa
 import { platformExecutableDirs, resolveExecutable } from './executables'
 import { migrateLegacyUserData } from './userDataMigration'
 import { CliRunner } from './cliRunner'
-import { startCliServer } from './cliServer'
+import { startCliServer, stopCliServer } from './cliServer'
 import { setupUpdates } from './updates'
 import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
@@ -33,7 +34,7 @@ import { killAppUtilityChildren } from './childProcesses'
 import { createQuitLog } from './quitLog'
 import { startQuitWatchdog } from './quitWatchdog'
 import { requestCloseCheck } from './closeCheck'
-import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, exitProcess, runPhases, runQuit, type ShutdownDeps } from './shutdown'
+import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, exitProcess, runPhases, runQuit, stopAllServices, type ShutdownDeps } from './shutdown'
 import { isPrivateRemoteBuild, isRemoteControlBuild } from '../shared/remoteBuild'
 
 const IMAGE_SCHEME = 'dawsha-image'
@@ -62,6 +63,7 @@ if (!gotLock) {
   app.exit(0)
 } else {
   app.on('second-instance', (_event, argv, workingDirectory) => {
+    if (handleDesktopLaunch(argv)) return
     if (!mainWindow || mainWindow.isDestroyed()) return
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.focus()
@@ -249,9 +251,11 @@ app.whenReady().then(async () => {
   recordings.startSchedule()
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
+  installDesktopLaunch(() => store.get(), cli)
+  refreshJumpList(store.get())
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
-  app.on('will-quit', () => cliServer.close())
-  void cli.executeFromArgv(process.argv, process.cwd())
+  app.on('will-quit', () => { void stopCliServer(cliServer) })
+  if (!handleDesktopLaunch(process.argv)) void cli.executeFromArgv(process.argv, process.cwd())
   mainWindow.webContents.once('did-finish-load', () => {
     watcher.start()
     codexWatcher.start()
@@ -261,22 +265,18 @@ app.whenReady().then(async () => {
   })
   const shutdownDeps: ShutdownDeps = {
     log: quitLog,
-    stopServices: async () => {
-      stopCodeNavigation()
-      closeBrowserPane()
-      watcher.stop()
-      closeAgentFiles()
-      codexWatcher.stop()
-      geminiWatcher.stop()
-      statusWatcher.stop()
-      opsWatcher.stop()
-      updates?.stop()
-      usage.flush()
-      recordings.stopSchedule()
-      await stopRunCommands()
-      await stopTurnChecks()
-      await remoteAccess?.stop()
-    },
+    stopServices: () => stopAllServices([
+      ['CLI bridge', () => stopCliServer(cliServer)],
+      ['code navigation', stopCodeNavigation], ['browser pane', closeBrowserPane],
+      ['sessions watcher', () => watcher.stop()], ['agent files', closeAgentFiles],
+      ['Codex watcher', () => codexWatcher.stop()], ['Gemini watcher', () => geminiWatcher.stop()],
+      ['status watcher', () => statusWatcher.stop()], ['ops watcher', () => opsWatcher.stop()],
+      ['updates', () => updates?.stop()], ['usage', () => usage.flush()],
+      ['recording schedule', () => recordings.stopSchedule()],
+      ['run commands', stopRunCommands], ['turn checks', stopTurnChecks],
+      ['Remote Control', () => remoteAccess?.stop()],
+      ['Chromium connections', () => session.defaultSession.closeAllConnections()]
+    ], quitLog),
     flushRenderer,
     flushStorage: async () => {
       await recorder.closeAll()

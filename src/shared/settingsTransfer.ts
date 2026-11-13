@@ -18,6 +18,7 @@ export const INCLUDED_KEYS = [
   'paletteShortcut',
   'sessionsLayout',
   'gridStyle',
+  'appearance',
   'focusMovesSelected',
   'recordings',
   'crew',
@@ -41,6 +42,8 @@ export const EXCLUDED_KEYS = [
   'version',
   'remoteAccess',
   'workspace',
+  'miniWindow',
+  'recentProjectIds',
   'keptSessions',
   // Keyed by this PC's project ids, like closed sessions.
   'foldedProjects',
@@ -120,7 +123,7 @@ export const importDialogOptions = (defaultDir: string) => ({
   title: 'Import settings',
   defaultPath: defaultDir,
   properties: ['openFile' as const],
-  filters: [{ name: 'Dawsha settings', extensions: ['json'] }]
+  filters: [{ name: 'JSON', extensions: ['json'] }]
 })
 
 export const transferFileName = (now: Date): string =>
@@ -138,7 +141,7 @@ export type ParseResult = { ok: true; transfer: ParsedTransfer } | { ok: false; 
 const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
-const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew'] as const
+const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew', 'appearance'] as const
 const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected'] as const
 
 function checkShapes(data: Raw): string | null {
@@ -243,6 +246,7 @@ export interface PlanInput {
 
 const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['theme', 'Theme'],
+  ['appearance', 'Appearance'],
   ['highlights', 'Highlight rules'],
   ['paletteShortcut', 'Palette shortcut'],
   ['sessionsLayout', 'Sessions view'],

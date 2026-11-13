@@ -188,6 +188,8 @@ export interface SessionInfoSettings {
 export interface Settings {
   version: 2
   projects: Project[]
+  /** Most recently used projects for desktop launch actions, local to this PC. */
+  recentProjectIds: string[]
   spendLimits: Record<string, { amountUsd: number; period: 'day' | 'week' }>
   /** Per project: the run commands to run after each reply that changed files. */
   turnChecks: import('./turnChecks').TurnChecksSettings
@@ -417,6 +419,8 @@ export interface BridgeStatus {
 export type BridgeResult = { ok: true; note?: string } | { ok: false; error: string }
 
 export interface NotifyRequest {
+  /** Waiting sessions flash through the badge transition, independently of notifications. */
+  flash?: boolean
   paneId: string
   title: string
   body: string

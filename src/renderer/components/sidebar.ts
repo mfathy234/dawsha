@@ -29,6 +29,7 @@ import { promptDialog } from './dialogs'
 import './sidebar.css'
 import './sidebarRoomy.css'
 import { needsCount } from '../../shared/attentionBadge'
+import { waitingSessionIds } from '../../shared/waitingAttention'
 import { syncAttentionBadge } from '../attentionBadge'
 import type { AppState } from '../state'
 
@@ -196,7 +197,10 @@ export class SidebarComponent {
 
   private render(state: AppState | null, views: PaneView[]): void {
     if (!state) return
-    syncAttentionBadge(needsCount(views.map(viewState)))
+    syncAttentionBadge(needsCount(views.map(viewState)), waitingSessionIds(views.map(view => ({
+      id: view.pane.id, exited: view.status === 'exited', attention: view.attention,
+      waiting: view.fileWaiting || state.waiting[view.pane.id] === true
+    }))))
     const collapsed = isSidebarCollapsed(state)
     const focusedView = views.find((v) => v.pane.id === state.focusedId)
     const filtering = this.filterText.trim() !== ''

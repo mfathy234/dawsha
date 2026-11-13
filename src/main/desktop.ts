@@ -3,6 +3,7 @@ import { appendFileSync, existsSync, readdirSync } from 'node:fs'
 import { delimiter, dirname, join } from 'node:path'
 import { BrowserWindow, Notification, app, nativeImage, shell } from 'electron'
 import { OVERLAY_SIZE, badgeWindowTitle, normalizeBadgeCount, overlayBitmap } from '../shared/attentionBadge'
+import { newlyWaiting } from '../shared/waitingAttention'
 import { safeLink } from '../shared/markdown'
 import { toastXml } from '../shared/notifyContent'
 import { platformExecutableDirs, resolveExecutable } from './executables'
@@ -105,7 +106,7 @@ const notifyString = (value: unknown): string => (typeof value === 'string' ? va
 /** The renderer's request, reduced to known string fields of a sane length. */
 function cleanRequest(raw: NotifyRequest): NotifyRequest {
   const attribution = notifyString(raw?.attribution)
-  return { paneId: notifyString(raw?.paneId), title: notifyString(raw?.title), body: notifyString(raw?.body), sound: raw?.sound === true, ...(attribution ? { attribution } : {}) }
+  return { paneId: notifyString(raw?.paneId), title: notifyString(raw?.title), body: notifyString(raw?.body), sound: raw?.sound === true, ...(raw?.flash === false ? { flash: false } : {}), ...(attribution ? { attribution } : {}) }
 }
 
 function createNotification(request: NotifyRequest): Notification {
@@ -121,8 +122,8 @@ export function notifyUser(getWindow: () => BrowserWindow | null, raw: NotifyReq
   const window = getWindow()
   const unfocused = !window || window.isDestroyed() || !window.isFocused()
   const log = process.env.DAWSHA_NOTIFY_LOG
-  if (log) return logTo(log, JSON.stringify({ ...request, flash: unfocused }))
-  if (window && !window.isDestroyed() && unfocused) window.flashFrame(true)
+  if (log) return logTo(log, JSON.stringify({ ...request, flash: unfocused && request.flash !== false }))
+  if (window && !window.isDestroyed() && unfocused && request.flash !== false) window.flashFrame(true)
   if (!Notification.isSupported()) return
   const notification = createNotification(request)
   notification.on('click', () => {
@@ -138,8 +139,29 @@ export function notifyUser(getWindow: () => BrowserWindow | null, raw: NotifyReq
   notification.show()
 }
 
-export function applyAttentionBadge(window: BrowserWindow | null, value: unknown): void {
+let attentionCount = 0
+let waitingSessions: string[] = []
+const attentionListeners = new Set<(count: number) => void>()
+
+/** Immediately reports the current count; returns an unsubscribe function for tray teardown. */
+export function onAttentionCount(listener: (count: number) => void): () => void {
+  attentionListeners.add(listener)
+  listener(attentionCount)
+  return () => { attentionListeners.delete(listener) }
+}
+
+export function applyAttentionBadge(window: BrowserWindow | null, value: unknown, rawIds?: unknown): void {
   const count = normalizeBadgeCount(value)
+  const ids = Array.isArray(rawIds) ? [...new Set(rawIds.filter((id): id is string => typeof id === 'string' && id.length > 0 && id.length < 200))].slice(0, 500) : []
+  const fresh = newlyWaiting(waitingSessions, ids)
+  waitingSessions = ids
+  if (count !== attentionCount) {
+    attentionCount = count
+    for (const listener of attentionListeners) {
+      try { listener(count) } catch { /* A consumer cannot prevent the taskbar update. */ }
+    }
+  }
+  if (fresh.length && window && !window.isDestroyed() && !window.isFocused()) window.flashFrame(true)
   if (process.platform !== 'win32') app.setBadgeCount(count)
   if (!window || window.isDestroyed()) return
   window.setTitle(badgeWindowTitle(count))

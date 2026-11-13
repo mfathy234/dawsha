@@ -116,6 +116,7 @@ export const IPC = {
   notify: 'app:notify',
   notifyClick: 'app:notify-click',
   attentionBadge: 'app:attention-badge',
+  desktopNewSession: 'app:desktop-new-session',
   bridgePreview: 'bridge:preview',
   bridgeStatus: 'bridge:status',
   bridgeInstall: 'bridge:install',

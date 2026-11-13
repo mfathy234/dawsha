@@ -50,7 +50,7 @@ function roots(locations: SkillLocations): Root[] {
   ]
   const projects = locations.projects.slice(0, 100).flatMap((project): Root[] =>
     ([['.agents', 'shared'], ['.claude', 'claude'], ['.codex', 'codex'], ['.gemini', 'gemini']] as const).map(([folder, agent]) => ({
-      path: join(project, folder, 'skills'), agent, kind: 'skill', scope: 'project', project
+      path: join(project, folder, 'skills'), agent, kind: 'skill', scope: 'project', project, followLinks: true
     }))
   )
   const agents: Root[] = [
@@ -80,14 +80,14 @@ function isFile(path: string): boolean {
   try { return lstatSync(path).isFile() } catch { return false }
 }
 
-// A user skill root may hold junctions or symlinks into a sync folder. Only such a direct child is followed,
+// A skill root may hold junctions or symlinks into a sync folder. Only such a direct child is followed,
 // and only when its real target holds a SKILL.md; nothing below it is followed through a link.
 function skillFolder(path: string, followLinks: boolean): { linked: boolean; target: string } | null {
   try {
     const info = lstatSync(path)
     const linked = info.isSymbolicLink()
     if (linked ? !followLinks : !info.isDirectory()) return null
-    const target = realpathSync(path)
+    const target = realpathSync.native(path)
     return isFile(join(target, 'SKILL.md')) ? { linked, target } : null
   } catch {
     return null
@@ -110,7 +110,7 @@ export function descriptionOf(path: string): string | undefined {
 }
 
 function idFor(path: string): string {
-  return createHash('sha256').update(path.toLowerCase()).digest('hex').slice(0, 24)
+  return createHash('sha256').update(path).digest('hex').slice(0, 24)
 }
 
 export function listSkills(locations: SkillLocations): SkillEntry[] {
@@ -132,7 +132,8 @@ export function listSkills(locations: SkillLocations): SkillEntry[] {
       try {
         const displayName = root.kind === 'agent' ? name.replace(/\.(md|toml)$/i, '') : name
         if (root.kind === 'agent' && agentNames.has(displayName.toLowerCase())) continue
-        const canonical = (folder ? folder.target : realpathSync(path)).toLowerCase()
+        const target = folder ? folder.target : realpathSync.native(path)
+        const canonical = process.platform === 'win32' ? target.toLowerCase() : target
         if (seen.has(canonical)) continue
         seen.add(canonical)
         if (root.kind === 'agent') agentNames.add(displayName.toLowerCase())
@@ -209,6 +210,22 @@ function exportEntry(skill: SkillEntry, destinationFolder: string): string {
   return destination
 }
 
+// These components are created by us beneath the selected folder. Never reuse a junction there.
+function createExportFolders(destination: string, components: string[]): string {
+  let current = destination
+  for (const name of components) {
+    current = join(current, name)
+    try {
+      const info = lstatSync(current)
+      if (info.isSymbolicLink() || !info.isDirectory()) throw new Error('Export destination contains a link or unsupported file.')
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+      mkdirSync(current)
+    }
+  }
+  return current
+}
+
 /**
  * Exports several skills or agents into `<destination>/dawsha-export/<agent>/<skills|agents>/`, so an
  * "export all" keeps each provider's items apart. Items that fail (already exported, links, gone) are
@@ -231,9 +248,8 @@ export function exportSkills(locations: SkillLocations, ids: unknown, destinatio
       skipped.push({ name: skill.name, reason: 'destination is inside it' })
       continue
     }
-    const target = join(folder, skill.agent, skill.kind === 'agent' ? 'agents' : 'skills')
     try {
-      mkdirSync(target, { recursive: true })
+      const target = createExportFolders(resolve(destinationFolder), ['dawsha-export', skill.agent, skill.kind === 'agent' ? 'agents' : 'skills'])
       exportEntry(skill, target)
       exported += 1
     } catch (error) {
