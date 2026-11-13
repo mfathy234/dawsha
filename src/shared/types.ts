@@ -413,6 +413,8 @@ export interface BridgeStatus {
 export type BridgeResult = { ok: true; note?: string } | { ok: false; error: string }
 
 export interface NotifyRequest {
+  /** Waiting sessions flash through the badge transition, independently of notifications. */
+  flash?: boolean
   paneId: string
   title: string
   body: string

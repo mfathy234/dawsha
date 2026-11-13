@@ -379,7 +379,7 @@ export function registerIpc(
     return root && isInstructionName(name) ? openFile(root, { path: name }) : undefined
   })
   ipcMain.on(IPC.notify, (_event, request: NotifyRequest) => notifyUser(getWindow, request, onNotifyClick))
-  ipcMain.on(IPC.attentionBadge, (_event, count: unknown) => applyAttentionBadge(getWindow(), count))
+  ipcMain.on(IPC.attentionBadge, (_event, count: unknown, waitingIds: unknown) => applyAttentionBadge(getWindow(), count, waitingIds))
   ipcMain.handle(IPC.bridgePreview, () => bridgePreview(locations()))
   ipcMain.handle(IPC.bridgeStatus, () => bridgeStatus(locations()))
   ipcMain.handle(IPC.bridgeInstall, () => installBridge(locations()))
