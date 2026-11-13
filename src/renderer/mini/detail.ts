@@ -35,12 +35,13 @@ class Composer {
       this.send()
     })
     this.area.addEventListener('input', () => { drafts.set(paneId, this.area.value); this.grow() })
-    this.grow()
+    queueMicrotask(() => this.grow())
   }
 
   private grow(): void {
     this.area.style.height = 'auto'
     this.area.style.height = `${Math.min(this.area.scrollHeight, MAX_ROWS_PX)}px`
+    this.area.style.overflowY = this.area.scrollHeight > MAX_ROWS_PX ? 'auto' : 'hidden'
   }
 
   private send(): void {
