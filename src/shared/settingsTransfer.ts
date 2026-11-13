@@ -1,5 +1,6 @@
 import { migrateSettings, MAX_LAYOUTS } from './settingsSchema'
 import { isGridStyle } from './gridStyle'
+import { isSessionsLayout } from './board'
 import { mergeSavedPrompts } from './savedPrompts'
 import type { CrewMember, CrewSettings } from './crew'
 import type { Project, SavedLayout, Settings } from './types'
@@ -31,6 +32,7 @@ export const INCLUDED_KEYS = [
   'colorSessionsByTag',
   'sidebarWidth',
   'othersCollapsed',
+  'sidePanel',
   // Personal and portable: a prompt carries no ids from this PC.
   'savedPrompts'
 ] as const satisfies readonly (keyof Settings)[]
@@ -153,8 +155,8 @@ function checkShapes(data: Raw): string | null {
   }
   if (data.savedPrompts !== undefined && !Array.isArray(data.savedPrompts)) return '"savedPrompts" must be a list.'
   if (data.paletteShortcut !== undefined && typeof data.paletteShortcut !== 'string') return '"paletteShortcut" must be text.'
-  if (data.sessionsLayout !== undefined && data.sessionsLayout !== 'grid' && data.sessionsLayout !== 'board') {
-    return '"sessionsLayout" must be grid or board.'
+  if (data.sessionsLayout !== undefined && !isSessionsLayout(data.sessionsLayout)) {
+    return '"sessionsLayout" must be grid, board or panel.'
   }
   if (data.gridStyle !== undefined && !isGridStyle(data.gridStyle)) return '"gridStyle" must be focus or tiles.'
   if (data.sidebarWidth !== undefined && (typeof data.sidebarWidth !== 'number' || !Number.isFinite(data.sidebarWidth))) {
@@ -258,6 +260,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['sleepHiddenTerminals', 'Sleep hidden terminals'],
   ['colorSessionsByTag', 'Tag colours'],
   ['sidebarWidth', 'Sidebar'],
+  ['sidePanel', 'Side panel'],
   ['othersCollapsed', 'Sidebar'],
   ['savedPrompts', 'Saved prompts']
 ]

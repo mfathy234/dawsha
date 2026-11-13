@@ -107,6 +107,8 @@ export interface Workspace {
   focusedIndex: number
   /** Index of the large pane in Calm focus; absent in older saves. */
   largeIndex?: number
+  /** Index of the pane shown on its own (the focus view or the Side panel), so a restart opens it again; absent in older saves. */
+  maximizedIndex?: number
   splits?: GridSplits
 }
 
@@ -212,6 +214,8 @@ export interface Settings {
   appearance: import('./appearance').AppearanceSettings
   /** The always-on-top Mini window. */
   miniWindow: import('./appearance').MiniWindowSettings
+  /** The Side panel layout: whether the panel is open, how wide, and its tab. */
+  sidePanel: import('./sidePanel').SidePanelSettings
   /** How the sessions grid arranges panes: calm focus (one large pane) or mission control (equal tiles). */
   gridStyle: GridStyle
   /** Calm focus: the session you select takes the large spot. Off, the large session stays put. */
