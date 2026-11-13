@@ -253,8 +253,9 @@ app.whenReady().then(async () => {
   registerMcpIpc(() => mainWindow, store)
   recordings.startSchedule()
   mainWindow = createWindow()
-  // Test sandboxes must not replace the user's registered protocol handler.
-  if (process.platform === 'win32' && !process.env.DAWSHA_NOTIFY_LOG) {
+  // Test sandboxes and dev runs must not replace the installed app's registered protocol handler.
+  const registerProtocol = app.isPackaged || process.env.DAWSHA_REGISTER_PROTOCOL === '1'
+  if (process.platform === 'win32' && registerProtocol && !process.env.DAWSHA_NOTIFY_LOG) {
     if (process.defaultApp && process.argv[1]) app.setAsDefaultProtocolClient(NOTIFICATION_SCHEME, process.execPath, [resolve(process.argv[1])])
     else if (!process.defaultApp) app.setAsDefaultProtocolClient(NOTIFICATION_SCHEME)
   }

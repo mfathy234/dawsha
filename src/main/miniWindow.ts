@@ -9,6 +9,8 @@ import { setMiniWindowLaunchHandler } from './desktopLaunch'
 import type { MiniPlanRequest } from '../shared/miniWindow'
 
 /** Owns native lifecycle only. Session state and approval execution belong to the main renderer. */
+const MAX_PLAN_REQUESTS = 50
+
 export function installMiniWindow(main: BrowserWindow, settings: SettingsStore): () => void {
   let mini: BrowserWindow | null = null
   let snapshot: MiniSnapshot | null = null
@@ -126,7 +128,7 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
     if (!trusted(event, main) || !mini?.isVisible() || !Array.isArray(requests)) return {}
     if (!requests.every((r): r is MiniPlanRequest => !!r && typeof r === 'object' && typeof r.paneId === 'string' &&
       (r.agent === 'claude' || r.agent === 'codex') && typeof r.sessionId === 'string' && typeof r.folder === 'string')) return {}
-    return plans.read(requests)
+    return plans.read(requests.slice(0, MAX_PLAN_REQUESTS))
   })
   const minimize = (): void => { if (settings.get().miniWindow.showOnMinimize) open() }
   main.on('minimize', minimize)
