@@ -1,0 +1,50 @@
+/* Settings: one left edge for the title, section heading and rows, one control style, and rows that never wrap their controls. */
+.settings-view > .page-header { padding-inline: var(--sp-7); }
+.settings-content { padding: var(--sp-4) var(--sp-7) var(--sp-7); }
+.settings-content > * { max-width: 640px; }
+.settings-panel .set-row { grid-template-columns: minmax(0, 1fr) max-content; align-items: center; min-height: 64px; }
+.settings-panel .set-row .set-control { padding-top: 0; white-space: nowrap; }
+.settings-panel .set-main { max-width: 56ch; }
+.settings-panel .set-name { font-weight: 500; }
+.settings-panel .hint { color: var(--text-2); }
+
+.settings-panel .segmented { display: inline-flex; flex-wrap: nowrap; white-space: nowrap; }
+.settings-panel .segmented > button { flex: 0 0 auto; white-space: nowrap; }
+.settings-panel .set-views { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-1); }
+.settings-panel .set-view { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.settings-panel .set-view-name { display: inline-flex; align-items: center; gap: var(--sp-2); }
+
+.settings-content .btn { height: 32px; padding-inline: var(--sp-3); white-space: nowrap; }
+.settings-content .btn.ghost,
+.settings-content .btn.small { border-color: transparent; background: var(--raised); color: var(--text); }
+.settings-content .btn.ghost:hover:not(:disabled),
+.settings-content .btn.small:hover:not(:disabled) { background: var(--hover); }
+.settings-content .btn:disabled { opacity: 0.5; cursor: default; }
+.settings-content .btn.primary { border-color: transparent; background: var(--accent); color: var(--on-accent); }
+.settings-content .btn.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+.settings-content .set-inline { flex-wrap: nowrap; }
+.settings-content .update-settings-actions { flex-wrap: nowrap; }
+
+.settings-back { display: flex; align-items: center; gap: var(--sp-2); width: 100%; height: 32px; margin-bottom: var(--sp-2); padding: 0 var(--sp-2); border: 0; border-radius: var(--r-1); background: transparent; color: var(--text-2); font: inherit; font-size: var(--fs-2); text-align: start; cursor: pointer; }
+.settings-back:hover { background: var(--hover); color: var(--text); }
+.settings-back:focus-visible,
+.settings-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.settings-search { width: 100%; height: 34px; margin-bottom: var(--sp-3); }
+.settings-panel .set-match { border-radius: var(--r-1); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+.set-style-card { gap: var(--sp-4); padding: var(--sp-4); min-height: 64px; }
+.set-style-card .set-main { max-width: 44ch; }
+.set-style-actions { display: flex; flex: none; align-items: center; gap: var(--sp-2); white-space: nowrap; }
+.set-style-state { padding-inline: var(--sp-2); color: var(--accent); font-weight: 500; }
+.set-style-card .btn.ghost { background: transparent; }
+.set-style-card .btn:not(.primary):not(:disabled) { background: var(--hover); color: var(--text); }
+
+.settings-panel .set-links { flex-direction: row; flex-wrap: wrap; gap: var(--sp-4); justify-content: flex-end; }
+.settings-panel .set-links .tool-link { height: auto; padding: 0; white-space: nowrap; }
+.settings-panel .set-path { display: block; margin-top: var(--sp-1); }
+.settings-panel .hl-rule { min-height: 44px; padding-block: var(--sp-2); }
+.settings-panel .hl-rule .set-control { display: flex; flex-wrap: nowrap; }
+.settings-panel .cl-list { margin-top: var(--sp-2); }
+
+.settings-import .set-inline { flex-wrap: nowrap; max-width: none; }
+.settings-import-path { flex: 1 1 auto; min-width: 0; }
