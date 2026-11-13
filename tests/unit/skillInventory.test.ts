@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest'
 import { exportSkill, exportSkills, isSafeExportDestination, listSkills, resolveSkill } from '../../src/main/skillInventory'
 
 describe('skill inventory', () => {
-  it.skipIf(process.platform === 'win32')('gives case-distinct POSIX skills different IDs', () => {
+  // Needs a case-sensitive file system: Windows and macOS (APFS by default) treat Foo and foo as one folder.
+  it.skipIf(process.platform === 'win32' || process.platform === 'darwin')('gives case-distinct POSIX skills different IDs', () => {
     const root = mkdtempSync(join(tmpdir(), 'dawsha-case-skills-'))
     for (const name of ['Foo', 'foo']) {
       const folder = join(root, '.claude', 'skills', name)

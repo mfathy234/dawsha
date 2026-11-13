@@ -131,7 +131,6 @@ function focusedAction(id: string, title: string, run: (paneId: string) => unkno
 
 export function installBuiltinCommands(): void {
   registerCommands(
-    { id: 'view.mini', title: 'Mini window', group: 'Actions', keywords: 'float always on top sessions', ...withKeys('Ctrl+Alt+M'), run: toggleMiniWindow },
     { id: 'session.new', title: 'New session', group: 'Actions', ...withKeys('Ctrl+N'), run: () => openQuickPick() },
     {
       id: 'session.new-other',
@@ -449,6 +448,8 @@ export function installBuiltinCommands(): void {
   )
   registerProvider(sessionCommands)
   registerProvider(projectCommands)
+  // After the session commands, so New session stays first in the palette.
+  registerCommands({ id: 'view.mini', title: 'Mini window', group: 'Actions', keywords: 'float always on top sessions', ...withKeys('Ctrl+Alt+M'), run: toggleMiniWindow })
 }
 
 function sessionCommands(state: AppState): Command[] {

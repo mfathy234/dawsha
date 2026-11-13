@@ -30,14 +30,10 @@ export class ThemePickerComponent {
       role: 'dialog',
       'aria-label': 'Theme'
     })
-    this.root.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation()
-        toggleThemePicker(false)
-      }
-    })
     document.body.appendChild(this.root)
     document.addEventListener('pointerdown', this.outside, true)
+    // Esc closes it wherever focus is: a re-render behind it can leave focus outside the picker.
+    document.addEventListener('keydown', this.escape, true)
     this.signature = ''
   }
 
@@ -48,8 +44,16 @@ export class ThemePickerComponent {
     if (this.root && !this.root.contains(target) && !anchor.contains(target)) toggleThemePicker(false)
   }
 
+  private readonly escape = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || !this.root || document.querySelector('.overlay:not(.leaving)')) return
+    event.stopPropagation()
+    event.preventDefault()
+    toggleThemePicker(false)
+  }
+
   private close(): void {
     document.removeEventListener('pointerdown', this.outside, true)
+    document.removeEventListener('keydown', this.escape, true)
     leave(this.root)
     this.root = null
     this.getAnchor().focus()

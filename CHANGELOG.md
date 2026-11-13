@@ -21,7 +21,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - **Calm focus** keeps the other sessions readable. Each one keeps a minimum height, the column scrolls instead of squeezing them, and they are dimmed less.
 - **Skills** now lists skills linked from another folder, once each, with a Linked note.
-- **Sidebar rows** stop reading Claude's status line and its Remote Control notices as what a session is doing, and a long name stops at three lines.
+- **Sidebar rows** stop reading Claude's status line and its Remote Control notices as what a session is doing, and a long name stops at four lines.
 
 ### Fixed
 
