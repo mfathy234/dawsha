@@ -416,8 +416,16 @@ export function installBuiltinCommands(): void {
       group: 'Actions',
       keywords: 'panes layout',
       ...withKeys('Ctrl+Shift+B'),
-      enabled: (state) => state.settings.sessionsLayout === 'board',
+      enabled: (state) => state.settings.sessionsLayout !== 'grid',
       run: () => setSessionsLayout('grid')
+    },
+    {
+      id: 'view.panel',
+      title: 'Switch to side panel view',
+      group: 'Actions',
+      keywords: 'layout one session changes plan checks panel beside',
+      enabled: (state) => state.settings.sessionsLayout !== 'panel',
+      run: () => setSessionsLayout('panel')
     },
     { id: 'view.toggleDim', title: 'Toggle dimming of other sessions', group: 'Actions', keywords: 'dim others focus calm idle sessions', run: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
     { id: 'view.gridFocus', title: 'Sessions grid: calm focus', group: 'Actions', keywords: 'grid layout focus one large pane siblings calm sessions', run: () => setGridStyle('focus') },

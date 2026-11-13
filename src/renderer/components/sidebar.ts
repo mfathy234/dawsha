@@ -32,7 +32,7 @@ import { syncAttentionBadge } from '../attentionBadge'
 import type { AppState } from '../state'
 
 export function isSidebarCollapsed(state: AppState): boolean {
-  const maximized = state.view === 'grid' && state.maximizedId !== null
+  const maximized = state.view === 'grid' && state.maximizedId !== null && state.settings.sessionsLayout !== 'panel'
   return state.sidebarOverride ?? (maximized || state.settings.sidebarCollapsed)
 }
 

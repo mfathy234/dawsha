@@ -41,7 +41,7 @@ import { canMakeLarge, paneUnitIds, resolveLargePane } from '../shared/gridStyle
 import { moveById, moveItem } from '../shared/reorder'
 import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
-import { leaveBoard } from './sessionsLayout'
+import { leaveBoard, setSessionsLayout } from './sessionsLayout'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { AgentPreset } from '../shared/quickPick'
 import { defaultHighlightRules, describeRules, sameRules, type HighlightSettings } from '../shared/highlights'
@@ -820,6 +820,7 @@ export function movePaneBy(paneId: string, delta: number): void {
 }
 
 export function toggleMaximize(paneId?: string): void {
+  if (store.state.settings.sessionsLayout === 'panel') return setSessionsLayout('grid')
   queueMicrotask(() => void refreshGitChanges())
   const target = paneId ?? store.state.focusedId
   if (!target || !paneById(store.state, target)) return
@@ -837,6 +838,7 @@ export function toggleMaximize(paneId?: string): void {
 }
 
 export function restoreGrid(): void {
+  if (store.state.settings.sessionsLayout === 'panel') return setSessionsLayout('grid')
   if (store.state.maximizedId) {
     store.set((s) => ({ ...s, maximizedId: null, detailsPaneId: null, timelinePaneId: null, sidebarOverride: null }))
     persistWorkspace()
@@ -1395,7 +1397,7 @@ export async function restoreWorkspace(): Promise<void> {
     panes: restored.map((pane, index) => (pane.pinned && index !== pinned ? { ...pane, pinned: undefined } : pane)),
     focusedId: focused.id,
     largePaneId: restored[settings.workspace.largeIndex ?? -1]?.id ?? focused.id,
-    maximizedId: restored[settings.workspace.maximizedIndex ?? -1]?.id ?? null,
+    maximizedId: settings.sessionsLayout === 'panel' ? focused.id : (restored[settings.workspace.maximizedIndex ?? -1]?.id ?? null),
     splits: settings.workspace.splits ?? {}
   })
   void refreshBranches()

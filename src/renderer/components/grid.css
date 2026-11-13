@@ -85,7 +85,12 @@
 }
 
 .pane.quiet .pane-work {
-  opacity: 0.8;
+  opacity: 0.92;
+}
+
+/* A side pane keeps its terminal readable: the unfocused dimming never goes below this. */
+.pane.quiet .term-host .xterm-screen {
+  opacity: max(var(--pane-unfocused-term), 0.94);
 }
 
 .pane-header {

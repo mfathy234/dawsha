@@ -31,6 +31,8 @@ import { LimitReminders } from './chatLimitSchedule'
 import { limitSituation, sendsAtNote } from '../../shared/chatLimit'
 import { toast } from '../components/toast'
 import { TurnExtras, type TurnInput } from './turnExtras'
+import type { PanelSource } from '../sidePanelSources'
+import type { TodoEntry } from '../../shared/chatCards'
 import { ChatRewind } from './chatRewind'
 
 export interface ChatHost {
@@ -48,6 +50,8 @@ export interface ChatHost {
   plan(label: string): void
   /** The usage limit started or stopped the session, so the pane header can say so at once. */
   limitChanged?(): void
+  /** Offers this chat's plan, latest reply card and checks to the Side panel; null when the chat goes away. */
+  source?(source: PanelSource | null): void
 }
 
 export interface ChatInput {
@@ -118,6 +122,7 @@ export class PaneChat {
   private history: string[] = []
   private historyIndex = -1
   private historyDraft = ''
+  private todos: readonly TodoEntry[] = []
   private checkpointRefs: Readonly<Record<string, string>> = {}
   private sendChain: Promise<unknown> = Promise.resolve()
   private checkpointSession = ''
@@ -139,6 +144,13 @@ export class PaneChat {
       () => this.el.offsetParent !== null
     )
     this.scroller.append(this.thread.el)
+    this.host.source?.({
+      todos: () => this.todos,
+      card: () => this.turns.panelCard(),
+      checks: () => this.turns.latestChecks(),
+      rerunChecks: () => this.turns.rerunChecks(),
+      showOutput: () => this.turns.showLatestOutput()
+    })
     this.completion = new ChatComplete(this.box, () => this.input?.folder ?? '', () => this.input?.agent ?? 'claude', () => store.state.settings.savedPrompts)
     this.find = new ChatFind({ thread: this.thread, items: () => this.snapshot.items, closed: () => this.focusComposer() })
     this.rewind = new ChatRewind({ input: () => this.input, items: () => this.snapshot.items, refs: () => this.checkpointRefs, rerender: () => this.render(true), resend: (text) => this.resend(text) })
@@ -230,6 +242,7 @@ export class PaneChat {
   }
 
   dispose(): void {
+    this.host.source?.(null)
     this.turns.dispose()
     this.watches.dispose()
     this.reminders.dispose()
@@ -273,7 +286,8 @@ export class PaneChat {
     if (!force && snapshot === this.renderedSnapshot && key === this.renderKey) return
     this.renderedSnapshot = snapshot
     this.renderKey = key
-    this.host.plan(this.planBar.update(latestTodos(snapshot.items)))
+    this.todos = latestTodos(snapshot.items)
+    this.host.plan(this.planBar.update(this.todos))
     const limitFlipped = (this.phase === 'limit') !== (phase === 'limit')
     this.phase = phase
     if (limitFlipped) this.host.limitChanged?.()
