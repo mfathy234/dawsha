@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { maskSecrets, MASK_MAX_LENGTH } from '../../src/shared/maskSecrets'
 
 describe('maskSecrets', () => {
+  it.each([
+    'npm test --token="private-value"',
+    "API_KEY='private-value' npm test",
+    'npm login --password private-value',
+    'curl -H "Authorization: Bearer private-value"',
+    'curl https://user:private-value@example.com',
+    'npm --client-secret "private-value"'
+  ])('masks common shell secret forms: %s', text => expect(maskSecrets(text)).not.toContain('private-value'))
   it('masks bearer tokens and keeps the word Bearer', () => {
     expect(maskSecrets('sent Authorization Bearer abc.def-ghi_123 to the API')).toBe('sent Authorization Bearer [masked] to the API')
   })

@@ -21,6 +21,15 @@ describe('closedTitle', () => {
     expect(closedTitle(resume('a', 'Agent title'), kept('a', { title: 'Old agent title' }))).toBe('Agent title')
     expect(closedTitle(resume('a', 'Agent title'), undefined)).toBe('Agent title')
   })
+
+  it('shortens closed titles only for display and preserves manual titles', () => {
+    const long = 'Please fix the failing invoice export and add regression coverage today'
+    const entry = resume('a', long)
+    expect(closedTitle(entry, undefined)).toBe('Fix the failing invoice export')
+    expect(entry.title).toBe(long)
+    expect(closedTitle({ ...entry, nameSource: 'user' }, undefined)).toBe(long)
+    expect(closedTitle(entry, kept('a', { title: long, renamed: true }))).toBe(long)
+  })
 })
 
 describe('reopenTargets', () => {

@@ -16,6 +16,7 @@ import { TerminalSearch } from './terminalSearch'
 import type { ThemeBundle } from './themeManager'
 import { TERMINAL_FONT } from './terminalFont'
 import { terminalShouldSleep } from '../shared/terminalSleep'
+import { PermissionPromptTracker } from '../shared/notificationAction'
 
 const SHIFT_ENTER = '\x1b\r'
 
@@ -56,6 +57,8 @@ export class TerminalView {
   private hiddenSince: number | null = null
   private visible = false
   private requestedVisible = false
+  private readonly permissionTracker = new PermissionPromptTracker(crypto.randomUUID())
+  private permissionWrites = 0
 
   constructor(
     readonly id: string,
@@ -84,6 +87,7 @@ export class TerminalView {
     this.arabic = new TerminalArabic(this.term, () => callbacks.textOrder())
     this.promptSelection = new PromptSelection(this.term, (data) => callbacks.onInput(data))
     this.term.onData((data) => {
+      if (data !== '\x1b[I' && data !== '\x1b[O') this.permissionTracker.invalidate()
       this.prompts.noteInput(data)
       this.promptSelection.noteInput(data)
       callbacks.onInput(data)
@@ -140,11 +144,25 @@ export class TerminalView {
   }
 
   write(data: string): void {
-    this.term.write(data)
+    this.permissionWrites += 1
+    // Explicit clears may be coalesced with the next redraw by xterm before write callbacks run.
+    if (/\x1b\[(?:2|3)J|\x1bc/.test(data)) this.permissionTracker.invalidate()
+    this.term.write(data, () => {
+      this.permissionTracker.observe(this.tailText(24))
+      this.permissionWrites -= 1
+    })
+  }
+
+  permissionId(): string | null {
+    return this.permissionWrites ? null : this.permissionTracker.observe(this.tailText(24))
+  }
+
+  invalidatePermission(): void {
+    this.permissionTracker.invalidate()
   }
 
   writeLine(message: string): void {
-    this.term.write(`\r\n${message}\r\n`)
+    this.write(`\r\n${message}\r\n`)
   }
 
   /** Text as the program meant it: rows a program wrote in visual order (Claude Code's Arabic) are put back in reading order. */

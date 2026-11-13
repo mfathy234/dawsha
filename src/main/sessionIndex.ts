@@ -2,7 +2,7 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseRolloutMeta, parseSessionIndex } from '../shared/codexSession'
 import { parseGeminiChat, parseLegacyGeminiChat } from '../shared/geminiSession'
-import { claudeProjectSlug, sessionIdFromFile, sessionTitle } from '../shared/projectSessions'
+import { claudeProjectSlug, sessionIdFromFile, sessionTitle, sessionTitleInfo } from '../shared/projectSessions'
 import { RESUME_LIMIT, matchesQuery } from '../shared/resumeIndex'
 import { claudeDetail, codexDetail, contentMatch, geminiDetail, modelLabel, type SessionDetail } from '../shared/sessionDetail'
 import { normalizePath } from '../shared/sessionMatch'
@@ -148,14 +148,15 @@ async function enrichClaude(candidate: Candidate): Promise<ResumeSession | null>
   const half = Math.min(text.length, 96 * 1024)
   const title = sessionTitle(text.slice(0, half), text.slice(-48 * 1024))
   if (!title || !candidate.id) return null
-  return build(candidate, candidate.id, title, claudeDetail(text, scale), text)
+  const info = sessionTitleInfo(text.slice(0, half), text.slice(-48 * 1024))
+  return { ...build(candidate, candidate.id, info.nameSource === 'user' ? info.name! : title, claudeDetail(text, scale), text), nameSource: info.nameSource, ...(info.firstPrompt ? { firstPrompt: info.firstPrompt } : {}) }
 }
 
 async function enrichCodex(candidate: Candidate, names: Map<string, string>): Promise<ResumeSession | null> {
   const { text, scale } = await sample(candidate.path, candidate.size)
   const meta = parseRolloutMeta(text.split('\n')[0])
   if (!meta) return null
-  const detail = codexDetail(text, scale)
+  const detail = codexDetail(text, scale, true)
   const title = names.get(meta.sessionId) ?? detail.firstPrompt?.slice(0, 80) ?? 'Codex session'
   return build(candidate, meta.sessionId, title, { ...detail, startedAt: meta.startedAt }, text)
 }
@@ -166,7 +167,7 @@ async function enrichGemini(candidate: Candidate): Promise<ResumeSession | null>
   if (!chat || !chat.hasConversation) return null
   const detail = geminiDetail(text, scale)
   const title = chat.name ?? 'Gemini session'
-  return build(candidate, chat.sessionId, title, { ...detail, startedAt: chat.startedAt || detail.startedAt }, text)
+  return { ...build(candidate, chat.sessionId, title, { ...detail, firstPrompt: chat.firstPrompt ?? detail.firstPrompt, startedAt: chat.startedAt || detail.startedAt }, text), nameSource: chat.nameSource }
 }
 
 async function enrich(candidate: Candidate, names: Map<string, string>): Promise<ResumeSession | null> {

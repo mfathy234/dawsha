@@ -148,7 +148,7 @@ const api: GridApi = {
   writeInstruction: (request) => ipcRenderer.invoke(IPC.instructionsWrite, request),
   openInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsOpen, folder, name),
   notify: (request) => ipcRenderer.send(IPC.notify, request),
-  onNotifyClick: (listener) => subscribe<[string]>(IPC.notifyClick, listener),
+  onNotifyClick: (listener) => subscribe<[string, import('../shared/notificationAction').NotificationAnswer?]>(IPC.notifyClick, listener),
   setAttentionBadge: (count, waitingIds) => ipcRenderer.send(IPC.attentionBadge, count, waitingIds),
   onDesktopNewSession: (listener) => { ipcRenderer.on(IPC.desktopNewSession, () => listener()) },
   bridgePreview: () => ipcRenderer.invoke(IPC.bridgePreview),

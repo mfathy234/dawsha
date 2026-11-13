@@ -3,8 +3,10 @@ export const MASK_MAX_LENGTH = 120
 const MASK = '[masked]'
 
 const RULES: [RegExp, string][] = [
+  [/\bhttps?:\/\/[^\s/@]+:[^\s/@]+@/gi, `https://${MASK}@`],
   [/\bBearer\s+\S+/gi, `Bearer ${MASK}`],
-  [/\b(token|key|password|passwd|secret|api[_-]?key)=[^\s"'&]+/gi, `$1=${MASK}`],
+  [/\b((?:[\w]+[_-])*(?:token|key|password|passwd|secret))\s*=\s*(?:"(?:[^"\\]|\\.)*(?:"|$)|'(?:[^'\\]|\\.)*(?:'|$)|[^\s"'&]+)/gi, `$1=${MASK}`],
+  [/(--(?:[\w]+[_-])*(?:token|key|password|passwd|secret))\s+(?:"(?:[^"\\]|\\.)*(?:"|$)|'(?:[^'\\]|\\.)*(?:'|$)|\S+)/gi, `$1 ${MASK}`],
   [/\bsk-[A-Za-z0-9_-]{16,}/g, `sk-${MASK}`],
   [/\b[0-9a-fA-F]{24,}\b/g, MASK],
   [/\b(?=[A-Za-z0-9+/]*\d)(?=[A-Za-z0-9+/]*[A-Za-z])[A-Za-z0-9+/]{24,}={0,2}/g, MASK]

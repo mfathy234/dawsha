@@ -1,5 +1,9 @@
 appId: io.github.mfathy234.dawsha
 productName: Dawsha
+protocols:
+  - name: Dawsha notification actions
+    schemes:
+      - dawsha-action
 directories:
   output: release
 files:

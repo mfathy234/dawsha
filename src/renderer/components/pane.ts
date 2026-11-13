@@ -254,7 +254,7 @@ export class PaneComponent {
     this.projectName.textContent = [projectName, AGENT_NAMES[view.agent]].filter((part) => part !== '').join(' · ')
     this.fresh.hidden = view.named
     this.updateTag(view.tag, view.tagAuto)
-    this.index.title = [title, projectName, view.tag ? SESSION_TAG_LABELS[view.tag] : ''].filter((part) => part !== '').join(' · ')
+    this.index.title = [view.fullTitle ?? title, projectName, view.tag ? SESSION_TAG_LABELS[view.tag] : ''].filter((part) => part !== '').join(' · ')
     const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
     const origin = view.pane.tabs.find((t) => t.id === view.primaryTabId)?.from
@@ -843,7 +843,7 @@ export class PaneComponent {
       },
       tab.label
     )
-    label.title = `${sessionLabel(tab.agent)}: ${tab.label}`
+    label.title = `${sessionLabel(tab.agent)}: ${tab.fullTitle ?? tab.label}`
     const wrapper = h(
       'div',
       { class: `tab${tab.active ? ' active' : ''}${tab.exited ? ' exited' : ''}`, 'data-tab-id': tab.id },
