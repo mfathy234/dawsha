@@ -1,6 +1,7 @@
 import { createMiniSnapshotGate, miniSession, miniStateOf, orderMiniSessions, type MiniAction, type MiniSnapshot, type MiniPlanRequest } from '../shared/miniWindow'
 import { activeMoment, elapsedSince, stepDoneMemory, type DoneMemory, type MiniLogRead } from '../shared/miniDetail'
 import type { MiniWindowSettings } from '../shared/appearance'
+import { miniSendRefusal } from '../shared/miniSend'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
 import { sessionState } from '../shared/sessionState'
 import { api } from './api'
@@ -45,14 +46,19 @@ function review(paneId: string): void {
   else toast('That session is gone.')
 }
 
-/** The same send path as the chat box, refused when the session is gone, has exited or is waiting for an answer. */
+/** The same send path as the chat box, refused for shells and when the session is gone, has exited, shows a menu or waits for an answer. */
 function send(paneId: string, text: string): void {
   const view = derivePanes(store.state).find(candidate => candidate.pane.id === paneId)
   const tab = view ? primaryTab(view.pane) : null
   if (!view || !tab) { toast('That session is gone.'); return }
-  if (tab.status === 'exited') { toast('That session has exited.'); return }
-  if (detectPermissionPrompt(permissionTail(paneId))) { toast('That session is waiting for your answer. Open it to reply.'); return }
-  sendChatMessage(tab.id, tab.agent, text)
+  const refusal = miniSendRefusal({ agent: tab.agent, status: tab.status, tail: permissionTail(paneId) })
+  if (refusal) { toast(refusal); return }
+  // A prompt can appear between typing and the delayed Enter; that Enter would approve it.
+  sendChatMessage(tab.id, tab.agent, text, () => {
+    const late = miniSendRefusal({ agent: tab.agent, status: tab.status, tail: permissionTail(paneId) })
+    if (late) toast(late)
+    return !late
+  })
 }
 
 /** A single bounded publisher, including plans for sessions whose Chat view is not on screen. */
