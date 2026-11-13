@@ -22,6 +22,18 @@ import type { CrewMember } from '../../src/shared/crew'
 import type { Project, SavedLayout, Settings } from '../../src/shared/types'
 
 const project = (id: string, folder: string, name = id): Project => ({ id, name, folder, defaultAgent: 'claude' })
+
+it('round-trips appearance and the panel layout with a clear preference preview', () => {
+  const current = defaultSettings()
+  const envelope = buildEnvelope({ ...current, appearance: { panes: 'quiet', frame: 'sidebar', tone: 'warm' }, sessionsLayout: 'panel' }, '1.8.7', new Date())
+  const parsed = parseTransfer(JSON.stringify(envelope))
+  expect(parsed.ok).toBe(true)
+  if (!parsed.ok) return
+  const plan = planImport({ current, data: parsed.transfer.data, mode: 'merge', missingFolders: new Set(), newId: () => 'new', keepFullAccess: false })
+  expect(plan.patch.appearance).toEqual({ panes: 'quiet', frame: 'sidebar', tone: 'warm' })
+  expect(plan.patch.sessionsLayout).toBe('panel')
+  expect(plan.summary.preferences).toContain('Appearance')
+})
 const layout = (id: string, name: string, projectId: string): SavedLayout => ({
   id,
   name,
@@ -348,7 +360,7 @@ describe('importDialogOptions', () => {
     const options = importDialogOptions('C:\\Users\\me\\Desktop')
     expect(options.defaultPath).toBe('C:\\Users\\me\\Desktop')
     expect(options.properties).toEqual(['openFile'])
-    expect(options.filters).toEqual([{ name: 'Dawsha settings', extensions: ['json'] }])
+    expect(options.filters).toEqual([{ name: 'JSON', extensions: ['json'] }])
     expect(options.title).toBe('Import settings')
   })
 })

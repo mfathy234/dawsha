@@ -17,6 +17,7 @@ export const INCLUDED_KEYS = [
   'paletteShortcut',
   'sessionsLayout',
   'gridStyle',
+  'appearance',
   'focusMovesSelected',
   'recordings',
   'crew',
@@ -39,6 +40,7 @@ export const EXCLUDED_KEYS = [
   'version',
   'remoteAccess',
   'workspace',
+  'miniWindow',
   'keptSessions',
   // Keyed by this PC's project ids, like closed sessions.
   'foldedProjects',
@@ -118,7 +120,7 @@ export const importDialogOptions = (defaultDir: string) => ({
   title: 'Import settings',
   defaultPath: defaultDir,
   properties: ['openFile' as const],
-  filters: [{ name: 'Dawsha settings', extensions: ['json'] }]
+  filters: [{ name: 'JSON', extensions: ['json'] }]
 })
 
 export const transferFileName = (now: Date): string =>
@@ -136,7 +138,7 @@ export type ParseResult = { ok: true; transfer: ParsedTransfer } | { ok: false; 
 const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
-const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew'] as const
+const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew', 'appearance'] as const
 const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected'] as const
 
 function checkShapes(data: Raw): string | null {
@@ -153,8 +155,8 @@ function checkShapes(data: Raw): string | null {
   }
   if (data.savedPrompts !== undefined && !Array.isArray(data.savedPrompts)) return '"savedPrompts" must be a list.'
   if (data.paletteShortcut !== undefined && typeof data.paletteShortcut !== 'string') return '"paletteShortcut" must be text.'
-  if (data.sessionsLayout !== undefined && data.sessionsLayout !== 'grid' && data.sessionsLayout !== 'board') {
-    return '"sessionsLayout" must be grid or board.'
+  if (data.sessionsLayout !== undefined && !['grid', 'board', 'panel'].includes(String(data.sessionsLayout))) {
+    return '"sessionsLayout" must be grid, board or panel.'
   }
   if (data.gridStyle !== undefined && !isGridStyle(data.gridStyle)) return '"gridStyle" must be focus or tiles.'
   if (data.sidebarWidth !== undefined && (typeof data.sidebarWidth !== 'number' || !Number.isFinite(data.sidebarWidth))) {
@@ -241,6 +243,7 @@ export interface PlanInput {
 
 const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['theme', 'Theme'],
+  ['appearance', 'Appearance'],
   ['highlights', 'Highlight rules'],
   ['paletteShortcut', 'Palette shortcut'],
   ['sessionsLayout', 'Sessions view'],
