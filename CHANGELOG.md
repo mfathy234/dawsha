@@ -3,6 +3,30 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.7] - 2026-11-13
+
+### Added
+
+- **Desktop app style.** Settings has a new Appearance section with three choices, each for both Terminal and Chat. Desktop app style turns all three on at once, and Back to Classic turns them off. Everyone starts on Classic, so nothing changes until you choose.
+  - **Quiet panes.** Rounded panes and a calmer header that shows the agent's plan progress. Under the terminal, one line sums up the last reply, with Review, Commit this reply and Undo. The approval card looks the same in Terminal and Chat.
+  - **Sidebar frame.** New session, Search and the Sessions, Agents, Files, Work and Skills tabs move into the sidebar, and the top bar goes away.
+  - **Warm tone.** Neutral greys instead of blue greys. Your theme's accent stays.
+- **Side panel layout.** One session fills the window, with Changes, Plan and Checks beside it. Pick it next to Grid and Board, or as the layout Dawsha opens with.
+- **Drag tabs to rearrange.** The session tabs above a maximized pane and in Side panel can be dragged into a new order. The order is the same one the grid uses, and it is kept after a restart.
+- **Mini window.** A small window that stays on top of your other apps and lists every session, with plan progress and what each one is doing. Allow or Deny a waiting session right there, click a session for its plan and its last terminal lines, or fold it into one line. Open it from the new tray icon, the View menu or the taskbar's right-click menu. It can also open when you minimize Dawsha.
+- **Taskbar.** The taskbar icon flashes when a session starts waiting for you, even with notifications off. Its right-click menu starts a Claude session in one of your recent projects.
+- **Plan progress at a glance.** Sidebar rows and the open tab show how far along the agent's plan is, such as 5/7.
+
+### Changed
+
+- **Calm focus** keeps the other sessions readable. Each one keeps a minimum height, the column scrolls instead of squeezing them, and they are dimmed less.
+- **Skills** now lists skills linked from another folder, once each, with a Linked note.
+
+### Fixed
+
+- **Sessions reopen as you left them.** Each Claude pane now remembers its own conversation. Before, every Claude pane in a project reopened the project's latest conversation after a restart. The maximized pane and each pane's Terminal or Chat view come back too. Panes saved before this update cannot be told apart: one per project reopens the latest conversation and the others start fresh, and older conversations stay in Resume.
+- **Quitting closes everything.** Command line, Remote Control and browser connections close before Dawsha exits, so no Dawsha process is left running.
+
 ## [1.8.6] - 2026-11-11
 
 ### Added

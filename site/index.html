@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.8.6</a>
+      <a href="#new">New in 1.8.7</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,8 +97,38 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.8.6</h2>
-      <p class="section-lead">1.8.6 lets you rewind a chat to any message, shows what each reply did and runs your tests after it, and gives the sidebar more room. Below it are 1.8.5 and the 1.8.0 redesign.</p>
+      <h2 id="new-h">New in 1.8.7</h2>
+      <p class="section-lead">1.8.7 adds a desktop app style you can turn on, a Mini window that stays on top, and a Side panel layout. Sessions now reopen as you left them. Below it are 1.8.6 and earlier releases.</p>
+      <div class="feat-row" id="desktop-style">
+        <div class="feat-copy">
+          <h3>A desktop app style, when you want it</h3>
+          <p>Three new choices in Settings change how Dawsha looks, in the terminal and in chat. One button turns them all on.</p>
+          <ul><li>Quiet panes sum up the last reply under the terminal, with Review, Commit this reply and Undo.</li><li>The Sidebar frame moves the tabs into the sidebar and drops the top bar.</li><li>The Warm tone swaps blue greys for neutral ones and keeps your accent.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/desktop-style.png" width="1168" height="668" alt="Dawsha in the desktop app style: the tabs in the sidebar, rounded quiet panes in warm grey, and one session asking to run a command">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="mini-window">
+        <div class="feat-copy">
+          <h3>A Mini window that stays on top</h3>
+          <p>Watch every session while you work in another app, and answer the one that needs you without switching.</p>
+          <ul><li>Each session shows what it is doing and how far along its plan is.</li><li>Allow or Deny right in the window, or open the session in Dawsha.</li><li>Open it from the tray, the View menu or the taskbar, or have it open when you minimize Dawsha.</li></ul>
+        </div>
+        <figure class="shot framed narrow">
+          <img loading="lazy" src="assets/mini-window.png" width="376" height="482" alt="The Mini window listing sessions with their plan progress, one asking to run a command with Allow and Deny buttons">
+        </figure>
+      </div>
+      <div class="feat-wide" id="side-panel">
+        <div class="feat-copy">
+          <h3>One session, with its changes beside it</h3>
+          <p>The Side panel layout shows one session with Changes, Plan and Checks next to it.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/side-panel.png" width="1168" height="668" alt="The Side panel layout: one Claude session with the session tabs above it and the files its last reply changed in a panel on the right">
+        </figure>
+        <ul class="feat-cols"><li>Drag the session tabs to put them in the order you want.</li><li>Calm focus keeps the other sessions tall enough to read.</li><li>Sessions reopen as you left them, each in its own conversation.</li></ul>
+      </div>
       <div class="feat-row" id="rewind-retry">
         <div class="feat-copy">
           <h3>Rewind and try again</h3>
