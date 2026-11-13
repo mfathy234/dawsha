@@ -1,10 +1,17 @@
 import { existsSync, unlinkSync } from 'node:fs'
-import { createServer, type Server } from 'node:net'
+import { createServer, type Server, type Socket } from 'node:net'
 import { tmpdir, userInfo } from 'node:os'
 import { join } from 'node:path'
 import type { CliReply, CliRequest } from '../shared/cli'
 
 const MAX_REQUEST_BYTES = 64 * 1024
+const clients = new WeakMap<Server, Set<Socket>>()
+
+export async function stopCliServer(server: Server): Promise<void> {
+  for (const socket of clients.get(server) ?? []) socket.destroy()
+  if (!server.listening) return
+  await new Promise<void>((resolve) => server.close(() => resolve()))
+}
 
 export function pipePath(): string {
   if (process.env.DAWSHA_PIPE) return process.env.DAWSHA_PIPE
@@ -26,10 +33,14 @@ export function isCliRequest(value: unknown): value is CliRequest {
 }
 
 export function startCliServer(run: (request: CliRequest) => Promise<CliReply>, path: string = pipePath()): Server {
+  const sockets = new Set<Socket>()
   const server = createServer((socket) => {
+    sockets.add(socket)
+    socket.once('close', () => sockets.delete(socket))
     let buffer = ''
     let handled = false
     const reply = (value: CliReply): void => {
+      if (socket.destroyed) return
       socket.end(`${JSON.stringify(value)}\n`)
     }
     socket.setEncoding('utf8')
@@ -59,6 +70,7 @@ export function startCliServer(run: (request: CliRequest) => Promise<CliReply>, 
       run(request).then(reply, (error: unknown) => reply({ ok: false, exit: 1, out: `dawsha: ${(error as Error).message}` }))
     })
   })
+  clients.set(server, sockets)
   server.on('error', () => undefined)
   // Only one Dawsha runs at a time (single-instance lock), so a socket file left here is from a crash.
   if (process.platform !== 'win32' && existsSync(path)) {

@@ -813,7 +813,9 @@ export async function startRemoteServer(options: RemoteServerOptions): Promise<R
         ws.terminate()
       }
       websocketServer.close()
-      await new Promise<void>((resolvePromise, reject) => server.close((error) => error ? reject(error) : resolvePromise()))
+      const closed = new Promise<void>((resolvePromise, reject) => server.close((error) => error ? reject(error) : resolvePromise()))
+      server.closeAllConnections()
+      await closed
     }
   }
 }

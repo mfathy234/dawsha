@@ -3,7 +3,7 @@ import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { isCliRequest, pipePath, startCliServer } from '../../src/main/cliServer'
+import { isCliRequest, pipePath, startCliServer, stopCliServer } from '../../src/main/cliServer'
 import type { CliReply, CliRequest } from '../../src/shared/cli'
 
 const servers: { close(): void }[] = []
@@ -40,6 +40,19 @@ async function serve(run: (request: CliRequest) => Promise<CliReply>): Promise<s
 }
 
 describe('cli pipe server', () => {
+  it('closes idle clients before waiting for the server to close', async () => {
+    const path = uniquePipe()
+    const server = startCliServer(async () => new Promise(() => undefined), path)
+    await new Promise<void>(resolve => server.once('listening', resolve))
+    const socket = connect(path)
+    await new Promise<void>(resolve => socket.once('connect', resolve))
+    const closed = new Promise<void>(resolve => socket.once('close', () => resolve()))
+    await stopCliServer(server)
+    await closed
+    expect(socket.destroyed).toBe(true)
+    expect(server.listening).toBe(false)
+    await stopCliServer(server)
+  })
   it('runs a request and writes the reply', async () => {
     const seen: CliRequest[] = []
     const path = await serve(async (request) => {
