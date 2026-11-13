@@ -18,7 +18,7 @@ export interface ThemeBundle {
 type Listener = (bundle: ThemeBundle) => void
 
 const listeners = new Set<Listener>()
-let currentTone: Tone = 'cool'
+let tone: Tone = 'cool'
 let current: ThemeBundle = buildBundle({ id: 'grid-dark', image: { enabled: false, path: null, dim: 60, blur: 0 } })
 let imageVersion = 0
 
@@ -74,7 +74,7 @@ function toned(theme: Theme, tone: Tone): Theme {
 }
 
 function buildBundle(settings: ThemeSettings): ThemeBundle {
-  const theme = toned(foundationTheme(findTheme(settings.id)), currentTone)
+  const theme = toned(foundationTheme(findTheme(settings.id)), tone)
   const { image } = settings
   const imageActive = image.enabled && image.path !== null
   const background = imageActive ? withAlpha(theme.term.background, image.dim / 100) : theme.term.background
@@ -155,11 +155,13 @@ export function applyTheme(settings: ThemeSettings, imageChanged = false): Theme
 }
 
 /** Switches the surface tone and repaints at once; the theme and its accent are untouched. */
-export function setTone(tone: Tone, settings?: ThemeSettings): void {
-  if (tone === currentTone && !settings) return
-  currentTone = tone
+export function setTone(next: Tone, settings?: ThemeSettings): void {
+  if (next === tone && !settings) return
+  tone = next
   if (settings) applyTheme(settings)
 }
+
+export const currentTone = (): Tone => tone
 
 export const currentBundle = (): ThemeBundle => current
 

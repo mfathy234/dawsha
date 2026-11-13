@@ -30,6 +30,7 @@ import { UsageViewComponent } from './usageView'
 import { WorkViewComponent } from './workView'
 import { isSidebarCollapsed } from './sidebar'
 import { startTour } from './tour'
+import { currentTone, setTone } from '../themeManager'
 
 export class AppShell {
   readonly el: HTMLElement
@@ -87,6 +88,7 @@ export class AppShell {
     const { panes, frame, tone } = state.settings.appearance
     this.el.classList.toggle('panes-quiet', panes === 'quiet')
     this.el.classList.toggle('tone-warm', tone === 'warm')
+    if (tone !== currentTone()) setTone(tone, state.settings.theme)
     const framed = frame === 'sidebar'
     this.el.classList.toggle('frame-sidebar', framed)
     if (framed !== this.framed) {

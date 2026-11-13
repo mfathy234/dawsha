@@ -181,6 +181,8 @@ export class SettingsViewComponent {
     const signature = JSON.stringify([
       state.settingsSection,
       state.settings.paletteShortcut,
+      state.settings.appearance,
+      state.settings.sessionsLayout,
       state.settings.sidebarCollapsed,
       state.settings.sessionViews,
       state.settings.savedPrompts,

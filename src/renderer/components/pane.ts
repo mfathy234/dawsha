@@ -907,6 +907,7 @@ export class PaneComponent {
     this.closeActions()
     this.timeline.dispose()
     this.chat.dispose()
+    this.reply.dispose()
     this.el.remove()
   }
 }

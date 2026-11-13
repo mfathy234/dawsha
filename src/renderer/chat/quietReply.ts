@@ -65,12 +65,14 @@ export class QuietReply {
       void this.refreshRefs()
       this.draw()
     }, () => this.host.onScreen())
-    this.pop.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape') return
-      event.stopPropagation()
-      this.closePop()
-    })
     document.addEventListener('pointerdown', this.outside, true)
+    document.addEventListener('keydown', this.escape, true)
+  }
+
+  private readonly escape = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || this.pop.hidden) return
+    event.stopPropagation()
+    this.closePop()
   }
 
   private readonly outside = (event: Event): void => {
@@ -98,6 +100,7 @@ export class QuietReply {
 
   dispose(): void {
     document.removeEventListener('pointerdown', this.outside, true)
+    document.removeEventListener('keydown', this.escape, true)
     this.turns.dispose()
     this.feed.stop()
     this.el.remove()
