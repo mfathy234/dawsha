@@ -15,6 +15,7 @@ import {
   refreshBridge,
   refreshGitChanges,
   restoreWorkspace,
+  setClaudeSessions,
   saveSettings,
   setCodexSessions,
   setGeminiSessions,
@@ -125,7 +126,7 @@ async function boot(): Promise<void> {
   connectPtyStreams(handleTerminalExit)
   api.onRemoteSessionStarted(attachRemoteSession)
   installRemoteCrew()
-  api.onSessions((next) => store.patch({ sessions: next }))
+  api.onSessions(setClaudeSessions)
   setStatusInfos(statusInfos)
   void refreshBridge()
   void refreshAgentTools(false)

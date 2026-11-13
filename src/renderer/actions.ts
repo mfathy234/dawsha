@@ -1,3 +1,4 @@
+import { matchSignature, restoreResumeFlags, workspaceSessionFor } from '../shared/sessionRestore'
 import type { SidebarSort } from '../shared/sidebarModel'
 import { canDropProject, canMoveProject, moveFromDisplay, moveProject, moveProjectTo, reorderFromDisplay, seedOrder, setProjectPinned, type MoveDirection } from '../shared/projectOrder'
 import {
@@ -128,7 +129,8 @@ export function largeOf(state: AppState): string | null {
 
 function saveWorkspace(): Promise<void> {
   const { panes, focusedId, splits } = store.state
-  return saveSettings({ workspace: snapshotWorkspace(panes, focusedId, { splits, largeId: largeOf(store.state) }) })
+  const sessionFor = workspaceSessionFor(matchAll(store.state))
+  return saveSettings({ workspace: snapshotWorkspace(panes, focusedId, { splits, largeId: largeOf(store.state), sessionFor }) })
 }
 
 export function persistWorkspace(): void {
@@ -1394,9 +1396,18 @@ export async function restoreWorkspace(): Promise<void> {
   })
   void refreshBranches()
   void refreshGitChanges()
-  await Promise.all(
-    restored.flatMap((pane) => pane.tabs.map((tab) => launch(pane.id, tab.id, canResume(tab))))
+  const launches = restored.flatMap((pane) => pane.tabs.map((tab) => ({ pane, tab })))
+  const resume = restoreResumeFlags(
+    launches.map(({ pane, tab }) => ({ agent: tab.agent, sessionId: tab.sessionId, folder: pane.folder ?? projectById(store.state, pane.projectId)?.folder ?? '' }))
   )
+  await Promise.all(launches.map(({ pane, tab }, index) => launch(pane.id, tab.id, resume[index])))
+}
+
+/** Live Claude sessions changed: save the workspace when a tab now shows a different conversation. */
+export function setClaudeSessions(sessions: AppState['sessions']): void {
+  const before = matchSignature(matchAll(store.state).claude)
+  store.patch({ sessions })
+  if (matchSignature(matchAll(store.state).claude) !== before) persistWorkspace()
 }
 
 export function setGeminiSessions(geminiSessions: GeminiSession[]): void {

@@ -8,6 +8,7 @@ import {
   type SnapshotTab
 } from '../shared/layouts'
 import type { SavedLayout } from '../shared/types'
+import { workspaceSessionFor } from '../shared/sessionRestore'
 import {
   buildPane,
   canResume,
@@ -42,13 +43,7 @@ function savablePanes(): PaneState[] {
 }
 
 function sessionResolver(): (tab: SnapshotTab) => string | undefined {
-  const matches = matchAll(store.state)
-  const byAgent: Record<string, Map<string, { sessionId: string }> | undefined> = {
-    claude: matches.claude,
-    codex: matches.codex,
-    gemini: matches.gemini
-  }
-  return (tab) => tab.sessionId ?? byAgent[tab.agent]?.get(tab.id)?.sessionId
+  return workspaceSessionFor(matchAll(store.state))
 }
 
 export async function saveCurrentLayout(): Promise<SavedLayout | null> {
