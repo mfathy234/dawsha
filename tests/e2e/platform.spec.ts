@@ -133,8 +133,8 @@ test('Windows jump list follows project changes', async () => {
       await window.gridApi.updateSettings({ projects: settings.projects.map(project => ({ ...project, name: `Renamed ${project.name}` })) })
     })
     const categories = await app.evaluate(() => (globalThis as unknown as { platformJumpList: Array<{ name?: string; items: Array<{ title: string }> }> }).platformJumpList)
-    expect(categories[0].name).toBe('Projects')
-    expect(categories[0].items[0].title).toBe('New Claude session in Renamed Smoke')
+    expect(categories[0].name).toBe('New Claude session')
+    expect(categories[0].items[0].title).toBe('Renamed Smoke')
     expect(categories[1].items.map(item => item.title)).toEqual(['New session', 'Mini window'])
   } finally { await closeApp(app) }
 })

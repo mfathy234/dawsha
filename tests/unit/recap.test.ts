@@ -7,6 +7,23 @@ describe('recapFromScreen', () => {
     expect(recapFromScreen(screen)).toBe('Sorting closed sessions; e2e next.')
   })
 
+  it('ignores the status line under the input box and Remote Control notices', () => {
+    const screen = [
+      '● The trial ran the all-modules package, then moved to the monthly HR package.',
+      '● Remote Control disconnected, another connection took over this session (code 4090)',
+      '────────────────',
+      '❯ ',
+      '────────────────',
+      '● main  ✻ claude Opus 5.5',
+      '  ▸▸ bypass permissions on (shift+tab to cycle)'
+    ].join('\n')
+    expect(recapFromScreen(screen)).toBe('The trial ran the all-modules package, then moved to the monthly HR package.')
+  })
+
+  it('says nothing when the only bullets are Remote Control notices and the status line', () => {
+    expect(recapFromScreen('● Remote Control not started\n❯ \n● main  ✻ claude Opus 5.5')).toBe('')
+  })
+
   it('takes the latest recap', () => {
     expect(recapFromScreen('recap: old\nrecap: new')).toBe('new')
   })

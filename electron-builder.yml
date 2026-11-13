@@ -24,6 +24,9 @@ files:
 extraResources:
   - from: build/dawsha-cli.cjs
     to: dawsha-cli.cjs
+  # The taskbar jump list's entries use this icon file directly.
+  - from: build/icon.ico
+    to: dawsha.ico
 electronLanguages:
   - en-US
   - ar

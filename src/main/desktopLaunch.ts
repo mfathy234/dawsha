@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { join } from 'node:path'
 import { buildJumpList, parseDesktopAction, type DesktopAction } from '../shared/platformActions'
 import type { Settings } from '../shared/types'
 import type { CliRunner } from './cliRunner'
@@ -34,6 +35,8 @@ export function refreshJumpList(settings: Settings): void {
   try {
     const removed = app.getJumpListSettings().removedItems.map(item => item.args ?? '')
     const prefix = app.isPackaged ? '' : `"${app.getAppPath()}" `
-    app.setJumpList(buildJumpList(settings.projects, settings.recentProjectIds, process.execPath, removed, prefix))
+    // Packaged builds ship the icon beside the app (extraResources); from source it is in build/.
+    const icon = app.isPackaged ? join(process.resourcesPath, 'dawsha.ico') : join(app.getAppPath(), 'build', 'icon.ico')
+    app.setJumpList(buildJumpList(settings.projects, settings.recentProjectIds, process.execPath, icon, removed, prefix))
   } catch { /* Windows privacy settings may disallow custom jump lists. */ }
 }
