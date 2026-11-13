@@ -74,7 +74,7 @@ export class AppShell {
   private autoTourStarted = false
 
   constructor() {
-    const main = h('div', { class: 'main' }, this.grid.el, this.board.el, this.projects.el, this.files.el, this.agents.el, this.crew.el, this.skills.el, this.usage.el, this.work.el, this.settings.el, this.replay.el)
+    const main = h('div', { class: 'main' }, this.frame.bar, this.grid.el, this.board.el, this.projects.el, this.files.el, this.agents.el, this.crew.el, this.skills.el, this.usage.el, this.work.el, this.settings.el, this.replay.el)
     this.sidebarResize.addEventListener('pointerdown', this.onResizeStart)
     this.sidebarResize.addEventListener('pointermove', this.onResizeMove)
     this.sidebarResize.addEventListener('pointerup', this.onResizeEnd)
