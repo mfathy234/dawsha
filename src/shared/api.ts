@@ -72,6 +72,7 @@ import type {
 } from './types'
 
 export interface GridApi {
+  miniWindow: import('./miniWindow').MiniHostApi
   runs: import('./runCommands').RunApi
   tools: import('./filesTools').FilesToolsApi
   turn: import('./turnApi').TurnApi

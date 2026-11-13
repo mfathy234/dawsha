@@ -5,6 +5,7 @@ import { h, icon, placeNearAnchor } from '../dom'
 import { ICONS } from '../icons'
 import { setSessionsLayout } from '../sessionsLayout'
 import { store, type AppState } from '../state'
+import { toggleMiniWindow } from '../miniWindowSync'
 
 const ZOOM_MOD = navigator.platform.toLowerCase().includes('mac') ? 'Cmd' : 'Ctrl'
 const BOARD_KEY_HINT = formatShortcut(bind('Ctrl+Shift+B'))
@@ -31,7 +32,8 @@ export class ViewMenu {
       h('button', { class: 'btn ghost zoom-button', type: 'button', 'aria-label': 'Increase font size', title: `Larger text in every pane, from the focused pane's size (${ZOOM_MOD}+= changes the focused pane only)`, onClick: () => zoomAll(1) }, icon(ICONS.plus))
     )
   )
-  private readonly menu = h('div', { class: 'popover menu floating view-menu', role: 'menu', 'aria-label': 'View' }, this.counts, this.layoutsItem, this.dimItem, this.zoomRow)
+  private readonly miniItem = h('button', { class: 'menu-item view-menu-item', type: 'button', role: 'menuitem', onClick: () => { this.close(false); toggleMiniWindow() } }, 'Mini window', h('span', { class: 'view-menu-value' }, formatShortcut(bind('Ctrl+Alt+M'))))
+  private readonly menu = h('div', { class: 'popover menu floating view-menu', role: 'menu', 'aria-label': 'View' }, this.counts, this.layoutsItem, this.dimItem, this.miniItem, this.zoomRow)
   private open = false
 
   constructor() {
@@ -107,7 +109,7 @@ export class ViewMenu {
   }
 
   private items(): HTMLElement[] {
-    return [this.layoutsItem, this.dimItem, ...Array.from(this.zoomRow.querySelectorAll<HTMLElement>('button'))]
+    return [this.layoutsItem, this.dimItem, this.miniItem, ...Array.from(this.zoomRow.querySelectorAll<HTMLElement>('button'))]
   }
 
   private onKey(event: KeyboardEvent): void {

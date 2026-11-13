@@ -14,6 +14,7 @@ import { registerRunIpc } from './runCommands'
 import { registerToolsIpc } from './toolsIpc'
 import { registerTurnIpc } from './turnIpc'
 import { registerMcpIpc } from './mcpIpc'
+import { installMiniWindow } from './miniWindow'
 import { PtyManager } from './ptyManager'
 import { Recorder } from './recorder'
 import { RecordingService } from './recordings'
@@ -250,6 +251,7 @@ app.whenReady().then(async () => {
   registerMcpIpc(() => mainWindow, store)
   recordings.startSchedule()
   mainWindow = createWindow()
+  const stopMiniWindow = installMiniWindow(mainWindow, store)
   cli = new CliRunner(() => mainWindow)
   installDesktopLaunch(() => store.get(), cli)
   refreshJumpList(store.get())
@@ -266,7 +268,7 @@ app.whenReady().then(async () => {
   const shutdownDeps: ShutdownDeps = {
     log: quitLog,
     stopServices: () => stopAllServices([
-      ['CLI bridge', () => stopCliServer(cliServer)],
+      ['Mini window', stopMiniWindow], ['CLI bridge', () => stopCliServer(cliServer)],
       ['code navigation', stopCodeNavigation], ['browser pane', closeBrowserPane],
       ['sessions watcher', () => watcher.stop()], ['agent files', closeAgentFiles],
       ['Codex watcher', () => codexWatcher.stop()], ['Gemini watcher', () => geminiWatcher.stop()],
