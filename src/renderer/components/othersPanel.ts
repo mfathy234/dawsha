@@ -11,6 +11,7 @@ import type { AppState } from '../state'
 import { agentMark } from './agentMark'
 import { crewSignature, identityMark } from './crewAvatar'
 import { stateIcon } from './stateIcon'
+import './othersPanel.css'
 
 const RAIL_MARK_SIZE = 18
 
