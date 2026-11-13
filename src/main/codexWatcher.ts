@@ -18,7 +18,13 @@ const META_BYTES = 512 * 1024
 const TAIL_BYTES = 256 * 1024
 
 const metaCache = new Map<string, RolloutMeta | null>()
-const promptCache = new Map<string, string>()
+interface PromptEntry { prompt: string | null; scanned: number }
+const promptCache = new Map<string, PromptEntry>()
+
+export function clearCodexCaches(): void {
+  metaCache.clear()
+  promptCache.clear()
+}
 
 export async function readRange(path: string, start: number, length: number): Promise<string> {
   const handle = await open(path, 'r')
@@ -31,11 +37,13 @@ export async function readRange(path: string, start: number, length: number): Pr
   }
 }
 
-async function readMeta(path: string, size: number): Promise<RolloutMeta | null> {
-  if (metaCache.has(path) && promptCache.has(path)) return metaCache.get(path) ?? null
-  const head = await readRange(path, 0, Math.min(size, META_BYTES))
-  const prompt = codexDetail(head, 1, true).firstPrompt
-  if (prompt) promptCache.set(path, prompt)
+/** Reads a rollout's head once; a rollout with no prompt yet is only read again after its scanned part grew. */
+export async function readMeta(path: string, size: number, read: typeof readRange = readRange): Promise<RolloutMeta | null> {
+  const scanned = Math.min(size, META_BYTES)
+  const known = promptCache.get(path)
+  if (metaCache.has(path) && known && (known.prompt || known.scanned >= scanned)) return metaCache.get(path) ?? null
+  const head = await read(path, 0, scanned)
+  promptCache.set(path, { prompt: codexDetail(head, 1, true).firstPrompt || null, scanned })
   const newline = head.indexOf('\n')
   const complete = newline >= 0 || size > META_BYTES
   const meta = newline < 0 && complete ? null : parseRolloutMeta(newline < 0 ? head : head.slice(0, newline))
@@ -81,7 +89,7 @@ async function readOne(path: string, names: Map<string, string>, now: number): P
       sessionId: meta.sessionId,
       cwd: meta.cwd,
       name: names.get(meta.sessionId),
-      firstPrompt: promptCache.get(path),
+      firstPrompt: promptCache.get(path)?.prompt ?? undefined,
       nameSource: names.has(meta.sessionId) ? 'ai' : 'prompt',
       startedAt: meta.startedAt,
       updatedAt: Math.round(info.mtimeMs),

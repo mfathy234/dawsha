@@ -41,6 +41,59 @@ function parseSession(text: string): SessionFile | null {
   }
 }
 
+type TitleInfo = ReturnType<typeof sessionTitleInfo>
+type TranscriptEnds = { head: string; tail: string }
+type TranscriptStat = { size: number; mtimeMs: number }
+interface TitleEntry { size: number; mtimeMs: number; info: TitleInfo }
+
+const titleCache = new Map<string, TitleEntry>()
+const HEAD_BYTES = 96 * 1024
+const TAIL_BYTES = 48 * 1024
+
+async function readTranscriptEnds(path: string, info: TranscriptStat): Promise<TranscriptEnds> {
+  const handle = await open(path, 'r')
+  try {
+    const headBuffer = Buffer.alloc(Math.min(info.size, HEAD_BYTES))
+    const headRead = await handle.read(headBuffer, 0, headBuffer.length, 0)
+    const head = headBuffer.subarray(0, headRead.bytesRead).toString('utf8')
+    let tail = ''
+    if (info.size > HEAD_BYTES) {
+      const tailBuffer = Buffer.alloc(Math.min(info.size, TAIL_BYTES))
+      const tailRead = await handle.read(tailBuffer, 0, tailBuffer.length, Math.max(0, info.size - tailBuffer.length))
+      tail = tailBuffer.subarray(0, tailRead.bytesRead).toString('utf8')
+    }
+    return { head, tail }
+  } finally {
+    await handle.close()
+  }
+}
+
+/**
+ * Title info for a transcript, parsed again only when the file changed. A user-named session only needs the first
+ * prompt, which never changes once written, so a cached entry is reused without touching the file at all.
+ */
+export async function cachedTitleInfo(
+  path: string,
+  named: boolean,
+  read: (path: string, info: TranscriptStat) => Promise<TranscriptEnds>,
+  stats: (path: string) => Promise<TranscriptStat> = stat
+): Promise<TitleInfo> {
+  const cached = titleCache.get(path)
+  if (named && cached?.info.firstPrompt) return cached.info
+  const info = await stats(path)
+  if (cached && cached.size === info.size && cached.mtimeMs === info.mtimeMs) return cached.info
+  const { head, tail } = await read(path, info)
+  const parsed = sessionTitleInfo(head, tail)
+  titleCache.set(path, { size: info.size, mtimeMs: info.mtimeMs, info: parsed })
+  return parsed
+}
+
+export const clearTitleCache = (): void => titleCache.clear()
+
+function pruneTitleCache(live: Set<string>): void {
+  for (const path of titleCache.keys()) if (!live.has(path)) titleCache.delete(path)
+}
+
 export async function readSessions(dir: string = sessionsDir()): Promise<SessionFile[]> {
   let names: string[]
   try {
@@ -64,27 +117,13 @@ export async function readSessions(dir: string = sessionsDir()): Promise<Session
     if (state === 'alive') found.push(session)
     else if (state === 'denied') found.push({ ...session, permissionDenied: true })
   }
+  const paths = new Set(found.map((session) => join(claudeProjectsDir(), claudeProjectSlug(session.cwd), `${session.sessionId}.jsonl`)))
+  pruneTitleCache(paths)
   return Promise.all(found.map(async (session) => {
     const transcript = join(claudeProjectsDir(), claudeProjectSlug(session.cwd), `${session.sessionId}.jsonl`)
     try {
-      const info = await stat(transcript)
-      const handle = await open(transcript, 'r')
-      let head = ''
-      let tail = ''
-      try {
-        const headBuffer = Buffer.alloc(Math.min(info.size, 96 * 1024))
-        const headRead = await handle.read(headBuffer, 0, headBuffer.length, 0)
-        head = headBuffer.subarray(0, headRead.bytesRead).toString('utf8')
-        if (info.size > 96 * 1024) {
-          const tailBuffer = Buffer.alloc(Math.min(info.size, 48 * 1024))
-          const tailRead = await handle.read(tailBuffer, 0, tailBuffer.length, Math.max(0, info.size - tailBuffer.length))
-          tail = tailBuffer.subarray(0, tailRead.bytesRead).toString('utf8')
-        }
-      } finally {
-        await handle.close()
-      }
-      const titleInfo = sessionTitleInfo(head, tail)
-      const named = session.name?.trim() && session.nameSource !== 'derived'
+      const named = Boolean(session.name?.trim() && session.nameSource !== 'derived')
+      const titleInfo = await cachedTitleInfo(transcript, named, readTranscriptEnds)
       // The session file's explicit name wins; transcript metadata still supplies its full first message.
       return { ...session, ...(!named ? titleInfo : { firstPrompt: titleInfo.firstPrompt }) }
     } catch {
