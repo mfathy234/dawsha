@@ -118,7 +118,7 @@ function isSafeUrl(value: string): boolean {
 
 export function registerIpc(
   getWindow: () => BrowserWindow | null,
-  onNotifyClick: (paneId: string) => void,
+  onNotifyClick: (paneId: string, answer?: import('../shared/notificationAction').NotificationAnswer) => void,
   settings: SettingsStore,
   ptys: PtyManager,
   status: StatusWatcher,

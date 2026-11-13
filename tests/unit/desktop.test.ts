@@ -1,4 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { parseNotificationActivation } from '../../src/shared/notificationAction'
 
 const spawn = vi.hoisted(() => vi.fn((_file: string, _args: unknown, _options?: unknown) => ({ on: vi.fn(), unref: vi.fn() })))
 vi.mock('node:child_process', () => ({ spawn }))
@@ -17,7 +21,7 @@ vi.mock('../../src/main/executables', () => ({
   resolveExecutable: () => '/usr/bin/code', platformExecutableDirs: () => ['/usr/bin']
 }))
 
-import { applyAttentionBadge, liveNotificationCount, notifyUser, onAttentionCount, quickOpen } from '../../src/main/desktop'
+import { applyAttentionBadge, handleNotificationActivation, liveNotificationCount, notifyUser, onAttentionCount, quickOpen } from '../../src/main/desktop'
 
 it('publishes count changes and flashes once for each newly waiting session', () => {
   applyAttentionBadge(null, 0, [])
@@ -72,4 +76,34 @@ it('releases notifications that close or fail, and caps how many it keeps', () =
   expect(liveNotificationCount()).toBe(before)
   for (let index = 0; index < 30; index++) notifyUser(() => window as never, { paneId: `p${index}`, title: 't', body: 'b', sound: false }, vi.fn())
   expect(liveNotificationCount()).toBe(20)
+})
+
+it('logs Windows permission actions without private prompts and authorizes them once through main', () => {
+  vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+  const file = join(mkdtempSync(join(tmpdir(), 'dawsha-notify-test-')), 'notify.log')
+  vi.stubEnv('DAWSHA_NOTIFY_LOG', file)
+  const permission = { tabId: 'tab', promptId: 'instance:1' }
+  notifyUser(() => null, { paneId: 'pane', title: 'Review', body: 'Wants to run npm --token="private-value"', sound: false, permission }, vi.fn())
+  const raw = readFileSync(file, 'utf8')
+  expect(raw).not.toContain('private-value')
+  expect(raw).not.toContain('promptId')
+  const note = JSON.parse(raw)
+  expect(note.actions.map((action: { content: string }) => action.content)).toEqual(['Allow', 'Deny'])
+  expect(parseNotificationActivation(note.actions[0].arguments)).toMatchObject({ paneId: 'pane', allow: true })
+  const onClick = vi.fn()
+  expect(handleNotificationActivation(['Dawsha.exe', note.actions[0].arguments], () => null, onClick)).toBe(true)
+  expect(onClick).toHaveBeenLastCalledWith('pane', { ...permission, allow: true })
+  handleNotificationActivation([note.actions[1].arguments], () => null, onClick)
+  expect(onClick).toHaveBeenLastCalledWith('pane', undefined)
+  handleNotificationActivation(['dawsha-action:allow?pane=pane&request=' + 'b'.repeat(32)], () => null, onClick)
+  expect(onClick).toHaveBeenLastCalledWith('pane', undefined)
+  expect(handleNotificationActivation(['--new-session'], () => null, onClick)).toBe(false)
+})
+
+it.each(['linux', 'darwin'] as const)('keeps %s notifications plain', platform => {
+  vi.spyOn(process, 'platform', 'get').mockReturnValue(platform)
+  const file = join(mkdtempSync(join(tmpdir(), 'dawsha-notify-test-')), 'notify.log')
+  vi.stubEnv('DAWSHA_NOTIFY_LOG', file)
+  notifyUser(() => null, { paneId: 'pane', title: 'Review', body: 'Waiting', sound: false, permission: { tabId: 't', promptId: 'instance:1' } }, vi.fn())
+  expect(JSON.parse(readFileSync(file, 'utf8'))).not.toHaveProperty('actions')
 })

@@ -1,4 +1,4 @@
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { BrowserWindow, Menu, app, ipcMain, net, powerMonitor, protocol, session } from 'electron'
 import { IPC } from '../shared/ipc'
@@ -7,7 +7,8 @@ import { GeminiWatcher } from './geminiWatcher'
 import { registerIpc } from './ipc'
 import { stopCodeNavigation } from './codeNav'
 import { closeAgentFiles, refreshAgentFiles } from './agentFiles'
-import { notifyUser } from './desktop'
+import { notifyUser, handleNotificationActivation } from './desktop'
+import { NOTIFICATION_SCHEME, type NotificationAnswer } from '../shared/notificationAction'
 import { handleDesktopLaunch, installDesktopLaunch, refreshJumpList } from './desktopLaunch'
 import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
@@ -56,7 +57,7 @@ let updates: UpdateController | null = null
 let quitting = false
 let checkingQuit = false
 let rendererReady = false
-const pendingNotificationClicks: string[] = []
+const pendingNotificationClicks: { paneId: string; answer?: NotificationAnswer }[] = []
 
 const gotLock = app.requestSingleInstanceLock()
 
@@ -64,6 +65,7 @@ if (!gotLock) {
   app.exit(0)
 } else {
   app.on('second-instance', (_event, argv, workingDirectory) => {
+    if (handleNotificationActivation(argv, () => mainWindow, routeNotificationClick)) return
     if (handleDesktopLaunch(argv)) return
     if (!mainWindow || mainWindow.isDestroyed()) return
     if (mainWindow.isMinimized()) mainWindow.restore()
@@ -103,18 +105,18 @@ function send(channel: string, ...args: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...args)
 }
 
-function routeNotificationClick(paneId: string): void {
+function routeNotificationClick(paneId: string, answer?: NotificationAnswer): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
   if (!rendererReady) {
-    pendingNotificationClicks.push(paneId)
+    pendingNotificationClicks.push({ paneId, answer })
     return
   }
-  send(IPC.notifyClick, paneId)
+  send(IPC.notifyClick, paneId, answer)
 }
 
 ipcMain.on(IPC.cliReady, () => {
   rendererReady = true
-  for (const paneId of pendingNotificationClicks.splice(0)) send(IPC.notifyClick, paneId)
+  for (const { paneId, answer } of pendingNotificationClicks.splice(0)) send(IPC.notifyClick, paneId, answer)
 })
 
 function createWindow(): BrowserWindow {
@@ -251,13 +253,18 @@ app.whenReady().then(async () => {
   registerMcpIpc(() => mainWindow, store)
   recordings.startSchedule()
   mainWindow = createWindow()
+  // Test sandboxes must not replace the user's registered protocol handler.
+  if (process.platform === 'win32' && !process.env.DAWSHA_NOTIFY_LOG) {
+    if (process.defaultApp && process.argv[1]) app.setAsDefaultProtocolClient(NOTIFICATION_SCHEME, process.execPath, [resolve(process.argv[1])])
+    else if (!process.defaultApp) app.setAsDefaultProtocolClient(NOTIFICATION_SCHEME)
+  }
   const stopMiniWindow = installMiniWindow(mainWindow, store)
   cli = new CliRunner(() => mainWindow)
   installDesktopLaunch(() => store.get(), cli)
   refreshJumpList(store.get())
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
   app.on('will-quit', () => { void stopCliServer(cliServer) })
-  if (!handleDesktopLaunch(process.argv)) void cli.executeFromArgv(process.argv, process.cwd())
+  if (!handleNotificationActivation(process.argv, () => mainWindow, routeNotificationClick) && !handleDesktopLaunch(process.argv)) void cli.executeFromArgv(process.argv, process.cwd())
   mainWindow.webContents.once('did-finish-load', () => {
     watcher.start()
     codexWatcher.start()

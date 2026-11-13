@@ -751,6 +751,7 @@ export function answerPermission(paneId: string, choice: boolean | number): bool
   const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
   const tail = tabId ? (getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '') : ''
   if (!tabId || !detectPermissionPrompt(tail)) return false
+  getTerminal(tabId)?.invalidatePermission()
   const allow = choice !== false
   recordApproval(paneId, allow, tail, Date.now())
   void api.remoteAccess?.recordApproval(tabId, allow, tail).catch(() => undefined)

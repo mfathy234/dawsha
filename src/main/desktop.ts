@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { appendFileSync, existsSync, readdirSync } from 'node:fs'
 import { delimiter, dirname, join } from 'node:path'
 import { BrowserWindow, Notification, app, nativeImage, shell } from 'electron'
@@ -6,6 +7,9 @@ import { OVERLAY_SIZE, badgeWindowTitle, normalizeBadgeCount, overlayBitmap } fr
 import { newlyWaiting } from '../shared/waitingAttention'
 import { safeLink } from '../shared/markdown'
 import { toastXml } from '../shared/notifyContent'
+import { maskSecrets } from '../shared/maskSecrets'
+import { notificationActions, parseNotificationActivation, NOTIFICATION_SCHEME, type NotificationAction, type NotificationAnswer } from '../shared/notificationAction'
+import { NotificationRequests } from './notificationRequests'
 import { platformExecutableDirs, resolveExecutable } from './executables'
 import type { NotifyRequest, QuickOpenKind } from '../shared/types'
 
@@ -105,27 +109,53 @@ const notifyString = (value: unknown): string => (typeof value === 'string' ? va
 
 /** The renderer's request, reduced to known string fields of a sane length. */
 function cleanRequest(raw: NotifyRequest): NotifyRequest {
-  const attribution = notifyString(raw?.attribution)
-  return { paneId: notifyString(raw?.paneId), title: notifyString(raw?.title), body: notifyString(raw?.body), sound: raw?.sound === true, ...(raw?.flash === false ? { flash: false } : {}), ...(attribution ? { attribution } : {}) }
+  const attribution = maskSecrets(notifyString(raw?.attribution))
+  const permission = raw?.permission
+  const validPermission = permission && typeof permission.tabId === 'string' && permission.tabId.length > 0 && permission.tabId.length <= 200
+    && typeof permission.promptId === 'string' && /^[a-z0-9-]+:\d+$/i.test(permission.promptId) && permission.promptId.length <= 100
+  return { paneId: notifyString(raw?.paneId), title: maskSecrets(notifyString(raw?.title)), body: maskSecrets(notifyString(raw?.body)), sound: raw?.sound === true, ...(raw?.flash === false ? { flash: false } : {}), ...(attribution ? { attribution } : {}), ...(validPermission ? { permission: { tabId: permission.tabId, promptId: permission.promptId } } : {}) }
 }
 
-function createNotification(request: NotifyRequest): Notification {
+function createNotification(request: NotifyRequest, actions: NotificationAction[]): Notification {
   if (process.platform !== 'win32') {
     const body = request.attribution ? `${request.body}\n${request.attribution}` : request.body
     return new Notification({ title: request.title, body, silent: !request.sound })
   }
-  return new Notification({ toastXml: toastXml({ title: request.title, body: request.body, attribution: request.attribution, silent: !request.sound }) })
+  return new Notification({ toastXml: toastXml({ title: request.title, body: request.body, attribution: request.attribution, silent: !request.sound, actions }) })
+}
+
+const notificationRequests = new NotificationRequests()
+
+/** Protocol activations work for both installed NSIS and default Electron launches. Unknown tokens only open the pane. */
+export function handleNotificationActivation(argv: string[], getWindow: () => BrowserWindow | null, onClick: (paneId: string, answer?: NotificationAnswer) => void): boolean {
+  const argument = argv.find(value => value.startsWith(`${NOTIFICATION_SCHEME}:`))
+  if (!argument) return false
+  const activation = parseNotificationActivation(argument)
+  if (!activation) return true
+  const answer = notificationRequests.take(activation)
+  const window = getWindow()
+  if (window && !window.isDestroyed()) {
+    if (window.isMinimized()) window.restore()
+    window.show()
+    window.focus()
+  }
+  onClick(activation.paneId, answer)
+  return true
 }
 
 export function notifyUser(getWindow: () => BrowserWindow | null, raw: NotifyRequest, onClick: (paneId: string) => void): void {
   const request = cleanRequest(raw)
   const window = getWindow()
   const unfocused = !window || window.isDestroyed() || !window.isFocused()
+  const { permission, ...publicRequest } = request
+  const requestId = process.platform === 'win32' && permission ? randomBytes(16).toString('hex') : null
+  const actions = requestId ? notificationActions(request.paneId, requestId) : []
+  if (requestId && permission) notificationRequests.add(request.paneId, requestId, permission)
   const log = process.env.DAWSHA_NOTIFY_LOG
-  if (log) return logTo(log, JSON.stringify({ ...request, flash: unfocused && request.flash !== false }))
+  if (log) return logTo(log, JSON.stringify({ ...publicRequest, flash: unfocused && request.flash !== false, ...(actions.length ? { actions } : {}) }))
   if (window && !window.isDestroyed() && unfocused && request.flash !== false) window.flashFrame(true)
   if (!Notification.isSupported()) return
-  const notification = createNotification(request)
+  const notification = createNotification(request, actions)
   notification.on('click', () => {
     liveNotifications.delete(notification)
     const activeWindow = getWindow()

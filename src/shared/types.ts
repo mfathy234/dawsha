@@ -314,6 +314,7 @@ export interface SessionFile {
   cwd: string
   name?: string
   nameSource?: string
+  firstPrompt?: string
   status?: string
   startedAt?: number
   updatedAt?: number
@@ -322,6 +323,8 @@ export interface SessionFile {
 }
 
 export interface CodexSession {
+  firstPrompt?: string
+  nameSource?: string
   sessionId: string
   cwd: string
   name?: string
@@ -333,6 +336,8 @@ export interface CodexSession {
 }
 
 export interface GeminiSession {
+  firstPrompt?: string
+  nameSource?: string
   sessionId: string
   name?: string
   startedAt: number
@@ -376,6 +381,7 @@ export interface ResumeEntry {
 }
 
 export interface ResumeSession {
+  nameSource?: string
   /** Transcript metadata reused by the work dashboard. */
   workBranch?: string | null
   lastActivityAt?: number
@@ -419,6 +425,7 @@ export interface BridgeStatus {
 export type BridgeResult = { ok: true; note?: string } | { ok: false; error: string }
 
 export interface NotifyRequest {
+  permission?: import('./notificationAction').NotificationPermission
   /** Waiting sessions flash through the badge transition, independently of notifications. */
   flash?: boolean
   paneId: string
