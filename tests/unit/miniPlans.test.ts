@@ -22,7 +22,7 @@ describe('Mini plan readers', () => {
     expect(locateSession).toHaveBeenCalledTimes(12)
     for (const request of requests) appendFileSync(join(folder, `${request.sessionId}.jsonl`), plan('b', 'completed'))
     const updated = await reader.read(requests)
-    expect(Object.values(updated).every(items => items[0]?.status === 'completed')).toBe(true)
+    expect(Object.values(updated).every(items => items.todos[0]?.status === 'completed')).toBe(true)
     expect(locateSession).toHaveBeenCalledTimes(12)
     await reader.read([])
     await reader.read(requests.slice(0, 1))
@@ -42,6 +42,19 @@ describe('Mini plan readers', () => {
     const pending = reader.read([request])
     reader.clear()
     expect(await pending).toEqual({})
-    expect((await reader.read([request])).p).toEqual([{ text: 'Run tests', status: 'pending' }])
+    expect((await reader.read([request])).p.todos).toEqual([{ text: 'Run tests', status: 'pending' }])
+  })
+  it('also returns the last message sent and the first lines of the last reply', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'dawsha-mini-plans-'))
+    dirs.push(folder)
+    const request: MiniPlanRequest = { paneId: 'p', agent: 'claude', sessionId: 's', folder }
+    const lines = [
+      { type: 'user', uuid: 'u1', message: { role: 'user', content: 'Move invoice totals' } },
+      { type: 'assistant', uuid: 'a1', message: { role: 'assistant', content: [{ type: 'text', text: 'Moved them.' + String.fromCharCode(10, 10) + 'Tests pass.' }] } }
+    ]
+    writeFileSync(join(folder, 's.jsonl'), lines.map(line => JSON.stringify(line)).join(String.fromCharCode(10)) + String.fromCharCode(10))
+    const read = (await new MiniPlans().read([request])).p
+    expect(read.asked).toBe('Move invoice totals')
+    expect(read.reply).toEqual(['Moved them.', 'Tests pass.'])
   })
 })

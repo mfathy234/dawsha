@@ -108,10 +108,10 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
   const onAction = (event: IpcMainEvent, value: unknown): void => {
     if (!trusted(event, mini) || !isMiniAction(value)) return
     if (value.kind === 'close') { persist(); mini?.hide(); return }
-    if (value.kind === 'open' || value.kind === 'answer') {
+    if (value.kind === 'open' || value.kind === 'answer' || value.kind === 'review' || value.kind === 'send') {
       if (!snapshot?.sessions.some(s => s.paneId === value.paneId)) return
     }
-    if (value.kind === 'open' || value.kind === 'new') showMain()
+    if (value.kind === 'open' || value.kind === 'new' || value.kind === 'review') showMain()
     host(MINI_IPC.action, value)
   }
   const onResize = (event: IpcMainEvent, height: unknown): void => {
