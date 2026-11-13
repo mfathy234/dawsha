@@ -27,7 +27,7 @@ export function chatHostFor(paneId: string, current: () => PaneView | null): Cha
     interrupt: () => interruptAgent(tabId()),
     screenTail: () => getTerminal(tabId())?.tailText(MENU_ROWS) ?? '',
     answer: (steps) => void answerMenu(tabId(), steps),
-    plan: (label) => setSessionNote(paneId, { plan: label }),
+    plan: (label, current) => setSessionNote(paneId, { plan: label, planNow: current }),
     notify: (title, body) => api.notify({ paneId, title, body, sound: store.state.settings.sessionInfo.sound }),
     reviewChanges: () => {
       const pane = store.state.panes.find((candidate) => candidate.id === paneId)

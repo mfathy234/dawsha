@@ -40,7 +40,7 @@ import { api } from '../api'
 import { COPY_SESSION_NAME, copySessionName } from '../copySessionName'
 import { sessionLabel as sessionRowName } from './sidebarRows'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
-import type { TabAgent } from '../../shared/types'
+import type { AgentKind, TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
 import { keycaps } from './keycaps'
 import { tagMenuItems, tagWord, type TagSource } from './sessionTagUi'
@@ -66,11 +66,18 @@ import { openMergeBack, paneWorktree } from '../mergeBackActions'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
 import './paneCalm.css'
+import './paneQuiet.css'
+import '../chat/chatQuiet.css'
 import './paneMeter.css'
 import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
 import { toolLineFromScreen } from '../../shared/sessionLine'
-import { setSessionNote } from '../sessionNotes'
+import { sessionNote, setSessionNote } from '../sessionNotes'
+import { planBadge } from '../../shared/quietReply'
+import { QuietReply } from '../chat/quietReply'
+import { primaryTab, sendChatMessage } from '../chat/chatActions'
+import { sessionIdOf } from '../transcriptActions'
+import { quietApprovalTitle } from '../../shared/quietApproval'
 import { PaneChat } from '../chat/paneChat'
 import { chatCapable } from '../../shared/chatLog'
 import { ViewSwitch } from '../chat/viewSwitch'
@@ -116,6 +123,9 @@ export class PaneComponent {
   private readonly recap = h('div', { class: 'pane-recap', dir: 'auto', hidden: true })
   private recapText = ''
   private recapAt = 0
+  private readonly plan = h('div', { class: 'pane-plan', hidden: true })
+  private planSignature = ''
+  private readonly reply: QuietReply
   private readonly permission = h('div', { class: 'pane-permission', role: 'alert', hidden: true })
   private permissionSignature = ''
   private permissionDetail: PermissionDetail | null = null
@@ -199,7 +209,19 @@ export class PaneComponent {
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.branch)
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.recap, this.hint, content, this.permission, this.foot)
+    this.reply = new QuietReply(paneId, {
+      review: () => this.reviewInFiles(),
+      send: (text) => {
+        const view = this.current
+        const tab = view ? primaryTab(view) : null
+        if (!view || !tab || tab.status === 'exited' || sessionState({ status: view.status, attention: view.attention }) !== 'idle') return false
+        sendChatMessage(tab.id, tab.agent, text)
+        return true
+      },
+      planChanged: () => this.updatePlan(),
+      onScreen: () => this.el.offsetParent !== null
+    })
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.plan, this.recap, this.hint, content, this.reply.el, this.permission, this.foot)
     // The chat can learn of a usage limit after the pane last rendered, so it tells the pane to update its pill.
     this.chat = new PaneChat({ ...chatHostFor(paneId, () => this.current), limitChanged: () => this.chatShown && this.showLimitState() }, this.permission)
     this.body.append(this.chat.el)
@@ -260,6 +282,7 @@ export class PaneComponent {
     const asking = state === 'needs' || (this.chatShown && detectPermissionPrompt(permissionTail(this.paneId)))
     this.updatePermission(view, asking ? 'needs' : state)
     this.updateChat(view, state, asking)
+    this.updateQuiet(view, state)
     // Chat already shows the last reply; the recap line is scraped from the terminal screen and only repeats it, stale.
     this.recap.hidden = !store.state.settings.showRecap || this.recapText === '' || this.chatShown
     this.updateDetails(view, maximized)
@@ -280,7 +303,7 @@ export class PaneComponent {
     const signature = `${number}|${title}`
     if (signature === this.titleText) return
     this.titleText = signature
-    this.index.replaceChildren(`${number} · `, h('bdi', { dir: 'auto' }, title))
+    this.index.replaceChildren(h('span', { class: 'pane-num' }, `${number} · `), h('bdi', { dir: 'auto' }, title))
   }
 
   private updateState(view: PaneView, state: SessionState): void {
@@ -317,7 +340,8 @@ export class PaneComponent {
     if (prompt !== '') this.permissionPrompt = prompt
     const shown = this.permissionDetail ?? detail
     const project = view.project?.name ?? ''
-    const signature = JSON.stringify([view.agent, project, shown, this.permissionPrompt])
+    const quiet = store.state.settings.appearance.panes === 'quiet'
+    const signature = JSON.stringify([view.agent, project, shown, this.permissionPrompt, quiet])
     if (signature === this.permissionSignature) return
     this.permissionSignature = signature
     this.permission.hidden = false
@@ -337,12 +361,52 @@ export class PaneComponent {
     }
   }
 
+  /** Quiet panes: the line under the terminal about the last reply, and the plan count under the title. */
+  private updateQuiet(view: PaneView, state: SessionState): void {
+    const quiet = store.state.settings.appearance.panes === 'quiet'
+    const tab = primaryTab(view)
+    const pane = paneById(store.state, this.paneId)
+    const on = quiet && !this.chatShown && !!tab && !!pane && chatCapable(tab.agent) && view.pane.activeTabId === tab.id
+    this.reply.update(on && tab && pane
+      ? {
+          agent: tab.agent as AgentKind,
+          sessionId: sessionIdOf(tab) ?? null,
+          folder: folderOfPane(store.state, pane) ?? '',
+          branch: view.branch ?? '',
+          projectId: pane.projectId,
+          tabId: tab.id,
+          working: state === 'working',
+          exited: tab.status === 'exited'
+        }
+      : null)
+    this.updatePlan()
+  }
+
+  /** "5/7", the step being worked on and a thin bar, from the plan the chat or the terminal view noticed. */
+  private updatePlan(): void {
+    const quiet = store.state.settings.appearance.panes === 'quiet'
+    const note = sessionNote(this.paneId)
+    const badge = quiet ? planBadge(note.plan) : null
+    const signature = badge ? JSON.stringify([badge, note.planNow]) : ''
+    if (signature === this.planSignature) return
+    this.planSignature = signature
+    this.plan.hidden = !badge
+    if (!badge) return this.plan.replaceChildren()
+    this.plan.setAttribute('aria-label', `Plan, ${note.plan} done${note.planNow ? `. Now: ${note.planNow}` : ''}`)
+    this.plan.replaceChildren(
+      h('span', { class: 'pane-plan-n', 'aria-hidden': 'true' }, badge.count),
+      h('span', { class: 'pane-plan-now', dir: 'auto', 'aria-hidden': 'true' }, note.planNow),
+      h('span', { class: 'pane-plan-bar', 'aria-hidden': 'true' }, h('i', { style: `width: ${badge.percent}%` }))
+    )
+  }
+
   private showLimitState(): void {
     if (this.chat.limitReached) this.stateHost.querySelector('.state-pill-text')?.replaceChildren(LIMIT_PANE_STATE)
   }
 
   private approvalChildren(view: PaneView, detail: PermissionDetail, prompt: string, project: string): HTMLElement[] {
     const name = AGENT_NAMES[view.agent]
+    const quiet = store.state.settings.appearance.panes === 'quiet'
     const always = detail.options.find((option) => option.kind === 'always')
     const subject = detail.target || prompt
     const key = (label: string): HTMLElement => h('kbd', { class: 'pane-permission-key' }, label)
@@ -350,7 +414,7 @@ export class PaneComponent {
       'div',
       { class: 'pane-permission-head' },
       stateIcon('needs'),
-      h('span', { class: 'pane-permission-title' }, `${name} is asking to proceed`),
+      h('span', { class: 'pane-permission-title' }, quiet ? quietApprovalTitle(name, detail.tool) : `${name} is asking to proceed`),
       h('span', { class: 'chip pane-permission-tool' }, detail.tool)
     )
     const command = subject
@@ -368,10 +432,11 @@ export class PaneComponent {
       h(
         'button',
         { class: 'btn small primary', type: 'button', 'aria-label': `Allow ${name} to continue`, onClick: () => answerPermission(this.paneId, true) },
-        'Allow',
+        quiet ? 'Allow once' : 'Allow',
         key('Enter')
       ),
       always ? this.alwaysButton(name, always) : null,
+      quiet ? h('span', { class: 'pane-permission-gap' }) : null,
       h(
         'button',
         { class: 'btn small ghost', type: 'button', 'aria-label': `Deny ${name}`, onClick: () => answerPermission(this.paneId, false) },
@@ -842,6 +907,7 @@ export class PaneComponent {
     this.closeActions()
     this.timeline.dispose()
     this.chat.dispose()
+    this.reply.dispose()
     this.el.remove()
   }
 }

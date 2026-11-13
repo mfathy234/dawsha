@@ -17,6 +17,8 @@ export class ChatPlanBar {
   private open = false
   private todos: readonly TodoEntry[] = []
   private signature = ''
+  /** The task being worked on, as of the last update. */
+  current = ''
 
   constructor() {
     this.bar.setAttribute('aria-controls', this.list.id)
@@ -26,6 +28,7 @@ export class ChatPlanBar {
   /** The label shown ("3 of 7"), or empty while the bar is hidden. */
   update(todos: readonly TodoEntry[]): string {
     const plan = planProgress(todos)
+    this.current = plan?.current ?? ''
     if (!plan) {
       this.hide()
       return ''

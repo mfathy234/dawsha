@@ -24,6 +24,7 @@ export const ICONS = {
   next: svg(16, '<polyline points="9 18 15 12 9 6"/>'),
   maximize: svg(16, '<path d="M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7"/>'),
   restore: svg(16, '<path d="M4 14h6v6 M20 10h-6V4 M14 10l7-7 M3 21l7-7"/>'),
+  panelLeft: svg(16, '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>'),
   collapse: svg(16, '<polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/>'),
   expand: svg(16, '<polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>'),
   search: svg(16, '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),

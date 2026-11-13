@@ -55,7 +55,7 @@ import { installInputMode } from './inputMode'
 import { store } from './state'
 import { confirmQuitWithUnsavedFiles } from './files/filesActions'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
-import { applyTheme, onThemeChange } from './themeManager'
+import { applyTheme, onThemeChange, setTone } from './themeManager'
 import { removeLegacyModelCache } from './legacyModelCache'
 
 const BRANCH_POLL_MS = 5000
@@ -95,6 +95,7 @@ async function boot(): Promise<void> {
   markStyle.setProperty('--codex-fg', CODEX_MARK.color)
   markStyle.setProperty('--gemini-bg', GEMINI_MARK.background)
   markStyle.setProperty('--gemini-fg', GEMINI_MARK.color)
+  setTone(loaded.settings.appearance.tone)
   applyTheme(loaded.settings.theme, true)
   onThemeChange(applyBundleToAll)
 

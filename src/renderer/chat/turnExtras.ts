@@ -27,6 +27,8 @@ export interface TurnHost {
   input(): TurnInput | null
   /** Types a message to the agent. False when it cannot take one now. */
   send(text: string): boolean
+  /** A card's state changed (a commit finished, say), for hosts that show a summary of it elsewhere. */
+  changed?(): void
 }
 
 /** What the thread knows about one reply that the card needs. */
@@ -107,6 +109,15 @@ export class TurnExtras {
     return this.build(this.entries.get(summary.messageId) ?? entry)
   }
 
+  /** Opens the commit box on a reply's card, as its Commit button does. The card must be on screen. */
+  startCommit(messageId: string): void {
+    this.actions(messageId).startCommit()
+  }
+
+  commitOf(messageId: string): CardState['commit'] {
+    return this.entries.get(messageId)?.state.commit ?? { phase: 'closed' }
+  }
+
   dispose(): void {
     this.stop()
     const sessionId = this.sessionId ?? this.host.input()?.sessionId
@@ -162,6 +173,7 @@ export class TurnExtras {
     if (!entry) return
     this.entries.set(id, { ...entry, state: { ...entry.state, ...change } })
     this.redrawIn(id, false)
+    this.host.changed?.()
   }
 
   /** Swaps one card for a fresh draw, keeping the commit box's focus and caret. */

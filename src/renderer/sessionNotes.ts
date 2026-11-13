@@ -6,9 +6,11 @@ export interface SessionNote {
   tool: string
   /** "3 of 7" while the chat log has an active plan. */
   plan: string
+  /** The task being worked on in that plan. */
+  planNow: string
 }
 
-const EMPTY: SessionNote = { recap: '', tool: '', plan: '' }
+const EMPTY: SessionNote = { recap: '', tool: '', plan: '', planNow: '' }
 
 let notes: ReadonlyMap<string, SessionNote> = new Map()
 let version = 0
@@ -21,7 +23,7 @@ export const sessionNotesVersion = (): number => version
 export function setSessionNote(paneId: string, patch: Partial<SessionNote>): void {
   const current = sessionNote(paneId)
   const next: SessionNote = { ...current, ...patch }
-  if (next.recap === current.recap && next.tool === current.tool && next.plan === current.plan) return
+  if (next.recap === current.recap && next.tool === current.tool && next.plan === current.plan && next.planNow === current.planNow) return
   notes = new Map(notes).set(paneId, next)
   version += 1
 }
