@@ -1,7 +1,8 @@
 import type { SessionState } from './sessionState'
 import type { AgentKind, TabAgent } from './types'
 
-export type SessionsLayout = 'grid' | 'board'
+/** Grid of panes, the Board of cards, or Side panel: one session with Changes, Plan, Checks and Preview beside it. */
+export type SessionsLayout = 'grid' | 'board' | 'panel'
 
 export type BoardColumn = 'needs' | 'working' | 'done' | 'reviewed'
 
@@ -52,7 +53,7 @@ export function matchesBoardFilter(entry: { projectId: string; agent: TabAgent }
   return filter.agent === null || entry.agent === filter.agent
 }
 
-export const isSessionsLayout = (value: unknown): value is SessionsLayout => value === 'grid' || value === 'board'
+export const isSessionsLayout = (value: unknown): value is SessionsLayout => value === 'grid' || value === 'board' || value === 'panel'
 
 /** Whether a drop on `target` from `source` is a valid move: only a Done card can be moved, to Reviewed. */
 export const canDropOn = (source: BoardColumn, target: BoardColumn): boolean => source === 'done' && target === 'reviewed'

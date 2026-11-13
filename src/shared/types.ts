@@ -208,6 +208,10 @@ export interface Settings {
   sidebarWidth: number
   othersCollapsed: boolean
   sessionsLayout: SessionsLayout
+  /** Pane, frame and tone styles (Settings > Appearance). */
+  appearance: import('./appearance').AppearanceSettings
+  /** The always-on-top Mini window. */
+  miniWindow: import('./appearance').MiniWindowSettings
   /** How the sessions grid arranges panes: calm focus (one large pane) or mission control (equal tiles). */
   gridStyle: GridStyle
   /** Calm focus: the session you select takes the large spot. Off, the large session stays put. */

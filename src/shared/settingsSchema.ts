@@ -7,6 +7,7 @@ import { isAgent } from './agents'
 import { sanitizePresets } from './sessionPresets'
 import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews, sanitizeSessionViews } from './chatLog'
 import { isSessionsLayout } from './board'
+import { DEFAULT_APPEARANCE, DEFAULT_MINI_WINDOW, sanitizeAppearance, sanitizeMiniWindow } from './appearance'
 import { DEFAULT_GRID_STYLE, isGridStyle } from './gridStyle'
 import { sanitizeSavedPrompts } from './savedPrompts'
 import { isSidebarSort } from './sidebarModel'
@@ -98,6 +99,8 @@ export const defaultSettings = (): Settings => ({
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   othersCollapsed: false,
   sessionsLayout: 'grid',
+  appearance: DEFAULT_APPEARANCE,
+  miniWindow: DEFAULT_MINI_WINDOW,
   gridStyle: DEFAULT_GRID_STYLE,
   focusMovesSelected: false,
   sessionInfo: { notifications: true, sound: false },
@@ -457,6 +460,8 @@ export function migrateSettings(raw: unknown): Settings {
     sidebarWidth: clampSidebarWidth(raw.sidebarWidth),
     othersCollapsed: raw.othersCollapsed === true,
     sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
+    appearance: sanitizeAppearance(raw.appearance),
+    miniWindow: sanitizeMiniWindow(raw.miniWindow),
     gridStyle: isGridStyle(raw.gridStyle) ? raw.gridStyle : DEFAULT_GRID_STYLE,
     focusMovesSelected: raw.focusMovesSelected === true,
     sessionInfo: {
