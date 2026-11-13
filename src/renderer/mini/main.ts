@@ -131,7 +131,8 @@ function update(next: MiniSnapshot): void {
   document.documentElement.dataset.kind = next.kind
   draw()
 }
-api.onSnapshot(update)
-void api.get().then(value => { if (value) update(value) })
+let pushed = false
+api.onSnapshot(value => { pushed = true; update(value) })
+void api.get().then(value => { if (value && !pushed) update(value) })
 root.addEventListener('keydown', event => { if (event.key === 'Escape' && selected) { event.preventDefault(); select(null) } })
 new ResizeObserver(fitContent).observe(root)

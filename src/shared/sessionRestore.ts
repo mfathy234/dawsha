@@ -31,11 +31,12 @@ export interface RestoreTab {
 
 /**
  * Whether each restored tab resumes. A Claude tab without an id resumes with --continue, the latest
- * conversation in its folder, so only one such tab per folder may do it; the others start fresh rather
- * than all opening the same conversation.
+ * conversation in its folder, so only one such tab per folder may do it, and none where another Claude tab
+ * resumes by id; the others start fresh rather than opening a conversation another pane already shows.
  */
 export function restoreResumeFlags(tabs: readonly RestoreTab[]): boolean[] {
-  const continued = new Set<string>()
+  // A folder where a Claude tab resumes by id: --continue there would most likely open that same conversation.
+  const continued = new Set(tabs.filter((tab) => tab.agent === 'claude' && tab.sessionId).map((tab) => normalizeFolder(tab.folder)))
   return tabs.map((tab) => {
     if (tab.agent === 'shell') return false
     if (tab.sessionId) return true

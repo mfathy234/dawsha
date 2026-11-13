@@ -1413,7 +1413,21 @@ export async function restoreWorkspace(): Promise<void> {
 export function setClaudeSessions(sessions: AppState['sessions']): void {
   const before = matchSignature(matchAll(store.state).claude)
   store.patch({ sessions })
-  if (matchSignature(matchAll(store.state).claude) !== before) persistWorkspace()
+  const matched = matchAll(store.state).claude
+  if (matchSignature(matched) === before) return
+  // Keep each tab's own id in step with its live conversation (it follows /clear), so a match that later
+  // disappears never makes the save fall back to the conversation the tab was first resumed from.
+  store.set((state) => ({
+    ...state,
+    panes: state.panes.map((pane) => ({
+      ...pane,
+      tabs: pane.tabs.map((tab) => {
+        const live = tab.agent === 'claude' ? matched.get(tab.id)?.sessionId : undefined
+        return live && live !== tab.sessionId ? { ...tab, sessionId: live } : tab
+      })
+    }))
+  }))
+  persistWorkspace()
 }
 
 export function setGeminiSessions(geminiSessions: GeminiSession[]): void {

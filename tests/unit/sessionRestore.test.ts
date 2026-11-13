@@ -56,11 +56,12 @@ describe('restoreResumeFlags', () => {
     ])).toEqual([true, false, true, false])
   })
 
-  it('still lets one tab without an id continue beside tabs that resume by id', () => {
+  it('starts a tab without an id fresh in a folder where another tab resumes by id', () => {
     expect(restoreResumeFlags([
+      { agent: 'claude', folder: 'C:/w' },
       { agent: 'claude', sessionId: 'a', folder: 'C:/w' },
-      { agent: 'claude', folder: 'C:/w' }
-    ])).toEqual([true, true])
+      { agent: 'claude', folder: 'C:/other' }
+    ])).toEqual([false, true, true])
   })
 
   it('does not resume Codex, Gemini or shells without an id', () => {

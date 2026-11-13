@@ -36,7 +36,7 @@ function act(action: MiniAction): void {
 
 /** A single bounded publisher, including plans for sessions whose Chat view is not on screen. */
 export function installMiniWindowSync(): void {
-  const gate = createMiniSnapshotGate()
+  let gate = createMiniSnapshotGate()
   let todos: Record<string, readonly TodoEntry[]> = {}
   let reading = false
   let planReadAt = -Infinity
@@ -46,7 +46,8 @@ export function installMiniWindowSync(): void {
   let theme: Record<string, string> = {}
   const tick = (): void => {
     const state = store.state
-    if (!state.ready) return
+    // Nothing to do while the Mini window is closed, so Classic pays nothing for it.
+    if (!state.ready || !visible) return
     const views = derivePanes(state)
     const requests: MiniPlanRequest[] = []
     const sessions = views.map(view => {
@@ -87,7 +88,13 @@ export function installMiniWindowSync(): void {
     if (gate.take(snapshot, Date.now())) api.miniWindow.publish(snapshot)
   }
   api.miniWindow.onAction(act)
-  api.miniWindow.onVisibility(value => { visible = value; generation += 1; planReadAt = -Infinity; tick() })
+  api.miniWindow.onVisibility(value => {
+    visible = value
+    generation += 1
+    planReadAt = -Infinity
+    if (value) gate = createMiniSnapshotGate()
+    tick()
+  })
   api.miniWindow.onBounds(bounds => store.patch({ settings: { ...store.state.settings, miniWindow: { ...store.state.settings.miniWindow, bounds } } }))
   window.setInterval(tick, 250)
   tick()
