@@ -23,6 +23,8 @@
 .frame-sidebar .sidebar .frame-new .split-chevron { flex: none; width: 22px; height: 22px; border-radius: 6px; background: transparent; color: var(--text-3); }
 .frame-sidebar .sidebar .frame-new .split-chevron:hover { background: var(--hover); color: var(--text); }
 
+/* The search shortcut is shown only in the sidebar frame; the top bar has no room for it. */
+#search-button .search-kbd { display: none; }
 .frame-sidebar .sidebar .frame-top > #search-button { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); width: 100%; height: 32px; padding: 0 var(--sp-2); border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--text-2); font-size: var(--fs-13); font-weight: 400; }
 .frame-sidebar .sidebar .frame-top > #search-button .utility-label { display: inline; }
 .frame-sidebar .sidebar .frame-top > #search-button .search-kbd { display: inline; margin-inline-start: auto; color: var(--text-3); font-size: var(--fs-12); }
@@ -68,6 +70,8 @@
 .frame-sidebar .sidebar.rail .frame-top > #search-button .utility-label,
 .frame-sidebar .sidebar.rail .frame-top > #search-button .search-kbd,
 .frame-sidebar .sidebar.rail .frame-nav .nav-label,
+.frame-sidebar .sidebar.rail .frame-nav .nav-button[aria-current='page'] .nav-label,
+.frame-sidebar .sidebar.rail .frame-foot .topbar-limits,
 .frame-sidebar .sidebar.rail .frame-bottom #settings-button .utility-label,
 .frame-sidebar .sidebar.rail .frame-top > .topbar-view,
 .frame-sidebar .sidebar.rail .frame-bottom > .crew-strip { display: none; }

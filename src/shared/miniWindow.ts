@@ -3,6 +3,7 @@ import type { TodoEntry } from './chatCards'
 import type { CrewIdentity } from './crew'
 import { detectPermissionPrompt, parsePermissionDetail, permissionPromptText } from './permissionPrompt'
 import { cleanText } from './remoteChat'
+import { outputLines } from './recap'
 import { needsAsk } from './sessionLine'
 import { sessionState, SESSION_STATE_LABELS, type SessionStateInput, type SessionState } from './sessionState'
 import type { TabAgent } from './types'
@@ -103,7 +104,7 @@ export function miniSession(input: MiniSessionInput): MiniSession {
   return {
     paneId: input.paneId, agent: input.agent, identity: input.identity ?? null,
     title: cleanText(input.title, 240), project: cleanText(input.project, 160), state, line: cleanText(line, 320),
-    tail: input.tail.trimEnd().split('\n').filter(line => line.trim()).slice(-3).map(line => cleanText(line, 600)),
+    tail: outputLines(input.tail, 3).map(line => cleanText(line, 600)),
     permission: waiting ? { command: cleanText(detail.target, 2000), prompt: input.tail.slice(-12000) } : null,
     plan: progress && progress.total > 0 ? { ...progress, items } : null
   }
