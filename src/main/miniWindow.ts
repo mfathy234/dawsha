@@ -4,6 +4,8 @@ import { MINI_IPC, isMiniAction, miniBounds, miniContentBounds, type MiniSnapsho
 import { isPrivateRemoteBuild } from '../shared/remoteBuild'
 import type { SettingsStore } from './settingsStore'
 import { MiniPlans } from './miniPlans'
+import { onAttentionCount } from './desktop'
+import { setMiniWindowLaunchHandler } from './desktopLaunch'
 import type { MiniPlanRequest } from '../shared/miniWindow'
 
 /** Owns native lifecycle only. Session state and approval execution belong to the main renderer. */
@@ -132,6 +134,11 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
   main.once('closed', () => app.quit())
   tray.on('click', toggle)
   updateMenu()
+  // The taskbar jump list's Mini window entry, and the tray tooltip saying how many sessions wait for you.
+  setMiniWindowLaunchHandler(open)
+  const stopAttention = onAttentionCount((count) => {
+    if (!tray.isDestroyed()) tray.setToolTip(count > 0 ? `Dawsha, ${count} waiting for you` : 'Dawsha')
+  })
   return () => {
     if (stopping) return
     persist()
@@ -144,6 +151,8 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
     ipcMain.removeListener(MINI_IPC.resize, onResize)
     ipcMain.removeHandler(MINI_IPC.get)
     ipcMain.removeHandler(MINI_IPC.plans)
+    stopAttention()
+    setMiniWindowLaunchHandler(() => undefined)
     plans.clear()
     mini?.destroy()
     mini = null

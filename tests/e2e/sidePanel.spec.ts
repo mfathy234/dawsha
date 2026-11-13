@@ -41,15 +41,14 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
     await expect(panel.getByText('No checks ran after the last reply.')).toBeVisible()
 
     const handle = page.getByRole('separator', { name: 'Resize session panel' })
-    const before = (await panel.boundingBox())!.width
+    // Shrink first: on a 1024px window the default width is already the most the session leaves room for.
     await handle.focus()
-    await page.keyboard.press('ArrowLeft')
-    await page.keyboard.press('ArrowLeft')
-    await expect.poll(async () => (await panel.boundingBox())!.width).toBeGreaterThan(before + 15)
     await page.keyboard.press('Home')
     await expect.poll(async () => (await panel.boundingBox())!.width).toBeLessThanOrEqual(281)
+    const narrowest = (await panel.boundingBox())!.width
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')
+    await expect.poll(async () => (await panel.boundingBox())!.width).toBeGreaterThan(narrowest + 15)
     width = Math.round((await panel.boundingBox())!.width)
     await expect.poll(() => readSettings(sandbox.userData).sidePanel?.width).toBeGreaterThan(285)
     await expect.poll(() => readSettings(sandbox.userData).sidePanel?.tab).toBe('checks')
@@ -76,7 +75,10 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
     await expect(panel.getByRole('tab', { name: /^Checks/ })).toHaveAttribute('aria-selected', 'true')
     await expect.poll(async () => Math.abs((await panel.boundingBox())!.width - width)).toBeLessThan(4)
 
-    await panel.getByRole('button', { name: 'Back to grid' }).click()
+    // Narrow windows (CI is 1024px) hide the panel's Back to grid link; the Grid switch is always there.
+    const back = panel.getByRole('button', { name: 'Back to grid' })
+    if (await back.isVisible()) await back.click()
+    else await page.locator('#layout-grid').click()
     await expect(page.locator('#layout-grid')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.side-panel')).toBeHidden()
     await expect(page.locator('.pane:visible')).toHaveCount(2)

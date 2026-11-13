@@ -46,6 +46,8 @@ export class SidePanelComponent {
   private readonly rail = h('button', { class: 'side-panel-rail', type: 'button', 'aria-label': 'Show the session panel', title: 'Show the session panel', onClick: () => savePanel({ open: true }) }, icon(ICONS.chevronLeft))
   private readonly full = h('div', { class: 'side-panel-full' }, this.tabs, this.body)
   private dragWidth: number | null = null
+  /** The width the last key press asked for, so quick presses add up before the panel re-renders. */
+  private keyWidth: number | null = null
   private drag: { pointerId: number; x: number; width: number } | null = null
   private signature = ''
   private bodyKey = ''
@@ -57,6 +59,7 @@ export class SidePanelComponent {
     this.handle.addEventListener('pointerup', (event) => this.onUp(event))
     this.handle.addEventListener('pointercancel', (event) => this.onUp(event))
     this.handle.addEventListener('keydown', (event) => this.onKey(event))
+    this.handle.addEventListener('blur', () => { this.keyWidth = null })
   }
 
   update(state: AppState, view: PaneView | null, shown: boolean): void {
@@ -200,7 +203,7 @@ export class SidePanelComponent {
   }
 
   private onKey(event: KeyboardEvent): void {
-    const now = this.el.getBoundingClientRect().width
+    const now = this.keyWidth ?? this.el.getBoundingClientRect().width
     const step = event.shiftKey ? KEY_STEP_BIG : KEY_STEP
     let width = now
     if (event.key === 'ArrowLeft') width += step
@@ -210,6 +213,7 @@ export class SidePanelComponent {
     else return
     event.preventDefault()
     event.stopPropagation()
-    savePanel({ width: fitSidePanelWidth(width, this.stage().clientWidth || window.innerWidth) })
+    this.keyWidth = fitSidePanelWidth(width, this.stage().clientWidth || window.innerWidth)
+    savePanel({ width: this.keyWidth })
   }
 }
