@@ -952,7 +952,15 @@ export function showView(view: AppState['view']): void {
   store.patch({ view })
 }
 
+let settingsReturnView: AppState['view'] = 'grid'
+
+/** Leaves Settings for the view it was opened from (Sessions when that is unknown). */
+export function leaveSettings(toSessions = false): void {
+  showView(toSessions ? 'grid' : settingsReturnView)
+}
+
 export function openSettings(section?: AppState['settingsSection']): void {
+  if (store.state.view !== 'settings') settingsReturnView = store.state.view
   store.set((s) => ({
     ...s,
     view: 'settings',

@@ -596,6 +596,7 @@ export class TopBarComponent {
     this.limits.hidden = model.hidden
     this.limits.classList.toggle('stale', model.stale)
     this.limits.classList.toggle('compact', this.narrow)
+    this.limits.classList.toggle('limits-empty', model.agents.length === 0)
     if (model.hidden) return
     this.limits.setAttribute('aria-label', model.ariaLabel)
     this.limits.title = model.title

@@ -105,7 +105,8 @@ test('Use it sets all three, and Back to Classic puts them back', async () => {
     await expect(page.locator('.app')).toHaveClass(/tone-warm/)
     await expect(page.locator('.app')).toHaveClass(/frame-sidebar/)
     await expect.poll(() => settingsOf(sandbox).appearance).toEqual({ panes: 'quiet', frame: 'sidebar', tone: 'warm' })
-    await expect(page.locator('#appearance-use-desktop')).toBeDisabled()
+    await expect(page.locator('#appearance-desktop-on')).toHaveText('On')
+    await expect(page.locator('#appearance-use-desktop')).toHaveCount(0)
     await expect(page.getByRole('group', { name: 'Panes', exact: true }).getByRole('button', { name: 'Quiet' })).toHaveAttribute('aria-pressed', 'true')
 
     await page.locator('#appearance-back-classic').click()
