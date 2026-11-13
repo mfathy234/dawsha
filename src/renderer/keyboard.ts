@@ -41,6 +41,8 @@ function zoomDelta(event: KeyboardEvent): number | 'reset' | null {
 const inTerminal = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.xterm') != null
 
 function escapeShouldRestore(event: KeyboardEvent): boolean {
+  // Esc cancels a tab drag first, and never leaves the Side panel layout (that has its own Back to grid).
+  if (document.body.classList.contains('dragging-ui') || store.state.settings.sessionsLayout === 'panel') return false
   return store.state.maximizedId !== null && !inTerminal(event)
 }
 

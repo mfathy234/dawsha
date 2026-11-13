@@ -873,6 +873,19 @@ button {
   overflow-y: auto;
 }
 
+/* Calm focus with many sessions: the side column scrolls and the large pane stays in view beside it. */
+.grid.side-scroll {
+  overflow-y: auto;
+  align-content: start;
+}
+
+.grid.side-scroll > .focus-sticky {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: var(--grid-h);
+}
+
 
 /* Selected row: raised surface plus a 1px ring. Add .is-selected (or aria-selected="true") to a row; --sel-ring is the ring on its own. */
 .is-selected,
@@ -1052,87 +1065,6 @@ button {
 .term-host .xterm {
   height: 100%;
   padding: var(--sp-3) var(--sp-4);
-}
-
-.pane-strip {
-  height: 22px;
-  flex: none;
-  display: flex;
-  align-items: stretch;
-  gap: 2px;
-  padding: 0 var(--s-2);
-  border-bottom: 1px solid var(--border);
-  background: var(--chrome);
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-
-.pane-strip::-webkit-scrollbar {
-  display: none;
-}
-
-/* A session entry: its label shrinks and ends in an ellipsis, the close X stays visible next to it. */
-.strip-tab {
-  flex: 0 1 auto;
-  min-width: 72px;
-  max-width: 240px;
-  display: flex;
-  align-items: center;
-  border-radius: var(--r-1) var(--r-1) 0 0;
-  color: var(--muted);
-}
-
-.strip-tab.selected {
-  flex-shrink: 0;
-  background: var(--pane);
-  font-weight: var(--w-semi);
-}
-
-.strip-label {
-  min-width: 0;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-  padding: 0 2px 0 var(--sp-2);
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.strip-index {
-  flex: none;
-}
-
-.strip-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.strip-status {
-  flex: none;
-  font-weight: var(--w-regular);
-  letter-spacing: 0;
-  text-transform: none;
-  white-space: pre;
-}
-
-.strip-close {
-  width: 16px;
-  height: 16px;
-  margin-right: 2px;
-  opacity: 0.6;
-}
-
-.strip-tab:hover .strip-close,
-.strip-tab.selected .strip-close,
-.strip-close:focus-visible {
-  opacity: 1;
 }
 
 .empty {
@@ -5694,13 +5626,8 @@ body.dragging-ui {
 
 .strip-label {
   font-size: var(--fs-1);
-  font-weight: var(--w-medium);
   letter-spacing: 0;
   text-transform: none;
-}
-
-.strip-tab.selected {
-  color: var(--text);
 }
 
 /* Status bar and header shed details by priority as the pane narrows. */

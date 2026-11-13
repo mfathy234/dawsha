@@ -37,7 +37,7 @@ import { chargeBar } from './chargeBar'
 import type { TabAgent } from '../../shared/types'
 import { h, icon, leave, placeNearAnchor } from '../dom'
 import { store, type AppState } from '../state'
-import { bind, formatShortcut } from '../../shared/shortcuts'
+import { bind, formatShortcut, parseShortcut } from '../../shared/shortcuts'
 import { NotificationBell } from './notificationBell'
 import { AVATAR_LABELS, compareAvatarStates, stripSummary, type AvatarState } from '../../shared/crewLive'
 import { acknowledgeRun, liveRuns } from '../crewLive'
@@ -56,6 +56,20 @@ const NARROW_QUERY = '(max-width: 1099px)'
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
 const AGENTS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+L'))
 const FILES_KEY_HINT = formatShortcut(bind('Ctrl+Shift+E'))
+
+/** The parts of the top bar that the Sidebar frame hosts in the sidebar. */
+export interface FrameParts {
+  brand: HTMLElement
+  bell: HTMLElement
+  newSession: HTMLElement
+  search: HTMLElement
+  nav: HTMLElement[]
+  settings: HTMLElement
+  limits: HTMLElement
+  updatePill: HTMLElement
+  view: HTMLElement
+  crew: HTMLElement
+}
 
 export class TopBarComponent {
   readonly el: HTMLElement
@@ -84,8 +98,10 @@ export class TopBarComponent {
   private readonly bell = new NotificationBell()
   private readonly search = h('button', { class: 'btn ghost topbar-tool', type: 'button', id: 'search-button', 'aria-label': 'Search', title: 'Search', onClick: () => openPalette() },
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.search)),
-    h('span', { class: 'utility-label' }, 'Search')
+    h('span', { class: 'utility-label' }, 'Search'),
+    h('span', { class: 'search-kbd', 'aria-hidden': 'true' })
   )
+  private readonly searchKbd = this.search.querySelector<HTMLElement>('.search-kbd')!
   readonly themeButton = h(
     'button',
     { class: 'btn ghost topbar-tool', type: 'button', id: 'theme-button', 'aria-label': 'Theme', title: 'Theme', 'aria-haspopup': 'dialog', onClick: () => toggleThemePicker() },
@@ -113,6 +129,8 @@ export class TopBarComponent {
   get layoutsButton(): HTMLElement {
     return this.viewMenu.layoutsAnchor
   }
+  private readonly nav = h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' })
+  private readonly tools = h('div', { class: 'topbar-tools' })
   private moreMenu: HTMLElement | null = null
   private moreItems: Record<MoreView, HTMLElement> | null = null
   private agentUpdates = false
@@ -170,32 +188,35 @@ export class TopBarComponent {
       if (this.settings.getAttribute('aria-pressed') === 'true') showView('grid')
       else openSettings()
     })
-    this.el = h(
-      'header',
-      { class: 'topbar' },
-      this.more,
-      h('nav', { class: 'topbar-nav', 'aria-label': 'Main views' },
-        this.sessions,
-        this.background,
-        this.files,
-        this.work,
-        this.skills
-      ),
-      this.viewMenu.el,
-      this.needsChip,
-      this.crewStrip,
-      this.updatePill,
-      h('span', { class: 'spacer' }),
-      this.limits,
-      h('div', { class: 'topbar-tools' },
-        this.search,
-        this.bell.el,
-        this.settings
-      ),
-      this.newSession
-    )
+    this.nav.append(this.sessions, this.background, this.files, this.work, this.skills)
+    this.tools.append(this.search, this.bell.el, this.settings)
+    this.el = h('header', { class: 'topbar' })
+    this.layOut()
     this.narrowQuery.addEventListener('change', () => this.onNarrowChange())
     this.onNarrowChange()
+  }
+
+  /** Everything the Sidebar frame moves out of the top bar. The elements keep their ids, menus and handlers. */
+  get frameParts(): FrameParts {
+    return {
+      brand: this.more,
+      bell: this.bell.el,
+      newSession: this.newSession,
+      search: this.search,
+      nav: [this.sessions, this.background, this.files, this.work, this.skills],
+      settings: this.settings,
+      limits: this.limits,
+      updatePill: this.updatePill,
+      view: this.viewMenu.el,
+      crew: this.crewStrip
+    }
+  }
+
+  /** Puts every part back in the bar. The Sidebar frame calls this when it lets go of them. */
+  layOut(): void {
+    this.nav.replaceChildren(this.sessions, this.background, this.files, this.work, this.skills)
+    this.tools.replaceChildren(this.search, this.bell.el, this.settings)
+    this.el.replaceChildren(this.more, this.nav, this.viewMenu.el, this.needsChip, this.crewStrip, this.updatePill, h('span', { class: 'spacer' }), this.limits, this.tools, this.newSession)
   }
 
   private get narrow(): boolean {
@@ -220,6 +241,7 @@ export class TopBarComponent {
       else button.removeAttribute('aria-current')
     }
     this.updateCrewStrip(state)
+    this.searchKbd.textContent = formatShortcut(parseShortcut(state.settings.paletteShortcut) ?? bind('Ctrl+K'))
     this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
     this.agentUpdates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
     this.updateMore(state)

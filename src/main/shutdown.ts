@@ -23,6 +23,13 @@ export interface ShutdownDeps {
 
 export type PhaseResult = 'done' | 'timeout' | 'error'
 
+/** Start every service cleanup even if another rejects or never settles. The caller bounds the whole phase. */
+export async function stopAllServices(steps: ReadonlyArray<readonly [string, () => void | Promise<void>]>, log: QuitLog): Promise<void> {
+  await Promise.all(steps.map(async ([name, stop]) => {
+    try { await stop() } catch (error) { log(`${name} stop failed: ${(error as Error).message}`) }
+  }))
+}
+
 export function exitProcess(code: number, deps: Pick<ShutdownDeps, 'exit' | 'log'>, platform = process.platform, kill = process.kill): void {
   deps.log(`terminating the process (code ${code})`)
   // Windows needs Electron to release Chromium's children and the launcher's pipes.

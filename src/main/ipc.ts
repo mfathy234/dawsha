@@ -68,6 +68,7 @@ import type { StatusWatcher } from './statusWatcher'
 import { exportTranscript } from './transcriptExport'
 import { revealHandoff, writeHandoffTranscript } from './handoffTranscript'
 import { exportSettings, readSettingsImport } from './settingsTransfer'
+import { refreshJumpList } from './desktopLaunch'
 import { exportTimeline, sessionTimeline } from './sessionTimeline'
 import { searchTimelines } from './timelineSearch'
 import type { TimelineSearchRequest } from '../shared/timelineSearch'
@@ -147,6 +148,7 @@ export function registerIpc(
   })
   ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => {
     const updated = settings.update(patch)
+    if (patch.projects || patch.recentProjectIds) refreshJumpList(updated)
     return updated
   })
   ipcMain.handle(IPC.settingsExport, () => exportSettings(getWindow(), settings.get()))
@@ -379,7 +381,7 @@ export function registerIpc(
     return root && isInstructionName(name) ? openFile(root, { path: name }) : undefined
   })
   ipcMain.on(IPC.notify, (_event, request: NotifyRequest) => notifyUser(getWindow, request, onNotifyClick))
-  ipcMain.on(IPC.attentionBadge, (_event, count: unknown) => applyAttentionBadge(getWindow(), count))
+  ipcMain.on(IPC.attentionBadge, (_event, count: unknown, waitingIds: unknown) => applyAttentionBadge(getWindow(), count, waitingIds))
   ipcMain.handle(IPC.bridgePreview, () => bridgePreview(locations()))
   ipcMain.handle(IPC.bridgeStatus, () => bridgeStatus(locations()))
   ipcMain.handle(IPC.bridgeInstall, () => installBridge(locations()))
@@ -418,7 +420,16 @@ export function registerIpc(
       if (typeof id === 'string' && typeof title === 'string') recordings.setTitle(id, title)
     })
   }
-  ipcMain.handle(IPC.ptySpawn, (_event, request: SpawnRequest) => ptys.spawn(request))
+  ipcMain.handle(IPC.ptySpawn, async (_event, request: SpawnRequest) => {
+    const result = await ptys.spawn(request)
+    const current = settings.get()
+    if (result.ok && request.projectId && current.projects.some(project => project.id === request.projectId)) {
+      try {
+        refreshJumpList(settings.update({ recentProjectIds: [request.projectId, ...current.recentProjectIds.filter(id => id !== request.projectId)].slice(0, 5) }))
+      } catch { /* Desktop history must not turn a running terminal into a failed spawn. */ }
+    }
+    return result
+  })
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))
   ipcMain.on(IPC.ptyResize, (_event, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))
   ipcMain.handle(IPC.ptyKill, (_event, id: string) => ptys.kill(id))

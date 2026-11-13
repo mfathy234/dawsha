@@ -5,6 +5,39 @@ import { describe, expect, it } from 'vitest'
 import { exportSkill, exportSkills, isSafeExportDestination, listSkills, resolveSkill } from '../../src/main/skillInventory'
 
 describe('skill inventory', () => {
+  // Needs a case-sensitive file system: Windows and macOS (APFS by default) treat Foo and foo as one folder.
+  it.skipIf(process.platform === 'win32' || process.platform === 'darwin')('gives case-distinct POSIX skills different IDs', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dawsha-case-skills-'))
+    for (const name of ['Foo', 'foo']) {
+      const folder = join(root, '.claude', 'skills', name)
+      mkdirSync(folder, { recursive: true })
+      writeFileSync(join(folder, 'SKILL.md'), `# ${name}`)
+    }
+    const skills = listSkills({ claude: join(root, '.claude'), codex: join(root, '.codex'), gemini: join(root, '.gemini'), shared: join(root, '.agents'), projects: [] })
+    expect(skills).toHaveLength(2)
+    expect(new Set(skills.map(skill => skill.id)).size).toBe(2)
+  })
+  it('includes linked project skills and refuses bulk export through destination junctions', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dawsha-linked-project-'))
+    const project = join(root, 'project')
+    const skillRoot = join(project, '.claude', 'skills')
+    const source = join(root, 'source')
+    const destination = join(root, 'export')
+    const outside = join(root, 'outside')
+    for (const folder of [skillRoot, source, destination, outside]) mkdirSync(folder, { recursive: true })
+    writeFileSync(join(source, 'SKILL.md'), '# Linked project')
+    symlinkSync(source, join(skillRoot, 'Linked'), 'junction')
+    symlinkSync(skillRoot, join(skillRoot, 'Loop'), 'junction')
+    const locations = { claude: join(root, '.claude'), codex: join(root, '.codex'), gemini: join(root, '.gemini'), shared: join(root, '.agents'), projects: [project] }
+    const skills = listSkills(locations)
+    expect(skills).toHaveLength(1)
+    expect(skills[0]).toMatchObject({ linked: true, scope: 'project', linkTarget: realpathSync.native(source) })
+    symlinkSync(outside, join(destination, 'dawsha-export'), 'junction')
+    const result = exportSkills(locations, [skills[0].id], destination)
+    expect(result.exported).toBe(0)
+    expect(result.skipped[0].reason).toMatch(/link/)
+    expect(existsSync(join(outside, 'claude'))).toBe(false)
+  })
   it('finds user and project skills by agent and deduplicates shared roots', () => {
     const root = mkdtempSync(join(tmpdir(), 'dawsha-skills-'))
     const claude = join(root, '.claude')

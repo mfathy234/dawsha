@@ -1,26 +1,27 @@
 import { forgetStateClocks } from '../stateClock'
 import { forgetSessionNotes } from '../sessionNotes'
 import { forgetTimelineLogs } from '../timelineLog'
-import { closePane, focusPane, largeOf, openQuickPick, setSplits, showView } from '../actions'
+import { largeOf, openQuickPick, setSplits, showView } from '../actions'
 import { OthersPanelComponent } from './othersPanel'
 import { derivePanes, type PaneView } from '../derive'
-import { clear, h, iconButton } from '../dom'
-import { ICONS } from '../icons'
+import { clear, h } from '../dom'
 import { pairOf } from '../../shared/compare'
-import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
+import { sessionState } from '../../shared/sessionState'
 import { layoutForCount, type GridLayout } from '../../shared/layout'
-import { focusLayout, largeUnitIndex, promotedRows, quietPaneIds, tileLayout } from '../../shared/gridStyle'
+import { focusLayout, largeUnitIndex, promotedRows, quietPaneIds, SIDE_PANE_MIN_HEIGHT, sideColumnOverflows, tileLayout } from '../../shared/gridStyle'
 import { equalSizes, resolveSplit, shapeKey, withSplit } from '../../shared/splits'
 import type { CompareLink, GridSplit, GridSplits } from '../../shared/types'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
-import { agentMark } from './agentMark'
-import { crewSignature, identityMark } from './crewAvatar'
 import { ComparePairComponent } from './comparePair'
 import { GridGutters } from './gutters'
 import { PaneComponent } from './pane'
+import { SessionTabs } from './sessionTabs'
+import { SidePanelComponent } from './sidePanel'
 
 const MIN_ROW_HEIGHT = '340px'
+const GRID_GAP = 12
+const GRID_PADDING = 12
 const PINNED_WIDTH = '32%'
 
 type Unit =
@@ -49,20 +50,27 @@ export class GridComponent {
   private readonly panes = new Map<string, PaneComponent>()
   private readonly pairs = new Map<string, ComparePairComponent>()
   private readonly grid = h('div', { class: 'grid' })
-  private readonly strip = h('div', { class: 'pane-strip', role: 'tablist', 'aria-label': 'Sessions' })
+  private readonly tabs = new SessionTabs()
   private readonly empty = h('div', { class: 'empty' })
   private readonly others = new OthersPanelComponent()
   private readonly stage = h('div', { class: 'grid-stage' }, this.grid, this.others.el)
+  private readonly sidePanel = new SidePanelComponent(() => this.stage)
   private readonly bg = h('div', { class: 'bg-layer', 'aria-hidden': 'true' })
   private readonly gutters = new GridGutters((axis, sizes) => this.resize(axis, sizes))
   private shape = { cols: 1, rows: 1, variant: '' }
   private lastFocused: string | null = null
-  private stripSignature = ''
   private splits: GridSplits = {}
+  private panelMode = false
+  private sideScroll = false
+  private lastState: AppState | null = null
 
   constructor() {
-    this.el = h('div', { class: 'grid-area' }, this.bg, this.strip, this.stage, this.gutters.el, this.empty)
-    new ResizeObserver(() => this.gutters.position()).observe(this.grid)
+    this.stage.append(this.sidePanel.el)
+    this.el = h('div', { class: 'grid-area' }, this.bg, this.tabs.el, this.stage, this.gutters.el, this.empty)
+    new ResizeObserver(() => {
+      this.gutters.position()
+      if (this.lastState && this.sideScroll !== this.sideColumnScrolls(this.lastState)) this.update(this.lastState)
+    }).observe(this.grid)
   }
 
   private resize(axis: 'cols' | 'rows', sizes: number[]): void {
@@ -70,6 +78,7 @@ export class GridComponent {
   }
 
   update(state: AppState): void {
+    this.lastState = state
     const views = derivePanes(state)
     // Unhide before panes mount so terminals measure a visible grid. When empty, a visible grid
     // would take half the height and push the empty-state message below center.
@@ -77,19 +86,23 @@ export class GridComponent {
     const units = unitsOf(views)
     this.syncPanes(views)
     const elements = this.syncUnits(units)
-    const maximized = state.maximizedId !== null && views.some((v) => v.pane.id === state.maximizedId)
+    const panel = state.view === 'grid' && state.settings.sessionsLayout === 'panel'
+    const shownId = panel ? (views.some((v) => v.pane.id === state.focusedId) ? state.focusedId : (views[0]?.pane.id ?? null)) : state.maximizedId
+    this.panelMode = panel
+    const maximized = shownId !== null && views.some((v) => v.pane.id === shownId)
     this.splits = state.splits
     // The large unit is not always the focused one: see resolveLargePane.
     const focusUnit = largeUnitIndex(units.map(paneIds), largeOf(state))
-    this.layout(units, elements, views, state, maximized ? state.maximizedId : null, focusUnit)
+    this.layout(units, elements, views, state, maximized ? shownId : null, focusUnit)
     const quiet = this.quietPanes(units, state, focusUnit, maximized)
     for (const view of views) {
-      const isMax = maximized && view.pane.id === state.maximizedId
+      const isMax = maximized && view.pane.id === shownId
       this.panes.get(view.pane.id)?.update(view, view.pane.id === state.focusedId, isMax, quiet.has(view.pane.id))
     }
-    this.updateStrip(views, state, maximized)
+    this.tabs.update(views, state, maximized, shownId)
+    this.sidePanel.update(state, views.find((view) => view.pane.id === shownId) ?? null, panel && maximized)
     const visible = new Set(views.filter((view) => this.panes.get(view.pane.id)?.el.hidden === false).map((view) => view.pane.id))
-    this.others.update(state, views, visible, maximized)
+    this.others.update(state, views, visible, maximized && !panel)
     this.updateEmpty(state, views.length)
     this.restoreFocus(state)
   }
@@ -162,15 +175,21 @@ export class GridComponent {
     const layout = this.planLayout(units.length, tiles, focusUnit)
     const split = tiles ? { cols: equalSizes(layout.cols), rows: equalSizes(layout.rows) } : this.focusSplit(layout, units, views, focusUnit)
     const track = (sizes: number[]): string => sizes.map((size) => `minmax(0, ${size}fr)`).join(' ')
+    const sideTrack = (sizes: number[]): string => sizes.map((size) => `minmax(${SIDE_PANE_MIN_HEIGHT}px, ${size}fr)`).join(' ')
+    const focusStyle = units.length > 1 && !tiles
+    this.sideScroll = focusStyle && this.sideColumnScrolls(state)
     style.gridTemplateColumns = track(split.cols)
-    style.gridTemplateRows = layout.scrolls ? `repeat(${layout.rows}, minmax(${MIN_ROW_HEIGHT}, 1fr))` : track(split.rows)
+    style.gridTemplateRows = layout.scrolls ? `repeat(${layout.rows}, minmax(${MIN_ROW_HEIGHT}, 1fr))` : focusStyle ? sideTrack(split.rows) : track(split.rows)
+    style.setProperty('--grid-h', `${Math.max(0, this.grid.clientHeight - GRID_PADDING * 2)}px`)
     this.grid.classList.toggle('scrolls', layout.scrolls)
+    this.grid.classList.toggle('side-scroll', this.sideScroll)
     const spanned = new Set<number>()
     elements.forEach((element, index) => {
       const cell = layout.cells[index]
       if (!cell) return
       element.hidden = false
       element.classList.remove('solo')
+      element.classList.toggle('focus-sticky', this.sideScroll && index === focusUnit)
       element.style.gridColumn = `${cell.col} / span ${cell.colSpan}`
       element.style.gridRow = `${cell.row} / span ${cell.rowSpan}`
       for (let boundary = cell.col; boundary < cell.col + cell.colSpan - 1; boundary += 1) spanned.add(boundary - 1)
@@ -178,7 +197,7 @@ export class GridComponent {
     this.shape = { cols: layout.cols, rows: layout.rows, variant: layout.variant }
     this.gutters.update({
       grid: this.grid,
-      enabled: !layout.scrolls && units.length > 1 && !tiles,
+      enabled: !layout.scrolls && !this.sideScroll && units.length > 1 && !tiles,
       cols: layout.cols,
       rows: layout.rows,
       rowsFrom: layout.rowsFrom,
@@ -186,6 +205,13 @@ export class GridComponent {
       sizes: split,
       spanned
     })
+  }
+
+  /** In Calm focus the side column keeps each pane at least its minimum height and scrolls when they do not all fit. */
+  private sideColumnScrolls(state: AppState): boolean {
+    if (state.settings.gridStyle !== 'focus' || this.grid.classList.contains('maximized')) return false
+    const siblings = this.grid.children.length - 1
+    return sideColumnOverflows(siblings, this.grid.clientHeight, GRID_GAP, GRID_PADDING)
   }
 
   private planLayout(count: number, tiles: boolean, focusUnit: number): GridLayout {
@@ -216,7 +242,7 @@ export class GridComponent {
 
   private layoutMaximized(units: Unit[], elements: HTMLElement[], views: PaneView[], maximizedId: string): void {
     const style = this.grid.style
-    const pinnedId = views.find((view) => view.pane.pinned === true)?.pane.id
+    const pinnedId = this.panelMode ? undefined : views.find((view) => view.pane.pinned === true)?.pane.id
     const sideIndex = pinnedId
       ? units.findIndex((unit) => paneIds(unit).includes(pinnedId) && !paneIds(unit).includes(maximizedId))
       : -1
@@ -228,6 +254,8 @@ export class GridComponent {
       component.el.hidden = view.pane.id !== maximizedId && !side
       component.el.classList.toggle('pinned-side', side)
     }
+    this.sideScroll = false
+    this.grid.classList.remove('side-scroll')
     this.grid.classList.toggle('with-pinned', sideIndex >= 0)
     style.gridTemplateColumns = sideIndex >= 0 ? `minmax(0, 1fr) ${PINNED_WIDTH}` : 'minmax(0, 1fr)'
     style.gridTemplateRows = 'minmax(0, 1fr)'
@@ -237,6 +265,7 @@ export class GridComponent {
       const element = elements[index]
       const side = index === sideIndex
       element.hidden = !contains && !side
+      element.classList.remove('focus-sticky')
       element.classList.toggle('solo', contains && unit.kind === 'pair')
       element.style.gridColumn = side ? '2' : '1'
       element.style.gridRow = '1'
@@ -251,42 +280,6 @@ export class GridComponent {
       sizes: { cols: [1], rows: [1] },
       spanned: new Set()
     })
-  }
-
-  private updateStrip(views: PaneView[], state: AppState, maximized: boolean): void {
-    this.strip.hidden = !maximized
-    if (!maximized) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status, v.agent, v.attention, crewSignature(v)]), state.focusedId])
-    if (signature === this.stripSignature) return
-    this.stripSignature = signature
-    clear(this.strip)
-    for (const view of views) this.strip.append(this.stripTab(view, view.pane.id === state.maximizedId))
-    this.strip.querySelector('.strip-tab.selected')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-  }
-
-  private stripTab(view: PaneView, selected: boolean): HTMLElement {
-    const name = view.title
-    // The same words as the sidebar, so a session that needs you says so in the focus view too.
-    const stateName = sessionState({ status: view.status, attention: view.attention })
-    const stateLabel = SESSION_STATE_LABELS[stateName]
-    const status = h('span', { class: `strip-status state-${stateName}` }, ` · ${stateLabel}`)
-    const label = h(
-      'button',
-      {
-        class: 'strip-label',
-        type: 'button',
-        role: 'tab',
-        'aria-selected': selected ? 'true' : 'false',
-        title: `${name} · ${stateLabel}`,
-        onClick: () => focusPane(view.pane.id)
-      },
-      h('span', { class: 'strip-index' }, `${view.index + 1}`),
-      identityMark(view, 18),
-      h('bdi', { class: 'strip-name', dir: 'auto' }, name),
-      status
-    )
-    const close = iconButton(`Close ${name}`, ICONS.closeSmall, () => void closePane(view.pane.id), 'strip-close')
-    return h('div', { class: `strip-tab${selected ? ' selected' : ''}`, 'data-pane-id': view.pane.id }, label, close)
   }
 
   private updateEmpty(state: AppState, count: number): void {

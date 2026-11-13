@@ -107,6 +107,8 @@ export interface Workspace {
   focusedIndex: number
   /** Index of the large pane in Calm focus; absent in older saves. */
   largeIndex?: number
+  /** Index of the pane shown on its own (the focus view or the Side panel), so a restart opens it again; absent in older saves. */
+  maximizedIndex?: number
   splits?: GridSplits
 }
 
@@ -186,6 +188,8 @@ export interface SessionInfoSettings {
 export interface Settings {
   version: 2
   projects: Project[]
+  /** Most recently used projects for desktop launch actions, local to this PC. */
+  recentProjectIds: string[]
   spendLimits: Record<string, { amountUsd: number; period: 'day' | 'week' }>
   /** Per project: the run commands to run after each reply that changed files. */
   turnChecks: import('./turnChecks').TurnChecksSettings
@@ -208,6 +212,12 @@ export interface Settings {
   sidebarWidth: number
   othersCollapsed: boolean
   sessionsLayout: SessionsLayout
+  /** Pane, frame and tone styles (Settings > Appearance). */
+  appearance: import('./appearance').AppearanceSettings
+  /** The always-on-top Mini window. */
+  miniWindow: import('./appearance').MiniWindowSettings
+  /** The Side panel layout: whether the panel is open, how wide, and its tab. */
+  sidePanel: import('./sidePanel').SidePanelSettings
   /** How the sessions grid arranges panes: calm focus (one large pane) or mission control (equal tiles). */
   gridStyle: GridStyle
   /** Calm focus: the session you select takes the large spot. Off, the large session stays put. */
@@ -409,6 +419,8 @@ export interface BridgeStatus {
 export type BridgeResult = { ok: true; note?: string } | { ok: false; error: string }
 
 export interface NotifyRequest {
+  /** Waiting sessions flash through the badge transition, independently of notifications. */
+  flash?: boolean
   paneId: string
   title: string
   body: string

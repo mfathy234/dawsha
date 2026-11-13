@@ -23,17 +23,21 @@ import { sessionNotesVersion } from '../sessionNotes'
 import { openFolderInFiles } from '../files/filesActions'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
+import type { SidebarFrame } from './sidebarFrame'
 import { tagMenuItems } from './sessionTagUi'
 import { promptDialog } from './dialogs'
 import './sidebar.css'
 import './sidebarRoomy.css'
 import { needsCount } from '../../shared/attentionBadge'
+import { waitingSessionIds } from '../../shared/waitingAttention'
 import { syncAttentionBadge } from '../attentionBadge'
 import type { AppState } from '../state'
 
 export function isSidebarCollapsed(state: AppState): boolean {
-  const maximized = state.view === 'grid' && state.maximizedId !== null
-  return state.sidebarOverride ?? (maximized || state.settings.sidebarCollapsed)
+  const maximized = state.view === 'grid' && state.maximizedId !== null && state.settings.sessionsLayout !== 'panel'
+  // Files has its own project switcher, so a sidebar that also holds the tabs shrinks to its icons there.
+  const framedFiles = state.settings.appearance.frame === 'sidebar' && state.view === 'files'
+  return state.sidebarOverride ?? (maximized || framedFiles || state.settings.sidebarCollapsed)
 }
 
 const NAV_SELECTOR = '.proj-toggle, .sess-row, .closed-line'
@@ -51,6 +55,7 @@ export class SidebarComponent {
   })
   private readonly list = h('div', { class: 'proj-list' })
   private signature = ''
+  private frame: SidebarFrame | null = null
   private filterText = ''
   private focusFilterNext = false
   /** Quiet projects the user has expanded from their one-line row; not remembered across restarts. */
@@ -177,6 +182,13 @@ export class SidebarComponent {
   private lastViews: PaneView[] = []
   private facts = new Map<string, RowFacts>()
 
+  /** The Sidebar frame hosts the top bar's parts above and below the projects; null brings the top bar back. */
+  setFrame(frame: SidebarFrame | null): void {
+    if (frame === this.frame) return
+    this.frame = frame
+    this.signature = ''
+  }
+
   update(state: AppState, views: PaneView[]): void {
     this.lastState = state
     this.lastViews = views
@@ -185,7 +197,10 @@ export class SidebarComponent {
 
   private render(state: AppState | null, views: PaneView[]): void {
     if (!state) return
-    syncAttentionBadge(needsCount(views.map(viewState)))
+    syncAttentionBadge(needsCount(views.map(viewState)), waitingSessionIds(views.map(view => ({
+      id: view.pane.id, exited: view.status === 'exited', attention: view.attention,
+      waiting: view.fileWaiting || state.waiting[view.pane.id] === true
+    }))))
     const collapsed = isSidebarCollapsed(state)
     const focusedView = views.find((v) => v.pane.id === state.focusedId)
     const filtering = this.filterText.trim() !== ''
@@ -199,6 +214,7 @@ export class SidebarComponent {
     this.facts = new Map(views.map((view) => [view.pane.id, rowFacts(state, view)]))
     const signature = JSON.stringify([
       collapsed,
+      this.frame !== null,
       state.view,
       focusedView?.pane.projectId,
       state.focusedId,
@@ -216,6 +232,8 @@ export class SidebarComponent {
     if (signature === this.signature) return
     this.signature = signature
     this.el.classList.toggle('rail', collapsed)
+    this.el.classList.toggle('framed', this.frame !== null)
+    this.frame?.update(collapsed)
     this.el.setAttribute('aria-label', collapsed ? 'Projects (collapsed)' : 'Projects')
     if (collapsed) this.renderRail(projects, views, focusedView?.pane.projectId)
     else this.renderFull(state, entries, views, hiddenEmpty)
@@ -244,10 +262,7 @@ export class SidebarComponent {
 
   private renderRail(projects: Project[], views: PaneView[], activeProject?: string): void {
     clear(this.el)
-    this.el.append(
-      iconButton('Expand sidebar', ICONS.expand, () => toggleSidebar(), 'rail-btn'),
-      h('div', { class: 'rail-divider' })
-    )
+    this.el.append(...(this.frame ? [this.frame.top] : [iconButton('Expand sidebar', ICONS.expand, () => toggleSidebar(), 'rail-btn')]), h('div', { class: 'rail-divider' }))
     for (const project of projects) {
       const states = views.filter((view) => view.pane.projectId === project.id).map(viewState)
       const status = projectStatus(states)
@@ -262,7 +277,7 @@ export class SidebarComponent {
       if (badge) button.append(h('span', { class: `rail-badge${status.needs > 0 ? ' needs' : ''}`, 'aria-hidden': 'true' }, badge))
       this.el.append(button)
     }
-    this.el.append(h('div', { class: 'rail-spacer' }), iconButton('Add project', ICONS.plus, () => void addProject(), 'rail-btn'))
+    this.el.append(h('div', { class: 'rail-spacer' }), iconButton('Add project', ICONS.plus, () => void addProject(), 'rail-btn'), ...(this.frame ? [this.frame.bottom] : []))
   }
 
   private renderFull(state: AppState, entries: SidebarEntry<PaneView>[], views: PaneView[], hiddenEmpty: number): void {
@@ -290,6 +305,7 @@ export class SidebarComponent {
       this.list.append(h('button', { class: 'link sidebar-note', type: 'button', onClick: () => setSidebarHideEmpty(false) }, `${hiddenEmpty} project${hiddenEmpty === 1 ? '' : 's'} without sessions hidden. Show`))
     }
     this.el.append(
+      ...(this.frame ? [this.frame.top] : []),
       h('div', { class: 'sidebar-head' }, this.findField(), iconButton('Add project', ICONS.plus, () => void addProject(), 'sidebar-add'), iconButton('Collapse sidebar', ICONS.collapse, () => toggleSidebar())),
       this.list,
       h(
@@ -297,7 +313,8 @@ export class SidebarComponent {
         { class: 'sidebar-foot' },
         h('button', { class: 'foot-btn', type: 'button', onClick: () => void addProject() }, icon(ICONS.plus), h('span', {}, 'Add project')),
         h('button', { class: 'foot-btn', type: 'button', 'aria-label': 'Manage projects', 'aria-current': state.view === 'projects' ? 'page' : undefined, onClick: () => showView('projects') }, h('span', {}, 'Manage'))
-      )
+      ),
+      ...(this.frame ? [this.frame.bottom] : [])
     )
     if (hadFocus || this.focusFilterNext) {
       this.filter.focus()

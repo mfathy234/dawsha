@@ -6,6 +6,7 @@ import { permissionTail } from '../actions'
 import type { PaneView } from '../derive'
 import { h } from '../dom'
 import { sessionNote } from '../sessionNotes'
+import { parsePlanLabel } from '../../shared/planProgress'
 import { stateSince } from '../stateClock'
 import type { AppState } from '../state'
 import { identityMark } from './crewAvatar'
@@ -90,8 +91,20 @@ export function sessionRowButton(view: PaneView, facts: RowFacts, options: Sessi
       onClick
     },
     identityMark(view),
-    h('span', { class: 'sess-body' }, h('span', { class: 'sess-name', dir: 'auto' }, sessionLabel(view)), lineTwo(facts, dimmed)),
+    h('span', { class: 'sess-body' }, h('span', { class: 'sess-name', dir: 'auto' }, sessionLabel(view)), lineTwo(facts, dimmed), dimmed ? null : planLine(view)),
     facts.time && !dimmed ? h('span', { class: 'sess-age', 'aria-label': timeLabel(facts) }, facts.time) : null
+  )
+}
+
+/** "5/7" in accent and a thin bar, for a session that has a plan; nothing otherwise. */
+function planLine(view: PaneView): HTMLElement | null {
+  const plan = parsePlanLabel(sessionNote(view.pane.id).plan)
+  if (!plan) return null
+  return h(
+    'span',
+    { class: 'sess-plan', role: 'img', 'aria-label': `Plan, ${plan.done} of ${plan.total} done` },
+    h('span', { class: 'sess-plan-n' }, `${plan.done}/${plan.total}`),
+    h('span', { class: 'sess-plan-bar' }, h('i', { style: `width: ${plan.percent}%` }))
   )
 }
 

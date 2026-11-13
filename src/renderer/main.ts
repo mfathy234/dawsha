@@ -10,11 +10,13 @@ import {
   focusPane,
   handleTerminalExit,
   openOnboarding,
+  openQuickPick,
   refreshBranches,
   refreshAgentTools,
   refreshBridge,
   refreshGitChanges,
   restoreWorkspace,
+  setClaudeSessions,
   saveSettings,
   setCodexSessions,
   setGeminiSessions,
@@ -34,6 +36,7 @@ import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
 import { installRemoteCrew } from './remoteCrewSync'
+import { installMiniWindowSync } from './miniWindowSync'
 import { installBuiltinCommands } from './commands/builtin'
 import { installCompareCommands } from './commands/compare'
 import { installTurnChecksCommands } from './commands/turnChecks'
@@ -54,7 +57,7 @@ import { installInputMode } from './inputMode'
 import { store } from './state'
 import { confirmQuitWithUnsavedFiles } from './files/filesActions'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
-import { applyTheme, onThemeChange } from './themeManager'
+import { applyTheme, onThemeChange, setTone } from './themeManager'
 import { removeLegacyModelCache } from './legacyModelCache'
 
 const BRANCH_POLL_MS = 5000
@@ -94,6 +97,7 @@ async function boot(): Promise<void> {
   markStyle.setProperty('--codex-fg', CODEX_MARK.color)
   markStyle.setProperty('--gemini-bg', GEMINI_MARK.background)
   markStyle.setProperty('--gemini-fg', GEMINI_MARK.color)
+  setTone(loaded.settings.appearance.tone)
   applyTheme(loaded.settings.theme, true)
   onThemeChange(applyBundleToAll)
 
@@ -125,7 +129,8 @@ async function boot(): Promise<void> {
   connectPtyStreams(handleTerminalExit)
   api.onRemoteSessionStarted(attachRemoteSession)
   installRemoteCrew()
-  api.onSessions((next) => store.patch({ sessions: next }))
+  installMiniWindowSync()
+  api.onSessions(setClaudeSessions)
   setStatusInfos(statusInfos)
   void refreshBridge()
   void refreshAgentTools(false)
@@ -159,6 +164,7 @@ async function boot(): Promise<void> {
   api.onFlushRequest(flushWorkspace)
   api.onCloseCheck(confirmQuitWithUnsavedFiles)
   api.onCliRun(runCliCommand)
+  api.onDesktopNewSession(openQuickPick)
   api.onCliNotice((text, ok) => toast(text, ok ? 'info' : 'error'))
   if (loaded.warning) toast(loaded.warning, 'info')
   if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()

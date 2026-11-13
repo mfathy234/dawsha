@@ -105,3 +105,13 @@ export function paneUnitIds(panes: { id: string; compare?: CompareLink }[]): str
   }
   return units
 }
+
+/** Side panes in Calm focus never get shorter than this: the header and a few terminal lines. */
+export const SIDE_PANE_MIN_HEIGHT = 160
+
+/** Whether the side column needs more height than the grid has, so it scrolls instead of squeezing its panes. */
+export function sideColumnOverflows(siblings: number, gridHeight: number, gap: number, padding: number, minHeight = SIDE_PANE_MIN_HEIGHT): boolean {
+  if (siblings <= 0) return false
+  const needed = siblings * minHeight + (siblings - 1) * gap + padding * 2
+  return needed > gridHeight
+}

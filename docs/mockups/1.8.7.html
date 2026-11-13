@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dawsha 1.8.7 directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body { margin: 0; background: #0b0d10; color: #e8ebf1; font: 14px/22px 'Geist', system-ui, sans-serif; }
+header.page { padding: 32px 40px 8px; max-width: 1440px; }
+header.page h1 { margin: 0 0 6px; font-size: 24px; font-weight: 500; }
+header.page p { margin: 0 0 16px; color: #aab3c3; max-width: 70ch; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+nav.toc a { color: #4ade9f; text-decoration: none; }
+nav.toc a:hover { color: #6ee7b7; }
+.board { padding: 32px 40px 0; }
+.board h2 { margin: 0 0 12px; font-size: 16px; font-weight: 500; color: #aab3c3; }
+.frame { overflow: hidden; border-radius: 12px; box-shadow: 0 0 0 1px rgb(255 255 255 / .1), 0 24px 64px rgb(0 0 0 / .5); }
+.board:last-child { padding-bottom: 48px; }
+.ui{font-family:'Geist',system-ui,sans-serif}
+.mono{font-family:'JetBrains Mono',Consolas,monospace}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:#4ade9f}a:hover{color:#6ee7b7}
+.ui{font-family:'Geist',system-ui,sans-serif}
+.mono{font-family:'JetBrains Mono',Consolas,monospace}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
+a{color:#4ade9f}a:hover{color:#6ee7b7}
+.ui{font-family:'Geist','IBM Plex Sans Arabic',system-ui,sans-serif}
+.mono{font-family:'JetBrains Mono',Consolas,monospace}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:start}
+a{color:#4ade9f}a:hover{color:#6ee7b7}
+.ui{font-family:'Geist',system-ui,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:#4ade9f}a:hover{color:#6ee7b7}
+.ui{font-family:'Geist',system-ui,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
+a{color:#4ade9f}a:hover{color:#6ee7b7}
+</style>
+</head>
+<body>
+<header class="page">
+<h1>Dawsha 1.8.7 directions</h1>
+<p>Ideas taken from the Claude desktop app, each one a Settings option for Terminal and Chat: Quiet panes, the Sidebar frame with a Warm tone, and the Focus layout, plus refined tabs you can drag to rearrange.</p>
+<nav class="toc">
+<a href="#Main">Now (1.8.6)</a>
+<a href="#QuietChat">A. Quiet panes, chat</a>
+<a href="#QuietTerminal">A. Quiet panes, terminal</a>
+<a href="#CalmShell">B. Calm shell (terminal panes)</a>
+<a href="#SidePanel">C. Focus layout, chat</a>
+<a href="#FocusTerminal">C. Focus layout, terminal</a>
+<a href="#States">States: empty, limit, Arabic, loading</a>
+<a href="#Settings">Settings: pick each one</a>
+<a href="#Mini">Mini window on Windows</a>
+<a href="#InApp">Its design language in the app</a>
+</nav>
+</header>
+<section id="Main" class="board">
+<h2>Now (1.8.6)</h2>
+<div class="frame" style="width: 1440px; height: 876px">
+<div style="width: 1440px; height: 876px; background: #121419; overflow: hidden">
+<img src="1.8.6-sidebar-now.png" alt="Dawsha 1.8.6: top bar, project sidebar and a grid of four Claude and Codex panes, one asking to run npm run migrate" style="width: 1440px; height: 876px; display: block; object-fit: cover">
+</div>
+</div>
+</section>
+
+<section id="QuietChat" class="board">
+<h2>A. Quiet panes, chat</h2>
+<div class="frame" style="width: 1440px; height: 900px">
+<div class="ui" style="width: 1440px; height: 900px; background: #121419; color: #e8ebf1; display: flex; flex-direction: column; overflow: hidden; font-size: 13px; line-height: 20px">
+
+<header style="height: 48px; flex: none; display: flex; align-items: center; gap: 24px; padding: 0 16px; background: #16191f; box-shadow: inset 0 -1px 0 rgb(255 255 255 / .07)">
+<div style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 22px; height: 22px; border-radius: 6px; background: #34d399; color: #04261b; display: grid; place-items: center; font-size: 12px; font-weight: 600">D</span>Dawsha</div>
+<nav style="display: flex; gap: 20px; color: #aab3c3"><span style="color: #e8ebf1">Sessions</span><span>Agents</span><span>Files</span><span>Work</span><span>Skills</span></nav>
+<div style="flex: 1"></div>
+<span style="color: #8c96a8">Claude 62% of 5h, resets 18:40</span>
+<button aria-label="Search" style="width: 32px; height: 32px; display: grid; place-items: center; color: #aab3c3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
+<button style="height: 32px; padding: 0 14px; border-radius: 8px; background: #34d399; color: #04261b; font-weight: 500">New session</button>
+</header>
+
+<div style="flex: 1; display: flex; min-height: 0">
+<aside style="width: 272px; flex: none; background: #16191f; box-shadow: inset -1px 0 0 rgb(255 255 255 / .07); padding: 16px 12px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 8px 6px; color: #8c96a8">Needs you</div>
+<div style="display: flex; gap: 10px; padding: 8px; border-radius: 8px">
+<span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>
+<div style="min-width: 0"><div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Refactor invoice export</div><div style="color: #ffa54f">Run npm run migrate?</div></div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 8px 6px; color: #8c96a8">acme-web</div>
+<div style="display: flex; gap: 10px; padding: 8px; border-radius: 8px; background: #20252d; box-shadow: inset 0 1px 0 rgb(255 255 255 / .06)">
+<span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>
+<div style="min-width: 0"><div>Add dark mode toggle</div><div style="color: #72b4ff">Running the test suite</div></div>
+</div>
+<div style="display: flex; gap: 10px; padding: 8px; border-radius: 8px">
+<span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d6dbe4; color: #121419; display: grid; place-items: center; font-size: 11px; font-weight: 600">X</span>
+<div style="min-width: 0"><div>Fix flaky login test</div><div style="color: #8c96a8">Done, 4 files changed</div></div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 8px 6px; color: #8c96a8">docs-site</div>
+<div style="display: flex; gap: 10px; padding: 8px; border-radius: 8px">
+<span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #8b7cf6; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">G</span>
+<div style="min-width: 0"><div>Rewrite the getting started guide</div><div style="color: #8c96a8">Idle</div></div>
+</div>
+</div>
+</aside>
+
+<main style="flex: 1; display: flex; flex-direction: column; min-width: 0; background: #121419">
+<div style="height: 52px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 20px">
+<span style="width: 22px; height: 22px; border-radius: 6px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 600">C</span>
+<div style="font-weight: 500; font-size: 14px">Add dark mode toggle</div>
+<div style="color: #8c96a8">acme-web on feature/dark-mode-toggle</div>
+<div style="flex: 1"></div>
+<div style="display: flex; padding: 2px; border-radius: 8px; background: #1b1f26"><button style="padding: 4px 12px; border-radius: 6px; color: #aab3c3">Terminal</button><button style="padding: 4px 12px; border-radius: 6px; background: #272d37">Chat</button></div>
+<button aria-label="More" style="width: 28px; height: 28px; color: #aab3c3"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button>
+</div>
+
+<div style="flex: 1; min-height: 0; overflow: hidden; display: flex; justify-content: center; padding: 8px 32px 0">
+<div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 18px; font-size: 14px; line-height: 22px">
+
+<div style="display: flex; align-items: center; gap: 10px; color: #aab3c3; font-size: 13px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"></path><path d="m3 6 1.5 1.5L7 5"></path><path d="m3 12 1.5 1.5L7 11"></path></svg>
+<span>Plan, 3 of 6</span><span style="color: #e8ebf1">Add the toggle to Settings</span>
+<div style="flex: 1; height: 2px; border-radius: 2px; background: rgb(255 255 255 / .06)"><div style="width: 50%; height: 2px; border-radius: 2px; background: #34d399"></div></div>
+</div>
+
+<div style="align-self: flex-end; max-width: 520px; padding: 10px 14px; border-radius: 14px; background: #20252d">Add a dark mode toggle to the settings page. Keep the choice after a restart.</div>
+
+<p style="margin: 0">I'll start with the settings components and the theme context, then add a toggle that writes the choice to settings.</p>
+
+<button style="align-self: flex-start; display: flex; align-items: center; gap: 8px; color: #8c96a8; font-size: 13px; padding: 2px 0">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+Read 2 files
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+</button>
+
+<p style="margin: 0">Adding a <span class="mono" style="font-size: 13px; color: #86bdff">ThemeToggle</span> and keeping the choice in app settings, so it survives a quick relaunch.</p>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<button style="align-self: flex-start; display: flex; align-items: center; gap: 8px; color: #aab3c3; font-size: 13px; padding: 2px 0">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+Edited 3 files <span style="color: #4ade9f">+69</span><span style="color: #ff8f8f">-3</span>
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+</button>
+<div style="border-radius: 12px; background: #1b1f26; overflow: hidden">
+<div class="mono" style="display: flex; flex-direction: column; padding: 6px 0; font-size: 12px; line-height: 24px">
+<div style="display: flex; gap: 12px; padding: 0 14px"><span style="flex: 1">src/components/ThemeToggle.tsx</span><span style="color: #4ade9f">+42</span><span style="color: #8c96a8; width: 24px; text-align: right">new</span></div>
+<div style="display: flex; gap: 12px; padding: 0 14px"><span style="flex: 1">src/context/theme.tsx</span><span style="color: #4ade9f">+18</span><span style="color: #ff8f8f; width: 24px; text-align: right">-3</span></div>
+<div style="display: flex; gap: 12px; padding: 0 14px"><span style="flex: 1">src/components/Settings.tsx</span><span style="color: #4ade9f">+9</span><span style="color: #8c96a8; width: 24px; text-align: right">0</span></div>
+</div>
+<div class="mono" style="background: #0f1115; padding: 8px 0; font-size: 12px; line-height: 20px; color: #d9dee8">
+<div style="padding: 0 14px; color: #8c96a8">theme.tsx</div>
+<div style="padding: 0 14px; background: rgb(255 128 128 / .08); color: #ff8f8f">- const stored = localStorage.getItem('theme')</div>
+<div style="padding: 0 14px; background: rgb(74 222 159 / .08); color: #4ade9f">+ const stored = settings.appearance.theme</div>
+<div style="padding: 0 14px">  return stored ?? systemTheme()</div>
+</div>
+<div style="display: flex; gap: 16px; padding: 8px 14px; font-size: 13px; color: #aab3c3"><button>Open diff</button><button>Commit this reply</button><button>Undo this reply</button></div>
+</div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 10px; color: #72b4ff; font-size: 13px">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"></path></svg>
+Running npm test <span style="color: #8c96a8">12s</span>
+</div>
+</div>
+</div>
+
+<div style="flex: none; display: flex; justify-content: center; padding: 12px 32px 20px">
+<div style="width: 100%; max-width: 760px; border-radius: 16px; background: #1b1f26; box-shadow: 0 0 0 1px rgb(255 255 255 / .09), 0 12px 32px rgb(4 6 10 / .45); padding: 12px 12px 10px 16px; display: flex; flex-direction: column; gap: 10px">
+<label for="qc-reply" style="position: absolute; left: -9999px">Reply to Claude</label>
+<textarea id="qc-reply" rows="2" placeholder="Reply to Claude. It reads this when the test run ends." style="resize: none; border: 0; outline: 0; background: transparent; color: #e8ebf1; font: 14px/22px 'Geist',system-ui,sans-serif; padding: 0"></textarea>
+<div style="display: flex; align-items: center; gap: 6px; color: #aab3c3; font-size: 13px">
+<button aria-label="Attach" style="width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+<button style="height: 30px; padding: 0 10px; border-radius: 8px; display: flex; align-items: center; gap: 6px">Plan mode off</button>
+<div style="flex: 1"></div>
+<span title="Context 41% full" style="display: flex; align-items: center; gap: 6px; color: #8c96a8"><svg width="16" height="16" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="rgb(255 255 255 / .12)" stroke-width="4"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="#aab3c3" stroke-width="4" stroke-dasharray="36 88" transform="rotate(-90 18 18)"></circle></svg>41%</span>
+<button style="height: 30px; padding: 0 10px; border-radius: 8px; display: flex; align-items: center; gap: 4px">Opus 5.5, medium<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+<button aria-label="Stop" style="width: 32px; height: 32px; border-radius: 10px; background: #e8ebf1; color: #121419; display: grid; place-items: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg></button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</div>
+</section>
+
+<section id="QuietTerminal" class="board">
+<h2>A. Quiet panes, terminal</h2>
+<div class="frame" style="width: 1440px; height: 900px">
+<div class="ui" style="width: 1440px; height: 900px; background: #121419; color: #e8ebf1; display: flex; flex-direction: column; overflow: hidden; font-size: 13px; line-height: 20px">
+
+<header style="height: 48px; flex: none; display: flex; align-items: center; gap: 24px; padding: 0 16px; background: #16191f; box-shadow: inset 0 -1px 0 rgb(255 255 255 / .07)">
+<div style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 22px; height: 22px; border-radius: 6px; background: #34d399; color: #04261b; display: grid; place-items: center; font-size: 12px; font-weight: 600">D</span>Dawsha</div>
+<nav style="display: flex; gap: 20px; color: #aab3c3"><span style="color: #e8ebf1">Sessions</span><span>Agents</span><span>Files</span><span>Work</span><span>Skills</span></nav>
+<div style="flex: 1"></div>
+<span style="color: #ffa54f">1 needs you</span>
+<button style="height: 32px; padding: 0 14px; border-radius: 8px; background: #34d399; color: #04261b; font-weight: 500">New session</button>
+</header>
+
+<div style="flex: 1; display: flex; min-height: 0">
+<aside style="width: 272px; flex: none; background: #16191f; box-shadow: inset -1px 0 0 rgb(255 255 255 / .07); padding: 16px 12px; display: flex; flex-direction: column; gap: 18px">
+<div><div style="padding: 0 8px 6px; color: #8c96a8">Needs you</div>
+<div style="display: flex; gap: 10px; padding: 8px; border-radius: 8px"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span><div><div>Refactor invoice export</div><div style="color: #ffa54f">Run npm run migrate?</div></div></div></div>
+<div><div style="padding: 0 8px 6px; color: #8c96a8">acme-web</div>
+<div style="display: flex; gap: 10px; padding: 8px; border-radius: 8px; background: #20252d"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span><div><div>Add dark mode toggle</div><div style="color: #4ade9f">Done, 3 files changed</div></div></div></div>
+</aside>
+
+<main style="flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 8px">
+
+<section style="border-radius: 14px; background: #1b1f26; display: flex; flex-direction: column; overflow: hidden">
+<div style="height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px">
+<span style="width: 20px; height: 20px; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>
+<span style="font-weight: 500">Add dark mode toggle</span><span style="color: #8c96a8">acme-web</span>
+<div style="flex: 1"></div>
+<div style="display: flex; padding: 2px; border-radius: 8px; background: #121419"><button style="padding: 2px 10px; border-radius: 6px; background: #272d37">Terminal</button><button style="padding: 2px 10px; border-radius: 6px; color: #aab3c3">Chat</button></div>
+</div>
+<div class="mono" style="flex: 1; min-height: 0; margin: 0 6px; border-radius: 10px; background: #0f1115; padding: 16px 18px; font-size: 13px; line-height: 22px; color: #d9dee8; display: flex; flex-direction: column">
+<div style="color: #8e98aa">&gt; Add a dark mode toggle to the settings page</div>
+<div style="margin-top: 12px"><span style="color: #34d399">●</span> Adding a <span style="color: #86bdff">ThemeToggle</span> and keeping the choice in settings.</div>
+<div style="color: #8e98aa">  Update src/context/theme.tsx (+18 -3)</div>
+<div style="color: #8e98aa">  Update src/components/Settings.tsx (+9 -0)</div>
+<div style="color: #8e98aa">  Create src/components/ThemeToggle.tsx (+42)</div>
+<div style="margin-top: 12px"><span style="color: #34d399">●</span> All 128 tests pass.</div>
+<div style="flex: 1"></div>
+<div style="border-radius: 8px; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14); padding: 6px 10px; color: #8e98aa">&gt; <span style="display: inline-block; width: 8px; height: 16px; vertical-align: -3px; background: #34d399"></span></div>
+</div>
+<div style="height: 44px; flex: none; display: flex; align-items: center; gap: 16px; padding: 0 14px; color: #aab3c3">
+<span style="display: flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Last reply edited 3 files <span style="color: #4ade9f">+69</span><span style="color: #ff8f8f">-3</span></span>
+<div style="flex: 1"></div>
+<button style="color: #e8ebf1">Review</button><button style="color: #e8ebf1">Commit this reply</button><button>Undo</button>
+</div>
+</section>
+
+<section style="border-radius: 14px; background: #1b1f26; display: flex; flex-direction: column; overflow: hidden; box-shadow: inset 0 0 0 1px rgb(255 165 79 / .45)">
+<div style="height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px">
+<span style="width: 20px; height: 20px; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>
+<span style="font-weight: 500">Refactor invoice export</span><span style="color: #8c96a8">billing-api</span>
+<div style="flex: 1"></div><span style="color: #ffa54f">Needs you</span>
+</div>
+<div class="mono" style="flex: 1; min-height: 0; margin: 0 6px; border-radius: 10px; background: #0f1115; padding: 16px 18px; font-size: 13px; line-height: 22px; color: #d9dee8; display: flex; flex-direction: column">
+<div><span style="color: #34d399">●</span> All 41 tests pass. The export output is unchanged.</div>
+<div style="margin-top: 12px"><span style="color: #34d399">●</span> Bash(npm run migrate -- --env dev)</div>
+<div style="flex: 1"></div>
+<div class="ui" style="border-radius: 12px; background: #20252d; padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: #e8ebf1; box-shadow: 0 12px 32px rgb(4 6 10 / .5)">
+<div style="font-weight: 500">Claude wants to run a command</div>
+<div class="mono" style="padding: 8px 10px; border-radius: 8px; background: #0f1115; font-size: 12px">npm run migrate -- --env dev</div>
+<div style="display: flex; gap: 8px; align-items: center">
+<button style="height: 30px; padding: 0 14px; border-radius: 8px; background: #e8ebf1; color: #121419; font-weight: 500">Allow once</button>
+<button style="height: 30px; padding: 0 12px; border-radius: 8px">Always allow npm run</button>
+<div style="flex: 1"></div>
+<button style="height: 30px; padding: 0 12px; border-radius: 8px; color: #aab3c3">Deny</button>
+</div>
+</div>
+</div>
+<div style="height: 44px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 14px; color: #8c96a8">No changes yet</div>
+</section>
+</main>
+</div>
+</div>
+</div>
+</section>
+
+<section id="CalmShell" class="board">
+<h2>B. Calm shell (terminal panes)</h2>
+<div class="frame" style="width: 1440px; height: 900px">
+<div class="ui" style="width: 1440px; height: 900px; background: #161615; color: #ecebe8; display: flex; overflow: hidden; font-size: 13px; line-height: 20px">
+
+<aside style="width: 272px; flex: none; background: #1b1b1a; display: flex; flex-direction: column; padding: 12px 10px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 4px 8px 14px; font-weight: 500">
+<span style="width: 22px; height: 22px; border-radius: 6px; background: #34d399; color: #04261b; display: grid; place-items: center; font-size: 12px; font-weight: 600">D</span>Dawsha
+<div style="flex: 1"></div>
+<button aria-label="Collapse sidebar" style="width: 28px; height: 28px; display: grid; place-items: center; color: #b4b2ac"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M9 4v16"></path></svg></button>
+</div>
+
+<button style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 10px; font-weight: 500">
+<span style="width: 22px; height: 22px; border-radius: 999px; background: #34d399; color: #04261b; display: grid; place-items: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>
+New session<span style="margin-left: auto; color: #8f8d87; font-weight: 400">Ctrl N</span></button>
+
+<nav style="display: flex; flex-direction: column; gap: 1px; padding: 8px 0 16px; color: #b4b2ac">
+<button style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>Search<span style="margin-left: auto; color: #8f8d87">Ctrl K</span></button>
+<button style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px; background: #2a2a28; color: #ecebe8"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="8" height="16" rx="2"></rect><rect x="13" y="4" width="8" height="7" rx="2"></rect><rect x="13" y="13" width="8" height="7" rx="2"></rect></svg>Sessions</button>
+<button style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21 20c0-2.6-1.6-4.8-4-5.6"></path></svg>Agents</button>
+<button style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Files</button>
+<button style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg>Work</button>
+<button style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z"></path></svg>Skills</button>
+</nav>
+
+<div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 14px">
+<div>
+<div style="padding: 0 10px 4px; color: #8f8d87">Needs you</div>
+<button style="width: 100%; display: flex; gap: 10px; padding: 7px 10px; border-radius: 8px">
+<span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>
+<span style="min-width: 0; display: flex; flex-direction: column"><span>Refactor invoice export</span><span style="color: #ffa54f">Run npm run migrate?</span></span></button>
+</div>
+<div>
+<div style="padding: 0 10px 4px; color: #8f8d87">acme-web</div>
+<button style="width: 100%; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>Add dark mode toggle<svg style="margin-left: auto; color: #72b4ff" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-label="Working" role="img"><path d="M12 3a9 9 0 1 0 9 9"></path></svg></button>
+<button style="width: 100%; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d6dbe4; color: #161615; display: grid; place-items: center; font-size: 11px; font-weight: 600">X</span>Fix flaky login test</button>
+</div>
+<div>
+<div style="padding: 0 10px 4px; color: #8f8d87">docs-site</div>
+<button style="width: 100%; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #8b7cf6; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">G</span>Rewrite the getting started guide</button>
+</div>
+<button style="padding: 0 10px; color: #8f8d87">12 closed sessions</button>
+</div>
+
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; color: #b4b2ac">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+Settings<span style="margin-left: auto; color: #8f8d87">Claude 62%</span>
+</div>
+</aside>
+
+<main style="flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 8px 8px 8px 0">
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 16px; padding: 0 12px; color: #b4b2ac">
+<span style="color: #ecebe8; font-weight: 500">4 sessions</span><span>Grid</span><span>Board</span>
+<div style="flex: 1"></div>
+<span style="color: #ffa54f">1 needs you</span>
+</div>
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 8px">
+
+<section style="border-radius: 14px; background: #212120; display: flex; flex-direction: column; overflow: hidden">
+<div style="height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px">
+<span style="width: 20px; height: 20px; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>
+<span style="font-weight: 500">Add dark mode toggle</span><span style="color: #8f8d87">acme-web</span>
+<div style="flex: 1"></div><span style="color: #72b4ff">Working 2m</span>
+</div>
+<div class="mono" style="flex: 1; margin: 0 6px 6px; border-radius: 10px; background: #121211; padding: 16px 18px; font-size: 13px; line-height: 22px; color: #dcdad5">
+<div><span style="color: #34d399">●</span> Adding a <span style="color: #86bdff">ThemeToggle</span> and keeping the choice in settings.</div>
+<div style="color: #8f8d87">  Update src/context/theme.tsx (+18 -3)</div>
+<div style="color: #8f8d87">  Update src/components/Settings.tsx (+9 -0)</div>
+<div style="color: #8f8d87">  Create src/components/ThemeToggle.tsx (+42)</div>
+<div style="margin-top: 14px"><span style="color: #f5b54a">*</span> Running the test suite (esc to interrupt)</div>
+</div>
+</section>
+
+<div style="display: grid; grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr); gap: 8px; min-height: 0">
+<section style="border-radius: 14px; background: #212120; display: flex; flex-direction: column; overflow: hidden; box-shadow: inset 0 0 0 1px rgb(255 165 79 / .45)">
+<div style="height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px">
+<span style="width: 20px; height: 20px; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>
+<span style="font-weight: 500">Refactor invoice export</span><span style="color: #8f8d87">billing-api</span>
+<div style="flex: 1"></div><span style="color: #ffa54f">Needs you</span>
+</div>
+<div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 14px 14px; gap: 12px">
+<div style="color: #b4b2ac">All 41 tests pass. The export output is byte-for-byte unchanged.</div>
+<div style="border-radius: 12px; background: #2a2a28; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-weight: 500">Claude wants to run a command</div>
+<div class="mono" style="padding: 8px 10px; border-radius: 8px; background: #121211; font-size: 12px">npm run migrate -- --env dev</div>
+<div style="display: flex; gap: 8px; align-items: center">
+<button style="height: 30px; padding: 0 14px; border-radius: 8px; background: #ecebe8; color: #161615; font-weight: 500">Allow once</button>
+<button style="height: 30px; padding: 0 12px; border-radius: 8px; color: #ecebe8">Always allow npm run</button>
+<div style="flex: 1"></div>
+<button style="height: 30px; padding: 0 12px; border-radius: 8px; color: #b4b2ac">Deny</button>
+</div>
+</div>
+</div>
+</section>
+<section style="border-radius: 14px; background: #212120; display: flex; flex-direction: column; overflow: hidden">
+<div style="height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px">
+<span style="width: 20px; height: 20px; border-radius: 5px; background: #d6dbe4; color: #161615; display: grid; place-items: center; font-size: 11px; font-weight: 600">X</span>
+<span style="font-weight: 500">Fix flaky login test</span><span style="color: #8f8d87">mobile-shell</span>
+<div style="flex: 1"></div><span style="color: #4ade9f">Done</span>
+</div>
+<div style="padding: 0 14px 14px; color: #b4b2ac">Replaced the sleep with a wait on the session ready event. 4 files changed.<div style="display: flex; gap: 16px; margin-top: 10px; color: #ecebe8"><button>Review 4 files</button><button>Commit</button></div></div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</div>
+</section>
+
+<section id="SidePanel" class="board">
+<h2>C. Focus layout, chat</h2>
+<div class="frame" style="width: 1440px; height: 900px">
+<div class="ui" style="width: 1440px; height: 900px; background: #121419; color: #e8ebf1; display: flex; overflow: hidden; font-size: 13px; line-height: 20px">
+
+<aside style="width: 232px; flex: none; background: #16191f; box-shadow: inset -1px 0 0 rgb(255 255 255 / .07); padding: 12px 10px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 4px 6px; font-weight: 500"><span style="width: 22px; height: 22px; border-radius: 6px; background: #34d399; color: #04261b; display: grid; place-items: center; font-size: 12px; font-weight: 600">D</span>Dawsha</div>
+<button style="height: 34px; padding: 0 10px; border-radius: 8px; background: #20252d; display: flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New session</button>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 6px 4px; color: #8c96a8">Needs you</div>
+<button style="display: flex; gap: 8px; padding: 6px; border-radius: 8px"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span><span style="display: flex; flex-direction: column; min-width: 0"><span>Refactor invoice export</span><span style="color: #ffa54f">Run npm run migrate?</span></span></button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 6px 4px; color: #8c96a8">acme-web</div>
+<button style="display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 8px; background: #20252d"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>Add dark mode toggle</button>
+<button style="display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 8px"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d6dbe4; color: #121419; display: grid; place-items: center; font-size: 11px; font-weight: 600">X</span>Fix flaky login test</button>
+</div>
+</aside>
+
+<main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<div style="height: 52px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 20px">
+<span style="font-weight: 500; font-size: 14px">Add dark mode toggle</span><span style="color: #8c96a8">acme-web</span>
+<div style="flex: 1"></div>
+<span style="color: #4ade9f">Done</span>
+</div>
+<div style="flex: 1; min-height: 0; overflow: hidden; padding: 4px 28px; display: flex; flex-direction: column; gap: 16px; font-size: 14px; line-height: 22px">
+<div style="align-self: flex-end; max-width: 420px; padding: 10px 14px; border-radius: 14px; background: #20252d">Add a dark mode toggle to the settings page. Keep the choice after a restart.</div>
+<p style="margin: 0">Done. The toggle sits under Appearance and the choice is stored in app settings, so it is kept after a relaunch. All 128 tests pass.</p>
+<button style="align-self: flex-start; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #1b1f26; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+<span style="display: flex; flex-direction: column; font-size: 13px; line-height: 18px"><span>3 files changed in this reply</span><span style="color: #8c96a8">Showing in the panel</span></span>
+</button>
+<p style="margin: 0; color: #aab3c3; font-size: 13px">Picked checks ran after the reply: npm test passed in 14s.</p>
+</div>
+<div style="padding: 12px 28px 20px">
+<div style="border-radius: 16px; background: #1b1f26; box-shadow: 0 0 0 1px rgb(255 255 255 / .09); padding: 12px 12px 10px 16px; display: flex; flex-direction: column; gap: 8px">
+<label for="sp-reply" style="position: absolute; left: -9999px">Reply to Claude</label>
+<textarea id="sp-reply" rows="1" placeholder="Reply to Claude" style="resize: none; border: 0; outline: 0; background: transparent; color: #e8ebf1; font: 14px/22px 'Geist',system-ui,sans-serif; padding: 0"></textarea>
+<div style="display: flex; align-items: center; gap: 8px; color: #aab3c3"><button aria-label="Attach" style="width: 28px; height: 28px; display: grid; place-items: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button><div style="flex: 1"></div><span>Opus 5.5, medium</span><button aria-label="Send" style="width: 32px; height: 32px; border-radius: 10px; background: #34d399; color: #04261b; display: grid; place-items: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></button></div>
+</div>
+</div>
+</main>
+
+<section aria-label="Changes in this reply" style="width: 560px; flex: none; margin: 8px 8px 8px 0; border-radius: 14px; background: #1b1f26; display: flex; flex-direction: column; overflow: hidden">
+<div style="height: 48px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 10px 0 8px">
+<button style="padding: 5px 10px; border-radius: 7px; background: #272d37">Changes 3</button>
+<button style="padding: 5px 10px; border-radius: 7px; color: #aab3c3">Plan</button>
+<button style="padding: 5px 10px; border-radius: 7px; color: #aab3c3">Checks</button>
+<button style="padding: 5px 10px; border-radius: 7px; color: #aab3c3">Preview</button>
+<div style="flex: 1"></div>
+<button aria-label="Close panel" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+<div class="mono" style="display: flex; flex-direction: column; padding: 0 8px 8px; font-size: 12px; line-height: 28px">
+<button style="display: flex; gap: 10px; padding: 0 10px; border-radius: 7px; background: #20252d"><span style="flex: 1">ThemeToggle.tsx <span style="color: #8c96a8">src/components</span></span><span style="color: #4ade9f">+42</span></button>
+<button style="display: flex; gap: 10px; padding: 0 10px; border-radius: 7px"><span style="flex: 1">theme.tsx <span style="color: #8c96a8">src/context</span></span><span style="color: #4ade9f">+18</span><span style="color: #ff8f8f">-3</span></button>
+<button style="display: flex; gap: 10px; padding: 0 10px; border-radius: 7px"><span style="flex: 1">Settings.tsx <span style="color: #8c96a8">src/components</span></span><span style="color: #4ade9f">+9</span></button>
+</div>
+<div class="mono" style="flex: 1; min-height: 0; overflow: hidden; background: #0f1115; padding: 10px 0; font-size: 12px; line-height: 21px; color: #d9dee8">
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">1</span><span style="color: #4ade9f">+ import { useTheme } from '../context/theme'</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">2</span><span style="color: #4ade9f">+</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">3</span><span style="color: #4ade9f">+ export function ThemeToggle() {</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">4</span><span style="color: #4ade9f">+   const { theme, setTheme } = useTheme()</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">5</span><span style="color: #4ade9f">+   const next = theme === 'dark' ? 'light' : 'dark'</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">6</span><span style="color: #4ade9f">+   return (</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">7</span><span style="color: #4ade9f">+     &lt;button role="switch" aria-checked={theme === 'dark'}</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">8</span><span style="color: #4ade9f">+       onClick={() =&gt; setTheme(next)}&gt;</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">9</span><span style="color: #4ade9f">+       Dark mode</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">10</span><span style="color: #4ade9f">+     &lt;/button&gt;</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">11</span><span style="color: #4ade9f">+   )</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">12</span><span style="color: #4ade9f">+ }</span></div>
+</div>
+<div style="flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 14px">
+<button style="height: 32px; padding: 0 14px; border-radius: 8px; background: #34d399; color: #04261b; font-weight: 500">Commit this reply</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 8px">Undo this reply</button>
+<div style="flex: 1"></div>
+<button style="height: 32px; padding: 0 12px; border-radius: 8px; color: #aab3c3">Open in Files</button>
+</div>
+</section>
+</div>
+</div>
+</section>
+
+<section id="FocusTerminal" class="board">
+<h2>C. Focus layout, terminal</h2>
+<div class="frame" style="width: 1440px; height: 900px">
+<div class="ui" style="width: 1440px; height: 900px; background: #121419; color: #e8ebf1; display: flex; overflow: hidden; font-size: 13px; line-height: 20px">
+
+<aside style="width: 232px; flex: none; background: #16191f; box-shadow: inset -1px 0 0 rgb(255 255 255 / .07); padding: 12px 10px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 4px 6px; font-weight: 500"><span style="width: 22px; height: 22px; border-radius: 6px; background: #34d399; color: #04261b; display: grid; place-items: center; font-size: 12px; font-weight: 600">D</span>Dawsha</div>
+<button style="height: 34px; padding: 0 10px; border-radius: 8px; background: #20252d; display: flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New session</button>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 6px 4px; color: #8c96a8">acme-web</div>
+<button style="display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 8px; background: #20252d"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>Add dark mode toggle</button>
+<button style="display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 8px"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d6dbe4; color: #121419; display: grid; place-items: center; font-size: 11px; font-weight: 600">X</span>Fix flaky login test</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 6px 4px; color: #8c96a8">billing-api</div>
+<button style="display: flex; gap: 8px; padding: 6px; border-radius: 8px"><span style="width: 20px; height: 20px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span><span style="display: flex; flex-direction: column"><span>Refactor invoice export</span><span style="color: #ffa54f">Run npm run migrate?</span></span></button>
+</div>
+</aside>
+
+<main style="flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 8px 0 8px 8px">
+<div role="tablist" aria-label="Sessions" style="flex: none; display: flex; align-items: center; gap: 2px; height: 36px; margin-bottom: 8px; padding: 0 2px; border-radius: 10px; background: #16191f">
+<div style="display: flex; align-items: center; gap: 2px; height: 30px; min-width: 0; max-width: 220px; padding: 0 4px 0 10px; border-radius: 8px"><button role="tab" aria-selected="false" title="Refactor invoice export, Needs you" style="min-width: 0; display: flex; align-items: center; gap: 8px"><span style="color: #8c96a8">2</span><span style="width: 18px; height: 18px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 600">C</span><span style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Refactor invoice export</span><span style="color: #ffa54f; flex: none">Needs you</span></button><span style="width: 22px; flex: none"></span></div>
+<div style="display: flex; align-items: center; gap: 2px; height: 30px; min-width: 0; max-width: 220px; padding: 0 4px 0 10px; border-radius: 8px; background: #272d37; box-shadow: inset 0 1px 0 rgb(255 255 255 / .06)"><button role="tab" aria-selected="true" title="Add dark mode toggle, Done" style="min-width: 0; display: flex; align-items: center; gap: 8px"><span style="color: #aab3c3">1</span><span style="width: 18px; height: 18px; flex: none; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 600">C</span><span style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500">Add dark mode toggle</span><span style="color: #4ade9f; flex: none">Done</span></button><button aria-label="Close Add dark mode toggle" style="width: 22px; height: 22px; flex: none; border-radius: 6px; display: grid; place-items: center; color: #aab3c3"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
+<div aria-hidden="true" style="width: 2px; height: 20px; flex: none; border-radius: 2px; background: #34d399"></div>
+<div style="display: flex; align-items: center; gap: 2px; height: 30px; min-width: 0; max-width: 220px; padding: 0 4px 0 10px; border-radius: 8px"><button role="tab" aria-selected="false" title="Fix flaky login test, Working" style="min-width: 0; display: flex; align-items: center; gap: 8px"><span style="color: #8c96a8">3</span><span style="width: 18px; height: 18px; flex: none; border-radius: 5px; background: #d6dbe4; color: #121419; display: grid; place-items: center; font-size: 10px; font-weight: 600">X</span><span style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Fix flaky login test</span><span style="color: #72b4ff; flex: none">Working</span></button><span style="width: 22px; flex: none"></span></div>
+<div style="display: flex; align-items: center; gap: 2px; height: 30px; min-width: 0; max-width: 220px; padding: 0 4px 0 10px; border-radius: 8px; background: #20252d; transform: translate(-30px, 3px); box-shadow: 0 10px 24px rgb(4 6 10 / .55), 0 0 0 1px rgb(255 255 255 / .14)"><button role="tab" aria-selected="false" title="Rewrite the getting started guide, Idle" style="min-width: 0; display: flex; align-items: center; gap: 8px"><span style="color: #8c96a8">4</span><span style="width: 18px; height: 18px; flex: none; border-radius: 5px; background: #8b7cf6; color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 600">G</span><span style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Rewrite the getting started guide</span><span style="color: #8c96a8; flex: none">Idle</span></button><span style="width: 22px; flex: none"></span></div>
+</div>
+<div style="height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px">
+<span style="width: 20px; height: 20px; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600">C</span>
+<span style="font-weight: 500; font-size: 14px">Add dark mode toggle</span><span style="color: #8c96a8">acme-web on feature/dark-mode-toggle</span>
+<div style="flex: 1"></div>
+<div style="display: flex; padding: 2px; border-radius: 8px; background: #1b1f26"><button style="padding: 3px 10px; border-radius: 6px; background: #272d37">Terminal</button><button style="padding: 3px 10px; border-radius: 6px; color: #aab3c3">Chat</button></div>
+<button style="color: #aab3c3; padding: 0 6px">Back to grid</button>
+</div>
+<div class="mono" style="flex: 1; min-height: 0; border-radius: 12px; background: #0f1115; padding: 18px 22px; font-size: 13px; line-height: 22px; color: #d9dee8; display: flex; flex-direction: column">
+<div style="color: #8e98aa">&gt; Add a dark mode toggle to the settings page. Keep the choice after a restart.</div>
+<div style="margin-top: 12px"><span style="color: #34d399">●</span> I will start with the settings components and the theme context.</div>
+<div style="color: #8e98aa">  Read src/components/Settings.tsx (84 lines)</div>
+<div style="color: #8e98aa">  Read src/context/theme.tsx (31 lines)</div>
+<div style="margin-top: 12px"><span style="color: #34d399">●</span> Adding a <span style="color: #86bdff">ThemeToggle</span> and keeping the choice in settings.</div>
+<div style="color: #8e98aa">  Update src/context/theme.tsx (+18 -3)</div>
+<div style="color: #8e98aa">  Update src/components/Settings.tsx (+9 -0)</div>
+<div style="color: #8e98aa">  Create src/components/ThemeToggle.tsx (+42)</div>
+<div style="margin-top: 12px"><span style="color: #34d399">●</span> Done. All 128 tests pass.</div>
+<div style="flex: 1"></div>
+<div style="border-radius: 8px; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14); padding: 6px 10px; color: #8e98aa">&gt; <span style="display: inline-block; width: 8px; height: 16px; vertical-align: -3px; background: #34d399"></span></div>
+</div>
+</main>
+
+<section aria-label="Changes in the last reply" style="width: 440px; flex: none; margin: 8px; border-radius: 14px; background: #1b1f26; display: flex; flex-direction: column; overflow: hidden">
+<div style="height: 48px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 10px 0 8px">
+<button style="padding: 5px 10px; border-radius: 7px; background: #272d37">Changes 3</button>
+<button style="padding: 5px 10px; border-radius: 7px; color: #aab3c3">Plan</button>
+<button style="padding: 5px 10px; border-radius: 7px; color: #aab3c3">Checks</button>
+<button style="padding: 5px 10px; border-radius: 7px; color: #aab3c3">Preview</button>
+<div style="flex: 1"></div>
+<button aria-label="Close panel" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+<div class="mono" style="display: flex; flex-direction: column; padding: 0 8px 8px; font-size: 12px; line-height: 28px">
+<button style="display: flex; gap: 10px; padding: 0 10px; border-radius: 7px"><span style="flex: 1">ThemeToggle.tsx <span style="color: #8c96a8">src/components</span></span><span style="color: #4ade9f">+42</span></button>
+<button style="display: flex; gap: 10px; padding: 0 10px; border-radius: 7px; background: #20252d"><span style="flex: 1">theme.tsx <span style="color: #8c96a8">src/context</span></span><span style="color: #4ade9f">+18</span><span style="color: #ff8f8f">-3</span></button>
+<button style="display: flex; gap: 10px; padding: 0 10px; border-radius: 7px"><span style="flex: 1">Settings.tsx <span style="color: #8c96a8">src/components</span></span><span style="color: #4ade9f">+9</span></button>
+</div>
+<div class="mono" style="flex: 1; min-height: 0; overflow: hidden; background: #0f1115; padding: 10px 0; font-size: 12px; line-height: 21px; color: #d9dee8">
+<div style="display: flex"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">12</span><span>export function readTheme(settings: Settings) {</span></div>
+<div style="display: flex; background: rgb(255 128 128 / .08)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">13</span><span style="color: #ff8f8f">-   const stored = localStorage.getItem('theme')</span></div>
+<div style="display: flex; background: rgb(74 222 159 / .07)"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">13</span><span style="color: #4ade9f">+   const stored = settings.appearance.theme</span></div>
+<div style="display: flex"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">14</span><span>    return stored ?? systemTheme()</span></div>
+<div style="display: flex"><span style="width: 44px; text-align: right; padding-right: 12px; color: #8e98aa">15</span><span>}</span></div>
+</div>
+<div style="flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 14px">
+<button style="height: 32px; padding: 0 14px; border-radius: 8px; background: #34d399; color: #04261b; font-weight: 500">Commit this reply</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 8px">Undo this reply</button>
+<div style="flex: 1"></div>
+<button style="height: 32px; padding: 0 12px; border-radius: 8px; color: #aab3c3">Open in Files</button>
+</div>
+</section>
+</div>
+</div>
+</section>
+
+<section id="States" class="board">
+<h2>States: empty, limit, Arabic, loading</h2>
+<div class="frame" style="width: 1440px; height: 900px">
+<div class="ui" style="width: 1440px; height: 900px; background: #0d0f13; color: #e8ebf1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 8px; box-sizing: border-box; font-size: 13px; line-height: 20px">
+
+<section aria-label="Empty session" style="border-radius: 14px; background: #121419; padding: 40px 48px; display: flex; flex-direction: column; justify-content: center; gap: 20px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; border-radius: 6px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 600">C</span><span style="color: #aab3c3">Claude in acme-web, on main</span></div>
+<h2 style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 500">What should Claude work on?</h2>
+<div style="border-radius: 16px; background: #1b1f26; box-shadow: 0 0 0 1px rgb(255 255 255 / .09); padding: 12px 12px 10px 16px; display: flex; flex-direction: column; gap: 8px">
+<label for="st-first" style="position: absolute; left: -9999px">First message</label>
+<textarea id="st-first" rows="2" placeholder="Describe the change, or paste an error" style="resize: none; border: 0; outline: 0; background: transparent; color: #e8ebf1; font: 14px/22px 'Geist',system-ui,sans-serif; padding: 0"></textarea>
+<div style="display: flex; align-items: center; gap: 8px; color: #aab3c3"><button aria-label="Attach" style="width: 28px; height: 28px; display: grid; place-items: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button><span>New worktree</span><div style="flex: 1"></div><span>Opus 5.5, medium</span><button aria-label="Send" style="width: 32px; height: 32px; border-radius: 10px; background: #272d37; color: #8c96a8; display: grid; place-items: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></button></div>
+</div>
+<div style="display: flex; flex-direction: column; color: #aab3c3">
+<button style="padding: 6px 0">Resume "Refactor invoice export" from yesterday</button>
+<button style="padding: 6px 0">Run the Release check crew agent</button>
+</div>
+</section>
+
+<section aria-label="Usage limit reached" style="border-radius: 14px; background: #121419; padding: 32px 48px; display: flex; flex-direction: column; justify-content: flex-end; gap: 16px; font-size: 14px; line-height: 22px">
+<div style="align-self: flex-end; max-width: 420px; padding: 10px 14px; border-radius: 14px; background: #20252d">Now update the invoice PDF to use the new rounding.</div>
+<div style="border-radius: 14px; background: #1b1f26; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="font-weight: 500">Claude's usage limit is reached.</div>
+<div style="color: #aab3c3; font-size: 13px">It resets at 18:40, in 1 h 12 min. Your message above was not sent.</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button style="height: 32px; padding: 0 14px; border-radius: 8px; background: #e8ebf1; color: #121419; font-weight: 500">Continue in Codex</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 8px; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14)">Send at 18:40</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 8px; color: #aab3c3">Notify me at 18:40</button>
+</div>
+</div>
+</section>
+
+<section aria-label="Arabic conversation" dir="rtl" lang="ar" style="border-radius: 14px; background: #121419; padding: 32px 48px; display: flex; flex-direction: column; justify-content: flex-end; gap: 16px; font-size: 14px; line-height: 24px">
+<div style="align-self: flex-start; max-width: 440px; padding: 10px 14px; border-radius: 14px; background: #20252d">أضف زر الوضع الداكن إلى صفحة الإعدادات واحفظ الاختيار بعد إعادة التشغيل.</div>
+<p style="margin: 0">تمت إضافة الزر تحت قسم المظهر، ويُحفظ الاختيار في إعدادات التطبيق. نجحت كل الاختبارات.</p>
+<button style="align-self: flex-start; display: flex; align-items: center; gap: 8px; color: #aab3c3; font-size: 13px">تم تعديل 3 ملفات <span dir="ltr"><span style="color: #4ade9f">+69</span> <span style="color: #ff8f8f">-3</span></span></button>
+<div class="mono" dir="ltr" style="align-self: flex-start; padding: 6px 10px; border-radius: 8px; background: #0f1115; font-size: 12px">src/components/ThemeToggle.tsx</div>
+</section>
+
+<section aria-label="Loading the conversation" aria-busy="true" style="border-radius: 14px; background: #121419; padding: 32px 48px; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px">
+<div style="align-self: flex-end; width: 300px; height: 40px; border-radius: 14px; background: #1b1f26"></div>
+<div style="width: 92%; height: 12px; border-radius: 6px; background: #1b1f26"></div>
+<div style="width: 78%; height: 12px; border-radius: 6px; background: #1b1f26"></div>
+<div style="width: 34%; height: 12px; border-radius: 6px; background: #1b1f26"></div>
+<div style="width: 180px; height: 12px; border-radius: 6px; background: #181c22"></div>
+<div style="color: #8c96a8">Reading the session from Claude's log</div>
+</section>
+</div>
+</div>
+</section>
+
+<section id="Settings" class="board">
+<h2>Settings: pick each one</h2>
+<div class="frame" style="width: 1440px; height: 900px">
+<div class="ui" style="width: 1440px; height: 900px; background: #121419; color: #e8ebf1; display: flex; overflow: hidden; font-size: 13px; line-height: 20px">
+
+<nav aria-label="Settings sections" style="width: 240px; flex: none; background: #16191f; box-shadow: inset -1px 0 0 rgb(255 255 255 / .07); padding: 24px 12px; display: flex; flex-direction: column; gap: 2px; color: #aab3c3">
+<div style="padding: 0 10px 12px; color: #e8ebf1; font-size: 16px; font-weight: 500">Settings</div>
+<button style="text-align: left; height: 32px; padding: 0 10px; border-radius: 8px">General</button>
+<button style="text-align: left; height: 32px; padding: 0 10px; border-radius: 8px; background: #20252d; color: #e8ebf1">Appearance</button>
+<button style="text-align: left; height: 32px; padding: 0 10px; border-radius: 8px">Agents</button>
+<button style="text-align: left; height: 32px; padding: 0 10px; border-radius: 8px">Chat</button>
+<button style="text-align: left; height: 32px; padding: 0 10px; border-radius: 8px">Notifications</button>
+<button style="text-align: left; height: 32px; padding: 0 10px; border-radius: 8px">Remote Access</button>
+</nav>
+
+<main style="flex: 1; min-width: 0; padding: 40px 64px; display: flex; flex-direction: column; gap: 28px; max-width: 880px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 500">Appearance</h1>
+<p style="margin: 0; color: #aab3c3">Each style works in both Terminal and Chat. Mix them as you like.</p>
+</div>
+
+<div style="display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: 12px; background: #1b1f26">
+<div style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 500">Desktop app style</span><span style="color: #aab3c3">Turns on Quiet panes, Sidebar frame and Warm tone in one step.</span></div>
+<button style="height: 32px; padding: 0 14px; border-radius: 8px; background: #34d399; color: #04261b; font-weight: 500">Use it</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 8px; color: #aab3c3">Back to Classic</button>
+</div>
+
+<div style="display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 24px; padding: 16px 0; box-shadow: inset 0 -1px 0 rgb(255 255 255 / .06)">
+<div style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 500">Panes</span><span style="color: #aab3c3">Quiet: rounded panes, a calmer header, and one line that sums up the last reply with Review, Commit and Undo.</span></div>
+<div role="group" aria-label="Panes" style="display: flex; padding: 2px; border-radius: 8px; background: #1b1f26"><button aria-pressed="false" style="padding: 4px 14px; border-radius: 6px; color: #aab3c3">Classic</button><button aria-pressed="true" style="padding: 4px 14px; border-radius: 6px; background: #272d37">Quiet</button></div>
+</div>
+<div style="display: flex; align-items: center; gap: 24px; padding: 16px 0; box-shadow: inset 0 -1px 0 rgb(255 255 255 / .06)">
+<div style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 500">Frame</span><span style="color: #aab3c3">Sidebar: New session, Search and the Sessions, Agents, Files, Work and Skills tabs move into the sidebar, and the top bar goes away.</span></div>
+<div role="group" aria-label="Frame" style="display: flex; padding: 2px; border-radius: 8px; background: #1b1f26"><button aria-pressed="false" style="padding: 4px 14px; border-radius: 6px; color: #aab3c3">Top bar</button><button aria-pressed="true" style="padding: 4px 14px; border-radius: 6px; background: #272d37">Sidebar</button></div>
+</div>
+<div style="display: flex; align-items: center; gap: 24px; padding: 16px 0; box-shadow: inset 0 -1px 0 rgb(255 255 255 / .06)">
+<div style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 500">Tone</span><span style="color: #aab3c3">Warm: neutral greys instead of blue greys. Your theme's accent stays.</span></div>
+<div role="group" aria-label="Tone" style="display: flex; padding: 2px; border-radius: 8px; background: #1b1f26"><button aria-pressed="false" style="padding: 4px 14px; border-radius: 6px; color: #aab3c3">Cool</button><button aria-pressed="true" style="padding: 4px 14px; border-radius: 6px; background: #272d37">Warm</button></div>
+</div>
+<div style="display: flex; align-items: center; gap: 24px; padding: 16px 0">
+<div style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 500">Layout when Dawsha opens</span><span style="color: #aab3c3">Focus: one session with Changes, Plan, Checks and Preview beside it. You can switch at any time from the View menu.</span></div>
+<div role="group" aria-label="Layout when Dawsha opens" style="display: flex; padding: 2px; border-radius: 8px; background: #1b1f26"><button aria-pressed="true" style="padding: 4px 14px; border-radius: 6px; background: #272d37">Grid</button><button aria-pressed="false" style="padding: 4px 14px; border-radius: 6px; color: #aab3c3">Board</button><button aria-pressed="false" style="padding: 4px 14px; border-radius: 6px; color: #aab3c3">Focus</button></div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</section>
+
+<section id="Mini" class="board">
+<h2>Mini window on Windows</h2>
+<div class="frame" style="width: 1600px; height: 900px">
+<div class="ui" style="width: 1600px; height: 900px; box-sizing: border-box; background: #0b0d10; color: #e8ebf1; padding: 40px; display: flex; gap: 32px; align-items: flex-start; font-size: 13px; line-height: 18px">
+
+<div style="display: flex; flex-direction: column; gap: 12px; width: 360px; flex: none">
+<div style="color: #8c96a8">Every session at a glance</div>
+<section aria-label="Dawsha mini window" style="border-radius: 18px; background: #16191f; box-shadow: 0 0 0 1px rgb(255 255 255 / .1), 0 24px 64px rgb(0 0 0 / .6); padding: 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 2px 4px 4px">
+<span style="font-size: 18px; line-height: 24px; font-weight: 600">Sessions</span><span style="font-size: 18px; color: #8c96a8">4</span>
+<div style="flex: 1"></div>
+<button aria-label="Sound on" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7"></path></svg></button>
+<button aria-label="Fold" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg></button>
+<button aria-label="Close mini window" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+
+<div style="display: flex; gap: 12px; padding: 12px; border-radius: 14px; background: #1b1f26">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 9px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 16px; font-weight: 700">C</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Add dark mode toggle</span>
+<span style="color: #aab3c3">Running the test suite</span>
+<span style="font-weight: 600"><span style="color: #4ade9f">5/7</span> <span style="color: #aab3c3">Plan</span></span>
+<div style="height: 4px; border-radius: 4px; background: rgb(255 255 255 / .08); margin-top: 4px"><div style="width: 71%; height: 4px; border-radius: 4px; background: #34d399"></div></div>
+</div>
+<button aria-label="Open in Dawsha" style="width: 26px; height: 26px; flex: none; display: grid; place-items: center; color: #aab3c3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M10 14l5-5M10.5 9H15v4.5"></path></svg></button>
+</div>
+
+<div style="display: flex; gap: 12px; padding: 12px; border-radius: 14px; background: #1b1f26">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 9px; background: #d6dbe4; color: #121419; display: grid; place-items: center; font-size: 16px; font-weight: 700">X</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; line-height: 20px; font-weight: 600">Fix flaky login test</span>
+<span style="color: #aab3c3">Reading tests/login.spec.ts</span>
+<span style="font-weight: 600"><span style="color: #4ade9f">2/5</span> <span style="color: #aab3c3">Plan</span></span>
+<div style="height: 4px; border-radius: 4px; background: rgb(255 255 255 / .08); margin-top: 4px"><div style="width: 40%; height: 4px; border-radius: 4px; background: #34d399"></div></div>
+</div>
+<button aria-label="Open in Dawsha" style="width: 26px; height: 26px; flex: none; display: grid; place-items: center; color: #aab3c3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M10 14l5-5M10.5 9H15v4.5"></path></svg></button>
+</div>
+
+<div style="display: flex; gap: 12px; padding: 12px; border-radius: 14px; background: #1b1f26">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 9px; background: #8b7cf6; color: #fff; display: grid; place-items: center; font-size: 16px; font-weight: 700">G</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; line-height: 20px; font-weight: 600">Rewrite the getting started guide</span>
+<span style="color: #4ade9f">Done, 2 files changed</span>
+</div>
+<button aria-label="Open in Dawsha" style="width: 26px; height: 26px; flex: none; display: grid; place-items: center; color: #aab3c3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M10 14l5-5M10.5 9H15v4.5"></path></svg></button>
+</div>
+
+<div style="display: flex; gap: 12px; padding: 12px; border-radius: 14px; background: #1b1f26">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 9px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 16px; font-weight: 700">C</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; line-height: 20px; font-weight: 600">Stage email branding</span>
+<span style="color: #8c96a8">Idle 50m</span>
+</div>
+<button aria-label="Open in Dawsha" style="width: 26px; height: 26px; flex: none; display: grid; place-items: center; color: #aab3c3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M10 14l5-5M10.5 9H15v4.5"></path></svg></button>
+</div>
+</section>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px; width: 360px; flex: none">
+<div style="color: #8c96a8">Click a session: its plan and terminal</div>
+<section aria-label="One session in the mini window" style="border-radius: 18px; background: #16191f; box-shadow: 0 0 0 1px rgb(255 255 255 / .1), 0 24px 64px rgb(0 0 0 / .6); padding: 12px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 6px">
+<button aria-label="Back to all sessions" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg></button>
+<button aria-label="Fix flaky login test" style="width: 24px; height: 24px; border-radius: 6px; background: #d6dbe4; color: #121419; display: grid; place-items: center; font-size: 11px; font-weight: 700">X</button>
+<button aria-label="Rewrite the getting started guide" style="width: 24px; height: 24px; border-radius: 6px; background: #8b7cf6; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700">G</button>
+<div style="flex: 1"></div>
+<button aria-label="Open in Dawsha" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M10 14l5-5M10.5 9H15v4.5"></path></svg></button>
+<button aria-label="Close mini window" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+<div style="display: flex; gap: 14px; padding: 4px 4px 12px; box-shadow: inset 0 -1px 0 rgb(255 255 255 / .07)">
+<span style="width: 48px; height: 48px; flex: none; border-radius: 12px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 22px; font-weight: 700">C</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 18px; line-height: 24px; font-weight: 600">Add dark mode toggle</span>
+<span style="color: #aab3c3">acme-web, running the test suite</span>
+<span style="font-weight: 600; font-size: 14px"><span style="color: #4ade9f">5/7</span> <span style="color: #aab3c3">Plan</span></span>
+<div style="height: 4px; border-radius: 4px; background: rgb(255 255 255 / .08); margin-top: 4px"><div style="width: 71%; height: 4px; border-radius: 4px; background: #34d399"></div></div>
+</div>
+</div>
+<ol style="list-style: none; margin: 0; padding: 0 4px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 20px">
+<li style="display: flex; align-items: center; gap: 10px; color: #8c96a8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" role="img" aria-label="Done"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>Read Settings.tsx and theme.tsx</li>
+<li style="display: flex; align-items: center; gap: 10px; color: #8c96a8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" role="img" aria-label="Done"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>Add ThemeToggle</li>
+<li style="display: flex; align-items: center; gap: 10px; color: #8c96a8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" role="img" aria-label="Done"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>Keep the choice in settings</li>
+<li style="display: flex; align-items: center; gap: 10px; color: #8c96a8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" role="img" aria-label="Done"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>Add the toggle to Settings</li>
+<li style="display: flex; align-items: center; gap: 10px; color: #e8ebf1; font-weight: 500"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#72b4ff" stroke-width="2.2" role="img" aria-label="In progress"><path d="M12 3a9 9 0 1 0 9 9"></path></svg>Run the tests</li>
+<li style="display: flex; align-items: center; gap: 10px; color: #aab3c3"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" role="img" aria-label="Not started"><circle cx="12" cy="12" r="9"></circle></svg>Update the docs</li>
+</ol>
+<div style="border-radius: 12px; background: #0f1115; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">
+<span style="display: flex; align-items: center; gap: 6px; color: #aab3c3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="m7 9 3 3-3 3M12 15h5"></path></svg>Terminal</span>
+<span class="mono" style="font-size: 12px; line-height: 18px; color: #4ade9f">$ npm test</span>
+<span class="mono" style="font-size: 12px; line-height: 18px; color: #d9dee8">PASS src/theme.test.tsx (84 of 128)</span>
+</div>
+</section>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px; width: 360px; flex: none">
+<div style="color: #8c96a8">A session needs you: answer right there</div>
+<section aria-label="Mini window with a permission request" style="border-radius: 18px; background: #16191f; box-shadow: 0 0 0 1px rgb(255 255 255 / .1), 0 24px 64px rgb(0 0 0 / .6); padding: 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 2px 4px 4px">
+<span style="font-size: 18px; line-height: 24px; font-weight: 600">Sessions</span><span style="font-size: 18px; color: #8c96a8">4</span><span style="color: #ffa54f; margin-left: 4px">1 needs you</span>
+<div style="flex: 1"></div>
+<button aria-label="Close mini window" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px; padding: 12px; border-radius: 14px; background: #1b1f26; box-shadow: inset 0 0 0 1.5px #ffa54f">
+<div style="display: flex; gap: 12px">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 9px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 16px; font-weight: 700">C</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; line-height: 20px; font-weight: 600">Refactor invoice export</span>
+<span style="color: #ffa54f; font-weight: 500">Wants to run a command</span>
+<span style="font-weight: 600"><span style="color: #4ade9f">4/6</span> <span style="color: #aab3c3">Plan</span></span>
+<div style="height: 4px; border-radius: 4px; background: rgb(255 255 255 / .08); margin-top: 4px"><div style="width: 66%; height: 4px; border-radius: 4px; background: #34d399"></div></div>
+</div>
+</div>
+<div style="border-radius: 10px; background: #0f1115; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px">
+<span class="mono" style="font-size: 12px; line-height: 18px">npm run migrate -- --env dev</span>
+<div style="display: flex; gap: 6px">
+<button style="height: 30px; padding: 0 14px; border-radius: 8px; background: #34d399; color: #04261b; font-weight: 600">Allow</button>
+<button style="height: 30px; padding: 0 12px; border-radius: 8px; background: #272d37">Deny</button>
+<button style="height: 30px; padding: 0 12px; border-radius: 8px; color: #aab3c3">Open in Dawsha</button>
+</div>
+</div>
+</div>
+<div style="display: flex; gap: 12px; padding: 12px; border-radius: 14px; background: #1b1f26">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 9px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 16px; font-weight: 700">C</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; line-height: 20px; font-weight: 600">Add dark mode toggle</span>
+<span style="color: #aab3c3">Running the test suite</span>
+<span style="font-weight: 600"><span style="color: #4ade9f">5/7</span> <span style="color: #aab3c3">Plan</span></span>
+<div style="height: 4px; border-radius: 4px; background: rgb(255 255 255 / .08); margin-top: 4px"><div style="width: 71%; height: 4px; border-radius: 4px; background: #34d399"></div></div>
+</div>
+</div>
+</section>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px; width: 300px; flex: none">
+<div style="color: #8c96a8">Folded: one bar that stays out of the way</div>
+<section aria-label="Folded mini window" style="border-radius: 14px; background: #16191f; box-shadow: 0 0 0 1px rgb(255 255 255 / .1), 0 16px 40px rgb(0 0 0 / .55); padding: 8px 8px 8px 10px; display: flex; align-items: center; gap: 10px">
+<div style="display: flex"><span style="width: 22px; height: 22px; border-radius: 6px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700; box-shadow: 0 0 0 2px #16191f">C</span><span style="width: 22px; height: 22px; margin-left: -6px; border-radius: 6px; background: #d6dbe4; color: #121419; display: grid; place-items: center; font-size: 11px; font-weight: 700; box-shadow: 0 0 0 2px #16191f">X</span><span style="width: 22px; height: 22px; margin-left: -6px; border-radius: 6px; background: #8b7cf6; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700; box-shadow: 0 0 0 2px #16191f">G</span></div>
+<span style="flex: 1; font-weight: 500">4 sessions, <span style="color: #ffa54f">1 needs you</span></span>
+<button aria-label="Unfold" style="width: 28px; height: 28px; display: grid; place-items: center; color: #aab3c3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+</section>
+<div style="color: #8c96a8; line-height: 20px; margin-top: 12px">Always on top, frameless, and it remembers where you put it. Open it from the tray icon, from View, or with a shortcut. Settings can show it when Dawsha is minimized. Sessions without a plan show their status line and no bar.</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="InApp" class="board">
+<h2>Its design language in the app</h2>
+<div class="frame" style="width: 1440px; height: 640px">
+<div class="ui" style="width: 1440px; height: 640px; background: #121419; color: #e8ebf1; display: flex; overflow: hidden; font-size: 13px; line-height: 18px">
+
+<aside style="width: 272px; flex: none; background: #16191f; box-shadow: inset -1px 0 0 rgb(255 255 255 / .07); padding: 16px 10px; display: flex; flex-direction: column; gap: 16px">
+<div style="padding: 0 6px; color: #8c96a8">Sidebar rows</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="padding: 0 6px 4px; color: #8c96a8">acme-web</div>
+<button style="display: flex; gap: 10px; padding: 10px; border-radius: 12px; background: #20252d">
+<span style="width: 28px; height: 28px; flex: none; border-radius: 7px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700">C</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 14px">Add dark mode toggle</span><span style="color: #aab3c3">Running the test suite</span><span style="display: flex; align-items: center; gap: 8px"><span style="font-weight: 600; color: #4ade9f">5/7</span><span style="flex: 1; height: 3px; border-radius: 3px; background: rgb(255 255 255 / .08)"><span style="display: block; width: 71%; height: 3px; border-radius: 3px; background: #34d399"></span></span></span></span>
+</button>
+<button style="display: flex; gap: 10px; padding: 10px; border-radius: 12px; box-shadow: inset 0 0 0 1.5px rgb(255 165 79 / .7)">
+<span style="width: 28px; height: 28px; flex: none; border-radius: 7px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700">C</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 14px">Refactor invoice export</span><span style="color: #ffa54f; font-weight: 500">Run npm run migrate?</span><span style="display: flex; gap: 6px; margin-top: 6px"><span style="height: 26px; padding: 0 12px; border-radius: 7px; background: #34d399; color: #04261b; font-weight: 600; display: grid; place-items: center">Allow</span><span style="height: 26px; padding: 0 10px; border-radius: 7px; background: #272d37; display: grid; place-items: center">Deny</span></span></span>
+</button>
+<button style="display: flex; gap: 10px; padding: 10px; border-radius: 12px">
+<span style="width: 28px; height: 28px; flex: none; border-radius: 7px; background: #d6dbe4; color: #121419; display: grid; place-items: center; font-size: 13px; font-weight: 700">X</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 14px">Fix flaky login test</span><span style="color: #4ade9f">Done, 4 files changed</span></span>
+</button>
+</div>
+</aside>
+
+<main style="flex: 1; min-width: 0; padding: 16px 24px; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="color: #8c96a8">Tab strip: the open tab carries the plan bar</div>
+<div style="display: flex; align-items: center; gap: 2px; height: 40px; padding: 0 2px; border-radius: 10px; background: #16191f; width: fit-content">
+<div style="position: relative; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 10px; border-radius: 8px"><span style="color: #8c96a8">2</span><span style="width: 18px; height: 18px; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 700">C</span>Refactor invoice export<span style="color: #ffa54f">Needs you</span></div>
+<div style="position: relative; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 10px; border-radius: 8px; background: #272d37"><span style="color: #aab3c3">1</span><span style="width: 18px; height: 18px; border-radius: 5px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 700">C</span><span style="font-weight: 600">Add dark mode toggle</span><span style="color: #4ade9f; font-weight: 600">5/7</span><span style="position: absolute; left: 10px; right: 12px; bottom: 3px; height: 2px; border-radius: 2px; background: rgb(255 255 255 / .08)"><span style="display: block; width: 71%; height: 2px; border-radius: 2px; background: #34d399"></span></span></div>
+<div style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 10px; border-radius: 8px"><span style="color: #8c96a8">3</span><span style="width: 18px; height: 18px; border-radius: 5px; background: #d6dbe4; color: #121419; display: grid; place-items: center; font-size: 10px; font-weight: 700">X</span>Fix flaky login test<span style="color: #4ade9f">Done</span></div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px; max-width: 620px">
+<div style="color: #8c96a8">Pane header: bold title, step count and a thin bar under it</div>
+<div style="border-radius: 14px; background: #1b1f26; padding: 12px 14px; display: flex; gap: 12px; align-items: center">
+<span style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: #d9774b; color: #fff; display: grid; place-items: center; font-size: 15px; font-weight: 700">C</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: baseline; gap: 10px"><span style="font-size: 16px; line-height: 22px; font-weight: 600">Add dark mode toggle</span><span style="color: #8c96a8">acme-web</span><span style="margin-left: auto; color: #72b4ff">Working 2m</span></div>
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-weight: 600"><span style="color: #4ade9f">5/7</span> <span style="color: #aab3c3">Run the tests</span></span><span style="flex: 1; height: 3px; border-radius: 3px; background: rgb(255 255 255 / .08)"><span style="display: block; width: 71%; height: 3px; border-radius: 3px; background: #34d399"></span></span></div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</section>
+</body>
+</html>

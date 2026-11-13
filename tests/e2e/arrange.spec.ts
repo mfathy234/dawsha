@@ -182,9 +182,12 @@ test('pins a pane so it stays beside a maximized pane, one pin at a time, and ke
     await expect(second.page.locator('.pane')).toHaveCount(3, { timeout: 20_000 })
     await expect(second.page.locator('.pane-pin:visible')).toHaveCount(1)
     await expect(second.page.locator('.pane').nth(1).locator('.pane-pin')).toBeVisible()
-    await second.page.locator('.pane').first().locator('.maximize').click()
-    await expect(second.page.locator('.pane').nth(1)).toBeVisible()
-    await expect(second.page.locator('.pane').nth(2)).toBeHidden()
+    // The maximized pane comes back too: the third one, with the pinned pane beside it.
+    await expect(second.page.locator('.pane.maximized')).toHaveCount(1)
+    await expect(second.page.locator('.pane').nth(2)).toHaveClass(/maximized/)
+    await expect(second.page.locator('.pane').first()).toBeHidden()
+    await second.page.locator('.pane').nth(2).locator('.maximize').click()
+    await expect(second.page.locator('.pane').first()).toBeVisible()
   } finally {
     expect(await closeApp(second.app)).toBeLessThan(QUIT_BUDGET_MS)
   }

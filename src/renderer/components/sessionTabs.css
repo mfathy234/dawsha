@@ -1,0 +1,138 @@
+/* Session tabs: one soft track, the open tab raised, the close X only where you are, a drop line while dragging. */
+.pane-strip {
+  position: relative;
+  height: 36px;
+  margin: var(--s-2) var(--s-3) 0;
+  padding: 0 2px;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 0;
+  border-radius: 10px;
+  background: var(--well);
+}
+
+.strip-tab {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 96px;
+  max-width: 220px;
+  height: 30px;
+  padding: 0 4px 0 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  transition: background var(--t-feedback, 120ms);
+}
+
+.strip-tab:hover { background: var(--hover); }
+
+.strip-tab.selected {
+  flex-shrink: 0;
+  background: var(--raised);
+  box-shadow: var(--e-inset-top) var(--seam);
+  color: var(--text);
+}
+
+.strip-tab.selected .strip-name { font-weight: var(--w-medium); }
+
+.strip-label { padding: 0; gap: 8px; font-weight: var(--w-regular); }
+.strip-label:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; border-radius: 6px; }
+
+.strip-index { color: var(--faint, var(--muted)); }
+
+.strip-status { margin-inline-start: 0; white-space: nowrap; }
+
+.strip-plan {
+  flex: none;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The close button keeps its 22px so tabs never shift; it shows on hover, on focus and on the open tab. */
+.strip-close {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  flex: none;
+  opacity: 0;
+}
+
+.strip-tab:hover .strip-close,
+.strip-tab:focus-within .strip-close,
+.strip-tab.selected .strip-close { opacity: 1; }
+
+.strip-bar {
+  position: absolute;
+  left: 10px;
+  right: 12px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.strip-bar i {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.strip-tab.drag-source {
+  z-index: 2;
+  background: var(--surface-pop, var(--raised));
+  box-shadow: 0 10px 24px rgb(var(--shadow-rgb, 4 6 10) / .45), 0 0 0 1px var(--line, rgb(255 255 255 / .14));
+  transform: translateY(2px);
+}
+
+.strip-drop {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.strip-drop[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .strip-tab { transition: none; }
+}
+
+.pane-strip {
+  flex: none;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.pane-strip::-webkit-scrollbar { display: none; }
+
+.strip-tab { display: flex; align-items: center; }
+
+.strip-label {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--fs-1);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.strip-index,
+.strip-status,
+.strip-plan { flex: none; }
+
+.strip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

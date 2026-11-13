@@ -179,7 +179,7 @@ for (const [mode, themeId] of THEMES) {
       expect(body.seam).toBe('1px')
       expect(body.bg).toBe(rgb(mode === 'dark' ? '#0f1115' : '#f1f4f8'))
       expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el, '::after').content)).toBe('none')
-      expect(await idle.locator('.xterm-screen').first().evaluate((el) => getComputedStyle(el).opacity)).toBe(mode === 'dark' ? '0.86' : '1')
+      expect(await idle.locator('.xterm-screen').first().evaluate((el) => getComputedStyle(el).opacity)).toBe(mode === 'dark' ? '0.94' : '1')
       expect(await focused.locator('.xterm-screen').first().evaluate((el) => getComputedStyle(el).opacity)).toBe('1')
       expect(await idle.locator('.pane-body').evaluate((el) => getComputedStyle(el).filter)).toBe('none')
       expect(await focused.locator('.pane-body').evaluate((el) => getComputedStyle(el).filter)).toBe('none')

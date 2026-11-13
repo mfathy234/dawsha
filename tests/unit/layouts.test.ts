@@ -213,3 +213,38 @@ describe('layouts in settings', () => {
     expect(migrateSettings({ layouts: 'x' }).layouts).toEqual([])
   })
 })
+
+describe('restoring the whole view', () => {
+  const project = { id: 'a', name: 'A', folder: 'C:\a' }
+  const panes = [
+    pane('p1', 'a', [{ id: 't1', agent: 'claude', label: 'claude', view: 'terminal' }]),
+    pane('p2', 'a', [
+      { id: 't2', agent: 'claude', label: 'claude', view: 'chat' },
+      { id: 't3', agent: 'shell', label: 'shell' }
+    ], 't3')
+  ]
+
+  it('saves which pane is maximized as an index and leaves it out for a portable layout', () => {
+    expect(snapshotWorkspace(panes, 'p2', { maximizedId: 'p2' }).maximizedIndex).toBe(1)
+    expect(snapshotWorkspace(panes, 'p2', { maximizedId: 'p9' })).not.toHaveProperty('maximizedIndex')
+    expect(snapshotWorkspace(panes, 'p2')).not.toHaveProperty('maximizedIndex')
+    expect(snapshotWorkspace(panes, 'p2', { maximizedId: 'p2', portable: true })).not.toHaveProperty('maximizedIndex')
+  })
+
+  it('round trips the maximized pane, large pane, active tab and chat view through the settings', () => {
+    const saved = snapshotWorkspace(panes, 'p2', { maximizedId: 'p2', largeId: 'p1' })
+    const back = migrateSettings({ projects: [project], workspace: JSON.parse(JSON.stringify(saved)) }).workspace
+    expect(back.maximizedIndex).toBe(1)
+    expect(back.largeIndex).toBe(0)
+    expect(back.focusedIndex).toBe(1)
+    expect(back.panes[1].activeIndex).toBe(1)
+    expect(back.panes[1].tabs[0].view).toBe('chat')
+  })
+
+  it('tolerates old saves and bad indexes', () => {
+    const old = { focusedIndex: 0, panes: [{ projectId: 'a', fontSize: 15, activeIndex: 0, tabs: [{ agent: 'claude', label: 'claude' }] }] }
+    expect(migrateSettings({ projects: [project], workspace: old }).workspace).not.toHaveProperty('maximizedIndex')
+    expect(migrateSettings({ projects: [project], workspace: { ...old, maximizedIndex: 5 } }).workspace).not.toHaveProperty('maximizedIndex')
+    expect(migrateSettings({ projects: [project], workspace: { ...old, maximizedIndex: 'x' } }).workspace).not.toHaveProperty('maximizedIndex')
+  })
+})

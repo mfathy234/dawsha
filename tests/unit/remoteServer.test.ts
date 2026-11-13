@@ -1,4 +1,5 @@
 import { request as httpRequest, type IncomingMessage } from 'node:http'
+import { connect } from 'node:net'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -83,6 +84,18 @@ async function setup(
 }
 
 describe('private remote HTTP API', () => {
+  it('stops with a client that never finishes its HTTP headers', async () => {
+    const context = await setup()
+    const socket = connect(context.server.port, '127.0.0.1')
+    await new Promise<void>((resolve, reject) => { socket.once('connect', resolve); socket.once('error', reject) })
+    socket.write('GET / HTTP/1.1\r\nHost: device.trycloudflare.com\r\n')
+    const closed = new Promise<void>(resolve => socket.once('close', () => resolve()))
+    try {
+      await context.server.stop()
+      await closed
+      expect(socket.destroyed).toBe(true)
+    } finally { socket.destroy(); await context.server.stop() }
+  })
   it('serves the unpaired browser page before requiring a device cookie', async () => {
     const assetDirectory = mkdtempSync(join(tmpdir(), 'dawsha-remote-assets-'))
     writeFileSync(join(assetDirectory, 'remote.html'), '<!doctype html><title>Pair with Dawsha</title>')

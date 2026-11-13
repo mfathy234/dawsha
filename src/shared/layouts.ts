@@ -38,6 +38,7 @@ export interface SnapshotOptions {
   portable?: boolean
   splits?: GridSplits
   largeId?: string | null
+  maximizedId?: string | null
 }
 
 export function snapshotWorkspace(
@@ -82,6 +83,8 @@ export function snapshotWorkspace(
   }
   const largeIndex = options.largeId ? kept.findIndex((pane) => pane.id === options.largeId) : -1
   if (largeIndex >= 0) workspace.largeIndex = largeIndex
+  const maximizedIndex = options.portable !== true && options.maximizedId ? kept.findIndex((pane) => pane.id === options.maximizedId) : -1
+  if (maximizedIndex >= 0) workspace.maximizedIndex = maximizedIndex
   const splits = sanitizeSplits(options.splits)
   if (splits) workspace.splits = splits
   return workspace

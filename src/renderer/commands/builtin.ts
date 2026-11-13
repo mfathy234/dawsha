@@ -56,6 +56,7 @@ import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
 import { SIDEBAR_FILTER_EVENT } from '../../shared/sidebarModel'
 import { registerCommands, registerProvider, type Command } from './registry'
 import { editSpendLimit, pauseAllAgents } from '../spendActions'
+import { toggleMiniWindow } from '../miniWindowSync'
 
 const hasPane = (state: AppState): boolean => paneById(state, state.focusedId) !== undefined
 
@@ -416,8 +417,16 @@ export function installBuiltinCommands(): void {
       group: 'Actions',
       keywords: 'panes layout',
       ...withKeys('Ctrl+Shift+B'),
-      enabled: (state) => state.settings.sessionsLayout === 'board',
+      enabled: (state) => state.settings.sessionsLayout !== 'grid',
       run: () => setSessionsLayout('grid')
+    },
+    {
+      id: 'view.panel',
+      title: 'Switch to side panel view',
+      group: 'Actions',
+      keywords: 'layout one session changes plan checks panel beside',
+      enabled: (state) => state.settings.sessionsLayout !== 'panel',
+      run: () => setSessionsLayout('panel')
     },
     { id: 'view.toggleDim', title: 'Toggle dimming of other sessions', group: 'Actions', keywords: 'dim others focus calm idle sessions', run: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
     { id: 'view.gridFocus', title: 'Sessions grid: calm focus', group: 'Actions', keywords: 'grid layout focus one large pane siblings calm sessions', run: () => setGridStyle('focus') },
@@ -439,6 +448,8 @@ export function installBuiltinCommands(): void {
   )
   registerProvider(sessionCommands)
   registerProvider(projectCommands)
+  // After the session commands, so New session stays first in the palette.
+  registerCommands({ id: 'view.mini', title: 'Mini window', group: 'Actions', keywords: 'float always on top sessions', ...withKeys('Ctrl+Alt+M'), run: toggleMiniWindow })
 }
 
 function sessionCommands(state: AppState): Command[] {

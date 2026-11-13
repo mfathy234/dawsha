@@ -6,6 +6,7 @@ const privateRemoteBuild = process.env.DAWSHA_PRIVATE_REMOTE_BUILD === '1'
 const remoteBuildDefine = { ...privateRemoteBuildDefine(privateRemoteBuild), ...remoteControlBuildDefine(true) }
 const rendererInputs: Record<string, string> = { index: resolve(__dirname, 'src/renderer/index.html') }
 rendererInputs.remote = resolve(__dirname, 'src/renderer/remote.html')
+rendererInputs.mini = resolve(__dirname, 'src/renderer/mini.html')
 const rendererOutDir = resolve(__dirname, privateRemoteBuild ? 'out/renderer-private' : 'out/renderer')
 
 export default defineConfig({
@@ -15,7 +16,7 @@ export default defineConfig({
   },
   preload: {
     define: remoteBuildDefine,
-    build: { rollupOptions: { input: { index: resolve(__dirname, 'src/preload/index.ts') } } }
+    build: { rollupOptions: { input: { index: resolve(__dirname, 'src/preload/index.ts'), mini: resolve(__dirname, 'src/preload/mini.ts') }, output: { inlineDynamicImports: false } } }
   },
   renderer: {
     root: resolve(__dirname, 'src/renderer'),

@@ -1,0 +1,84 @@
+/* Sidebar frame: the top bar's parts live in the sidebar. Everything is scoped to .frame-sidebar so the top bar frame is untouched. */
+.frame-sidebar .topbar { display: none; }
+
+.frame-sidebar .sidebar .frame-top { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-2) var(--sp-2); }
+.frame-sidebar .sidebar .frame-head { display: flex; align-items: center; gap: var(--sp-1); padding: 0 0 var(--sp-2) var(--sp-1); }
+.frame-sidebar .sidebar .frame-spacer { flex: 1 1 0; min-width: 0; }
+.frame-sidebar .sidebar .frame-head .app-logo-menu { flex: 0 1 auto; min-width: 0; height: 32px; padding: 0 var(--sp-2); gap: var(--sp-2); border-radius: 8px; font-weight: 500; }
+.frame-sidebar .sidebar .frame-head .app-logo-menu .app-title { display: inline; }
+.frame-sidebar .sidebar .frame-head .bell-button,
+.frame-sidebar .sidebar .frame-collapse { flex: none; width: 28px; height: 28px; min-height: 28px; padding: 0; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--text-2); cursor: pointer; }
+.frame-sidebar .sidebar .frame-head .bell-button:hover,
+.frame-sidebar .sidebar .frame-collapse:hover { background: var(--hover); color: var(--text); }
+.frame-sidebar .sidebar .frame-collapse:active { background: var(--press); }
+.frame-sidebar .sidebar .frame-collapse svg { width: 16px; height: 16px; }
+
+.frame-sidebar .sidebar .frame-new { display: flex; align-items: center; gap: var(--sp-2); width: 100%; height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: 10px; background: transparent; box-shadow: none; color: var(--text); font-size: var(--fs-13); font-weight: 500; }
+.frame-sidebar .sidebar .frame-new:hover { background: var(--hover); color: var(--text); }
+.frame-sidebar .sidebar .frame-new:active { background: var(--press); }
+.frame-sidebar .sidebar .frame-new .new-session-icon { width: 22px; height: 22px; border-radius: 999px; background: var(--accent); color: var(--on-accent); }
+.frame-sidebar .sidebar .frame-new .new-session-icon svg { width: 12px; height: 12px; }
+.frame-sidebar .sidebar .frame-new .new-session-label { display: inline; }
+.frame-sidebar .sidebar .frame-new .new-session-kbd { display: inline; margin-inline-start: auto; min-width: 0; height: auto; padding: 0; border-radius: 0; background: none; color: var(--text-3); font-size: var(--fs-12); font-weight: 400; line-height: 1; }
+.frame-sidebar .sidebar .frame-new .split-chevron { flex: none; width: 22px; height: 22px; border-radius: 6px; background: transparent; color: var(--text-3); }
+.frame-sidebar .sidebar .frame-new .split-chevron:hover { background: var(--hover); color: var(--text); }
+
+.frame-sidebar .sidebar .frame-top > #search-button { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); width: 100%; height: 32px; padding: 0 var(--sp-2); border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--text-2); font-size: var(--fs-13); font-weight: 400; }
+.frame-sidebar .sidebar .frame-top > #search-button .utility-label { display: inline; }
+.frame-sidebar .sidebar .frame-top > #search-button .search-kbd { display: inline; margin-inline-start: auto; color: var(--text-3); font-size: var(--fs-12); }
+.frame-sidebar .sidebar .frame-top > #search-button:hover,
+.frame-sidebar .sidebar .frame-nav .nav-button:hover { background: var(--hover); color: var(--text); }
+
+.frame-sidebar .sidebar .frame-nav { display: flex; flex-direction: column; gap: 1px; padding-bottom: var(--sp-2); }
+.frame-sidebar .sidebar .frame-nav .nav-button { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); width: 100%; height: 32px; min-width: 0; padding: 0 var(--sp-2); border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--text-2); font-size: var(--fs-13); font-weight: 400; }
+.frame-sidebar .sidebar .frame-nav .nav-button .nav-icon,
+.frame-sidebar .sidebar .frame-nav .nav-button[aria-current='page'] .nav-icon { display: inline-flex; flex: none; }
+.frame-sidebar .sidebar .frame-nav .nav-button .nav-label,
+.frame-sidebar .sidebar .frame-nav .nav-button[aria-current='page'] .nav-label { display: inline; }
+.frame-sidebar .sidebar .frame-nav .nav-button[aria-pressed='true'],
+.frame-sidebar .sidebar .frame-nav .nav-button[aria-pressed='true']:hover { background: var(--raised); color: var(--text); font-weight: 400; }
+.frame-sidebar .sidebar .frame-nav .nav-button[aria-pressed='true']::after { content: none; }
+
+.frame-sidebar .sidebar .frame-top > .topbar-view { display: flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-1) var(--sp-2); flex-wrap: wrap; }
+.frame-sidebar .sidebar .frame-top > .topbar-view[hidden] { display: none; }
+.frame-sidebar .sidebar .frame-top > .topbar-view .topbar-sep { display: none; }
+
+.frame-sidebar .sidebar .frame-bottom { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-2) var(--sp-2) var(--sp-3); }
+.frame-sidebar .sidebar .frame-bottom > .update-pill { margin: 0; height: 30px; justify-content: flex-start; }
+.frame-sidebar .sidebar .frame-bottom > .update-pill[hidden] { display: none; }
+.frame-sidebar .sidebar .frame-bottom > .crew-strip { flex-wrap: wrap; }
+.frame-sidebar .sidebar .frame-bottom > .crew-strip[hidden] { display: none; }
+.frame-sidebar .sidebar .frame-foot { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.frame-sidebar .sidebar .frame-foot #settings-button { flex: 1 1 auto; display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); width: auto; min-width: 0; height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: 10px; background: transparent; box-shadow: none; color: var(--text-2); font-size: var(--fs-13); font-weight: 400; }
+.frame-sidebar .sidebar .frame-foot #settings-button .utility-label { display: inline; }
+.frame-sidebar .sidebar .frame-foot #settings-button:hover { background: var(--hover); color: var(--text); }
+.frame-sidebar .sidebar .frame-foot #settings-button[aria-pressed='true'] { background: var(--raised); color: var(--text); }
+.frame-sidebar .sidebar .frame-foot .topbar-limits { flex: 0 1 auto; min-width: 0; margin-inline-start: auto; padding: 0 var(--sp-1); }
+.frame-sidebar .sidebar .frame-foot .topbar-limits .limits-agent-name { display: none; }
+
+.frame-sidebar .sidebar .sidebar-head .icon-btn[aria-label='Collapse sidebar'] { display: none; }
+
+.frame-sidebar .sidebar.rail .frame-top { align-items: center; padding: var(--sp-3) 0 0; gap: var(--sp-1); }
+.frame-sidebar .sidebar.rail .frame-head { flex-direction: column; padding: 0 0 var(--sp-1); gap: var(--sp-1); }
+.frame-sidebar .sidebar.rail .frame-spacer,
+.frame-sidebar .sidebar.rail .frame-head .app-title,
+.frame-sidebar .sidebar.rail .frame-new .new-session-label,
+.frame-sidebar .sidebar.rail .frame-new .new-session-kbd,
+.frame-sidebar .sidebar.rail .frame-new .split-chevron,
+.frame-sidebar .sidebar.rail .frame-top > #search-button .utility-label,
+.frame-sidebar .sidebar.rail .frame-top > #search-button .search-kbd,
+.frame-sidebar .sidebar.rail .frame-nav .nav-label,
+.frame-sidebar .sidebar.rail .frame-bottom #settings-button .utility-label,
+.frame-sidebar .sidebar.rail .frame-top > .topbar-view,
+.frame-sidebar .sidebar.rail .frame-bottom > .crew-strip { display: none; }
+.frame-sidebar .sidebar.rail .frame-new,
+.frame-sidebar .sidebar.rail .frame-top > #search-button,
+.frame-sidebar .sidebar.rail .frame-nav .nav-button,
+.frame-sidebar .sidebar.rail .frame-foot #settings-button { width: 36px; height: 32px; padding: 0; justify-content: center; }
+.frame-sidebar .sidebar.rail .frame-nav { align-items: center; padding-bottom: 0; }
+.frame-sidebar .sidebar.rail .frame-bottom { align-items: center; padding: var(--sp-2) 0 var(--sp-3); }
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill { width: 36px; padding: 0; justify-content: center; overflow: hidden; }
+.frame-sidebar .sidebar.rail .frame-foot { flex-direction: column; }
+.frame-sidebar .sidebar.rail .frame-foot .topbar-limits { margin: 0; }
+
+:root:not([data-input='pointer']) .frame-sidebar .sidebar :is(.frame-collapse, .frame-new, .frame-nav .nav-button, #search-button, #settings-button, .app-logo-menu):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

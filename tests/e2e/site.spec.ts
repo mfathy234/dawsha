@@ -237,7 +237,7 @@ test('with reduced motion the demo shows its poster and never starts', async ({ 
   for (const toggle of await page.locator('.demo-toggle').all()) await expect(toggle).toBeHidden()
 })
 
-const releaseRows = ['rewind-retry', 'reply-checks', 'calmer-sidebar', 'chat-composer', 'undo-reply', 'work-budget', 'redesign', 'grid-styles', 'settings-sections', 'agent-roster', 'agents-crew', 'agent-states', 'lead-maya', 'phone-agents', 'from-1-7-5']
+const releaseRows = ['desktop-style', 'mini-window', 'side-panel', 'rewind-retry', 'reply-checks', 'calmer-sidebar', 'chat-composer', 'undo-reply', 'work-budget', 'redesign', 'grid-styles', 'settings-sections', 'agent-roster', 'agents-crew', 'agent-states', 'lead-maya', 'phone-agents', 'from-1-7-5']
 
 test('the hero is three text elements with a readable crop of the app and no pill or platform row', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -265,11 +265,15 @@ test('the page has no em or en dashes, no uppercase labels and no decorative bad
   }
 })
 
-test('New in 1.8.6 leads the page with sized lazy screenshots and no run of three splits', async ({ page }) => {
+test('New in 1.8.7 leads the page with sized lazy screenshots and no run of three splits', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(url)
-  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.8.6')
-  await expect(page.locator('#new-h')).toHaveText('New in 1.8.6')
+  await expect(page.locator('nav[aria-label="Primary"] a').first()).toHaveText('New in 1.8.7')
+  await expect(page.locator('#new-h')).toHaveText('New in 1.8.7')
+  await expect(page.locator('#new #desktop-style h3')).toHaveText('A desktop app style, when you want it')
+  await expect(page.locator('#new #desktop-style')).toContainText('Quiet panes sum up the last reply')
+  await expect(page.locator('#new #mini-window h3')).toHaveText('A Mini window that stays on top')
+  await expect(page.locator('#new #side-panel')).toContainText('Drag the session tabs')
   await expect(page.locator('#new #rewind-retry h3')).toHaveText('Rewind and try again')
   await expect(page.locator('#new #rewind-retry')).toContainText('Edit a message you sent and send it again')
   await expect(page.locator('#new #reply-checks h3')).toHaveText('Know what a reply did')
@@ -358,7 +362,10 @@ test('the remote section keeps its phone screenshots and says Remote Control is 
 
 test('the Arabic page translates the 1.8 sections, the earlier releases and the demo, and neither page scrolls sideways at 375px', async ({ page }) => {
   await page.goto(arabicUrl)
-  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.8.6')
+  await expect(page.locator('#new-h')).toHaveText('الجديد في 1.8.7')
+  await expect(page.locator('#desktop-style h3')).toHaveText('نمط تطبيقات سطح المكتب، متى أردته')
+  await expect(page.locator('#mini-window h3')).toHaveText('نافذة مصغّرة تبقى في المقدمة')
+  await expect(page.locator('#side-panel h3')).toHaveText('جلسة واحدة وتغييراتها بجانبها')
   await expect(page.locator('#rewind-retry h3')).toHaveText('ارجع وجرّب من جديد')
   await expect(page.locator('#reply-checks h3')).toHaveText('اعرف ما فعله الرد')
   await expect(page.locator('#calmer-sidebar h3')).toHaveText('شريط جانبي أهدأ')

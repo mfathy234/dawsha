@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { armHardDeadline, bounded, exitProcess, runPhases, runQuit, type ShutdownDeps } from '../../src/main/shutdown'
+import { armHardDeadline, bounded, exitProcess, runPhases, runQuit, stopAllServices, type ShutdownDeps } from '../../src/main/shutdown'
 
 const never = (): Promise<void> => new Promise(() => undefined)
 
@@ -23,6 +23,20 @@ function makeDeps(overrides: Partial<ShutdownDeps> = {}): ShutdownDeps & { lines
 }
 
 describe('shutdown', () => {
+  it('starts every cleanup even when an earlier service throws or hangs', async () => {
+    const stopped: string[] = []
+    const log = vi.fn()
+    const result = stopAllServices([
+      ['throwing', () => { throw new Error('failed') }],
+      ['hanging', never],
+      ['watcher', () => { stopped.push('watcher') }],
+      ['server', async () => { stopped.push('server') }]
+    ], log)
+    await Promise.resolve()
+    expect(stopped).toEqual(['watcher', 'server'])
+    expect(log).toHaveBeenCalledWith('throwing stop failed: failed')
+    void result
+  })
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 

@@ -40,7 +40,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="التنقل الرئيسي">
-      <a href="#new">الجديد في 1.8.6</a>
+      <a href="#new">الجديد في 1.8.7</a>
       <a href="#showcase">صور التطبيق</a>
       <a href="#remote">عن بُعد</a>
       <a href="#features">المميزات</a>
@@ -95,8 +95,38 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">الجديد في 1.8.6</h2>
-      <p class="section-lead">يتيح 1.8.6 الرجوع بالمحادثة إلى أي رسالة، ويُظهر ما فعله كل رد ويشغّل اختباراتك بعده، ويمنح الشريط الجانبي مساحة أرحب. وتحته 1.8.5 وإعادة تصميم 1.8.0.</p>
+      <h2 id="new-h">الجديد في 1.8.7</h2>
+      <p class="section-lead">يضيف 1.8.7 نمطًا يشبه تطبيقات سطح المكتب تشغّله متى شئت، ونافذة مصغّرة تبقى فوق كل النوافذ، وتخطيط اللوحة الجانبية. وصارت الجلسات تعود كما تركتها. وتحته 1.8.6 والإصدارات الأقدم.</p>
+      <div class="feat-row" id="desktop-style">
+        <div class="feat-copy">
+          <h3>نمط تطبيقات سطح المكتب، متى أردته</h3>
+          <p>ثلاثة خيارات جديدة في الإعدادات تغيّر شكل دوشة، في الطرفية وفي المحادثة. وزر واحد يشغّلها كلها.</p>
+          <ul><li>تلخّص الألواح الهادئة آخر رد تحت الطرفية، مع مراجعة وحفظ هذا الرد في commit والتراجع.</li><li>إطار الشريط الجانبي ينقل التبويبات إلى الشريط الجانبي ويستغني عن الشريط العلوي.</li><li>الدرجة الدافئة تستبدل الرمادي المائل للأزرق برمادي محايد، وتُبقي لونك المميز.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="../assets/desktop-style.png" width="1168" height="668" alt="Dawsha in the desktop app style: the tabs in the sidebar, rounded quiet panes in warm grey, and one session asking to run a command">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="mini-window">
+        <div class="feat-copy">
+          <h3>نافذة مصغّرة تبقى في المقدمة</h3>
+          <p>تابع كل الجلسات وأنت تعمل في تطبيق آخر، وأجب الجلسة التي تحتاجك دون أن تنتقل إليها.</p>
+          <ul><li>تُظهر كل جلسة ما تفعله الآن وإلى أين وصلت في خطتها.</li><li>اسمح أو ارفض من النافذة نفسها، أو افتح الجلسة في دوشة.</li><li>افتحها من أيقونة شريط النظام أو قائمة العرض أو شريط المهام، أو اجعلها تُفتح عندما تصغّر دوشة.</li></ul>
+        </div>
+        <figure class="shot framed narrow">
+          <img loading="lazy" src="../assets/mini-window.png" width="376" height="482" alt="The Mini window listing sessions with their plan progress, one asking to run a command with Allow and Deny buttons">
+        </figure>
+      </div>
+      <div class="feat-wide" id="side-panel">
+        <div class="feat-copy">
+          <h3>جلسة واحدة وتغييراتها بجانبها</h3>
+          <p>يعرض تخطيط اللوحة الجانبية جلسة واحدة وبجانبها التغييرات والخطة والفحوص.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="../assets/side-panel.png" width="1168" height="668" alt="The Side panel layout: one Claude session with the session tabs above it and the files its last reply changed in a panel on the right">
+        </figure>
+        <ul class="feat-cols"><li>اسحب تبويبات الجلسات لترتّبها كما تريد.</li><li>يُبقي التركيز الهادئ الجلسات الأخرى بارتفاع يكفي لقراءتها.</li><li>تعود الجلسات كما تركتها، كل واحدة في محادثتها.</li></ul>
+      </div>
       <div class="feat-row" id="rewind-retry">
         <div class="feat-copy">
           <h3>ارجع وجرّب من جديد</h3>
