@@ -90,3 +90,35 @@ test('Quiet panes move the context gauge from the footer into the header ring', 
     await closeApp(app)
   }
 })
+
+test('an update keeps focus on Compact, and closing the pane with the window open leaves nothing behind', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    mkdirSync(join(logPath(sandbox), '..'), { recursive: true })
+    writeFileSync(logPath(sandbox), '')
+    writeOps(sandbox, 41, 82_000)
+    await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
+    await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
+    writeSession(sandbox)
+    const ring = page.locator('.pane .pane-header').getByRole('button', { name: /^Context 41% used/ })
+    await expect(ring).toContainText('41%', { timeout: 15_000 })
+
+    await ring.click()
+    const pop = page.getByRole('dialog', { name: 'Context' })
+    const compact = pop.getByRole('button', { name: 'Compact', exact: true })
+    await compact.focus()
+    writeOps(sandbox, 55, 110_000)
+    await expect(pop).toContainText('55% of 200K used', { timeout: 15_000 })
+    await expect(compact).toBeFocused()
+
+    await page.keyboard.press('Control+k')
+    // A click event without a pointerdown, as a shortcut or another window closing the pane would cause.
+    await page.evaluate(() => document.querySelector<HTMLElement>('.pane .close-pane')?.click())
+    await expect(page.locator('.pane')).toHaveCount(0, { timeout: 15_000 })
+    await expect(page.locator('.ctx-pop')).toHaveCount(0)
+    await expect(page.getByRole('dialog', { name: 'Context' })).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})

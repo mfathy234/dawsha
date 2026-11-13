@@ -28,6 +28,7 @@ export class ContextRing {
   private sessionName = ''
   private pop: HTMLElement | null = null
   private stopListening: (() => void) | null = null
+  private shownKey = ''
 
   constructor(private readonly host: ContextRingHost) {
     this.glyph.append(this.track, this.arc)
@@ -60,10 +61,24 @@ export class ContextRing {
     this.text.textContent = view.text
     this.el.dataset.stage = view.stage
     this.el.setAttribute('aria-label', view.label)
-    if (this.pop) {
-      this.fill(this.pop, reading)
-      this.place(this.pop)
-    }
+    if (this.pop) this.refresh(this.pop, reading)
+  }
+
+  /** Closes the popover and drops its document listeners; a closed pane must not leave either behind. */
+  destroy(): void {
+    this.close(false)
+  }
+
+  private refresh(pop: HTMLElement, reading: ContextReading): void {
+    if (this.keyOf(reading) === this.shownKey) return
+    const focused = Array.from(pop.querySelectorAll('button')).findIndex((button) => button === document.activeElement)
+    this.fill(pop, reading)
+    this.place(pop)
+    if (focused >= 0) pop.querySelectorAll('button')[focused]?.focus()
+  }
+
+  private keyOf(reading: ContextReading): string {
+    return JSON.stringify([contextSegments(reading), contextUsedLine(reading), contextWindowLine(reading), this.sessionName])
   }
 
   private open(): void {
@@ -93,6 +108,7 @@ export class ContextRing {
   }
 
   private fill(pop: HTMLElement, reading: ContextReading): void {
+    this.shownKey = this.keyOf(reading)
     const segments = contextSegments(reading)
     const windowLine = contextWindowLine(reading)
     const bar = h('div', { class: 'ctx-pop-bar', role: 'img', 'aria-label': contextUsedLine(reading) }, ...segments.map((s) => h('i', { class: `ctx-seg ctx-seg-${s.key}`, style: `width:${s.percent}%` })))
@@ -127,6 +143,7 @@ export class ContextRing {
     this.stopListening = null
     this.pop.remove()
     this.pop = null
+    this.shownKey = ''
     this.el.setAttribute('aria-expanded', 'false')
     if (returnFocus) this.el.focus()
   }

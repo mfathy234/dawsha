@@ -923,6 +923,7 @@ export class PaneComponent {
   dispose(): void {
     this.closeMenu()
     this.closeActions()
+    this.ring.destroy()
     this.timeline.dispose()
     this.chat.dispose()
     this.reply.dispose()
