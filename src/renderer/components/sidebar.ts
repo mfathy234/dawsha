@@ -61,7 +61,16 @@ export class SidebarComponent {
   /** Quiet projects the user has expanded from their one-line row; not remembered across restarts. */
   private readonly quietOpen = new Set<string>()
 
+  /** Under 1100px the top-bar frame's sidebar is too narrow for the full placeholder, so it says just "Find". */
+  private readonly narrowQuery = window.matchMedia('(max-width: 1100px)')
+
+  private updatePlaceholder(): void {
+    this.filter.placeholder = this.narrowQuery.matches && this.frame === null ? 'Find' : 'Find a session'
+  }
+
   constructor() {
+    this.narrowQuery.addEventListener('change', () => this.updatePlaceholder())
+    this.updatePlaceholder()
     this.filter.classList.remove('text-input')
     this.filter.classList.add('sb-find-input')
     this.filter.setAttribute('dir', 'auto')
@@ -187,6 +196,7 @@ export class SidebarComponent {
     if (frame === this.frame) return
     this.frame = frame
     this.signature = ''
+    this.updatePlaceholder()
   }
 
   update(state: AppState, views: PaneView[]): void {
