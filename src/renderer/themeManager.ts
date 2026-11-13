@@ -5,7 +5,7 @@ import { EDITOR_COLORS } from '../shared/syntaxPalette'
 import { needsColours } from '../shared/themeLadder'
 import type { ThemeSettings } from '../shared/types'
 import type { Tone } from '../shared/appearance'
-import { toneApp, toneTerminalBackground } from '../shared/tone'
+import { toneApp, toneTerminalBackground, warmTintKeep } from '../shared/tone'
 
 export interface ThemeBundle {
   theme: Theme
@@ -69,8 +69,9 @@ const VARIABLES: Record<string, Exclude<keyof Theme['app'], 'faint' | 'done'>> =
 
 function toned(theme: Theme, tone: Tone): Theme {
   if (tone === 'cool') return theme
-  const background = toneTerminalBackground(theme.term.background, tone, theme.kind)
-  return { ...theme, app: toneApp(theme.app, theme.kind, tone), term: { ...theme.term, background, cursorAccent: background } }
+  const keep = warmTintKeep(theme.id)
+  const background = toneTerminalBackground(theme.term.background, tone, theme.kind, keep)
+  return { ...theme, app: toneApp(theme.app, theme.kind, tone, keep), term: { ...theme.term, background, cursorAccent: background } }
 }
 
 function buildBundle(settings: ThemeSettings): ThemeBundle {
