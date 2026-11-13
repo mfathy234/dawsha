@@ -13,6 +13,7 @@ import { registerRunIpc } from './runCommands'
 import { registerToolsIpc } from './toolsIpc'
 import { registerTurnIpc } from './turnIpc'
 import { registerMcpIpc } from './mcpIpc'
+import { installMiniWindow } from './miniWindow'
 import { PtyManager } from './ptyManager'
 import { Recorder } from './recorder'
 import { RecordingService } from './recordings'
@@ -248,6 +249,7 @@ app.whenReady().then(async () => {
   registerMcpIpc(() => mainWindow, store)
   recordings.startSchedule()
   mainWindow = createWindow()
+  const stopMiniWindow = installMiniWindow(mainWindow, store)
   cli = new CliRunner(() => mainWindow)
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
   app.on('will-quit', () => cliServer.close())
@@ -262,6 +264,7 @@ app.whenReady().then(async () => {
   const shutdownDeps: ShutdownDeps = {
     log: quitLog,
     stopServices: async () => {
+      stopMiniWindow()
       stopCodeNavigation()
       closeBrowserPane()
       watcher.stop()

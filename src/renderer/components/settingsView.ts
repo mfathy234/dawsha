@@ -23,6 +23,7 @@ import {
   toggleThemePicker
 } from '../actions'
 import { AGENTS, AGENT_NAMES, FULL_ACCESS_FLAGS } from '../../shared/agents'
+import { setMiniWindow } from '../miniWindowSync'
 import {
   HIGHLIGHT_COLORS,
   MAX_HIGHLIGHT_RULES,
@@ -184,6 +185,7 @@ export class SettingsViewComponent {
       state.settings.fullAccess,
       state.settings.presets,
       state.settings.sessionInfo,
+      state.settings.miniWindow.showOnMinimize,
       state.settings.autoUpdateCheck,
       state.settings.highlights,
       state.settings.recordings,
@@ -497,6 +499,8 @@ export class SettingsViewComponent {
         bridge.error ? h('p', { class: 'note error set-note', id: 'bridge-error', role: 'alert' }, bridge.error) : null,
         bridge.note ? h('p', { class: 'note set-note', id: 'bridge-note' }, bridge.note) : null
       ),
+      // Mini window preferences share the existing notification controls.
+      row('Mini window', checkbox('mini-minimize-toggle', 'Show the Mini window when Dawsha is minimized', settings.miniWindow.showOnMinimize, false, value => setMiniWindow({ showOnMinimize: value }))),
       row(
         'Notifications',
         h(

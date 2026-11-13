@@ -4,6 +4,7 @@ import { createFilesToolsPreload } from './filesTools'
 import { createTurnPreload } from './turn'
 import { createMcpPreload } from './mcp'
 import { createChatPreload } from './chat'
+import { MINI_IPC } from '../shared/miniWindow'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
 import { isRemoteControlBuild } from '../shared/remoteBuild'
@@ -29,6 +30,14 @@ async function invokeRemote(channel: string, ...args: unknown[]): Promise<Remote
 }
 
 const api: GridApi = {
+  miniWindow: {
+    toggle: () => ipcRenderer.send(MINI_IPC.toggle),
+    publish: snapshot => ipcRenderer.send(MINI_IPC.publish, snapshot),
+    onAction: listener => subscribe(MINI_IPC.action, listener),
+    onVisibility: listener => subscribe(MINI_IPC.visibility, listener),
+    onBounds: listener => subscribe(MINI_IPC.bounds, listener),
+    plans: requests => ipcRenderer.invoke(MINI_IPC.plans, requests)
+  },
   runs: createRunPreload(),
   tools: createFilesToolsPreload(),
   turn: createTurnPreload(),

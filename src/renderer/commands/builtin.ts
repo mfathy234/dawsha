@@ -56,6 +56,7 @@ import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
 import { SIDEBAR_FILTER_EVENT } from '../../shared/sidebarModel'
 import { registerCommands, registerProvider, type Command } from './registry'
 import { editSpendLimit, pauseAllAgents } from '../spendActions'
+import { toggleMiniWindow } from '../miniWindowSync'
 
 const hasPane = (state: AppState): boolean => paneById(state, state.focusedId) !== undefined
 
@@ -130,6 +131,7 @@ function focusedAction(id: string, title: string, run: (paneId: string) => unkno
 
 export function installBuiltinCommands(): void {
   registerCommands(
+    { id: 'view.mini', title: 'Mini window', group: 'Actions', keywords: 'float always on top sessions', ...withKeys('Ctrl+Alt+M'), run: toggleMiniWindow },
     { id: 'session.new', title: 'New session', group: 'Actions', ...withKeys('Ctrl+N'), run: () => openQuickPick() },
     {
       id: 'session.new-other',

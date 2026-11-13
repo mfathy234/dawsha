@@ -35,6 +35,7 @@ import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
 import { installRemoteCrew } from './remoteCrewSync'
+import { installMiniWindowSync } from './miniWindowSync'
 import { installBuiltinCommands } from './commands/builtin'
 import { installCompareCommands } from './commands/compare'
 import { installTurnChecksCommands } from './commands/turnChecks'
@@ -126,6 +127,7 @@ async function boot(): Promise<void> {
   connectPtyStreams(handleTerminalExit)
   api.onRemoteSessionStarted(attachRemoteSession)
   installRemoteCrew()
+  installMiniWindowSync()
   api.onSessions(setClaudeSessions)
   setStatusInfos(statusInfos)
   void refreshBridge()
