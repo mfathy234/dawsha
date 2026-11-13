@@ -62,6 +62,17 @@ describe('uniqueSessionTitles', () => {
     ])
     expect(titles).toEqual(['Fix login', 'Fix login 3', 'Fix login 2', 'Fix login'])
   })
+  it('keeps each suffix on its session when the panes are reordered', () => {
+    const early = { projectId: 'p', title: 'Fix login', manual: false, order: [100, 'a'] as const }
+    const late = { projectId: 'p', title: 'Fix login', manual: false, order: [200, 'b'] as const }
+    expect(uniqueSessionTitles([early, late])).toEqual(['Fix login', 'Fix login 2'])
+    expect(uniqueSessionTitles([late, early])).toEqual(['Fix login 2', 'Fix login'])
+  })
+  it('breaks equal start times by id', () => {
+    const a = { projectId: 'p', title: 'Fix login', manual: false, order: [100, 'a'] as const }
+    const b = { projectId: 'p', title: 'Fix login', manual: false, order: [100, 'b'] as const }
+    expect(uniqueSessionTitles([b, a])).toEqual(['Fix login 2', 'Fix login'])
+  })
   it('leaves two explicit manual names untouched', () => {
     expect(uniqueSessionTitles([{ projectId: 'p', title: 'Mine', manual: true }, { projectId: 'p', title: 'Mine', manual: true }])).toEqual(['Mine', 'Mine'])
   })

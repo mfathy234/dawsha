@@ -66,16 +66,32 @@ export function resolveSessionTitle(input: SessionTitleInput): { title: string; 
   return { title, fullTitle: fullTitle || title, renameText, named: Boolean(explicit || inferred), manual }
 }
 
+export interface UniqueTitleEntry {
+  projectId: string
+  title: string
+  manual: boolean
+  /** A stable rank (start time, then id) so suffixes follow the session, not its position in the grid. */
+  order?: readonly [number, string]
+}
+
+const byOrder = (a: UniqueTitleEntry, b: UniqueTitleEntry, ia: number, ib: number): number => {
+  if (!a.order || !b.order) return ia - ib
+  return a.order[0] - b.order[0] || (a.order[1] < b.order[1] ? -1 : a.order[1] > b.order[1] ? 1 : 0) || ia - ib
+}
+
 /** Reserve literal manual names before assigning suffixes, scoped to each project. */
-export function uniqueSessionTitles(entries: readonly { projectId: string; title: string; manual: boolean }[]): string[] {
+export function uniqueSessionTitles(entries: readonly UniqueTitleEntry[]): string[] {
   const used = new Map<string, Set<string>>()
   for (const entry of entries) {
     if (!used.has(entry.projectId)) used.set(entry.projectId, new Set())
     if (entry.manual) used.get(entry.projectId)!.add(entry.title)
   }
-  return entries.map(entry => {
+  const result = entries.map(entry => entry.title)
+  const inferred = entries.map((entry, index) => index).filter(index => !entries[index].manual)
+  inferred.sort((a, b) => byOrder(entries[a], entries[b], a, b))
+  for (const index of inferred) {
+    const entry = entries[index]
     const project = used.get(entry.projectId)!
-    if (entry.manual) return entry.title
     let title = entry.title
     let suffix = 1
     while (project.has(title)) {
@@ -83,6 +99,7 @@ export function uniqueSessionTitles(entries: readonly { projectId: string; title
       title = `${fit(entry.title, MAX_CHARS - number.length, MAX_WORDS - 1) ?? 'Session'}${number}`
     }
     project.add(title)
-    return title
-  })
+    result[index] = title
+  }
+  return result
 }
