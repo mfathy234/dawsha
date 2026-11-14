@@ -12,6 +12,8 @@ import type { TicketNotes } from '../../shared/ticketNotes'
 import { TicketsPanel } from './workTickets'
 import { selectMenu } from './selectMenu'
 import { formatWorkSummary } from '../../shared/workSummary'
+import type { WorkRecapData } from '../../shared/workRecap'
+import { todaySection } from './workToday'
 import { toast } from './toast'
 import { pageHeader } from './pageHeader'
 import { scheduledSection } from './scheduledSection'
@@ -32,6 +34,7 @@ export class WorkViewComponent {
   readonly el = h('main', { class: 'work-view', 'aria-label': 'Work dashboard' })
   private period: WorkPeriod = 'today'
   private report: WorkReport | null = null
+  private recap: WorkRecapData | null = null
   private projectId: string | null = null
   private projectLabel = ''
   private search = ''
@@ -104,9 +107,10 @@ export class WorkViewComponent {
     this.loading = true
     this.render()
     try {
-      const report = await api.workReport(this.period, this.offset)
+      const [report, recap] = await Promise.all([api.workReport(this.period, this.offset), api.workRecap().catch(() => this.recap)])
       if (token !== this.token) return
       this.report = report
+      this.recap = recap
       this.error = null
     } catch {
       if (token !== this.token) return
@@ -173,6 +177,7 @@ export class WorkViewComponent {
   private bodyNodes(): Node[] {
     const nodes: Node[] = [this.toolbar()]
     if (this.mode === 'scheduled') return [...nodes, scheduledSection(), queueSection()]
+    nodes.unshift(todaySection(this.recap, this.loading))
     if (this.projectId) nodes.push(this.selectedProject())
     if (this.error) nodes.push(h('p', { class: 'field-error', role: 'alert' }, this.error))
     const source = this.report

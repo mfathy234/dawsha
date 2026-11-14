@@ -1,6 +1,7 @@
 import type { AgentAccounts } from './agentAccounts'
 import type { KnownLimits } from './agentLimits'
 import type { WorkPeriod, WorkReport } from './workDashboard'
+import type { WorkRecapData } from './workRecap'
 import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
@@ -233,6 +234,7 @@ export interface GridApi {
   knownLimits(): Promise<KnownLimits>
   /** `offset`: periods back from now (0 now, -1 the one before). */
   workReport(period: WorkPeriod, offset?: number): Promise<WorkReport>
+  workRecap(): Promise<WorkRecapData>
   exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
   writeHandoffTranscript(request: HandoffTranscriptRequest): Promise<HandoffTranscriptResult>
   revealHandoff(path: string): Promise<void>

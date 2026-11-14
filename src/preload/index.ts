@@ -192,6 +192,7 @@ const api: GridApi = {
   openUpdateLink: (url) => ipcRenderer.invoke(IPC.updateOpenLink, url),
   usageReport: (range) => ipcRenderer.invoke(IPC.usageGet, range),
   workReport: (period, offset) => ipcRenderer.invoke(IPC.workGet, period, offset ?? 0),
+  workRecap: () => ipcRenderer.invoke(IPC.workRecap),
   usageSnapshot: () => ipcRenderer.invoke(IPC.usageSnapshot),
   agentAccounts: (fresh?: boolean) => ipcRenderer.invoke(IPC.agentAccounts, fresh),
   knownLimits: () => ipcRenderer.invoke(IPC.knownLimits),

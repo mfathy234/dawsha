@@ -85,3 +85,13 @@ it('keeps readable work visible when another indexed transcript is deleted or in
   expect(report.items).toHaveLength(1)
   expect(report.projects[0].durationMs).toBe(60_000)
 })
+
+it('reads the changes of each session in today\'s report for the recap', async () => {
+  const now = pinClock(12), start = now - 10 * 60_000
+  const seen: string[] = []
+  const service = new WorkService(async () => [session({ startedAt: start, lastActivityAt: now - 1000 })])
+  const recap = await service.recap(projects, async (folder, branch) => { seen.push(`${folder}|${branch}`); return { files: 2, added: 7, removed: 1 } })
+  expect(recap.report.items).toHaveLength(1)
+  expect(Object.values(recap.changes)).toEqual([{ files: 2, added: 7, removed: 1 }])
+  expect(seen).toHaveLength(1)
+})

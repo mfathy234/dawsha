@@ -138,6 +138,7 @@ export const IPC = {
   updateOpenLink: 'update:open-link',
   usageGet: 'usage:get',
   workGet: 'work:get',
+  workRecap: 'work:recap',
   usageSnapshot: 'usage:snapshot',
   agentAccounts: 'agents:accounts',
   knownLimits: 'agents:known-limits',
