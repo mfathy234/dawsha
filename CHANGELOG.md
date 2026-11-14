@@ -3,6 +3,31 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.9] - 2026-11-14
+
+### Added
+
+- **Keep running in the tray.** Choose in Settings whether closing the window quits Dawsha or keeps it running in the tray. Your agents keep working, and the Mini window and notifications keep coming. Show Dawsha in the tray brings the window back. Quit stays the default.
+- **Start with your computer.** Dawsha can start when you sign in, and can start hidden in the tray.
+- **A warning before a usage limit.** When Claude or Codex passes 80% of its 5-hour or weekly limit, and again at 95%, Dawsha tells you and says when it resets. Turn it off in Notifications.
+- **A context nudge for terminal sessions.** When a terminal session's context passes 85%, one line under its header offers Compact before the agent does it in the middle of a task.
+- **Start a session from the Mini window.** The + in the Mini window picks a project, an agent and an optional first message, and starts the session without bringing Dawsha to the front.
+- **Pin sessions.** Pin to top from a session's menu or its tab. Pinned sessions get their own group in the sidebar and come first in the tabs.
+- **Today in Work.** One line per session that worked today, with how long it worked, the files it committed and its cost, a total, and Copy as text for your standup.
+
+### Changed
+
+- **The Mini window reads like a small conversation.** Your last message as a bubble, the reply below it, and the terminal folded to its last line.
+- **One toolbar row in Desktop app style.** Grid, Board, Side panel and View sit above the panes with the 5h and W rings at the end of the row. With session tabs showing, the rings join the tab row.
+- **A clearer sidebar rail.** The bell shows its count on the icon, and a chevron opens the sidebar.
+- **Faster checks for each change.** The Windows tests run in parallel, so a release takes far less waiting.
+
+### Fixed
+
+- The Mini window showed an older message as the one you sent last when you had written while the agent was busy. Chat now shows those messages too.
+- The Mini window's terminal lines could be border rows from the agent's input box.
+- A working session's time in the Mini window restarted after you approved a request.
+
 ## [1.8.8] - 2026-11-13
 
 ### Added
