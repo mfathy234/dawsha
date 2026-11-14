@@ -46,6 +46,7 @@ export const EXCLUDED_KEYS = [
   'pendingWorktreeSetups',
   'miniWindow',
   'pullRequests',
+  'watchPullRequests',
   'desktop',
   'trayNoticeShown',
   'warnedUsageWindows',
@@ -108,10 +109,17 @@ type Raw = Record<string, unknown>
 
 const isRecord = (value: unknown): value is Raw => typeof value === 'object' && value !== null && !Array.isArray(value)
 
+/** A worktree setup command runs on this PC, so it never travels in a shared file. */
+function withoutWorktreeSetup(project: Project): Project {
+  const { worktreeSetup: _dropped, ...rest } = project
+  return rest
+}
+
 export function buildTransferData(settings: Settings): TransferData {
   const data: Raw = {}
   for (const key of INCLUDED_KEYS) data[key] = settings[key]
   data.theme = { id: settings.theme.id }
+  data.projects = settings.projects.map(withoutWorktreeSetup)
   return JSON.parse(JSON.stringify(data)) as TransferData
 }
 
@@ -346,12 +354,12 @@ function planProjects(input: PlanInput): ProjectOutcome {
     if (match) {
       idMap.set(project.id, match.id)
       existing += 1
-      if (mode === 'replace') kept.push({ ...project, id: match.id })
+      if (mode === 'replace') kept.push({ ...withoutWorktreeSetup(project), ...(match.worktreeSetup ? { worktreeSetup: match.worktreeSetup } : {}), id: match.id })
       continue
     }
     const id = uniqueId(project.id, taken, newId)
     idMap.set(project.id, id)
-    kept.push({ ...project, id })
+    kept.push({ ...withoutWorktreeSetup(project), id })
     added += 1
     if (missingFolders.has(project.folder)) missing += 1
   }

