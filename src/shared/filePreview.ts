@@ -1,4 +1,4 @@
-export type PreviewKind = 'markdown' | 'html' | 'image'
+export type PreviewKind = 'markdown' | 'html' | 'image' | 'plantuml' | 'mermaid'
 
 const IMAGE_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' }
 
@@ -11,6 +11,8 @@ export function previewKind(path: string): PreviewKind | null {
   const ext = extension(path)
   if (ext === 'md' || ext === 'markdown') return 'markdown'
   if (ext === 'html' || ext === 'htm') return 'html'
+  if (['puml', 'plantuml', 'pu', 'iuml'].includes(ext)) return 'plantuml'
+  if (ext === 'mmd') return 'mermaid'
   return ext in IMAGE_TYPES ? 'image' : null
 }
 
@@ -19,7 +21,10 @@ export const imageMime = (path: string): string | null => IMAGE_TYPES[extension(
 export const isHtmlPath = (path: string): boolean => previewKind(path) === 'html'
 
 /** Docs open as a rendered page; code and HTML open as source until the user asks for the preview. */
-export const previewByDefault = (path: string): boolean => previewKind(path) === 'markdown' || previewKind(path) === 'image'
+export const previewByDefault = (path: string): boolean => {
+  const kind = previewKind(path)
+  return kind === 'markdown' || kind === 'image' || kind === 'plantuml' || kind === 'mermaid'
+}
 
 // The page is served from the dawsha-preview scheme, whose responses carry their own policy (see main/filePreviewServer).
 // The frame is sandboxed with scripts only: no same-origin access, no navigation of the app, no popups, no forms.

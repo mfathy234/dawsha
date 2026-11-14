@@ -56,6 +56,7 @@ export const EXCLUDED_KEYS = [
   'turnChecks',
   'filesLayout',
   'filesTabs',
+  'plantumlJarPath',
   'runCommands',
   // Run history points at this PC's panes and projects.
   'crewRuns',

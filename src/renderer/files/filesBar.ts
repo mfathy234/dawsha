@@ -18,6 +18,7 @@ export interface BarModel {
   editing: boolean
   canPreview: boolean
   previewing: boolean
+  diagram?: boolean
   /** The source can be shown (an image that is not text has none). */
   hasSource: boolean
   inspectorOpen: boolean
@@ -117,6 +118,7 @@ export class FilesBar {
     const stat = model.added !== null || model.removed !== null ? ` +${model.added ?? 0} ${minus}${model.removed ?? 0}` : ''
     this.changesButton.textContent = `Changes${stat}`
     this.previewSegment.hidden = !model.canPreview || !model.hasSource
+    this.previewButton.textContent = model.diagram ? 'Diagram' : 'Preview'
     this.previewButton.setAttribute('aria-pressed', String(model.previewing))
     this.sourceButton.setAttribute('aria-pressed', String(!model.previewing))
     this.done.hidden = !model.editing

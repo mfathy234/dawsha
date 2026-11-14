@@ -128,6 +128,7 @@ export function onFilesSearchRequest(listener: () => void): () => void {
 }
 
 export type FilesCommand =
+  | 'copy-diagram' | 'save-diagram'
   | 'toggle-inspector' | 'toggle-explorer' | 'switch-worktree' | 'switch-branch'
   | 'show-config' | 'show-pr' | 'show-browser'
   | 'definition' | 'implementation' | 'references' | 'back' | 'forward' | 'symbol' | 'line'

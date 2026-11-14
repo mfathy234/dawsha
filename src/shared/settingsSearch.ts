@@ -9,6 +9,7 @@ export interface SearchSection {
 /** What each section holds, so "Find in Settings" can name a section from a row's label or description without drawing it. */
 export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
   general: [
+    'PlantUML jar path Java local diagrams MIT download',
     'When I close the window Quit Dawsha Keep running in the tray',
     'Start at sign-in Start Dawsha when you sign in Start hidden in the tray installed app',
     'Command palette shortcut Ctrl or Alt plus a key',

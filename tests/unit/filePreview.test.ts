@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { HTML_PREVIEW_SANDBOX, imageMime, previewByDefault, previewKind } from '../../src/shared/filePreview'
 
 describe('previewKind', () => {
+  it('opens local diagram formats in their diagram preview', () => {
+    for (const ext of ['puml', 'plantuml', 'pu', 'iuml', 'PUML']) {
+      expect(previewKind(`architecture.${ext}`)).toBe('plantuml')
+      expect(previewByDefault(`architecture.${ext}`)).toBe(true)
+    }
+    expect(previewKind('flow.mmd')).toBe('mermaid')
+    expect(previewByDefault('flow.mmd')).toBe(true)
+  })
   it('knows documents, pages and images', () => {
     expect(previewKind('docs/plan.md')).toBe('markdown')
     expect(previewKind('a/B.HTML')).toBe('html')

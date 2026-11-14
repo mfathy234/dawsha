@@ -31,7 +31,7 @@ function inline(source: string): string {
 const cells = (line: string): string[] => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((cell) => cell.trim())
 const isRule = (line: string): boolean => /^ {0,3}([-*_])(\s*\1){2,}\s*$/.test(line)
 const isTableRule = (line: string): boolean => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line) && line.includes('-')
-const startsBlock = (line: string): boolean => /^(#{1,6}\s|```|>\s?|\s*[-*+]\s|\s*\d+[.)]\s)/.test(line) || isRule(line)
+const startsBlock = (line: string): boolean => /^(#{1,6}\s|```|:::\s*(?:mermaid|plantuml)\s*$|>\s?|\s*[-*+]\s|\s*\d+[.)]\s)/i.test(line) || isRule(line)
 
 export function renderDocMarkdown(source: string): string {
   const lines = source.replace(/\r\n?/g, '\n').split('\n')
@@ -43,13 +43,17 @@ export function renderDocMarkdown(source: string): string {
       i += 1
       continue
     }
-    const fence = /^```\s*([\w+-]*)/.exec(line)
+    const colonFence = /^:::\s*(mermaid|plantuml)\s*$/i.exec(line)
+    const fence = /^```\s*([\w+-]*)/.exec(line) ?? colonFence
     if (fence) {
       const code: string[] = []
+      const sourceLine = i + 2
       i += 1
-      while (i < lines.length && !/^```\s*$/.test(lines[i])) code.push(lines[i++])
+      const end = colonFence ? /^:::\s*$/ : /^```\s*$/
+      while (i < lines.length && !end.test(lines[i])) code.push(lines[i++])
       i += 1
-      out.push(`<pre><code${fence[1] ? ` class="lang-${escapeHtml(fence[1])}"` : ''}>${escapeHtml(code.join('\n'))}</code></pre>`)
+      const diagram = /^(mermaid|plantuml)$/i.test(fence[1])
+      out.push(`<pre><code${fence[1] ? ` class="lang-${escapeHtml(fence[1].toLowerCase())}"` : ''}${diagram ? ` data-source-line="${sourceLine}"` : ''}>${escapeHtml(code.join('\n'))}</code></pre>`)
       continue
     }
     const heading = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line)

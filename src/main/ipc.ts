@@ -44,6 +44,7 @@ import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
 import { PreviewServer } from './filePreviewServer'
+import { registerDiagramIpc } from './diagramIpc'
 import { registerPreviewProtocol } from './previewProtocol'
 import { fileCommitDetails, fileCommitFile, fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { trashProjectPath } from './filesTrash'
@@ -374,6 +375,7 @@ export function registerIpc(
     return root ? fileCommitFile(root, hash, path, full === true) : refused
   })
   const previews = new PreviewServer(known)
+  registerDiagramIpc({ userData: app.getPath('userData'), jarPath: () => settings.get().plantumlJarPath, known, window: getWindow })
   registerPreviewProtocol(previews)
   ipcMain.handle(IPC.filesPreviewUrl, (_event, folder: unknown, path: unknown, text: unknown) => previews.register(folder, path, typeof text === 'string' ? text : null))
   ipcMain.handle(IPC.filesImage, async (_event, folder: unknown, path: unknown, base: unknown) => {

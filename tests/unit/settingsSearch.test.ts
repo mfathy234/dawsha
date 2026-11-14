@@ -30,6 +30,7 @@ describe('sectionsMatching', () => {
   })
 
   it('finds a section by a row inside it', () => {
+    expect(sectionsMatching(SECTIONS, 'PlantUML jar').map((s) => s.id)).toEqual(['general'])
     expect(sectionsMatching(SECTIONS, 'sound').map((s) => s.id)).toEqual(['notifications'])
     expect(sectionsMatching(SECTIONS, 'warm').map((s) => s.id)).toEqual(['appearance'])
     expect(sectionsMatching(SECTIONS, 'data folder').map((s) => s.id)).toEqual(['about'])

@@ -1,0 +1,47 @@
+@startuml HrOverview
+title Where HR sits
+skinparam componentStyle rectangle
+skinparam ArrowColor #Black
+skinparam component {
+    BackgroundColor #A9DCDF
+    BorderColor #368E92
+}
+skinparam database {
+    BackgroundColor #A9DCDF
+    BorderColor #368E92
+}
+skinparam queue {
+    BackgroundColor #A9DCDF
+    BorderColor #368E92
+}
+
+actor "HR user / ESS mobile app" as User
+
+component "Gateway" as GW
+component "HR API" as HR
+component "Workflow API" as WF
+component "Apps Portal" as AP
+component "BO API" as BO
+component "Hangfire Worker" as Worker
+component "Keycloak" as KC
+
+database "Tenant database\n(ERP + HR tables)" as TDB
+database "Redis" as Redis
+queue "Message Bus" as MQ
+
+User --> GW : /hr-apis
+GW --> HR
+HR --> TDB : per-tenant connection
+HR --> Redis : caches
+HR --> BO : tenant connection string,\nsubscription end date,\nESS seats and invitations
+HR --> AP : through the Gateway:\nbranch / company data\n(with currency), lookups,\njournals
+HR --> WF : start approval (HTTP),\nread task actions
+HR --> MQ : org data changed
+MQ --> WF : org data changed
+WF --> MQ : workflow moved
+MQ --> HR : workflow moved
+HR --> Worker : enqueue job
+Worker --> HR : job callback
+User ..> KC : sign in
+GW ..> KC : token checked
+@enduml

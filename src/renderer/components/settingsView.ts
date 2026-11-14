@@ -192,6 +192,7 @@ export class SettingsViewComponent {
     const signature = JSON.stringify([
       state.settingsSection,
       state.settings.desktop,
+      state.settings.plantumlJarPath,
       this.desktopControls.revision,
       state.settings.paletteShortcut,
       state.settings.appearance,
@@ -491,6 +492,24 @@ export class SettingsViewComponent {
     return this.remotePanel.build()
   }
 
+  // Local diagram tools. Kept separate from Appearance and portable preferences.
+  private diagramSettings(state: AppState): HTMLElement {
+    const path = h('input', {
+      class: 'text-input', type: 'text', id: 'plantuml-jar-path',
+      value: state.settings.plantumlJarPath, placeholder: 'Use the Dawsha download',
+      'aria-label': 'PlantUML jar path', dir: 'auto'
+    })
+    const save = (): void => {
+      const plantumlJarPath = path.value.trim()
+      if (plantumlJarPath === store.state.settings.plantumlJarPath) return
+      store.set((current) => ({ ...current, settings: { ...current.settings, plantumlJarPath } }))
+      void saveSettings({ plantumlJarPath })
+    }
+    path.addEventListener('change', save)
+    path.addEventListener('keydown', (event) => { if (event.key === 'Enter') { save(); path.blur() } })
+    return row('PlantUML', path, h('p', { class: 'hint' }, 'Optional path to an existing PlantUML jar on this computer. Leave blank for the one-time MIT download in Files. Java is required.'))
+  }
+
   private general(state: AppState): HTMLElement[] {
     const draft = this.shortcutDraft ?? formatShortcut(parseShortcut(state.settings.paletteShortcut) ?? parseShortcut(DEFAULT_PALETTE_SHORTCUT)!)
     const input = h('input', {
@@ -534,6 +553,7 @@ export class SettingsViewComponent {
     )
     return [
       ...this.desktopControls.rows(state.settings, row, checkbox),
+      this.diagramSettings(state),
       row(
         'Command palette shortcut',
         h('div', { class: 'set-inline' }, input, reset),

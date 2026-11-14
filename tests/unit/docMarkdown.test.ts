@@ -35,6 +35,16 @@ describe('renderDocMarkdown escaping', () => {
 })
 
 describe('renderDocMarkdown structure', () => {
+  it('keeps diagram source and its first source line for editor jumps', () => {
+    const html = renderDocMarkdown('# Flow\n\n```mermaid\nflowchart LR\n  A --> B\n```\n\n```plantuml\n@startuml\nA -> B\n@enduml\n```')
+    expect(html).toContain('<code class="lang-mermaid" data-source-line="4">flowchart LR\n  A --&gt; B</code>')
+    expect(html).toContain('<code class="lang-plantuml" data-source-line="9">@startuml\nA -&gt; B\n@enduml</code>')
+  })
+  it('renders Azure DevOps Mermaid fences from architecture docs', () => {
+    const html = renderDocMarkdown('# Flow\n\n::: mermaid\nflowchart TD\n A --> B\n:::\n\nAfter')
+    expect(html).toContain('<code class="lang-mermaid" data-source-line="4">flowchart TD\n A --&gt; B</code>')
+    expect(html).toContain('<p>After</p>')
+  })
   it('renders headings, paragraphs, emphasis and code', () => {
     const html = renderDocMarkdown('## Title\n\nSome **bold** and *it* and `code`.\nNext line')
     expect(html).toContain('<h2>Title</h2>')

@@ -4,6 +4,8 @@ import { api } from '../api'
 import { h } from '../dom'
 import { LatestGate, type Ticket } from './asyncGuard'
 import { errorNote, loadingNote } from './loadNote'
+import { DiagramView } from './diagramView'
+import { toast } from '../components/toast'
 
 export interface PreviewSpec {
   kind: PreviewKind
@@ -17,9 +19,10 @@ export interface PreviewSpec {
 export interface PreviewHooks {
   openBrowser(): void
   openLink(url: string): void
+  source?(line?: number): void
 }
 
-const key = (spec: PreviewSpec): string => `${spec.kind}|${spec.folder}|${spec.path}|${spec.changed}|${spec.text.length}|${spec.kind === 'image' && spec.text === '' ? '' : spec.text.slice(0, 200)}${spec.text.slice(-200)}`
+const key = (spec: PreviewSpec): string => `${spec.kind}|${spec.folder}|${spec.path}|${spec.changed}|${spec.text}`
 
 /** Rendered markdown, a sandboxed HTML page, or an image (with a before / after split for a changed one). */
 export class PreviewPane {
@@ -27,6 +30,8 @@ export class PreviewPane {
   private last = ''
   private readonly gate = new LatestGate()
   private spec: PreviewSpec | null = null
+  private diagrams: DiagramView[] = []
+  private selectedDiagram: DiagramView | null = null
 
   constructor(private readonly hooks: PreviewHooks) {
     this.el.addEventListener('click', (event) => {
@@ -39,6 +44,9 @@ export class PreviewPane {
 
   hide(): void {
     this.el.hidden = true
+    this.gate.begin()
+    this.clearDiagrams()
+    this.last = ''
   }
 
   render(spec: PreviewSpec): void {
@@ -48,9 +56,49 @@ export class PreviewPane {
     this.last = next
     this.spec = spec
     const ticket = this.gate.begin()
+    this.clearDiagrams()
     if (spec.kind === 'markdown') this.markdown(spec)
+    else if (spec.kind === 'plantuml' || spec.kind === 'mermaid') this.diagram(spec)
     else if (spec.kind === 'html') void this.html(spec, ticket)
     else void this.image(spec, ticket)
+  }
+
+  async copyDiagram(): Promise<void> {
+    if (!this.selectedDiagram) { toast('Open a diagram to copy it as SVG.', 'info'); return }
+    await this.selectedDiagram?.copy()
+  }
+
+  async saveDiagram(): Promise<void> {
+    if (!this.selectedDiagram) { toast('Open a diagram to save it.', 'info'); return }
+    await this.selectedDiagram?.save()
+  }
+
+  refreshDiagrams(): void {
+    if (this.el.hidden || !this.spec || this.diagrams.length === 0) return
+    this.last = ''
+    this.render(this.spec)
+  }
+
+  private clearDiagrams(): void {
+    for (const view of this.diagrams) view.dispose()
+    this.diagrams = []
+    this.selectedDiagram = null
+  }
+
+  private makeDiagram(spec: PreviewSpec, kind: 'plantuml' | 'mermaid', text: string, sourceLine = 1, standalone = false): DiagramView {
+    const view = new DiagramView({ kind, folder: spec.folder, path: spec.path, text, sourceLine, standalone }, {
+      openLink: (url) => this.hooks.openLink(url),
+      source: (line) => this.hooks.source?.(line),
+      select: (selected) => { this.selectedDiagram = selected }
+    })
+    this.diagrams.push(view)
+    this.selectedDiagram ??= view
+    return view
+  }
+
+  private diagram(spec: PreviewSpec): void {
+    const view = this.makeDiagram(spec, spec.kind === 'mermaid' ? 'mermaid' : 'plantuml', spec.text, 1, true)
+    this.el.replaceChildren(view.el)
   }
 
   private retry(): void {
@@ -63,6 +111,11 @@ export class PreviewPane {
   private markdown(spec: PreviewSpec): void {
     const page = h('article', { class: 'files-md', id: 'files-md', 'aria-label': `Preview of ${spec.path}` })
     page.innerHTML = renderDocMarkdown(spec.text)
+    for (const block of page.querySelectorAll<HTMLElement>('code.lang-mermaid, code.lang-plantuml')) {
+      const kind = block.classList.contains('lang-mermaid') ? 'mermaid' : 'plantuml'
+      const view = this.makeDiagram(spec, kind, block.textContent ?? '', Number(block.dataset.sourceLine) || 1)
+      block.parentElement?.replaceWith(view.el)
+    }
     this.el.replaceChildren(page)
   }
 
