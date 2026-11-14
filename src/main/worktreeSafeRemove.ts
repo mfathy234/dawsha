@@ -161,8 +161,10 @@ export async function removeWorktreeSafely(request: PrTidyRequest): Promise<PrTi
   const listed = await git(repo, ['worktree', 'list', '--porcelain', '-z'])
   if (!listed.ok) return { ok: false, error: 'This project is not a git repository.' }
   const trees = parseWorktreeList(listed.stdout)
-  const tree = trees.find((item) => samePath(item.path, path))
-  if (!tree || samePath(trees[0]?.path ?? '', path)) return { ok: false, error: 'That folder is not a linked worktree of this project, so it was left alone.' }
+  const wanted = canonical(path)
+  const matches = (listedPath: string): boolean => samePath(listedPath, path) || samePath(canonical(listedPath), wanted)
+  const tree = trees.find((item) => matches(item.path))
+  if (!tree || matches(trees[0]?.path ?? '')) return { ok: false, error: 'That folder is not a linked worktree of this project, so it was left alone.' }
   if (!existsSync(tree.path)) {
     await git(repo, ['worktree', 'prune'])
     return { ok: true }

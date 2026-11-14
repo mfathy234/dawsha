@@ -197,7 +197,14 @@ export class ReplayPlayer {
   bufferText(): string {
     const buffer = this.term.buffer.active
     const lines: string[] = []
-    for (let row = 0; row < buffer.length; row += 1) lines.push(buffer.getLine(row)?.translateToString(true) ?? '')
+    for (let row = 0; row < buffer.length; row += 1) {
+      const line = buffer.getLine(row)
+      // Join rows the terminal wrapped, so a long prompt line reads as the line that was printed.
+      const continues = buffer.getLine(row + 1)?.isWrapped === true
+      const value = line?.translateToString(!continues) ?? ''
+      if (line?.isWrapped && lines.length > 0) lines[lines.length - 1] += value
+      else lines.push(value)
+    }
     return lines.join('\n')
   }
 
