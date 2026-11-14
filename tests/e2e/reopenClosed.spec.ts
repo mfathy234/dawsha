@@ -31,7 +31,7 @@ test('closing an agent session offers Reopen for a few seconds and brings it bac
     await closePaneViaActions(page.locator('.pane').first())
     await expect(page.locator('.pane')).toHaveCount(1)
     const toast = page.locator('.toast')
-    await expect(toast).toHaveText('Closed SmokeReopen')
+    await expect(toast).toHaveText('Closed Add dark mode toggleReopen')
     await toast.getByRole('button', { name: 'Reopen' }).click()
     await expect(toast).toHaveCount(0)
     await expect(page.locator('.pane')).toHaveCount(2)

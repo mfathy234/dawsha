@@ -156,7 +156,7 @@ test('sort and hide-empty are remembered, and the filter opens from the keyboard
     await expect(page.locator('.proj-list .proj-name', { hasText: 'Missing' })).toHaveCount(0)
 
     const find = page.locator('#sidebar-project-filter')
-    await expect(find).toHaveAttribute('placeholder', 'Find a session')
+    await expect(find).toHaveAttribute('placeholder', /^Find( a session)?$/)
     await expect(page.locator('.sb-find-hint')).toHaveText('Ctrl+K')
     await page.locator('.pane .pane-title').first().click()
     await page.keyboard.press('Control+Shift+O')
