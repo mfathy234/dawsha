@@ -22,7 +22,7 @@ export function prMenuEntries(paneId: string): ContextEntry[] {
     { label: 'Merge when green', current: mergeWhenGreenOn(paneId), detail: effectiveMergeCommand(project).replace('<n>', String(state.number)), run: () => void toggleMergeWhenGreen(paneId) },
     { label: 'Change the merge command', run: () => void editMergeCommand(pane.projectId) },
     'separator',
-    { label: 'Tidy up after a merge', current: project.tidyUp, detail: 'Close the session and remove its worktree, for this project', run: () => toggleTidyUp(pane.projectId) }
+    { label: 'Tidy up after a merge', current: project.tidyUp, detail: 'Close the session and its worktree', run: () => toggleTidyUp(pane.projectId) }
   ]
 }
 

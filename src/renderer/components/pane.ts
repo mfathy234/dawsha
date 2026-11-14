@@ -59,7 +59,7 @@ import { contextReading } from '../../shared/chatContext'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { crewSignature, identityMark } from './crewAvatar'
-import { ensureTerminal, getTerminal } from '../terminals'
+import { ensureTerminal, getTerminal, setupPhaseOf } from '../terminals'
 import { enableDrag } from '../drag'
 import { COMPACT_SLASH, type NoteMemory } from '../../shared/chatContext'
 import { contextNudgeText, stepContextNudge } from '../../shared/contextRing'
@@ -334,6 +334,11 @@ export class PaneComponent {
     } else {
       setStatePillSuffix(this.stateHost, state, inState)
     }
+    // A worktree's setup command runs before the agent: say so rather than "Idle".
+    const setup = setupPhaseOf(view.primaryTabId)
+    const pillText = this.stateHost.querySelector('.state-pill-text')
+    if (setup && pillText) pillText.textContent = setup === 'running' ? 'Setting up' : 'Setup failed'
+    else if (!setup && pillText && /^Setting up$|^Setup failed$/.test(pillText.textContent ?? '')) this.stateHost.replaceChildren(statePill(state, inState))
     this.el.classList.toggle('attention', view.attention !== 'none')
     this.el.classList.toggle('needs-you', state === 'needs')
     this.el.dataset.attention = view.attention

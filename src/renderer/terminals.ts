@@ -72,7 +72,13 @@ document.addEventListener('visibilitychange', () => {
   for (const view of views.values()) view.refreshVisibility()
 })
 
+/** Worktree setup still in progress or failed, per terminal, so the pane header can say so instead of "Idle". */
+const setupPhases = new Map<string, 'running' | 'failed'>()
+export const setupPhaseOf = (id: string): 'running' | 'failed' | null => setupPhases.get(id) ?? null
+
 function showSetup(id: string, state: { phase: 'running' | 'failed'; exitCode?: number } | null): void {
+  if (state) setupPhases.set(id, state.phase)
+  else setupPhases.delete(id)
   views.get(id)?.showSetupChoice(state?.phase === 'failed' ? (state.exitCode ?? -1) : null, (action) => void api.resolveTerminalSetup(id, action))
 }
 
@@ -82,6 +88,7 @@ export function disposeTerminal(id: string): void {
   views.get(id)?.dispose()
   views.delete(id)
   pending.delete(id)
+  setupPhases.delete(id)
 }
 
 export function applyBundleToAll(): void {

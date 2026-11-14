@@ -3,6 +3,30 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] - 2026-11-14
+
+### Added
+
+- **Worktree setup for any project.** A session in its own worktree gets the git-ignored local files it needs, such as `.env` or local settings files, copied from a `.worktreeinclude` list. Dawsha suggests the list from what it finds, and never suggests key or certificate files. A setup command, such as `npm ci`, `dotnet restore`, `uv sync` or `bundle install`, runs in the session's terminal before the agent starts. Dawsha suggests one for each stack in the project. If setup fails, you can retry or start the agent anyway.
+- **Comment on a diff and send it back.** Click a line in a session's diff to leave a comment, then send all your comments to the agent in one message. Comments follow their line when the code moves, and say Outdated when it is gone.
+- **Review this session.** A second agent reviews the last reply, the whole session or the uncommitted changes in read-only plan mode, and its findings appear on their lines with Send and Dismiss, and Fix all.
+- **All sessions in Review.** One list of every checkout's uncommitted changes, grouped by session.
+- **Watch the pull request.** A session's PR shows its state where the session's status shows: checks running, failed, ready to merge or merged. Fix CI sends the failing log to the agent, once by hand or automatically once per failing commit. Merge when green runs your merge command after a first confirm. GitHub only for now; turn it off in Notifications.
+- **Tidy up after a merge.** When you turn it on for a project, a session whose PR is merged closes and its worktree is removed. It refuses when the worktree has uncommitted, unpushed or ignored local data.
+- **Diagram previews in Files.** PlantUML files and blocks, and Mermaid in Markdown, show as diagrams with zoom, a Source switch and errors that jump to their line. PlantUML runs on your computer with Java; Dawsha downloads it once, after you ask, and checks it. Nothing is sent to a server. Copy a diagram as SVG or save it as SVG or PNG.
+- **Point at the page.** In the Files browser, pick an element and send it to a session with your note and a picture of it. You see the exact message before it goes.
+- **A Session panel.** A Session tab in the Side panel shows how full the context is, with Compact and Clear, and the files the session created or edited. In Desktop app style it can sit beside your sessions.
+
+### Changed
+
+- **The Mini window** can hide a session (it comes back by itself when it needs you), says what a waiting session is asking, and has softer cards.
+- **The sidebar rail** opens from a chevron at the bottom, and the bell shows its count as a badge in Desktop app style.
+
+### Fixed
+
+- A session could stay "Needs you" for a few seconds after its question was answered, so the Mini window showed nothing to answer.
+- The Files bar, breadcrumb and Review rows fit a 1024 pixel window.
+
 ## [1.8.9] - 2026-11-14
 
 ### Added
