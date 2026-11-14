@@ -7,6 +7,8 @@ export interface LoginItemState {
   platform: string
   packaged: boolean
   enabled: boolean
+  /** False when the system tray could not be created, so keeping the window in it would strand the user. */
+  trayAvailable?: boolean
 }
 
 export const DEFAULT_DESKTOP: DesktopSettings = { closeBehavior: 'quit', startHidden: false }
@@ -16,9 +18,9 @@ export function sanitizeDesktopSettings(value: unknown): DesktopSettings {
   return { closeBehavior: raw.closeBehavior === 'tray' ? 'tray' : 'quit', startHidden: raw.startHidden === true }
 }
 
-/** A real Quit always wins over keeping the window in the tray. */
-export function closeBehavior(platform: string, preference: DesktopSettings['closeBehavior'], quitting: boolean): 'hide' | 'quit' {
-  return !quitting && (platform === 'darwin' || preference === 'tray') ? 'hide' : 'quit'
+/** A real Quit always wins over keeping the window in the tray, and without a tray the window can never be hidden. */
+export function closeBehavior(preference: DesktopSettings['closeBehavior'], quitting: boolean, trayAvailable = true): 'hide' | 'quit' {
+  return !quitting && trayAvailable && preference === 'tray' ? 'hide' : 'quit'
 }
 
 export function loginItemArgs(platform: string, settings: DesktopSettings): string[] {
@@ -26,6 +28,6 @@ export function loginItemArgs(platform: string, settings: DesktopSettings): stri
 }
 
 export function startHidden(argv: readonly string[], platform: string, settings: DesktopSettings, openedAtLogin: boolean): boolean {
-  if (platform !== 'darwin' && settings.closeBehavior !== 'tray') return false
+  if (settings.closeBehavior !== 'tray') return false
   return argv.includes('--hidden') || (platform === 'darwin' && openedAtLogin && settings.startHidden)
 }

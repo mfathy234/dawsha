@@ -1,15 +1,16 @@
 import { app } from 'electron'
+import { trayAvailable } from './trayState'
 import { loginItemArgs, type DesktopSettings, type LoginItemState } from '../shared/desktopSettings'
 
 const supported = (platform: string): boolean => app.isPackaged && (platform === 'win32' || platform === 'darwin')
 
 export function readLoginItem(platform: string = process.platform): LoginItemState {
-  if (!supported(platform)) return { platform, packaged: app.isPackaged, enabled: false }
+  if (!supported(platform)) return { platform, packaged: app.isPackaged, enabled: false, trayAvailable: trayAvailable() }
   const native = app.getLoginItemSettings(platform === 'win32' ? { path: process.execPath } : {})
   const enabled = platform === 'win32'
     ? native.executableWillLaunchAtLogin === true
     : native.openAtLogin && native.status === 'enabled'
-  return { platform, packaged: app.isPackaged, enabled }
+  return { platform, packaged: app.isPackaged, enabled, trayAvailable: trayAvailable() }
 }
 
 export function setLoginItem(enabled: boolean, desktop: DesktopSettings, platform: string = process.platform): LoginItemState {

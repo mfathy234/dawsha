@@ -192,6 +192,8 @@ export interface GridApi {
   openInstruction(folder: string, name: string): Promise<void>
   notify(request: NotifyRequest): void
   onNotifyClick(listener: (paneId: string, answer?: import('./notificationAction').NotificationAnswer) => void): () => void
+  onLimitWarning(listener: (message: string) => void): () => void
+  migrateLimitWarned(legacy: unknown): Promise<void>
   setAttentionBadge(count: number, waitingIds?: string[]): void
   onDesktopNewSession(listener: () => void): void
   bridgePreview(): Promise<BridgePreview>

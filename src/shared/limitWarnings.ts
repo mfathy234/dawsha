@@ -37,7 +37,7 @@ export interface WarningResult {
 }
 
 /**
- * Warn at 80% and again at 95%, once per window until it resets. A jump across both
+ * Warn at 80% and again at 95%, once per window until it resets or usage falls back under 80%. A jump across both
  * thresholds produces one notice at the current percentage and remembers both.
  */
 export function detectLimitWarnings(previous: WarnedWindows, readings: readonly LimitReading[]): WarningResult {
@@ -51,7 +51,11 @@ export function detectLimitWarnings(previous: WarnedWindows, readings: readonly 
     const id = windowId(reading.agent, reading.window)
     const known = warned[id]
     const threshold = reading.window.percent >= 95 ? 95 : reading.window.percent >= RING_WARN_AT ? 80 : null
-    if (threshold === null) continue
+    if (threshold === null) {
+      // Usage that fell back under the warning level starts a new cycle, whether or not the window reports a reset time.
+      if (known) warned = Object.fromEntries(Object.entries(warned).filter(([key]) => key !== id))
+      continue
+    }
     const same = known && sameWindow(known, reading.window.resetsAt)
     if (same && (known.threshold ?? 80) >= threshold) {
       // Enrich a previously unknown reset without losing deduplication.

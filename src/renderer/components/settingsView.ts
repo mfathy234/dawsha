@@ -597,10 +597,10 @@ export class SettingsViewComponent {
       // Mini window preferences share the existing notification controls.
       row('Mini window', checkbox('mini-minimize-toggle', 'Show the Mini window when Dawsha is minimized', settings.miniWindow.showOnMinimize, false, value => setMiniWindow({ showOnMinimize: value })), h('p', { class: 'hint' }, 'A small window that follows your sessions while Dawsha is minimized.')),
       row('Notifications', checkbox('notify-toggle', 'Notify when a session is done or needs you', info.notifications, false, (value) => setSessionInfo({ notifications: value })), h('p', { class: 'hint' }, 'Tell me when a session is done or needs me.')),
-      row('Warn me before a usage limit', checkbox('usage-warning-toggle', 'Warn me before a usage limit', settings.warnUsageLimits, !info.notifications, value => {
+      row('Warn me before a usage limit', checkbox('usage-warning-toggle', 'Warn me before a usage limit', settings.warnUsageLimits, false, value => {
         store.set(s => ({ ...s, settings: { ...s.settings, warnUsageLimits: value } }))
         void saveSettings({ warnUsageLimits: value })
-      }), h('p', { class: 'hint' }, 'Notify at 80% and 95% of Claude and Codex 5-hour and weekly limits.')),
+      }), h('p', { class: 'hint' }, 'Warn at 80% and 95% of Claude and Codex 5-hour and weekly limits, on the desktop or in the app when notifications are off.')),
       row('Sound', checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) => setSessionInfo({ sound: value })), h('p', { class: 'hint' }, 'Play a sound with each notification.'))
     ]
   }

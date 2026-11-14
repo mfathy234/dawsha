@@ -9,6 +9,7 @@ import { derivePanes, type PaneView } from './derive'
 import { store, type AppState } from './state'
 import { getTerminal } from './terminals'
 import { toast } from './components/toast'
+import { installLimitNotices } from './limitNotices'
 import { boardShowing } from './sessionsLayout'
 
 const PROMPT_POLL_MS = 1500
@@ -100,6 +101,7 @@ export function acknowledgeAttention(paneId: string): void {
 }
 
 export function installAttention(): void {
+  installLimitNotices()
   store.subscribe(evaluate)
   setInterval(pollPrompts, PROMPT_POLL_MS)
   setInterval(() => store.patch({ now: Date.now() }), CLOCK_MS)

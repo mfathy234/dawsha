@@ -118,6 +118,8 @@ export const IPC = {
   instructionsOpen: 'instructions:open',
   notify: 'app:notify',
   notifyClick: 'app:notify-click',
+  limitWarning: 'app:limit-warning',
+  limitWarnedMigrate: 'app:limit-warned-migrate',
   attentionBadge: 'app:attention-badge',
   desktopNewSession: 'app:desktop-new-session',
   bridgePreview: 'bridge:preview',

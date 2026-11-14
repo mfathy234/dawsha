@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { aggregateWork, type WorkItem } from '../../src/shared/workDashboard'
-import { buildTodayRecap, formatRecapText, parseNumstat } from '../../src/shared/workRecap'
+import { buildTodayRecap, formatRecapText, parseCommitNumstat, parseNumstat } from '../../src/shared/workRecap'
 
 const now = new Date(2026, 10, 14, 15).getTime()
 const dayStart = new Date(2026, 10, 14).getTime()
@@ -24,7 +24,37 @@ describe('parseNumstat', () => {
   })
 })
 
+describe('parseCommitNumstat', () => {
+  const h1 = 'a'.repeat(40)
+  const h2 = 'b'.repeat(40)
+  it('keeps each commit with its files and lines, and the same totals as parseNumstat', () => {
+    const text = `${h1}\n\n3\t1\tsrc/a.ts\n2\t0\tsrc/b.ts\n${h2}\n\n4\t4\tsrc/a.ts\n-\t-\tlogo.png\n`
+    const change = parseCommitNumstat(text)
+    expect(change).toMatchObject({ files: 3, added: 9, removed: 5 })
+    expect(change.commits).toEqual([
+      { hash: h1, paths: ['src/a.ts', 'src/b.ts'], added: 5, removed: 1 },
+      { hash: h2, paths: ['src/a.ts', 'logo.png'], added: 4, removed: 4 }
+    ])
+  })
+})
+
 describe('buildTodayRecap', () => {
+  it('counts a commit once in the totals when two sessions overlap, keeping each row as it is', () => {
+    const shared = { hash: 'c'.repeat(40), paths: ['src/a.ts', 'src/b.ts'], added: 10, removed: 2 }
+    const own = { hash: 'd'.repeat(40), paths: ['src/c.ts'], added: 3, removed: 1 }
+    const data = {
+      report: report([item('a', 540, 40), item('b', 560, 30)]),
+      changes: {
+        a: { files: 2, added: 10, removed: 2, commits: [shared] },
+        b: { files: 3, added: 13, removed: 3, commits: [shared, own] }
+      }
+    }
+    const recap = buildTodayRecap(data, now, noCost)
+    expect(recap.rows.map((row) => [row.id, row.files, row.added])).toEqual([['a', 2, 10], ['b', 3, 13]])
+    expect([recap.totalFiles, recap.totalAdded, recap.totalRemoved]).toEqual([3, 13, 3])
+  })
+
+
   it('lists the sessions that worked today, longest first, with totals', () => {
     const data = {
       report: report([item('a', 540, 40), item('b', 600, 12, { title: 'Wrote the docs', project: 'Dawsha', agent: 'codex' })]),

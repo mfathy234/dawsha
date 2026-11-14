@@ -8,12 +8,11 @@ describe('desktop lifecycle preferences', () => {
   })
 
   it.each([
-    ['win32', 'quit', false, 'quit'], ['win32', 'tray', false, 'hide'],
-    ['linux', 'quit', false, 'quit'], ['linux', 'tray', false, 'hide'],
-    ['darwin', 'quit', false, 'hide'], ['darwin', 'tray', false, 'hide'],
-    ['win32', 'tray', true, 'quit'], ['darwin', 'tray', true, 'quit']
-  ] as const)('on %s with %s and quitting=%s decides %s', (platform, setting, quitting, expected) => {
-    expect(closeBehavior(platform, setting, quitting)).toBe(expected)
+    ['quit', false, true, 'quit'], ['tray', false, true, 'hide'],
+    ['tray', true, true, 'quit'], ['quit', true, true, 'quit'],
+    ['tray', false, false, 'quit']
+  ] as const)('with %s, quitting=%s and tray=%s decides %s on every platform', (setting, quitting, tray, expected) => {
+    expect(closeBehavior(setting, quitting, tray)).toBe(expected)
   })
 
   it('only registers hidden Windows startup while keep-running is enabled', () => {
@@ -31,6 +30,7 @@ describe('desktop lifecycle preferences', () => {
     }
     expect(startHidden(['app.exe', '--hidden'], 'win32', { ...settings, closeBehavior: 'quit' }, false)).toBe(false)
     expect(startHidden([], 'darwin', settings, true)).toBe(true)
+    expect(startHidden([], 'darwin', { ...settings, closeBehavior: 'quit' }, true)).toBe(false)
     expect(startHidden([], 'darwin', settings, false)).toBe(false)
     expect(startHidden([], 'darwin', { ...settings, startHidden: false }, true)).toBe(false)
   })

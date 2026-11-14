@@ -19,8 +19,21 @@ describe('limit warnings', () => {
     expect(run([[read(60)], [read(79)], [read(80)], [read(84)], [read(94)], [read(95)], [read(99)]])).toEqual([0, 0, 1, 0, 0, 1, 0])
   })
 
-  it('never re-arms either threshold after a percentage dip in the same window', () => {
-    expect(run([[read(85)], [read(40)], [read(82)], [read(96)], [read(94)], [read(97)]])).toEqual([1, 0, 0, 1, 0, 0])
+  it('does not re-arm after a dip that stays above 80', () => {
+    expect(run([[read(96)], [read(85)], [read(97)]])).toEqual([1, 0, 0])
+  })
+
+  it('forgets the window when usage drops below 80, so the next rise warns again', () => {
+    expect(run([[read(85)], [read(40)], [read(82)], [read(96)], [read(94)], [read(97)]])).toEqual([1, 0, 1, 1, 0, 0])
+  })
+
+  it('re-arms after a drop below 80 even when no reset time is reported', () => {
+    expect(run([[read(95, null)], [read(30, null)], [read(96, null)]])).toEqual([1, 0, 1])
+    expect(detectLimitWarnings(detectLimitWarnings({}, [read(95, null)]).warned, [read(30, null)]).warned).toEqual({})
+  })
+
+  it('keeps comparing reset times as an extra reset signal while usage stays high', () => {
+    expect(run([[read(90)], [read(91, 5_000_000 + 5 * 3_600_000)]])).toEqual([1, 1])
   })
 
   it('re-arms when the window resets', () => {

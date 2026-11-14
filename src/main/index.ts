@@ -39,6 +39,7 @@ import { requestCloseCheck } from './closeCheck'
 import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, exitProcess, runPhases, runQuit, stopAllServices, type ShutdownDeps } from './shutdown'
 import { isPrivateRemoteBuild, isRemoteControlBuild } from '../shared/remoteBuild'
 import { closeBehavior, startHidden } from '../shared/desktopSettings'
+import { trayAvailable } from './trayState'
 import { installLimitNotifications } from './limitNotifications'
 
 const IMAGE_SCHEME = 'dawsha-image'
@@ -70,9 +71,12 @@ if (!gotLock) {
     if (handleNotificationActivation(argv, () => mainWindow, routeNotificationClick)) return
     if (handleDesktopLaunch(argv)) return
     if (!mainWindow || mainWindow.isDestroyed()) return
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.show()
-    mainWindow.focus()
+    // A second sign-in launch (--hidden) must not pull a running window out of the tray.
+    if (!argv.includes('--hidden')) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.show()
+      mainWindow.focus()
+    }
     void cli?.executeFromArgv(argv, workingDirectory)
   })
 }
@@ -151,7 +155,9 @@ function createWindow(settings: SettingsStore, hidden: boolean): BrowserWindow {
       sandbox: true
     }
   })
-  if (!hidden) {
+  // Hidden from the start, the page still owns session state, Mini publishing and saving.
+  if (hidden) window.webContents.backgroundThrottling = false
+  else {
     if (offscreen) window.showInactive()
     else window.show()
   }
@@ -165,12 +171,11 @@ function createWindow(settings: SettingsStore, hidden: boolean): BrowserWindow {
     if (quitting) return
     event.preventDefault()
     if (checkingQuit) return
-    if (closeBehavior(process.platform, settings.get().desktop.closeBehavior, quitting) === 'quit') {
+    if (closeBehavior(settings.get().desktop.closeBehavior, quitting, trayAvailable()) === 'quit') {
       app.quit()
       return
     }
     window.hide()
-    window.webContents.backgroundThrottling = false
     if (process.platform !== 'darwin' && !settings.get().trayNoticeShown) {
       try { settings.update({ trayNoticeShown: true }) } catch (error) { console.warn('Could not save tray notice preference', error) }
       notifyUser(() => window, { paneId: '', title: 'Dawsha is still running in the tray', body: 'Choose Show Dawsha from the tray to return.', sound: settings.get().sessionInfo.sound, flash: false }, () => undefined)
@@ -274,6 +279,8 @@ app.whenReady().then(async () => {
     else if (!process.defaultApp) app.setAsDefaultProtocolClient(NOTIFICATION_SCHEME)
   }
   const stopMiniWindow = installMiniWindow(mainWindow, store)
+  // Without a tray icon a hidden window could never be brought back.
+  if (!trayAvailable() && !mainWindow.isVisible()) mainWindow.show()
   const stopLimitNotifications = installLimitNotifications(() => mainWindow, store, usage, statusWatcher)
   cli = new CliRunner(() => mainWindow)
   installDesktopLaunch(() => store.get(), cli)

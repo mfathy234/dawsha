@@ -63,11 +63,12 @@ export class DesktopSettingsControls {
   rows(settings: Settings, row: Row, toggle: Toggle): HTMLElement[] {
     const platform = this.login?.platform ?? (navigator.platform.toLowerCase().includes('mac') ? 'darwin' : navigator.platform.toLowerCase().includes('win') ? 'win32' : 'linux')
     const rows: HTMLElement[] = []
-    if (platform !== 'darwin') {
+    {
+      const trayOption = this.login?.trayAvailable === false ? [] : [h('option', { value: 'tray' }, 'Keep running in the tray')]
       const select = h('select', {
         class: 'text-input desktop-close-choice', id: 'desktop-close-behavior', 'aria-label': 'When I close the window', disabled: this.busy,
         onChange: (event: Event) => { void this.setDesktop({ closeBehavior: (event.currentTarget as HTMLSelectElement).value === 'tray' ? 'tray' : 'quit' }) }
-      }, h('option', { value: 'quit' }, 'Quit Dawsha'), h('option', { value: 'tray' }, 'Keep running in the tray'))
+      }, h('option', { value: 'quit' }, 'Quit Dawsha'), ...trayOption)
       select.value = settings.desktop.closeBehavior
       rows.push(row('When I close the window', select, h('p', { class: 'hint' }, 'Agents keep running. Use the tray to return.')))
     }
@@ -76,7 +77,7 @@ export class DesktopSettingsControls {
     rows.push(row('Start Dawsha when you sign in', toggle('desktop-login-toggle', 'Start Dawsha when you sign in', this.login?.enabled ?? false, disabled, value => { void this.setEnabled(value) }),
       h('p', { class: 'hint' }, this.login?.packaged ? 'Start Dawsha when you sign in.' : 'Available in the installed app.'),
       this.error ? h('p', { class: 'note error', role: 'alert' }, this.error) : null))
-    if (settings.desktop.closeBehavior === 'tray' || platform === 'darwin') {
+    if (settings.desktop.closeBehavior === 'tray') {
       rows.push(row('Start hidden in the tray', toggle('desktop-hidden-toggle', 'Start hidden in the tray', settings.desktop.startHidden, disabled || !this.login?.enabled, value => { void this.setDesktop({ startHidden: value }) }), h('p', { class: 'hint' }, 'Keep the main window out of the way when Dawsha starts at sign-in.')))
     }
     return rows

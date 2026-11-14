@@ -16,6 +16,7 @@ import type {
 import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
 import { applyAttentionBadge, findSolution, notifyUser, openInVsCode, quickOpen, revealInFolder } from './desktop'
+import { migrateLegacyLimitWarnings } from './limitNotifications'
 import { readLoginItem, reconcileLoginItem, setLoginItem } from './loginItems'
 import { sanitizeDesktopSettings } from '../shared/desktopSettings'
 import { existingFiles, openFile, resolveFile } from './fileOpen'
@@ -155,6 +156,11 @@ export function registerIpc(
     return updated
   })
   ipcMain.handle(IPC.loginItemGet, () => readLoginItem())
+  ipcMain.handle(IPC.limitWarnedMigrate, (event, legacy: unknown) => {
+    const window = getWindow()
+    if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) return
+    migrateLegacyLimitWarnings(settings, legacy)
+  })
   ipcMain.on(IPC.quit, event => {
     const window = getWindow()
     if (window && event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame) app.quit()

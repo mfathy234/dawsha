@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { branchNameProblem } from '../shared/gitBranches'
-import { parseNumstat, type RecapChange, type WorkRecapData } from '../shared/workRecap'
+import { parseCommitNumstat, type RecapChange, type WorkRecapData } from '../shared/workRecap'
 import { aggregateWork, classifyWork, shiftAnchor, ticketFromBranch, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../shared/workDashboard'
 import type { Project, ResumeSession } from '../shared/types'
 import { listSessionSources } from './sessionIndex'
@@ -49,10 +49,10 @@ export const workCommitChanges = (folder: string, branch: string | null, start: 
   const none: RecapChange = { files: 0, added: 0, removed: 0 }
   if ((branch && branchNameProblem(branch)) || !Number.isFinite(start) || !Number.isFinite(end) || end < start) return Promise.resolve(none)
   return repoAuthor(folder).then((author) => new Promise<RecapChange>((resolve) => {
-    execFile('git', ['log', '--numstat', '--format=', `--since=${new Date(start).toISOString()}`, `--until=${new Date(end).toISOString()}`,
+    execFile('git', ['log', '--numstat', '--format=%H', `--since=${new Date(start).toISOString()}`, `--until=${new Date(end).toISOString()}`,
       ...(author ? ['--fixed-strings', `--author=${author}`] : []), branch ? `refs/heads/${branch}` : 'HEAD', '--'],
     { cwd: folder, windowsHide: true, timeout: 5000, maxBuffer: 4 * 1024 * 1024 },
-    (error, stdout) => resolve(error ? none : parseNumstat(stdout)))
+    (error, stdout) => resolve(error ? none : parseCommitNumstat(stdout)))
   }))
 }
 
