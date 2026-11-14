@@ -33,7 +33,11 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
     await expect(page.locator('.pane-strip .strip-tab')).toHaveCount(2)
     const panel = page.locator('.side-panel')
     await expect(panel).toBeVisible()
-    await expect(panel.getByRole('tab')).toHaveText([/^Changes/, /^Plan/, /^Checks/])
+    await expect(panel.getByRole('tab')).toHaveText([/^Session/, /^Changes/, /^Plan/, /^Checks/])
+    await expect(panel.getByRole('tab', { name: /^Session/ })).toHaveAttribute('aria-selected', 'true')
+    await expect(panel.getByText('Send a message to see context usage.')).toBeVisible()
+    await expect(panel.getByText('Files this session writes show up here.')).toBeVisible()
+    await panel.getByRole('tab', { name: /^Changes/ }).click()
     await expect(panel.getByText('No changes yet.')).toBeVisible()
     await panel.getByRole('tab', { name: /^Plan/ }).click()
     await expect(panel.getByText('No plan yet.')).toBeVisible()
@@ -59,7 +63,7 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
     await expect(panel.getByRole('tab')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).sidePanel?.open).toBe(false)
     await panel.getByRole('button', { name: 'Show the session panel' }).click()
-    await expect(panel.getByRole('tab')).toHaveCount(3)
+    await expect(panel.getByRole('tab')).toHaveCount(4)
   } finally {
     expect(await closeApp(first.app)).toBeLessThan(QUIT_BUDGET_MS)
   }
@@ -178,6 +182,7 @@ test('the Changes tab lists the files the last reply changed and the Plan tab sh
 
     await page.locator('#layout-panel').click()
     const panel = page.locator('.side-panel')
+    await panel.getByRole('tab', { name: /^Changes/ }).click()
     await expect(panel.locator('.chat-turn-summary')).toBeVisible({ timeout: 20_000 })
     await expect(panel.locator('.chat-turn-file')).toHaveCount(2)
     await expect(panel.locator('.chat-turn-file', { hasText: 'a.ts' })).toBeVisible()

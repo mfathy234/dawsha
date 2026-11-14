@@ -30,6 +30,7 @@ export class SessionPanel {
   private contextKey = ''
   private version: string | undefined
   private paneId = ''
+  private requestKey = ''
   private timer: ReturnType<typeof setInterval> | null = null
   private token = 0
   private loaded = false
@@ -44,8 +45,10 @@ export class SessionPanel {
   /** Called on every state change while the tab is on screen; starts the log polling the first time. */
   show(view: PaneView): void {
     this.view = view
-    if (view.pane.id !== this.paneId) {
+    const requestKey = JSON.stringify(timelineRequest(view.pane.id))
+    if (view.pane.id !== this.paneId || requestKey !== this.requestKey) {
       this.paneId = view.pane.id
+      this.requestKey = requestKey
       this.version = undefined
       this.outputs = []
       this.outputsKey = ''
@@ -62,6 +65,7 @@ export class SessionPanel {
     this.timer = null
     this.token += 1
     this.paneId = ''
+    this.requestKey = ''
     this.view = null
     this.contextKey = ''
   }
