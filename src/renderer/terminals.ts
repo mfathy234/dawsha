@@ -61,6 +61,7 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     sleepingEnabled: () => store.state.settings.sleepHiddenTerminals
   })
   views.set(id, view)
+  void api.getTerminalSetup(id).then((state) => showSetup(id, state)).catch(() => undefined)
   for (const chunk of pending.take(id)) view.write(chunk)
   return view
 }
@@ -70,6 +71,10 @@ setInterval(() => { for (const view of views.values()) view.updateRenderer() }, 
 document.addEventListener('visibilitychange', () => {
   for (const view of views.values()) view.refreshVisibility()
 })
+
+function showSetup(id: string, state: { phase: 'running' | 'failed'; exitCode?: number } | null): void {
+  views.get(id)?.showSetupChoice(state?.phase === 'failed' ? (state.exitCode ?? -1) : null, (action) => void api.resolveTerminalSetup(id, action))
+}
 
 export const getTerminal = (id: string): TerminalView | undefined => views.get(id)
 
@@ -105,6 +110,7 @@ export function connectPtyStreams(onExit: (id: string, exitCode: number) => void
     if (view) view.write(data)
     else pending.append(id, data)
   })
+  api.onTerminalSetup((id, state) => showSetup(id, state))
   api.onExit((id, exitCode) => {
     pending.delete(id)
     onExit(id, exitCode)

@@ -40,6 +40,7 @@ import type { TranscriptRequest, TranscriptResult } from './transcript'
 import type { HandoffTranscriptRequest, HandoffTranscriptResult } from './handoff'
 import type { UsageRange, UsageReport } from './usage'
 import type { CleanupListResult, CleanupRequest, CleanupResult } from './worktreeCleanup'
+import type { WorktreeSetupInspectResult } from './worktreeSetup'
 import type { ExportGrouping, ExportRange, UsageExportResult } from './usageCsv'
 import type {
   AgentKind,
@@ -212,6 +213,9 @@ export interface GridApi {
   kill(id: string): Promise<void>
   onData(listener: (id: string, data: string) => void): () => void
   onExit(listener: (id: string, exitCode: number) => void): () => void
+  getTerminalSetup(id: string): Promise<import('./terminalSetup').TerminalSetupState | null>
+  resolveTerminalSetup(id: string, action: import('./terminalSetup').TerminalSetupAction): Promise<SpawnResult>
+  onTerminalSetup(listener: (id: string, state: import('./terminalSetup').TerminalSetupState | null, pid?: number) => void): () => void
   onRemoteSessionStarted(listener: (session: RemoteSessionStarted) => void): () => void
   listProcessActivity(visibleTabIds?: string[]): Promise<ProcessActivity[]>
   listSkills(): Promise<SkillEntry[]>
@@ -258,6 +262,8 @@ export interface GridApi {
   runWorktreeCreate(folder: string, short: string): Promise<WorktreeResult>
   compareRemove(request: WorktreeRemoval): Promise<GitResult>
   worktreeCreate(folder: string, short: string): Promise<SessionWorktreeResult>
+  worktreeSetupInspect(folder: string): Promise<WorktreeSetupInspectResult>
+  worktreeSetupSave(folder: string, patterns: string): Promise<GitResult>
   mergeOverview(request: MergeBackRequest): Promise<MergeOverviewResult>
   mergeCommit(request: WorktreeCommitRequest): Promise<GitCommitResult>
   mergeInto(request: MergeBackRequest): Promise<MergeResult>

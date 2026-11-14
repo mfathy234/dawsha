@@ -59,6 +59,7 @@ export class TerminalView {
   private requestedVisible = false
   private readonly permissionTracker = new PermissionPromptTracker(crypto.randomUUID())
   private permissionWrites = 0
+  private setupBar: HTMLElement | null = null
 
   constructor(
     readonly id: string,
@@ -326,6 +327,19 @@ export class TerminalView {
     } catch (error) {
       console.warn('Terminal fit failed', error)
     }
+  }
+
+  /** A failed worktree setup waits for the owner here: Retry, or start the agent without it. */
+  showSetupChoice(exitCode: number | null, choose: (action: 'retry' | 'start') => void): void {
+    this.setupBar?.remove()
+    this.setupBar = null
+    this.el.classList.toggle('has-setup-choice', exitCode !== null)
+    if (exitCode === null) return
+    const retry = h('button', { class: 'btn small', type: 'button', onClick: () => choose('retry') }, 'Retry')
+    const start = h('button', { class: 'btn primary small', type: 'button', onClick: () => choose('start') }, 'Start the agent anyway')
+    this.setupBar = h('div', { class: 'term-setup-choice', role: 'group', 'aria-label': 'Worktree setup failed' },
+      h('span', { class: 'term-setup-text' }, exitCode > 0 ? `Setup failed (exit ${exitCode}).` : 'Setup failed.'), retry, start)
+    this.el.append(this.setupBar)
   }
 
   dispose(): void {

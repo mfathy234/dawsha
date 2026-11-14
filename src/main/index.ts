@@ -1,4 +1,5 @@
 import { join, resolve } from 'node:path'
+import { realpathSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { BrowserWindow, Menu, app, ipcMain, net, powerMonitor, protocol, session } from 'electron'
 import { IPC } from '../shared/ipc'
@@ -18,6 +19,7 @@ import { registerTurnIpc } from './turnIpc'
 import { registerMcpIpc } from './mcpIpc'
 import { installMiniWindow } from './miniWindow'
 import { PtyManager } from './ptyManager'
+import { configurePendingWorktrees } from './worktreeSetupPending'
 import { Recorder } from './recorder'
 import { RecordingService } from './recordings'
 import { SessionsWatcher } from './sessionsWatcher'
@@ -231,12 +233,24 @@ app.whenReady().then(async () => {
     enabled: () => store.get().recordings.enabled
   })
   const recordings = new RecordingService(join(userData, 'recordings'), recorder, () => store.get().recordings)
+  configurePendingWorktrees(store.get().pendingWorktreeSetups, (entries) => {
+    store.update({ pendingWorktreeSetups: entries })
+  })
   const ptys = new PtyManager({
     onData: (id, data) => send(IPC.ptyData, id, data),
-    onExit: (id, code) => send(IPC.ptyExit, id, code)
+    onExit: (id, code) => send(IPC.ptyExit, id, code),
+    onSetup: (id, state, pid) => send(IPC.ptySetupChanged, id, state, pid)
   }, remoteTerminals, {
     recorder,
     projectName: (projectId) => store.get().projects.find((project) => project.id === projectId)?.name ?? ''
+  }, (repo, projectId) => {
+    const canonical = (folder: string): string => {
+      try { return realpathSync.native(folder).toLowerCase() } catch { return resolve(folder).toLowerCase() }
+    }
+    const source = canonical(repo)
+    const projects = store.get().projects
+    const project = projects.find((item) => item.id === projectId && canonical(item.folder) === source) ?? projects.find((item) => canonical(item.folder) === source)
+    return project?.worktreeSetup?.command ?? ''
   })
   const watcher = new SessionsWatcher((sessions) => { send(IPC.sessionsUpdate, sessions); refreshAgentFiles() })
   const codexWatcher = new CodexWatcher((sessions) => { send(IPC.codexUpdate, sessions); refreshAgentFiles() })

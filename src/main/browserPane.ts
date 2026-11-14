@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { WebContentsView, session, shell, type BrowserWindow, type Session } from 'electron'
@@ -14,6 +15,9 @@ import {
   type BrowserResult,
   type BrowserState
 } from '../shared/browserPane'
+import { clipElementBounds, readPickedElement, type BrowserPick } from '../shared/browserPick'
+import { CANCEL_PICKER_SCRIPT, PICKER_SCRIPT, PICKER_WORLD } from './browserPickerScript'
+import { pasteDir } from './clipboardImage'
 
 const START_PAGE = 'about:blank'
 const SHOT_DIR = 'dawsha-browser'
@@ -43,6 +47,7 @@ export class BrowserPane {
   private failure: string | null = null
   private bounds: BrowserBounds = { x: 0, y: 0, width: 0, height: 0 }
   private visible = false
+  private pickGeneration = 0
 
   constructor(private readonly host: Host, private readonly changed: (state: BrowserState) => void) {}
 
@@ -99,6 +104,9 @@ export class BrowserPane {
       return { action: 'deny' }
     })
     const events = contents as unknown as NodeJS.EventEmitter
+    contents.on('did-start-navigation', (details) => {
+      if (details.isMainFrame) this.cancelPick()
+    })
     const refuse = (details: { url: string; preventDefault(): void }): void => {
       if (isWebUrl(details.url)) return
       details.preventDefault()
@@ -154,6 +162,7 @@ export class BrowserPane {
     const scale = zoom > 0 ? zoom : 1
     this.bounds = { x: Math.round(bounds.x * scale), y: Math.round(bounds.y * scale), width: Math.max(0, Math.round(bounds.width * scale)), height: Math.max(0, Math.round(bounds.height * scale)) }
     this.visible = visible
+    if (!visible) this.cancelPick()
     this.applyBounds()
   }
 
@@ -187,6 +196,47 @@ export class BrowserPane {
     return { ok: true, path, url: contents.getURL() }
   }
 
+  cancelPick(): void {
+    this.pickGeneration += 1
+    const contents = this.view?.webContents
+    if (contents && !contents.isDestroyed()) void contents.executeJavaScriptInIsolatedWorld(PICKER_WORLD, [{ code: CANCEL_PICKER_SCRIPT }]).catch(() => undefined)
+  }
+
+  /** A pick can describe a page, but never type into a session. Only the owner's composer can do that. */
+  async pickElement(): Promise<BrowserPick> {
+    const view = this.view
+    const contents = view?.webContents
+    if (!view || !contents || contents.isDestroyed() || !isWebUrl(contents.getURL())) return { ok: false, error: 'Open a page before picking an element.' }
+    this.cancelPick()
+    const generation = this.pickGeneration
+    const url = contents.getURL()
+    try {
+      contents.focus()
+      const raw: unknown = await contents.executeJavaScriptInIsolatedWorld(PICKER_WORLD, [{ code: PICKER_SCRIPT }])
+      const current = (): boolean => generation === this.pickGeneration && this.view === view && !contents.isDestroyed() && contents.getURL() === url
+      if (raw === null || !current()) return { ok: false, cancelled: true, error: 'Picking cancelled.' }
+      const element = readPickedElement(raw)
+      if (!element) return { ok: false, error: 'That element could not be described. Pick it again.' }
+      const zoom = contents.getZoomFactor()
+      const bounds = clipElementBounds({ x: element.bounds.x * zoom, y: element.bounds.y * zoom, width: element.bounds.width * zoom, height: element.bounds.height * zoom }, view.getBounds())
+      if (!bounds) return { ok: false, error: 'That element is outside the visible page. Scroll to it and try again.' }
+      const image = await contents.capturePage(bounds)
+      if (!current()) return { ok: false, cancelled: true, error: 'Picking cancelled.' }
+      if (image.isEmpty()) return { ok: false, error: 'The element has nothing to capture yet.' }
+      const folder = pasteDir()
+      await mkdir(folder, { recursive: true })
+      const path = join(folder, `element-${randomUUID()}.png`)
+      await writeFile(path, image.toPNG())
+      return { ok: true, element, url, path, preview: image.toDataURL() }
+    } catch {
+      return generation !== this.pickGeneration || this.view !== view
+        ? { ok: false, cancelled: true, error: 'Picking cancelled.' }
+        : { ok: false, error: 'Could not pick that element. Try again after the page has loaded.' }
+    } finally {
+      if (generation === this.pickGeneration && this.owner && !this.owner.isDestroyed()) this.owner.webContents.focus()
+    }
+  }
+
   consoleErrors(): BrowserErrors {
     if (!this.view) return { ok: false, error: 'The browser is not open.' }
     if (this.errors.length === 0) return { ok: false, error: 'The page has logged no errors.' }
@@ -195,6 +245,7 @@ export class BrowserPane {
 
   /** Removes the native view and closes its page. Safe to call twice. */
   close(): BrowserState {
+    this.cancelPick()
     const view = this.view
     this.view = null
     if (view) {

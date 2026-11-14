@@ -55,6 +55,7 @@ export function registerToolsIpc(getWindow: () => BrowserWindow | null, store: T
   ipcMain.handle(TOOLS_IPC.browser, guarded<[BrowserCommand], BrowserResult>(refusedBrowser, (command) => runBrowser(command)))
   ipcMain.handle(TOOLS_IPC.browserShot, guarded<[], unknown>(refusedBrowser, () => pane.screenshot()))
   ipcMain.handle(TOOLS_IPC.browserErrors, guarded<[], unknown>(refusedBrowser, () => pane.consoleErrors()))
+  ipcMain.handle(TOOLS_IPC.browserPick, guarded<[], unknown>(refusedBrowser, () => pane.pickElement()))
 
   function runBrowser(command: BrowserCommand): BrowserResult {
     const window = getWindow()
@@ -70,6 +71,7 @@ export function registerToolsIpc(getWindow: () => BrowserWindow | null, store: T
       return { ok: true, state: pane.state() }
     }
     if (command.type === 'close') return { ok: true, state: pane.close() }
+    if (command.type === 'cancel-pick') { pane.cancelPick(); return { ok: true, state: pane.state() } }
     if (['back', 'forward', 'reload', 'stop', 'devtools'].includes(command.type)) return pane.command(command.type as 'back')
     return { ok: false, error: 'Unknown browser command.' }
   }

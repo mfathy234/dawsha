@@ -7,6 +7,7 @@ import { blameLines, type BlameSource } from '../../shared/fileActivity'
 import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
 import { buildReviewMessage, draftCommitMessage, stepReview } from '../../shared/review'
 import { runningSummary, runningText } from '../../shared/runStatus'
+import { attachmentOf, messageWithAttachments } from '../../shared/chatAttach'
 import type { FileCommit } from '../../shared/filePreview'
 import type { LinkedRepo } from '../../shared/linkedRepos'
 import type { GitFileEntry } from '../../shared/gitStatus'
@@ -14,6 +15,7 @@ import { languageLabel } from '../files/languageInfo'
 import { api } from '../api'
 import { focusPane, saveSettings, startSessionIn } from '../actions'
 import { derivePanes } from '../derive'
+import { primaryTab, sendChatMessage } from '../chat/chatActions'
 import { h, icon } from '../dom'
 import { currentBundle, onThemeChange } from '../themeManager'
 import { projectById, store, type AppState } from '../state'
@@ -106,7 +108,11 @@ export class FilesViewComponent {
   }
   private readonly configPane = new ConfigPane({ folder: () => this.target?.folder ?? null, open: this.openChecked })
   private readonly prPanel = new PrPanel({ folder: () => this.target?.folder ?? null, open: this.openChecked, send: (text, anchor) => this.sendProblems(text, anchor) })
-  private readonly browserTab = new BrowserTab({ send: (text, anchor) => this.sendProblems(text, anchor) })
+  private readonly browserTab = new BrowserTab({
+    send: (text, anchor) => this.sendProblems(text, anchor),
+    sessions: () => this.liveSessions(),
+    sendElement: (paneId, text, imagePath) => this.sendPageElement(paneId, text, imagePath)
+  })
   private readonly panel = new BottomPanel(this.runPanel, () => {
     // the panel reports while it is built, before the status bar below exists
     if (this.status === undefined) return
@@ -1143,6 +1149,18 @@ export class FilesViewComponent {
       x: box.left, y: box.top, label: 'Send problems to', returnFocus: anchor,
       entries: [{ heading: 'Send to session' }, ...sessions.map((session) => ({ label: session.title, run: () => send(session.paneId, session.title) }))]
     })
+  }
+
+  private sendPageElement(paneId: string, text: string, imagePath: string): boolean {
+    const view = derivePanes(store.state).find((candidate) => candidate.pane.id === paneId)
+    const tab = view && primaryTab(view)
+    if (!view || !tab || tab.status === 'exited' || !this.liveSessions().some((session) => session.paneId === paneId)) {
+      toast('That session is not open any more.', 'info')
+      return false
+    }
+    const message = messageWithAttachments(tab.agent, [attachmentOf(imagePath)], text, store.state.info.shellCommand)
+    sendChatMessage(tab.id, tab.agent, message)
+    return true
   }
 
   private sessionForDraft(paths: readonly string[]): string | null {

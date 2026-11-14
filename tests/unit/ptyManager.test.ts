@@ -37,13 +37,15 @@ vi.mock('../../src/main/agentLaunch', () => ({
   codexCommand: () => 'codex',
   geminiCommand: () => 'gemini',
   shellCommand: () => 'shell',
-  launchSpec: () => ({ file: 'fake-agent', args: [] })
+  launchSpec: (request: { agent: string; command?: string; prompt?: string }) => ({ file: request.agent === 'shell' ? 'fake-shell' : 'fake-agent', args: [request.command ?? request.prompt ?? ''] })
 }))
 
 import { PtyManager } from '../../src/main/ptyManager'
 import { RemoteTerminalState } from '../../src/main/remoteTerminalState'
 import type { Recorder } from '../../src/main/recorder'
 import type { CrewLaunch } from '../../src/shared/crew'
+import { registerPendingWorktree } from '../../src/main/worktreeSetupPending'
+import { ptyArguments } from '../../src/main/commandLine'
 
 const crewLaunch = (change: Partial<CrewLaunch>): CrewLaunch => ({ instructions: '', model: 'sonnet', effort: '', permissions: 'ask', startup: 'lean', ...change })
 
@@ -149,6 +151,63 @@ describe('PtyManager desktop output delivery', () => {
     expect(onData).toHaveBeenCalledWith('desktop-1', 'desktop output')
     fake.exit?.({ exitCode: 0 })
     expect(onExit).toHaveBeenCalledWith('desktop-1', 0)
+  })
+
+  it('runs setup before the original agent and keeps its prompt and terminal output', async () => {
+    const onData = vi.fn()
+    const onExit = vi.fn()
+    const onSetup = vi.fn()
+    const remote = new RemoteTerminalState()
+    const target = new PtyManager({ onData, onExit, onSetup }, remote, null, () => 'echo prepare')
+    registerPendingWorktree(cwd, cwd)
+    expect(target.spawn({ id: 'setup', projectId: 'p1', agent: 'codex', cwd, resume: false, prompt: 'Keep my first prompt', cols: 80, rows: 24 }).ok).toBe(true)
+    expect(fake.spawn).toHaveBeenCalledTimes(1)
+    expect(fake.spawn.mock.calls[0][0]).toBe(process.platform === 'win32' ? process.env.ComSpec || 'cmd.exe' : 'shell')
+    expect(target.setupState('setup')?.phase).toBe('running')
+    fake.data?.('setup output\r\n')
+    // Terminal text is untrusted and never signals a completed setup.
+    fake.data?.('DAWSHA_SETUP_SUCCESS\r\n')
+    expect(fake.spawn).toHaveBeenCalledTimes(1)
+    fake.exit?.({ exitCode: 0 })
+    expect(fake.spawn).toHaveBeenCalledTimes(2)
+    expect(fake.spawn.mock.calls[1].slice(0, 2)).toEqual(['fake-agent', ptyArguments(['Keep my first prompt'])])
+    expect(target.setupState('setup')).toBeNull()
+    expect((await target.remoteScreen('setup'))?.output).toContain('setup output')
+    expect(onExit).not.toHaveBeenCalled()
+    fake.exit?.({ exitCode: 0 })
+    expect(onExit).toHaveBeenCalledWith('setup', 0)
+  })
+
+  it('keeps a failed setup waiting until retry succeeds or the owner starts the agent anyway', () => {
+    const onExit = vi.fn()
+    const target = new PtyManager({ onData: vi.fn(), onExit }, null, null, () => 'exit 7')
+    registerPendingWorktree(cwd, cwd)
+    target.spawn({ id: 'setup', agent: 'codex', cwd, resume: false, cols: 80, rows: 24 })
+    fake.exit?.({ exitCode: 7 })
+    expect(target.setupState('setup')).toEqual({ phase: 'failed', exitCode: 7 })
+    expect(target.activityRoots()).toEqual([])
+    expect(onExit).not.toHaveBeenCalled()
+    expect(target.resolveSetup('setup', 'retry').ok).toBe(true)
+    expect(target.setupState('setup')?.phase).toBe('running')
+    expect(fake.spawn.mock.calls.at(-1)?.[0]).toBe(process.platform === 'win32' ? process.env.ComSpec || 'cmd.exe' : 'shell')
+    fake.exit?.({ exitCode: 9 })
+    expect(target.resolveSetup('setup', 'start').ok).toBe(true)
+    expect(fake.spawn.mock.calls.at(-1)?.[0]).toBe('fake-agent')
+    expect(target.setupState('setup')).toBeNull()
+  })
+
+  it('does not relaunch a killed setup or run it for an ordinary checkout', () => {
+    const target = new PtyManager({ onData: vi.fn(), onExit: vi.fn() }, null, null, () => 'echo prepare')
+    target.spawn({ id: 'ordinary', agent: 'codex', cwd, resume: false, cols: 80, rows: 24 })
+    expect(fake.spawn.mock.calls[0][0]).toBe('fake-agent')
+    registerPendingWorktree(cwd, cwd)
+    target.spawn({ id: 'setup', agent: 'codex', cwd, resume: false, cols: 80, rows: 24 })
+    const setupExit = fake.exit
+    target.kill('setup')
+    setupExit?.({ exitCode: 0 })
+    expect(fake.spawn).toHaveBeenCalledTimes(2)
+    expect(target.resolveSetup('setup', 'start').ok).toBe(false)
+    target.kill('ordinary')
   })
 })
 

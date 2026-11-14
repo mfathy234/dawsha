@@ -24,6 +24,7 @@ export type BrowserCommand =
   | { type: 'back' | 'forward' | 'reload' | 'stop' | 'devtools' | 'close' }
   | { type: 'screenshot' }
   | { type: 'errors' }
+  | { type: 'cancel-pick' }
 
 export type BrowserResult =
   | { ok: true; state: BrowserState }

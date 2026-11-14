@@ -251,6 +251,7 @@ export interface PresetStart {
   /** The worktree folder the session works in, when the preset made one. */
   worktree?: PaneWorktree
   prompt: string
+  view?: ChatView
 }
 
 /** Opens a preset's session. Agents take the first prompt as their start argument; a shell has it typed once it is up. */
@@ -258,7 +259,7 @@ export async function startPresetSession(start: PresetStart): Promise<string | n
   const prompt = start.prompt.trim() === '' ? undefined : start.prompt
   const typed = start.agent === 'shell' && prompt ? `${prompt}
 ` : undefined
-  const opened = await openSession(start.projectId, start.agent, undefined, false, undefined, undefined, start.worktree?.path, start.agent === 'shell' ? undefined : prompt, undefined, { typed, worktree: start.worktree })
+  const opened = await openSession(start.projectId, start.agent, undefined, false, undefined, undefined, start.worktree?.path, start.agent === 'shell' ? undefined : prompt, start.view, { typed, worktree: start.worktree })
   return opened?.paneId ?? null
 }
 
