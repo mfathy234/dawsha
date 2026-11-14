@@ -37,7 +37,25 @@ const host: MiniHost = {
   select: id => select(id),
   review: s => api.action({ kind: 'review', paneId: s.paneId }),
   answer: (s, allow) => { if (s.permission) api.action({ kind: 'answer', paneId: s.paneId, allow, prompt: s.permission.prompt }) },
-  send: (s, text) => api.action({ kind: 'send', paneId: s.paneId, text })
+  send: (s, text) => api.action({ kind: 'send', paneId: s.paneId, text }),
+  hide: s => api.action({ kind: 'hide', paneId: s.paneId }),
+  unhide: () => api.action({ kind: 'unhide' })
+}
+
+const hiddenCountText = h('span', {})
+const hiddenLine = h('div', { class: 'mini-hidden-line', hidden: true }, hiddenCountText, h('span', { 'aria-hidden': 'true' }, '·'),
+  h('button', { type: 'button', class: 'mini-link', onClick: () => host.unhide() }, 'Show'))
+const emptyText = h('p', {}, 'No sessions open')
+
+function drawHiddenLine(): void {
+  const count = snapshot?.hiddenCount ?? 0
+  const wanted = !!snapshot && !snapshot.folded && !starting && !selected && count > 0
+  if (hiddenCountText.textContent !== `${count} hidden`) hiddenCountText.textContent = `${count} hidden`
+  hiddenLine.querySelector('button')!.setAttribute('aria-label', `Show ${count} hidden session${count === 1 ? '' : 's'}`)
+  hiddenLine.hidden = !wanted
+  if (!wanted) { hiddenLine.remove(); return }
+  if (hiddenLine.parentElement !== content || hiddenLine.nextElementSibling !== ghosts) content.insertBefore(hiddenLine, ghosts.parentElement ? ghosts : null)
+  emptyText.textContent = snapshot!.sessions.length === 0 ? 'No sessions shown' : 'No sessions open'
 }
 
 function fitContent(): void {
@@ -145,7 +163,7 @@ function rebuild(next: Mode, session: MiniSession | undefined, previous: Mode | 
     content.append(form.el)
     if (fade || previous === 'empty') slide(form.el, 'end')
   } else if (next === 'empty') {
-    content.append(h('div', { class: 'mini-empty' }, h('p', {}, 'No sessions open'), h('button', { type: 'button', onClick: () => api.action({ kind: 'new' }) }, 'New session')))
+    content.append(h('div', { class: 'mini-empty' }, emptyText, h('button', { type: 'button', onClick: () => api.action({ kind: 'new' }) }, 'New session')))
   }
 }
 
@@ -168,6 +186,7 @@ function draw(): void {
     rebuild(next, session, previous)
   } else if (next === 'detail' && session) detailView?.update(session)
   else if (next === 'list') syncCards(snapshot.sessions, true)
+  drawHiddenLine()
   if (hadFocus && !root.contains(document.activeElement)) header.querySelector<HTMLElement>('button')?.focus({ preventScroll: true })
   fitContent()
 }

@@ -9,6 +9,8 @@ export interface MiniHost {
   review(session: MiniSession): void
   answer(session: MiniSession, allow: boolean): void
   send(session: MiniSession, text: string): void
+  hide(session: MiniSession): void
+  unhide(): void
 }
 
 export function tile(session: Pick<MiniSession, 'identity' | 'agent'>, size = 36): HTMLElement {
@@ -69,5 +71,26 @@ export class PermissionBlock {
         h('button', { type: 'button', class: 'mini-allow', onClick: () => this.host.answer(session, true) }, 'Allow'),
         h('button', { type: 'button', onClick: () => this.host.answer(session, false) }, 'Deny'),
         h('button', { type: 'button', class: 'mini-open-text', onClick: () => this.host.open(session) }, 'Open in Dawsha'))].filter((node): node is HTMLPreElement | HTMLDivElement => node !== null))
+  }
+}
+
+/** What a needs-you session waits on when it is not an approval: the question and its choices, read-only, and a way into Dawsha. */
+export class WaitingBlock {
+  readonly el = h('div', { class: 'mini-waiting', hidden: true })
+  private key = ''
+
+  constructor(private readonly host: MiniHost) {}
+
+  update(session: MiniSession): void {
+    const waiting = session.waiting
+    const key = waiting ? JSON.stringify(waiting) : ''
+    if (key === this.key) return
+    this.key = key
+    this.el.hidden = !waiting
+    if (!waiting) { this.el.replaceChildren(); return }
+    this.el.replaceChildren(
+      h('p', { class: 'mini-waiting-question', dir: 'auto' }, waiting.question || 'The agent is waiting for you. Open the session to see what it needs.'),
+      ...(waiting.choices.length ? [h('ul', { class: 'mini-waiting-choices', 'aria-label': 'Choices' }, ...waiting.choices.map(choice => h('li', { dir: 'auto' }, choice)))] : []),
+      h('div', { class: 'mini-actions' }, h('button', { type: 'button', class: 'mini-open-text', onClick: () => this.host.open(session) }, 'Open in Dawsha')))
   }
 }
