@@ -243,6 +243,8 @@ export interface Settings {
   filesLayout: import('./filesLayout').FilesLayout
   /** Open files of the Files view, by project id (at most FILES_TABS_MAX each). */
   filesTabs: Record<string, string[]>
+  /** Optional PlantUML jar on this computer. Empty uses the consented, verified download. */
+  plantumlJarPath: string
   /** Locally saved run commands, kept separate from portable preferences. */
   runCommands: import('./runCommands').RunOverrides
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */

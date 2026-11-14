@@ -185,6 +185,11 @@ export interface GridApi {
   fileCommitFile(folder: string, hash: string, path: string, full?: boolean): Promise<import('./commitDetails').CommitFileResult>
   filePreviewUrl(folder: string, path: string, text: string | null): Promise<{ ok: true; url: string } | { ok: false; error: string }>
   fileImage(folder: string, path: string, base: boolean): Promise<import('./filePreview').FileImageResult>
+  diagramStatus(): Promise<import('./diagrams').DiagramStatus>
+  diagramDownload(): Promise<{ ok: true } | { ok: false; error: string }>
+  diagramRender(folder: string, path: string, text: string, sourceLine?: number): Promise<import('./diagrams').DiagramResult>
+  diagramCopy(svg: string): Promise<{ ok: true } | { ok: false; error: string }>
+  diagramSave(name: string, svg: string, pngDataUrl?: string): Promise<{ ok: true } | { ok: false; error: string }>
   openFileInBrowser(folder: string, path: string): Promise<{ ok: true } | { ok: false; error: string }>
   linkedRepos(projectId: string, folders: string[]): Promise<import('./linkedRepos').LinkedRepo[]>
   readInstruction(folder: string, name: string): Promise<InstructionRead>
