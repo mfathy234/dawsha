@@ -6,6 +6,7 @@ import { detectTerminalMenu } from './terminalMenu'
 export interface MiniWaiting {
   /** A numbered picker or menu blocks the reply box; a plain question does not. */
   kind: 'menu' | 'question'
+  /** Empty when nothing on the screen or in the last reply says what the agent asks. */
   question: string
   choices: string[]
 }
@@ -15,7 +16,6 @@ const NUMBERED = /^[\s│┃|]*[❯›▸▶●◉>]?\s*(\d{1,2})[.)]\s+(\S.*)$/
 const QUESTION_MAX = 240
 const CHOICE_MAX = 160
 const CHOICES_MAX = 8
-const FALLBACK = 'The agent is waiting for you. Open the session to see what it needs.'
 
 const clip = (text: string, max: number): string => {
   const flat = text.replace(/\s+/g, ' ').trim()
@@ -38,7 +38,7 @@ function questionFromReply(reply: readonly string[]): string {
 
 /**
  * Why a session that needs you shows no approval box: the numbered picker on its screen, a menu chat cannot draw,
- * or a plain question in its last reply. Always returns something to show, so the detail never says "waiting" about nothing.
+ * or a plain question in its last reply. The question is empty when nothing says what it is; the detail then tells the owner to open the session.
  * Null only for a tool-permission prompt, which has its own approval box.
  */
 export function miniWaiting(tail: string, reply: readonly string[]): MiniWaiting | null {
@@ -48,8 +48,8 @@ export function miniWaiting(tail: string, reply: readonly string[]): MiniWaiting
   if (asked) {
     const choices = [...asked.options.map(option => `${option.number}. ${clip(option.label, CHOICE_MAX)}`),
       ...(asked.otherNumber !== null ? [`${asked.otherNumber}. Something else`] : [])].slice(0, CHOICES_MAX)
-    return { kind: 'menu', question: clip(asked.question, QUESTION_MAX) || FALLBACK, choices }
+    return { kind: 'menu', question: clip(asked.question, QUESTION_MAX), choices }
   }
   if (detectTerminalMenu(tail)) return { kind: 'menu', question: 'A menu is open in the session.', choices: screenRows(tail) }
-  return { kind: 'question', question: questionFromReply(reply) || FALLBACK, choices: [] }
+  return { kind: 'question', question: questionFromReply(reply), choices: [] }
 }

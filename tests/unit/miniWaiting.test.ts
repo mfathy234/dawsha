@@ -27,8 +27,8 @@ describe('Mini waiting reason', () => {
     expect(waiting).toEqual({ kind: 'question', question: 'Should I run the tests too?', choices: [] })
   })
 
-  it('always says something when it knows nothing', () => {
-    expect(miniWaiting('', [])?.question).toMatch(/Open the session/)
+  it('has an empty question when it knows nothing, so the card says Needs you and the detail says to open the session', () => {
+    expect(miniWaiting('', [])).toEqual({ kind: 'question', question: '', choices: [] })
   })
 
   it('reaches the snapshot only for a needs-you session without a permission prompt', () => {
@@ -39,5 +39,6 @@ describe('Mini waiting reason', () => {
     expect(session.line).toBe('Which database should we use?')
     expect(session.now).toBe('Waiting for you: Which database should we use?')
     expect(miniSession({ ...base, attention: 'none', tail: '' }).waiting).toBeNull()
+    expect(miniSession({ ...base, tail: '' }).line).toBe('Needs you')
   })
 })

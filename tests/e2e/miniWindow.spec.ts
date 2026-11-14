@@ -118,17 +118,23 @@ test('closing a detail session never transfers approval focus to another session
     const firstId = (await panes.first().getAttribute('data-pane-id'))!
     const ids = await panes.locator('.term-host.active').evaluateAll(els => els.map(el => el.getAttribute('data-term-id')!))
     const mini = await openMini(app, page)
-    for (const id of ids) {
-      await expect.poll(async () => (await bufferText(page, id)).replace(/\n/g, '').trimEnd()).toMatch(/[>$#%]$/)
-      await feedTerminal(page, id, '● Bash(npm test)\r\nDo you want to proceed?\r\n1. Yes\r\n3. No\r\n')
-    }
+    for (const id of ids) await expect.poll(async () => (await bufferText(page, id)).replace(/\n/g, '').trimEnd()).toMatch(/[>$#%]$/)
+    // A screen can be repainted after it is fed (a shell finishing its start), which drops the request while the card still waits
+    // out its grace period. So the test asserts the request is in the snapshot, feeding again until it is, instead of racing a click.
+    const requests = (): Promise<boolean[]> => mini.evaluate(async () => (await window.miniApi.get())!.sessions.map(s => s.permission !== null))
+    await expect(async () => {
+      for (const id of ids) await feedTerminal(page, id, '● Bash(npm test)\r\nDo you want to proceed?\r\n1. Yes\r\n3. No\r\n')
+      await expect.poll(requests, { timeout: 2000 }).toEqual([true, true])
+    }).toPass({ timeout: 20_000 })
     await expect(mini.locator('.mini-card[data-state="needs"]')).toHaveCount(2)
     // This test is about focus, not motion: without the list/detail slide the slow CI runner cannot race it.
     await mini.emulateMedia({ reducedMotion: 'reduce' })
+    await mini.locator(`.mini-card[data-pane-id="${firstId}"] .mini-select`).click()
+    await expect(mini.locator('.mini-detail')).toBeVisible()
     const allow = mini.locator('.mini-detail').getByRole('button', { name: 'Allow', exact: true })
     await expect(async () => {
-      if (!(await allow.isVisible())) await mini.locator(`.mini-card[data-pane-id="${firstId}"] .mini-select`).click({ timeout: 2000 })
-      await expect(allow).toBeVisible({ timeout: 2000 })
+      await feedTerminal(page, ids[0], '● Bash(npm test)\r\nDo you want to proceed?\r\n1. Yes\r\n3. No\r\n')
+      await expect(allow).toBeVisible({ timeout: 1500 })
     }).toPass({ timeout: 20_000 })
     await allow.focus()
     await closePaneViaActions(panes.first())
@@ -245,5 +251,71 @@ test('starting a session from the Mini adds a pane with the chosen project and a
     await form.getByRole('button', { name: 'Cancel' }).click()
     await expect(form).toHaveCount(0)
     await expect(mini.locator('.mini-card')).toHaveCount(2)
+  } finally { await closeApp(app) }
+})
+
+const PICKER = ['Which database should we use?', '', '❯ 1. Postgres', '  2. SQLite', '  3. Type something', '', 'Enter to select · Esc to cancel', ''].join('\r\n')
+const PERMISSION = '● Bash(npm test)\r\nDo you want to proceed?\r\n1. Yes\r\n3. No\r\n'
+
+test('the x hides a session from the Mini list only, Show brings it back, and a session that needs you shows again', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const add = page.getByRole('button', { name: 'New Claude session in Smoke', exact: true })
+    await add.click()
+    await add.click()
+    await expect(page.locator('.pane')).toHaveCount(2)
+    const panes = await page.locator('.pane').evaluateAll(els => els.map(el => ({ paneId: el.getAttribute('data-pane-id')!, termId: el.querySelector('.term-host.active')!.getAttribute('data-term-id')! })))
+    const mini = await openMini(app, page)
+    await expect(mini.locator('.mini-card')).toHaveCount(2)
+    const target = panes[0]
+    const card = mini.locator(`.mini-card[data-pane-id="${target.paneId}"]`)
+    await card.getByRole('button', { name: /^Hide .* from the Mini window$/ }).click()
+    await expect(mini.locator('.mini-card')).toHaveCount(1)
+    await expect(mini.locator('.mini-hidden-line')).toContainText('1 hidden')
+    await expect(page.locator('.pane')).toHaveCount(2)
+    await expect.poll(() => readSettings(sandbox.userData).miniWindow?.hidden?.length).toBe(1)
+    await mini.getByRole('button', { name: 'Show 1 hidden session' }).click()
+    await expect(mini.locator('.mini-card')).toHaveCount(2)
+    await expect(mini.locator('.mini-hidden-line')).toHaveCount(0)
+    await expect.poll(() => readSettings(sandbox.userData).miniWindow?.hidden?.length).toBe(0)
+    await card.getByRole('button', { name: /^Hide / }).click()
+    await expect(mini.locator('.mini-card')).toHaveCount(1)
+    await expect.poll(async () => (await bufferText(page, target.termId)).replace(/\n/g, '').trimEnd()).toMatch(/[>$#%]$/)
+    await expect(async () => {
+      await feedTerminal(page, target.termId, PERMISSION)
+      await expect(card).toHaveAttribute('data-state', 'needs', { timeout: 1500 })
+    }).toPass({ timeout: 20_000 })
+    await expect(mini.locator('.mini-card')).toHaveCount(2)
+    await expect(mini.locator('.mini-hidden-line')).toHaveCount(0)
+  } finally { await closeApp(app) }
+})
+
+test('a session waiting on a numbered question shows its question and choices in the detail, with the reply box explained by a visible request', async () => {
+  const sandbox = createSandbox()
+  const sessionId = 'mini-ask-session'
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
+    const id = (await page.locator('.pane .term-host.active').first().getAttribute('data-term-id'))!
+    await expect.poll(async () => (await bufferText(page, id)).replace(/\n/g, '').trimEnd()).toMatch(/[>$#%]$/)
+    const now = Date.now()
+    writeFileSync(join(sandbox.sessionsDir, `${sessionId}.json`), JSON.stringify({ pid: process.pid, sessionId, cwd: sandbox.projectFolder, name: 'Pick a database', nameSource: 'user', status: 'waiting', startedAt: now + 1000, updatedAt: now + 1000 }))
+    const mini = await openMini(app, page)
+    await page.evaluate(() => {
+      document.hasFocus = () => false
+      window.dispatchEvent(new Event('blur'))
+    })
+    await expect(async () => {
+      await feedTerminal(page, id, PICKER)
+      await expect(mini.locator('.mini-card')).toHaveAttribute('data-state', 'needs', { timeout: 1500 })
+      await expect(mini.locator('.mini-card')).toContainText('Which database should we use?', { timeout: 1500 })
+    }).toPass({ timeout: 20_000 })
+    await mini.locator('.mini-select').click()
+    const waiting = mini.locator('.mini-detail .mini-waiting')
+    await expect(waiting).toContainText('Which database should we use?')
+    await expect(waiting.getByRole('listitem')).toHaveText(['1. Postgres', '2. SQLite', '3. Something else'])
+    await expect(waiting.getByRole('button', { name: 'Open in Dawsha' })).toBeVisible()
+    await expect(mini.locator('.mini-compose-note')).toHaveText('Answer the request above first.')
   } finally { await closeApp(app) }
 })

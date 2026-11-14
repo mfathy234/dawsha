@@ -89,7 +89,7 @@ export class WaitingBlock {
     this.el.hidden = !waiting
     if (!waiting) { this.el.replaceChildren(); return }
     this.el.replaceChildren(
-      h('p', { class: 'mini-waiting-question', dir: 'auto' }, waiting.question),
+      h('p', { class: 'mini-waiting-question', dir: 'auto' }, waiting.question || 'The agent is waiting for you. Open the session to see what it needs.'),
       ...(waiting.choices.length ? [h('ul', { class: 'mini-waiting-choices', 'aria-label': 'Choices' }, ...waiting.choices.map(choice => h('li', { dir: 'auto' }, choice)))] : []),
       h('div', { class: 'mini-actions' }, h('button', { type: 'button', class: 'mini-open-text', onClick: () => this.host.open(session) }, 'Open in Dawsha')))
   }
