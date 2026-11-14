@@ -478,7 +478,11 @@ export class SidebarComponent {
     const rows: HTMLElement[] = [row]
     if (collapsed) return rows
     if (own.length + closed.length === 0) {
-      rows.push(h('div', { class: 'proj-hidden' }, 'No sessions. ', h('button', { class: 'link', type: 'button', onClick: () => void startSession(project.id) }, 'Start one')))
+      // Its sessions may all be pinned: say where they are instead of claiming there are none.
+      const pinned = state.panes.filter((pane) => pane.projectId === project.id && isStarred(pane)).length
+      rows.push(pinned > 0
+        ? h('div', { class: 'proj-hidden' }, pinned === 1 ? '1 session, pinned above' : `${pinned} sessions, pinned above`)
+        : h('div', { class: 'proj-hidden' }, 'No sessions. ', h('button', { class: 'link', type: 'button', onClick: () => void startSession(project.id) }, 'Start one')))
       return rows
     }
     for (const view of own) rows.push(this.openRow(state, project, view, listedAbove.has(view.pane.id)))

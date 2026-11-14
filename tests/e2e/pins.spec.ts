@@ -39,7 +39,7 @@ test('pins a session from its menus: it heads the sidebar and the tabs, and stay
     await expect(group).toHaveCount(1)
     await expect(group.locator('.sess-row')).toHaveCount(1)
     await expect(group.locator('.sess-row')).toHaveAttribute('data-nav', `s:${ids[2]}`)
-    await expect(group.locator('.sess-pin')).toBeVisible()
+    await expect(group.locator('.sess-pin')).toHaveCount(0)
     await expect(page.locator('.kept-session-row:not(.pinned-row) .sess-row')).toHaveCount(2)
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.map((p: any) => p.starred === true)).toEqual([true, false, false])
     await expect.poll(async () => (await paneIds(page))[0]).toBe(ids[2])
@@ -77,7 +77,7 @@ test('pins a session from its menus: it heads the sidebar and the tabs, and stay
   try {
     await expect(second.page.locator('.pane')).toHaveCount(3, { timeout: 20_000 })
     await expect(second.page.locator('.pinned-group .sess-row')).toHaveCount(2)
-    await expect(second.page.locator('.pinned-group .sess-pin')).toHaveCount(2)
+    await expect(second.page.locator('.pinned-group .sess-pin')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.map((p: any) => p.starred === true)).toEqual([true, true, false])
 
     const pinnedRow = second.page.locator('.pinned-group .kept-session-row').first()

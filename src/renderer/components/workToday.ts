@@ -8,7 +8,8 @@ import { agentMark } from './agentMark'
 import { toast } from './toast'
 
 const changesText = (row: Pick<RecapRow, 'files' | 'added' | 'removed'>): string =>
-  row.files === 0 ? 'No files' : `${row.files} file${row.files === 1 ? '' : 's'} +${row.added} −${row.removed}`
+  // Counted from the commits made during the session, so say so.
+  row.files === 0 ? 'Nothing committed' : `${row.files} file${row.files === 1 ? '' : 's'} committed +${row.added} −${row.removed}`
 
 function costOf(item: { session?: { id: string } }): number | null {
   const id = item.session?.id
@@ -47,7 +48,7 @@ export function todaySection(data: WorkRecapData | null, loading: boolean): HTML
     return h('section', { class: 'usage-panel work-today', id: 'work-today', 'aria-label': 'Today' }, head,
       h('p', { class: 'today-empty muted', role: 'status' }, loading && !data ? 'Reading today’s work…' : 'Nothing yet today.'))
   }
-  const total = [formatDuration(recap.totalMs), recap.totalFiles > 0 ? `${recap.totalFiles} file${recap.totalFiles === 1 ? '' : 's'} +${recap.totalAdded} −${recap.totalRemoved}` : 'No files', ...(recap.totalCostUsd !== null ? [formatUsd(recap.totalCostUsd)] : [])]
+  const total = [formatDuration(recap.totalMs), recap.totalFiles > 0 ? `${recap.totalFiles} file${recap.totalFiles === 1 ? '' : 's'} committed +${recap.totalAdded} −${recap.totalRemoved}` : 'Nothing committed', ...(recap.totalCostUsd !== null ? [formatUsd(recap.totalCostUsd)] : [])]
   return h('section', { class: 'usage-panel work-today', id: 'work-today', 'aria-label': 'Today' }, head,
     h('ul', { class: 'today-rows' }, ...recap.rows.map(row)),
     h('p', { class: 'today-total', id: 'work-today-total' }, h('span', {}, 'Total'), h('span', {}, total.join(' · '))))

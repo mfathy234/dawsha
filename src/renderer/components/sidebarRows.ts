@@ -4,8 +4,7 @@ import { needsAsk, sessionLine, sessionTime } from '../../shared/sessionLine'
 import { compareSessionStates, countSessionStates, sessionState, type SessionState } from '../../shared/sessionState'
 import { permissionTail } from '../actions'
 import type { PaneView } from '../derive'
-import { h, icon } from '../dom'
-import { ICONS } from '../icons'
+import { h } from '../dom'
 import { sessionNote } from '../sessionNotes'
 import { parsePlanLabel } from '../../shared/planProgress'
 import { stateSince } from '../stateClock'
@@ -96,8 +95,8 @@ Pinned in ${pinnedIn}` : facts.tooltip,
     },
     identityMark(view),
     h('span', { class: 'sess-body' }, h('span', { class: 'sess-name', dir: 'auto' }, sessionLabel(view)), lineTwo(facts, dimmed), dimmed ? null : planLine(view)),
-    facts.time && !dimmed ? h('span', { class: 'sess-age', 'aria-label': timeLabel(facts) }, facts.time) : null,
-    pinnedIn ? h('span', { class: 'sess-pin', role: 'img', 'aria-label': 'Pinned' }, icon(ICONS.pin)) : null
+    // No pin glyph here: the Pinned heading says it, and a glyph would take width from the title.
+    facts.time && !dimmed ? h('span', { class: 'sess-age', 'aria-label': timeLabel(facts) }, facts.time) : null
   )
 }
 
