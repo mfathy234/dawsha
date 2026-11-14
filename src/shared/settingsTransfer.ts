@@ -43,6 +43,7 @@ export const EXCLUDED_KEYS = [
   'version',
   'remoteAccess',
   'workspace',
+  'pendingWorktreeSetups',
   'miniWindow',
   'desktop',
   'trayNoticeShown',

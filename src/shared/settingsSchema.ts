@@ -1,3 +1,4 @@
+import { sanitizePendingWorktrees } from './terminalSetup'
 import { sanitizeTicketNotes } from './ticketNotes'
 import { checkoutTabsKey } from './filesWorkspace'
 import { defaultLayout, parseLayout } from './filesLayout'
@@ -116,6 +117,7 @@ export const defaultSettings = (): Settings => ({
   onboardingDismissed: false,
   tourSeen: false,
   workspace: { panes: [], focusedIndex: 0 },
+  pendingWorktreeSetups: [],
   layouts: [],
   keptSessions: [],
   foldedProjects: [],
@@ -164,6 +166,13 @@ function sanitizeProjects(value: unknown): Project[] {
     }
     if (typeof item.fontSize === 'number') project.fontSize = clampFontSize(item.fontSize)
     if (item.pinned === true) project.pinned = true
+    if (isRecord(item.worktreeSetup)) {
+      const command = item.worktreeSetup.command
+      project.worktreeSetup = {
+        command: typeof command === 'string' && command.length <= 8000 && !command.includes('\0') ? command : '',
+        prompted: item.worktreeSetup.prompted === true
+      }
+    }
     projects.push(project)
   }
   return projects
@@ -490,6 +499,7 @@ export function migrateSettings(raw: unknown): Settings {
     // and it would otherwise open on top of the What's new dialog right after the update.
     tourSeen: raw.tourSeen === true || (raw.tourSeen === undefined && typeof raw.lastSeenVersion === 'string'),
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
+    pendingWorktreeSetups: sanitizePendingWorktrees(raw.pendingWorktreeSetups),
     layouts: sanitizeLayouts(raw.layouts),
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
     foldedProjects: sanitizeProjectIds(raw.foldedProjects, projects),

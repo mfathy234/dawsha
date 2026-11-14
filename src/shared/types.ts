@@ -20,6 +20,8 @@ export interface Project {
   defaultAgent: AgentKind
   fontSize?: number
   pinned?: boolean
+  /** Reviewed setup command for new worktrees, plus the one-time local-file suggestion choice. */
+  worktreeSetup?: { command: string; prompted: boolean }
 }
 
 export interface BackgroundImage {
@@ -233,6 +235,8 @@ export interface Settings {
   onboardingDismissed: boolean
   tourSeen: boolean
   workspace: Workspace
+  /** Trusted new worktrees whose setup has not succeeded or been bypassed. */
+  pendingWorktreeSetups?: import('./terminalSetup').PendingWorktreeSetup[]
   layouts: SavedLayout[]
   keptSessions: KeptSession[]
   /** Ids of projects whose session list is folded in the sidebar. */
@@ -454,6 +458,8 @@ export interface SpawnRequest {
   rows: number
   command?: string
   prompt?: string
+  /** Preset shell input, delivered only after worktree setup has succeeded or been bypassed. */
+  initialInput?: string
   title?: string
   fullAccess?: boolean
   desktopVisible?: boolean
