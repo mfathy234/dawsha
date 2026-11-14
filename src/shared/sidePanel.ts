@@ -1,13 +1,16 @@
-/** The Side panel layout: one session beside a panel of Changes, Plan and Checks. */
-export type SidePanelTab = 'changes' | 'plan' | 'checks'
+/** The Side panel layout: one session beside a panel of Session, Changes, Plan and Checks. */
+export type SidePanelTab = 'session' | 'changes' | 'plan' | 'checks'
 
 export interface SidePanelSettings {
   open: boolean
   width: number
   tab: SidePanelTab
+  /** Desktop app style: the panel is docked beside the grid or a maximized session, from the toolbar toggle. */
+  docked: boolean
 }
 
 export const SIDE_PANEL_TABS: readonly { id: SidePanelTab; label: string }[] = [
+  { id: 'session', label: 'Session' },
   { id: 'changes', label: 'Changes' },
   { id: 'plan', label: 'Plan' },
   { id: 'checks', label: 'Checks' }
@@ -19,9 +22,9 @@ export const MAX_SIDE_PANEL_WIDTH = 640
 /** The session beside the panel never gets narrower than this. */
 export const MIN_SESSION_WIDTH = 420
 
-export const DEFAULT_SIDE_PANEL: SidePanelSettings = { open: true, width: DEFAULT_SIDE_PANEL_WIDTH, tab: 'changes' }
+export const DEFAULT_SIDE_PANEL: SidePanelSettings = { open: true, width: DEFAULT_SIDE_PANEL_WIDTH, tab: 'session', docked: false }
 
-export const isSidePanelTab = (value: unknown): value is SidePanelTab => value === 'changes' || value === 'plan' || value === 'checks'
+export const isSidePanelTab = (value: unknown): value is SidePanelTab => value === 'session' || value === 'changes' || value === 'plan' || value === 'checks'
 
 /** A saved or dragged width kept inside the limits; the default for anything that is not a number. */
 export function clampSidePanelWidth(value: unknown): number {
@@ -40,6 +43,17 @@ export function sanitizeSidePanel(value: unknown): SidePanelSettings {
   return {
     open: raw.open !== false,
     width: clampSidePanelWidth(raw.width),
-    tab: isSidePanelTab(raw.tab) ? raw.tab : DEFAULT_SIDE_PANEL.tab
+    tab: isSidePanelTab(raw.tab) ? raw.tab : DEFAULT_SIDE_PANEL.tab,
+    docked: raw.docked === true
   }
 }
+
+export interface DockInput {
+  view: string
+  sessionsLayout: string
+  frame: string
+  docked: boolean
+}
+
+/** Desktop app style (the Sidebar frame) can dock the panel beside the grid or one maximized session; the Board has no room for it. */
+export const panelDockedOn = (input: DockInput): boolean => input.view === 'grid' && input.frame === 'sidebar' && input.docked && input.sessionsLayout !== 'board' && input.sessionsLayout !== 'panel'

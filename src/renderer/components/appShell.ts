@@ -22,6 +22,7 @@ import { SkillsViewComponent } from './skillsView'
 import { CrewViewComponent } from './crewView'
 import { SidebarComponent } from './sidebar'
 import { SidebarFrame } from './sidebarFrame'
+import { panelDocked } from '../sessionsLayout'
 import { ThemePickerComponent } from './themePicker'
 import { UpdatePopoverComponent } from './updatePopover'
 import { WhatsNewComponent } from './whatsNew'
@@ -101,6 +102,7 @@ export class AppShell {
       this.sidebar.setFrame(framed ? this.frame : null)
     }
     this.topbar.el.hidden = framed
+    if (framed) this.frame.updatePanel(state.view === 'grid' && state.settings.sessionsLayout === 'grid', panelDocked(state))
   }
 
   private setSidebarWidth(width: number): void {
