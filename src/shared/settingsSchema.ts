@@ -4,6 +4,8 @@ import { defaultLayout, parseLayout } from './filesLayout'
 import { sanitizeRunOverrides } from './runCommands'
 import { sanitizeTurnChecks } from './turnChecks'
 import { isAgent } from './agents'
+import { DEFAULT_DESKTOP, sanitizeDesktopSettings } from './desktopSettings'
+import { sanitizeWarnedWindows } from './limitWarnings'
 import { sanitizePresets } from './sessionPresets'
 import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews, sanitizeSessionViews } from './chatLog'
 import { isSessionsLayout } from './board'
@@ -103,6 +105,10 @@ export const defaultSettings = (): Settings => ({
   sessionsLayout: 'grid',
   appearance: DEFAULT_APPEARANCE,
   miniWindow: DEFAULT_MINI_WINDOW,
+  desktop: DEFAULT_DESKTOP,
+  trayNoticeShown: false,
+  warnUsageLimits: true,
+  warnedUsageWindows: {},
   sidePanel: DEFAULT_SIDE_PANEL,
   gridStyle: DEFAULT_GRID_STYLE,
   focusMovesSelected: false,
@@ -467,6 +473,10 @@ export function migrateSettings(raw: unknown): Settings {
     sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
     appearance: sanitizeAppearance(raw.appearance),
     miniWindow: sanitizeMiniWindow(raw.miniWindow),
+    desktop: sanitizeDesktopSettings(raw.desktop),
+    trayNoticeShown: raw.trayNoticeShown === true,
+    warnUsageLimits: raw.warnUsageLimits !== false,
+    warnedUsageWindows: sanitizeWarnedWindows(raw.warnedUsageWindows),
     sidePanel: sanitizeSidePanel(raw.sidePanel),
     gridStyle: isGridStyle(raw.gridStyle) ? raw.gridStyle : DEFAULT_GRID_STYLE,
     focusMovesSelected: raw.focusMovesSelected === true,

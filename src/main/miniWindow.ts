@@ -39,7 +39,7 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
   const visibility = (visible: boolean): void => {
     if (stopping) return
     // The source renderer must keep publishing while its native window is minimized.
-    if (!main.isDestroyed()) main.webContents.backgroundThrottling = !visible
+    if (!main.isDestroyed()) main.webContents.backgroundThrottling = !visible && main.isVisible()
     host(MINI_IPC.visibility, visible)
     if (!visible) plans.clear()
     updateMenu()

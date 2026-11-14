@@ -216,6 +216,11 @@ export interface Settings {
   appearance: import('./appearance').AppearanceSettings
   /** The always-on-top Mini window. */
   miniWindow: import('./appearance').MiniWindowSettings
+  /** This PC's close and sign-in preferences. Sign-in enablement is read from the OS. */
+  desktop: import('./desktopSettings').DesktopSettings
+  trayNoticeShown: boolean
+  warnUsageLimits: boolean
+  warnedUsageWindows: import('./limitWarnings').WarnedWindows
   /** The Side panel layout: whether the panel is open, how wide, and its tab. */
   sidePanel: import('./sidePanel').SidePanelSettings
   /** How the sessions grid arranges panes: calm focus (one large pane) or mission control (equal tiles). */

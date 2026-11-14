@@ -72,6 +72,9 @@ import type {
 } from './types'
 
 export interface GridApi {
+  getLoginItem(): Promise<import('./desktopSettings').LoginItemState>
+  setLoginItem(enabled: boolean): Promise<import('./desktopSettings').LoginItemState>
+  quit(): void
   miniWindow: import('./miniWindow').MiniHostApi
   runs: import('./runCommands').RunApi
   tools: import('./filesTools').FilesToolsApi

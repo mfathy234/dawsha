@@ -13,6 +13,7 @@ import {
   setHighlights,
   setPaletteShortcut,
   setSessionInfo,
+  saveSettings,
   setColorSessionsByTag,
   setDimOtherPanes,
   setFocusMovesSelected,
@@ -72,6 +73,7 @@ import type { ChatAgent, SessionViews } from '../../shared/chatLog'
 import { agentMark } from './agentMark'
 import { savedPromptsRow } from './savedPromptsSettings'
 import { presetsSettings } from './presetsSettings'
+import { DesktopSettingsControls } from './desktopSettingsControls'
 import '../chat/chat.css'
 import '../chat/chatChoice.css'
 
@@ -136,6 +138,7 @@ export class SettingsViewComponent {
   private changelogOpen = false
   private importPath = ''
   private readonly mcp = new McpServersPanel()
+  private readonly desktopControls = new DesktopSettingsControls(() => this.refresh())
   private navSection: string | null = null
   private shortcutDraft: string | null = null
   private shortcutError: string | null = null
@@ -188,6 +191,8 @@ export class SettingsViewComponent {
     if (!force && this.editingField()) return
     const signature = JSON.stringify([
       state.settingsSection,
+      state.settings.desktop,
+      this.desktopControls.revision,
       state.settings.paletteShortcut,
       state.settings.appearance,
       state.settings.sessionsLayout,
@@ -197,6 +202,7 @@ export class SettingsViewComponent {
       state.settings.fullAccess,
       state.settings.presets,
       state.settings.sessionInfo,
+      state.settings.warnUsageLimits,
       state.settings.miniWindow.showOnMinimize,
       state.settings.autoUpdateCheck,
       state.settings.highlights,
@@ -224,6 +230,7 @@ export class SettingsViewComponent {
 
   show(): void {
     invalidateRecordingStats()
+    void this.desktopControls.reload()
     if (isRemoteControlBuild) void this.verifyRemote()
     this.refresh()
   }
@@ -526,6 +533,7 @@ export class SettingsViewComponent {
       'Reset'
     )
     return [
+      ...this.desktopControls.rows(state.settings, row, checkbox),
       row(
         'Command palette shortcut',
         h('div', { class: 'set-inline' }, input, reset),
@@ -589,6 +597,10 @@ export class SettingsViewComponent {
       // Mini window preferences share the existing notification controls.
       row('Mini window', checkbox('mini-minimize-toggle', 'Show the Mini window when Dawsha is minimized', settings.miniWindow.showOnMinimize, false, value => setMiniWindow({ showOnMinimize: value })), h('p', { class: 'hint' }, 'A small window that follows your sessions while Dawsha is minimized.')),
       row('Notifications', checkbox('notify-toggle', 'Notify when a session is done or needs you', info.notifications, false, (value) => setSessionInfo({ notifications: value })), h('p', { class: 'hint' }, 'Tell me when a session is done or needs me.')),
+      row('Warn me before a usage limit', checkbox('usage-warning-toggle', 'Warn me before a usage limit', settings.warnUsageLimits, !info.notifications, value => {
+        store.set(s => ({ ...s, settings: { ...s.settings, warnUsageLimits: value } }))
+        void saveSettings({ warnUsageLimits: value })
+      }), h('p', { class: 'hint' }, 'Notify at 80% and 95% of Claude and Codex 5-hour and weekly limits.')),
       row('Sound', checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) => setSessionInfo({ sound: value })), h('p', { class: 'hint' }, 'Play a sound with each notification.'))
     ]
   }

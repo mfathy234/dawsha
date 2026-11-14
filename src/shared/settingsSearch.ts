@@ -9,6 +9,8 @@ export interface SearchSection {
 /** What each section holds, so "Find in Settings" can name a section from a row's label or description without drawing it. */
 export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
   general: [
+    'When I close the window Quit Dawsha Keep running in the tray',
+    'Start at sign-in Start Dawsha when you sign in Start hidden in the tray installed app',
     'Command palette shortcut Ctrl or Alt plus a key',
     'Sessions dim sessions you are not working in',
     'Open sessions as Terminal or Chat',
@@ -34,6 +36,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
     'Session info live status line',
     'Mini window show when minimized',
     'Notifications notify when a session is done or needs you',
+    'Usage limits Warn me before a usage limit 80% 95% Claude Codex 5-hour weekly',
     'Sound play a sound with notifications',
     'Highlight lines matching rules regex colour error warning'
   ],
