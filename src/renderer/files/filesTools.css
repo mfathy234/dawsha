@@ -74,6 +74,7 @@ button.files-config-value { border: 0; background: transparent; padding: 2px 0; 
 .files-browser-pick-preview { width: 72px; height: 64px; object-fit: contain; background: var(--well); flex: none; }
 .files-browser-pick-body { display: flex; flex-direction: column; gap: var(--s-2); flex: 1; min-width: 0; }
 .files-browser-picked { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--fs-status) var(--font-mono); color: var(--muted); }
+.files-browser-pick-message { margin: 0; max-height: 84px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--fs-status) var(--font-mono); color: var(--muted); background: var(--well); padding: var(--s-1) var(--s-2); }
 .files-browser-pick-actions { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
 .files-browser-pick-actions select { flex: 1; min-width: 100px; max-width: 300px; }
 .files-browser-pick-actions button { flex: none; }

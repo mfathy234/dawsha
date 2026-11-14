@@ -37,11 +37,12 @@ export class BrowserTab implements PanelExtra {
   private readonly picked = h('span', { class: 'files-browser-picked', id: 'files-browser-picked', dir: 'auto' })
   private readonly preview = h('img', { class: 'files-browser-pick-preview', id: 'files-browser-pick-preview', alt: 'Picked element', draggable: false })
   private readonly note = h('textarea', { class: 'files-tool-input', id: 'files-browser-pick-note', rows: 2, dir: 'auto', 'aria-label': 'Note about this element', placeholder: 'What should change?', maxlength: 8000 })
+  private readonly message = h('pre', { class: 'files-browser-pick-message', id: 'files-browser-pick-message', dir: 'auto', 'aria-label': 'Message that will be sent' })
   private readonly session = h('select', { class: 'files-tool-select', id: 'files-browser-pick-session', 'aria-label': 'Send to session' })
   private readonly sendPick = h('button', { class: 'btn primary small', type: 'button', id: 'files-browser-pick-send', onClick: () => this.submitPick() }, 'Send to session')
   private readonly composer = h('div', { class: 'files-browser-pick-composer', id: 'files-browser-pick-composer', hidden: true, role: 'group', 'aria-label': 'Send picked element' },
     this.preview,
-    h('div', { class: 'files-browser-pick-body' }, this.picked, this.note,
+    h('div', { class: 'files-browser-pick-body' }, this.picked, this.note, this.message,
       h('div', { class: 'files-browser-pick-actions' }, this.session, this.sendPick, h('button', { class: 'btn ghost small', type: 'button', onClick: () => this.dismissPick() }, 'Cancel'))))
   private readonly stage = h('div', { class: 'files-browser-stage', id: 'files-browser-stage' },
     h('p', { class: 'files-browser-hint', id: 'files-browser-hint' }, 'Type an address above, for example localhost:5173, to preview your running app here.'))
@@ -63,7 +64,7 @@ export class BrowserTab implements PanelExtra {
     this.el.append(
       h('div', { class: 'files-browser-bar' }, this.back, this.forward, this.reload, this.address, this.pick, this.devtools, this.shot, this.errors, this.close),
       this.problem, this.composer, this.stage)
-    this.note.addEventListener('input', () => { this.sendPick.disabled = this.note.value.trim() === '' || this.session.options.length === 0 })
+    this.note.addEventListener('input', () => { this.showMessage(); this.sendPick.disabled = this.note.value.trim() === '' || this.session.options.length === 0 })
     this.composer.addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.stopPropagation(); this.dismissPick() } })
     this.el.addEventListener('keydown', (event) => { if (event.key === 'Escape' && this.picking) { event.stopPropagation(); this.cancelPick() } })
     api.tools.onBrowserState((state) => this.apply(state))
@@ -233,13 +234,19 @@ export class BrowserTab implements PanelExtra {
     if (result.url !== this.state.url || !this.active) return
     this.captured = result
     this.picked.textContent = `${result.element.selector}${result.element.name ? ` (${result.element.name})` : ''}`
-    this.picked.title = elementMessage(result.url, result.element, '')
+    this.picked.title = result.element.selector
     this.preview.src = result.preview
     this.session.replaceChildren(...this.hooks.sessions().map((session) => h('option', { value: session.paneId, dir: 'auto' }, session.title)))
     this.sendPick.disabled = true
     this.note.placeholder = this.session.options.length ? 'What should change?' : 'Open a session to send this element.'
     this.composer.hidden = false
+    this.showMessage()
     this.note.focus()
+  }
+
+  private showMessage(): void {
+    const captured = this.captured
+    this.message.textContent = captured ? elementMessage(captured.url, captured.element, this.note.value) : ''
   }
 
   private submitPick(): void {
