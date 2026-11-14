@@ -60,6 +60,8 @@ async function detectJava(): Promise<string | null> {
 export class DiagramService {
   private readonly folder: string
   private downloading?: Promise<{ ok: true } | { ok: false; error: string }>
+  private javaCommand: string | null = null
+  private readonly verifiedJars = new Set<string>()
 
   constructor(userData: string, private readonly getJarPath: () => string) {
     this.folder = join(userData, 'diagrams')
@@ -70,6 +72,27 @@ export class DiagramService {
     return process.env.DAWSHA_USER_DATA ? process.env.DAWSHA_PLANTUML_FAKE_RENDERER : undefined
   }
 
+  /** The Java found earlier this session. A miss is never kept, so installing Java and pressing Retry works. */
+  private async java(): Promise<string | null> {
+    if (!this.javaCommand) this.javaCommand = await detectJava()
+    return this.javaCommand
+  }
+
+  private isJarOverride(): boolean {
+    return !!(this.getJarPath().trim() || process.env.DAWSHA_PLANTUML_JAR?.trim())
+  }
+
+  /** The downloaded jar is hashed once per app session, before its first use, not only when it was downloaded. */
+  async verifySessionJar(jar: string, expected = PLANTUML_SHA256): Promise<boolean> {
+    const info = await stat(jar).catch(() => null)
+    if (!info) return false
+    const identity = `${jar}:${info.size}:${info.mtimeMs}:${expected}`
+    if (this.verifiedJars.has(identity)) return true
+    if (!await verifyJarHash(jar, expected)) return false
+    this.verifiedJars.add(identity)
+    return true
+  }
+
   private jarPath(): string {
     return this.getJarPath().trim() || process.env.DAWSHA_PLANTUML_JAR?.trim() || join(this.folder, `plantuml-mit-${PLANTUML_VERSION}.jar`)
   }
@@ -77,7 +100,7 @@ export class DiagramService {
   async status(): Promise<DiagramStatus> {
     const fake = this.fakeRenderer()
     return {
-      java: !!fake || !!await detectJava(),
+      java: !!fake || !!await this.java(),
       jar: !!fake || await exists(this.jarPath()),
       jarOverride: !!(this.getJarPath().trim() || process.env.DAWSHA_PLANTUML_JAR?.trim()),
       downloadMegabytes: Math.ceil(PLANTUML_BYTES / 1_000_000),
@@ -130,11 +153,12 @@ export class DiagramService {
 
   private async renderLocal(folder: string, path: string, text: string, signal: AbortSignal): Promise<DiagramResult> {
     const fake = this.fakeRenderer()
-    const java = fake ? process.execPath : await detectJava()
+    const java = fake ? process.execPath : await this.java()
     if (!java) return { ok: false, error: 'Install Java to see this diagram', reason: 'java' }
     if (signal.aborted) return { ok: false, error: 'Drawing this diagram timed out', reason: 'render' }
     const jar = this.jarPath()
     if (!fake && !await exists(jar)) return { ok: false, error: 'Download PlantUML to see this diagram', reason: 'jar' }
+    if (!fake && !this.isJarOverride() && !await this.verifySessionJar(jar)) return { ok: false, error: 'The PlantUML file does not match its verified SHA-256. Download it again.', reason: 'jar' }
     // Includes, file functions and preprocessor state can change without this text changing.
     const cacheable = !/(?:^\s*!|%(?:load|file|dir|getenv))/im.test(text)
     const jarStat = await stat(fake || jar).catch(() => null)
@@ -182,7 +206,10 @@ export class DiagramService {
       child.stdout.on('data', collect(stdout))
       child.stderr.on('data', collect(stderr))
       child.stdin.on('error', () => {})
-      child.once('error', error => resolveResult({ ok: false, error: error.message, reason: 'render' }))
+      child.once('error', error => {
+        if (command === this.javaCommand) this.javaCommand = null
+        resolveResult({ ok: false, error: error.message, reason: 'render' })
+      })
       child.once('close', code => {
         signal.removeEventListener('abort', abort)
         if (capped) { resolveResult({ ok: false, error: 'This diagram produced more than 8 MB', reason: 'render' }); return }

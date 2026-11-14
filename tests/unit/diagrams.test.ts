@@ -12,6 +12,23 @@ afterEach(async () => {
   await Promise.all(folders.splice(0).map(folder => rm(folder, { recursive: true, force: true })))
 })
 
+describe('session jar verification', () => {
+  it('rejects a jar that does not match and accepts one that does, per app session', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'dawsha-jar-'))
+    folders.push(folder)
+    const jar = join(folder, 'plantuml.jar')
+    await writeFile(jar, 'not the real jar')
+    const service = new DiagramService(folder, () => '')
+    expect(await service.verifySessionJar(jar)).toBe(false)
+    const { createHash } = await import('node:crypto')
+    const expected = createHash('sha256').update('not the real jar').digest('hex')
+    expect(await service.verifySessionJar(jar, expected)).toBe(true)
+    await writeFile(jar, 'tampered after the first check!')
+    expect(await service.verifySessionJar(jar, expected)).toBe(false)
+    expect(await service.verifySessionJar(join(folder, 'missing.jar'), expected)).toBe(false)
+  })
+})
+
 describe('diagram helpers', () => {
   it('recognizes both modern OpenJDK and old Java version output', () => {
     expect(parseJavaVersion('openjdk version "21.0.5" 2024-10-15\nOpenJDK Runtime Environment')).toBe(21)
