@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { bufferText, closeApp, closePaneViaActions, createSandbox, feedTerminal, launchApp } from './helpers'
+import { APP_VERSION, bufferText, closeApp, closePaneViaActions, createSandbox, feedTerminal, launchApp } from './helpers'
 
 const readSettings = (dir: string): any => JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8'))
 async function openMini(app: ElectronApplication, page: Page): Promise<Page> {
@@ -197,5 +197,53 @@ test('minimize preference opens Mini and restoring leaves it open, with live the
     expect(await mini.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await mini.getByRole('button', { name: 'Fold', exact: true }).click()
     await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Dawsha Mini')!.getBounds().height)).toBe(58)
+  } finally { await closeApp(app) }
+})
+
+test('starting a session from the Mini adds a pane with the chosen project and agent and its first message, leaving the main window where it is', async () => {
+  const sandbox = createSandbox()
+  const second = join(sandbox.root, 'Second Project')
+  mkdirSync(second, { recursive: true })
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({
+    version: 2, lastSeenVersion: APP_VERSION, tourSeen: true,
+    projects: [{ id: 'smoke', name: 'Smoke', folder: sandbox.projectFolder }, { id: 'second', name: 'Second', folder: second }]
+  }), 'utf8')
+  const logDir = join(sandbox.root, 'agent-log')
+  const node = process.execPath
+  const fake = resolve(__dirname, '../support/fakeAgent.cjs')
+  const { app, page } = await launchApp(sandbox, {
+    FAKE_AGENT_LOG: logDir,
+    DAWSHA_CLAUDE_COMMAND: node, DAWSHA_CLAUDE_ARGS: JSON.stringify([fake, 'claude']),
+    DAWSHA_CODEX_COMMAND: node, DAWSHA_CODEX_ARGS: JSON.stringify([fake, 'codex']),
+    DAWSHA_GEMINI_COMMAND: node, DAWSHA_GEMINI_ARGS: JSON.stringify([fake, 'gemini'])
+  })
+  try {
+    await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    const mini = await openMini(app, page)
+    await expect(mini.locator('.mini-card')).toHaveCount(1)
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Dawsha')!.minimize())
+    await mini.getByRole('button', { name: 'Start a session', exact: true }).click()
+    const form = mini.getByRole('form', { name: 'New session' })
+    await expect(form).toBeVisible()
+    await form.getByLabel('Project').selectOption({ label: 'Second' })
+    await form.getByLabel('Agent').selectOption('codex')
+    await form.getByLabel('First message, optional').fill('Check the build')
+    await form.getByRole('button', { name: 'Start' }).click()
+    await expect(form).toHaveCount(0)
+    await expect(mini.locator('.mini-card')).toHaveCount(2)
+    await expect(page.locator('.pane')).toHaveCount(2)
+    const log = join(logDir, 'codex.json')
+    await expect.poll(() => { try { return JSON.parse(readFileSync(log, 'utf8')) } catch { return null } }, { timeout: 30_000 }).toMatchObject({ cwd: second, args: ['Check the build'] })
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Dawsha')!.isMinimized())).toBe(true)
+    expect(readSettings(sandbox.userData).recentProjectIds?.[0]).toBe('second')
+    await mini.getByRole('button', { name: 'Start a session', exact: true }).click()
+    await expect(form).toBeVisible()
+    await mini.keyboard.press('Escape')
+    await expect(form).toHaveCount(0)
+    await mini.getByRole('button', { name: 'Start a session', exact: true }).click()
+    await form.getByRole('button', { name: 'Cancel' }).click()
+    await expect(form).toHaveCount(0)
+    await expect(mini.locator('.mini-card')).toHaveCount(2)
   } finally { await closeApp(app) }
 })

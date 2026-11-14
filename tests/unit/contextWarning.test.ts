@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canCompact, contextHintText, contextLevel, contextStep, showContextHint, stepContextNotice } from '../../src/shared/contextWarning'
+import { canCompact, contextLevel, stepContextNotice } from '../../src/shared/contextWarning'
 
 describe('contextLevel', () => {
   it('turns amber at 80 and red at 90', () => {
@@ -8,37 +8,6 @@ describe('contextLevel', () => {
     expect(contextLevel(89)).toBe('amber')
     expect(contextLevel(90)).toBe('red')
     expect(contextLevel(100)).toBe('red')
-  })
-})
-
-describe('contextStep', () => {
-  it('reports the highest reached step', () => {
-    expect(contextStep(89)).toBeNull()
-    expect(contextStep(90)).toBe(90)
-    expect(contextStep(94)).toBe(90)
-    expect(contextStep(95)).toBe(95)
-  })
-})
-
-describe('showContextHint', () => {
-  it('shows from 90 and nothing without data', () => {
-    expect(showContextHint(null, undefined)).toBe(false)
-    expect(showContextHint(85, undefined)).toBe(false)
-    expect(showContextHint(90, undefined)).toBe(true)
-  })
-
-  it('stays hidden after a dismissal until the next step', () => {
-    expect(showContextHint(92, 90)).toBe(false)
-    expect(showContextHint(94, 90)).toBe(false)
-    expect(showContextHint(96, 90)).toBe(true)
-    expect(showContextHint(96, 95)).toBe(false)
-    expect(showContextHint(100, 95)).toBe(false)
-  })
-})
-
-describe('contextHintText', () => {
-  it('names the rounded percent', () => {
-    expect(contextHintText(91.6)).toBe('Context is 92% full — /compact or start a fresh session')
   })
 })
 

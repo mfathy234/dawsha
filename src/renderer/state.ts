@@ -143,7 +143,6 @@ export interface AppState {
   /** What each active goal shows right now: the plan, the open question and Maya's notes. */
   goalLive: Record<string, GoalLive>
   waiting: Record<string, boolean>
-  contextDismissed: Record<string, number>
   bridge: BridgeState
   agents: AgentsState
   windowFocused: boolean
@@ -196,7 +195,6 @@ export const initialState = (): AppState => ({
   crewStates: {},
   goalLive: {},
   waiting: {},
-  contextDismissed: {},
   bridge: { installed: false, busy: false, error: null, note: null },
   agents: { report: null, checking: false },
   windowFocused: true,

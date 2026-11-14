@@ -56,8 +56,10 @@ import { agentMark } from './agentMark'
 import { crewSignature, identityMark } from './crewAvatar'
 import { ensureTerminal, getTerminal } from '../terminals'
 import { enableDrag } from '../drag'
-import { canCompact, contextHintText, showContextHint } from '../../shared/contextWarning'
-import { dismissContextHint, typeCompact } from '../contextActions'
+import { COMPACT_SLASH, type NoteMemory } from '../../shared/chatContext'
+import { contextNudgeText, stepContextNudge } from '../../shared/contextRing'
+import { typeCompact } from '../contextActions'
+import { detectTerminalMenu } from '../../shared/terminalMenu'
 import { dropFiles, hasFiles } from '../fileDrop'
 import { sessionState, type SessionState } from '../../shared/sessionState'
 import { detectPermissionPrompt, parsePermissionDetail, permissionPromptText, type PermissionDetail, type PermissionOption } from '../../shared/permissionPrompt'
@@ -139,6 +141,8 @@ export class PaneComponent {
   private infoSignature = ''
   private readonly hint = h('div', { class: 'pane-hint', role: 'status', hidden: true })
   private hintSignature = ''
+  private nudgeMemory: NoteMemory = { dismissed: false }
+  private nudgeTab = ''
   private readonly details = h('aside', { class: 'pane-details', 'aria-label': 'Details', hidden: true })
   private detailsSignature = ''
   private readonly timeline: TimelinePanel
@@ -521,22 +525,36 @@ export class PaneComponent {
   }
 
   private updateHint(view: PaneView): void {
-    const percent = view.info.contextPercent
     const tabId = view.primaryTabId
-    const show = percent !== null && showContextHint(percent, store.state.contextDismissed[tabId])
-    const signature = show ? JSON.stringify([Math.round(percent), tabId, view.agent]) : ''
+    if (tabId !== this.nudgeTab) {
+      this.nudgeTab = tabId
+      this.nudgeMemory = { dismissed: false }
+    }
+    const reading = contextReading({ agent: view.agent, percent: view.info.contextPercent, tokens: view.info.contextTokens, window: view.info.contextWindow })
+    const tail = permissionTail(this.paneId)
+    const step = stepContextNudge(this.nudgeMemory, {
+      percent: reading?.percent ?? null,
+      asking: detectPermissionPrompt(tail) || detectTerminalMenu(tail),
+      chatShown: this.chatShown
+    })
+    this.nudgeMemory = step.memory
+    const percent = reading?.percent ?? 0
+    const signature = step.show ? JSON.stringify([percent, tabId]) : ''
     if (signature === this.hintSignature) return
     this.hintSignature = signature
-    this.hint.hidden = !show
-    if (!show) return this.hint.replaceChildren()
-    const compact = canCompact(view.agent)
-      ? h('button', { class: 'btn small', type: 'button', onClick: () => typeCompact(tabId) }, 'Compact')
-      : null
+    this.hint.hidden = !step.show
+    if (!step.show) return this.hint.replaceChildren()
+    const dismiss = (): void => {
+      this.nudgeMemory = { dismissed: true }
+      this.hintSignature = ''
+      this.hint.hidden = true
+      this.hint.replaceChildren()
+    }
     this.hint.replaceChildren(
-      h('span', { class: 'pane-hint-text' }, contextHintText(percent)),
+      h('span', { class: 'pane-hint-text' }, contextNudgeText(percent)),
       h('span', { class: 'spacer' }),
-      ...(compact ? [compact] : []),
-      h('button', { class: 'btn small', type: 'button', onClick: () => dismissContextHint(tabId, percent) }, 'Dismiss')
+      h('button', { class: 'btn small', type: 'button', onClick: () => { dismiss(); this.runCommand(COMPACT_SLASH) } }, 'Compact'),
+      h('button', { class: 'btn small', type: 'button', onClick: dismiss }, 'Dismiss')
     )
   }
 

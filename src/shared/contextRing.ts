@@ -1,4 +1,4 @@
-import type { ContextReading } from './chatContext'
+import { stepContextNote, type ContextReading, type NoteMemory } from './chatContext'
 import { ringGeometry, ringStage, type RingGeometry, type RingStage } from './limitRings'
 import { formatTokens } from './usage'
 
@@ -52,3 +52,20 @@ export const segmentText = (segment: ContextSegment): string =>
 
 export const contextWindowLine = (reading: ContextReading): string | null =>
   reading.window ? `Model window ${formatTokens(reading.window)} tokens` : null
+
+export interface NudgeInput {
+  percent: number | null
+  /** The agent is asking for permission or showing a menu. */
+  asking: boolean
+  /** The Chat view is on screen, which has its own note. */
+  chatShown: boolean
+}
+
+/** The line under a terminal pane's header past the warning line: once per crossing, never while the agent asks or in Chat. */
+export function stepContextNudge(memory: NoteMemory, input: NudgeInput): { memory: NoteMemory; show: boolean } {
+  const step = stepContextNote(memory, input.percent)
+  return { memory: step.memory, show: step.show && !input.asking && !input.chatShown }
+}
+
+export const contextNudgeText = (percent: number): string =>
+  `Context is ${Math.round(percent)}% full. Compact now so the agent does not do it mid-task.`
