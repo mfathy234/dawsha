@@ -89,6 +89,14 @@ export function nowLine(input: NowInput): string {
   return 'Exited'
 }
 
+/**
+ * Where the card's clock starts: a working session counts from when its run of work began (an approval in between does not
+ * restart it), every other state from when the card entered it.
+ */
+export function clockStart(state: SessionState, enteredAt: number, memory: DoneMemory | undefined): number {
+  return state === 'working' && memory?.workedSince != null ? Math.min(memory.workedSince, enteredAt) : enteredAt
+}
+
 export const elapsedSince = (since: number, now: number): string => spanShort(now - since)
 
 export function usageLine(context: number | null, costUsd: number | null): string {

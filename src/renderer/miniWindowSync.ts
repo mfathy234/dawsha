@@ -1,10 +1,10 @@
 import { createMiniSnapshotGate, miniSession, miniStateOf, orderMiniSessions, type MiniAction, type MiniSnapshot, type MiniPlanRequest } from '../shared/miniWindow'
-import { activeMoment, elapsedSince, stepDoneMemory, type DoneMemory, type MiniLogRead } from '../shared/miniDetail'
+import { activeMoment, clockStart, elapsedSince, stepDoneMemory, type DoneMemory, type MiniLogRead } from '../shared/miniDetail'
 import type { MiniWindowSettings } from '../shared/appearance'
 import { miniSendRefusal } from '../shared/miniSend'
 import { miniStartRefusal, orderMiniProjects, startAgents, type MiniStartOptions } from '../shared/miniStart'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
-import { sessionState } from '../shared/sessionState'
+import { formatTimeInState, stepStateClock, type StateClock } from '../shared/sessionState'
 import { api } from './api'
 import { answerPermission, focusPane, openQuickPick, permissionTail, saveSettings, setSessionInfo, showView, startPromptSession } from './actions'
 import { sendChatMessage } from './chat/chatActions'
@@ -12,7 +12,6 @@ import { openReviewInFiles } from './files/filesActions'
 import { derivePanes, primaryTab } from './derive'
 import { sessionNote } from './sessionNotes'
 import { store, folderOfPane } from './state'
-import { stateSince, timeInState } from './stateClock'
 import { sessionIdOf } from './transcriptActions'
 import { toast } from './components/toast'
 
@@ -88,6 +87,8 @@ export function installMiniWindowSync(): void {
   let gate = createMiniSnapshotGate()
   let logs: Record<string, MiniLogRead> = {}
   const done = new Map<string, DoneMemory>()
+  // The Mini card's own clock, on the state the card shows. A pane's clock follows the sidebar's state, which can differ while a request waits.
+  const clocks = new Map<string, StateClock>()
   let reading = false
   let planReadAt = -Infinity
   let generation = 0
@@ -112,14 +113,17 @@ export function installMiniWindowSync(): void {
       const tail = permissionTail(id)
       const planNote = /^(\d+) of (\d+)$/.exec(note.plan)
       const shape = { status: view.status, attention: view.attention, tail }
-      const since = stateSince(id, sessionState(view), state.now)
-      const memory = stepDoneMemory(done.get(id), miniStateOf(shape).state, state.now)
+      const shown = miniStateOf(shape).state
+      const clock = stepStateClock(clocks.get(id), shown, state.now)
+      clocks.set(id, clock)
+      const memory = stepDoneMemory(done.get(id), shown, state.now)
       done.set(id, memory)
+      const since = clockStart(shown, clock.since, memory)
       const log = logs[id]
       return miniSession({
         paneId: id, agent: view.agent, identity: view.crew?.identity, title: view.title,
         project: view.project?.name ?? '', status: view.status, attention: view.attention,
-        tail, recap: note.recap, tool: note.tool, idleFor: timeInState(id, sessionState(view), state.now),
+        tail, recap: note.recap, tool: note.tool, idleFor: formatTimeInState(state.now - clock.since),
         changed: view.info.changes?.files ?? null, todos: log?.todos ?? [],
         elapsed: elapsedSince(since, state.now), asked: log?.asked ?? '', reply: log?.reply ?? [],
         changes: view.info.changes, context: view.info.contextPercent, costUsd: view.info.costUsd,
@@ -128,7 +132,7 @@ export function installMiniWindowSync(): void {
           : planNote ? { done: Number(planNote[1]), total: Number(planNote[2]), current: note.planNow } : null
       })
     })
-    for (const id of done.keys()) if (!views.some(view => view.pane.id === id)) done.delete(id)
+    for (const id of done.keys()) if (!views.some(view => view.pane.id === id)) { done.delete(id); clocks.delete(id) }
     if (visible && !reading && Date.now() - planReadAt >= 1000) {
       reading = true
       planReadAt = Date.now()
