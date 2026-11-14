@@ -7,13 +7,14 @@ import { CardView } from './card'
 import { DetailView } from './detail'
 import { enter, flip, leave, slide } from './motion'
 import { tile, type MiniHost } from './parts'
+import { StartForm } from './start'
 
 declare global { interface Window { miniApi: MiniApi } }
 const api = window.miniApi
 const root = document.getElementById('mini')!
 const soundIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9v6h4l5 4V5L8 9zM17 8a6 6 0 0 1 0 8"/></svg>'
 
-type Mode = 'folded' | 'empty' | 'list' | 'detail'
+type Mode = 'folded' | 'empty' | 'list' | 'detail' | 'start'
 let snapshot: MiniSnapshot | null = null
 let selected: string | null = null
 let signature = ''
@@ -23,12 +24,14 @@ let headerKey = ''
 let listScroll = 0
 const cards = new Map<string, CardView>()
 let detailView: DetailView | null = null
+let starting = false
 let header = h('header', { class: 'mini-header' })
 const content = h('div', { class: 'mini-content' })
 const ghosts = h('div', { class: 'mini-ghosts', 'aria-hidden': 'true' })
 root.replaceChildren(header, content)
 
-const select = (id: string | null): void => { selected = id; draw() }
+const select = (id: string | null): void => { selected = id; starting = false; draw() }
+const setStarting = (value: boolean): void => { starting = value; draw() }
 const host: MiniHost = {
   open: s => api.action({ kind: 'open', paneId: s.paneId }),
   select: id => select(id),
@@ -52,7 +55,7 @@ function drawHeader(session: MiniSession | undefined): void {
   if (!snapshot) return
   const count = snapshot.sessions.length
   const needs = snapshot.sessions.filter(s => s.state === 'needs').length
-  const key = JSON.stringify([snapshot.folded, snapshot.sound, session?.paneId, count, needs,
+  const key = JSON.stringify([snapshot.folded, snapshot.sound, starting, session?.paneId, count, needs,
     (snapshot.folded ? snapshot.sessions.slice(0, 3) : session ? snapshot.sessions : []).map(s => [s.paneId, s.title, s.agent, s.identity])])
   if (key === headerKey) return
   headerKey = key
@@ -67,10 +70,13 @@ function drawHeader(session: MiniSession | undefined): void {
       h('nav', { class: 'mini-switch', 'aria-label': 'Other sessions' }, ...snapshot.sessions.filter(s => s.paneId !== session.paneId).map(s =>
         h('button', { type: 'button', 'aria-label': s.title, title: s.title, onClick: () => select(s.paneId) }, tile(s, 24)))),
       iconButton('Open in Dawsha', ICONS.maximize, () => host.open(session)))
+  } else if (starting) {
+    next.append(iconButton('Back to all sessions', ICONS.prev, () => setStarting(false)), h('h1', {}, 'New session'), h('span', { class: 'mini-spacer' }))
   } else {
     next.append(h('h1', {}, 'Sessions'), h('span', { class: 'mini-count' }, String(count)))
     if (needs) next.append(h('span', { class: 'mini-needs' }, `${needs} needs you`))
   }
+  if (!snapshot.folded && !starting && !session) next.append(iconButton('New session', ICONS.plus, () => setStarting(true)))
   next.append(
     iconButton(snapshot.sound ? 'Sound on' : 'Sound off', soundIcon, () => api.action({ kind: 'sound' })),
     iconButton(snapshot.folded ? 'Unfold' : 'Fold', snapshot.folded ? ICONS.chevronDown : ICONS.chevronUp, () => api.action({ kind: 'fold' })),
@@ -123,7 +129,7 @@ function rebuild(next: Mode, session: MiniSession | undefined, previous: Mode | 
   content.replaceChildren()
   ghosts.replaceChildren()
   const slideFrom = next === 'detail' ? 'end' : 'start'
-  const fade = previous === 'list' || previous === 'detail'
+  const fade = previous === 'list' || previous === 'detail' || previous === 'start'
   if (next === 'detail' && session) {
     detailView = new DetailView(session, host)
     content.append(detailView.el)
@@ -134,6 +140,10 @@ function rebuild(next: Mode, session: MiniSession | undefined, previous: Mode | 
     syncCards(snapshot.sessions, false)
     content.scrollTop = listScroll
     if (fade) slide(content, slideFrom)
+  } else if (next === 'start' && snapshot) {
+    const form = new StartForm(snapshot.start, { start: (projectId, agent, text) => { api.action({ kind: 'start', projectId, agent, text }); setStarting(false) }, cancel: () => setStarting(false) })
+    content.append(form.el)
+    if (fade || previous === 'empty') slide(form.el, 'end')
   } else if (next === 'empty') {
     content.append(h('div', { class: 'mini-empty' }, h('p', {}, 'No sessions open'), h('button', { type: 'button', onClick: () => api.action({ kind: 'new' }) }, 'New session')))
   }
@@ -143,13 +153,13 @@ function draw(): void {
   if (!snapshot) return
   const session = snapshot.sessions.find(s => s.paneId === selected)
   if (!session) selected = null
-  const key = JSON.stringify([snapshot, selected])
+  const key = JSON.stringify([snapshot, selected, starting])
   if (key === signature) return
   signature = key
   const hadFocus = root.contains(document.activeElement)
   root.classList.toggle('mini-folded', snapshot.folded)
   drawHeader(session)
-  const next: Mode = snapshot.folded ? 'folded' : session ? 'detail' : snapshot.sessions.length ? 'list' : 'empty'
+  const next: Mode = snapshot.folded ? 'folded' : starting ? 'start' : session ? 'detail' : snapshot.sessions.length ? 'list' : 'empty'
   const id = next === 'detail' ? session!.paneId : null
   if (next !== mode || id !== shownId) {
     const previous = mode

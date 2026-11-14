@@ -4,10 +4,11 @@ import type { CrewIdentity } from './crew'
 import { detectPermissionPrompt, parsePermissionDetail, permissionPromptText } from './permissionPrompt'
 import { cleanText } from './remoteChat'
 import { doneLine, filesLabel, MINI_SEND_MAX, nowLine, usageLine, type MiniChanges, type MiniLogRead } from './miniDetail'
+import { MINI_START_MAX, isAgentKind, type MiniStartOptions } from './miniStart'
 import { outputLines } from './recap'
 import { needsAsk } from './sessionLine'
 import { sessionState, SESSION_STATE_LABELS, type SessionStateInput, type SessionState } from './sessionState'
-import type { TabAgent } from './types'
+import type { AgentKind, TabAgent } from './types'
 
 export const MINI_IPC = {
   toggle: 'mini:toggle', publish: 'mini:publish', snapshot: 'mini:snapshot', get: 'mini:get',
@@ -64,6 +65,8 @@ export interface MiniSnapshot {
   sessions: MiniSession[]
   folded: boolean
   sound: boolean
+  /** What the start form offers. */
+  start: MiniStartOptions
   /** Computed theme tokens from the main renderer, including the selected tone. */
   theme: Record<string, string>
   kind: string
@@ -74,6 +77,7 @@ export type MiniAction =
   | { kind: 'answer'; paneId: string; allow: boolean; prompt: string }
   | { kind: 'review'; paneId: string }
   | { kind: 'send'; paneId: string; text: string }
+  | { kind: 'start'; projectId: string; agent: AgentKind; text: string }
   | { kind: 'fold' | 'sound' | 'close' | 'new' }
 
 export interface MiniApi {
@@ -98,6 +102,10 @@ export function isMiniAction(value: unknown): value is MiniAction {
   if (!value || typeof value !== 'object') return false
   const a = value as Record<string, unknown>
   if (['fold', 'sound', 'close', 'new'].includes(String(a.kind))) return Object.keys(a).length === 1
+  if (a.kind === 'start') {
+    return typeof a.projectId === 'string' && a.projectId.length > 0 && a.projectId.length <= 128 && isAgentKind(a.agent) &&
+      typeof a.text === 'string' && a.text.length <= MINI_START_MAX && Object.keys(a).length === 4
+  }
   if (typeof a.paneId !== 'string' || a.paneId.length < 1 || a.paneId.length > 128) return false
   if (a.kind === 'open' || a.kind === 'review') return Object.keys(a).length === 2
   if (a.kind === 'send') return typeof a.text === 'string' && a.text.trim().length > 0 && a.text.length <= MINI_SEND_MAX && Object.keys(a).length === 3

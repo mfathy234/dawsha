@@ -107,3 +107,18 @@ body.mini-window { margin: 0; background: var(--chrome); color: var(--text); ove
 .mini-terminal[open] .mini-terminal-label { border-radius: var(--r-2) var(--r-2) 0 0; }
 .mini-terminal pre { padding: 8px 10px 10px; border-radius: 0 0 var(--r-2) var(--r-2); background: var(--well); }
 .mini-detail .mini-usage { padding-top: 10px; color: var(--text-3); }
+
+/* 1.8.9: start a session from the Mini window. */
+.mini-spacer { flex: 1; }
+.mini-start { flex: none; display: flex; flex-direction: column; gap: 6px; padding: var(--sp-3); background: var(--pane); border-radius: var(--r-3); }
+.mini-start h2 { margin: 0 0 2px; font-size: 15px; line-height: 20px; font-weight: 600; }
+.mini-start label { color: var(--text-2); font-size: var(--fs-1); }
+.mini-select-field { font: inherit; color: var(--text); background: var(--well); border: 0; border-radius: var(--r-2); padding: 7px 10px; min-height: 34px; width: 100%; -webkit-app-region: no-drag; }
+.mini-select-field:focus-visible, .mini-start .mini-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.mini-start .mini-input { flex: none; width: 100%; margin-top: 4px; }
+.mini-start-note { margin: 0; color: var(--text-2); font-size: var(--fs-1); min-height: 0; }
+.mini-start-note:empty { display: none; }
+.mini-start-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }
+.mini-window .mini-start-go { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.mini-window .mini-start-go:disabled { opacity: .45; cursor: default; }
+.mini-window .mini-start-cancel { background: transparent; color: var(--text-2); }

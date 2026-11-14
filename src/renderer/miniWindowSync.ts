@@ -2,10 +2,11 @@ import { createMiniSnapshotGate, miniSession, miniStateOf, orderMiniSessions, ty
 import { activeMoment, elapsedSince, stepDoneMemory, type DoneMemory, type MiniLogRead } from '../shared/miniDetail'
 import type { MiniWindowSettings } from '../shared/appearance'
 import { miniSendRefusal } from '../shared/miniSend'
+import { miniStartRefusal, orderMiniProjects, startAgents, type MiniStartOptions } from '../shared/miniStart'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
 import { sessionState } from '../shared/sessionState'
 import { api } from './api'
-import { answerPermission, focusPane, openQuickPick, permissionTail, saveSettings, setSessionInfo, showView } from './actions'
+import { answerPermission, focusPane, openQuickPick, permissionTail, saveSettings, setSessionInfo, showView, startPromptSession } from './actions'
 import { sendChatMessage } from './chat/chatActions'
 import { openReviewInFiles } from './files/filesActions'
 import { derivePanes, primaryTab } from './derive'
@@ -30,6 +31,7 @@ function act(action: MiniAction): void {
   else if (action.kind === 'open') { showView('grid'); focusPane(action.paneId) }
   else if (action.kind === 'review') review(action.paneId)
   else if (action.kind === 'send') send(action.paneId, action.text)
+  else if (action.kind === 'start') void start(action)
   else if (action.kind === 'answer') {
     // A stale card must never approve a different command that replaced its prompt.
     const tail = permissionTail(action.paneId)
@@ -37,6 +39,26 @@ function act(action: MiniAction): void {
       toast('That request changed. Open the session to review it.')
     }
   }
+}
+
+export function startOptions(): MiniStartOptions {
+  const { settings, agents } = store.state
+  return {
+    projects: orderMiniProjects(settings.projects, settings.recentProjectIds),
+    agents: startAgents(agents.report?.tools ?? null)
+  }
+}
+
+/** Starts a session without moving the main window or its focus. The request is checked here, where the projects live. */
+async function start(action: Extract<MiniAction, { kind: 'start' }>): Promise<void> {
+  const request = { projectId: action.projectId, agent: action.agent, text: action.text.trim() }
+  const refusal = miniStartRefusal(request, startOptions())
+  if (refusal) { toast(refusal); return }
+  const paneId = await startPromptSession(request.projectId, request.agent, request.text)
+  if (!paneId) { toast('Could not start that session.'); return }
+  const recent = [request.projectId, ...store.state.settings.recentProjectIds.filter(id => id !== request.projectId)].slice(0, 5)
+  store.patch({ settings: { ...store.state.settings, recentProjectIds: recent } })
+  void saveSettings({ recentProjectIds: recent })
 }
 
 function review(paneId: string): void {
@@ -121,7 +143,7 @@ export function installMiniWindowSync(): void {
       const css = getComputedStyle(root)
       theme = Object.fromEntries(Array.from(css).filter(name => name.startsWith('--')).map(name => [name, css.getPropertyValue(name).trim()]))
     }
-    const snapshot: MiniSnapshot = { sessions: orderMiniSessions(sessions), folded: state.settings.miniWindow.folded, sound: state.settings.sessionInfo.sound, theme, kind: root.dataset.kind ?? 'dark' }
+    const snapshot: MiniSnapshot = { sessions: orderMiniSessions(sessions), folded: state.settings.miniWindow.folded, sound: state.settings.sessionInfo.sound, start: startOptions(), theme, kind: root.dataset.kind ?? 'dark' }
     if (gate.take(snapshot, Date.now())) api.miniWindow.publish(snapshot)
   }
   api.miniWindow.onAction(act)
