@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contextRingView, contextSegments, contextUsedLine, contextWindowLine, segmentText } from '../../src/shared/contextRing'
+import { contextRingView, contextSegments, contextUsedLine, contextWindowLine, segmentText, contextNudgeText, stepContextNudge } from '../../src/shared/contextRing'
 
 const reading = (percent: number, tokens: number | null = null, window: number | null = null) => ({ percent, tokens, window })
 
@@ -53,5 +53,33 @@ describe('contextSegments', () => {
 
   it('never lets free go below zero', () => {
     expect(contextSegments(reading(100, 210_000, 200_000))[1].tokens).toBe(0)
+  })
+})
+
+describe('stepContextNudge', () => {
+  const open = { asking: false, chatShown: false }
+  it('shows from 85 and says the share in plain words', () => {
+    expect(stepContextNudge({ dismissed: false }, { ...open, percent: 84 }).show).toBe(false)
+    expect(stepContextNudge({ dismissed: false }, { ...open, percent: 87 }).show).toBe(true)
+    expect(contextNudgeText(86.6)).toBe('Context is 87% full. Compact now so the agent does not do it mid-task.')
+  })
+
+  it('stays hidden after a dismissal until the context falls below the line and crosses again', () => {
+    let memory = { dismissed: true }
+    expect(stepContextNudge(memory, { ...open, percent: 92 })).toEqual({ memory, show: false })
+    memory = stepContextNudge(memory, { ...open, percent: 40 }).memory
+    expect(memory.dismissed).toBe(false)
+    expect(stepContextNudge(memory, { ...open, percent: 88 }).show).toBe(true)
+  })
+
+  it('never shows while the agent asks, nor in Chat, and keeps the crossing for later', () => {
+    const memory = { dismissed: false }
+    expect(stepContextNudge(memory, { percent: 90, asking: true, chatShown: false }).show).toBe(false)
+    expect(stepContextNudge(memory, { percent: 90, asking: false, chatShown: true }).show).toBe(false)
+    expect(stepContextNudge(memory, { percent: 90, asking: false, chatShown: false }).show).toBe(true)
+  })
+
+  it('shows nothing without a reading', () => {
+    expect(stepContextNudge({ dismissed: false }, { ...open, percent: null }).show).toBe(false)
   })
 })

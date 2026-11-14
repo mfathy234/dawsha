@@ -4709,7 +4709,7 @@ body.dragging-ui {
   height: 28px;
   padding: 0 var(--s-4);
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  background: color-mix(in srgb, var(--busy) 8%, var(--surface));
   font-size: var(--fs-ui);
   color: var(--text);
   white-space: nowrap;

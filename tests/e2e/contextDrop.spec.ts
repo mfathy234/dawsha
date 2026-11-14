@@ -50,7 +50,7 @@ async function dropOn(page: Page, selector: string, names: string[], uris: strin
   )
 }
 
-test('context warning: amber at 85, hint with Compact and Dismiss at 92, back at 96', async () => {
+test('context nudge: amber and a quiet line with Compact and Dismiss from 85, back after the context drops', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
@@ -67,14 +67,10 @@ test('context warning: amber at 85, hint with Compact and Dismiss at 92, back at
     await expect(gauge).not.toHaveClass(/ctx-amber|ctx-red/)
     await expect(hint).toBeHidden()
 
-    writeContext(sandbox, 85)
+    writeContext(sandbox, 87)
     await expect(gauge).toHaveClass(/ctx-amber/, { timeout: 15_000 })
-    await expect(hint).toBeHidden()
-
-    writeContext(sandbox, 92)
-    await expect(gauge).toHaveClass(/ctx-red/, { timeout: 15_000 })
     await expect(hint).toBeVisible()
-    await expect(hint).toContainText('Context is 92% full — /compact or start a fresh session')
+    await expect(hint).toContainText('Context is 87% full. Compact now so the agent does not do it mid-task.')
 
     await hint.getByRole('button', { name: 'Compact' }).click()
     await expect.poll(() => lastInput(page, id)).toBe('/compact')
@@ -85,9 +81,11 @@ test('context warning: amber at 85, hint with Compact and Dismiss at 92, back at
     await expect(gauge).toContainText('93%', { timeout: 15_000 })
     await expect(hint).toBeHidden()
 
-    writeContext(sandbox, 96)
+    writeContext(sandbox, 40)
+    await expect(gauge).toHaveText('40%', { timeout: 15_000 })
+    writeContext(sandbox, 91)
     await expect(hint).toBeVisible({ timeout: 15_000 })
-    await expect(hint).toContainText('96% full')
+    await expect(hint).toContainText('91% full')
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
