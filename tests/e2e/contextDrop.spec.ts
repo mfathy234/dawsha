@@ -75,7 +75,6 @@ test('context nudge: amber and a quiet line with Compact and Dismiss from 85, ba
     await hint.getByRole('button', { name: 'Compact' }).click()
     await expect.poll(() => lastInput(page, id)).toBe('/compact')
 
-    await hint.getByRole('button', { name: 'Dismiss' }).click()
     await expect(hint).toBeHidden()
     writeContext(sandbox, 93)
     await expect(gauge).toContainText('93%', { timeout: 15_000 })
@@ -86,6 +85,11 @@ test('context nudge: amber and a quiet line with Compact and Dismiss from 85, ba
     writeContext(sandbox, 91)
     await expect(hint).toBeVisible({ timeout: 15_000 })
     await expect(hint).toContainText('91% full')
+    await hint.getByRole('button', { name: 'Dismiss' }).click()
+    await expect(hint).toBeHidden()
+    writeContext(sandbox, 94)
+    await expect(gauge).toContainText('94%', { timeout: 15_000 })
+    await expect(hint).toBeHidden()
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }

@@ -76,7 +76,7 @@ function drawHeader(session: MiniSession | undefined): void {
     next.append(h('h1', {}, 'Sessions'), h('span', { class: 'mini-count' }, String(count)))
     if (needs) next.append(h('span', { class: 'mini-needs' }, `${needs} needs you`))
   }
-  if (!snapshot.folded && !starting && !session) next.append(iconButton('New session', ICONS.plus, () => setStarting(true)))
+  if (!snapshot.folded && !starting && !session) next.append(iconButton('Start a session', ICONS.plus, () => setStarting(true)))
   next.append(
     iconButton(snapshot.sound ? 'Sound on' : 'Sound off', soundIcon, () => api.action({ kind: 'sound' })),
     iconButton(snapshot.folded ? 'Unfold' : 'Fold', snapshot.folded ? ICONS.chevronDown : ICONS.chevronUp, () => api.action({ kind: 'fold' })),

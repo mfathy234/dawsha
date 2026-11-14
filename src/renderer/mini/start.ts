@@ -22,7 +22,6 @@ export class StartForm {
     const start = h('button', { type: 'submit', class: 'mini-start-go' }, 'Start')
     if (options.projects.length === 0 || options.agents.length === 0) start.setAttribute('disabled', '')
     this.el = h('form', { class: 'mini-start', 'aria-label': 'New session' },
-      h('h2', {}, 'New session'),
       h('label', { for: 'mini-start-project' }, 'Project'), this.project,
       h('label', { for: 'mini-start-agent' }, 'Agent'), this.agent,
       this.message,
