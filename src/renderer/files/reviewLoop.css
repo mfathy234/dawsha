@@ -71,3 +71,6 @@
 .files-comment-row.sent .files-comment-jump { color: var(--text-2); }
 .cm-review-sent, .cm-review-comment.sent .cm-review-text, .turn-cm-text.sent { color: var(--text-2); }
 .files-review-card-slot { flex: none; }
+.files-comments { max-height: none; }
+.files-comments-list { flex: none; max-height: 96px; }
+.files-pane-review .files-review-list { min-height: 96px; }
