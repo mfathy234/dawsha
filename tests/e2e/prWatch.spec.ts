@@ -98,7 +98,8 @@ test('with Watch pull requests off there is no gh polling and no status chip', a
   try {
     await expect(page.locator('.pane').first()).toBeVisible({ timeout: 30_000 })
     await page.waitForTimeout(3000)
-    await expect(page.locator('.pane-pr')).toHaveCount(0)
+    await expect(page.locator('.pane-pr').first()).toBeHidden()
+    await expect(page.locator('.sess-row').first()).not.toContainText('PR #')
     expect(existsSync(join(state, 'calls.log'))).toBe(false)
   } finally {
     await closeApp(app)

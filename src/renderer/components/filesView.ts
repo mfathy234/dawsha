@@ -1088,6 +1088,8 @@ export class FilesViewComponent {
     const set = this.set
     if (!target || !set) return
     const ticket = this.groupGate.begin()
+    await this.refreshCheckouts()
+    if (!ticket.current() || this.set !== set) return
     const state = store.state
     const views = derivePanes(state).filter((view) => view.pane.projectId === target.projectId && view.agent !== 'shell')
     const places = this.checkouts.filter((checkout) => !checkout.unavailable)
