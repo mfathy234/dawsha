@@ -12,6 +12,7 @@ import { fitSidePanelWidth, MAX_SIDE_PANEL_WIDTH, MIN_SIDE_PANEL_WIDTH, SIDE_PAN
 import { setSessionsLayout } from '../sessionsLayout'
 import { panelSource } from '../sidePanelSources'
 import { folderOfPane, store, type AppState } from '../state'
+import { SessionPanel } from './sessionPanel'
 import './sidePanel.css'
 
 const KEY_STEP = 10
@@ -29,7 +30,7 @@ function savePanel(change: Partial<SidePanelSettings>): void {
   void saveSettings({ sidePanel })
 }
 
-/** Changes, Plan and Checks beside the open session. Closes to a thin rail, remembers its width and tab. */
+/** Session, Changes, Plan and Checks beside the open session. Closes to a thin rail, remembers its width and tab. */
 export class SidePanelComponent {
   readonly el = h('aside', { class: 'side-panel', 'aria-label': 'Session panel', hidden: true })
   private readonly handle = h('div', {
@@ -44,6 +45,7 @@ export class SidePanelComponent {
   private readonly tabs = h('div', { class: 'side-panel-tabs', role: 'tablist', 'aria-label': 'Panel' })
   private readonly body = h('div', { class: 'side-panel-body', role: 'tabpanel' })
   private readonly rail = h('button', { class: 'side-panel-rail', type: 'button', 'aria-label': 'Show the session panel', title: 'Show the session panel', onClick: () => savePanel({ open: true }) }, icon(ICONS.chevronLeft))
+  private readonly session = new SessionPanel()
   private readonly full = h('div', { class: 'side-panel-full' }, this.tabs, this.body)
   private dragWidth: number | null = null
   /** The width the last key press asked for, so quick presses add up before the panel re-renders. */
@@ -51,6 +53,8 @@ export class SidePanelComponent {
   private drag: { pointerId: number; x: number; width: number } | null = null
   private signature = ''
   private bodyKey = ''
+  /** The Side panel layout owns the panel and can fold it to a rail; in Desktop app style it is docked from the toolbar toggle and just closes. */
+  private layoutPanel = true
 
   constructor(private readonly stage: () => HTMLElement) {
     this.el.append(this.handle, this.rail, this.full)
@@ -67,22 +71,28 @@ export class SidePanelComponent {
     if (this.el.hidden || !view) {
       this.signature = ''
       this.bodyKey = ''
+      this.session.hide()
       return
     }
     const settings = state.settings.sidePanel
-    this.el.classList.toggle('closed', !settings.open)
-    this.rail.hidden = settings.open
-    this.full.hidden = !settings.open
-    this.handle.hidden = !settings.open
-    this.applyWidth(settings.open ? (this.dragWidth ?? settings.width) : null)
-    if (!settings.open) return
+    this.layoutPanel = state.settings.sessionsLayout === 'panel'
+    const open = settings.open || !this.layoutPanel
+    this.el.classList.toggle('closed', !open)
+    this.rail.hidden = open
+    this.full.hidden = !open
+    this.handle.hidden = !open
+    this.applyWidth(open ? (this.dragWidth ?? settings.width) : null)
+    if (!open) {
+      this.session.hide()
+      return
+    }
     const source = panelSource(view.pane.id)
     const todos = source?.todos() ?? []
     const plan = planProgress(todos)
     const reply = source?.card() ?? null
     const files = reply?.files ?? view.info.changes?.files ?? 0
     const checks = source?.checks() ?? null
-    const signature = JSON.stringify([settings.tab, view.pane.id, files, plan?.label ?? '', checks?.results.map((result) => result.status) ?? null])
+    const signature = JSON.stringify([settings.tab, this.layoutPanel, view.pane.id, files, plan?.label ?? '', checks?.results.map((result) => result.status) ?? null])
     if (signature !== this.signature) {
       this.signature = signature
       this.drawTabs(settings.tab, files, plan?.label ?? '', checks !== null && !checks.done)
@@ -102,7 +112,7 @@ export class SidePanelComponent {
   }
 
   private drawTabs(active: SidePanelTab, files: number, plan: string, checking: boolean): void {
-    const counts: Record<SidePanelTab, string> = { changes: files > 0 ? String(files) : '', plan: plan.replace(' of ', '/'), checks: checking ? 'running' : '' }
+    const counts: Record<SidePanelTab, string> = { session: '', changes: files > 0 ? String(files) : '', plan: plan.replace(' of ', '/'), checks: checking ? 'running' : '' }
     clear(this.tabs)
     for (const tab of SIDE_PANEL_TABS) {
       const count = counts[tab.id]
@@ -117,13 +127,20 @@ export class SidePanelComponent {
     }
     this.tabs.append(
       h('span', { class: 'side-panel-spacer' }),
-      h('button', { class: 'link-quiet side-panel-grid', type: 'button', onClick: () => setSessionsLayout('grid') }, 'Back to grid'),
-      iconButton('Close the session panel', ICONS.closeSmall, () => savePanel({ open: false }), 'small side-panel-close')
+      ...(this.layoutPanel ? [h('button', { class: 'link-quiet side-panel-grid', type: 'button', onClick: () => setSessionsLayout('grid') }, 'Back to grid')] : []),
+      iconButton('Close the session panel', ICONS.closeSmall, () => savePanel(this.layoutPanel ? { open: false } : { docked: false }), 'small side-panel-close')
     )
   }
 
   private drawBody(tab: SidePanelTab, view: PaneView, todos: readonly TodoEntry[], reply: Reply | null, checks: ChecksState | null): void {
     const paneId = view.pane.id
+    if (tab === 'session') {
+      this.bodyKey = ''
+      if (this.body.firstElementChild !== this.session.el) this.body.replaceChildren(this.session.el)
+      this.session.show(view)
+      return
+    }
+    this.session.hide()
     if (tab === 'changes' && reply) {
       if (this.body.firstElementChild !== reply.el) this.body.replaceChildren(reply.el)
       this.bodyKey = ''

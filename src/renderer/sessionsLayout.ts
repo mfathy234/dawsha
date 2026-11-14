@@ -2,6 +2,7 @@ import type { GridStyle } from '../shared/gridStyle'
 import type { SessionsLayout } from '../shared/board'
 import { api } from './api'
 import { toast } from './components/toast'
+import { panelDockedOn, type SidePanelSettings } from '../shared/sidePanel'
 import { store } from './state'
 
 export function setSessionsLayout(layout: SessionsLayout): void {
@@ -41,4 +42,14 @@ export function setGridStyle(gridStyle: GridStyle): void {
   if (store.state.settings.gridStyle === gridStyle) return
   store.set((state) => ({ ...state, settings: { ...state.settings, gridStyle } }))
   api.updateSettings({ gridStyle }).catch((error: unknown) => toast((error as Error).message || 'Could not save settings.'))
+}
+
+export const panelDocked = (state = store.state): boolean =>
+  panelDockedOn({ view: state.view, sessionsLayout: state.settings.sessionsLayout, frame: state.settings.appearance.frame, docked: state.settings.sidePanel.docked })
+
+/** The toolbar toggle and Ctrl+Alt+B in Desktop app style: dock the Session panel beside the sessions, or take it away. */
+export function toggleDockedPanel(): void {
+  const sidePanel: SidePanelSettings = { ...store.state.settings.sidePanel, docked: !store.state.settings.sidePanel.docked }
+  store.set((state) => ({ ...state, settings: { ...state.settings, sidePanel } }))
+  api.updateSettings({ sidePanel }).catch((error: unknown) => toast((error as Error).message || 'Could not save settings.'))
 }

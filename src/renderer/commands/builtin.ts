@@ -52,7 +52,7 @@ import { openGlobalSearch } from '../components/globalSearch'
 import { filesTarget, openFolderInFiles, requestFilesCommand, type FilesCommand } from '../files/filesActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
-import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
+import { setGridStyle, setSessionsLayout, toggleDockedPanel } from '../sessionsLayout'
 import { SIDEBAR_FILTER_EVENT } from '../../shared/sidebarModel'
 import { registerCommands, registerProvider, type Command } from './registry'
 import { editSpendLimit, pauseAllAgents } from '../spendActions'
@@ -419,6 +419,15 @@ export function installBuiltinCommands(): void {
       ...withKeys('Ctrl+Shift+B'),
       enabled: (state) => state.settings.sessionsLayout !== 'grid',
       run: () => setSessionsLayout('grid')
+    },
+    {
+      id: 'view.session-panel',
+      title: 'Show or hide the session panel',
+      group: 'Actions',
+      keywords: 'context outputs files session panel side right dock',
+      ...withKeys('Ctrl+Alt+B'),
+      enabled: (state) => state.view === 'grid' && state.settings.appearance.frame === 'sidebar' && state.settings.sessionsLayout === 'grid',
+      run: () => toggleDockedPanel()
     },
     {
       id: 'view.panel',
