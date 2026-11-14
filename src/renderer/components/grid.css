@@ -167,6 +167,12 @@
   }
 }
 
+@container pane (max-width: 520px) {
+  .pane-header .pane-project {
+    display: none;
+  }
+}
+
 @container pane (max-width: 420px) {
   .pane-header .pane-project,
   .pane-header .chip-compare {

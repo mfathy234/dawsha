@@ -16,7 +16,7 @@ describe('side panel width', () => {
 
   it('narrows the panel on a small window so the session keeps its room', () => {
     expect(fitSidePanelWidth(500, 1400)).toBe(500)
-    expect(fitSidePanelWidth(500, 800)).toBe(380)
+    expect(fitSidePanelWidth(500, 800)).toBe(308)
     expect(fitSidePanelWidth(500, 500)).toBe(MIN_SIDE_PANEL_WIDTH)
   })
 })
@@ -24,13 +24,14 @@ describe('side panel width', () => {
 describe('side panel settings', () => {
   it('sanitizes saved values and defaults everything else', () => {
     expect(sanitizeSidePanel(undefined)).toEqual(DEFAULT_SIDE_PANEL)
-    expect(sanitizeSidePanel({ open: false, width: 450, tab: 'plan' })).toEqual({ open: false, width: 450, tab: 'plan' })
+    expect(sanitizeSidePanel({ open: false, width: 450, tab: 'plan', docked: true })).toEqual({ open: false, width: 450, tab: 'plan', docked: true })
+    expect(DEFAULT_SIDE_PANEL.tab).toBe('session')
     expect(sanitizeSidePanel({ open: 'no', width: 'x', tab: 'preview' })).toEqual(DEFAULT_SIDE_PANEL)
   })
 
   it('is part of the migrated settings', () => {
     expect(migrateSettings({}).sidePanel).toEqual(DEFAULT_SIDE_PANEL)
-    expect(migrateSettings({ sidePanel: { width: 9999, tab: 'checks' } }).sidePanel).toEqual({ open: true, width: MAX_SIDE_PANEL_WIDTH, tab: 'checks' })
+    expect(migrateSettings({ sidePanel: { width: 9999, tab: 'checks' } }).sidePanel).toEqual({ open: true, width: MAX_SIDE_PANEL_WIDTH, tab: 'checks', docked: false })
     expect(migrateSettings({ sessionsLayout: 'panel' }).sessionsLayout).toBe('panel')
   })
 })

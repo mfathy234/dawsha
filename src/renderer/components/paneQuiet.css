@@ -12,6 +12,7 @@
 
 .panes-quiet .pane-header { height: 44px; gap: 10px; padding: 0 var(--sp-2) 0 14px; background: transparent; }
 .panes-quiet .pane-header .pane-titles { gap: 10px; }
+@container pane (max-width: 520px) { .panes-quiet .pane-header { gap: 6px; } }
 .panes-quiet .pane-header .pane-num { display: none; }
 .panes-quiet .pane-header .pane-title { font-size: var(--fs-13); font-weight: 600; color: var(--text); }
 .panes-quiet .pane-header .pane-project,

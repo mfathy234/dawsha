@@ -1,0 +1,28 @@
+@startuml TokenFlow
+autonumber
+hide unlinked
+skinparam sequenceMessageAlign direction
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+skinparam sequence {
+    LifeLineBackgroundColor #A9DCDF
+    LifeLineBorderColor #368E92
+    ArrowColor #Black
+}
+actor User
+
+actor "ERP Admin" as Admin
+participant "ERP App" as ERP
+participant "Auth App (Keycloak)" as Auth
+
+
+Admin++
+Admin -> ERP : Request App token (using Erp token)
+ERP++
+ERP -> Auth : Ask for a token for this user,\nthrough the tenant's mobile client
+Auth -> ERP : Return long-lived token (30 days)
+ERP -> ERP : Save the token with its expiry, for the POS app
+ERP -> Admin : Provide token (store for future use)
+
+@enduml

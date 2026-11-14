@@ -35,6 +35,7 @@ import { exportUsage, revealExport } from './usageExport'
 import type { CleanupRequest } from '../shared/worktreeCleanup'
 import { commitWorktree, mergeBranch, mergeOverview, removeSessionWorktree } from './mergeBack'
 import { createSessionWorktree } from './sessionWorktree'
+import { inspectWorktreeSetup, saveWorktreeSetup } from './worktreeEnvironment'
 import type { MergeBackRequest, WorktreeCommitRequest, WorktreeRemoveRequest } from '../shared/mergeBack'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import { fileAgainstBase, fileDiffSince, projectFiles, readProjectFile, resolveProjectPath, sessionBaseline, sessionStatus, writeProjectFile } from './gitWorkspace'
@@ -44,6 +45,7 @@ import { createWatchRegistry } from './fileWatch'
 import { knownProjectFolder, whenKnown } from './knownFolder'
 import { listFilesWorkspaces } from './filesWorkspace'
 import { PreviewServer } from './filePreviewServer'
+import { registerDiagramIpc } from './diagramIpc'
 import { registerPreviewProtocol } from './previewProtocol'
 import { fileCommitDetails, fileCommitFile, fileLog, htmlToOpen, linkedRepos, readImage, searchFiles } from './filesExtra'
 import { trashProjectPath } from './filesTrash'
@@ -239,6 +241,8 @@ export function registerIpc(
   ipcMain.handle(IPC.gitStatus, (_event, folder: unknown) => gated(folder, repoStatus))
   ipcMain.handle(IPC.gitCommit, (_event, request: CommitRequest) => gated(request?.folder, () => commitFiles(request)))
   ipcMain.handle(IPC.worktreeCreate, (_event, folder: unknown, short: unknown) => gated(folder, (root) => createSessionWorktree(root, short)))
+  ipcMain.handle(IPC.worktreeSetupInspect, (_event, folder: unknown) => gated(folder, inspectWorktreeSetup))
+  ipcMain.handle(IPC.worktreeSetupSave, (_event, folder: unknown, patterns: unknown) => gated(folder, (root) => saveWorktreeSetup(root, patterns)))
   ipcMain.handle(IPC.mergeOverview, (_event, request: MergeBackRequest) => gated(request?.repo, () => mergeOverview(request)))
   ipcMain.handle(IPC.mergeCommit, (_event, request: WorktreeCommitRequest) => gated(request?.repo, () => commitWorktree(request)))
   ipcMain.handle(IPC.mergeInto, (_event, request: MergeBackRequest) => gated(request?.repo, () => mergeBranch(request)))
@@ -374,6 +378,7 @@ export function registerIpc(
     return root ? fileCommitFile(root, hash, path, full === true) : refused
   })
   const previews = new PreviewServer(known)
+  registerDiagramIpc({ userData: app.getPath('userData'), jarPath: () => settings.get().plantumlJarPath, known, window: getWindow })
   registerPreviewProtocol(previews)
   ipcMain.handle(IPC.filesPreviewUrl, (_event, folder: unknown, path: unknown, text: unknown) => previews.register(folder, path, typeof text === 'string' ? text : null))
   ipcMain.handle(IPC.filesImage, async (_event, folder: unknown, path: unknown, base: unknown) => {
@@ -452,6 +457,12 @@ export function registerIpc(
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))
   ipcMain.on(IPC.ptyResize, (_event, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))
   ipcMain.handle(IPC.ptyKill, (_event, id: string) => ptys.kill(id))
+  ipcMain.handle(IPC.ptySetupState, (_event, id: unknown) => typeof id === 'string' ? ptys.setupState(id) : null)
+  ipcMain.handle(IPC.ptySetupAction, (_event, id: unknown, action: unknown) =>
+    typeof id === 'string' && (action === 'retry' || action === 'start')
+      ? ptys.resolveSetup(id, action)
+      : { ok: false, error: 'Choose Retry or Start the agent anyway.' }
+  )
   ipcMain.handle(IPC.usageGet, (_event, range: UsageRange) => {
     const known = USAGE_RANGES.some((entry) => entry.value === range)
     return usage.report(known ? range : '7d', settings.get().projects)

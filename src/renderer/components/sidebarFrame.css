@@ -11,7 +11,13 @@
 .frame-sidebar .sidebar .frame-head .bell-button:hover,
 .frame-sidebar .sidebar .frame-collapse:hover { background: var(--hover); color: var(--text); }
 .frame-sidebar .sidebar .frame-collapse:active { background: var(--press); }
-.frame-sidebar .sidebar .frame-collapse svg { width: 16px; height: 16px; }
+.frame-sidebar .sidebar .frame-collapse svg,
+.frame-sidebar .sidebar .frame-expand svg { width: 16px; height: 16px; }
+.frame-sidebar .sidebar .frame-expand { flex: none; width: 36px; height: 32px; padding: 0; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--text-2); cursor: pointer; }
+.frame-sidebar .sidebar .frame-expand:hover { background: var(--hover); color: var(--text); }
+.frame-sidebar .sidebar .frame-expand:active { background: var(--press); }
+.frame-sidebar .sidebar:not(.rail) .frame-expand { display: none; }
+.frame-sidebar .sidebar.rail .frame-collapse { display: none; }
 
 .frame-sidebar .sidebar .frame-new { display: flex; align-items: center; gap: var(--sp-2); width: 100%; height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: 10px; background: transparent; box-shadow: none; color: var(--text); font-size: var(--fs-13); font-weight: 500; }
 .frame-sidebar .sidebar .frame-new:hover { background: var(--hover); color: var(--text); }
@@ -30,7 +36,7 @@
 .frame-sidebar .frame-bar-spacer { flex: 1 1 auto; }
 .frame-sidebar .frame-bar > .topbar-view { display: flex; align-items: center; gap: var(--sp-1); flex: none; }
 .frame-sidebar .frame-bar > .topbar-view .topbar-sep { display: none; }
-.frame-sidebar .frame-bar:not(:has(> .topbar-view:not([hidden]))):not(:has(> .topbar-limits:not([hidden]):not(.limits-empty))) { display: none; }
+.frame-sidebar .frame-bar:not(:has(> .topbar-view:not([hidden]))):not(:has(> .topbar-limits:not([hidden]):not(.limits-empty))):not(:has(> .frame-panel-toggle:not([hidden]))) { display: none; }
 .frame-sidebar .frame-bar .topbar-limits { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden; white-space: nowrap; }
 .frame-sidebar .frame-bar .topbar-limits.limits-empty { display: none; }
 /* With the session tabs showing, the rings join the tab row instead of taking a row of their own. */
@@ -38,6 +44,14 @@
 .frame-sidebar .main:has(> .grid-area:not([hidden]) > .pane-strip:not([hidden])) > .frame-bar > * { pointer-events: auto; }
 .frame-sidebar .main:has(> .grid-area:not([hidden]) > .pane-strip:not([hidden])) > .frame-bar > .topbar-view { display: none; }
 .frame-sidebar .main:has(> .frame-bar .topbar-limits:not([hidden]):not(.limits-empty)) > .grid-area > .pane-strip { margin-inline-end: 180px; }
+.frame-sidebar .main:has(> .frame-bar > .frame-panel-toggle:not([hidden])) > .grid-area > .pane-strip { margin-inline-end: 44px; }
+.frame-sidebar .main:has(> .frame-bar > .frame-panel-toggle:not([hidden])):has(> .frame-bar .topbar-limits:not([hidden]):not(.limits-empty)) > .grid-area > .pane-strip { margin-inline-end: 216px; }
+
+.frame-sidebar .frame-bar > .frame-panel-toggle { flex: none; width: 28px; height: 28px; padding: 0; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--text-2); cursor: pointer; }
+.frame-sidebar .frame-bar > .frame-panel-toggle[hidden] { display: none; }
+.frame-sidebar .frame-bar > .frame-panel-toggle:hover { background: var(--hover); color: var(--text); }
+.frame-sidebar .frame-bar > .frame-panel-toggle[aria-pressed='true'] { background: var(--press); color: var(--text); }
+.frame-sidebar .frame-bar > .frame-panel-toggle svg { width: 16px; height: 16px; }
 
 /* The search shortcut is shown only in the sidebar frame; the top bar has no room for it. */
 #search-button .search-kbd { display: none; }
@@ -72,8 +86,8 @@
 .frame-sidebar .sidebar .sidebar-head .icon-btn[aria-label='Collapse sidebar'] { display: none; }
 
 .frame-sidebar .sidebar.rail .frame-top { align-items: center; padding: var(--sp-2) 0 0; gap: var(--sp-1); }
-.frame-sidebar .sidebar.rail #notifications-button { position: relative; }
-.frame-sidebar .sidebar.rail #notifications-button .bell-badge { position: absolute; top: 0; right: -2px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--accent); color: var(--on-accent); font-family: var(--font-ui); font-size: 10px; font-weight: 600; line-height: 14px; text-align: center; }
+.frame-sidebar .sidebar #notifications-button { position: relative; }
+.frame-sidebar .sidebar #notifications-button .bell-badge { position: absolute; top: 0; right: -3px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--accent); color: var(--on-accent); font-family: var(--font-ui); font-size: 10px; font-weight: 600; line-height: 14px; text-align: center; }
 .frame-sidebar .sidebar.rail .frame-head { flex-direction: column; padding: 0 0 var(--sp-1); gap: var(--sp-1); }
 .frame-sidebar .sidebar.rail .frame-spacer,
 .frame-sidebar .sidebar.rail .frame-head .app-title,
@@ -95,7 +109,7 @@
 .frame-sidebar .sidebar.rail .frame-bottom > .update-pill { width: 36px; padding: 0; justify-content: center; overflow: hidden; }
 .frame-sidebar .sidebar.rail .frame-foot { flex-direction: column; }
 
-:root:not([data-input='pointer']) .frame-sidebar .sidebar :is(.frame-collapse, .frame-new, .frame-nav .nav-button, #search-button, #settings-button, .app-logo-menu):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+:root:not([data-input='pointer']) .frame-sidebar .sidebar :is(.frame-collapse, .frame-expand, .frame-panel-toggle, .frame-new, .frame-nav .nav-button, #search-button, #settings-button, .app-logo-menu):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* On short windows the frame gives its rows less height so the project list keeps room and scrolls. */
 @media (max-height: 800px) {

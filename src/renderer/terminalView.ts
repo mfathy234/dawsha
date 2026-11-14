@@ -59,6 +59,7 @@ export class TerminalView {
   private requestedVisible = false
   private readonly permissionTracker = new PermissionPromptTracker(crypto.randomUUID())
   private permissionWrites = 0
+  private setupBar: HTMLElement | null = null
 
   constructor(
     readonly id: string,
@@ -199,6 +200,16 @@ export class TerminalView {
     let start = this.term.rows >= rows ? Math.max(top, end - rows + 1) : Math.max(0, end - rows + 1)
     // Start at the beginning of a wrapped line, and join wrapped rows back into the line the program printed.
     while (start > 0 && buffer.getLine(start)?.isWrapped) start -= 1
+    return this.readable(this.joinedRows(start, end))
+  }
+
+  /** The whole buffer with wrapped rows joined back into the lines the program printed, for exports. */
+  lineText(): string {
+    return this.readable(this.joinedRows(0, this.term.buffer.active.length - 1))
+  }
+
+  private joinedRows(start: number, end: number): string {
+    const buffer = this.term.buffer.active
     const lines: string[] = []
     for (let row = start; row <= end; row += 1) {
       const line = buffer.getLine(row)
@@ -208,7 +219,7 @@ export class TerminalView {
       if (line?.isWrapped && lines.length > 0) lines[lines.length - 1] += value
       else lines.push(value)
     }
-    return this.readable(lines.join('\n'))
+    return lines.join('\n')
   }
 
   selectAll(): void {
@@ -326,6 +337,19 @@ export class TerminalView {
     } catch (error) {
       console.warn('Terminal fit failed', error)
     }
+  }
+
+  /** A failed worktree setup waits for the owner here: Retry, or start the agent without it. */
+  showSetupChoice(exitCode: number | null, choose: (action: 'retry' | 'start') => void): void {
+    this.setupBar?.remove()
+    this.setupBar = null
+    this.el.classList.toggle('has-setup-choice', exitCode !== null)
+    if (exitCode === null) return
+    const retry = h('button', { class: 'btn small', type: 'button', onClick: () => choose('retry') }, 'Retry')
+    const start = h('button', { class: 'btn primary small', type: 'button', onClick: () => choose('start') }, 'Start the agent anyway')
+    this.setupBar = h('div', { class: 'term-setup-choice', role: 'group', 'aria-label': 'Worktree setup failed' },
+      h('span', { class: 'term-setup-text' }, exitCode > 0 ? `Setup failed (exit ${exitCode}).` : 'Setup failed.'), retry, start)
+    this.el.append(this.setupBar)
   }
 
   dispose(): void {

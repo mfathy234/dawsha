@@ -1,4 +1,5 @@
 import { join, resolve } from 'node:path'
+import { realpathSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { BrowserWindow, Menu, app, ipcMain, net, powerMonitor, protocol, session } from 'electron'
 import { IPC } from '../shared/ipc'
@@ -13,10 +14,12 @@ import { handleDesktopLaunch, installDesktopLaunch, refreshJumpList } from './de
 import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
 import { registerToolsIpc } from './toolsIpc'
+import { registerPrWatchIpc } from './prWatchIpc'
 import { registerTurnIpc } from './turnIpc'
 import { registerMcpIpc } from './mcpIpc'
 import { installMiniWindow } from './miniWindow'
 import { PtyManager } from './ptyManager'
+import { configurePendingWorktrees } from './worktreeSetupPending'
 import { Recorder } from './recorder'
 import { RecordingService } from './recordings'
 import { SessionsWatcher } from './sessionsWatcher'
@@ -230,12 +233,24 @@ app.whenReady().then(async () => {
     enabled: () => store.get().recordings.enabled
   })
   const recordings = new RecordingService(join(userData, 'recordings'), recorder, () => store.get().recordings)
+  configurePendingWorktrees(store.get().pendingWorktreeSetups, (entries) => {
+    store.update({ pendingWorktreeSetups: entries })
+  })
   const ptys = new PtyManager({
     onData: (id, data) => send(IPC.ptyData, id, data),
-    onExit: (id, code) => send(IPC.ptyExit, id, code)
+    onExit: (id, code) => send(IPC.ptyExit, id, code),
+    onSetup: (id, state, pid) => send(IPC.ptySetupChanged, id, state, pid)
   }, remoteTerminals, {
     recorder,
     projectName: (projectId) => store.get().projects.find((project) => project.id === projectId)?.name ?? ''
+  }, (repo, projectId) => {
+    const canonical = (folder: string): string => {
+      try { return realpathSync.native(folder).toLowerCase() } catch { return resolve(folder).toLowerCase() }
+    }
+    const source = canonical(repo)
+    const projects = store.get().projects
+    const project = projects.find((item) => item.id === projectId && canonical(item.folder) === source) ?? projects.find((item) => canonical(item.folder) === source)
+    return project?.worktreeSetup?.command ?? ''
   })
   const watcher = new SessionsWatcher((sessions) => { send(IPC.sessionsUpdate, sessions); refreshAgentFiles() })
   const codexWatcher = new CodexWatcher((sessions) => { send(IPC.codexUpdate, sessions); refreshAgentFiles() })
@@ -267,6 +282,7 @@ app.whenReady().then(async () => {
   registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings)
   const stopRunCommands = registerRunIpc(() => mainWindow, store)
   const closeBrowserPane = registerToolsIpc(() => mainWindow, store)
+  const stopPrWatch = registerPrWatchIpc(() => mainWindow, store)
   const stopTurnChecks = registerTurnIpc(() => mainWindow, store)
   registerMcpIpc(() => mainWindow, store)
   recordings.startSchedule()
@@ -300,7 +316,7 @@ app.whenReady().then(async () => {
     stopServices: () => stopAllServices([
       ['Mini window', stopMiniWindow], ['CLI bridge', () => stopCliServer(cliServer)],
       ['limit notifications', stopLimitNotifications],
-      ['code navigation', stopCodeNavigation], ['browser pane', closeBrowserPane],
+      ['code navigation', stopCodeNavigation], ['browser pane', closeBrowserPane], ['pull request watch', stopPrWatch],
       ['sessions watcher', () => watcher.stop()], ['agent files', closeAgentFiles],
       ['Codex watcher', () => codexWatcher.stop()], ['Gemini watcher', () => geminiWatcher.stop()],
       ['status watcher', () => statusWatcher.stop()], ['ops watcher', () => opsWatcher.stop()],

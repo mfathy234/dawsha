@@ -40,7 +40,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="التنقل الرئيسي">
-      <a href="#new">الجديد في 1.8.9</a>
+      <a href="#new">الجديد في 1.9.0</a>
       <a href="#showcase">صور التطبيق</a>
       <a href="#remote">عن بُعد</a>
       <a href="#features">المميزات</a>
@@ -95,8 +95,38 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">الجديد في 1.8.9</h2>
-      <p class="section-lead">يُبقي 1.8.9 دوشة يراقب وكلاءك من شريط النظام، وينبّهك قبل بلوغ حد الاستخدام، ويضيف تثبيت الجلسات وملخص اليوم. وتحته 1.8.8 والإصدارات الأقدم.</p>
+      <h2 id="new-h">الجديد في 1.9.0</h2>
+      <p class="section-lead">يجهّز 1.9.0 مساحات العمل نيابة عنك، ويتيح لك مراجعة عمل الوكيل سطرًا بسطر، ويتابع طلبات الدمج، ويعرض المخططات في الملفات. وتحته 1.8.9 والإصدارات الأقدم.</p>
+      <div class="feat-row" id="review-loop">
+        <div class="feat-copy">
+          <h3>راجع العمل سطرًا بسطر</h3>
+          <p>علّق على أي سطر من تغييرات الجلسة وأرسل كل تعليقاتك إلى الوكيل في رسالة واحدة.</p>
+          <ul><li>يمكن لوكيل ثانٍ مراجعة الجلسة دون أن يعدّل شيئًا، وتظهر ملاحظاته على أسطرها.</li><li>تتبع التعليقات أسطرها عندما يتحرك الكود.</li><li>قائمة واحدة تُظهر ما غيّرته كل جلسة.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="../assets/review-comments.png" width="1168" height="668" alt="A session's diff in Review with two comments on its lines and a button to send them to Claude">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="worktree-setup">
+        <div class="feat-copy">
+          <h3>مساحات عمل جاهزة للتشغيل</h3>
+          <p>تحصل الجلسة في مساحة عملها الخاصة على الملفات المحلية التي تحتاجها، وتشغّل أمر الإعداد قبل أن يبدأ الوكيل.</p>
+          <ul><li>يعمل مع أي بيئة: npm وdotnet وuv وbundler وcargo وgo وغيرها.</li><li>يقترح دوشة الملفات المتجاهَلة في git التي تُنسخ، ولا يقترح ملفات المفاتيح أبدًا.</li><li>إذا فشل الإعداد، أعد المحاولة أو ابدأ الوكيل على أي حال.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="../assets/worktree-setup.png" width="1168" height="668" alt="A new session's terminal running npm ci in its worktree before the agent starts">
+        </figure>
+      </div>
+      <div class="feat-wide" id="pr-watch">
+        <div class="feat-copy">
+          <h3>طلبات دمج تعتني بنفسها</h3>
+          <p>يُظهر طلب الدمج الخاص بالجلسة حالة فحوصه حيث تظهر حالة الجلسة، ويرسل زر إصلاح الفحوص السجل الفاشل إلى الوكيل.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="../assets/pr-watch.png" width="1168" height="668" alt="A session showing its pull request with failed checks and a menu with Fix CI and Merge when green">
+        </figure>
+        <ul class="feat-cols"><li>ادمج عند نجاح الفحوص، بأمر الدمج الخاص بك.</li><li>ترتيب بعد الدمج: تُغلق الجلسة وتُحذف مساحة عملها.</li><li>تظهر مخططات PlantUML وMermaid في الملفات، وتُرسم على جهازك.</li></ul>
+      </div>
       <div class="feat-row" id="tray-mini">
         <div class="feat-copy">
           <h3>يواصل المراقبة من شريط النظام</h3>

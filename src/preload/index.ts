@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { createRunPreload } from './runCommands'
 import { createFilesToolsPreload } from './filesTools'
+import { createPrWatchPreload } from './prWatch'
 import { createTurnPreload } from './turn'
 import { createMcpPreload } from './mcp'
 import { createChatPreload } from './chat'
@@ -40,6 +41,7 @@ const api: GridApi = {
   },
   runs: createRunPreload(),
   tools: createFilesToolsPreload(),
+  prWatch: createPrWatchPreload(),
   turn: createTurnPreload(),
   mcp: createMcpPreload(),
   chat: createChatPreload(),
@@ -145,6 +147,11 @@ const api: GridApi = {
   fileCommitFile: (folder, hash, path, full) => ipcRenderer.invoke(IPC.filesCommitFile, folder, hash, path, full),
   filePreviewUrl: (folder, path, text) => ipcRenderer.invoke(IPC.filesPreviewUrl, folder, path, text),
   fileImage: (folder, path, base) => ipcRenderer.invoke(IPC.filesImage, folder, path, base),
+  diagramStatus: () => ipcRenderer.invoke(IPC.diagramStatus),
+  diagramDownload: () => ipcRenderer.invoke(IPC.diagramDownload),
+  diagramRender: (folder, path, text, sourceLine) => ipcRenderer.invoke(IPC.diagramRender, folder, path, text, sourceLine),
+  diagramCopy: (svg) => ipcRenderer.invoke(IPC.diagramCopy, svg),
+  diagramSave: (name, svg, pngDataUrl) => ipcRenderer.invoke(IPC.diagramSave, name, svg, pngDataUrl),
   openFileInBrowser: (folder, path) => ipcRenderer.invoke(IPC.filesOpenBrowser, folder, path),
   linkedRepos: (projectId, folders) => ipcRenderer.invoke(IPC.filesLinked, projectId, folders),
   readInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsRead, folder, name),
@@ -166,6 +173,9 @@ const api: GridApi = {
   kill: (id) => ipcRenderer.invoke(IPC.ptyKill, id),
   onData: (listener) => subscribe<[string, string]>(IPC.ptyData, listener),
   onExit: (listener) => subscribe<[string, number]>(IPC.ptyExit, listener),
+  getTerminalSetup: (id) => ipcRenderer.invoke(IPC.ptySetupState, id),
+  resolveTerminalSetup: (id, action) => ipcRenderer.invoke(IPC.ptySetupAction, id, action),
+  onTerminalSetup: (listener) => subscribe<[string, import('../shared/terminalSetup').TerminalSetupState | null, number?]>(IPC.ptySetupChanged, listener),
   onRemoteSessionStarted: (listener) => subscribe<[RemoteSessionStarted]>(IPC.remoteSessionStarted, listener),
   listProcessActivity: (ids?: string[]) => ipcRenderer.invoke(IPC.processActivityList, ids),
   listSkills: () => ipcRenderer.invoke(IPC.skillsList),
@@ -211,6 +221,8 @@ const api: GridApi = {
   compareCreate: (folder, short) => ipcRenderer.invoke(IPC.compareCreate, folder, short),
   compareStatus: (repo, path, branch) => ipcRenderer.invoke(IPC.compareStatus, repo, path, branch),
   worktreeCreate: (folder, short) => ipcRenderer.invoke(IPC.worktreeCreate, folder, short),
+  worktreeSetupInspect: (folder) => ipcRenderer.invoke(IPC.worktreeSetupInspect, folder),
+  worktreeSetupSave: (folder, patterns) => ipcRenderer.invoke(IPC.worktreeSetupSave, folder, patterns),
   compareRemove: (request) => ipcRenderer.invoke(IPC.compareRemove, request),
   runWorktreeCreate: (folder, short) => ipcRenderer.invoke(IPC.runWorktreeCreate, folder, short),
   mergeOverview: (request) => ipcRenderer.invoke(IPC.mergeOverview, request),

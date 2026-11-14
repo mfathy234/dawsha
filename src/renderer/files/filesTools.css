@@ -57,7 +57,7 @@ button.files-config-value { border: 0; background: transparent; padding: 2px 0; 
 .files-pr-row-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Browser */
-.files-browser-bar { display: flex; align-items: center; gap: var(--s-1); padding: var(--s-1) var(--s-2); flex: none; }
+.files-browser-bar { display: flex; align-items: center; gap: var(--s-1); padding: var(--s-1) var(--s-2); flex: none; flex-wrap: wrap; }
 .files-browser-address { flex: 1; min-width: 80px; }
 .files-browser-bar .icon-btn:disabled { opacity: .4; }
 .files-browser-bar .icon-btn.busy .icon { animation: files-browser-spin 1s linear infinite; }
@@ -67,3 +67,15 @@ button.files-config-value { border: 0; background: transparent; padding: 2px 0; 
 .files-browser-stage { position: relative; flex: 1; min-height: 0; background: var(--well); }
 .files-browser-hint { margin: 0; padding: var(--s-4); color: var(--muted); font-size: var(--fs-ui); max-width: 56ch; line-height: 1.5; }
 .files-browser-stage:not(.empty) .files-browser-hint { display: none; }
+
+/* Picked element composer: the native guest stays below this owner-controlled row. */
+.files-browser-pick-composer { display: flex; gap: var(--s-3); padding: var(--s-2) var(--s-3); flex: none; max-height: 210px; overflow: auto; }
+.files-browser-pick-composer[hidden] { display: none; }
+.files-browser-pick-preview { width: 72px; height: 64px; object-fit: contain; background: var(--well); flex: none; }
+.files-browser-pick-body { display: flex; flex-direction: column; gap: var(--s-2); flex: 1; min-width: 0; }
+.files-browser-picked { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--fs-status) var(--font-mono); color: var(--muted); }
+.files-browser-pick-message { margin: 0; max-height: 84px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--fs-status) var(--font-mono); color: var(--muted); background: var(--well); padding: var(--s-1) var(--s-2); }
+.files-browser-pick-actions { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.files-browser-pick-actions select { flex: 1; min-width: 100px; max-width: 300px; }
+.files-browser-pick-actions button { flex: none; }
+#files-browser-pick[aria-pressed="true"] { background: var(--hover); }

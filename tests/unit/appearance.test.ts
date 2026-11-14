@@ -26,15 +26,17 @@ describe('appearance settings', () => {
 
 describe('mini window settings', () => {
   it('defaults to closed on minimize, unfolded, no saved spot', () => {
-    expect(sanitizeSettings({}).miniWindow).toEqual({ showOnMinimize: false, folded: false, bounds: null })
+    expect(sanitizeSettings({}).miniWindow).toEqual({ showOnMinimize: false, folded: false, bounds: null, hidden: [] })
   })
 
   it('keeps whole-number bounds and drops broken ones', () => {
     expect(sanitizeMiniWindow({ showOnMinimize: true, bounds: { x: 10.4, y: 20, width: 360, height: 480 } })).toEqual({
       showOnMinimize: true,
       folded: false,
-      bounds: { x: 10, y: 20, width: 360, height: 480 }
+      bounds: { x: 10, y: 20, width: 360, height: 480 },
+      hidden: []
     })
+    expect(sanitizeMiniWindow({ hidden: ['a|b', 4, '', 'c'] }).hidden).toEqual(['a|b', 'c'])
     expect(sanitizeMiniWindow({ bounds: { x: 1, y: 2, width: 0, height: 480 } }).bounds).toBeNull()
     expect(sanitizeMiniWindow({ bounds: { x: 'a', y: 2, width: 3, height: 4 } }).bounds).toBeNull()
   })

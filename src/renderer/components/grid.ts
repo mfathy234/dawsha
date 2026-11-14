@@ -10,6 +10,7 @@ import { sessionState } from '../../shared/sessionState'
 import { layoutForCount, type GridLayout } from '../../shared/layout'
 import { focusLayout, largeUnitIndex, promotedRows, quietPaneIds, SIDE_PANE_MIN_HEIGHT, sideColumnOverflows, tileLayout } from '../../shared/gridStyle'
 import { equalSizes, resolveSplit, shapeKey, withSplit } from '../../shared/splits'
+import { panelDockedOn } from '../../shared/sidePanel'
 import type { CompareLink, GridSplit, GridSplits } from '../../shared/types'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
@@ -100,7 +101,10 @@ export class GridComponent {
       this.panes.get(view.pane.id)?.update(view, view.pane.id === state.focusedId, isMax, quiet.has(view.pane.id))
     }
     this.tabs.update(views, state, maximized, shownId)
-    this.sidePanel.update(state, views.find((view) => view.pane.id === shownId) ?? null, panel && maximized)
+    const docked = panelDockedOn({ view: state.view, sessionsLayout: state.settings.sessionsLayout, frame: state.settings.appearance.frame, docked: state.settings.sidePanel.docked })
+    const dockedId = docked ? [state.maximizedId, state.focusedId].find((id) => id !== null && views.some((view) => view.pane.id === id)) ?? views[0]?.pane.id ?? null : null
+    const panelId = docked ? dockedId : shownId
+    this.sidePanel.update(state, views.find((view) => view.pane.id === panelId) ?? null, (panel && maximized) || (docked && dockedId !== null))
     const visible = new Set(views.filter((view) => this.panes.get(view.pane.id)?.el.hidden === false).map((view) => view.pane.id))
     this.others.update(state, views, visible, maximized && !panel)
     this.updateEmpty(state, views.length)

@@ -7425,3 +7425,11 @@ button.tl-event:hover { background: var(--raised); }
 :root .new-session-menu .menu-item { gap: 10px; }
 :root .new-session-menu .menu-item > :is(.icon, .agent-mark, svg) { flex: none; width: 16px; height: 16px; }
 :root .new-session-menu .kbd { margin-inline-start: auto; padding: 0; border: 0; background: none; color: var(--text-3); font-family: inherit; font-size: var(--fs-12); }
+
+/* Pull request status in a pane's footer (1.9.0): plain text, shrinks before the branch chip. */
+.pane-foot .pane-pr { flex: 0 1 auto; min-width: 0; max-width: 42%; margin-left: auto; padding: 2px var(--s-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-12); color: var(--text-2); }
+.pane-foot .pane-pr[hidden] { display: none; }
+.pane-foot .pane-pr + .chip-branch { margin-left: 0; }
+.pane-foot .pane-pr[data-phase='failed'] { color: var(--danger); }
+.pane-foot .pane-pr[data-phase='ready'], .pane-foot .pane-pr[data-phase='merged'] { color: var(--done); }
+@container pane-foot (max-width: 380px) { .pane-foot .pane-pr { max-width: 60%; } }

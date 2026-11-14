@@ -6,6 +6,7 @@ import { cleanText } from './remoteChat'
 import { doneLine, filesLabel, MINI_SEND_MAX, nowLine, usageLine, type MiniChanges, type MiniLogRead } from './miniDetail'
 import { MINI_START_MAX, isAgentKind, type MiniStartOptions } from './miniStart'
 import { outputLines } from './recap'
+import { miniWaiting, type MiniWaiting } from './miniWaiting'
 import { needsAsk } from './sessionLine'
 import { sessionState, SESSION_STATE_LABELS, type SessionStateInput, type SessionState } from './sessionState'
 import type { AgentKind, TabAgent } from './types'
@@ -38,6 +39,8 @@ export interface MiniSessionInput extends SessionStateInput {
   costUsd?: number | null
   /** Set for a short while after a run of work finished: how long it took. */
   moment?: { took: string } | null
+  /** The session's pull request, as "PR #34: checks running". */
+  pr?: string
 }
 
 export interface MiniSession {
@@ -58,6 +61,8 @@ export interface MiniSession {
   fresh: boolean
   tail: string[]
   permission: { command: string; prompt: string } | null
+  /** What a needs-you session waits on when it is not an approval: a picker, a menu or a question. */
+  waiting: MiniWaiting | null
   plan: { done: number; total: number; current: string; items: readonly TodoEntry[] } | null
 }
 
@@ -67,6 +72,8 @@ export interface MiniSnapshot {
   sound: boolean
   /** What the start form offers. */
   start: MiniStartOptions
+  /** Sessions the owner hid from the list. */
+  hiddenCount: number
   /** Computed theme tokens from the main renderer, including the selected tone. */
   theme: Record<string, string>
   kind: string
@@ -77,8 +84,9 @@ export type MiniAction =
   | { kind: 'answer'; paneId: string; allow: boolean; prompt: string }
   | { kind: 'review'; paneId: string }
   | { kind: 'send'; paneId: string; text: string }
+  | { kind: 'hide'; paneId: string }
   | { kind: 'start'; projectId: string; agent: AgentKind; text: string }
-  | { kind: 'fold' | 'sound' | 'close' | 'new' }
+  | { kind: 'fold' | 'sound' | 'close' | 'new' | 'unhide' }
 
 export interface MiniApi {
   get(): Promise<MiniSnapshot | null>
@@ -101,13 +109,13 @@ export interface MiniPlanRequest { paneId: string; agent: 'claude' | 'codex'; se
 export function isMiniAction(value: unknown): value is MiniAction {
   if (!value || typeof value !== 'object') return false
   const a = value as Record<string, unknown>
-  if (['fold', 'sound', 'close', 'new'].includes(String(a.kind))) return Object.keys(a).length === 1
+  if (['fold', 'sound', 'close', 'new', 'unhide'].includes(String(a.kind))) return Object.keys(a).length === 1
   if (a.kind === 'start') {
     return typeof a.projectId === 'string' && a.projectId.length > 0 && a.projectId.length <= 128 && isAgentKind(a.agent) &&
       typeof a.text === 'string' && a.text.length <= MINI_START_MAX && Object.keys(a).length === 4
   }
   if (typeof a.paneId !== 'string' || a.paneId.length < 1 || a.paneId.length > 128) return false
-  if (a.kind === 'open' || a.kind === 'review') return Object.keys(a).length === 2
+  if (a.kind === 'open' || a.kind === 'review' || a.kind === 'hide') return Object.keys(a).length === 2
   if (a.kind === 'send') return typeof a.text === 'string' && a.text.trim().length > 0 && a.text.length <= MINI_SEND_MAX && Object.keys(a).length === 3
   return a.kind === 'answer' && typeof a.allow === 'boolean' && typeof a.prompt === 'string' && a.prompt.length <= 12000 && Object.keys(a).length === 4
 }
@@ -120,9 +128,10 @@ export function miniStateOf(input: SessionStateInput & { tail: string }): { stat
 }
 
 export function miniSession(input: MiniSessionInput): MiniSession {
-  const { state, waiting } = miniStateOf(input)
+  const { state, waiting: asking } = miniStateOf(input)
   const detail = parsePermissionDetail(input.tail)
-  const ask = needsAsk(detail, permissionPromptText(input.tail))
+  const waiting = state === 'needs' && !asking ? miniWaiting(input.tail, input.reply ?? []) : null
+  const ask = needsAsk(detail, permissionPromptText(input.tail)) || (waiting?.question ?? '')
   const items = input.todos.slice(0, 60).map(todo => ({ ...todo, text: cleanText(todo.text, 240) }))
   const progress = items.length ? {
     done: items.filter(todo => todo.status === 'completed').length,
@@ -130,10 +139,12 @@ export function miniSession(input: MiniSessionInput): MiniSession {
     current: items.find(todo => todo.status === 'in_progress')?.text ?? items.find(todo => todo.status !== 'completed')?.text ?? ''
   } : input.plan
   const changed = input.changed ?? 0
-  const line = state === 'needs' ? ask || 'Needs you'
+  const pr = input.pr ?? ''
+  const base = state === 'needs' ? ask || 'Needs you'
     : state === 'done' ? input.moment ? doneLine(input.moment.took, changed) : `Done${changed > 0 ? `, ${filesLabel(changed)} changed` : ''}`
       : state === 'idle' ? `Idle${input.idleFor ? ` ${input.idleFor}` : ''}`
         : state === 'exited' ? 'Exited' : input.recap || input.tool || progress?.current || SESSION_STATE_LABELS[state]
+  const line = pr !== '' && state === 'done' ? `${base}, ${pr}` : pr !== '' && state === 'idle' ? pr : base
   return {
     paneId: input.paneId, agent: input.agent, identity: input.identity ?? null,
     title: cleanText(input.title, 240), project: cleanText(input.project, 160), state, line: cleanText(line, 320),
@@ -142,7 +153,8 @@ export function miniSession(input: MiniSessionInput): MiniSession {
     changes: input.changes && input.changes.files > 0 ? input.changes : null,
     usage: usageLine(input.context ?? null, input.costUsd ?? null), fresh: !!input.moment && changed > 0,
     tail: outputLines(input.tail, 3).map(line => cleanText(line, 600)),
-    permission: waiting ? { command: cleanText(detail.target, 2000), prompt: input.tail.slice(-12000) } : null,
+    permission: asking ? { command: cleanText(detail.target, 2000), prompt: input.tail.slice(-12000) } : null,
+    waiting,
     plan: progress && progress.total > 0 ? { ...progress, items } : null
   }
 }

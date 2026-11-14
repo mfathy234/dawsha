@@ -52,7 +52,7 @@ import { openGlobalSearch } from '../components/globalSearch'
 import { filesTarget, openFolderInFiles, requestFilesCommand, type FilesCommand } from '../files/filesActions'
 import { openTimelineWith, toggleTimeline } from '../timelineActions'
 import { paneById, store, type AppState } from '../state'
-import { setGridStyle, setSessionsLayout } from '../sessionsLayout'
+import { setGridStyle, setSessionsLayout, toggleDockedPanel } from '../sessionsLayout'
 import { SIDEBAR_FILTER_EVENT } from '../../shared/sidebarModel'
 import { registerCommands, registerProvider, type Command } from './registry'
 import { editSpendLimit, pauseAllAgents } from '../spendActions'
@@ -95,6 +95,8 @@ function panelCommand(id: string, title: string, command: FilesCommand, keywords
 // Code navigation keys work only while Files is showing, so Ctrl+Shift+O keeps filtering the sidebar in the grid.
 function filesNavigationCommands(): Command[] {
   return [
+    filesCommand('files.copyDiagram', 'Copy diagram as SVG', 'copy-diagram', {}, 'diagram plantuml mermaid export clipboard svg'),
+    filesCommand('files.saveDiagram', 'Save diagram as…', 'save-diagram', {}, 'diagram plantuml mermaid export image png svg'),
     filesCommand('files.definition', 'Go to Definition', 'definition', functionKey('F12'), 'jump declaration f12'),
     filesCommand('files.implementation', 'Go to Implementation', 'implementation', withKeys('Ctrl+F12'), 'jump implements f12'),
     filesCommand('files.references', 'Find All References', 'references', functionKey('F12', true), 'usages peek f12'),
@@ -419,6 +421,15 @@ export function installBuiltinCommands(): void {
       ...withKeys('Ctrl+Shift+B'),
       enabled: (state) => state.settings.sessionsLayout !== 'grid',
       run: () => setSessionsLayout('grid')
+    },
+    {
+      id: 'view.session-panel',
+      title: 'Show or hide the session panel',
+      group: 'Actions',
+      keywords: 'context outputs files session panel side right dock',
+      ...withKeys('Ctrl+Alt+B'),
+      enabled: (state) => state.view === 'grid' && state.settings.appearance.frame === 'sidebar' && state.settings.sessionsLayout === 'grid',
+      run: () => toggleDockedPanel()
     },
     {
       id: 'view.panel',

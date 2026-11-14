@@ -13,7 +13,7 @@ async function openPanes(page: Page, count: number): Promise<void> {
     await page.keyboard.press('Control+n')
     const picker = page.locator('.quickpick:not(.leaving)')
     await expect(picker.locator('[role="option"][aria-selected="true"]')).toHaveCount(1)
-    await expect(picker.locator('input')).toBeFocused()
+    await expect(picker.getByRole('combobox')).toBeFocused()
     await expect(picker.locator('.nd-start')).toBeEnabled()
     await page.keyboard.press('Enter')
     await expect(page.locator('.pane')).toHaveCount(existing + index + 1, { timeout: 20_000 })
@@ -33,7 +33,11 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
     await expect(page.locator('.pane-strip .strip-tab')).toHaveCount(2)
     const panel = page.locator('.side-panel')
     await expect(panel).toBeVisible()
-    await expect(panel.getByRole('tab')).toHaveText([/^Changes/, /^Plan/, /^Checks/])
+    await expect(panel.getByRole('tab')).toHaveText([/^Session/, /^Changes/, /^Plan/, /^Checks/])
+    await expect(panel.getByRole('tab', { name: /^Session/ })).toHaveAttribute('aria-selected', 'true')
+    await expect(panel.getByText('Send a message to see context usage.')).toBeVisible()
+    await expect(panel.getByText('Files this session writes show up here.')).toBeVisible()
+    await panel.getByRole('tab', { name: /^Changes/ }).click()
     await expect(panel.getByText('No changes yet.')).toBeVisible()
     await panel.getByRole('tab', { name: /^Plan/ }).click()
     await expect(panel.getByText('No plan yet.')).toBeVisible()
@@ -41,7 +45,8 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
     await expect(panel.getByText('No checks ran after the last reply.')).toBeVisible()
 
     const handle = page.getByRole('separator', { name: 'Resize session panel' })
-    // Shrink first: on a 1024px window the default width is already the most the session leaves room for.
+    // The session keeps 480px, so a 1024px window leaves the panel no room to resize: use a wider one here and after the restart.
+    await page.setViewportSize({ width: 1280, height: 800 })
     await handle.focus()
     await page.keyboard.press('Home')
     await expect.poll(async () => (await panel.boundingBox())!.width).toBeLessThanOrEqual(281)
@@ -59,7 +64,7 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
     await expect(panel.getByRole('tab')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).sidePanel?.open).toBe(false)
     await panel.getByRole('button', { name: 'Show the session panel' }).click()
-    await expect(panel.getByRole('tab')).toHaveCount(3)
+    await expect(panel.getByRole('tab')).toHaveCount(4)
   } finally {
     expect(await closeApp(first.app)).toBeLessThan(QUIT_BUDGET_MS)
   }
@@ -67,6 +72,7 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
   const second = await launchApp(sandbox)
   try {
     const { page } = second
+    await page.setViewportSize({ width: 1280, height: 800 })
     await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
     await expect(page.locator('#layout-panel')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.pane:visible')).toHaveCount(1)
@@ -178,6 +184,7 @@ test('the Changes tab lists the files the last reply changed and the Plan tab sh
 
     await page.locator('#layout-panel').click()
     const panel = page.locator('.side-panel')
+    await panel.getByRole('tab', { name: /^Changes/ }).click()
     await expect(panel.locator('.chat-turn-summary')).toBeVisible({ timeout: 20_000 })
     await expect(panel.locator('.chat-turn-file')).toHaveCount(2)
     await expect(panel.locator('.chat-turn-file', { hasText: 'a.ts' })).toBeVisible()

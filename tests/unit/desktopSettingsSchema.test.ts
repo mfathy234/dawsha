@@ -12,6 +12,8 @@ describe('desktop and warning settings', () => {
     expect(migrateSettings({}).desktop).toEqual({ closeBehavior: 'quit', startHidden: false })
     expect(migrateSettings({}).warnUsageLimits).toBe(true)
     expect(migrateSettings({ warnUsageLimits: false }).warnUsageLimits).toBe(false)
+    expect(migrateSettings({}).watchPullRequests).toBe(true)
+    expect(migrateSettings({ watchPullRequests: false }).watchPullRequests).toBe(false)
   })
 
   it('writes tray, hidden-start, one-time notice and threshold dedupe immediately to disk', () => {

@@ -2,6 +2,9 @@ import { existsSync } from 'node:fs'
 import { isShortId } from '../shared/compare'
 import { presetWorktreeNames, type SessionWorktreeResult } from '../shared/mergeBack'
 import { git, repoRoot } from './gitCommit'
+import { removeWorktree } from './compare'
+import { copyWorktreeEnvironment } from './worktreeEnvironment'
+import { registerPendingWorktree } from './worktreeSetupPending'
 
 const SLOW_MS = 60_000
 
@@ -15,5 +18,12 @@ export async function createSessionWorktree(folder: unknown, short: unknown): Pr
   const names = presetWorktreeNames(root, short)
   if (existsSync(names.path)) return { ok: false, error: `The folder ${names.path} already exists. Try again.` }
   const added = await git(root, ['worktree', 'add', '-b', names.branch, names.path, 'HEAD'], SLOW_MS)
-  return added.ok ? { ok: true, ...names } : { ok: false, error: added.message || `git could not create ${names.path}.` }
+  if (!added.ok) return { ok: false, error: added.message || `git could not create ${names.path}.` }
+  const copied = await copyWorktreeEnvironment(root, names.path)
+  if (!copied.ok) {
+    const removed = await removeWorktree({ repo: root, path: names.path, branch: names.branch, force: true })
+    return { ok: false, error: copied.error + (removed.ok ? '' : ` The new worktree could not be removed: ${removed.error}`) }
+  }
+  registerPendingWorktree(names.path, root)
+  return { ok: true, ...names }
 }

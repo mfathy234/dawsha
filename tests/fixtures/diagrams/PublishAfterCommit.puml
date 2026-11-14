@@ -1,0 +1,53 @@
+@startuml PublishAfterCommit
+title Publishing after the save commits
+autonumber
+hide unlinked
+skinparam sequenceMessageAlign direction
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+skinparam sequence {
+    LifeLineBackgroundColor #A9DCDF
+    LifeLineBorderColor #368E92
+    ArrowColor #Black
+}
+
+actor "User" as User
+participant "HR API / Apps Portal" as Svc
+database "Tenant DB" as DB
+participant "Event bus" as Bus
+participant "Workflow" as WF
+participant "Redis" as Redis
+
+User -> Svc++ : Change employees, departments or users
+Svc -> DB : Save (one transaction)
+alt Save rolled back
+    DB --> Svc : Failed
+    Svc --> User : Error
+    note right of Svc : Nothing is published.
+else Save committed
+    DB --> Svc : Committed
+    Svc -> Bus : Publish a coarse event\n(tenant + kind of data, no values)
+    note right of Svc
+      The publish waits at most 2 seconds.
+      A broker failure is logged and never fails the save.
+      One event per commit.
+    end note
+    Svc --> User : Done
+end
+deactivate Svc
+
+Bus -> WF : Deliver event
+WF -> Redis : Drop the tenant's cached lookup
+note right of WF
+  The next request reads fresh data from the owner.
+  The cache also expires on its own,
+  so a lost event is not permanent.
+end note
+
+note over Svc, Bus
+  There is no outbox for integration events.
+  A crash between the commit and the publish loses the event.
+  The consumer's cache expiry is the safety net.
+end note
+@enduml

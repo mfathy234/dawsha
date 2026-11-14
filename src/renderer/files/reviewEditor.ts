@@ -4,10 +4,10 @@ import { Decoration, EditorView, GutterMarker, WidgetType, gutter, type Decorati
 import { formatClock } from '../../shared/timeline'
 import type { LineBlame } from '../../shared/fileActivity'
 import { agentMark } from '../components/agentMark'
-import type { ReviewComment } from '../../shared/review'
+import type { ReviewDraft } from '../../shared/reviewDrafts'
 import { addedLinesOf } from './editor'
 
-export interface DraftComment extends ReviewComment {
+export interface DraftComment extends ReviewDraft {
   /** The comment is open in a text box: new, or being edited. */
   editing?: boolean
 }
@@ -15,7 +15,11 @@ export interface DraftComment extends ReviewComment {
 export interface ReviewAnnotations {
   comments: readonly DraftComment[]
   blame: ReadonlyMap<number, LineBlame>
-  onAdd(line: number): void
+  /** Who the reviewer's findings go back to, for the button label. */
+  authorName: string
+  onAdd(line: number, endLine?: number): void
+  onSendFinding(id: string): void
+  onDismiss(id: string): void
   onEdit(id: string): void
   onSave(id: string, text: string): void
   onCancel(id: string): void
@@ -87,7 +91,7 @@ class CommentWidget extends WidgetType {
   }
 
   override eq(other: CommentWidget): boolean {
-    return other.comment.id === this.comment.id && other.comment.text === this.comment.text && other.comment.editing === this.comment.editing && other.comment.line === this.comment.line
+    return other.comment.id === this.comment.id && other.comment.text === this.comment.text && other.comment.editing === this.comment.editing && other.comment.line === this.comment.line && other.comment.endLine === this.comment.endLine && other.comment.status === this.comment.status && other.hooks.authorName === this.hooks.authorName
   }
 
   override ignoreEvent(): boolean {
@@ -112,8 +116,8 @@ class CommentWidget extends WidgetType {
       field.className = 'cm-review-input'
       field.rows = 2
       field.value = comment.text
-      field.placeholder = `Comment on line ${comment.line}`
-      field.setAttribute('aria-label', `Comment on line ${comment.line}`)
+      field.placeholder = `Comment on ${lineLabel(comment)}`
+      field.setAttribute('aria-label', `Comment on ${lineLabel(comment)}`)
       const save = (): void => hooks.onSave(comment.id, field.value)
       field.addEventListener('keydown', (event) => {
         event.stopPropagation()
@@ -135,19 +139,45 @@ class CommentWidget extends WidgetType {
     const text = document.createElement('div')
     text.className = 'cm-review-text'
     text.textContent = comment.text
+    text.dir = 'auto'
     const actions = document.createElement('div')
     actions.className = 'cm-review-actions'
-    actions.append(button('Edit', () => hooks.onEdit(comment.id)), button('Delete', () => hooks.onDelete(comment.id)))
-    box.append(text, actions)
+    if (comment.reviewer) {
+      const head = document.createElement('div')
+      head.className = `cm-review-head sev-${comment.reviewer.severity}`
+      head.textContent = `Review by ${comment.reviewer.agent}, ${comment.reviewer.severity}`
+      box.append(head)
+    }
+    box.classList.toggle('sent', comment.status === 'sent')
+    if (comment.status === 'sent') {
+      const sent = document.createElement('div')
+      sent.className = 'cm-review-sent'
+      sent.textContent = 'Sent'
+      box.append(text, sent)
+      return box
+    }
+    box.append(text)
+    if (comment.reviewer?.fix) {
+      const fix = document.createElement('div')
+      fix.className = 'cm-review-fix'
+      fix.dir = 'auto'
+      fix.textContent = `Suggested fix: ${comment.reviewer.fix}`
+      box.append(fix)
+    }
+    if (comment.author === 'reviewer') actions.append(button(`Send to ${hooks.authorName}`, () => hooks.onSendFinding(comment.id)), button('Dismiss', () => hooks.onDismiss(comment.id)))
+    else actions.append(button('Edit', () => hooks.onEdit(comment.id)), button('Delete', () => hooks.onDelete(comment.id)))
+    box.append(actions)
     return box
   }
 }
+
+const lineLabel = (comment: DraftComment): string => (comment.endLine ? `lines ${comment.line} to ${comment.endLine}` : `line ${comment.line}`)
 
 function widgets(state: EditorState, hooks: ReviewAnnotations): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>()
   const ordered = [...hooks.comments].filter((comment) => comment.line >= 1).sort((a, b) => a.line - b.line)
   for (const comment of ordered) {
-    const line = state.doc.line(Math.min(comment.line, state.doc.lines))
+    const line = state.doc.line(Math.min(comment.endLine ?? comment.line, state.doc.lines))
     builder.add(line.to, line.to, Decoration.widget({ widget: new CommentWidget(comment, hooks), block: true, side: 1 }))
   }
   return builder.finish()
@@ -169,7 +199,11 @@ export function reviewExtension(hooks: ReviewAnnotations): Extension {
       click(view, line) {
         const number = lineNumber(view.state, line.from)
         if (!addedSet(view.state).has(number)) return false
-        hooks.onAdd(number)
+        const { from, to } = view.state.selection.main
+        const first = lineNumber(view.state, from)
+        const last = lineNumber(view.state, to)
+        if (to > from && number >= first && number <= last && last > first) hooks.onAdd(first, last)
+        else hooks.onAdd(number)
         return true
       }
     }

@@ -20,6 +20,8 @@ export interface Project {
   defaultAgent: AgentKind
   fontSize?: number
   pinned?: boolean
+  /** Reviewed setup command for new worktrees, plus the one-time local-file suggestion choice. */
+  worktreeSetup?: { command: string; prompted: boolean }
 }
 
 export interface BackgroundImage {
@@ -134,6 +136,8 @@ export interface KeptSession {
   tag?: SessionTag
   /** The git branch the session was on when it closed, to guess a tag for the closed row. */
   branch?: string
+  /** Why it closed on its own, for example "Merged as PR #34". */
+  note?: string
 }
 
 export interface ProjectTask {
@@ -218,10 +222,14 @@ export interface Settings {
   appearance: import('./appearance').AppearanceSettings
   /** The always-on-top Mini window. */
   miniWindow: import('./appearance').MiniWindowSettings
+  /** Pull request watching options per project: merge command and tidy-up after a merge. */
+  pullRequests: import('./prSettings').PrSettings
   /** This PC's close and sign-in preferences. Sign-in enablement is read from the OS. */
   desktop: import('./desktopSettings').DesktopSettings
   trayNoticeShown: boolean
   warnUsageLimits: boolean
+  /** Whether Dawsha polls GitHub for each session's pull request. */
+  watchPullRequests: boolean
   warnedUsageWindows: import('./limitWarnings').WarnedWindows
   /** The Side panel layout: whether the panel is open, how wide, and its tab. */
   sidePanel: import('./sidePanel').SidePanelSettings
@@ -233,6 +241,8 @@ export interface Settings {
   onboardingDismissed: boolean
   tourSeen: boolean
   workspace: Workspace
+  /** Trusted new worktrees whose setup has not succeeded or been bypassed. */
+  pendingWorktreeSetups?: import('./terminalSetup').PendingWorktreeSetup[]
   layouts: SavedLayout[]
   keptSessions: KeptSession[]
   /** Ids of projects whose session list is folded in the sidebar. */
@@ -243,6 +253,8 @@ export interface Settings {
   filesLayout: import('./filesLayout').FilesLayout
   /** Open files of the Files view, by project id (at most FILES_TABS_MAX each). */
   filesTabs: Record<string, string[]>
+  /** Optional PlantUML jar on this computer. Empty uses the consented, verified download. */
+  plantumlJarPath: string
   /** Locally saved run commands, kept separate from portable preferences. */
   runCommands: import('./runCommands').RunOverrides
   /** The user's own names and links for tickets on the Work dashboard, by ticket key. */
@@ -263,6 +275,8 @@ export interface Settings {
   crew: CrewSettings
   /** The latest crew runs, newest first. */
   crewRuns: CrewRun[]
+  /** Review comments on diffs, open and sent, newest last. */
+  reviewDrafts: import('./reviewDrafts').ReviewDraft[]
   /** How the Lead works: her rules, limits and which members she may use. */
   lead: LeadSettings
   /** The latest goals handed to the Lead, newest first. */
@@ -454,6 +468,8 @@ export interface SpawnRequest {
   rows: number
   command?: string
   prompt?: string
+  /** Preset shell input, delivered only after worktree setup has succeeded or been bypassed. */
+  initialInput?: string
   title?: string
   fullAccess?: boolean
   desktopVisible?: boolean

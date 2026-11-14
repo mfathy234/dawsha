@@ -5,6 +5,8 @@ import { compareNames, isShortId } from '../shared/compare'
 import { isOwnBranch, isOwnWorktree } from '../shared/mergeBack'
 import type { WorktreeStatus } from '../shared/compare'
 import type { GitResult, RepoProbe, WorktreeRemoval, WorktreeResult, WorktreesResult } from '../shared/types'
+import { copyWorktreeEnvironment } from './worktreeEnvironment'
+import { registerPendingWorktree } from './worktreeSetupPending'
 
 const GIT_TIMEOUT_MS = 20_000
 const REMOVE_ATTEMPTS = 6
@@ -37,7 +39,14 @@ export async function probeRepo(folder: string): Promise<RepoProbe> {
 
 async function addWorktree(repo: string, path: string, branch: string): Promise<GitResult> {
   const run = await git(['worktree', 'add', '-b', branch, path, 'HEAD'], repo)
-  return run.ok ? { ok: true } : { ok: false, error: gitError(run, `git could not create ${path}.`) }
+  if (!run.ok) return { ok: false, error: gitError(run, `git could not create ${path}.`) }
+  const copied = await copyWorktreeEnvironment(repo, path)
+  if (!copied.ok) {
+    const removed = await removeWorktree({ repo, path, branch, force: true })
+    return { ok: false, error: copied.error + (removed.ok ? '' : ` The new worktree could not be removed: ${removed.error}`) }
+  }
+  registerPendingWorktree(path, repo)
+  return { ok: true }
 }
 
 export async function createWorktrees(repo: string, short: string): Promise<WorktreesResult> {

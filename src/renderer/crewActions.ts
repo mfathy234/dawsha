@@ -104,6 +104,10 @@ export interface RunInput {
   fields: Record<string, string>
   background: boolean
   goalId?: string
+  /** A name for the run instead of the one made from its fields. */
+  title?: string
+  /** The checkout the session works in, when it is not the project's own folder. */
+  folder?: string
 }
 
 export type RunOutcome = { ok: true; runId: string; paneId: string; termId: string } | { ok: false; error: string }
@@ -123,7 +127,7 @@ export async function runMember(input: RunInput): Promise<RunOutcome> {
   const member = await refreshLinked(input.member)
   const runId = shortId()
   const instructions = composeInstructions(member, runner)
-  const title = runTitle(member, input.fields)
+  const title = input.title ?? runTitle(member, input.fields)
   const started = await startCrewSession(project.id, {
     agent: runner,
     title,
@@ -137,7 +141,8 @@ export async function runMember(input: RunInput): Promise<RunOutcome> {
     },
     fullAccess: crewFullAccess(runner, member.permissions),
     identity: identityOf(member, runId),
-    background: input.background
+    background: input.background,
+    ...(input.folder ? { folder: input.folder } : {})
   })
   if (!started) return { ok: false, error: 'Could not open a pane for the run.' }
   patchRuns((runs) => [

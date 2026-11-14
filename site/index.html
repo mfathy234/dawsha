@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.8.9</a>
+      <a href="#new">New in 1.9.0</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,8 +97,38 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.8.9</h2>
-      <p class="section-lead">1.8.9 keeps Dawsha watching your agents from the tray, warns you before a usage limit, and adds pinned sessions and a Today recap. Below it are 1.8.8 and earlier releases.</p>
+      <h2 id="new-h">New in 1.9.0</h2>
+      <p class="section-lead">1.9.0 sets up worktrees for you, lets you review an agent's work line by line, watches your pull requests, and shows diagrams in Files. Below it are 1.8.9 and earlier releases.</p>
+      <div class="feat-row" id="review-loop">
+        <div class="feat-copy">
+          <h3>Review the work, line by line</h3>
+          <p>Comment on any line of a session's diff and send all your comments back to the agent in one message.</p>
+          <ul><li>A second agent can review the session in read-only mode, and its findings appear on their lines.</li><li>Comments follow their line when the code moves.</li><li>One list shows what every session changed.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/review-comments.png" width="1168" height="668" alt="A session's diff in Review with two comments on its lines and a button to send them to Claude">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="worktree-setup">
+        <div class="feat-copy">
+          <h3>Worktrees that are ready to run</h3>
+          <p>A session in its own worktree gets the local files it needs and runs your setup command before the agent starts.</p>
+          <ul><li>Works for any stack: npm, dotnet, uv, bundler, cargo, go and more.</li><li>Dawsha suggests which git-ignored files to copy, and never key files.</li><li>If setup fails, retry it or start the agent anyway.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/worktree-setup.png" width="1168" height="668" alt="A new session's terminal running npm ci in its worktree before the agent starts">
+        </figure>
+      </div>
+      <div class="feat-wide" id="pr-watch">
+        <div class="feat-copy">
+          <h3>Pull requests that look after themselves</h3>
+          <p>A session's pull request shows its checks where the session's status shows, and Fix CI sends the failing log to the agent.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/pr-watch.png" width="1168" height="668" alt="A session showing its pull request with failed checks and a menu with Fix CI and Merge when green">
+        </figure>
+        <ul class="feat-cols"><li>Merge when green, with your own merge command.</li><li>Tidy up after a merge: the session closes and its worktree is removed.</li><li>PlantUML and Mermaid diagrams show in Files, drawn on your computer.</li></ul>
+      </div>
       <div class="feat-row" id="tray-mini">
         <div class="feat-copy">
           <h3>Keeps watching from the tray</h3>

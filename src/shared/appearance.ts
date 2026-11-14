@@ -47,9 +47,11 @@ export interface MiniWindowSettings {
   showOnMinimize: boolean
   folded: boolean
   bounds: { x: number; y: number; width: number; height: number } | null
+  /** Sessions removed from the Mini list, as `paneId|sessionId` (see miniHidden). */
+  hidden: string[]
 }
 
-export const DEFAULT_MINI_WINDOW: MiniWindowSettings = { showOnMinimize: false, folded: false, bounds: null }
+export const DEFAULT_MINI_WINDOW: MiniWindowSettings = { showOnMinimize: false, folded: false, bounds: null, hidden: [] }
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 
@@ -59,5 +61,6 @@ export function sanitizeMiniWindow(value: unknown): MiniWindowSettings {
   const bounds = b && finite(b.x) && finite(b.y) && finite(b.width) && finite(b.height) && b.width > 0 && b.height > 0
     ? { x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height) }
     : null
-  return { showOnMinimize: raw.showOnMinimize === true, folded: raw.folded === true, bounds }
+  const hidden = Array.isArray(raw.hidden) ? raw.hidden.filter((key): key is string => typeof key === 'string' && key.length > 0 && key.length <= 300).slice(-200) : []
+  return { showOnMinimize: raw.showOnMinimize === true, folded: raw.folded === true, bounds, hidden }
 }

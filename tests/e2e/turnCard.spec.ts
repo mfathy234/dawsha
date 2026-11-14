@@ -236,3 +236,36 @@ test('opening a finished session runs no checks', async () => {
     await closeApp(app)
   }
 })
+
+test('a line of a reply diff takes a review comment, and the card sends it to the session', async () => {
+  test.setTimeout(120_000)
+  const sandbox = createSandbox()
+  makeRepo(sandbox)
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const pane = await openFinished(page, sandbox)
+    const termId = (await pane.locator('.term-host').first().getAttribute('data-term-id')) ?? ''
+    await app.evaluate(({ ipcMain }, id) => {
+      ;(globalThis as any).__writes = []
+      ipcMain.on('pty:write', (_event, target, text) => {
+        if (target === id) (globalThis as any).__writes.push(text)
+      })
+    }, termId)
+    const card = pane.locator('.chat-turn-summary')
+    await expect(card.getByRole('button', { name: /Undo this reply/ })).toBeVisible({ timeout: 20_000 })
+    await card.locator('.chat-turn-file', { hasText: 'a.ts' }).click()
+    const row = card.locator('.turn-ln.add').first()
+    await row.hover()
+    await row.getByRole('button', { name: /Add a review comment on line/ }).click()
+    await card.locator('.turn-cm textarea').fill('Should this be UTC only?')
+    await page.keyboard.press('Control+Enter')
+    await expect(card.locator('.turn-cm-text')).toHaveText('Should this be UTC only?')
+    await card.getByRole('button', { name: 'Send 1 comment to Claude' }).click()
+    await expect.poll(async () => (await app.evaluate(() => (globalThis as any).__writes as string[])).join('')).toContain('src/a.ts:2')
+    expect((await app.evaluate(() => (globalThis as any).__writes as string[])).join('')).toContain('Should this be UTC only?')
+    await expect(card.locator('.turn-cm-text.sent')).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Review this session' })).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})

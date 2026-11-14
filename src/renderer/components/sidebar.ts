@@ -296,7 +296,7 @@ export class SidebarComponent {
       if (badge) button.append(h('span', { class: `rail-badge${status.needs > 0 ? ' needs' : ''}`, 'aria-hidden': 'true' }, badge))
       this.el.append(button)
     }
-    this.el.append(h('div', { class: 'rail-spacer' }), iconButton('Add project', ICONS.plus, () => void addProject(), 'rail-btn'), ...(this.frame ? [this.frame.bottom] : []))
+    this.el.append(h('div', { class: 'rail-spacer' }), ...(this.frame ? [this.frame.expand] : []), iconButton('Add project', ICONS.plus, () => void addProject(), 'rail-btn'), ...(this.frame ? [this.frame.bottom] : []))
   }
 
   private renderFull(state: AppState, entries: SidebarEntry<PaneView>[], views: PaneView[], hiddenEmpty: number, starredViews: PaneView[]): void {

@@ -28,6 +28,7 @@ import {
   canMakeLargePane,
   tagSession
 } from '../actions'
+import { reviewSession } from '../reviewRun'
 import { derivePanes, type PaneView } from '../derive'
 import { folderOfPane, paneById, store } from '../state'
 import { openReviewInFiles } from '../files/filesActions'
@@ -49,13 +50,16 @@ import { SESSION_TAG_LABELS, type SessionTag } from '../../shared/sessionTags'
 import { openPaneBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
+import { openPrMenu } from './prMenu'
+import { prLine } from '../../shared/prWatch'
+import { prNoteFor, prStateOf } from '../prWatch'
 import { openPaneMeter } from './paneMeter'
 import { ContextRing } from './contextRing'
 import { contextReading } from '../../shared/chatContext'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { crewSignature, identityMark } from './crewAvatar'
-import { ensureTerminal, getTerminal } from '../terminals'
+import { ensureTerminal, getTerminal, setupPhaseOf } from '../terminals'
 import { enableDrag } from '../drag'
 import { COMPACT_SLASH, type NoteMemory } from '../../shared/chatContext'
 import { contextNudgeText, stepContextNudge } from '../../shared/contextRing'
@@ -119,6 +123,8 @@ export class PaneComponent {
     'aria-haspopup': 'menu',
     onClick: () => openPaneBranchMenu(this.paneId, this.branch)
   })
+  private readonly pr = h('button', { class: 'link-quiet pane-pr', type: 'button', hidden: true, 'aria-haspopup': 'menu', onClick: () => openPrMenu(this.paneId, this.pr) })
+  private prSignature = ''
   private readonly branchName = h('span', { class: 'chip-text' })
   private readonly branchSync = h('span', { class: 'chip-sync', hidden: true })
   private readonly stateHost = h('span', { class: 'pane-state' })
@@ -218,7 +224,7 @@ export class PaneComponent {
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
-    this.foot.append(this.info, this.branch)
+    this.foot.append(this.info, this.pr, this.branch)
     this.reply = new QuietReply(paneId, {
       review: () => this.reviewInFiles(),
       send: (text) => {
@@ -287,7 +293,8 @@ export class PaneComponent {
     this.updateState(view, state)
     this.updateInfo(view, maximized)
     this.updateRing(view)
-    this.foot.hidden = this.info.hidden && this.branch.hidden
+    this.updatePr()
+    this.foot.hidden = this.info.hidden && this.branch.hidden && this.pr.hidden
     this.updateRecap(view)
     this.updateHint(view)
     const asking = state === 'needs' || (this.chatShown && detectPermissionPrompt(permissionTail(this.paneId)))
@@ -327,6 +334,11 @@ export class PaneComponent {
     } else {
       setStatePillSuffix(this.stateHost, state, inState)
     }
+    // A worktree's setup command runs before the agent: say so rather than "Idle".
+    const setup = setupPhaseOf(view.primaryTabId)
+    const pillText = this.stateHost.querySelector('.state-pill-text')
+    if (setup && pillText) pillText.textContent = setup === 'running' ? 'Setting up' : 'Setup failed'
+    else if (!setup && pillText && /^Setting up$|^Setup failed$/.test(pillText.textContent ?? '')) this.stateHost.replaceChildren(statePill(state, inState))
     this.el.classList.toggle('attention', view.attention !== 'none')
     this.el.classList.toggle('needs-you', state === 'needs')
     this.el.dataset.attention = view.attention
@@ -496,6 +508,20 @@ export class PaneComponent {
     // Session time and age show only next to model, changes, review or the others.
     this.info.hidden = !items.some((item) => !FOOT_FILLER.some((name) => item.classList.contains(name)))
     this.info.replaceChildren(...items)
+  }
+
+  private updatePr(): void {
+    const state = prStateOf(this.paneId)
+    const line = state ? prLine(state) : ''
+    const signature = `${line}|${state?.phase ?? ''}`
+    if (signature !== this.prSignature) {
+      this.prSignature = signature
+      this.pr.textContent = line
+      this.pr.dataset.phase = state?.phase ?? ''
+      this.pr.title = state ? [state.title, prNoteFor(this.paneId)].filter(Boolean).join(' ') || `Pull request #${state.number}` : ''
+      this.pr.setAttribute('aria-label', line === '' ? 'Pull request' : `${line}. Open the pull request menu`)
+    }
+    this.pr.hidden = line === ''
   }
 
   private updateRing(view: PaneView): void {
@@ -684,6 +710,11 @@ export class PaneComponent {
       changesItem.setAttribute('disabled', '')
       changesItem.title = 'This pane folder is not a git repository'
     }
+    const reviewItem = item('Review this session…', () => reviewSession(this.paneId), ICONS.diff)
+    if (!paneHasRepo(this.paneId) || this.current?.agent === 'shell') {
+      reviewItem.setAttribute('disabled', '')
+      reviewItem.title = 'Needs an agent session in a git repository'
+    }
     const pauseItem = item('Pause recording', () => toggleRecordingPause(this.paneId), ICONS.history)
     pauseItem.setAttribute('disabled', '')
     pauseItem.title = 'This terminal is not being recorded'
@@ -753,6 +784,7 @@ export class PaneComponent {
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Open and review'),
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
       changesItem,
+      reviewItem,
       ...mergeItem,
       ...liveInfo,
       h('div', { class: 'menu-separator', role: 'separator' }),

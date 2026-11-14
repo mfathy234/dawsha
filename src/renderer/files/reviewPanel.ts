@@ -4,6 +4,13 @@ import { openContextMenu } from '../components/contextMenu'
 import { ICONS } from '../icons'
 import { fileIcon } from './fileIcon'
 import { newFolderRow, toggleFolderOpen } from './newFolders'
+import type { CheckoutGroup } from '../../shared/allSessions'
+import { allSessionsView, type AllSessionsHooks } from './reviewAll'
+import { reviewCard, type ReviewCardHooks, type ReviewCardModel } from './reviewCard'
+import { CommentsBar, type CommentRow, type CommentsHooks } from './reviewComments'
+import './reviewLoop.css'
+
+export type ReviewScopeView = 'checkout' | 'all'
 
 export interface ReviewFile {
   path: string
@@ -19,11 +26,22 @@ export interface ReviewModel {
   commentCounts: ReadonlyMap<string, number>
   commentTotal: number
   note: string
+  scope: ReviewScopeView
+  /** The groups of the All sessions scope; null while they load. */
+  groups: readonly CheckoutGroup[] | null
+  comments: readonly CommentRow[]
+  /** The agent the comments go to: "Claude", "Codex" or "agent". */
+  sendLabel: string
+  card: ReviewCardModel | null
   /** Folders of new files that fold into one row. */
   newFolders?: readonly UntrackedFolder[]
 }
 
 export interface ReviewHooks {
+  setScope(scope: ReviewScopeView): void
+  comment: CommentsHooks
+  card: ReviewCardHooks
+  all: AllSessionsHooks
   open(path: string): void
   toggleViewed(path: string, viewed: boolean): void
   step(direction: 1 | -1): void
@@ -63,10 +81,17 @@ export class ReviewPanel {
   private last: ReviewModel | null = null
   private noteOpen = false
   private readonly head = h('div', { class: 'files-review-head' })
+  private readonly scopes = (['checkout', 'all'] as const).map((scope) => h('button', {
+    class: 'files-review-scope', type: 'button', id: `files-review-scope-${scope}`, 'aria-pressed': 'false', onClick: () => this.hooks.setScope(scope)
+  }, scope === 'checkout' ? 'This checkout' : 'All sessions'))
+  private readonly scopeRow = h('div', { class: 'files-review-scopes', role: 'group', 'aria-label': 'What to review' }, ...this.scopes)
+  private readonly cardSlot = h('div', { class: 'files-review-card-slot' })
+  private readonly comments: CommentsBar
   private readonly foot = h('div', { class: 'files-review-foot' })
 
   constructor(private readonly hooks: ReviewHooks) {
-    this.el.append(this.head, this.list, this.foot)
+    this.comments = new CommentsBar(hooks.comment)
+    this.el.append(this.scopeRow, this.cardSlot, this.head, this.list, this.comments.el, this.foot)
     this.head.append(this.progress, this.prev, this.next)
     this.note.hidden = true
     this.foot.append(this.note, this.send, h('div', { class: 'files-review-actions' }, this.noteToggle, this.more, this.commit))
@@ -119,6 +144,17 @@ export class ReviewPanel {
   render(model: ReviewModel): void {
     this.current = model.current
     this.last = model
+    this.scopes.forEach((button, index) => button.setAttribute('aria-pressed', String(model.scope === (index === 0 ? 'checkout' : 'all'))))
+    this.cardSlot.replaceChildren(...(model.card ? [reviewCard(model.card, this.hooks.card)] : []))
+    if (model.scope === 'all') {
+      this.head.hidden = true
+      this.foot.hidden = true
+      this.comments.el.hidden = true
+      this.list.replaceChildren(...(model.groups ? allSessionsView(model.groups, this.hooks.all) : [h('p', { class: 'all-empty', role: 'status' }, 'Reading every checkout…')]))
+      return
+    }
+    this.head.hidden = false
+    this.comments.render(model.comments)
     const total = model.files.length
     const done = model.files.filter((file) => model.viewed.has(file.path)).length
     this.renderProgress(done, total)
@@ -133,7 +169,7 @@ export class ReviewPanel {
     if (model.note.trim() !== '' && !this.noteOpen) this.setNoteOpen(true, false)
     const count = model.commentTotal
     this.send.disabled = count === 0 && model.note.trim() === ''
-    this.send.textContent = count > 0 ? `Send ${count} comment${count === 1 ? '' : 's'} to agent` : 'Send note to agent'
+    this.send.textContent = count > 0 ? `Send ${count} comment${count === 1 ? '' : 's'} to ${model.sendLabel}` : `Send note to ${model.sendLabel}`
     // Comments can be sent without opening the note, so the button also shows while any exist.
     this.send.hidden = !this.noteOpen && count === 0
     this.noteToggle.classList.toggle('has-note', model.note.trim() !== '')
@@ -154,9 +190,10 @@ export class ReviewPanel {
       tick,
       h('button', { class: 'files-review-open', type: 'button', title: file.path, 'aria-current': file.path === model.current ? 'true' : undefined, onClick: () => this.hooks.open(file.path) },
         fileIcon(file.path), h('span', { class: 'files-flat-name' }, name), folder ? h('span', { class: 'files-flat-dir' }, folder) : null),
+      h('span', { class: 'files-review-meta' },
+        file.added !== null || file.removed !== null ? h('span', { class: 'files-review-stat' }, h('span', { class: 'plus' }, `+${file.added ?? 0}`), ' ', h('span', { class: 'minus' }, `${minus}${file.removed ?? 0}`)) : null,
+        h('span', { class: `files-badge b-${file.letter === 'U' ? 'A' : file.letter}`, title: BADGE_TITLES[file.letter] ?? file.letter }, file.letter === 'U' ? 'A' : file.letter)),
       comments > 0 ? h('span', { class: 'files-review-comments', title: `${comments} comment${comments === 1 ? '' : 's'}` }, `${comments} comment${comments === 1 ? '' : 's'}`) : null,
-      file.added !== null || file.removed !== null ? h('span', { class: 'files-review-stat' }, h('span', { class: 'plus' }, `+${file.added ?? 0}`), ' ', h('span', { class: 'minus' }, `${minus}${file.removed ?? 0}`)) : null,
-      h('span', { class: `files-badge b-${file.letter === 'U' ? 'A' : file.letter}`, title: BADGE_TITLES[file.letter] ?? file.letter }, file.letter === 'U' ? 'A' : file.letter),
       viewed ? h('span', { class: 'files-review-done' }, 'Viewed') : null)
   }
 }

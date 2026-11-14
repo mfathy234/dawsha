@@ -5,10 +5,13 @@ import { h, icon } from '../dom'
 import { ICONS } from '../icons'
 import type { PanelExtra } from './bottomPanel'
 import './filesTools.css'
+import { elementMessage, type BrowserPick } from '../../shared/browserPick'
 
 export interface BrowserHooks {
   /** Put text in an agent's prompt without sending it; the anchor places the session menu. */
   send(text: string, anchor: HTMLElement): void
+  sessions(): Array<{ paneId: string; title: string }>
+  sendElement(paneId: string, text: string, imagePath: string): boolean
 }
 
 const svg = (body: string): string => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`
@@ -28,6 +31,19 @@ export class BrowserTab implements PanelExtra {
   private frame = 0
   private lastBox: BrowserBounds | null = null
   private lastVisible = false
+  private picking = false
+  private pickRequest = 0
+  private captured: Extract<BrowserPick, { ok: true }> | null = null
+  private readonly picked = h('span', { class: 'files-browser-picked', id: 'files-browser-picked', dir: 'auto' })
+  private readonly preview = h('img', { class: 'files-browser-pick-preview', id: 'files-browser-pick-preview', alt: 'Picked element', draggable: false })
+  private readonly note = h('textarea', { class: 'files-tool-input', id: 'files-browser-pick-note', rows: 2, dir: 'auto', 'aria-label': 'Note about this element', placeholder: 'What should change?', maxlength: 8000 })
+  private readonly message = h('pre', { class: 'files-browser-pick-message', id: 'files-browser-pick-message', dir: 'auto', 'aria-label': 'Message that will be sent' })
+  private readonly session = h('select', { class: 'files-tool-select', id: 'files-browser-pick-session', 'aria-label': 'Send to session' })
+  private readonly sendPick = h('button', { class: 'btn primary small', type: 'button', id: 'files-browser-pick-send', onClick: () => this.submitPick() }, 'Send to session')
+  private readonly composer = h('div', { class: 'files-browser-pick-composer', id: 'files-browser-pick-composer', hidden: true, role: 'group', 'aria-label': 'Send picked element' },
+    this.preview,
+    h('div', { class: 'files-browser-pick-body' }, this.picked, this.note, this.message,
+      h('div', { class: 'files-browser-pick-actions' }, this.session, this.sendPick, h('button', { class: 'btn ghost small', type: 'button', onClick: () => this.dismissPick() }, 'Cancel'))))
   private readonly stage = h('div', { class: 'files-browser-stage', id: 'files-browser-stage' },
     h('p', { class: 'files-browser-hint', id: 'files-browser-hint' }, 'Type an address above, for example localhost:5173, to preview your running app here.'))
   private readonly address = h('input', { class: 'files-tool-input files-browser-address', id: 'files-browser-address', type: 'text', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'Address', placeholder: 'localhost:5173' })
@@ -37,6 +53,7 @@ export class BrowserTab implements PanelExtra {
   private readonly reload = this.tool('files-browser-reload', 'Reload', ICONS.refresh, () => void this.run({ type: 'reload' }))
   private readonly devtools = this.tool('files-browser-devtools', 'Open developer tools', DEVTOOLS, () => void this.run({ type: 'devtools' }))
   private readonly shot = this.tool('files-browser-shot', 'Send a screenshot to an agent', CAMERA, (event) => void this.sendShot(event.currentTarget as HTMLElement))
+  private readonly pick = h('button', { class: 'btn ghost small', type: 'button', id: 'files-browser-pick', 'aria-pressed': 'false', onClick: () => this.picking ? this.cancelPick() : void this.startPick() }, 'Pick element')
   private readonly errors = h('button', { class: 'btn ghost small', type: 'button', id: 'files-browser-errors', onClick: (event: Event) => void this.sendErrors(event.currentTarget as HTMLElement) }, 'Send errors')
   private readonly close = this.tool('files-browser-close', 'Close the browser', ICONS.close, () => void this.shut())
 
@@ -45,8 +62,11 @@ export class BrowserTab implements PanelExtra {
       if (event.key === 'Enter') void this.go()
     })
     this.el.append(
-      h('div', { class: 'files-browser-bar' }, this.back, this.forward, this.reload, this.address, this.devtools, this.shot, this.errors, this.close),
-      this.problem, this.stage)
+      h('div', { class: 'files-browser-bar' }, this.back, this.forward, this.reload, this.address, this.pick, this.devtools, this.shot, this.errors, this.close),
+      this.problem, this.composer, this.stage)
+    this.note.addEventListener('input', () => { this.showMessage(); this.sendPick.disabled = this.note.value.trim() === '' || this.session.options.length === 0 })
+    this.composer.addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.stopPropagation(); this.dismissPick() } })
+    this.el.addEventListener('keydown', (event) => { if (event.key === 'Escape' && this.picking) { event.stopPropagation(); this.cancelPick() } })
     api.tools.onBrowserState((state) => this.apply(state))
     this.apply(CLOSED_BROWSER)
   }
@@ -58,6 +78,7 @@ export class BrowserTab implements PanelExtra {
   activate(active: boolean): void {
     this.active = active
     if (!active) {
+      this.cancelPick()
       this.stop()
       this.report(false)
       return
@@ -113,11 +134,16 @@ export class BrowserTab implements PanelExtra {
   }
 
   private apply(state: BrowserState): void {
+    if (state.url !== this.state.url || state.loading || !state.open) {
+      this.cancelPick()
+      this.dismissPick()
+    }
     this.state = state
     if (document.activeElement !== this.address) this.address.value = state.url
     this.back.disabled = !state.canGoBack
     this.forward.disabled = !state.canGoForward
     for (const control of [this.reload, this.devtools, this.shot, this.close]) control.disabled = !state.open
+    this.pick.disabled = !state.open || !state.url || state.loading
     this.errors.disabled = !state.open || state.errorCount === 0
     this.errors.textContent = state.errorCount > 0 ? `Send ${state.errorCount} error${state.errorCount === 1 ? '' : 's'}` : 'Send errors'
     this.reload.classList.toggle('busy', state.loading)
@@ -169,5 +195,66 @@ export class BrowserTab implements PanelExtra {
       return
     }
     this.hooks.send(errorsMessage(result.url, result.lines), anchor)
+  }
+
+  private setPicking(picking: boolean): void {
+    this.picking = picking
+    this.pick.setAttribute('aria-pressed', String(picking))
+    this.pick.textContent = picking ? 'Cancel pick' : 'Pick element'
+    this.pick.setAttribute('aria-label', picking ? 'Cancel pick' : 'Pick element')
+    this.problem.textContent = picking ? 'Click an element, or use Tab and Enter. Esc cancels.' : ''
+  }
+
+  private cancelPick(): void {
+    if (!this.picking) return
+    this.pickRequest += 1
+    this.setPicking(false)
+    void api.tools.browser({ type: 'cancel-pick' })
+  }
+
+  private dismissPick(): void {
+    this.captured = null
+    this.composer.hidden = true
+    this.preview.removeAttribute('src')
+    this.note.value = ''
+  }
+
+  private async startPick(): Promise<void> {
+    this.dismissPick()
+    const request = ++this.pickRequest
+    this.setPicking(true)
+    const result = await api.tools.browserPick().catch((): BrowserPick => ({ ok: false, error: 'Could not pick that element. Try again.' }))
+    if (request !== this.pickRequest) return
+    this.setPicking(false)
+    if (!result.ok) {
+      if (!result.cancelled) this.problem.textContent = result.error
+      this.pick.focus()
+      return
+    }
+    if (result.url !== this.state.url || !this.active) return
+    this.captured = result
+    this.picked.textContent = `${result.element.selector}${result.element.name ? ` (${result.element.name})` : ''}`
+    this.picked.title = result.element.selector
+    this.preview.src = result.preview
+    this.session.replaceChildren(...this.hooks.sessions().map((session) => h('option', { value: session.paneId, dir: 'auto' }, session.title)))
+    this.sendPick.disabled = true
+    this.note.placeholder = this.session.options.length ? 'What should change?' : 'Open a session to send this element.'
+    this.composer.hidden = false
+    this.showMessage()
+    this.note.focus()
+  }
+
+  private showMessage(): void {
+    const captured = this.captured
+    this.message.textContent = captured ? elementMessage(captured.url, captured.element, this.note.value) : ''
+  }
+
+  private submitPick(): void {
+    const captured = this.captured
+    if (!captured || !this.note.value.trim() || !this.session.value) return
+    if (this.hooks.sendElement(this.session.value, elementMessage(captured.url, captured.element, this.note.value), captured.path)) {
+      this.dismissPick()
+      toast('Sent the element and screenshot to the session.', 'info')
+    }
   }
 }

@@ -3,7 +3,7 @@ import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter } from 'node:path'
 import * as pty from 'node-pty'
-import { claudeCommand, codexCommand, geminiCommand, launchSpec, shellCommand } from './agentLaunch'
+import { claudeCommand, codexCommand, geminiCommand, launchSpec, shellCommand, type LaunchSpec } from './agentLaunch'
 import { ptyArguments } from './commandLine'
 import { platformExecutableDirs } from './executables'
 import type { QuitLog } from './quitLog'
@@ -11,6 +11,9 @@ import type { Recorder } from './recorder'
 import type { AppInfo, SpawnRequest, SpawnResult } from '../shared/types'
 import type { ProcessRoot } from '../shared/processActivity'
 import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot } from './remoteTerminalState'
+import { claimPendingWorktree, completePendingWorktree, hasPendingWorktree, releasePendingWorktree, rememberPendingLaunch } from './worktreeSetupPending'
+import type { TerminalSetupAction, TerminalSetupState } from '../shared/terminalSetup'
+import { createSetupCommand, type SetupCommand } from './worktreeSetupCommand'
 
 interface RemoteTerminalStateLike {
   snapshot(id?: string): RemoteTerminalSnapshot[]
@@ -33,6 +36,15 @@ export interface PtyRecording {
 export interface PtyHandlers {
   onData(id: string, data: string): void
   onExit(id: string, exitCode: number): void
+  onSetup?(id: string, state: TerminalSetupState | null, pid?: number): void
+}
+
+interface SetupGate {
+  request: SpawnRequest
+  command: string
+  agentSpec: LaunchSpec
+  shell: SetupCommand
+  state: TerminalSetupState
 }
 
 interface Entry {
@@ -42,6 +54,9 @@ interface Entry {
   timer: NodeJS.Timeout | null
   killed: boolean
   desktopVisible: boolean
+  exited: boolean
+  size: { cols: number; rows: number }
+  setup: SetupGate | null
 }
 
 function folderProblem(cwd: string): string | null {
@@ -60,7 +75,8 @@ export class PtyManager {
   constructor(
     private readonly handlers: PtyHandlers,
     remoteTerminals: RemoteTerminalStateLike | null = null,
-    private readonly recording: PtyRecording | null = null
+    private readonly recording: PtyRecording | null = null,
+    private readonly setupCommand: (repo: string, projectId?: string) => string = () => ''
   ) {
     this.remoteTerminals = remoteTerminals
   }
@@ -70,7 +86,7 @@ export class PtyManager {
   }
 
   activityRoots(): ProcessRoot[] {
-    return [...this.entries].map(([tabId, entry]) => ({ tabId, pid: entry.process.pid, startedAt: entry.startedAt }))
+    return [...this.entries].filter(([, entry]) => !entry.exited).map(([tabId, entry]) => ({ tabId, pid: entry.process.pid, startedAt: entry.startedAt }))
   }
 
   remoteSnapshot(id?: string): RemoteTerminalSnapshot[] {
@@ -93,20 +109,39 @@ export class PtyManager {
     if (this.closing) return { ok: false, error: 'Dawsha is shutting down' }
     const problem = folderProblem(request.cwd)
     if (problem) return { ok: false, error: problem }
-    const spec = launchSpec(request)
-    if (typeof spec === 'string') return { ok: false, error: spec }
     this.kill(request.id)
+    const pending = claimPendingWorktree(request.cwd)
+    if (!pending && hasPendingWorktree(request.cwd)) return { ok: false, error: 'Worktree setup is waiting in another terminal. Finish it there first.' }
+    if (pending?.launch?.agent === request.agent && !request.prompt && !request.initialInput) request = { ...request, ...pending.launch }
+    const spec = launchSpec(request)
+    if (typeof spec === 'string') {
+      if (pending) releasePendingWorktree(request.cwd)
+      return { ok: false, error: spec }
+    }
+    const repo = pending?.repo
+    const command = repo ? this.setupCommand(repo, request.projectId).trim() : ''
+    let setup: SetupGate | null = null
+    if (command) {
+      try {
+        rememberPendingLaunch(request.cwd, { agent: request.agent, prompt: request.prompt, initialInput: request.initialInput, command: request.command, crew: request.crew, fullAccess: request.fullAccess })
+        setup = { request: { ...request }, command, agentSpec: spec, shell: createSetupCommand(command), state: { phase: 'running' } }
+      } catch (error) {
+        if (repo) releasePendingWorktree(request.cwd)
+        return { ok: false, error: `Could not prepare worktree setup: ${(error as Error).message}` }
+      }
+    }
     try {
       const cols = Math.max(2, request.cols)
       const rows = Math.max(1, request.rows)
-      const child = pty.spawn(spec.file, ptyArguments(spec.args), {
+      const first = setup?.shell.spec ?? spec
+      const child = pty.spawn(first.file, ptyArguments(first.args), {
         name: 'xterm-256color',
         cols,
         rows,
         cwd: request.cwd,
         env: this.environment(request.crew?.goal)
       })
-      this.attach(request.id, child, request.projectId ?? null, request.agent, request.desktopVisible !== false, request.remoteManaged === true, { cols, rows })
+      this.attach(request.id, child, request.projectId ?? null, request.agent, request.desktopVisible !== false, request.remoteManaged === true, { cols, rows }, setup)
       this.recording?.recorder.start(
         request.id,
         {
@@ -118,15 +153,24 @@ export class PtyManager {
         },
         { cols, rows }
       )
+      if (setup) {
+        this.output(request.id, this.entries.get(request.id)!, `\r\nWorktree setup: ${command}\r\n`)
+        this.handlers.onSetup?.(request.id, setup.state, child.pid)
+      } else {
+        if (pending) completePendingWorktree(request.cwd)
+        if (request.initialInput) child.write(request.initialInput)
+      }
       return { ok: true, pid: child.pid }
     } catch (error) {
+      setup?.shell.dispose()
+      if (repo) releasePendingWorktree(request.cwd)
       return { ok: false, error: `Could not start ${spec.file}: ${(error as Error).message}` }
     }
   }
 
   write(id: string, data: string): void {
     const entry = this.entries.get(id)
-    if (!entry) return
+    if (!entry || entry.exited) return
     entry.process.write(data)
     this.recording?.recorder.input(id, data)
   }
@@ -134,8 +178,9 @@ export class PtyManager {
   resize(id: string, cols: number, rows: number): void {
     const entry = this.entries.get(id)
     if (!entry || cols < 2 || rows < 1) return
+    entry.size = { cols, rows }
     try {
-      entry.process.resize(cols, rows)
+      if (!entry.exited) entry.process.resize(cols, rows)
     } catch {
       return
     }
@@ -150,8 +195,21 @@ export class PtyManager {
     this.remoteTerminals?.remove(id)
     this.recording?.recorder.stop(id)
     entry.killed = true
+    entry.setup?.shell.dispose()
+    if (entry.setup) releasePendingWorktree(entry.setup.request.cwd)
     if (entry.timer) clearTimeout(entry.timer)
-    killTree(entry.process)
+    if (!entry.exited) killTree(entry.process)
+  }
+
+  setupState(id: string): TerminalSetupState | null {
+    return this.entries.get(id)?.setup?.state ?? null
+  }
+
+  resolveSetup(id: string, action: TerminalSetupAction): SpawnResult {
+    if (this.closing) return { ok: false, error: 'Dawsha is shutting down' }
+    const entry = this.entries.get(id)
+    if (!entry?.setup || entry.setup.state.phase !== 'failed') return { ok: false, error: 'This session has no failed worktree setup.' }
+    return this.advanceSetup(id, entry, action === 'retry')
   }
 
   killAll(): void {
@@ -164,9 +222,11 @@ export class PtyManager {
     this.entries.clear()
     const trees = entries.map(([id, entry]) => {
       entry.killed = true
+      entry.setup?.shell.dispose()
       this.remoteTerminals?.remove(id)
       this.recording?.recorder.stop(id)
       if (entry.timer) clearTimeout(entry.timer)
+      if (entry.exited) return Promise.resolve()
       if (process.platform === 'win32') return taskkillTree(entry.process.pid, log).then(() => {
         // Dispose ConPTY only after taskkill has found the shell and its children.
         try { entry.process.kill() } catch (error) {
@@ -200,27 +260,74 @@ export class PtyManager {
     return env
   }
 
-  private attach(id: string, child: pty.IPty, projectId: string | null, agent: SpawnRequest['agent'], desktopVisible: boolean, remoteManaged: boolean, size: { cols: number; rows: number }): void {
+  private attach(id: string, child: pty.IPty, projectId: string | null, agent: SpawnRequest['agent'], desktopVisible: boolean, remoteManaged: boolean, size: { cols: number; rows: number }, setup: SetupGate | null): void {
     const startedAt = Date.now()
-    const entry: Entry = { process: child, startedAt, buffer: '', timer: null, killed: false, desktopVisible }
+    const entry: Entry = { process: child, startedAt, buffer: '', timer: null, killed: false, desktopVisible, exited: false, size, setup }
     this.entries.set(id, entry)
     this.remoteTerminals?.add(id, startedAt, { projectId, agent, remoteManaged }, size)
+    this.connect(id, entry, child)
+  }
+
+  private output(id: string, entry: Entry, data: string): void {
+    entry.buffer += data
+    this.remoteTerminals?.append(id, data)
+    this.recording?.recorder.output(id, data)
+    if (!entry.timer) entry.timer = setTimeout(() => this.flush(id, entry), FLUSH_MS)
+  }
+
+  private connect(id: string, entry: Entry, child: pty.IPty): void {
     child.onData((data) => {
-      if (entry.killed) return
-      entry.buffer += data
-      this.remoteTerminals?.append(id, data)
-      this.recording?.recorder.output(id, data)
-      if (entry.timer) return
-      entry.timer = setTimeout(() => this.flush(id, entry), FLUSH_MS)
+      if (entry.killed || entry.process !== child) return
+      this.output(id, entry, data)
     })
     child.onExit(({ exitCode }) => {
-      if (entry.killed) return
+      if (entry.killed || entry.process !== child) return
+      entry.exited = true
       this.flush(id, entry)
+      if (entry.setup) {
+        if (exitCode === 0) this.advanceSetup(id, entry, false)
+        else this.failSetup(id, entry, exitCode)
+        return
+      }
       this.entries.delete(id)
       this.remoteTerminals?.remove(id)
       this.recording?.recorder.stop(id, exitCode)
       if (entry.desktopVisible) this.handlers.onExit(id, exitCode)
     })
+  }
+
+  private failSetup(id: string, entry: Entry, exitCode: number, message?: string): void {
+    if (!entry.setup) return
+    entry.setup.state = { phase: 'failed', exitCode }
+    this.output(id, entry, `\r\nWorktree setup failed (exit ${exitCode}).${message ? ` ${message}` : ''}\r\nChoose Retry or Start the agent anyway.\r\n`)
+    this.handlers.onSetup?.(id, entry.setup.state)
+  }
+
+  private advanceSetup(id: string, entry: Entry, retry: boolean): SpawnResult {
+    const setup = entry.setup!
+    const spec = retry ? setup.shell.spec : setup.agentSpec
+    try {
+      const child = pty.spawn(spec.file, ptyArguments(spec.args), {
+        name: 'xterm-256color', ...entry.size, cwd: setup.request.cwd, env: this.environment(setup.request.crew?.goal)
+      })
+      entry.process = child
+      entry.exited = false
+      entry.startedAt = Date.now()
+      if (retry) setup.state = { phase: 'running' }
+      else {
+        entry.setup = null
+        setup.shell.dispose()
+        completePendingWorktree(setup.request.cwd)
+      }
+      this.connect(id, entry, child)
+      this.output(id, entry, retry ? `\r\nRetrying worktree setup: ${setup.command}\r\n` : '\r\nStarting the agent.\r\n')
+      this.handlers.onSetup?.(id, entry.setup?.state ?? null, child.pid)
+      if (!retry && setup.request.initialInput) child.write(setup.request.initialInput)
+      return { ok: true, pid: child.pid }
+    } catch (error) {
+      this.failSetup(id, entry, -1, `Could not start ${spec.file}: ${(error as Error).message}`)
+      return { ok: false, error: `Could not start ${spec.file}: ${(error as Error).message}` }
+    }
   }
 
   private flush(id: string, entry: Entry): void {

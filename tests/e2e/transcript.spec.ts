@@ -108,7 +108,8 @@ test('a tab without a session file exports its terminal text and says so', async
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
     const id = await activeTermId(page)
     await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toContain('Smoke Project>')
-    await feedTerminal(page, id, 'build finished in 4s\r\n\u001b[32mall green\u001b[0m\r\n')
+    const long = `long line ${'0123456789'.repeat(40)} end`
+    await feedTerminal(page, id, `build finished in 4s\r\n${long}\r\n\u001b[32mall green\u001b[0m\r\n`)
     await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toContain('all green')
     await page.getByRole('button', { name: 'Pane actions' }).click()
     await page.getByRole('menuitem', { name: 'Export transcript…' }).click()
@@ -119,6 +120,8 @@ test('a tab without a session file exports its terminal text and says so', async
     expect(text).toContain('## Terminal output')
     expect(text).toContain('build finished in 4s')
     expect(text).toContain('all green')
+    // A line wider than the terminal is exported whole, not as the rows it wrapped onto.
+    expect(text).toContain(long)
     expect(text).not.toContain('[32m')
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)

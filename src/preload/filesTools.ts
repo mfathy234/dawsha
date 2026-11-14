@@ -10,6 +10,7 @@ export function createFilesToolsPreload(): FilesToolsApi {
     browser: (command) => ipcRenderer.invoke(TOOLS_IPC.browser, command),
     browserShot: () => ipcRenderer.invoke(TOOLS_IPC.browserShot),
     browserErrors: () => ipcRenderer.invoke(TOOLS_IPC.browserErrors),
+    browserPick: () => ipcRenderer.invoke(TOOLS_IPC.browserPick),
     onBrowserState: (listener) => {
       const handler = (_event: Electron.IpcRendererEvent, state: BrowserState): void => listener(state)
       ipcRenderer.on(TOOLS_IPC.browserState, handler)

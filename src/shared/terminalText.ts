@@ -28,7 +28,10 @@ export function unwrapLines(lines: ScreenLine[]): string[] {
 }
 
 export function extractReply(lines: ScreenLine[], startRow: number): ExtractedReply {
-  const region = startRow >= 0 ? lines.slice(startRow + 1) : lines
+  let from = startRow >= 0 ? startRow + 1 : 0
+  // A prompt line wider than the terminal continues on wrapped rows; those are still the prompt, not the reply.
+  if (startRow >= 0) while (from < lines.length && lines[from].isWrapped) from += 1
+  const region = lines.slice(from)
   const logical = unwrapLines(region).map((text) => text.replace(/\s+$/, ''))
   while (logical.length > 0 && logical[logical.length - 1] === '') logical.pop()
   if (logical.length > 0 && isShellPromptLine(logical[logical.length - 1])) logical.pop()

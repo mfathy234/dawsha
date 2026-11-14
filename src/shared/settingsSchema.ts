@@ -1,3 +1,4 @@
+import { sanitizePendingWorktrees } from './terminalSetup'
 import { sanitizeTicketNotes } from './ticketNotes'
 import { checkoutTabsKey } from './filesWorkspace'
 import { defaultLayout, parseLayout } from './filesLayout'
@@ -10,6 +11,7 @@ import { sanitizePresets } from './sessionPresets'
 import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews, sanitizeSessionViews } from './chatLog'
 import { isSessionsLayout } from './board'
 import { DEFAULT_APPEARANCE, DEFAULT_MINI_WINDOW, sanitizeAppearance, sanitizeMiniWindow } from './appearance'
+import { sanitizePrSettings } from './prSettings'
 import { DEFAULT_GRID_STYLE, isGridStyle } from './gridStyle'
 import { sanitizeSavedPrompts } from './savedPrompts'
 import { isSidebarSort } from './sidebarModel'
@@ -25,6 +27,7 @@ import { defaultRecordings, sanitizeRecordings } from './recordings'
 import { defaultCapabilities, sanitizeCapabilities } from './remoteCapabilities'
 import { BUILTIN_IDS } from './crewBuiltins'
 import { defaultCrew, sanitizeCrew, sanitizeCrewRuns, sanitizeIdentity } from './crew'
+import { sanitizeDrafts } from './reviewDrafts'
 import { defaultLead, sanitizeGoals, sanitizeLead } from './crewLead'
 import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from './sessionTags'
 import {
@@ -105,9 +108,12 @@ export const defaultSettings = (): Settings => ({
   sessionsLayout: 'grid',
   appearance: DEFAULT_APPEARANCE,
   miniWindow: DEFAULT_MINI_WINDOW,
+  pullRequests: {},
   desktop: DEFAULT_DESKTOP,
+  plantumlJarPath: '',
   trayNoticeShown: false,
   warnUsageLimits: true,
+  watchPullRequests: true,
   warnedUsageWindows: {},
   sidePanel: DEFAULT_SIDE_PANEL,
   gridStyle: DEFAULT_GRID_STYLE,
@@ -116,6 +122,7 @@ export const defaultSettings = (): Settings => ({
   onboardingDismissed: false,
   tourSeen: false,
   workspace: { panes: [], focusedIndex: 0 },
+  pendingWorktreeSetups: [],
   layouts: [],
   keptSessions: [],
   foldedProjects: [],
@@ -138,6 +145,7 @@ export const defaultSettings = (): Settings => ({
   recordings: defaultRecordings(),
   crew: defaultCrew(),
   crewRuns: [],
+  reviewDrafts: [],
   lead: defaultLead(),
   crewGoals: [],
   presets: [],
@@ -164,6 +172,13 @@ function sanitizeProjects(value: unknown): Project[] {
     }
     if (typeof item.fontSize === 'number') project.fontSize = clampFontSize(item.fontSize)
     if (item.pinned === true) project.pinned = true
+    if (isRecord(item.worktreeSetup)) {
+      const command = item.worktreeSetup.command
+      project.worktreeSetup = {
+        command: typeof command === 'string' && command.length <= 8000 && !command.includes('\0') ? command : '',
+        prompted: item.worktreeSetup.prompted === true
+      }
+    }
     projects.push(project)
   }
   return projects
@@ -337,6 +352,7 @@ function sanitizeRemoteAccess(value: unknown): RemoteAccessSettings {
 }
 
 const KEPT_BRANCH_MAX = 200
+const KEPT_NOTE_MAX = 120
 
 function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSession[] {
   if (!Array.isArray(value)) return []
@@ -355,6 +371,8 @@ function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSess
     if (isSessionTag(item.tag)) kept.tag = item.tag
     const branch = asString(item.branch)
     if (branch) kept.branch = branch.slice(0, KEPT_BRANCH_MAX)
+    const note = asString(item.note)
+    if (note) kept.note = note.slice(0, KEPT_NOTE_MAX)
     sessions.push(kept)
   }
   return sessions.slice(-500)
@@ -474,9 +492,12 @@ export function migrateSettings(raw: unknown): Settings {
     sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
     appearance: sanitizeAppearance(raw.appearance),
     miniWindow: sanitizeMiniWindow(raw.miniWindow),
+    pullRequests: sanitizePrSettings(raw.pullRequests, new Set(projects.map((p) => p.id))),
     desktop: sanitizeDesktopSettings(raw.desktop),
+    plantumlJarPath: typeof raw.plantumlJarPath === 'string' && raw.plantumlJarPath.length <= 4096 && !/[\x00-\x1f]/.test(raw.plantumlJarPath) ? raw.plantumlJarPath.trim() : '',
     trayNoticeShown: raw.trayNoticeShown === true,
     warnUsageLimits: raw.warnUsageLimits !== false,
+    watchPullRequests: raw.watchPullRequests !== false,
     warnedUsageWindows: sanitizeWarnedWindows(raw.warnedUsageWindows),
     sidePanel: sanitizeSidePanel(raw.sidePanel),
     gridStyle: isGridStyle(raw.gridStyle) ? raw.gridStyle : DEFAULT_GRID_STYLE,
@@ -490,6 +511,7 @@ export function migrateSettings(raw: unknown): Settings {
     // and it would otherwise open on top of the What's new dialog right after the update.
     tourSeen: raw.tourSeen === true || (raw.tourSeen === undefined && typeof raw.lastSeenVersion === 'string'),
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
+    pendingWorktreeSetups: sanitizePendingWorktrees(raw.pendingWorktreeSetups),
     layouts: sanitizeLayouts(raw.layouts),
     keptSessions: sanitizeKeptSessions(raw.keptSessions, new Set(projects.map((p) => p.id))),
     foldedProjects: sanitizeProjectIds(raw.foldedProjects, projects),
@@ -512,6 +534,7 @@ export function migrateSettings(raw: unknown): Settings {
     recordings: sanitizeRecordings(raw.recordings),
     crew: sanitizeCrew(raw.crew, BUILTIN_IDS),
     crewRuns: sanitizeCrewRuns(raw.crewRuns),
+    reviewDrafts: sanitizeDrafts(raw.reviewDrafts),
     lead: sanitizeLead(raw.lead),
     crewGoals: sanitizeGoals(raw.crewGoals),
     presets: sanitizePresets(raw.presets, new Set(projects.map((p) => p.id))),

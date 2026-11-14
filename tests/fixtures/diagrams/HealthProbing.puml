@@ -1,0 +1,50 @@
+@startuml HealthProbing
+title Health probing and working hours
+autonumber
+hide unlinked
+skinparam sequenceMessageAlign direction
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+skinparam sequence {
+    LifeLineBackgroundColor #A9DCDF
+    LifeLineBorderColor #368E92
+    ArrowColor #Black
+}
+
+participant "Internal Gateway\n(prober)" as IG
+participant "Version Registry" as Reg
+participant "Service labels" as S
+participant "Health memory" as H
+
+loop Every 60 seconds
+    alt Inside the working hours (or none configured)
+        IG -> Reg : Active labels of each configured service
+        loop Every active label, and the main address
+            IG -> S : GET /health
+            alt 5xx or 404
+                IG -> H : Count a failure
+                note right of H
+3 failures in a row: unhealthy.
+end note
+            else Anything else
+                IG -> H : Healthy again
+            end
+        end
+        alt Every label of one service failed together
+            IG -> H : Keep all of them healthy
+            note right of H
+Treated as a probe or network fault,
+not a version fault.
+end note
+        end
+    else Outside the working hours
+        IG -> IG : No probe, no registry read
+        note right of IG
+Apps can scale to zero.
+Health entries expire after 5 minutes,
+so every label counts as healthy.
+end note
+    end
+end
+@enduml

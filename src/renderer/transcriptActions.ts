@@ -32,7 +32,7 @@ export async function exportTranscript(paneId: string): Promise<void> {
   }
   let result = await api.exportTranscript(request)
   if (result.status === 'no-session') {
-    result = await api.exportTranscript({ ...request, scrollback: getTerminal(tab.id)?.bufferText() ?? '' })
+    result = await api.exportTranscript({ ...request, scrollback: getTerminal(tab.id)?.lineText() ?? '' })
   }
   if (result.status === 'saved') {
     const note = result.source === 'scrollback' ? ' (terminal text only)' : ''

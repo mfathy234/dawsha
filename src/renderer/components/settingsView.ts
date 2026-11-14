@@ -192,6 +192,7 @@ export class SettingsViewComponent {
     const signature = JSON.stringify([
       state.settingsSection,
       state.settings.desktop,
+      state.settings.plantumlJarPath,
       this.desktopControls.revision,
       state.settings.paletteShortcut,
       state.settings.appearance,
@@ -203,6 +204,7 @@ export class SettingsViewComponent {
       state.settings.presets,
       state.settings.sessionInfo,
       state.settings.warnUsageLimits,
+      state.settings.watchPullRequests,
       state.settings.miniWindow.showOnMinimize,
       state.settings.autoUpdateCheck,
       state.settings.highlights,
@@ -491,6 +493,24 @@ export class SettingsViewComponent {
     return this.remotePanel.build()
   }
 
+  // Local diagram tools. Kept separate from Appearance and portable preferences.
+  private diagramSettings(state: AppState): HTMLElement {
+    const path = h('input', {
+      class: 'text-input', type: 'text', id: 'plantuml-jar-path',
+      value: state.settings.plantumlJarPath, placeholder: 'Use the Dawsha download',
+      'aria-label': 'PlantUML jar path', dir: 'auto'
+    })
+    const save = (): void => {
+      const plantumlJarPath = path.value.trim()
+      if (plantumlJarPath === store.state.settings.plantumlJarPath) return
+      store.set((current) => ({ ...current, settings: { ...current.settings, plantumlJarPath } }))
+      void saveSettings({ plantumlJarPath })
+    }
+    path.addEventListener('change', save)
+    path.addEventListener('keydown', (event) => { if (event.key === 'Enter') { save(); path.blur() } })
+    return row('PlantUML', path, h('p', { class: 'hint' }, 'Optional path to an existing PlantUML jar on this computer. Leave blank for the one-time MIT download in Files. Java is required.'))
+  }
+
   private general(state: AppState): HTMLElement[] {
     const draft = this.shortcutDraft ?? formatShortcut(parseShortcut(state.settings.paletteShortcut) ?? parseShortcut(DEFAULT_PALETTE_SHORTCUT)!)
     const input = h('input', {
@@ -534,6 +554,7 @@ export class SettingsViewComponent {
     )
     return [
       ...this.desktopControls.rows(state.settings, row, checkbox),
+      this.diagramSettings(state),
       row(
         'Command palette shortcut',
         h('div', { class: 'set-inline' }, input, reset),
@@ -601,6 +622,10 @@ export class SettingsViewComponent {
         store.set(s => ({ ...s, settings: { ...s.settings, warnUsageLimits: value } }))
         void saveSettings({ warnUsageLimits: value })
       }), h('p', { class: 'hint' }, 'Warn at 80% and 95% of Claude and Codex 5-hour and weekly limits, on the desktop or in the app when notifications are off.')),
+      row('Watch pull requests', checkbox('watch-prs-toggle', 'Watch pull requests', settings.watchPullRequests, false, value => {
+        store.set(s => ({ ...s, settings: { ...s.settings, watchPullRequests: value } }))
+        void saveSettings({ watchPullRequests: value })
+      }), h('p', { class: 'hint' }, 'Check GitHub for the pull request of each session and show its status. Off means no gh calls, no status chip and no pull request notifications.')),
       row('Sound', checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) => setSessionInfo({ sound: value })), h('p', { class: 'hint' }, 'Play a sound with each notification.'))
     ]
   }

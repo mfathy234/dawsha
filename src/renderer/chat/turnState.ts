@@ -49,12 +49,20 @@ export interface CardActions {
   openPullRequest(): void
   sendFailures(): void
   showOutput(): void
+  /** Ask another agent to review what this reply changed. */
+  reviewReply(): void
+  /** Send the open review comments to the session. */
+  sendComments(): void
 }
 
 export interface CardView {
   state: CardState
   actions: CardActions
   agentName: string
+  /** Where review comments on this card's diffs are saved and sent; null when the card has no session. */
+  comments: import('./turnComments').CardComments | null
+  /** The review comments waiting to be sent from this card. */
+  openComments: number
   /** The folder is a git repository with a session that can commit. */
   canCommit: boolean
   /** Holds the commit message box between redraws, so typing and focus survive. */

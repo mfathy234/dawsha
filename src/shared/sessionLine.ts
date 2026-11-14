@@ -40,12 +40,17 @@ export interface SessionLineInput {
   changed: number | null
   /** Background agents running. */
   agents: number
+  /** The session's pull request, as "PR #34: checks running". Shown once the session is not working. */
+  pr?: string
 }
 
 /** The second line of a session row: what it is doing, else the state word. */
 export function sessionLine(input: SessionLineInput): string {
   const { state } = input
   if (state === 'needs') return input.ask || SESSION_STATE_LABELS.needs
+  const pr = input.pr ?? ''
+  if (pr !== '' && state === 'done') return `${SESSION_STATE_LABELS.done} · ${pr}`
+  if (pr !== '' && state === 'idle') return pr
   if (state === 'done') {
     const files = input.changed ?? 0
     return files > 0 ? `${SESSION_STATE_LABELS.done} · ${files} file${files === 1 ? '' : 's'} changed` : SESSION_STATE_LABELS.done
