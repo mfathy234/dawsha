@@ -1,8 +1,9 @@
 import { existsSync } from 'node:fs'
-import { lstat, readdir, rmdir, unlink } from 'node:fs/promises'
+import { lstat, readdir, readFile, rmdir, unlink } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import type { PrTidyRequest, PrTidyResult } from '../shared/prWatch'
 import { parseWorktreeList, samePath } from '../shared/worktreeCleanup'
+import { matchesWorktreeInclude, parseWorktreeInclude, WORKTREE_SKIP_DIRS } from '../shared/worktreeSetup'
 import { git } from './gitCommit'
 
 const MAX_ENTRIES = 400_000
@@ -81,6 +82,40 @@ async function unpushedCommits(path: string, headSha: string, strict: boolean): 
   return Number.isFinite(n) ? n : 1
 }
 
+const SKIPPED = new Set<string>(WORKTREE_SKIP_DIRS)
+
+/** Ignored files worth keeping: everything but build and dependency folders and the copies .worktreeinclude made from the main checkout. */
+export function ignoredBlockers(paths: readonly string[], includeRules: readonly string[]): string[] {
+  return paths.filter((path) => {
+    const parts = path.replace(/\/+$/, '').split('/')
+    if (parts.some((part) => SKIPPED.has(part.toLowerCase()))) return false
+    return !matchesWorktreeInclude(path, includeRules)
+  })
+}
+
+async function includeRulesOf(repo: string): Promise<string[]> {
+  const text = await readFile(join(repo, '.worktreeinclude'), 'utf8').catch(() => '')
+  return parseWorktreeInclude(text)
+}
+
+/** The ignored files in the worktree that are not disposable, or null when git could not say. */
+async function ignoredData(tree: string, repo: string): Promise<string[] | null> {
+  const listed = await git(tree, ['status', '--porcelain', '--ignored'])
+  if (!listed.ok) return null
+  const entries = listed.stdout.split('\n').filter((line) => line.startsWith('!! ')).map((line) => line.slice(3).trim())
+  const files: string[] = []
+  for (const entry of entries) {
+    if (!entry.endsWith('/')) {
+      files.push(entry)
+      continue
+    }
+    if (entry.replace(/\/+$/, '').split('/').some((part) => SKIPPED.has(part.toLowerCase()))) continue
+    const inside = await git(tree, ['ls-files', '--others', '--ignored', '--exclude-standard', '--', entry])
+    files.push(...(inside.ok ? inside.stdout.split('\n').filter((line) => line.trim() !== '') : [entry]))
+  }
+  return ignoredBlockers(files, await includeRulesOf(repo))
+}
+
 const pause = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms))
 
 /** The folder git leaves behind when a process still held it as its working directory. Only an empty folder goes, with no recursion. */
@@ -132,6 +167,12 @@ export async function removeWorktreeSafely(request: PrTidyRequest): Promise<PrTi
   const status = await git(tree.path, ['status', '--porcelain'])
   if (!status.ok) return { ok: false, error: 'Could not check the worktree for changes, so it was kept.' }
   if (count(status.stdout) > 0) return { ok: false, error: `The worktree has ${plural(count(status.stdout), 'uncommitted change')}, so it was kept.` }
+  const ignored = await ignoredData(tree.path, trees[0]?.path ?? repo)
+  if (ignored === null) return { ok: false, error: 'Could not check the worktree for ignored files, so it was kept.' }
+  if (ignored.length > 0) {
+    const names = ignored.slice(0, 3).join(', ')
+    return { ok: false, error: `The worktree has ${plural(ignored.length, 'ignored file')} that git does not track (${names}${ignored.length > 3 ? ', ...' : ''}), so it was kept.` }
+  }
   const unpushed = await unpushedCommits(tree.path, headSha, strict === true)
   if (unpushed > 0) return { ok: false, error: `The worktree has ${plural(unpushed, 'commit')} that are not on any remote, so it was kept.` }
   if (dryRun) return { ok: true }

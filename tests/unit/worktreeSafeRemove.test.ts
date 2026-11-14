@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { removeWorktreeSafely, scanLinks } from '../../src/main/worktreeSafeRemove'
+import { ignoredBlockers, removeWorktreeSafely, scanLinks } from '../../src/main/worktreeSafeRemove'
 
 const roots: string[] = []
 const IDENTITY = { GIT_AUTHOR_NAME: 'T', GIT_AUTHOR_EMAIL: 't@example.invalid', GIT_COMMITTER_NAME: 'T', GIT_COMMITTER_EMAIL: 't@example.invalid' }
@@ -31,7 +31,7 @@ function fixture(): Fixture {
   const repo = join(root, 'acme')
   mkdirSync(repo)
   git(repo, 'init', '-q', '-b', 'main')
-  writeFileSync(join(repo, '.gitignore'), 'node_modules\ndeep\n')
+  writeFileSync(join(repo, '.gitignore'), 'node_modules\nbuild\ndata\n')
   writeFileSync(join(repo, 'a.txt'), 'one\n')
   git(repo, 'add', '.')
   git(repo, 'commit', '-q', '-m', 'first')
@@ -59,8 +59,8 @@ describe('removeWorktreeSafely', () => {
 
   it('unlinks a link nested deeper in the tree too', async () => {
     const f = fixture()
-    mkdirSync(join(f.tree, 'deep', 'er'), { recursive: true })
-    symlinkSync(f.target, join(f.tree, 'deep', 'er', 'linked'), linkType)
+    mkdirSync(join(f.tree, 'build', 'er'), { recursive: true })
+    symlinkSync(f.target, join(f.tree, 'build', 'er', 'linked'), linkType)
     expect((await scanLinks(f.tree)).links).toHaveLength(2)
     expect(await removeWorktreeSafely(request(f))).toEqual({ ok: true })
     expect(existsSync(join(f.target, 'pkg', 'index.js'))).toBe(true)
@@ -95,5 +95,25 @@ describe('removeWorktreeSafely', () => {
     const main = await removeWorktreeSafely({ ...request(f), path: f.repo })
     expect(main).toMatchObject({ ok: false })
     expect(existsSync(join(f.repo, 'a.txt'))).toBe(true)
+  })
+
+  it('keeps a worktree that holds ignored data, but not one with only build folders or .worktreeinclude copies', async () => {
+    const f = fixture()
+    mkdirSync(join(f.tree, 'data'))
+    writeFileSync(join(f.tree, 'data', 'local.db'), 'precious')
+    const refused = await removeWorktreeSafely(request(f, { dryRun: true }))
+    expect(refused).toMatchObject({ ok: false })
+    expect(!refused.ok && refused.error).toContain('data/local.db')
+    writeFileSync(join(f.repo, '.worktreeinclude'), 'data/*.db')
+    expect(await removeWorktreeSafely(request(f, { dryRun: true }))).toEqual({ ok: true })
+    mkdirSync(join(f.tree, 'build'))
+    writeFileSync(join(f.tree, 'build', 'out.js'), 'x')
+    expect(await removeWorktreeSafely(request(f, { dryRun: true }))).toEqual({ ok: true })
+  })
+
+  it('filters ignored paths', () => {
+    const paths = ['node_modules/', 'a/dist/x.js', '.env', 'data/local.db', 'src/.venv/lib/y.py', 'notes/todo.txt']
+    expect(ignoredBlockers(paths, [])).toEqual(['.env', 'data/local.db', 'notes/todo.txt'])
+    expect(ignoredBlockers(paths, ['.env', 'data/*.db'])).toEqual(['notes/todo.txt'])
   })
 })
