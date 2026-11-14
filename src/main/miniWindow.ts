@@ -6,6 +6,7 @@ import type { SettingsStore } from './settingsStore'
 import { MiniPlans } from './miniPlans'
 import { onAttentionCount } from './desktop'
 import { setMiniWindowLaunchHandler } from './desktopLaunch'
+import { setTrayAvailable } from './trayState'
 import type { MiniPlanRequest } from '../shared/miniWindow'
 
 /** Owns native lifecycle only. Session state and approval execution belong to the main renderer. */
@@ -15,6 +16,7 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
   let mini: BrowserWindow | null = null
   let snapshot: MiniSnapshot | null = null
   let stopping = false
+  let miniShown = false
   let persistTimer: ReturnType<typeof setTimeout> | undefined
   const offscreen = process.env.DAWSHA_OFFSCREEN === '1'
   const plans = new MiniPlans()
@@ -28,18 +30,25 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
     else { main.show(); main.focus() }
   }
   const icon = nativeImage.createFromPath(join(app.getAppPath(), 'build', 'icon.png'))
-  const tray = new Tray(icon.resize({ width: 20, height: 20 }))
-  tray.setToolTip('Dawsha')
-  const updateMenu = (): void => tray.setContextMenu(Menu.buildFromTemplate([
+  let tray: Tray | null = null
+  try { tray = new Tray(icon.resize({ width: 20, height: 20 })) } catch (error) { console.warn('Could not create the tray icon', error) }
+  setTrayAvailable(tray !== null)
+  tray?.setToolTip('Dawsha')
+  const updateMenu = (): void => tray?.setContextMenu(Menu.buildFromTemplate([
     { label: 'Show Dawsha', click: showMain },
     { label: 'Mini window', type: 'checkbox', checked: !!mini?.isVisible(), click: () => toggle() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() }
   ]))
+  // The renderer owns session state, Mini publishing and saving, so it is throttled only while someone can see the main window and the Mini window is closed.
+  const syncThrottling = (): void => {
+    if (!main.isDestroyed()) main.webContents.backgroundThrottling = !miniShown && main.isVisible()
+  }
   const visibility = (visible: boolean): void => {
     if (stopping) return
     // The source renderer must keep publishing while its native window is minimized.
-    if (!main.isDestroyed()) main.webContents.backgroundThrottling = !visible
+    miniShown = visible
+    syncThrottling()
     host(MINI_IPC.visibility, visible)
     if (!visible) plans.clear()
     updateMenu()
@@ -132,14 +141,17 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
   })
   const minimize = (): void => { if (settings.get().miniWindow.showOnMinimize) open() }
   main.on('minimize', minimize)
+  main.on('show', syncThrottling)
+  main.on('hide', syncThrottling)
+  syncThrottling()
   // A hidden Mini window must not keep the app alive after its main window closes.
   main.once('closed', () => app.quit())
-  tray.on('click', toggle)
+  tray?.on('click', toggle)
   updateMenu()
   // The taskbar jump list's Mini window entry, and the tray tooltip saying how many sessions wait for you.
   setMiniWindowLaunchHandler(open)
   const stopAttention = onAttentionCount((count) => {
-    if (!tray.isDestroyed()) tray.setToolTip(count > 0 ? `Dawsha, ${count} waiting for you` : 'Dawsha')
+    if (tray && !tray.isDestroyed()) tray.setToolTip(count > 0 ? `Dawsha, ${count} waiting for you` : 'Dawsha')
   })
   return () => {
     if (stopping) return
@@ -147,6 +159,8 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
     stopping = true
     clearTimeout(persistTimer)
     main.removeListener('minimize', minimize)
+    main.removeListener('show', syncThrottling)
+    main.removeListener('hide', syncThrottling)
     ipcMain.removeListener(MINI_IPC.toggle, onToggle)
     ipcMain.removeListener(MINI_IPC.publish, onPublish)
     ipcMain.removeListener(MINI_IPC.action, onAction)
@@ -158,6 +172,6 @@ export function installMiniWindow(main: BrowserWindow, settings: SettingsStore):
     plans.clear()
     mini?.destroy()
     mini = null
-    tray.destroy()
+    tray?.destroy()
   }
 }

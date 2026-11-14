@@ -93,6 +93,8 @@ export interface SavedPane {
   activeIndex: number
   fontSize: number
   pinned?: boolean
+  /** Pinned to the top of the sidebar and the session tabs; not the same as `pinned`, the pane beside a large one. */
+  starred?: boolean
 }
 
 export interface GridSplit {
@@ -216,6 +218,11 @@ export interface Settings {
   appearance: import('./appearance').AppearanceSettings
   /** The always-on-top Mini window. */
   miniWindow: import('./appearance').MiniWindowSettings
+  /** This PC's close and sign-in preferences. Sign-in enablement is read from the OS. */
+  desktop: import('./desktopSettings').DesktopSettings
+  trayNoticeShown: boolean
+  warnUsageLimits: boolean
+  warnedUsageWindows: import('./limitWarnings').WarnedWindows
   /** The Side panel layout: whether the panel is open, how wide, and its tab. */
   sidePanel: import('./sidePanel').SidePanelSettings
   /** How the sessions grid arranges panes: calm focus (one large pane) or mission control (equal tiles). */

@@ -637,3 +637,22 @@ aside.sidebar.rail { width: 56px; }
 .sess-plan-n { flex: none; color: var(--accent); font-weight: var(--w-semi); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
 .sess-plan-bar { flex: 1; min-width: 24px; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .sess-plan-bar i { display: block; height: 3px; border-radius: 3px; background: var(--accent); }
+
+/* Pinned sessions: a quiet group under Needs you, rows at the list's own indent. */
+.pinned-group { margin: 0 0 var(--s-2); }
+.pinned-group .side-sec {
+  padding: 0 var(--sp-3);
+  color: var(--text-3);
+  font-size: var(--fs-1);
+  font-weight: var(--w-regular);
+}
+.pinned-group .side-sec-count { margin-inline-start: 0; font-family: var(--font-mono); }
+.proj-list .pinned-group .kept-session-row { margin-inline-start: 0; }
+.sess-pin {
+  display: inline-flex;
+  flex: none;
+  align-self: center;
+  margin-inline-start: var(--s-1);
+  color: var(--text-3);
+}
+.sess-pin svg { width: 12px; height: 12px; }

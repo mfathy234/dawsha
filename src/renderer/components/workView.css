@@ -83,3 +83,21 @@
 .usage-table.work-table { table-layout: fixed; width: 100%; }
 .usage-table.work-table th:first-child, .usage-table.work-table td:first-child { width: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .usage-table.work-table th.num, .usage-table.work-table td.num { width: 112px; }
+
+/* Today card: one quiet row per session, numbers in a steady column, no charts. */
+.work-today { margin-bottom: var(--s-5); }
+.today-rows { list-style: none; margin: 0; padding: 0; }
+.today-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto 56px; align-items: center; gap: var(--s-3); padding: var(--s-2) 0; font-size: var(--fs-ui); }
+.today-main { display: flex; flex-direction: column; min-width: 0; }
+.today-title { font-size: var(--fs-body); font-weight: var(--w-medium, 500); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today-project { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today-time, .today-changes, .today-cost { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.today-time { color: var(--text); text-align: end; }
+.today-cost { text-align: end; }
+.today-total { display: flex; justify-content: space-between; gap: var(--s-3); margin: var(--s-2) 0 0; padding-top: var(--s-3); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; }
+.today-total span:last-child { color: var(--text); }
+.today-empty { margin: 0; }
+@media (max-width: 900px) {
+  .today-row { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+  .today-cost { display: none; }
+}

@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { branchNameProblem } from '../shared/gitBranches'
+import { parseCommitNumstat, type RecapChange, type WorkRecapData } from '../shared/workRecap'
 import { aggregateWork, classifyWork, shiftAnchor, ticketFromBranch, workWindow, type WorkItem, type WorkPeriod, type WorkReport } from '../shared/workDashboard'
 import type { Project, ResumeSession } from '../shared/types'
 import { listSessionSources } from './sessionIndex'
@@ -43,6 +44,18 @@ export const workCommits: CommitReader = (folder, branch, start, end) => {
   return job
 }
 
+/** The same read-only, own-commits query as workCommits, summed into files and lines changed. */
+export const workCommitChanges = (folder: string, branch: string | null, start: number, end: number): Promise<RecapChange> => {
+  const none: RecapChange = { files: 0, added: 0, removed: 0 }
+  if ((branch && branchNameProblem(branch)) || !Number.isFinite(start) || !Number.isFinite(end) || end < start) return Promise.resolve(none)
+  return repoAuthor(folder).then((author) => new Promise<RecapChange>((resolve) => {
+    execFile('git', ['log', '--numstat', '--format=%H', `--since=${new Date(start).toISOString()}`, `--until=${new Date(end).toISOString()}`,
+      ...(author ? ['--fixed-strings', `--author=${author}`] : []), branch ? `refs/heads/${branch}` : 'HEAD', '--'],
+    { cwd: folder, windowsHide: true, timeout: 5000, maxBuffer: 4 * 1024 * 1024 },
+    (error, stdout) => resolve(error ? none : parseCommitNumstat(stdout)))
+  }))
+}
+
 /** Sessions in a git worktree of a project count under that project, with the worktree shown on the item. */
 export async function sessionWorkItems(sessions: readonly ResumeSession[], projects: readonly Project[], commits: CommitReader = workCommits, mainOf: (folder: string) => Promise<string | null> = mainCheckoutOf): Promise<WorkItem[]> {
   const byId = new Map(projects.map(p => [p.id, p]))
@@ -82,6 +95,22 @@ export class WorkService {
   private cached: { key: string; at: number; job: Promise<WorkSession[]> } | null = null
   private readonly spans = new WorkSpanReader()
   constructor(private readonly sources: SourceReader = readSources) {}
+
+  /** Today's report with the files each session changed, read from the user's own commits during the session. */
+  async recap(projects: Project[], changesOf: (folder: string, branch: string | null, start: number, end: number) => Promise<RecapChange> = workCommitChanges): Promise<WorkRecapData> {
+    const report = await this.report('today', projects, 0)
+    const folders = new Map(projects.map((project) => [project.id, project.folder]))
+    const changes: Record<string, RecapChange> = {}
+    let next = 0
+    await Promise.all(Array.from({ length: Math.min(4, report.items.length) }, async () => {
+      while (next < report.items.length) {
+        const item = report.items[next++]
+        const folder = folders.get(item.session?.projectId ?? item.projectId)
+        if (folder) changes[item.id] = await changesOf(folder, item.branch, item.startedAt, item.endedAt)
+      }
+    }))
+    return { report, changes }
+  }
 
   async report(period: WorkPeriod, projects: Project[], offset = 0): Promise<WorkReport> {
     const now = Date.now()

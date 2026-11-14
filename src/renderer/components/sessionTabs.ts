@@ -1,13 +1,15 @@
-import { closePane, focusPane, movePane } from '../actions'
+import { closePane, focusPane, movePane, toggleStarred } from '../actions'
 import type { PaneView } from '../derive'
-import { clear, h, iconButton } from '../dom'
+import { clear, h, icon, iconButton } from '../dom'
 import { enableDrag } from '../drag'
 import { ICONS } from '../icons'
 import { sessionNote } from '../sessionNotes'
 import { parsePlanLabel } from '../../shared/planProgress'
 import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
 import { dropSlot, isNoMove, slotToIndex } from '../../shared/tabDrag'
+import { isStarred } from '../../shared/starred'
 import type { AppState } from '../state'
+import { openContextMenu } from './contextMenu'
 import { crewSignature, identityMark } from './crewAvatar'
 import './sessionTabs.css'
 
@@ -26,7 +28,7 @@ export class SessionTabs {
   update(views: PaneView[], state: AppState, shown: boolean, selectedId: string | null): void {
     this.el.hidden = !shown
     if (!shown) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.fullTitle, v.status, v.agent, v.attention, crewSignature(v), sessionNote(v.pane.id).plan]), selectedId])
+    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.fullTitle, v.status, v.agent, v.attention, isStarred(v.pane), crewSignature(v), sessionNote(v.pane.id).plan]), selectedId])
     if (signature === this.signature || document.body.classList.contains('dragging-ui')) return
     this.signature = signature
     clear(this.el)
@@ -40,6 +42,7 @@ export class SessionTabs {
     const stateName = sessionState({ status: view.status, attention: view.attention })
     const stateLabel = SESSION_STATE_LABELS[stateName]
     const plan = parsePlanLabel(sessionNote(view.pane.id).plan)
+    const starred = isStarred(view.pane)
     const label = h(
       'button',
       {
@@ -53,6 +56,7 @@ export class SessionTabs {
       h('span', { class: 'strip-index' }, `${view.index + 1}`),
       identityMark(view, 18),
       h('bdi', { class: 'strip-name', dir: 'auto' }, name),
+      starred ? h('span', { class: 'strip-pin', role: 'img', 'aria-label': 'Pinned' }, icon(ICONS.pin)) : null,
       h('span', { class: `strip-status state-${stateName}` }, stateLabel),
       selected && plan ? h('span', { class: 'strip-plan', 'aria-hidden': 'true' }, `${plan.done}/${plan.total}`) : null
     )
@@ -64,6 +68,16 @@ export class SessionTabs {
       close,
       selected && plan ? h('span', { class: 'strip-bar', 'aria-hidden': 'true' }, h('i', { style: `width: ${plan.percent}%` })) : null
     )
+    tab.addEventListener('contextmenu', (event) => {
+      event.preventDefault()
+      openContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        label: `Actions for ${name}`,
+        entries: [{ label: starred ? 'Unpin' : 'Pin to top', run: () => toggleStarred(view.pane.id) }, { label: 'Close', run: () => void closePane(view.pane.id) }],
+        returnFocus: () => this.el.querySelector<HTMLElement>(`[data-pane-id="${view.pane.id}"] .strip-label`)?.focus()
+      })
+    })
     this.enableReorder(tab, view.pane.id, views)
     return tab
   }

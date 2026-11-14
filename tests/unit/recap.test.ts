@@ -58,6 +58,23 @@ describe('outputLines', () => {
     expect(outputLines(screen, 3)).toEqual(['● Ran the audit spec, 12 screenshots saved.', '  Waiting for 1 background agent'])
   })
 
+  it('drops border rows that the terminal joined into one long line, and finds the input box inside them', () => {
+    const rule = '─'.repeat(60)
+    const screen = [
+      '● Committed the layout, rail and CI changes.',
+      rule + rule + rule + '→',
+      rule + rule,
+      rule + ' ❯ ',
+      rule,
+      '● main  ✻ claude  Opus 5.5'
+    ].join('\n')
+    expect(outputLines(screen, 3)).toEqual(['● Committed the layout, rail and CI changes.'])
+  })
+
+  it('keeps the words of a line that a border runs through', () => {
+    expect(outputLines('──── Tests  41 passed ────\n', 3)).toEqual(['Tests  41 passed'])
+  })
+
   it('uses the whole screen when there is no input box', () => {
     expect(outputLines('$ npm test\n\nPASS src/a.test.ts\n', 3)).toEqual(['$ npm test', 'PASS src/a.test.ts'])
   })

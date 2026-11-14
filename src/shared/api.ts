@@ -1,6 +1,7 @@
 import type { AgentAccounts } from './agentAccounts'
 import type { KnownLimits } from './agentLimits'
 import type { WorkPeriod, WorkReport } from './workDashboard'
+import type { WorkRecapData } from './workRecap'
 import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
@@ -72,6 +73,9 @@ import type {
 } from './types'
 
 export interface GridApi {
+  getLoginItem(): Promise<import('./desktopSettings').LoginItemState>
+  setLoginItem(enabled: boolean): Promise<import('./desktopSettings').LoginItemState>
+  quit(): void
   miniWindow: import('./miniWindow').MiniHostApi
   runs: import('./runCommands').RunApi
   tools: import('./filesTools').FilesToolsApi
@@ -188,6 +192,8 @@ export interface GridApi {
   openInstruction(folder: string, name: string): Promise<void>
   notify(request: NotifyRequest): void
   onNotifyClick(listener: (paneId: string, answer?: import('./notificationAction').NotificationAnswer) => void): () => void
+  onLimitWarning(listener: (message: string) => void): () => void
+  migrateLimitWarned(legacy: unknown): Promise<void>
   setAttentionBadge(count: number, waitingIds?: string[]): void
   onDesktopNewSession(listener: () => void): void
   bridgePreview(): Promise<BridgePreview>
@@ -233,6 +239,7 @@ export interface GridApi {
   knownLimits(): Promise<KnownLimits>
   /** `offset`: periods back from now (0 now, -1 the one before). */
   workReport(period: WorkPeriod, offset?: number): Promise<WorkReport>
+  workRecap(): Promise<WorkRecapData>
   exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
   writeHandoffTranscript(request: HandoffTranscriptRequest): Promise<HandoffTranscriptResult>
   revealHandoff(path: string): Promise<void>

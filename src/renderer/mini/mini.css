@@ -89,3 +89,35 @@ body.mini-window { margin: 0; background: var(--chrome); color: var(--text); ove
   .mini-window *, .mini-window *::before, .mini-window *::after { animation: none !important; transition: none !important; }
   .mini-spin { border-right-color: var(--st-working); }
 }
+
+/* 1.8.9: the detail reads like a small conversation, and the terminal stays folded to its last line. */
+.mini-detail-title { gap: 12px; align-items: center; }
+.mini-detail h1 { font-size: 16px; line-height: 22px; }
+.mini-convo { display: flex; flex-direction: column; gap: 8px; padding: 12px 4px 0; }
+.mini-turn[hidden] { display: none; }
+.mini-turn-you { align-self: flex-end; max-width: 88%; padding: 6px 10px; border-radius: 12px 12px 4px 12px; background: var(--raised); color: var(--text); }
+.mini-turn-agent { color: var(--text-2); }
+.mini-turn-agent .mini-reply { color: var(--text); }
+.mini-detail .mini-terminal { margin-top: 12px; padding: 0; background: transparent; }
+.mini-terminal-label { margin: 0; padding: 8px 10px; border-radius: var(--r-2); background: var(--well); cursor: pointer; list-style: none; align-items: center; min-width: 0; }
+.mini-terminal-label::-webkit-details-marker { display: none; }
+.mini-terminal-label > span:first-of-type { flex: none; }
+.mini-terminal-last { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); font: var(--fs-1)/18px var(--font-mono); text-align: end; }
+.mini-terminal[open] .mini-terminal-last { display: none; }
+.mini-terminal[open] .mini-terminal-label { border-radius: var(--r-2) var(--r-2) 0 0; }
+.mini-terminal pre { padding: 8px 10px 10px; border-radius: 0 0 var(--r-2) var(--r-2); background: var(--well); }
+.mini-detail .mini-usage { padding-top: 10px; color: var(--text-3); }
+
+/* 1.8.9: start a session from the Mini window. */
+.mini-spacer { flex: 1; }
+.mini-start { flex: none; display: flex; flex-direction: column; gap: 6px; padding: var(--sp-3); background: var(--pane); border-radius: var(--r-3); }
+.mini-start label { color: var(--text-2); font-size: var(--fs-1); }
+.mini-select-field { font: inherit; color: var(--text); background: var(--well); border: 0; border-radius: var(--r-2); padding: 7px 10px; min-height: 34px; width: 100%; -webkit-app-region: no-drag; }
+.mini-select-field:focus-visible, .mini-start .mini-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.mini-start .mini-input { flex: none; width: 100%; margin-top: 4px; }
+.mini-start-note { margin: 0; color: var(--text-2); font-size: var(--fs-1); min-height: 0; }
+.mini-start-note:empty { display: none; }
+.mini-start-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }
+.mini-window .mini-start-go { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.mini-window .mini-start-go:disabled { opacity: .45; cursor: default; }
+.mini-window .mini-start-cancel { background: transparent; color: var(--text-2); }

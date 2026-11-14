@@ -62,6 +62,9 @@ const api: GridApi = {
       reply: (id, result) => ipcRenderer.send(IPC.remoteCrewRunResult, id, result)
     }
   } : {}),
+  getLoginItem: () => ipcRenderer.invoke(IPC.loginItemGet),
+  setLoginItem: (enabled) => ipcRenderer.invoke(IPC.loginItemSet, enabled),
+  quit: () => ipcRenderer.send(IPC.quit),
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   updateSettings: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
   exportSettings: () => ipcRenderer.invoke(IPC.settingsExport),
@@ -149,6 +152,8 @@ const api: GridApi = {
   openInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsOpen, folder, name),
   notify: (request) => ipcRenderer.send(IPC.notify, request),
   onNotifyClick: (listener) => subscribe<[string, import('../shared/notificationAction').NotificationAnswer?]>(IPC.notifyClick, listener),
+  onLimitWarning: (listener) => subscribe<[string]>(IPC.limitWarning, listener),
+  migrateLimitWarned: (legacy) => ipcRenderer.invoke(IPC.limitWarnedMigrate, legacy),
   setAttentionBadge: (count, waitingIds) => ipcRenderer.send(IPC.attentionBadge, count, waitingIds),
   onDesktopNewSession: (listener) => { ipcRenderer.on(IPC.desktopNewSession, () => listener()) },
   bridgePreview: () => ipcRenderer.invoke(IPC.bridgePreview),
@@ -192,6 +197,7 @@ const api: GridApi = {
   openUpdateLink: (url) => ipcRenderer.invoke(IPC.updateOpenLink, url),
   usageReport: (range) => ipcRenderer.invoke(IPC.usageGet, range),
   workReport: (period, offset) => ipcRenderer.invoke(IPC.workGet, period, offset ?? 0),
+  workRecap: () => ipcRenderer.invoke(IPC.workRecap),
   usageSnapshot: () => ipcRenderer.invoke(IPC.usageSnapshot),
   agentAccounts: (fresh?: boolean) => ipcRenderer.invoke(IPC.agentAccounts, fresh),
   knownLimits: () => ipcRenderer.invoke(IPC.knownLimits),

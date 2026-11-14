@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.8.8</a>
+      <a href="#new">New in 1.8.9</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,8 +97,28 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.8.8</h2>
-      <p class="section-lead">1.8.8 makes the Mini window worth a glance, gives sessions short names, and shows how full each context is. Below it are 1.8.7 and earlier releases.</p>
+      <h2 id="new-h">New in 1.8.9</h2>
+      <p class="section-lead">1.8.9 keeps Dawsha watching your agents from the tray, warns you before a usage limit, and adds pinned sessions and a Today recap. Below it are 1.8.8 and earlier releases.</p>
+      <div class="feat-row" id="tray-mini">
+        <div class="feat-copy">
+          <h3>Keeps watching from the tray</h3>
+          <p>Close the window and Dawsha can keep running in the tray, so your agents keep working and the Mini window keeps you posted.</p>
+          <ul><li>Start a new session from the Mini window without bringing Dawsha to the front.</li><li>A warning at 80% and 95% of a usage limit, with when it resets.</li><li>Dawsha can start when you sign in, hidden in the tray.</li></ul>
+        </div>
+        <figure class="shot framed narrow">
+          <img loading="lazy" src="assets/mini-start.png" width="376" height="304" alt="The Mini window's start form with a project, an agent and a first message">
+        </figure>
+      </div>
+      <div class="feat-wide" id="pins-today">
+        <div class="feat-copy">
+          <h3>Pinned sessions and your day in one card</h3>
+          <p>Pin the sessions you care about to the top, and see what every session did today in Work.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/work-today.png" width="1168" height="668" alt="The Today card in Work listing three sessions with how long each worked, the files it committed and its cost, above a total">
+        </figure>
+        <ul class="feat-cols"><li>Pinned sessions get their own group in the sidebar and come first in the tabs.</li><li>Copy the Today card as text for your standup.</li><li>Terminal sessions offer Compact before their context runs out.</li></ul>
+      </div>
       <div class="feat-row" id="mini-detail">
         <div class="feat-copy">
           <h3>Know what a session is doing, from anywhere</h3>

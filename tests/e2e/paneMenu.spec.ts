@@ -30,7 +30,7 @@ test('the pane menu is short and grouped, and the rest of the actions are in the
     for (const name of ['Move pane…', 'Show session timeline', 'Replay session', 'Copy session name', 'Copy last reply', 'Copy current prompt', 'Clear scrollback', 'Continue in Codex', 'Close pane']) {
       await expect(menu.getByRole('menuitem', { name })).toBeVisible()
     }
-    expect(await menu.getByRole('menuitem').count()).toBeLessThanOrEqual(19)
+    expect(await menu.getByRole('menuitem').count()).toBeLessThanOrEqual(20)
     await expect(menu.getByRole('menuitem', { name: /^Changes/ }).locator('.menu-kbd')).toHaveText('Ctrl+Shift+G')
     await expect(menu.getByRole('menuitem', { name: /^Find/ }).locator('.menu-kbd')).toHaveText('Ctrl+Shift+F')
     await expect(menu.locator('.menu-item .menu-icon svg').first()).toBeVisible()

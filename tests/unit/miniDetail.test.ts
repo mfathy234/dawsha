@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChatItem } from '../../src/shared/chatLog'
-import { activeMoment, changesLabel, doneLine, DONE_MOMENT_MS, lastExchange, nowLine, replyLines, stepDoneMemory, usageLine, type DoneMemory } from '../../src/shared/miniDetail'
+import { activeMoment, changesLabel, clockStart, doneLine, DONE_MOMENT_MS, lastExchange, nowLine, replyLines, stepDoneMemory, usageLine, type DoneMemory } from '../../src/shared/miniDetail'
 import { isMiniAction, miniSession, type MiniSessionInput } from '../../src/shared/miniWindow'
 
 const message = (id: string, role: 'user' | 'agent', text: string): ChatItem => ({ kind: 'message', id, role, text })
@@ -120,5 +120,22 @@ describe('Mini actions for review and send', () => {
     expect(isMiniAction({ kind: 'send', paneId: 'a', text: 'hi', extra: 1 })).toBe(false)
     expect(isMiniAction({ kind: 'send', paneId: 'a' })).toBe(false)
     expect(isMiniAction({ kind: 'review', paneId: 'a', path: 'x' })).toBe(false)
+  })
+})
+
+describe('the card clock', () => {
+  it('counts a working session from the start of its run, not from the last approval', () => {
+    const memory: DoneMemory = { state: 'working', workedSince: 1000, moment: null }
+    expect(clockStart('working', 90_000, memory)).toBe(1000)
+  })
+  it('counts every other state from when the card entered it', () => {
+    const memory: DoneMemory = { state: 'done', workedSince: null, moment: { at: 90_000, took: 5 } }
+    expect(clockStart('done', 90_000, memory)).toBe(90_000)
+    expect(clockStart('needs', 50_000, { state: 'needs', workedSince: 1000, moment: null })).toBe(50_000)
+    expect(clockStart('working', 5000, undefined)).toBe(5000)
+  })
+  it('says how long a request waited, then Done and its age, from the state the card shows', () => {
+    expect(nowLine({ state: 'done', ask: '', tool: '', step: '', elapsed: '40s' })).toBe('Done 40s ago')
+    expect(nowLine({ state: 'working', ask: '', tool: 'Running npm test', step: '', elapsed: '12s' })).toBe('Running npm test, 12s')
   })
 })

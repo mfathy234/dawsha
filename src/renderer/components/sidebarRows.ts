@@ -74,24 +74,28 @@ export interface SessionRowOptions {
   key: string
   selected: boolean
   dimmed: boolean
+  /** The project name, for a row in the Pinned group: it adds the pin glyph and names the project on hover. */
+  pinnedIn?: string
   onClick: () => void
 }
 
 /** An open session in its project: agent mark, title (wraps), what it is doing, and the time on the right. */
 export function sessionRowButton(view: PaneView, facts: RowFacts, options: SessionRowOptions): HTMLElement {
-  const { key, selected, dimmed, onClick } = options
+  const { key, selected, dimmed, onClick, pinnedIn } = options
   return h(
     'button',
     {
       class: `sess-row${selected ? ' selected' : ''}${dimmed ? ' dimmed' : ''}`,
       type: 'button',
-      title: facts.tooltip,
+      title: pinnedIn ? `${facts.tooltip}
+Pinned in ${pinnedIn}` : facts.tooltip,
       'aria-current': selected ? 'true' : undefined,
       'data-nav': key,
       onClick
     },
     identityMark(view),
     h('span', { class: 'sess-body' }, h('span', { class: 'sess-name', dir: 'auto' }, sessionLabel(view)), lineTwo(facts, dimmed), dimmed ? null : planLine(view)),
+    // No pin glyph here: the Pinned heading says it, and a glyph would take width from the title.
     facts.time && !dimmed ? h('span', { class: 'sess-age', 'aria-label': timeLabel(facts) }, facts.time) : null
   )
 }
