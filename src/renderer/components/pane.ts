@@ -16,6 +16,7 @@ import {
   restoreGrid,
   setActiveTab,
   togglePinned,
+  toggleStarred,
   showPaneDiff,
   openChanges,
   paneHasRepo,
@@ -708,6 +709,7 @@ export class PaneComponent {
       ? [item('Make large', () => makeLarge(this.paneId), ICONS.maximize, 'pane.make-large')]
       : []
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
+    const starItem = item(this.current?.pane.starred === true ? 'Unpin' : 'Pin to top', () => toggleStarred(this.paneId), ICONS.pin)
     const source = this.current?.agent ?? 'shell'
     const handoffs =
       source === 'shell'
@@ -729,6 +731,7 @@ export class PaneComponent {
       first,
       ...largeItems,
       showDetails,
+      starItem,
       pinItem,
       item('Tag…', () => this.openTag(), ICONS.tag),
       h('div', { class: 'menu-separator', role: 'separator' }),

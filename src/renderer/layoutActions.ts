@@ -24,6 +24,7 @@ import { choiceDialog, confirmDialog, promptDialog } from './components/dialogs'
 import { toast } from './components/toast'
 import { matchAll } from './derive'
 import { newId, projectById, store, type PaneState } from './state'
+import { starredFirst } from '../shared/starred'
 
 export type OpenMode = 'replace' | 'add'
 
@@ -155,7 +156,7 @@ export async function openLayout(layout: SavedLayout, mode?: OpenMode): Promise<
   const focused = panes[Math.min(plan.focusedIndex, panes.length - 1)]
   store.set((s) => ({
     ...s,
-    panes: [...s.panes, ...panes],
+    panes: starredFirst([...s.panes, ...panes]),
     splits: layout.splits ? { ...s.splits, ...layout.splits } : s.splits,
     focusedId: focused.id,
     maximizedId: null,

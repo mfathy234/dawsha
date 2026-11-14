@@ -453,6 +453,7 @@ export function registerIpc(
     const steps = typeof offset === 'number' && Number.isInteger(offset) && offset <= 0 && offset >= -MAX_STEPS_BACK ? offset : 0
     return work.report(valid, settings.get().projects, steps)
   })
+  ipcMain.handle(IPC.workRecap, () => work.recap(settings.get().projects))
   ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
   ipcMain.handle(IPC.handoffTranscript, (_event, request: unknown) => writeHandoffTranscript(settings.get().projects, join(app.getPath('userData'), 'handoffs'), request))
   ipcMain.handle(IPC.handoffReveal, (_event, path: unknown) => revealHandoff(join(app.getPath('userData'), 'handoffs'), path))

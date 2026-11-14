@@ -39,6 +39,7 @@ import { showUpdatePill, type UpdateState } from '../shared/updates'
 import { snapshotWorkspace } from '../shared/layouts'
 import { canMakeLarge, paneUnitIds, resolveLargePane } from '../shared/gridStyle'
 import { moveById, moveItem } from '../shared/reorder'
+import { clampMoveIndex, setStarred as setStarredPanes, starredFirst } from '../shared/starred'
 import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
 import { leaveBoard, setSessionsLayout } from './sessionsLayout'
@@ -778,7 +779,7 @@ export function focusPaneAt(index: number): void {
 export function movePane(paneId: string, toIndex: number, focus = true): void {
   const panes = store.state.panes
   const from = panes.findIndex((p) => p.id === paneId)
-  const to = Math.max(0, Math.min(panes.length - 1, toIndex))
+  const to = from < 0 ? from : clampMoveIndex(panes, from, Math.max(0, Math.min(panes.length - 1, toIndex)))
   if (from < 0 || from === to) return
   store.patch(focus ? { panes: moveItem(panes, from, to), focusedId: paneId } : { panes: moveItem(panes, from, to) })
   persistWorkspace()
@@ -803,6 +804,17 @@ export function setPinned(paneId: string, pinned: boolean): void {
     })
   }))
   persistWorkspace()
+}
+
+export function setStarred(paneId: string, starred: boolean): void {
+  if (!paneById(store.state, paneId)) return
+  store.set((s) => ({ ...s, panes: setStarredPanes(s.panes, paneId, starred) }))
+  persistWorkspace()
+}
+
+export function toggleStarred(paneId: string): void {
+  const target = paneById(store.state, paneId)
+  if (target) setStarred(paneId, target.starred !== true)
 }
 
 export function togglePinned(paneId?: string): void {
@@ -1388,7 +1400,8 @@ export function buildPane(saved: SavedPane, project: Project): PaneState {
     folder: saved.folder,
     compare: saved.compare,
     worktree: saved.worktree,
-    pinned: saved.pinned === true ? true : undefined
+    pinned: saved.pinned === true ? true : undefined,
+    starred: saved.starred === true ? true : undefined
   }
 }
 
@@ -1403,7 +1416,7 @@ export async function restoreWorkspace(): Promise<void> {
   const focused = restored[Math.min(settings.workspace.focusedIndex, restored.length - 1)]
   const pinned = restored.findIndex((pane) => pane.pinned === true)
   store.patch({
-    panes: restored.map((pane, index) => (pane.pinned && index !== pinned ? { ...pane, pinned: undefined } : pane)),
+    panes: starredFirst(restored.map((pane, index) => (pane.pinned && index !== pinned ? { ...pane, pinned: undefined } : pane))),
     focusedId: focused.id,
     largePaneId: restored[settings.workspace.largeIndex ?? -1]?.id ?? focused.id,
     maximizedId: settings.sessionsLayout === 'panel' ? focused.id : (restored[settings.workspace.maximizedIndex ?? -1]?.id ?? null),

@@ -247,6 +247,7 @@ function sanitizePane(item: unknown): SavedPane | null {
   const worktree = sanitizeWorktree(item.worktree)
   if (worktree) pane.worktree = worktree
   if (item.pinned === true) pane.pinned = true
+  if (item.starred === true) pane.starred = true
   return pane
 }
 

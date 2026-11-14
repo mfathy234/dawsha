@@ -72,6 +72,8 @@ export interface PaneState {
   compare?: CompareLink
   worktree?: PaneWorktree
   pinned?: boolean
+  /** Pinned to the top of the sidebar and the session tabs; kept ahead of the other panes. */
+  starred?: boolean
 }
 
 export type QuickPickMode = 'new' | 'resume'

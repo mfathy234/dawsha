@@ -30,6 +30,7 @@ export interface SnapshotPane {
   fontSize: number
   activeTabId: string
   pinned?: boolean
+  starred?: boolean
   tabs: SnapshotTab[]
 }
 
@@ -78,6 +79,7 @@ export function snapshotWorkspace(
         if (pane.worktree) saved.worktree = pane.worktree
       }
       if (pane.pinned === true) saved.pinned = true
+      if (pane.starred === true) saved.starred = true
       return saved
     })
   }
