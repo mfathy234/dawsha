@@ -65,3 +65,9 @@
 .turn-cm textarea:focus-visible { outline: 2px solid var(--accent); }
 .turn-cm-actions { display: flex; gap: var(--s-2); margin-top: var(--s-2); }
 .side-panel-card:empty { display: none; }
+.files-review-list > *, .files-comments-list > * { flex: none; }
+.files-comments-list { flex: 1 1 auto; }
+.files-comment-row.sent { opacity: 1; color: var(--text-2); }
+.files-comment-row.sent .files-comment-jump { color: var(--text-2); }
+.cm-review-sent, .cm-review-comment.sent .cm-review-text, .turn-cm-text.sent { color: var(--text-2); }
+.files-review-card-slot { flex: none; }

@@ -37,7 +37,7 @@ function groupBlock(group: CheckoutGroup, hooks: AllSessionsHooks): HTMLElement 
   const sessions = group.main
     ? group.sessions.map((session) => h('button', { class: 'link-quiet all-group-session', type: 'button', onClick: () => hooks.jumpToSession(session.paneId) }, session.title))
     : first ? [h('button', { class: 'link-quiet all-group-session', type: 'button', onClick: () => hooks.jumpToSession(first.paneId) }, 'Go to session')] : []
-  const note = group.main ? null : h('div', { class: 'all-group-branch' }, group.branch ?? group.folder)
+  const note = group.main || !group.branch || group.branch === group.heading ? null : h('div', { class: 'all-group-branch' }, group.branch)
   return h('section', { class: 'all-group', 'data-folder': group.folder, 'aria-label': group.heading },
     h('div', { class: 'all-group-head' }, who, sessions.length > 0 ? h('div', { class: 'all-group-sessions' }, ...sessions) : null, note),
     h('div', { class: 'all-group-files', role: 'list' }, ...group.files.map((file) => fileRow(group, file, hooks))))
