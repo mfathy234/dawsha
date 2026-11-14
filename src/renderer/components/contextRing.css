@@ -24,4 +24,8 @@
 .ctx-pop-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-1); }
 
 .panes-quiet .pane-foot .info-context { display: none; }
+
+/* The title is never cut: in a narrow pane the ring drops its percent, then goes (Classic keeps the footer gauge). */
+@container pane (max-width: 560px) { .pane-header .ctx-ring-text { display: none; } .pane-header .ctx-ring { padding: 0 4px; } }
+@container pane (max-width: 420px) { .pane-header .ctx-ring { display: none; } }
 @media (prefers-reduced-motion: reduce) { .ctx-ring-arc { transition: none; } }

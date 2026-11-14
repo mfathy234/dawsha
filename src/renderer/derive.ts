@@ -338,7 +338,7 @@ export function derivePanes(state: AppState): PaneView[] {
   const titles = state.panes.map((pane, index) => titleFor(pane, matches, index + 1, projectById(state, pane.projectId)))
   const unique = uniqueSessionTitles(titles.map((title, index) => {
     const tab = primaryTab(state.panes[index])
-    return { ...title, projectId: state.panes[index].projectId, order: tab ? [tab.startedAt, tab.id] as const : undefined }
+    return { ...title, projectId: state.panes[index].projectId, fallback: !title.named, order: tab ? [tab.startedAt, tab.id] as const : undefined }
   }))
   return state.panes.map((pane, index) => {
     const project = projectById(state, pane.projectId)

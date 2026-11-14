@@ -93,6 +93,8 @@ export interface UniqueTitleEntry {
   projectId: string
   title: string
   manual: boolean
+  /** A stand-in name (the project, or "Claude session N"): the pane number already tells these apart. */
+  fallback?: boolean
   /** A stable rank (start time, then id) so suffixes follow the session, not its position in the grid. */
   order?: readonly [number, string]
 }
@@ -110,7 +112,7 @@ export function uniqueSessionTitles(entries: readonly UniqueTitleEntry[]): strin
     if (entry.manual) used.get(entry.projectId)!.add(entry.title)
   }
   const result = entries.map(entry => entry.title)
-  const inferred = entries.map((entry, index) => index).filter(index => !entries[index].manual)
+  const inferred = entries.map((entry, index) => index).filter(index => !entries[index].manual && !entries[index].fallback)
   inferred.sort((a, b) => byOrder(entries[a], entries[b], a, b))
   for (const index of inferred) {
     const entry = entries[index]

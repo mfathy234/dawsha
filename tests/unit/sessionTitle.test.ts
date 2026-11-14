@@ -61,6 +61,15 @@ describe('resolveSessionTitle', () => {
 })
 
 describe('uniqueSessionTitles', () => {
+  it('leaves fallback names alone, since the pane number already tells them apart', () => {
+    expect(uniqueSessionTitles([
+      { projectId: 'p', title: 'Smoke', manual: false, fallback: true },
+      { projectId: 'p', title: 'Smoke', manual: false, fallback: true },
+      { projectId: 'p', title: 'Fix the login', manual: false },
+      { projectId: 'p', title: 'Fix the login', manual: false }
+    ])).toEqual(['Smoke', 'Smoke', 'Fix the login', 'Fix the login 2'])
+  })
+
   it('numbers only inferred collisions within each project, reserving manual names', () => {
     const titles = uniqueSessionTitles([
       { projectId: 'p', title: 'Fix login', manual: false },
