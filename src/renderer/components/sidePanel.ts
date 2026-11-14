@@ -10,6 +10,9 @@ import { ICONS } from '../icons'
 import { planProgress } from '../../shared/planProgress'
 import { fitSidePanelWidth, MAX_SIDE_PANEL_WIDTH, MIN_SIDE_PANEL_WIDTH, SIDE_PANEL_TABS, type SidePanelSettings, type SidePanelTab } from '../../shared/sidePanel'
 import { setSessionsLayout } from '../sessionsLayout'
+import { reviewCard } from '../files/reviewCard'
+import { cancelReview, dismissReview, fixAll, onReviewChange, openFindings, retryReview, reviewOf, reviewSession, showReviewer } from '../reviewRun'
+import { AGENT_NAMES } from '../../shared/agents'
 import { panelSource } from '../sidePanelSources'
 import { folderOfPane, store, type AppState } from '../state'
 import { SessionPanel } from './sessionPanel'
@@ -22,6 +25,7 @@ interface Reply {
   id: string
   el: HTMLElement
   files: number
+  paths: string[]
 }
 
 function savePanel(change: Partial<SidePanelSettings>): void {
@@ -46,7 +50,9 @@ export class SidePanelComponent {
   private readonly body = h('div', { class: 'side-panel-body', role: 'tabpanel' })
   private readonly rail = h('button', { class: 'side-panel-rail', type: 'button', 'aria-label': 'Show the session panel', title: 'Show the session panel', onClick: () => savePanel({ open: true }) }, icon(ICONS.chevronLeft))
   private readonly session = new SessionPanel()
-  private readonly full = h('div', { class: 'side-panel-full' }, this.tabs, this.body)
+  private readonly card = h('div', { class: 'side-panel-card' })
+  private readonly full = h('div', { class: 'side-panel-full' }, this.tabs, this.card, this.body)
+  private lastView: PaneView | null = null
   private dragWidth: number | null = null
   /** The width the last key press asked for, so quick presses add up before the panel re-renders. */
   private keyWidth: number | null = null
@@ -64,10 +70,26 @@ export class SidePanelComponent {
     this.handle.addEventListener('pointercancel', (event) => this.onUp(event))
     this.handle.addEventListener('keydown', (event) => this.onKey(event))
     this.handle.addEventListener('blur', () => { this.keyWidth = null })
+    onReviewChange(() => this.drawCard())
+  }
+
+  private drawCard(): void {
+    const view = this.lastView
+    const folder = view ? folderOfPane(store.state, view.pane) : null
+    const job = folder ? reviewOf(folder) : null
+    if (!folder || !job || job.authorPaneId !== view?.pane.id) {
+      this.card.replaceChildren()
+      return
+    }
+    this.card.replaceChildren(reviewCard(
+      { state: job.state, reviewer: AGENT_NAMES[job.reviewer], scope: job.scopeLabel, summary: job.summary, open: openFindings(folder), raw: job.raw },
+      { fixAll: () => fixAll(folder), dismissAll: () => dismissReview(folder), cancel: () => cancelReview(folder), retry: () => void retryReview(folder), open: () => showReviewer(folder) }
+    ))
   }
 
   update(state: AppState, view: PaneView | null, shown: boolean): void {
     this.el.hidden = !shown || view === null
+    this.lastView = view
     if (this.el.hidden || !view) {
       this.signature = ''
       this.bodyKey = ''
@@ -95,9 +117,10 @@ export class SidePanelComponent {
     const signature = JSON.stringify([settings.tab, this.layoutPanel, view.pane.id, files, plan?.label ?? '', checks?.results.map((result) => result.status) ?? null])
     if (signature !== this.signature) {
       this.signature = signature
-      this.drawTabs(settings.tab, files, plan?.label ?? '', checks !== null && !checks.done)
+      this.drawTabs(settings.tab, files, plan?.label ?? '', checks !== null && !checks.done, view.pane.id)
     }
     this.drawBody(settings.tab, view, todos, reply, checks)
+    this.drawCard()
   }
 
   private applyWidth(wanted: number | null): void {
@@ -111,7 +134,7 @@ export class SidePanelComponent {
     this.handle.setAttribute('aria-valuenow', String(width))
   }
 
-  private drawTabs(active: SidePanelTab, files: number, plan: string, checking: boolean): void {
+  private drawTabs(active: SidePanelTab, files: number, plan: string, checking: boolean, paneId: string): void {
     const counts: Record<SidePanelTab, string> = { session: '', changes: files > 0 ? String(files) : '', plan: plan.replace(' of ', '/'), checks: checking ? 'running' : '' }
     clear(this.tabs)
     for (const tab of SIDE_PANEL_TABS) {
@@ -127,6 +150,7 @@ export class SidePanelComponent {
     }
     this.tabs.append(
       h('span', { class: 'side-panel-spacer' }),
+      h('button', { class: 'link-quiet side-panel-review', type: 'button', id: 'side-panel-review', onClick: () => void reviewSession(paneId) }, 'Review'),
       ...(this.layoutPanel ? [h('button', { class: 'link-quiet side-panel-grid', type: 'button', onClick: () => setSessionsLayout('grid') }, 'Back to grid')] : []),
       iconButton('Close the session panel', ICONS.closeSmall, () => savePanel(this.layoutPanel ? { open: false } : { docked: false }), 'small side-panel-close')
     )

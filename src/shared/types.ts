@@ -273,6 +273,8 @@ export interface Settings {
   crew: CrewSettings
   /** The latest crew runs, newest first. */
   crewRuns: CrewRun[]
+  /** Review comments on diffs, open and sent, newest last. */
+  reviewDrafts: import('./reviewDrafts').ReviewDraft[]
   /** How the Lead works: her rules, limits and which members she may use. */
   lead: LeadSettings
   /** The latest goals handed to the Lead, newest first. */

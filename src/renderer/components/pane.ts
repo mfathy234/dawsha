@@ -28,6 +28,7 @@ import {
   canMakeLargePane,
   tagSession
 } from '../actions'
+import { reviewSession } from '../reviewRun'
 import { derivePanes, type PaneView } from '../derive'
 import { folderOfPane, paneById, store } from '../state'
 import { openReviewInFiles } from '../files/filesActions'
@@ -704,6 +705,11 @@ export class PaneComponent {
       changesItem.setAttribute('disabled', '')
       changesItem.title = 'This pane folder is not a git repository'
     }
+    const reviewItem = item('Review this session…', () => reviewSession(this.paneId), ICONS.diff)
+    if (!paneHasRepo(this.paneId) || this.current?.agent === 'shell') {
+      reviewItem.setAttribute('disabled', '')
+      reviewItem.title = 'Needs an agent session in a git repository'
+    }
     const pauseItem = item('Pause recording', () => toggleRecordingPause(this.paneId), ICONS.history)
     pauseItem.setAttribute('disabled', '')
     pauseItem.title = 'This terminal is not being recorded'
@@ -773,6 +779,7 @@ export class PaneComponent {
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Open and review'),
       item('Show session timeline', () => toggleTimeline(this.paneId), ICONS.history, 'pane.timeline'),
       changesItem,
+      reviewItem,
       ...mergeItem,
       ...liveInfo,
       h('div', { class: 'menu-separator', role: 'separator' }),

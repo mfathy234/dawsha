@@ -27,6 +27,7 @@ import { defaultRecordings, sanitizeRecordings } from './recordings'
 import { defaultCapabilities, sanitizeCapabilities } from './remoteCapabilities'
 import { BUILTIN_IDS } from './crewBuiltins'
 import { defaultCrew, sanitizeCrew, sanitizeCrewRuns, sanitizeIdentity } from './crew'
+import { sanitizeDrafts } from './reviewDrafts'
 import { defaultLead, sanitizeGoals, sanitizeLead } from './crewLead'
 import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from './sessionTags'
 import {
@@ -143,6 +144,7 @@ export const defaultSettings = (): Settings => ({
   recordings: defaultRecordings(),
   crew: defaultCrew(),
   crewRuns: [],
+  reviewDrafts: [],
   lead: defaultLead(),
   crewGoals: [],
   presets: [],
@@ -530,6 +532,7 @@ export function migrateSettings(raw: unknown): Settings {
     recordings: sanitizeRecordings(raw.recordings),
     crew: sanitizeCrew(raw.crew, BUILTIN_IDS),
     crewRuns: sanitizeCrewRuns(raw.crewRuns),
+    reviewDrafts: sanitizeDrafts(raw.reviewDrafts),
     lead: sanitizeLead(raw.lead),
     crewGoals: sanitizeGoals(raw.crewGoals),
     presets: sanitizePresets(raw.presets, new Set(projects.map((p) => p.id))),

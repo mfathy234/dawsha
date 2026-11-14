@@ -5,7 +5,10 @@ import { branchName, checkoutLabel, checkoutTabsKey, type FilesCheckout } from '
 import { INSPECTOR_MIN_WIDTH, type EditorPrefs, type InspectorTab } from '../../shared/filesLayout'
 import { blameLines, type BlameSource } from '../../shared/fileActivity'
 import { toProjectPath, toRepoPath } from '../../shared/projectPaths'
-import { buildReviewMessage, draftCommitMessage, stepReview } from '../../shared/review'
+import { draftCommitMessage, stepReview } from '../../shared/review'
+import { groupCheckouts, type CheckoutGroup, type CheckoutInput } from '../../shared/allSessions'
+import { anchorDraft, openDrafts, snippetAt, type ReviewDraft } from '../../shared/reviewDrafts'
+import { AGENT_NAMES } from '../../shared/agents'
 import { runningSummary, runningText } from '../../shared/runStatus'
 import { attachmentOf, messageWithAttachments } from '../../shared/chatAttach'
 import type { FileCommit } from '../../shared/filePreview'
@@ -16,9 +19,11 @@ import { api } from '../api'
 import { focusPane, saveSettings, startSessionIn } from '../actions'
 import { derivePanes } from '../derive'
 import { primaryTab, sendChatMessage } from '../chat/chatActions'
+import { addDraft, changeDraft, draftsOf, isEditing, onDraftsChange, reanchor, removeDrafts, sendDrafts, startEditing, stopEditing } from '../reviewDrafts'
+import { cancelReview, dismissOne, dismissReview, fixAll, onReviewChange, isReviewerPane, openFindings, retryReview, reviewOf, sendOne, showReviewer } from '../reviewRun'
 import { h, icon } from '../dom'
 import { currentBundle, onThemeChange } from '../themeManager'
-import { projectById, store, type AppState } from '../state'
+import { folderOfPane, projectById, store, type AppState } from '../state'
 import { paneTerminal } from '../terminalActions'
 import { lastOutputAt } from '../ptyActivity'
 import { waitForSessionOutput, waitUntil } from '../files/sessionWait'
@@ -29,7 +34,7 @@ import { neighbourFile } from '../files/changeStep'
 import type { ToolsHost } from '../files/toolsHost'
 import { marksForFile, openTarget } from '../files/problemMarks'
 import { noteOpened } from '../files/fileIndex'
-import { filesTarget, insertIntoSession, onFilesCommand, type FilesCommand, onFilesRequest, onFilesSearchRequest, openInVsCode, promptReference, setCurrentTarget, setDirtyProvider, takeFilesRequest, addToPrompt, type FilesTarget } from '../files/filesActions'
+import { filesTarget, openReviewFileInFiles, insertIntoSession, onFilesCommand, type FilesCommand, onFilesRequest, onFilesSearchRequest, openInVsCode, promptReference, setCurrentTarget, setDirtyProvider, takeFilesRequest, addToPrompt, type FilesTarget } from '../files/filesActions'
 import { closeTab, openTab, pinTab, type TabRef } from '../files/filesState'
 import { fileIcon } from '../files/fileIcon'
 import { loadSessionData, orderSessions, type TouchMap } from '../files/sessionTouch'
@@ -52,7 +57,8 @@ import { editorPrefs, filesLayout, updateEditorPrefs, updateLayout } from '../fi
 import { EditorSettings } from '../files/editorSettings'
 import { reviewExtension, type DraftComment } from '../files/reviewEditor'
 import type { TreeTarget } from '../files/filesTree'
-import type { ReviewFile } from '../files/reviewPanel'
+import type { ReviewFile, ReviewModel } from '../files/reviewPanel'
+import type { CommentRow } from '../files/reviewComments'
 import { openContextMenu, type ContextEntry } from './contextMenu'
 import { confirmDialog, promptDialog } from './dialogs'
 import { ignoredToast, type UntrackedFolder } from '../../shared/gitIgnore'
@@ -77,9 +83,10 @@ type CheckoutsRefresh = 'ok' | 'failed' | 'stale'
 
 interface ReviewState {
   viewed: Set<string>
-  comments: DraftComment[]
   note: string
   current: string | null
+  scope: 'checkout' | 'all'
+  groups: CheckoutGroup[] | null
 }
 
 interface DocSet {
@@ -153,6 +160,7 @@ export class FilesViewComponent {
   private statusFiles: GitFileEntry[] = []
   private newFolders: UntrackedFolder[] = []
   private readonly newFolderGate = new LatestGate()
+  private readonly groupGate = new LatestGate()
   private linked: LinkedRepo[] = []
   private linkedKey = ''
   private readonly commits = new Map<string, FileCommit[]>()
@@ -182,6 +190,10 @@ export class FilesViewComponent {
         this.renderReview(false)
       },
       send: (anchor) => this.sendReview(anchor),
+      setScope: (scope) => this.setReviewScope(scope),
+      comment: { jump: (id) => void this.jumpToComment(id), edit: (id) => void this.jumpToComment(id, true), remove: (id) => void this.deleteComment(id) },
+      card: { fixAll: () => this.withFolder(fixAll), dismissAll: () => this.withFolder(dismissReview), cancel: () => this.withFolder(cancelReview), retry: () => this.withFolder(retryReview), open: () => this.withFolder(showReviewer) },
+      all: { openFile: (folder, path) => void this.openAcross(folder, path), jumpToSession: (paneId) => focusPane(paneId) },
       commit: () => void this.commitChanges(),
       discard: (path) => void this.discardFile(path),
       ignoreFolder: (folder) => void this.ignoreFolder(folder),
@@ -272,6 +284,8 @@ export class FilesViewComponent {
       for (const set of this.sets.values()) for (const doc of set.docs.values()) doc.setTheme(themeKind())
     })
     onFilesRequest(() => this.takeRequest())
+    onDraftsChange(() => { if (this.visible) this.renderReview() })
+    onReviewChange(() => { if (this.visible) this.renderReview(false) })
     onFilesSearchRequest(() => {
       if (this.visible) this.explorer.setMode('search')
     })
@@ -392,7 +406,7 @@ export class FilesViewComponent {
       const saved = store.state.settings.filesTabs[key] ?? []
       set = {
         projectId: target.projectId, folder: target.folder, docs: new Map(), tabs: saved.map((path) => ({ path, pinned: true })), active: saved[0] ?? null,
-        openFolders: new Set(), prefix: '', review: { viewed: new Set(), comments: [], note: '', current: null }
+        openFolders: new Set(), prefix: '', review: { viewed: new Set(), note: '', current: null, scope: 'checkout', groups: null }
       }
       this.sets.set(key, set)
     }
@@ -545,12 +559,12 @@ export class FilesViewComponent {
     window.setTimeout(check, 200)
   }
 
-  private liveSessions(): Array<{ paneId: string; title: string }> {
+  private liveSessions(): Array<{ paneId: string; title: string; agent: string }> {
     const projectId = this.target?.projectId
     if (!projectId) return []
     return derivePanes(store.state)
-      .filter((view) => view.pane.projectId === projectId && view.agent !== 'shell' && !view.activeExited && paneTerminal(view.pane.id) !== undefined)
-      .map((view) => ({ paneId: view.pane.id, title: view.title }))
+      .filter((view) => view.pane.projectId === projectId && view.agent !== 'shell' && !view.activeExited && paneTerminal(view.pane.id) !== undefined && !isReviewerPane(view.pane.id))
+      .map((view) => ({ paneId: view.pane.id, title: view.title, agent: AGENT_NAMES[view.agent] }))
   }
 
   private openSendMenu(anchor: HTMLElement): void {
@@ -1017,6 +1031,33 @@ export class FilesViewComponent {
     return this.statusFiles.map((file) => ({ path: file.path, letter: statusLetter(file), added: file.added, removed: file.removed }))
   }
 
+  private withFolder(run: (folder: string) => unknown): void {
+    if (this.set) run(this.set.folder)
+  }
+
+  private visibleDrafts(set: DocSet): ReviewDraft[] {
+    return draftsOf(set.folder).filter((draft) => draft.status !== 'dismissed')
+  }
+
+  private commentRows(set: DocSet): CommentRow[] {
+    return this.visibleDrafts(set).map((draft) => {
+      const doc = set.docs.get(draft.path)
+      const outdated = doc?.status === 'ready' && doc.changes ? anchorDraft(draft, doc.text().split('\n')).outdated : false
+      return { id: draft.id, path: draft.path, line: draft.line, ...(draft.endLine ? { endLine: draft.endLine } : {}), text: draft.text, sent: draft.status === 'sent', outdated, reviewer: draft.author === 'reviewer' }
+    })
+  }
+
+  private sendLabel(): string {
+    const sessions = this.liveSessions()
+    return sessions.length === 1 ? sessions[0].agent : 'agent'
+  }
+
+  private cardModel(set: DocSet): ReviewModel['card'] {
+    const job = reviewOf(set.folder)
+    if (!job) return null
+    return { state: job.state, reviewer: AGENT_NAMES[job.reviewer], scope: job.scopeLabel, summary: job.summary, open: openFindings(set.folder), raw: job.raw }
+  }
+
   private renderReview(updateCounts = true): void {
     const set = this.set
     if (!set) return
@@ -1024,10 +1065,65 @@ export class FilesViewComponent {
     const paths = new Set(files.map((file) => file.path))
     for (const path of [...set.review.viewed]) if (!paths.has(path)) set.review.viewed.delete(path)
     const counts = new Map<string, number>()
-    for (const comment of set.review.comments) if (comment.text.trim() !== '') counts.set(comment.path, (counts.get(comment.path) ?? 0) + 1)
+    for (const comment of openDrafts(draftsOf(set.folder), set.folder)) if (comment.text.trim() !== '') counts.set(comment.path, (counts.get(comment.path) ?? 0) + 1)
     const total = [...counts.values()].reduce((sum, count) => sum + count, 0)
-    this.explorer.review.render({ newFolders: this.newFolders, files, current: set.review.current ?? set.active, viewed: set.review.viewed, commentCounts: counts, commentTotal: total, note: set.review.note })
+    this.explorer.review.render({
+      newFolders: this.newFolders, files, current: set.review.current ?? set.active, viewed: set.review.viewed, commentCounts: counts, commentTotal: total, note: set.review.note,
+      scope: set.review.scope, groups: set.review.groups, comments: this.commentRows(set), sendLabel: this.sendLabel(), card: this.cardModel(set)
+    })
     if (updateCounts) this.syncAnnotations()
+  }
+
+  private setReviewScope(scope: 'checkout' | 'all'): void {
+    const set = this.set
+    if (!set || set.review.scope === scope) return
+    set.review.scope = scope
+    if (scope === 'all') set.review.groups = null
+    this.renderReview(false)
+    if (scope === 'all') void this.loadGroups()
+  }
+
+  private async loadGroups(): Promise<void> {
+    const target = this.target
+    const set = this.set
+    if (!target || !set) return
+    const ticket = this.groupGate.begin()
+    const state = store.state
+    const views = derivePanes(state).filter((view) => view.pane.projectId === target.projectId && view.agent !== 'shell')
+    const places = this.checkouts.filter((checkout) => !checkout.unavailable)
+    const known = places.length > 0 ? places : [{ folder: target.folder, branch: '', main: true }]
+    const inputs: CheckoutInput[] = await Promise.all(known.map(async (checkout) => {
+      const result = await api.gitStatus(checkout.folder).catch(() => null)
+      const files = result?.ok ? result.status.files.map((file) => ({ path: file.path, letter: statusLetter(file), added: file.added, removed: file.removed })) : []
+      const sessions = views
+        .filter((view) => normalizeFolder(folderOfPane(state, view.pane) ?? '') === normalizeFolder(checkout.folder))
+        .map((view) => ({ paneId: view.pane.id, title: view.title, agent: view.agent as 'claude' | 'codex' | 'gemini' }))
+      return { folder: checkout.folder, main: checkout.main, branch: checkout.branch || null, files, sessions }
+    }))
+    if (!ticket.current() || this.set !== set) return
+    set.review.groups = groupCheckouts(inputs)
+    this.renderReview(false)
+  }
+
+  private async openAcross(folder: string, path: string): Promise<void> {
+    const target = this.target
+    if (!target) return
+    if (normalizeFolder(folder) === normalizeFolder(target.folder)) {
+      this.setReviewScope('checkout')
+      await this.reviewOpen(path)
+      return
+    }
+    openReviewFileInFiles({ projectId: target.projectId, folder }, path)
+  }
+
+  private async jumpToComment(id: string, edit = false): Promise<void> {
+    const set = this.set
+    const draft = set ? draftsOf(set.folder).find((candidate) => candidate.id === id) : undefined
+    if (!set || !draft) return
+    await this.reviewOpen(draft.path)
+    const doc = this.active()
+    if (edit && draft.status === 'open' && draft.author === 'you') startEditing(id)
+    if (doc && doc.path === draft.path && doc.editor) doc.editor.reveal(doc.editor.posAt(draft.line, 1))
   }
 
   private async reviewOpen(path: string): Promise<void> {
@@ -1107,27 +1203,28 @@ export class FilesViewComponent {
   private sendReview(anchor: HTMLElement): void {
     const set = this.set
     if (!set) return
-    const message = buildReviewMessage(set.review.comments, set.review.note, set.prefix)
+    const open = openDrafts(draftsOf(set.folder), set.folder)
     const note = set.review.note.trim()
-    const body = message || (note ? `Review note: ${note}` : '')
-    if (!body) return
+    if (open.length === 0 && note === '') return
     const sessions = this.liveSessions()
-    const count = set.review.comments.filter((comment) => comment.text.trim() !== '').length
-    const send = (paneId: string, title: string): void => {
-      if (insertIntoSession(paneId, body)) toast(`Added ${count > 0 ? `${count} comment${count === 1 ? '' : 's'}` : 'your note'} to ${title}. Press Enter there to send it.`, 'info')
+    const send = (target: { paneId: string; title: string; agent: string }): void => {
+      if (sendDrafts(target, open, { prefix: set.prefix, note })) set.review.note = ''
+      this.renderReview(false)
     }
     if (sessions.length === 0) {
       toast('Open a session to send review comments to.', 'info')
       return
     }
-    if (sessions.length === 1) {
-      send(sessions[0].paneId, sessions[0].title)
+    const owners = new Set(open.map((draft) => draft.paneId).filter((id): id is string => id !== undefined))
+    const owner = owners.size === 1 ? sessions.find((session) => owners.has(session.paneId)) : undefined
+    if (sessions.length === 1 || owner) {
+      send(owner ?? sessions[0])
       return
     }
     const box = anchor.getBoundingClientRect()
     openContextMenu({
       x: box.left, y: box.top, label: 'Send comments to', returnFocus: anchor,
-      entries: [{ heading: 'Send to session' }, ...sessions.map((session) => ({ label: session.title, run: () => send(session.paneId, session.title) }))]
+      entries: [{ heading: 'Send to session' }, ...sessions.map((session) => ({ label: session.title, run: () => send(session) }))]
     })
   }
 
@@ -1210,43 +1307,32 @@ export class FilesViewComponent {
       toast(result.error)
       return
     }
-    set.review.comments = set.review.comments.filter((comment) => comment.path !== path)
+    removeDrafts((draft) => draft.folder === set.folder && draft.path === path && draft.status === 'open')
     toast(`Discarded changes to ${name}`, 'info')
     await this.loadTree()
     this.checkOpenDocs([path])
   }
 
-  private addComment(doc: FileDoc, line: number): void {
+  private addComment(doc: FileDoc, line: number, endLine?: number): void {
     const set = this.set
     if (!set) return
-    set.review.comments = [...set.review.comments, { id: crypto.randomUUID(), path: doc.path, line, text: '', editing: true }]
-    this.afterCommentChange()
-  }
-
-  private updateComment(id: string, change: (comment: DraftComment) => DraftComment | null): void {
-    const set = this.set
-    if (!set) return
-    set.review.comments = set.review.comments.flatMap((comment) => {
-      if (comment.id !== id) return [comment]
-      const next = change(comment)
-      return next ? [next] : []
+    const lines = doc.text().split('\n')
+    const sessions = this.liveSessions()
+    addDraft({
+      folder: set.folder, ...(sessions.length === 1 ? { paneId: sessions[0].paneId } : {}), path: doc.path, line, ...(endLine ? { endLine } : {}),
+      lineText: lines[line - 1] ?? '', snippet: snippetAt(lines, line, new Set(doc.addedLines())), text: ''
     })
-    this.afterCommentChange()
-  }
-
-  private afterCommentChange(): void {
-    this.renderReview()
   }
 
   private async deleteComment(id: string): Promise<void> {
-    const comment = this.set?.review.comments.find((candidate) => candidate.id === id)
+    const comment = draftsOf(this.set?.folder ?? '').find((candidate) => candidate.id === id)
     if (!comment) return
     const confirmed = await confirmDialog({
       title: 'Delete this comment?',
       body: `${comment.path}:${comment.line}\n${comment.text}`,
       confirmLabel: `Delete comment on line ${comment.line}`
     })
-    if (confirmed) this.updateComment(id, () => null)
+    if (confirmed) changeDraft(id, () => null)
   }
 
   private blameFor(doc: FileDoc): ReadonlyMap<number, ReturnType<typeof blameLines> extends Map<number, infer V> ? V : never> {
@@ -1258,7 +1344,19 @@ export class FilesViewComponent {
     const doc = this.active()
     const set = this.set
     if (!doc || !set || doc.status !== 'ready') return
-    const comments = set.review.comments.filter((comment) => comment.path === doc.path)
+    const lines = doc.changes ? doc.text().split('\n') : []
+    const added = new Set(doc.addedLines())
+    const moves = new Map<string, { line: number; endLine?: number; snippet: string[] }>()
+    const comments: DraftComment[] = []
+    for (const draft of this.visibleDrafts(set).filter((candidate) => candidate.path === doc.path)) {
+      if (!doc.changes) break
+      const anchor = anchorDraft(draft, lines)
+      if (anchor.line === null) continue
+      const shift = anchor.line - draft.line
+      if (anchor.moved && !doc.dirty) moves.set(draft.id, { line: anchor.line, ...(draft.endLine ? { endLine: draft.endLine + shift } : {}), snippet: snippetAt(lines, anchor.line, added) })
+      comments.push({ ...draft, line: anchor.line, ...(draft.endLine ? { endLine: draft.endLine + shift } : {}), editing: isEditing(draft.id) })
+    }
+    if (moves.size > 0) queueMicrotask(() => reanchor(moves))
     if (doc.changes) this.tools.changes.load(doc)
     const blame = doc.changes ? this.blameFor(doc) : new Map()
     const signature = `${doc.changes}|${JSON.stringify(comments)}|${JSON.stringify([...blame.entries()])}|${this.tools.changes.signature(doc)}`
@@ -1269,12 +1367,18 @@ export class FilesViewComponent {
       return
     }
     doc.annotate([this.tools.changes.extensions(doc, blame), reviewExtension({
-      comments, blame,
-      onAdd: (line) => this.addComment(doc, line),
-      onEdit: (id) => this.updateComment(id, (comment) => ({ ...comment, editing: true })),
-      onSave: (id, text) => this.updateComment(id, (comment) => (text.trim() === '' ? null : { ...comment, text: text.trim(), editing: false })),
-      onCancel: (id) => this.updateComment(id, (comment) => (comment.text.trim() === '' ? null : { ...comment, editing: false })),
-      onDelete: (id) => void this.deleteComment(id)
+      comments, blame, authorName: this.sendLabel(),
+      onAdd: (line, endLine) => this.addComment(doc, line, endLine),
+      onEdit: (id) => startEditing(id),
+      onSave: (id, text) => changeDraft(id, (comment) => (text.trim() === '' ? null : { ...comment, text: text.trim() })),
+      onCancel: (id) => {
+        const comment = draftsOf(set.folder).find((candidate) => candidate.id === id)
+        if (!comment || comment.text.trim() === '') changeDraft(id, () => null)
+        else stopEditing(id)
+      },
+      onDelete: (id) => void this.deleteComment(id),
+      onSendFinding: (id) => void sendOne(id),
+      onDismiss: (id) => dismissOne(id)
     })])
   }
 

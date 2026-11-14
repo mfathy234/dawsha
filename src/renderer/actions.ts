@@ -332,6 +332,7 @@ export interface CrewStart {
   identity: CrewIdentity
   /** Start the pane without taking focus or leaving the current view. */
   background: boolean
+  folder?: string
 }
 
 /** Opens a normal pane for a crew run, titled with the member's name, and returns its ids. */
@@ -352,6 +353,7 @@ export async function startCrewSession(projectId: string, start: CrewStart): Pro
     projectId,
     tabs: [tab],
     activeTabId: tab.id,
+    ...(start.folder ? { folder: start.folder } : {}),
     fontSize: clampFontSize(project.fontSize ?? DEFAULT_FONT_SIZE)
   }
   store.set((s) =>

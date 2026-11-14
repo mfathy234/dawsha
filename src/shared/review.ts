@@ -1,34 +1,4 @@
-import { toProjectPath } from './projectPaths'
-
-export interface ReviewComment {
-  id: string
-  /** Repo-relative path, as Files lists it. */
-  path: string
-  line: number
-  text: string
-}
-
 const oneLine = (text: string): string => text.replace(/\s+/g, ' ').trim()
-
-/** Comments in file and line order, with empty ones dropped. */
-export function orderedComments(comments: readonly ReviewComment[]): ReviewComment[] {
-  return comments
-    .filter((comment) => oneLine(comment.text) !== '')
-    .slice()
-    .sort((a, b) => (a.path === b.path ? a.line - b.line : a.path < b.path ? -1 : 1))
-}
-
-/** One message for an agent: a `file:line` reference per comment (as the agent sees the path from its folder), then an optional overall note. */
-export function buildReviewMessage(comments: readonly ReviewComment[], note = '', prefix = ''): string {
-  const ordered = orderedComments(comments)
-  if (ordered.length === 0) return ''
-  const count = ordered.length
-  const lines = [`Review of your changes: ${count} comment${count === 1 ? '' : 's'}.`, '']
-  for (const comment of ordered) lines.push(`${toProjectPath(prefix, comment.path)}:${comment.line}  ${oneLine(comment.text)}`)
-  const overall = oneLine(note)
-  if (overall) lines.push('', `Overall: ${overall}`)
-  return lines.join('\n')
-}
 
 /** The paths to commit: every changed file except the ones the user unticked. */
 export function selectCommitFiles(all: readonly string[], unchecked: ReadonlySet<string>): string[] {

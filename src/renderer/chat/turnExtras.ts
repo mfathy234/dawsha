@@ -8,6 +8,9 @@ import { toast } from '../components/toast'
 import { h } from '../dom'
 import { openInFiles, openFolderInFiles, requestFilesCommand } from '../files/filesActions'
 import { store } from '../state'
+import { draftsOf, onDraftsChange, sendDrafts } from '../reviewDrafts'
+import { openDrafts } from '../../shared/reviewDrafts'
+import { reviewSession, targetOf } from '../reviewRun'
 import { turnSummaryCard } from './chatTurnSummary'
 import { openCommitBox, pushCommitted, submitCommit, type CommitPort } from './turnCommitFlow'
 import { showFullOutput } from './turnChecks'
@@ -16,6 +19,7 @@ import { emptyCard, type CardActions, type CardState, type ChecksState, type Dif
 const PR_TAB_DELAY_MS = 400
 
 export interface TurnInput {
+  paneId: string | null
   folder: string
   sessionId: string | null
   projectId: string | null
@@ -77,9 +81,18 @@ export class TurnExtras {
   private sessionKey = ''
   private sessionId: string | null = null
   private readonly stop: () => void
+  private readonly stopDrafts: () => void
 
   constructor(private readonly host: TurnHost) {
-    this.stop = api.turn.onChecksUpdate((update) => this.onUpdate(update))
+    const stopChecks = api.turn.onChecksUpdate((update) => this.onUpdate(update))
+    const stopComments = onDraftsChange(() => this.redrawAll())
+    this.stopDrafts = stopComments
+    this.stop = stopChecks
+  }
+
+  /** Comments changed somewhere: every card shows the current ones. */
+  private redrawAll(): void {
+    for (const id of this.entries.keys()) this.redrawIn(id, false)
   }
 
   /** Called on every thread draw with the summaries in order. A reply that finishes after one was seen working gets its checks. */
@@ -122,6 +135,7 @@ export class TurnExtras {
 
   dispose(): void {
     this.stop()
+    this.stopDrafts()
     const sessionId = this.sessionId ?? this.host.input()?.sessionId
     if (sessionId) void api.turn.stopChecks(sessionId).catch(() => undefined)
     this.entries.clear()
@@ -157,15 +171,16 @@ export class TurnExtras {
   }
 
   /** The card of the latest reply for the Side panel; kept in step with the one in the thread. */
-  panelCard(): { id: string; el: HTMLElement; files: number } | null {
+  panelCard(): { id: string; el: HTMLElement; files: number; paths: string[] } | null {
     const last = [...this.entries.values()].pop()
     if (!last) return null
     const id = last.summary.messageId
     const files = last.summary.files.length
-    if (last.panelEl?.isConnected) return { id, el: last.panelEl, files }
+    const paths = last.summary.files.map((file) => file.path)
+    if (last.panelEl?.isConnected) return { id, el: last.panelEl, files, paths }
     const el = this.draw(last)
     this.entries.set(id, { ...(this.entries.get(id) ?? last), panelEl: el })
-    return { id, el, files }
+    return { id, el, files, paths }
   }
 
   latestChecks(): ChecksState | null {
@@ -197,6 +212,8 @@ export class TurnExtras {
       actions: this.actions(id),
       agentName: input?.agentName ?? 'the agent',
       canCommit: !!input?.sessionId && !!input.folder,
+      comments: input?.folder ? { folder: input.folder, paneId: input.paneId } : null,
+      openComments: input?.folder ? openDrafts(draftsOf(input.folder), input.folder).length : 0,
       box: entry.box
     })
   }
@@ -273,6 +290,15 @@ export class TurnExtras {
       },
       openPullRequest: () => this.openPullRequest(),
       sendFailures: () => this.sendFailures(id),
+      reviewReply: () => {
+        const paneId = input()?.paneId
+        if (paneId) void reviewSession(paneId, 'reply')
+      },
+      sendComments: () => {
+        const now = input()
+        const target = now?.paneId ? targetOf(now.paneId) : null
+        if (now && target) sendDrafts(target, openDrafts(draftsOf(now.folder), now.folder))
+      },
       showOutput: () => {
         const checks = this.entries.get(id)?.state.checks
         if (checks) showFullOutput(checks)
