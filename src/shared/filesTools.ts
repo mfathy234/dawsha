@@ -1,4 +1,5 @@
 import type { BrowserCapture, BrowserCommand, BrowserErrors, BrowserResult, BrowserState } from './browserPane'
+import type { BrowserPick } from './browserPick'
 import type { ConfigReport, ConfigRevealRequest, ConfigRevealResult } from './configFiles'
 import type { PrActionResult, PrOverviewResult, PrRequest } from './prFlow'
 
@@ -9,7 +10,8 @@ export const TOOLS_IPC = {
   browser: 'tools:browser',
   browserShot: 'tools:browser-shot',
   browserErrors: 'tools:browser-errors',
-  browserState: 'tools:browser-state'
+  browserState: 'tools:browser-state',
+  browserPick: 'tools:browser-pick'
 } as const
 
 /** Config, pull request and browser tools of the Files bottom panel. */
@@ -21,5 +23,6 @@ export interface FilesToolsApi {
   browser(command: BrowserCommand): Promise<BrowserResult>
   browserShot(): Promise<BrowserCapture>
   browserErrors(): Promise<BrowserErrors>
+  browserPick(): Promise<BrowserPick>
   onBrowserState(listener: (state: BrowserState) => void): () => void
 }
