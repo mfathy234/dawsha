@@ -58,9 +58,10 @@ jobs:
           retention-days: 14
       - name: Unit tests
         run: npx vitest run
-  test:
+  # Windows runs a unit job and four end-to-end shards side by side, so a run takes minutes, not most of an hour.
+  unit:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - name: Keep temp files under the runner temp folder
         shell: bash
@@ -76,15 +77,44 @@ jobs:
       - run: npm run build
       - name: Unit tests
         run: npx vitest run
+  # Keeps the single "test" check that the pull request view and branch rules expect.
+  test:
+    runs-on: ubuntu-24.04
+    needs: [unit, e2e]
+    if: always()
+    steps:
+      - name: All Windows tests passed
+        run: test "${{ needs.unit.result }}" = success && test "${{ needs.e2e.result }}" = success
+  e2e:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    name: e2e (${{ matrix.shard }}/4)
+    steps:
+      - name: Keep temp files under the runner temp folder
+        shell: bash
+        run: |
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
       - name: Install browser for website tests
         run: npx playwright install chromium
       - name: End-to-end tests
-        run: npx playwright test
+        run: npx playwright test --shard=${{ matrix.shard }}/4
       - name: Upload test artifacts
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results
+          name: test-results-${{ matrix.shard }}
           path: |
             test-results/
             playwright-report/

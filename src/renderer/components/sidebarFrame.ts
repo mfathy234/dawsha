@@ -22,11 +22,11 @@ export class SidebarFrame {
       h('div', { class: 'frame-head' }, parts.brand, h('span', { class: 'frame-spacer' }), parts.bell, this.collapse),
       parts.newSession,
       parts.search,
-      h('nav', { class: 'frame-nav', 'aria-label': 'Main views' }, ...parts.nav),
-      parts.view
+      h('nav', { class: 'frame-nav', 'aria-label': 'Main views' }, ...parts.nav)
     )
     this.bottom.replaceChildren(parts.updatePill, parts.crew, h('div', { class: 'frame-foot' }, parts.settings))
-    this.bar.replaceChildren(parts.limits)
+    // One toolbar row above the panes: the layout switch and View on the left, the usage rings on the right.
+    this.bar.replaceChildren(parts.view, h('span', { class: 'frame-bar-spacer' }), parts.limits)
     this.collapsed = null
   }
 
@@ -44,6 +44,7 @@ export class SidebarFrame {
     const label = collapsed ? 'Expand sidebar' : 'Collapse sidebar'
     this.collapse.setAttribute('aria-label', label)
     this.collapse.title = label
-    this.collapse.replaceChildren(icon(ICONS.panelLeft))
+    // On the rail the button says what it does: a chevron that opens the sidebar.
+    this.collapse.replaceChildren(icon(collapsed ? ICONS.chevronRight : ICONS.panelLeft))
   }
 }

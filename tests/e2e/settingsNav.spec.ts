@@ -105,7 +105,9 @@ test('the Sidebar frame shows the limit rings above the panes, not in the sideba
   const { app, page } = await launchApp(sandbox)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await expect(page.locator('.frame-bar')).toBeHidden()
+    // The row above the panes holds the layout switch; no rings until limits are reported.
+    await expect(page.locator('.frame-bar #layout-grid')).toBeVisible()
+    await expect(page.locator('.frame-bar .limit-ring')).toHaveCount(0)
     await page.getByRole('button', { name: /^New (Claude|Codex|Gemini) session in Smoke$/ }).first().click()
     await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
     limitFiles(sandbox)

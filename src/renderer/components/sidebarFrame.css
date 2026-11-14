@@ -23,12 +23,21 @@
 .frame-sidebar .sidebar .frame-new .split-chevron { flex: none; border: 0; box-shadow: none; width: 22px; height: 22px; border-radius: 6px; background: transparent; color: var(--text-3); }
 .frame-sidebar .sidebar .frame-new .split-chevron:hover { background: var(--hover); color: var(--text); }
 
-/* The usage limits: the same rings as the top bar, at the right end of the row above the panes. Nothing is shown when no limits are reported. */
+/* One toolbar row above the panes: the layout switch and View on the left, the usage rings (the same as the top bar's) on the right. */
 .frame-bar { display: none; }
-.frame-sidebar .frame-bar { flex: none; display: flex; align-items: center; justify-content: flex-end; min-width: 0; height: 34px; padding: 0 var(--sp-3); }
-.frame-sidebar .frame-bar:not(:has(> .topbar-limits:not([hidden]):not(.limits-empty))) { display: none; }
+.frame-sidebar .main { position: relative; }
+.frame-sidebar .frame-bar { flex: none; display: flex; align-items: center; gap: var(--sp-2); min-width: 0; height: 40px; padding: var(--sp-2) var(--sp-3) 0; }
+.frame-sidebar .frame-bar-spacer { flex: 1 1 auto; }
+.frame-sidebar .frame-bar > .topbar-view { display: flex; align-items: center; gap: var(--sp-1); flex: none; }
+.frame-sidebar .frame-bar > .topbar-view .topbar-sep { display: none; }
+.frame-sidebar .frame-bar:not(:has(> .topbar-view:not([hidden]))):not(:has(> .topbar-limits:not([hidden]):not(.limits-empty))) { display: none; }
 .frame-sidebar .frame-bar .topbar-limits { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden; white-space: nowrap; }
 .frame-sidebar .frame-bar .topbar-limits.limits-empty { display: none; }
+/* With the session tabs showing, the rings join the tab row instead of taking a row of their own. */
+.frame-sidebar .main:has(> .grid-area:not([hidden]) > .pane-strip:not([hidden])) > .frame-bar { position: absolute; top: var(--s-3); right: var(--s-3); z-index: 2; height: 36px; padding: 0; pointer-events: none; }
+.frame-sidebar .main:has(> .grid-area:not([hidden]) > .pane-strip:not([hidden])) > .frame-bar > * { pointer-events: auto; }
+.frame-sidebar .main:has(> .grid-area:not([hidden]) > .pane-strip:not([hidden])) > .frame-bar > .topbar-view { display: none; }
+.frame-sidebar .main:has(> .frame-bar .topbar-limits:not([hidden]):not(.limits-empty)) > .grid-area > .pane-strip { margin-inline-end: 180px; }
 
 /* The search shortcut is shown only in the sidebar frame; the top bar has no room for it. */
 #search-button .search-kbd { display: none; }
@@ -48,9 +57,6 @@
 .frame-sidebar .sidebar .frame-nav .nav-button[aria-pressed='true']:hover { background: var(--press); color: var(--text); font-weight: 400; }
 .frame-sidebar .sidebar .frame-nav .nav-button[aria-pressed='true']::after { content: none; }
 
-.frame-sidebar .sidebar .frame-top > .topbar-view { display: flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-1) var(--sp-2); flex-wrap: wrap; }
-.frame-sidebar .sidebar .frame-top > .topbar-view[hidden] { display: none; }
-.frame-sidebar .sidebar .frame-top > .topbar-view .topbar-sep { display: none; }
 
 .frame-sidebar .sidebar .frame-bottom { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-2) var(--sp-2) var(--sp-3); }
 .frame-sidebar .sidebar .frame-bottom > .update-pill { margin: 0; height: 30px; justify-content: flex-start; }
@@ -65,7 +71,9 @@
 
 .frame-sidebar .sidebar .sidebar-head .icon-btn[aria-label='Collapse sidebar'] { display: none; }
 
-.frame-sidebar .sidebar.rail .frame-top { align-items: center; padding: var(--sp-3) 0 0; gap: var(--sp-1); }
+.frame-sidebar .sidebar.rail .frame-top { align-items: center; padding: var(--sp-2) 0 0; gap: var(--sp-1); }
+.frame-sidebar .sidebar.rail #notifications-button { position: relative; }
+.frame-sidebar .sidebar.rail #notifications-button .bell-badge { position: absolute; top: 0; right: -2px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--accent); color: var(--on-accent); font-family: var(--font-ui); font-size: 10px; font-weight: 600; line-height: 14px; text-align: center; }
 .frame-sidebar .sidebar.rail .frame-head { flex-direction: column; padding: 0 0 var(--sp-1); gap: var(--sp-1); }
 .frame-sidebar .sidebar.rail .frame-spacer,
 .frame-sidebar .sidebar.rail .frame-head .app-title,
@@ -77,7 +85,6 @@
 .frame-sidebar .sidebar.rail .frame-nav .nav-label,
 .frame-sidebar .sidebar.rail .frame-nav .nav-button[aria-current='page'] .nav-label,
 .frame-sidebar .sidebar.rail .frame-bottom #settings-button .utility-label,
-.frame-sidebar .sidebar.rail .frame-top > .topbar-view,
 .frame-sidebar .sidebar.rail .frame-bottom > .crew-strip { display: none; }
 .frame-sidebar .sidebar.rail .frame-new,
 .frame-sidebar .sidebar.rail .frame-top > #search-button,
@@ -98,7 +105,6 @@
   .frame-sidebar .sidebar:not(.rail) .frame-top > #search-button,
   .frame-sidebar .sidebar:not(.rail) .frame-nav .nav-button { height: 28px; }
   .frame-sidebar .sidebar:not(.rail) .frame-nav { padding-bottom: var(--sp-1); }
-  .frame-sidebar .sidebar:not(.rail) .frame-top > .topbar-view { padding-bottom: 0; }
   .frame-sidebar .sidebar:not(.rail) .frame-bottom { padding-block: var(--sp-1) var(--sp-2); }
   .frame-sidebar .sidebar:not(.rail) .frame-foot #settings-button { height: 32px; }
 }
