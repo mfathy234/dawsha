@@ -64,13 +64,15 @@ export class DesktopSettingsControls {
     const platform = this.login?.platform ?? (navigator.platform.toLowerCase().includes('mac') ? 'darwin' : navigator.platform.toLowerCase().includes('win') ? 'win32' : 'linux')
     const rows: HTMLElement[] = []
     {
-      const trayOption = this.login?.trayAvailable === false ? [] : [h('option', { value: 'tray' }, 'Keep running in the tray')]
-      const select = h('select', {
-        class: 'text-input desktop-close-choice', id: 'desktop-close-behavior', 'aria-label': 'When I close the window', disabled: this.busy,
-        onChange: (event: Event) => { void this.setDesktop({ closeBehavior: (event.currentTarget as HTMLSelectElement).value === 'tray' ? 'tray' : 'quit' }) }
-      }, h('option', { value: 'quit' }, 'Quit Dawsha'), ...trayOption)
-      select.value = settings.desktop.closeBehavior
-      rows.push(row('When I close the window', select, h('p', { class: 'hint' }, 'Agents keep running. Use the tray to return.')))
+      // The same two-way switch as the other Settings choices, not a native dropdown.
+      const choices: Array<['quit' | 'tray', string]> = [['quit', 'Quit Dawsha'], ...(this.login?.trayAvailable === false ? [] : [['tray', 'Keep in tray'] as ['tray', string]])]
+      const current = settings.desktop.closeBehavior
+      const choice = h('div', { class: 'segmented desktop-close-choice', id: 'desktop-close-behavior', role: 'group', 'aria-label': 'When I close the window' },
+        ...choices.map(([value, label]) => h('button', {
+          class: 'tab', type: 'button', id: `desktop-close-${value}`, 'data-value': value, 'aria-pressed': String(value === current), disabled: this.busy,
+          onClick: () => { if (value !== current) void this.setDesktop({ closeBehavior: value }) }
+        }, label)))
+      rows.push(row('When I close the window', choice, h('p', { class: 'hint' }, current === 'tray' ? 'Agents keep running. Show Dawsha from the tray icon to come back.' : 'Closing the window quits Dawsha and its sessions.')))
     }
     if (platform === 'linux') return rows
     const disabled = !this.login?.packaged || this.busy
