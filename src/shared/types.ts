@@ -93,6 +93,8 @@ export interface SavedPane {
   activeIndex: number
   fontSize: number
   pinned?: boolean
+  /** Pinned to the top of the sidebar and the session tabs; not the same as `pinned`, the pane beside a large one. */
+  starred?: boolean
 }
 
 export interface GridSplit {
