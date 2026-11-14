@@ -18,7 +18,7 @@ import { api } from '../api'
 import { focusPane, saveSettings, startSessionIn } from '../actions'
 import { derivePanes } from '../derive'
 import { addDraft, changeDraft, draftsOf, isEditing, onDraftsChange, reanchor, removeDrafts, sendDrafts, startEditing, stopEditing } from '../reviewDrafts'
-import { cancelReview, dismissOne, dismissReview, fixAll, onReviewChange, openFindings, retryReview, reviewOf, sendOne, showReviewer } from '../reviewRun'
+import { cancelReview, dismissOne, dismissReview, fixAll, onReviewChange, isReviewerPane, openFindings, retryReview, reviewOf, sendOne, showReviewer } from '../reviewRun'
 import { h, icon } from '../dom'
 import { currentBundle, onThemeChange } from '../themeManager'
 import { folderOfPane, projectById, store, type AppState } from '../state'
@@ -551,7 +551,7 @@ export class FilesViewComponent {
     const projectId = this.target?.projectId
     if (!projectId) return []
     return derivePanes(store.state)
-      .filter((view) => view.pane.projectId === projectId && view.agent !== 'shell' && !view.activeExited && paneTerminal(view.pane.id) !== undefined)
+      .filter((view) => view.pane.projectId === projectId && view.agent !== 'shell' && !view.activeExited && paneTerminal(view.pane.id) !== undefined && !isReviewerPane(view.pane.id))
       .map((view) => ({ paneId: view.pane.id, title: view.title, agent: AGENT_NAMES[view.agent] }))
   }
 

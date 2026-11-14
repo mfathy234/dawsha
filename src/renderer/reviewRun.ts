@@ -217,6 +217,9 @@ export function showReviewer(folder: string): void {
 
 const openOf = (job: ReviewJob) => allDrafts().filter((draft) => job.draftIds.includes(draft.id) && draft.status === 'open')
 
+/** A pane the reviewer runs in; comments never go there. */
+export const isReviewerPane = (paneId: string): boolean => [...jobs.values()].some((job) => job.reviewerPaneId === paneId)
+
 export const openFindings = (folder: string): number => {
   const job = jobs.get(folder)
   return job ? openOf(job).length : 0
