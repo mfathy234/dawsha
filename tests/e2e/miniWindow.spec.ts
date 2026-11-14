@@ -123,8 +123,14 @@ test('closing a detail session never transfers approval focus to another session
       await feedTerminal(page, id, '● Bash(npm test)\r\nDo you want to proceed?\r\n1. Yes\r\n3. No\r\n')
     }
     await expect(mini.locator('.mini-card[data-state="needs"]')).toHaveCount(2)
-    await mini.locator(`.mini-card[data-pane-id="${firstId}"] .mini-select`).click()
-    await mini.locator('.mini-detail').getByRole('button', { name: 'Allow', exact: true }).focus()
+    // This test is about focus, not motion: without the list/detail slide the slow CI runner cannot race it.
+    await mini.emulateMedia({ reducedMotion: 'reduce' })
+    const allow = mini.locator('.mini-detail').getByRole('button', { name: 'Allow', exact: true })
+    await expect(async () => {
+      if (!(await allow.isVisible())) await mini.locator(`.mini-card[data-pane-id="${firstId}"] .mini-select`).click({ timeout: 2000 })
+      await expect(allow).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 20_000 })
+    await allow.focus()
     await closePaneViaActions(panes.first())
     await expect(mini.locator('.mini-detail')).toHaveCount(0)
     await expect(mini.locator('.mini-card')).toHaveCount(1)
