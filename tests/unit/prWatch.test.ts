@@ -131,7 +131,7 @@ describe('merge command and merge when green', () => {
     expect(parseMergeCommand('gh pr merge --squash', 5, '')).toEqual({ ok: true, args: ['pr', 'merge', '5', '--squash'], admin: false })
   })
   it('refuses anything that is not a plain gh pr merge', () => {
-    for (const bad of ['rm -rf /', 'gh pr merge <n> --squash; rm x', 'gh pr merge <n> $(x)', 'gh pr merge 9 --squash', 'gh pr merge <n> --repo a/b', 'gh pr close <n>']) {
+    for (const bad of ['rm -rf /', 'gh pr merge <n> --squash; rm x', 'gh pr merge <n> $(x)', 'gh pr merge 9 --squash', 'gh pr merge <n> --repo a/b', 'gh pr merge <n> --repo=a/b', 'gh pr merge <n> -Rowner/repo', 'gh pr merge <n> -R owner/repo', 'gh pr close <n>']) {
       expect(parseMergeCommand(bad, 34, SHA).ok).toBe(false)
     }
   })

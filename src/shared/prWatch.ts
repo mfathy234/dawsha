@@ -279,7 +279,7 @@ export function parseMergeCommand(template: string, number: number, headSha: str
   const rest = tokens.slice(3)
   const flags = rest.filter((token) => token !== '<n>' && token !== '{n}')
   if (flags.some((token) => !MERGE_TOKEN.test(token))) return { ok: false, error: 'Use only plain flags in the merge command, like --squash or --admin.' }
-  if (flags.some((token) => /^(?:--repo|-R)\b/.test(token))) return { ok: false, error: 'Leave out --repo: Dawsha merges the pull request of this session.' }
+  if (flags.some((token) => /^(?:--repo\b|-R)/.test(token))) return { ok: false, error: 'Leave out --repo: Dawsha merges the pull request of this session.' }
   const numbered = flags.filter((token) => /^\d+$/.test(token))
   if (numbered.length > 0 && numbered.some((token) => token !== String(number))) return { ok: false, error: 'The merge command names a different pull request.' }
   const others = flags.filter((token) => !/^\d+$/.test(token))
