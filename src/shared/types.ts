@@ -134,6 +134,8 @@ export interface KeptSession {
   tag?: SessionTag
   /** The git branch the session was on when it closed, to guess a tag for the closed row. */
   branch?: string
+  /** Why it closed on its own, for example "Merged as PR #34". */
+  note?: string
 }
 
 export interface ProjectTask {
@@ -218,6 +220,8 @@ export interface Settings {
   appearance: import('./appearance').AppearanceSettings
   /** The always-on-top Mini window. */
   miniWindow: import('./appearance').MiniWindowSettings
+  /** Pull request watching options per project: merge command and tidy-up after a merge. */
+  pullRequests: import('./prSettings').PrSettings
   /** This PC's close and sign-in preferences. Sign-in enablement is read from the OS. */
   desktop: import('./desktopSettings').DesktopSettings
   trayNoticeShown: boolean

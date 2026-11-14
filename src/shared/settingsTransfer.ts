@@ -44,6 +44,7 @@ export const EXCLUDED_KEYS = [
   'remoteAccess',
   'workspace',
   'miniWindow',
+  'pullRequests',
   'desktop',
   'trayNoticeShown',
   'warnedUsageWindows',

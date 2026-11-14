@@ -38,6 +38,8 @@ export interface MiniSessionInput extends SessionStateInput {
   costUsd?: number | null
   /** Set for a short while after a run of work finished: how long it took. */
   moment?: { took: string } | null
+  /** The session's pull request, as "PR #34: checks running". */
+  pr?: string
 }
 
 export interface MiniSession {
@@ -130,10 +132,12 @@ export function miniSession(input: MiniSessionInput): MiniSession {
     current: items.find(todo => todo.status === 'in_progress')?.text ?? items.find(todo => todo.status !== 'completed')?.text ?? ''
   } : input.plan
   const changed = input.changed ?? 0
-  const line = state === 'needs' ? ask || 'Needs you'
+  const pr = input.pr ?? ''
+  const base = state === 'needs' ? ask || 'Needs you'
     : state === 'done' ? input.moment ? doneLine(input.moment.took, changed) : `Done${changed > 0 ? `, ${filesLabel(changed)} changed` : ''}`
       : state === 'idle' ? `Idle${input.idleFor ? ` ${input.idleFor}` : ''}`
         : state === 'exited' ? 'Exited' : input.recap || input.tool || progress?.current || SESSION_STATE_LABELS[state]
+  const line = pr !== '' && state === 'done' ? `${base}, ${pr}` : pr !== '' && state === 'idle' ? pr : base
   return {
     paneId: input.paneId, agent: input.agent, identity: input.identity ?? null,
     title: cleanText(input.title, 240), project: cleanText(input.project, 160), state, line: cleanText(line, 320),

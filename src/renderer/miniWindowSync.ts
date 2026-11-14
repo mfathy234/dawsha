@@ -11,6 +11,7 @@ import { sendChatMessage } from './chat/chatActions'
 import { openReviewInFiles } from './files/filesActions'
 import { derivePanes, primaryTab } from './derive'
 import { sessionNote } from './sessionNotes'
+import { prLineFor } from './prWatch'
 import { store, folderOfPane } from './state'
 import { sessionIdOf } from './transcriptActions'
 import { toast } from './components/toast'
@@ -127,7 +128,7 @@ export function installMiniWindowSync(): void {
         changed: view.info.changes?.files ?? null, todos: log?.todos ?? [],
         elapsed: elapsedSince(since, state.now), asked: log?.asked ?? '', reply: log?.reply ?? [],
         changes: view.info.changes, context: view.info.contextPercent, costUsd: view.info.costUsd,
-        moment: activeMoment(memory, state.now),
+        moment: activeMoment(memory, state.now), pr: prLineFor(id),
         plan: view.snapshot?.plan ? { ...view.snapshot.plan, current: view.snapshot.plan.title ?? '' }
           : planNote ? { done: Number(planNote[1]), total: Number(planNote[2]), current: note.planNow } : null
       })

@@ -27,6 +27,7 @@ import {
 import { CODEX_MARK, GEMINI_MARK } from '../shared/agents'
 import { api } from './api'
 import { installAttention } from './attention'
+import { installPrWatch } from './prWatch'
 import { installCrewLive } from './crewLive'
 import { installLead } from './crewLead'
 import { guardWindowDrops } from './fileDrop'
@@ -141,6 +142,7 @@ async function boot(): Promise<void> {
   setInterval(() => void refreshGitChanges(), GIT_CHANGES_POLL_MS)
   document.addEventListener('visibilitychange', () => void refreshGitChanges())
   installAttention()
+  installPrWatch()
   installNeedsNotices()
   guardWindowDrops()
   installUsageSnapshot()

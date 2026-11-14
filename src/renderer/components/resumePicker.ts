@@ -418,6 +418,7 @@ export class ResumePickerComponent {
           this.allProjects?.checked && project ? h('span', { class: 'rp-project-chip' }, project.name) : null,
           h('span', {}, messageWord(session.messageCount)),
           session.matchExcerpt ? h('span', { class: 'rp-match-chip' }, 'content match') : null,
+          kept?.note ? h('span', { class: 'rp-closed-note' }, kept.note) : null,
           kept?.tag ? sidebarTagWord(kept.tag) : null,
           used ? h('span', {}, used) : null,
           open ? h('span', { class: 'rp-open' }, `open in pane ${open.number}`) : null

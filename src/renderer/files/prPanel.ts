@@ -15,6 +15,7 @@ import {
 } from '../../shared/prFlow'
 import { confirmDialog } from '../components/dialogs'
 import { toast } from '../components/toast'
+import { linkFolderPullRequest } from '../prWatch'
 import { h } from '../dom'
 import type { PanelExtra } from './bottomPanel'
 import './filesTools.css'
@@ -88,6 +89,7 @@ export class PrPanel implements PanelExtra {
       return
     }
     this.ready = result
+    if (result.pr) linkFolderPullRequest(folder, result.pr.number)
     this.show(result.pr ? this.pullRequest(result, result.pr) : this.createForm(result))
   }
 

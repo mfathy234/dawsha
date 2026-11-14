@@ -13,6 +13,7 @@ import { handleDesktopLaunch, installDesktopLaunch, refreshJumpList } from './de
 import { PREVIEW_SCHEME } from './filePreviewServer'
 import { registerRunIpc } from './runCommands'
 import { registerToolsIpc } from './toolsIpc'
+import { registerPrWatchIpc } from './prWatchIpc'
 import { registerTurnIpc } from './turnIpc'
 import { registerMcpIpc } from './mcpIpc'
 import { installMiniWindow } from './miniWindow'
@@ -267,6 +268,7 @@ app.whenReady().then(async () => {
   registerIpc(() => mainWindow, routeNotificationClick, store, ptys, statusWatcher, opsWatcher, usage, warning, remoteAccess, recordings)
   const stopRunCommands = registerRunIpc(() => mainWindow, store)
   const closeBrowserPane = registerToolsIpc(() => mainWindow, store)
+  const stopPrWatch = registerPrWatchIpc(() => mainWindow, store)
   const stopTurnChecks = registerTurnIpc(() => mainWindow, store)
   registerMcpIpc(() => mainWindow, store)
   recordings.startSchedule()
@@ -300,7 +302,7 @@ app.whenReady().then(async () => {
     stopServices: () => stopAllServices([
       ['Mini window', stopMiniWindow], ['CLI bridge', () => stopCliServer(cliServer)],
       ['limit notifications', stopLimitNotifications],
-      ['code navigation', stopCodeNavigation], ['browser pane', closeBrowserPane],
+      ['code navigation', stopCodeNavigation], ['browser pane', closeBrowserPane], ['pull request watch', stopPrWatch],
       ['sessions watcher', () => watcher.stop()], ['agent files', closeAgentFiles],
       ['Codex watcher', () => codexWatcher.stop()], ['Gemini watcher', () => geminiWatcher.stop()],
       ['status watcher', () => statusWatcher.stop()], ['ops watcher', () => opsWatcher.stop()],
