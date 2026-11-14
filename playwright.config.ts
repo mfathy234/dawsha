@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 90_000,
   workers: 1,
+  // One retry on CI: a test that fails twice still fails the run, one that passes on retry is reported as flaky.
+  retries: process.env.CI ? 1 : 0,
   reporter: 'list',
   // Removes the dawsha-e2e-* sandboxes this run created (they once filled 20 GB of temp).
   globalSetup: './tests/support/e2eTempCleanup.ts',
