@@ -30,7 +30,6 @@ import { toolState } from '../../shared/agentTools'
 import { formatPercent } from '../../shared/statusLine'
 import { visibleLimitAgents } from '../../shared/visibleAgents'
 import { limitsPillModel, type LimitsPillModel } from '../../shared/limitsPill'
-import { checkLimitWarnings } from '../limitNotices'
 import { limitsPillChildren } from './limitRings'
 import { ViewMenu } from './viewMenu'
 import { chargeBar } from './chargeBar'
@@ -504,6 +503,7 @@ export class TopBarComponent {
     const items = entries.map(([, item]) => item)
     const tourItem = h('button', { class: 'menu-item more-item', type: 'button', role: 'menuitem', id: 'take-tour-menu-item', onClick: () => { this.closeMoreMenu(); startTour() } }, TOUR_TEXT.menu)
     items.push(tourItem)
+    items.push(h('button', { class: 'menu-item more-item', type: 'button', role: 'menuitem', id: 'quit-menu-item', onClick: () => { this.closeMoreMenu(); api.quit() } }, 'Quit Dawsha'))
     for (const [view] of entries) this.markMoreItem(view)
     this.moreMenu = h(
       'div',
@@ -564,7 +564,6 @@ export class TopBarComponent {
     this.focusedAgent = focusedView?.agent ?? null
     this.limitsFocused = meterLimits(this.limitStore, this.focusedAgent, state.now)
     this.limitsNow = state.now
-    checkLimitWarnings(this.limitStore, state.now)
     const model = limitsPillModel(this.limitStore, this.focusedAgent, state.now, this.narrow, this.visibleAgents(state))
     const signature = JSON.stringify(model)
     if (signature !== this.limitsSignature) {

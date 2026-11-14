@@ -1,4 +1,7 @@
 export const IPC = {
+  loginItemGet: 'desktop:login-item-get',
+  loginItemSet: 'desktop:login-item-set',
+  quit: 'desktop:quit',
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsExport: 'settings:export',

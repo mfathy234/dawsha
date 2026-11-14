@@ -62,6 +62,9 @@ const api: GridApi = {
       reply: (id, result) => ipcRenderer.send(IPC.remoteCrewRunResult, id, result)
     }
   } : {}),
+  getLoginItem: () => ipcRenderer.invoke(IPC.loginItemGet),
+  setLoginItem: (enabled) => ipcRenderer.invoke(IPC.loginItemSet, enabled),
+  quit: () => ipcRenderer.send(IPC.quit),
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   updateSettings: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
   exportSettings: () => ipcRenderer.invoke(IPC.settingsExport),

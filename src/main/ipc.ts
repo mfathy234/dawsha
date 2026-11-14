@@ -16,6 +16,8 @@ import type {
 import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
 import { applyAttentionBadge, findSolution, notifyUser, openInVsCode, quickOpen, revealInFolder } from './desktop'
+import { readLoginItem, reconcileLoginItem, setLoginItem } from './loginItems'
+import { sanitizeDesktopSettings } from '../shared/desktopSettings'
 import { existingFiles, openFile, resolveFile } from './fileOpen'
 import { projectFolder, readInstruction, writeInstruction } from './instructionFiles'
 import { isInstructionName, type InstructionWriteRequest } from '../shared/instructions'
@@ -147,9 +149,20 @@ export function registerIpc(
     return result
   })
   ipcMain.handle(IPC.settingsUpdate, (_event, patch: Partial<Settings>) => {
+    if (patch.desktop) reconcileLoginItem(settings.get().desktop, sanitizeDesktopSettings(patch.desktop))
     const updated = settings.update(patch)
     if (patch.projects || patch.recentProjectIds) refreshJumpList(updated)
     return updated
+  })
+  ipcMain.handle(IPC.loginItemGet, () => readLoginItem())
+  ipcMain.on(IPC.quit, event => {
+    const window = getWindow()
+    if (window && event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame) app.quit()
+  })
+  ipcMain.handle(IPC.loginItemSet, (event, enabled: unknown) => {
+    const window = getWindow()
+    if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || typeof enabled !== 'boolean') throw new Error('Invalid sign-in setting.')
+    return setLoginItem(enabled, settings.get().desktop)
   })
   ipcMain.handle(IPC.settingsExport, () => exportSettings(getWindow(), settings.get()))
   ipcMain.handle(IPC.settingsImportRead, () => readSettingsImport(getWindow()))

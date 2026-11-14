@@ -48,3 +48,6 @@
 
 .settings-import .set-inline { flex-wrap: nowrap; max-width: none; }
 .settings-import-path { flex: 1 1 auto; min-width: 0; }
+
+/* Tray/startup controls share the Settings row and surface tokens. */
+.settings-panel .desktop-close-choice { width: 220px; max-width: 100%; }

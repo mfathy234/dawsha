@@ -38,6 +38,8 @@ import { startQuitWatchdog } from './quitWatchdog'
 import { requestCloseCheck } from './closeCheck'
 import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, exitProcess, runPhases, runQuit, stopAllServices, type ShutdownDeps } from './shutdown'
 import { isPrivateRemoteBuild, isRemoteControlBuild } from '../shared/remoteBuild'
+import { closeBehavior, startHidden } from '../shared/desktopSettings'
+import { installLimitNotifications } from './limitNotifications'
 
 const IMAGE_SCHEME = 'dawsha-image'
 const quitLog = createQuitLog()
@@ -69,6 +71,7 @@ if (!gotLock) {
     if (handleDesktopLaunch(argv)) return
     if (!mainWindow || mainWindow.isDestroyed()) return
     if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
     mainWindow.focus()
     void cli?.executeFromArgv(argv, workingDirectory)
   })
@@ -93,6 +96,12 @@ function flushRenderer(): Promise<void> {
 function askMayClose(): Promise<boolean> {
   const window = mainWindow
   if (!window || window.isDestroyed() || !rendererReady) return Promise.resolve(true)
+  // Quit can come from the tray; any unsaved-files confirmation must be reachable.
+  if (!window.isVisible()) {
+    if (window.isMinimized()) window.restore()
+    if (process.env.DAWSHA_OFFSCREEN === '1') window.showInactive()
+    else { window.show(); window.focus() }
+  }
   return requestCloseCheck(ipcMain, window.webContents, quitLog)
 }
 
@@ -119,13 +128,14 @@ ipcMain.on(IPC.cliReady, () => {
   for (const { paneId, answer } of pendingNotificationClicks.splice(0)) send(IPC.notifyClick, paneId, answer)
 })
 
-function createWindow(): BrowserWindow {
+function createWindow(settings: SettingsStore, hidden: boolean): BrowserWindow {
   rendererReady = false
   // Automated tests set DAWSHA_OFFSCREEN=1: the window renders as usual but off-screen, out of the taskbar and
   // without taking focus, so test runs do not pop windows up on the user's desktop.
   const offscreen = process.env.DAWSHA_OFFSCREEN === '1'
   const window = new BrowserWindow({
     ...(offscreen ? { x: -32000, y: -32000, skipTaskbar: true, show: false } : {}),
+    show: false,
     width: 1440,
     height: 900,
     minWidth: 960,
@@ -141,27 +151,30 @@ function createWindow(): BrowserWindow {
       sandbox: true
     }
   })
-  if (offscreen) window.showInactive()
+  if (!hidden) {
+    if (offscreen) window.showInactive()
+    else window.show()
+  }
   window.webContents.on('did-start-loading', () => {
     if (mainWindow === window) rendererReady = false
   })
   window.webContents.on('render-process-gone', () => {
     if (mainWindow === window) rendererReady = false
   })
-  let flushedOnClose = false
-  let asking = false
   window.on('close', (event) => {
-    if (flushedOnClose) return
+    if (quitting) return
     event.preventDefault()
-    if (asking) return
-    asking = true
-    // A quit that was already approved does not ask a second time as its windows close.
-    void (quitting ? Promise.resolve(true) : askMayClose()).then((ok) => {
-      asking = false
-      if (!ok) return
-      flushedOnClose = true
-      void flushRenderer().finally(() => window.close())
-    })
+    if (checkingQuit) return
+    if (closeBehavior(process.platform, settings.get().desktop.closeBehavior, quitting) === 'quit') {
+      app.quit()
+      return
+    }
+    window.hide()
+    window.webContents.backgroundThrottling = false
+    if (process.platform !== 'darwin' && !settings.get().trayNoticeShown) {
+      try { settings.update({ trayNoticeShown: true }) } catch (error) { console.warn('Could not save tray notice preference', error) }
+      notifyUser(() => window, { paneId: '', title: 'Dawsha is still running in the tray', body: 'Choose Show Dawsha from the tray to return.', sound: settings.get().sessionInfo.sound, flash: false }, () => undefined)
+    }
   })
   window.on('focus', () => window.flashFrame(false))
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
@@ -252,7 +265,8 @@ app.whenReady().then(async () => {
   const stopTurnChecks = registerTurnIpc(() => mainWindow, store)
   registerMcpIpc(() => mainWindow, store)
   recordings.startSchedule()
-  mainWindow = createWindow()
+  const openedAtLogin = app.isPackaged && process.platform === 'darwin' && app.getLoginItemSettings().wasOpenedAtLogin
+  mainWindow = createWindow(store, startHidden(process.argv, process.platform, store.get().desktop, openedAtLogin))
   // Test sandboxes and dev runs must not replace the installed app's registered protocol handler.
   const registerProtocol = app.isPackaged || process.env.DAWSHA_REGISTER_PROTOCOL === '1'
   if (process.platform === 'win32' && registerProtocol && !process.env.DAWSHA_NOTIFY_LOG) {
@@ -260,6 +274,7 @@ app.whenReady().then(async () => {
     else if (!process.defaultApp) app.setAsDefaultProtocolClient(NOTIFICATION_SCHEME)
   }
   const stopMiniWindow = installMiniWindow(mainWindow, store)
+  const stopLimitNotifications = installLimitNotifications(() => mainWindow, store, usage, statusWatcher)
   cli = new CliRunner(() => mainWindow)
   installDesktopLaunch(() => store.get(), cli)
   refreshJumpList(store.get())
@@ -277,6 +292,7 @@ app.whenReady().then(async () => {
     log: quitLog,
     stopServices: () => stopAllServices([
       ['Mini window', stopMiniWindow], ['CLI bridge', () => stopCliServer(cliServer)],
+      ['limit notifications', stopLimitNotifications],
       ['code navigation', stopCodeNavigation], ['browser pane', closeBrowserPane],
       ['sessions watcher', () => watcher.stop()], ['agent files', closeAgentFiles],
       ['Codex watcher', () => codexWatcher.stop()], ['Gemini watcher', () => geminiWatcher.stop()],
@@ -338,4 +354,10 @@ app.whenReady().then(async () => {
   app.on('quit', () => quitLog('quit'))
 })
 
-app.on('window-all-closed', () => app.quit())
+app.on('activate', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+})
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
