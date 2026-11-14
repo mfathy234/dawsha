@@ -248,7 +248,8 @@ test('projects keep one list: sessions first, projects without sessions say so, 
     const quiet = page.locator('.proj-group.zone-quiet .proj-row.quiet-row')
     await expect(quiet.locator('.proj-name')).toHaveText(['Missing', 'Beta', 'Gamma'])
     await expect(quiet.locator('.proj-none')).toHaveText(['no sessions', 'no sessions', 'no sessions'])
-    expect((await quiet.first().boundingBox())!.height).toBeLessThan(36)
+    // The sidebar re-renders on its own clock, so measure until a row is attached rather than once.
+    await expect.poll(async () => (await quiet.first().boundingBox())?.height ?? Number.POSITIVE_INFINITY).toBeLessThan(36)
     await expect(page.locator('.proj-group.zone-quiet .sess-row')).toHaveCount(0)
 
     await expect(page.locator('.closed-line')).toHaveText('3 closed today')
