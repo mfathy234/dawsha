@@ -204,6 +204,7 @@ export class SettingsViewComponent {
       state.settings.presets,
       state.settings.sessionInfo,
       state.settings.warnUsageLimits,
+      state.settings.watchPullRequests,
       state.settings.miniWindow.showOnMinimize,
       state.settings.autoUpdateCheck,
       state.settings.highlights,
@@ -621,6 +622,10 @@ export class SettingsViewComponent {
         store.set(s => ({ ...s, settings: { ...s.settings, warnUsageLimits: value } }))
         void saveSettings({ warnUsageLimits: value })
       }), h('p', { class: 'hint' }, 'Warn at 80% and 95% of Claude and Codex 5-hour and weekly limits, on the desktop or in the app when notifications are off.')),
+      row('Watch pull requests', checkbox('watch-prs-toggle', 'Watch pull requests', settings.watchPullRequests, false, value => {
+        store.set(s => ({ ...s, settings: { ...s.settings, watchPullRequests: value } }))
+        void saveSettings({ watchPullRequests: value })
+      }), h('p', { class: 'hint' }, 'Check GitHub for the pull request of each session and show its status. Off means no gh calls, no status chip and no pull request notifications.')),
       row('Sound', checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) => setSessionInfo({ sound: value })), h('p', { class: 'hint' }, 'Play a sound with each notification.'))
     ]
   }

@@ -172,6 +172,7 @@ export function openPullRequest(paneId: string): void {
 
 /** Remember a pull request a session opened (from the PR tab, or a link its agent printed) and look at it now. */
 export function linkPullRequest(paneId: string, number: number): void {
+  if (!store.state.settings.watchPullRequests) return
   linked.set(paneId, number)
   syncKey = ''
   api.prWatch.refresh(paneId)
@@ -250,6 +251,7 @@ function reviewPane(view: PaneView, state: PrWatchState): void {
 }
 
 function onUpdate(key: string, state: PrWatchState | null): void {
+  if (!store.state.settings.watchPullRequests) return
   const known = store.state.prWatch
   const before = known[key]
   if (!state) {
@@ -276,9 +278,23 @@ function scanForLink(view: PaneView): void {
   else store.patch({ prWatch: { ...store.state.prWatch, [id]: linkOnlyPr(found.number, found.url) } })
 }
 
+function pauseWatching(): void {
+  if (syncKey !== '[]') {
+    syncKey = '[]'
+    api.prWatch.sync([])
+  }
+  if (Object.keys(store.state.prWatch).length > 0) store.patch({ prWatch: {} })
+  phases.clear()
+  linked.clear()
+}
+
 function tick(): void {
   const state = store.state
   if (!state.ready) return
+  if (!state.settings.watchPullRequests) {
+    pauseWatching()
+    return
+  }
   const views = derivePanes(state).filter((view) => view.agent !== 'shell')
   const targets: PrWatchTarget[] = []
   const alive = new Set<string>()

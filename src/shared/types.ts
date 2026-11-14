@@ -228,6 +228,8 @@ export interface Settings {
   desktop: import('./desktopSettings').DesktopSettings
   trayNoticeShown: boolean
   warnUsageLimits: boolean
+  /** Whether Dawsha polls GitHub for each session's pull request. */
+  watchPullRequests: boolean
   warnedUsageWindows: import('./limitWarnings').WarnedWindows
   /** The Side panel layout: whether the panel is open, how wide, and its tab. */
   sidePanel: import('./sidePanel').SidePanelSettings

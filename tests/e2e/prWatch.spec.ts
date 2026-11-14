@@ -76,3 +76,31 @@ test('a session shows its pull request, Fix CI sends the trimmed log, merge when
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
+
+test('with Watch pull requests off there is no gh polling and no status chip', async () => {
+  const sandbox = createSandbox()
+  const repo = sandbox.projectFolder
+  git(repo, 'init', '-q', '-b', 'main')
+  writeFileSync(join(repo, 'a.txt'), 'one\n')
+  git(repo, 'add', '.')
+  git(repo, 'commit', '-q', '-m', 'first')
+  const tree = `${repo}-pr-off`
+  git(repo, 'worktree', 'add', '-q', '-b', 'feature/off', tree, 'HEAD')
+  const settings = readSettings(sandbox.userData)
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({
+    ...settings,
+    watchPullRequests: false,
+    workspace: { focusedIndex: 0, panes: [{ projectId: 'smoke', folder: tree, worktree: { repo, path: tree, branch: 'feature/off' }, tabs: [{ agent: 'claude', label: 'claude', sessionId: 'pr-session-off' }], activeIndex: 0, fontSize: 13 }] }
+  }), 'utf8')
+  const state = mkdtempSync(join(tmpdir(), 'dawsha-fake-gh-'))
+  writeFileSync(join(state, 'phase'), 'failing')
+  const { app, page } = await launchApp(sandbox, { DAWSHA_GH_SCRIPT: resolve(__dirname, '../support/fakeGhWatch.cjs'), FAKE_GH_DIR: state, FAKE_GH_HEAD: git(tree, 'rev-parse', 'HEAD'), DAWSHA_PR_POLL_SPEED: '40' })
+  try {
+    await expect(page.locator('.pane').first()).toBeVisible({ timeout: 30_000 })
+    await page.waitForTimeout(3000)
+    await expect(page.locator('.pane-pr')).toHaveCount(0)
+    expect(existsSync(join(state, 'calls.log'))).toBe(false)
+  } finally {
+    await closeApp(app)
+  }
+})
