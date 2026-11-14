@@ -69,6 +69,21 @@ async function comment(page: Page, file: string, text: string): Promise<void> {
   await expect(page.locator('.cm-review-text').last()).toHaveText(text)
 }
 
+/** The menu reads the folder's git status when it opens, and that status loads after the session starts. */
+async function openReviewDialog(page: Page): Promise<void> {
+  const reviewItem = page.getByRole('menuitem', { name: 'Review this session…' })
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Pane actions' }).click()
+    try {
+      await expect(reviewItem).toBeEnabled({ timeout: 1_000 })
+    } catch (error) {
+      await page.keyboard.press('Escape')
+      throw error
+    }
+  }).toPass({ timeout: 30_000 })
+  await reviewItem.click()
+}
+
 test('two comments on a diff go to the session as one message with the diff around each line', async () => {
   test.setTimeout(120_000)
   const sandbox = createSandbox()
@@ -145,8 +160,7 @@ test('a reviewer in the background returns findings that land on the right lines
     await expect(page.locator('.pane')).toHaveCount(1)
     const authorTerm = await activeTermId(page)
     await captureWrites(app, authorTerm)
-    await page.getByRole('button', { name: 'Pane actions' }).click()
-    await page.getByRole('menuitem', { name: 'Review this session…' }).click()
+    await openReviewDialog(page)
     const dialog = page.getByRole('dialog', { name: 'Review this session' })
     await expect(dialog).toContainText('read-only plan mode')
     await dialog.getByRole('radio', { name: 'Uncommitted changes' }).check()
@@ -197,8 +211,7 @@ test('a reply that cannot be read as findings is shown as it came', async () => 
     await expect(page.locator('.quickpick')).toBeVisible()
     await page.keyboard.press('Enter')
     await expect(page.locator('.pane')).toHaveCount(1)
-    await page.getByRole('button', { name: 'Pane actions' }).click()
-    await page.getByRole('menuitem', { name: 'Review this session…' }).click()
+    await openReviewDialog(page)
     await page.getByRole('dialog', { name: 'Review this session' }).locator('#review-start').click()
     await expect(page.locator('.pane')).toHaveCount(2)
     await openReview(page)

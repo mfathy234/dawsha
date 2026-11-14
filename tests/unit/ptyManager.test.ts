@@ -37,6 +37,7 @@ vi.mock('../../src/main/agentLaunch', () => ({
   codexCommand: () => 'codex',
   geminiCommand: () => 'gemini',
   shellCommand: () => 'shell',
+  shellArgs: (_file: string, command?: string) => (command === undefined ? [] : ['-lc', command]),
   launchSpec: (request: { agent: string; command?: string; prompt?: string }) => ({ file: request.agent === 'shell' ? 'fake-shell' : 'fake-agent', args: [request.command ?? request.prompt ?? ''] })
 }))
 

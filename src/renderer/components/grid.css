@@ -162,7 +162,6 @@
 @container pane (max-width: 560px) {
   .pane-header .pane-tag,
   .pane-header .pane-fresh,
-  .pane-header .chip-resumed,
   .pane-header .chip-from {
     display: none;
   }

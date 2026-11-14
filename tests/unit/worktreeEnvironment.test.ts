@@ -1,12 +1,16 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, rmdirSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, rmdirSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { copyWorktreeEnvironment, inspectWorktreeSetup, isPathInside, saveWorktreeSetup } from '../../src/main/worktreeEnvironment'
 import { createWorktree, createWorktrees } from '../../src/main/compare'
 import { createSessionWorktree } from '../../src/main/sessionWorktree'
+
 import { claimPendingWorktree } from '../../src/main/worktreeSetupPending'
+
+/** A junction is a folder to Windows but a plain symlink elsewhere. */
+const removeLink = (path: string): void => (process.platform === 'win32' ? rmdirSync(path) : unlinkSync(path))
 
 const roots: string[] = []
 function repo(): string {
@@ -69,7 +73,7 @@ describe('worktree environment safety', () => {
     writeFileSync(join(root, '.worktreeinclude'), 'config/\n'); writeFileSync(join(outside, '.env'), 'private')
     symlinkSync(outside, join(root, 'config'), 'junction')
     expect((await copyWorktreeEnvironment(root, destination)).ok).toBe(false)
-    rmdirSync(join(root, 'config')); mkdirSync(join(root, 'config')); writeFileSync(join(root, 'config', '.env'), 'local')
+    removeLink(join(root, 'config')); mkdirSync(join(root, 'config')); writeFileSync(join(root, 'config', '.env'), 'local')
     symlinkSync(outside, join(destination, 'config'), 'junction')
     expect((await copyWorktreeEnvironment(root, destination)).ok).toBe(false)
     expect(readFileSync(join(outside, '.env'), 'utf8')).toBe('private')

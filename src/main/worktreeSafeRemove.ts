@@ -1,10 +1,15 @@
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import { lstat, readdir, readFile, rmdir, unlink } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import type { PrTidyRequest, PrTidyResult } from '../shared/prWatch'
 import { parseWorktreeList, samePath } from '../shared/worktreeCleanup'
 import { matchesWorktreeInclude, parseWorktreeInclude, WORKTREE_SKIP_DIRS } from '../shared/worktreeSetup'
 import { git } from './gitCommit'
+
+/** The real path, so /var/... matches the /private/var/... that git lists on macOS. */
+function canonical(path: string): string {
+  try { return realpathSync.native(path) } catch { return path }
+}
 
 const MAX_ENTRIES = 400_000
 const SLOW_MS = 60_000

@@ -19,6 +19,11 @@ describe('extractReply', () => {
     expect(extractReply(lines, 0)).toEqual({ text: 'hi', lineCount: 1 })
   })
 
+  it('leaves out the rest of a prompt line that wrapped', () => {
+    const lines = [line('C:\\a\\long\\path\\Smoke Project>echo omeg'), line('a-out', true), line('omega-out'), line(''), line('C:\\a\\long\\path\\Smoke Project>')]
+    expect(extractReply(lines, 0)).toEqual({ text: 'omega-out', lineCount: 1 })
+  })
+
   it('drops a trailing PowerShell prompt', () => {
     const lines = [line('PS C:\\billing-api> ls'), line('a.txt'), line('b.txt'), line('PS C:\\billing-api>')]
     expect(extractReply(lines, 0)).toEqual({ text: 'a.txt\nb.txt', lineCount: 2 })

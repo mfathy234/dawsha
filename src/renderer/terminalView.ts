@@ -200,6 +200,16 @@ export class TerminalView {
     let start = this.term.rows >= rows ? Math.max(top, end - rows + 1) : Math.max(0, end - rows + 1)
     // Start at the beginning of a wrapped line, and join wrapped rows back into the line the program printed.
     while (start > 0 && buffer.getLine(start)?.isWrapped) start -= 1
+    return this.readable(this.joinedRows(start, end))
+  }
+
+  /** The whole buffer with wrapped rows joined back into the lines the program printed, for exports. */
+  lineText(): string {
+    return this.readable(this.joinedRows(0, this.term.buffer.active.length - 1))
+  }
+
+  private joinedRows(start: number, end: number): string {
+    const buffer = this.term.buffer.active
     const lines: string[] = []
     for (let row = start; row <= end; row += 1) {
       const line = buffer.getLine(row)
@@ -209,7 +219,7 @@ export class TerminalView {
       if (line?.isWrapped && lines.length > 0) lines[lines.length - 1] += value
       else lines.push(value)
     }
-    return this.readable(lines.join('\n'))
+    return lines.join('\n')
   }
 
   selectAll(): void {
