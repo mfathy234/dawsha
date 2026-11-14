@@ -1,6 +1,7 @@
 import { createMiniSnapshotGate, miniSession, miniStateOf, orderMiniSessions, type MiniAction, type MiniSnapshot, type MiniPlanRequest } from '../shared/miniWindow'
 import { activeMoment, clockStart, elapsedSince, stepDoneMemory, type DoneMemory, type MiniLogRead } from '../shared/miniDetail'
 import type { MiniWindowSettings } from '../shared/appearance'
+import { hideMiniSession, reconcileMiniHidden, splitMiniHidden } from '../shared/miniHidden'
 import { miniSendRefusal } from '../shared/miniSend'
 import { miniStartRefusal, orderMiniProjects, startAgents, type MiniStartOptions } from '../shared/miniStart'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
@@ -30,6 +31,8 @@ function act(action: MiniAction): void {
   else if (action.kind === 'open') { showView('grid'); focusPane(action.paneId) }
   else if (action.kind === 'review') review(action.paneId)
   else if (action.kind === 'send') send(action.paneId, action.text)
+  else if (action.kind === 'hide') hide(action.paneId)
+  else if (action.kind === 'unhide') setMiniWindow({ hidden: [] })
   else if (action.kind === 'start') void start(action)
   else if (action.kind === 'answer') {
     // A stale card must never approve a different command that replaced its prompt.
@@ -58,6 +61,14 @@ async function start(action: Extract<MiniAction, { kind: 'start' }>): Promise<vo
   const recent = [request.projectId, ...store.state.settings.recentProjectIds.filter(id => id !== request.projectId)].slice(0, 5)
   store.patch({ settings: { ...store.state.settings, recentProjectIds: recent } })
   void saveSettings({ recentProjectIds: recent })
+}
+
+/** Takes a session off the Mini list only. The session keeps running and stays in Dawsha. */
+function hide(paneId: string): void {
+  const view = derivePanes(store.state).find(candidate => candidate.pane.id === paneId)
+  if (!view) return
+  const sessionId = sessionIdOf(primaryTab(view.pane)) ?? ''
+  setMiniWindow({ hidden: hideMiniSession(store.state.settings.miniWindow.hidden, { paneId, sessionId }) })
 }
 
 function review(paneId: string): void {
@@ -101,10 +112,12 @@ export function installMiniWindowSync(): void {
     if (!state.ready || !visible) return
     const views = derivePanes(state)
     const requests: MiniPlanRequest[] = []
+    const sessionIds = new Map<string, string>()
     const sessions = views.map(view => {
       const id = view.pane.id
       const tab = primaryTab(view.pane)
       const sessionId = sessionIdOf(tab)
+      sessionIds.set(id, sessionId ?? '')
       const folder = folderOfPane(state, view.pane)
       if (visible && sessionId && folder && (view.agent === 'claude' || view.agent === 'codex')) {
         requests.push({ paneId: id, agent: view.agent, sessionId, folder })
@@ -132,6 +145,11 @@ export function installMiniWindowSync(): void {
           : planNote ? { done: Number(planNote[1]), total: Number(planNote[2]), current: note.planNow } : null
       })
     })
+    const listed = views.map(view => ({ paneId: view.pane.id, sessionId: sessionIds.get(view.pane.id) ?? '', state: sessions.find(s => s.paneId === view.pane.id)?.state ?? 'idle' }))
+    const hidden = state.settings.miniWindow.hidden
+    const kept = reconcileMiniHidden(hidden, listed)
+    if (kept.length !== hidden.length) setMiniWindow({ hidden: kept })
+    const shownIds = new Set(splitMiniHidden(kept, listed).shown.map(session => session.paneId))
     for (const id of done.keys()) if (!views.some(view => view.pane.id === id)) { done.delete(id); clocks.delete(id) }
     if (visible && !reading && Date.now() - planReadAt >= 1000) {
       reading = true
@@ -147,7 +165,7 @@ export function installMiniWindowSync(): void {
       const css = getComputedStyle(root)
       theme = Object.fromEntries(Array.from(css).filter(name => name.startsWith('--')).map(name => [name, css.getPropertyValue(name).trim()]))
     }
-    const snapshot: MiniSnapshot = { sessions: orderMiniSessions(sessions), folded: state.settings.miniWindow.folded, sound: state.settings.sessionInfo.sound, start: startOptions(), theme, kind: root.dataset.kind ?? 'dark' }
+    const snapshot: MiniSnapshot = { sessions: orderMiniSessions(sessions.filter(session => shownIds.has(session.paneId))), hiddenCount: sessions.length - shownIds.size, folded: state.settings.miniWindow.folded, sound: state.settings.sessionInfo.sound, start: startOptions(), theme, kind: root.dataset.kind ?? 'dark' }
     if (gate.take(snapshot, Date.now())) api.miniWindow.publish(snapshot)
   }
   api.miniWindow.onAction(act)

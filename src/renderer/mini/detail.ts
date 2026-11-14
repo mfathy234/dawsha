@@ -3,7 +3,7 @@ import type { MiniSession } from '../../shared/miniWindow'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
 import { spinner, spinPhase } from './motion'
-import { PermissionBlock, ProgressBar, setText, tile, tileKey, type MiniHost } from './parts'
+import { PermissionBlock, ProgressBar, setText, tile, tileKey, WaitingBlock, type MiniHost } from './parts'
 
 const SEND_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M6 11l6-6 6 6"/></svg>'
 const SENT_MS = 2000
@@ -60,7 +60,8 @@ class Composer {
   }
 
   update(session: MiniSession): void {
-    this.reason = session.state === 'needs' ? 'Answer the request above first.' : session.state === 'exited' ? 'This session has exited.' : ''
+    const blocked = !!session.permission || session.waiting?.kind === 'menu'
+    this.reason = session.state === 'needs' && blocked ? 'Answer the request above first.' : session.state === 'exited' ? 'This session has exited.' : ''
     this.render()
   }
 
@@ -85,6 +86,7 @@ export class DetailView {
   private readonly nowText = h('span', { dir: 'auto' })
   private readonly nowLine = h('div', { class: 'mini-now mini-line', role: 'status' }, this.spin, this.nowText)
   private readonly permission: PermissionBlock
+  private readonly waiting: WaitingBlock
   private readonly asked = turn('you', 'You asked')
   private readonly reply = turn('agent', 'Last reply')
   private readonly changesLabel = h('span', { dir: 'ltr' })
@@ -106,11 +108,12 @@ export class DetailView {
   constructor(session: MiniSession, private readonly host: MiniHost) {
     this.session = session
     this.permission = new PermissionBlock(host)
+    this.waiting = new WaitingBlock(host)
     this.composer = new Composer(() => this.session, host, session.paneId)
     this.el.dataset.paneId = session.paneId
     this.el.append(
       h('div', { class: 'mini-detail-title' }, this.tileSlot, h('div', { class: 'mini-info' }, this.title, this.project)),
-      this.nowLine, this.permission.el, h('div', { class: 'mini-convo' }, this.asked.el, this.reply.el), this.changes, this.progress.el, this.steps,
+      this.nowLine, this.permission.el, this.waiting.el, h('div', { class: 'mini-convo' }, this.asked.el, this.reply.el), this.changes, this.progress.el, this.steps,
       this.terminal, this.usage, this.composer.el)
     this.update(session)
   }
@@ -126,6 +129,7 @@ export class DetailView {
     setText(this.nowText, session.now)
     this.spin.hidden = session.state !== 'working'
     this.permission.update(session)
+    this.waiting.update(session)
     this.fillBlock(this.asked, session.asked ? [session.asked] : [])
     this.fillBlock(this.reply, session.reply)
     this.changes.hidden = !session.changes

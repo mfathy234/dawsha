@@ -15,6 +15,7 @@ export class CardView {
   private readonly progress = new ProgressBar()
   private readonly select: HTMLButtonElement
   private readonly open: HTMLButtonElement
+  private readonly hide: HTMLButtonElement
   private readonly review: HTMLButtonElement
   private readonly ring = h('span', { class: 'mini-ring', 'aria-hidden': 'true' })
   private readonly permission: PermissionBlock
@@ -27,8 +28,9 @@ export class CardView {
     this.select = h('button', { type: 'button', class: 'mini-select', onClick: () => host.select(this.session.paneId) },
       this.tileSlot, h('span', { class: 'mini-info' }, this.title, h('span', { class: 'mini-line' }, this.spin, this.lineText), this.progress.el))
     this.open = iconButton('Open in Dawsha', ICONS.maximize, () => host.open(this.session), 'mini-open')
+    this.hide = iconButton('Hide from the Mini window', ICONS.close, () => host.hide(this.session), 'mini-hide')
     this.review = h('button', { type: 'button', class: 'mini-review', onClick: () => host.review(this.session) }, 'Review')
-    this.el.append(this.ring, h('div', { class: 'mini-card-row' }, this.select, this.open), h('div', { class: 'mini-card-foot' }, this.review), this.permission.el)
+    this.el.append(this.ring, h('div', { class: 'mini-card-row' }, this.select, this.open, this.hide), h('div', { class: 'mini-card-foot' }, this.review), this.permission.el)
     this.el.dataset.paneId = session.paneId
     this.update(session, false)
   }
@@ -47,6 +49,10 @@ export class CardView {
     this.spin.hidden = session.state !== 'working'
     this.progress.update(session.plan)
     this.open.hidden = !!session.permission
+    // A session that needs you is never hidden (see miniHidden), so it offers no way to hide.
+    this.hide.hidden = session.state === 'needs'
+    setAttr(this.hide, 'aria-label', `Hide ${session.title} from the Mini window`)
+    setAttr(this.hide, 'title', 'Hide from the Mini window')
     this.review.hidden = !session.fresh
     this.review.parentElement!.hidden = !session.fresh
     this.permission.update(session)
