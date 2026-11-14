@@ -49,6 +49,9 @@ import { SESSION_TAG_LABELS, type SessionTag } from '../../shared/sessionTags'
 import { openPaneBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
+import { openPrMenu } from './prMenu'
+import { prLine } from '../../shared/prWatch'
+import { prNoteFor, prStateOf } from '../prWatch'
 import { openPaneMeter } from './paneMeter'
 import { ContextRing } from './contextRing'
 import { contextReading } from '../../shared/chatContext'
@@ -119,6 +122,8 @@ export class PaneComponent {
     'aria-haspopup': 'menu',
     onClick: () => openPaneBranchMenu(this.paneId, this.branch)
   })
+  private readonly pr = h('button', { class: 'link-quiet pane-pr', type: 'button', hidden: true, 'aria-haspopup': 'menu', onClick: () => openPrMenu(this.paneId, this.pr) })
+  private prSignature = ''
   private readonly branchName = h('span', { class: 'chip-text' })
   private readonly branchSync = h('span', { class: 'chip-sync', hidden: true })
   private readonly stateHost = h('span', { class: 'pane-state' })
@@ -218,7 +223,7 @@ export class PaneComponent {
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
-    this.foot.append(this.info, this.branch)
+    this.foot.append(this.info, this.pr, this.branch)
     this.reply = new QuietReply(paneId, {
       review: () => this.reviewInFiles(),
       send: (text) => {
@@ -287,7 +292,8 @@ export class PaneComponent {
     this.updateState(view, state)
     this.updateInfo(view, maximized)
     this.updateRing(view)
-    this.foot.hidden = this.info.hidden && this.branch.hidden
+    this.updatePr()
+    this.foot.hidden = this.info.hidden && this.branch.hidden && this.pr.hidden
     this.updateRecap(view)
     this.updateHint(view)
     const asking = state === 'needs' || (this.chatShown && detectPermissionPrompt(permissionTail(this.paneId)))
@@ -496,6 +502,20 @@ export class PaneComponent {
     // Session time and age show only next to model, changes, review or the others.
     this.info.hidden = !items.some((item) => !FOOT_FILLER.some((name) => item.classList.contains(name)))
     this.info.replaceChildren(...items)
+  }
+
+  private updatePr(): void {
+    const state = prStateOf(this.paneId)
+    const line = state ? prLine(state) : ''
+    const signature = `${line}|${state?.phase ?? ''}`
+    if (signature !== this.prSignature) {
+      this.prSignature = signature
+      this.pr.textContent = line
+      this.pr.dataset.phase = state?.phase ?? ''
+      this.pr.title = state ? [state.title, prNoteFor(this.paneId)].filter(Boolean).join(' ') || `Pull request #${state.number}` : ''
+      this.pr.setAttribute('aria-label', line === '' ? 'Pull request' : `${line}. Open the pull request menu`)
+    }
+    this.pr.hidden = line === ''
   }
 
   private updateRing(view: PaneView): void {

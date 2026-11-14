@@ -79,6 +79,7 @@ export interface GridApi {
   miniWindow: import('./miniWindow').MiniHostApi
   runs: import('./runCommands').RunApi
   tools: import('./filesTools').FilesToolsApi
+  prWatch: import('./prWatch').PrWatchApi
   turn: import('./turnApi').TurnApi
   mcp: import('./mcp').McpApi
   chat: import('./chatLog').ChatApi

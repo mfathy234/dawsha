@@ -10,6 +10,7 @@ import { sanitizePresets } from './sessionPresets'
 import { DEFAULT_CHAT_VIEW, isChatView, sanitizeChatViews, sanitizeSessionViews } from './chatLog'
 import { isSessionsLayout } from './board'
 import { DEFAULT_APPEARANCE, DEFAULT_MINI_WINDOW, sanitizeAppearance, sanitizeMiniWindow } from './appearance'
+import { sanitizePrSettings } from './prSettings'
 import { DEFAULT_GRID_STYLE, isGridStyle } from './gridStyle'
 import { sanitizeSavedPrompts } from './savedPrompts'
 import { isSidebarSort } from './sidebarModel'
@@ -105,6 +106,7 @@ export const defaultSettings = (): Settings => ({
   sessionsLayout: 'grid',
   appearance: DEFAULT_APPEARANCE,
   miniWindow: DEFAULT_MINI_WINDOW,
+  pullRequests: {},
   desktop: DEFAULT_DESKTOP,
   plantumlJarPath: '',
   trayNoticeShown: false,
@@ -338,6 +340,7 @@ function sanitizeRemoteAccess(value: unknown): RemoteAccessSettings {
 }
 
 const KEPT_BRANCH_MAX = 200
+const KEPT_NOTE_MAX = 120
 
 function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSession[] {
   if (!Array.isArray(value)) return []
@@ -356,6 +359,8 @@ function sanitizeKeptSessions(value: unknown, projectIds: Set<string>): KeptSess
     if (isSessionTag(item.tag)) kept.tag = item.tag
     const branch = asString(item.branch)
     if (branch) kept.branch = branch.slice(0, KEPT_BRANCH_MAX)
+    const note = asString(item.note)
+    if (note) kept.note = note.slice(0, KEPT_NOTE_MAX)
     sessions.push(kept)
   }
   return sessions.slice(-500)
@@ -475,6 +480,7 @@ export function migrateSettings(raw: unknown): Settings {
     sessionsLayout: isSessionsLayout(raw.sessionsLayout) ? raw.sessionsLayout : 'grid',
     appearance: sanitizeAppearance(raw.appearance),
     miniWindow: sanitizeMiniWindow(raw.miniWindow),
+    pullRequests: sanitizePrSettings(raw.pullRequests, new Set(projects.map((p) => p.id))),
     desktop: sanitizeDesktopSettings(raw.desktop),
     plantumlJarPath: typeof raw.plantumlJarPath === 'string' && raw.plantumlJarPath.length <= 4096 && !/[\x00-\x1f]/.test(raw.plantumlJarPath) ? raw.plantumlJarPath.trim() : '',
     trayNoticeShown: raw.trayNoticeShown === true,

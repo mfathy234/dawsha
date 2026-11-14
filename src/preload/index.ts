@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { createRunPreload } from './runCommands'
 import { createFilesToolsPreload } from './filesTools'
+import { createPrWatchPreload } from './prWatch'
 import { createTurnPreload } from './turn'
 import { createMcpPreload } from './mcp'
 import { createChatPreload } from './chat'
@@ -40,6 +41,7 @@ const api: GridApi = {
   },
   runs: createRunPreload(),
   tools: createFilesToolsPreload(),
+  prWatch: createPrWatchPreload(),
   turn: createTurnPreload(),
   mcp: createMcpPreload(),
   chat: createChatPreload(),
