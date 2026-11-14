@@ -48,6 +48,25 @@ describe('ClaudeChatReader', () => {
     expect(reader.items()[0]).toMatchObject({ done: true, failed: true, output: 'done', note: 'failed' })
   })
 
+  it('shows a message sent while the agent was busy where the agent took it in', () => {
+    const reader = new ClaudeChatReader()
+    reader.feed(lines(
+      { type: 'user', uuid: 'u1', message: { content: 'Fix the sidebar' } },
+      block('a1', [{ type: 'text', text: 'Working on it.' }]),
+      { type: 'queue-operation', operation: 'enqueue', content: 'also suggest new features' },
+      { type: 'queue-operation', operation: 'remove', reason: 'absorbed_mid_turn', timestamp: '2026-11-14T11:20:22.000Z', content: 'also suggest new features' },
+      { type: 'queue-operation', operation: 'enqueue', content: 'never mind' },
+      { type: 'queue-operation', operation: 'remove', reason: 'cancelled', content: 'never mind' },
+      block('a2', [{ type: 'text', text: 'Here are some ideas.' }])
+    ))
+    expect(reader.items().map((item) => [(item as ChatMessage).role, (item as ChatMessage).text])).toEqual([
+      ['user', 'Fix the sidebar'],
+      ['agent', 'Working on it.'],
+      ['user', 'also suggest new features'],
+      ['agent', 'Here are some ideas.']
+    ])
+  })
+
   it('keeps a message the user sends twice in a row', () => {
     const reader = new ClaudeChatReader()
     reader.feed(lines({ type: 'user', uuid: 'u1', message: { content: 'continue' } }, block('a1', [{ type: 'text', text: 'ok' }]), { type: 'user', uuid: 'u2', message: { content: 'continue' } }, { type: 'user', uuid: 'u3', message: { content: 'continue' } }))

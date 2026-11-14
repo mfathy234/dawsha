@@ -98,6 +98,10 @@ export class ClaudeChatReader implements ChatLineReader {
     else if (record.type === 'user' && record.isCompactSummary === true) this.builder.compact(this.nextId(record), promptParts(message.content).join('\n'), at)
     else if (record.type === 'user' && record.isMeta !== true) this.user(record, message, at)
     else if (record.type === 'assistant') this.assistant(record, message, at)
+    // A message typed while the agent was busy is logged only as a queue operation when the agent takes it in mid-turn.
+    else if (record.type === 'queue-operation' && record.operation === 'remove' && record.reason === 'absorbed_mid_turn' && typeof record.content === 'string' && isUserText(record.content)) {
+      this.builder.message(this.nextId(record), 'user', record.content.trim(), at)
+    }
   }
 
   private user(record: Json, message: Json, at: number | undefined): void {

@@ -11,8 +11,10 @@ const MAX_ROWS_PX = 96
 
 export const drafts = new Map<string, string>()
 
-function section(label: string, body: HTMLElement): { el: HTMLElement; body: HTMLElement } {
-  return { el: h('div', { class: 'mini-block', hidden: true }, h('span', { class: 'mini-label' }, label), body), body }
+/** One side of the last exchange, drawn like the Chat view: your message as a soft bubble, the reply as plain text. */
+function turn(kind: 'you' | 'agent', label: string): { el: HTMLElement; body: HTMLElement } {
+  const body = h('p', { class: `mini-clamp mini-${kind === 'you' ? 'asked' : 'reply'}`, dir: 'auto' })
+  return { el: h('div', { class: `mini-turn mini-turn-${kind}`, hidden: true, 'aria-label': label }, body), body }
 }
 
 /** The reply box at the bottom of the detail: Enter sends, Shift+Enter starts a new line. */
@@ -83,8 +85,8 @@ export class DetailView {
   private readonly nowText = h('span', { dir: 'auto' })
   private readonly nowLine = h('div', { class: 'mini-now mini-line', role: 'status' }, this.spin, this.nowText)
   private readonly permission: PermissionBlock
-  private readonly asked = section('You asked', h('p', { class: 'mini-clamp mini-asked', dir: 'auto' }))
-  private readonly reply = section('Last reply', h('p', { class: 'mini-clamp mini-reply', dir: 'auto' }))
+  private readonly asked = turn('you', 'You asked')
+  private readonly reply = turn('agent', 'Last reply')
   private readonly changesLabel = h('span', { dir: 'ltr' })
   private readonly review = h('button', { type: 'button', class: 'mini-review', onClick: () => this.host.review(this.session) }, 'Review')
   private readonly changes = h('div', { class: 'mini-changes', hidden: true }, this.changesLabel, this.review)
@@ -92,6 +94,11 @@ export class DetailView {
   private readonly steps = h('ol', { class: 'mini-plan', 'aria-label': 'Plan', hidden: true })
   private readonly usage = h('div', { class: 'mini-usage', hidden: true })
   private readonly output = h('pre', { dir: 'auto' })
+  private readonly lastLine = h('span', { class: 'mini-terminal-last', dir: 'auto' })
+  // Monitoring first: the terminal stays folded to its last line until you open it.
+  private readonly terminal = h('details', { class: 'mini-terminal' },
+    h('summary', { class: 'mini-terminal-label' }, icon(ICONS.terminal), h('span', {}, 'Terminal'), this.lastLine),
+    this.output)
   private readonly composer: Composer
   private tiles = ''
   private stepsKey = ''
@@ -103,9 +110,8 @@ export class DetailView {
     this.el.dataset.paneId = session.paneId
     this.el.append(
       h('div', { class: 'mini-detail-title' }, this.tileSlot, h('div', { class: 'mini-info' }, this.title, this.project)),
-      this.nowLine, this.permission.el, this.asked.el, this.reply.el, this.changes, this.progress.el, this.steps, this.usage,
-      h('div', { class: 'mini-terminal' }, h('span', { class: 'mini-terminal-label' }, icon(ICONS.terminal), 'Terminal'), this.output),
-      this.composer.el)
+      this.nowLine, this.permission.el, h('div', { class: 'mini-convo' }, this.asked.el, this.reply.el), this.changes, this.progress.el, this.steps,
+      this.terminal, this.usage, this.composer.el)
     this.update(session)
   }
 
@@ -113,7 +119,7 @@ export class DetailView {
     this.session = session
     this.el.dataset.state = session.state
     const key = tileKey(session)
-    if (key !== this.tiles) { this.tiles = key; this.tileSlot.replaceChildren(tile(session, 48)) }
+    if (key !== this.tiles) { this.tiles = key; this.tileSlot.replaceChildren(tile(session, 36)) }
     setText(this.title, session.title)
     setText(this.project, session.project)
     this.project.hidden = session.project === ''
@@ -129,6 +135,7 @@ export class DetailView {
     this.usage.hidden = session.usage === ''
     setText(this.usage, session.usage)
     setText(this.output, session.tail.join('\n') || 'No output yet')
+    setText(this.lastLine, session.tail.at(-1)?.trim() ?? '')
     this.composer.update(session)
   }
 

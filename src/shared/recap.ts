@@ -28,10 +28,21 @@ const RULE_LINE = /^[\s─━═┄┈╌\-_|│]*$/
  * without blank lines or border rules. With no input box on screen, the whole screen counts.
  */
 export function outputLines(screen: string, count: number): string[] {
-  const lines = screen.split('\n')
+  // The terminal joins rows that wrapped into one line, so border rows can arrive glued together or around the prompt:
+  // take the border runs out wherever they are, then judge what is left.
+  const lines = screen.split('\n').map((line) => {
+    const cleaned = line.replace(BORDER_RUN, ' ')
+    return cleaned === line ? line : cleaned.trim()
+  })
   const prompt = lines.findLastIndex((line) => INPUT_LINE.test(line))
-  return lines.slice(0, prompt >= 0 ? prompt : lines.length).filter((line) => !RULE_LINE.test(line)).slice(-count)
+  return lines
+    .slice(0, prompt >= 0 ? prompt : lines.length)
+    .filter((line) => !RULE_LINE.test(line) && /[\p{L}\p{N}]/u.test(line))
+    .slice(-count)
 }
+
+/** Three or more box-drawing or block characters in a row: a border, a rule or a divider. */
+const BORDER_RUN = /[─-▟]{3,}/g
 
 /**
  * One line that says where a session is: Claude Code's own "recap:" line when the screen has one,
