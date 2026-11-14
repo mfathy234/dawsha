@@ -1,19 +1,13 @@
-import { removeTempCreatedSince } from './tempCleanup'
+import { removePrivateTemp, startPrivateTemp } from './tempCleanup'
 
-const isE2e = (name: string): boolean => name.startsWith('dawsha-e2e-')
-
-/** Global setup for vitest: on teardown remove the temp folders this run created, never an e2e run's sandboxes. */
+/** Global setup for vitest: a private temp folder for this run, removed at the end. Workers inherit it through TEMP/TMP. */
 export default function setup(): () => void {
-  const startedAt = Date.now()
-  return () => {
-    removeTempCreatedSince(startedAt, (name) => !isE2e(name))
-  }
+  const dir = startPrivateTemp('unit')
+  return () => removePrivateTemp(dir)
 }
 
-/** The same for Playwright: only its own `dawsha-e2e-*` sandboxes, so a unit run going on at the same time keeps its folders. */
+/** The same for Playwright: the runner, its workers and the Dawsha apps they launch all use this run's folder. */
 export function e2eSetup(): () => void {
-  const startedAt = Date.now()
-  return () => {
-    removeTempCreatedSince(startedAt, isE2e)
-  }
+  const dir = startPrivateTemp('e2e')
+  return () => removePrivateTemp(dir)
 }

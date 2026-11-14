@@ -1,39 +1,57 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { removeTempCreatedSince } from '../support/tempCleanup'
+import { removePrivateTemp, removeTree, startPrivateTemp } from '../support/tempCleanup'
 
 const roots: string[] = []
-afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }) })
+const saved = { TEMP: process.env.TEMP, TMP: process.env.TMP, TMPDIR: process.env.TMPDIR }
+afterEach(() => {
+  for (const [name, value] of Object.entries(saved)) {
+    if (value === undefined) delete process.env[name]
+    else process.env[name] = value
+  }
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
+})
 
-describe('removeTempCreatedSince', () => {
-  it('removes only dawsha folders it owns that appeared after the run began', () => {
-    const root = mkdtempSync(join(tmpdir(), 'cleanup-check-'))
-    roots.push(root)
-    const before = join(root, 'dawsha-e2e-old')
-    mkdirSync(before)
-    const startedAt = Date.now() + 50
-    const wait = Date.now() + 80
-    while (Date.now() < wait) { /* let the clock pass the run start */ }
-    for (const name of ['dawsha-e2e-new', 'dawsha-agents-new', 'other-new']) mkdirSync(join(root, name))
-    const removed = removeTempCreatedSince(startedAt, (name) => name.startsWith('dawsha-e2e-'), root)
-    expect(removed).toBe(1)
-    expect(existsSync(join(root, 'dawsha-e2e-new'))).toBe(false)
-    expect(existsSync(before)).toBe(true)
-    expect(existsSync(join(root, 'dawsha-agents-new'))).toBe(true)
-    expect(existsSync(join(root, 'other-new'))).toBe(true)
-    utimesSync(before, new Date(), new Date())
+describe('private temp folder per test run', () => {
+  it('points TEMP, TMP and TMPDIR at a new folder and removes only that folder', () => {
+    const base = mkdtempSync(join(tmpdir(), 'cleanup-check-'))
+    roots.push(base)
+    const neighbour = join(base, 'dawsha-e2e-other-run')
+    mkdirSync(neighbour)
+    const dir = startPrivateTemp('unit', base)
+    expect(process.env.TEMP).toBe(dir)
+    expect(process.env.TMP).toBe(dir)
+    expect(process.env.TMPDIR).toBe(dir)
+    mkdirSync(join(dir, 'dawsha-e2e-mine', 'deep'), { recursive: true })
+    removePrivateTemp(dir)
+    expect(existsSync(dir)).toBe(false)
+    expect(existsSync(neighbour)).toBe(true)
   })
 
-  it('keeps everything when DAWSHA_KEEP_TEMP is set', () => {
-    const root = mkdtempSync(join(tmpdir(), 'cleanup-check-'))
-    roots.push(root)
+  it('never deletes through a junction or symbolic link inside the folder', () => {
+    const base = mkdtempSync(join(tmpdir(), 'cleanup-check-'))
+    roots.push(base)
+    const target = join(base, 'keep-me')
+    mkdirSync(target)
+    writeFileSync(join(target, 'important.txt'), 'still here')
+    const run = join(base, 'run')
+    mkdirSync(run)
+    symlinkSync(target, join(run, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir')
+    removeTree(run)
+    expect(existsSync(run)).toBe(false)
+    expect(existsSync(join(target, 'important.txt'))).toBe(true)
+  })
+
+  it('keeps the folder when DAWSHA_KEEP_TEMP is set', () => {
+    const base = mkdtempSync(join(tmpdir(), 'cleanup-check-'))
+    roots.push(base)
+    const dir = startPrivateTemp('unit', base)
     process.env.DAWSHA_KEEP_TEMP = '1'
     try {
-      mkdirSync(join(root, 'dawsha-x'))
-      expect(removeTempCreatedSince(0, () => true, root)).toBe(0)
-      expect(existsSync(join(root, 'dawsha-x'))).toBe(true)
+      removePrivateTemp(dir)
+      expect(existsSync(dir)).toBe(true)
     } finally {
       delete process.env.DAWSHA_KEEP_TEMP
     }
