@@ -1,6 +1,7 @@
 import { changesLabel, isFolded, visibleRows, type TurnDiff, type TurnDiffRow } from '../../shared/turnDiff'
 import { h } from '../dom'
 import type { CardActions, DiffEntry } from './turnState'
+import { commentBoxes, commentButton, type CardComments } from './turnComments'
 import './turnExtras.css'
 
 const SIGN: Readonly<Record<string, string>> = { add: '+', del: '−', ctx: ' ' }
@@ -9,11 +10,11 @@ function width(diff: TurnDiff): number {
   return Math.max(2, ...diff.rows.map((row) => String(Math.max(row.old ?? 0, row.new ?? 0)).length))
 }
 
-function line(row: TurnDiffRow, digits: number): HTMLElement {
+function line(row: TurnDiffRow, digits: number, add: HTMLElement | null): HTMLElement {
   if (row.k === 'hunk') return h('div', { class: 'turn-hunk' }, row.t)
   const no = (value: number | undefined): HTMLElement => h('span', { class: 'no', 'aria-hidden': 'true' }, value === undefined ? '' : String(value).padStart(digits, ' '))
   const word = row.k === 'add' ? 'added' : row.k === 'del' ? 'removed' : ''
-  return h('div', { class: `turn-ln ${row.k}` }, no(row.old), no(row.new), h('span', { class: 'sg', 'aria-hidden': 'true' }, SIGN[row.k] ?? ' '), h('span', { class: 'tx' }, row.t), word ? h('span', { class: 'sr-only' }, ` (${word})`) : null)
+  return h('div', { class: `turn-ln ${row.k}` }, add, no(row.old), no(row.new), h('span', { class: 'sg', 'aria-hidden': 'true' }, SIGN[row.k] ?? ' '), h('span', { class: 'tx' }, row.t), word ? h('span', { class: 'sr-only' }, ` (${word})`) : null)
 }
 
 function footer(path: string, diff: TurnDiff, entry: Extract<DiffEntry, { status: 'ready' }>, actions: CardActions): HTMLElement {
@@ -31,7 +32,7 @@ function footer(path: string, diff: TurnDiff, entry: Extract<DiffEntry, { status
 }
 
 /** The diff under one file row: hunk headers, both line numbers, coloured +/- lines. Text is always set as text. */
-export function diffSection(path: string, entry: DiffEntry | undefined, actions: CardActions): HTMLElement {
+export function diffSection(path: string, entry: DiffEntry | undefined, actions: CardActions, comments: CardComments | null = null): HTMLElement {
   if (!entry || entry.status === 'loading') return h('div', { class: 'turn-diff', role: 'status' }, h('p', { class: 'turn-diff-note chat-quiet' }, 'Reading the change…'))
   if (entry.status === 'error') return h('div', { class: 'turn-diff', role: 'alert' }, h('p', { class: 'turn-diff-note chat-quiet' }, entry.error))
   const diff = entry.diff
@@ -39,5 +40,5 @@ export function diffSection(path: string, entry: DiffEntry | undefined, actions:
     return h('div', { class: 'turn-diff' }, h('p', { class: 'turn-diff-note chat-quiet' }, entry.changedSince ? 'No difference from before this reply. Changed since this reply.' : 'No text changes to show.'), footer(path, diff, entry, actions))
   }
   const digits = width(diff)
-  return h('div', { class: 'turn-diff', dir: 'ltr', role: 'group', 'aria-label': `Changes to ${path}` }, h('div', { class: 'turn-diff-body' }, ...visibleRows(diff, entry.open).map((row) => line(row, digits))), footer(path, diff, entry, actions))
+  return h('div', { class: 'turn-diff', dir: 'ltr', role: 'group', 'aria-label': `Changes to ${path}` }, h('div', { class: 'turn-diff-body' }, ...visibleRows(diff, entry.open).flatMap((row, at) => [line(row, digits, comments ? commentButton(comments, path, diff, at) : null), ...(comments ? commentBoxes(comments, path, row) : [])])), footer(path, diff, entry, actions))
 }

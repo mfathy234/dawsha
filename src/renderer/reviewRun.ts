@@ -264,3 +264,23 @@ export const reviewerChoices = (author: AgentKind): { agent: AgentKind; label: s
     { agent: author === 'gemini' ? 'claude' : author, label: `${AGENT_NAMES[author === 'gemini' ? 'claude' : author]}, in a fresh session` }
   ]
 }
+
+/** The Review action: asks who reviews and what, then starts it. Offered from the pane menu, the Side panel and a reply's summary. */
+export async function reviewSession(paneId: string, scope: ReviewScope = 'uncommitted'): Promise<void> {
+  const author = agentOfPane(paneId)
+  const target = targetOf(paneId)
+  if (!author || !target) {
+    toast('Open an agent session to review.', 'info')
+    return
+  }
+  const { reviewDialog } = await import('./components/reviewDialog')
+  const choice = await reviewDialog({ author, title: target.title, scope })
+  if (choice) await startReview({ paneId, reviewer: choice.reviewer, scope: choice.scope })
+}
+
+export async function retryReview(folder: string): Promise<void> {
+  const job = jobs.get(folder)
+  if (!job) return
+  dismissReview(folder)
+  await startReview({ paneId: job.authorPaneId, reviewer: job.reviewer, scope: job.scope })
+}

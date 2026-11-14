@@ -2,7 +2,9 @@ import { execFileSync } from 'node:child_process'
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { activeTermId, closeApp, createSandbox, lastInput, launchApp, type Sandbox } from './helpers'
+import { activeTermId, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+
+const readSettings = (dir: string): any => JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8'))
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', ['-c', 'core.autocrlf=false', '-c', 'user.name=Test User', '-c', 'user.email=test@example.invalid', ...args], { cwd, encoding: 'utf8' }).trim()
@@ -61,6 +63,7 @@ test('Review steps through changed files with N and P, ticks them viewed, and ke
     await expect(page.locator('.cm-review-text')).toHaveText('Why change this?')
     await expect(page.locator('.files-review-row[data-path="README.md"]')).toContainText('1 comment')
     await expect(page.locator('#files-review-send')).toHaveText('Send 1 comment to agent')
+    await expect(page.locator('#files-comments-head')).toContainText('Comments (1)')
     await page.getByRole('button', { name: 'Edit', exact: true }).click()
     await page.locator('.cm-review-input').fill('Please explain this line.')
     await page.keyboard.press('Control+Enter')
@@ -81,7 +84,7 @@ test('Review steps through changed files with N and P, ticks them viewed, and ke
   }
 })
 
-test('Send comments inserts one message into the chosen session prompt without submitting it', async () => {
+test('Send comments sends one message to the session, with the diff context, and marks the comments sent', async () => {
   test.setTimeout(120_000)
   const sandbox = createSandbox()
   makeRepo(sandbox)
@@ -90,6 +93,12 @@ test('Send comments inserts one message into the chosen session prompt without s
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     await expect(page.locator('.pane')).toHaveCount(1)
     const id = await activeTermId(page)
+    await app.evaluate(({ ipcMain }, termId) => {
+      ;(globalThis as any).__writes = []
+      ipcMain.on('pty:write', (_event, target, text) => {
+        if (target === termId) (globalThis as any).__writes.push(text)
+      })
+    }, id)
     await openReview(page)
     await page.locator('.files-review-row[data-path="README.md"] .files-review-open').click()
     await page.locator('.files-editor:not([hidden]) .cm-review-add').first().click()
@@ -97,13 +106,18 @@ test('Send comments inserts one message into the chosen session prompt without s
     await page.keyboard.press('Control+Enter')
     await page.locator('#files-review-note-toggle').click()
     await page.locator('#files-review-note').fill('Mostly fine')
+    await expect(page.locator('#files-review-send')).toHaveText('Send 1 comment to Claude')
     await page.locator('#files-review-send').click()
-    await expect(page.locator('.pane')).toBeVisible()
-    await expect.poll(() => lastInput(page, id)).toContain('README.md:2  Explain this')
-    const sent = await lastInput(page, id)
+    await expect.poll(async () => (await app.evaluate(() => (globalThis as any).__writes as string[])).join('')).toContain('README.md:2')
+    const sent = (await app.evaluate(() => (globalThis as any).__writes as string[])).join('')
+    expect(sent).toContain('Review of your changes: 1 comment.')
+    expect(sent).toContain('Explain this')
+    expect(sent).toContain('again')
     expect(sent).toContain('Overall: Mostly fine')
-    expect(sent.endsWith('\r')).toBe(false)
-    expect(sent.endsWith('\n')).toBe(false)
+    await expect.poll(async () => (await app.evaluate(() => (globalThis as any).__writes as string[])).at(-1)).toBe(String.fromCharCode(13))
+    await expect(page.locator('.cm-review-comment.sent')).toContainText('Sent')
+    await expect(page.locator('#files-comments-head')).toContainText('Comments (0)')
+    await expect.poll(() => readSettings(sandbox.userData).reviewDrafts?.[0]?.status).toBe('sent')
   } finally {
     await closeApp(app)
   }

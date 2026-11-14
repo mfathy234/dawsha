@@ -18,7 +18,7 @@ import { api } from '../api'
 import { focusPane, saveSettings, startSessionIn } from '../actions'
 import { derivePanes } from '../derive'
 import { addDraft, changeDraft, draftsOf, isEditing, onDraftsChange, reanchor, removeDrafts, sendDrafts, startEditing, stopEditing } from '../reviewDrafts'
-import { cancelReview, dismissOne, dismissReview, fixAll, onReviewChange, openFindings, reviewOf, sendOne, showReviewer, startReview } from '../reviewRun'
+import { cancelReview, dismissOne, dismissReview, fixAll, onReviewChange, openFindings, retryReview, reviewOf, sendOne, showReviewer } from '../reviewRun'
 import { h, icon } from '../dom'
 import { currentBundle, onThemeChange } from '../themeManager'
 import { folderOfPane, projectById, store, type AppState } from '../state'
@@ -185,7 +185,7 @@ export class FilesViewComponent {
       send: (anchor) => this.sendReview(anchor),
       setScope: (scope) => this.setReviewScope(scope),
       comment: { jump: (id) => void this.jumpToComment(id), edit: (id) => void this.jumpToComment(id, true), remove: (id) => void this.deleteComment(id) },
-      card: { fixAll: () => this.withFolder(fixAll), dismissAll: () => this.withFolder(dismissReview), cancel: () => this.withFolder(cancelReview), retry: () => void this.retryReview(), open: () => this.withFolder(showReviewer) },
+      card: { fixAll: () => this.withFolder(fixAll), dismissAll: () => this.withFolder(dismissReview), cancel: () => this.withFolder(cancelReview), retry: () => this.withFolder(retryReview), open: () => this.withFolder(showReviewer) },
       all: { openFile: (folder, path) => void this.openAcross(folder, path), jumpToSession: (paneId) => focusPane(paneId) },
       commit: () => void this.commitChanges(),
       discard: (path) => void this.discardFile(path),
@@ -1099,14 +1099,6 @@ export class FilesViewComponent {
       return
     }
     openReviewFileInFiles({ projectId: target.projectId, folder }, path)
-  }
-
-  private async retryReview(): Promise<void> {
-    const set = this.set
-    const job = set ? reviewOf(set.folder) : null
-    if (!set || !job) return
-    dismissReview(set.folder)
-    await startReview({ paneId: job.authorPaneId, reviewer: job.reviewer, scope: job.scope })
   }
 
   private async jumpToComment(id: string, edit = false): Promise<void> {

@@ -1,4 +1,5 @@
 import { h } from '../dom'
+import './reviewLoop.css'
 
 export type ReviewCardState = 'running' | 'done' | 'failed'
 

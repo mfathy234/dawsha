@@ -26,7 +26,7 @@ function files(summary: TurnSummary, scope: string, view?: CardView): Node[] {
   return summary.files.flatMap((file) => {
     const open = view ? () => view.actions.toggleFile(file.path) : () => host.open({ path: file.path }, { ctrlKey: true, metaKey: false, shiftKey: false })
     const row = fileRow(file, open, view)
-    return view?.state.expanded.has(file.path) ? [row, diffSection(file.path, view.state.diffs.get(file.path), view.actions)] : [row]
+    return view?.state.expanded.has(file.path) ? [row, diffSection(file.path, view.state.diffs.get(file.path), view.actions, view.comments)] : [row]
   })
 }
 
@@ -44,7 +44,9 @@ function actions(summary: TurnSummary, review: () => void, undo: (summary: TurnS
     view && hasOutput(state?.checks ?? null) && state?.checks?.done ? button('Show full output', view.actions.showOutput) : null,
     committed && view ? button('Push', view.actions.push) : null,
     committed && view ? button('Open pull request', view.actions.openPullRequest) : null,
+    view && view.openComments > 0 ? button(`Send ${view.openComments} comment${view.openComments === 1 ? '' : 's'} to ${view.agentName}`, view.actions.sendComments, ' turn-ink') : null,
     button(CHAT_TEXT.reviewChanges, review),
+    view && view.comments?.paneId ? button('Review this session', view.actions.reviewReply) : null,
     view && view.canCommit && !committed && !busy ? button('Commit', view.actions.startCommit) : null,
     undoable ? button(CHAT_TEXT.undoReply, () => undo(summary), '', `${CHAT_TEXT.undoReply}: ${summary.files.length} files`) : null)
 }

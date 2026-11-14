@@ -109,7 +109,7 @@ export class QuietReply {
   private turnInput(): TurnInput | null {
     const input = this.input
     if (!input) return null
-    return { folder: input.folder, sessionId: input.sessionId, projectId: input.projectId, agentName: AGENT_NAMES[input.agent], branch: input.branch }
+    return { paneId: this.paneId, folder: input.folder, sessionId: input.sessionId, projectId: input.projectId, agentName: AGENT_NAMES[input.agent], branch: input.branch }
   }
 
   private async refreshRefs(): Promise<void> {

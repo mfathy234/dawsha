@@ -383,8 +383,9 @@ export class PaneChat {
   private turnInput(): TurnInput | null {
     const input = this.input
     if (!input) return null
-    const projectId = store.state.panes.find((pane) => pane.tabs.some((tab) => tab.id === input.tabId))?.projectId ?? null
-    return { folder: input.folder, sessionId: input.sessionId, projectId, agentName: AGENT_NAMES[input.agent], branch: input.branch }
+    const pane = store.state.panes.find((candidate) => candidate.tabs.some((tab) => tab.id === input.tabId))
+    const projectId = pane?.projectId ?? null
+    return { paneId: pane?.id ?? null, folder: input.folder, sessionId: input.sessionId, projectId, agentName: AGENT_NAMES[input.agent], branch: input.branch }
   }
 
   /** A message from a summary card (failed checks) goes in as typed text, and only while the agent can take it. */

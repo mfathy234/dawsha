@@ -8,6 +8,7 @@ import type { CheckoutGroup } from '../../shared/allSessions'
 import { allSessionsView, type AllSessionsHooks } from './reviewAll'
 import { reviewCard, type ReviewCardHooks, type ReviewCardModel } from './reviewCard'
 import { CommentsBar, type CommentRow, type CommentsHooks } from './reviewComments'
+import './reviewLoop.css'
 
 export type ReviewScopeView = 'checkout' | 'all'
 
