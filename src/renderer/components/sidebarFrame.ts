@@ -17,7 +17,7 @@ export class SidebarFrame {
   readonly bar = h('div', { class: 'frame-bar' })
   private readonly collapse = h('button', { class: 'frame-collapse', type: 'button', id: 'sidebar-collapse', onClick: () => toggleSidebar() })
   /** The collapsed rail's own expand button, shown above Add project at the foot of the rail. */
-  readonly expand = h('button', { class: 'frame-expand', type: 'button', id: 'sidebar-expand', 'aria-label': 'Expand sidebar', title: 'Expand sidebar', onClick: () => toggleSidebar() }, icon(ICONS.panelLeft))
+  readonly expand = h('button', { class: 'frame-expand', type: 'button', id: 'sidebar-expand', 'aria-label': 'Expand sidebar', title: 'Expand sidebar', onClick: () => toggleSidebar() }, icon(ICONS.chevronRight))
   private readonly panelToggle = h('button', { class: 'frame-panel-toggle', type: 'button', id: 'session-panel-toggle', hidden: true, 'aria-pressed': 'false', onClick: () => toggleDockedPanel() }, icon(ICONS.panelRight))
   private collapsed: boolean | null = null
 
