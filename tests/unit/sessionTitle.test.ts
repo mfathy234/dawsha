@@ -25,6 +25,14 @@ describe('shortSessionTitle', () => {
     ['Fix authenticationconfigurationvalidation failures', 'Fix authenticationconfigurationvalidation']
   ])('shortens %j', (prompt, expected) => expect(shortSessionTitle(prompt)).toBe(expected))
 
+  it('stops at a clause break and never ends on a filler word', () => {
+    expect(shortSessionTitle('Refactor the invoice export so the CSV columns come from one list instead of three places.')).toBe('Refactor the invoice export')
+    expect(shortSessionTitle('The login test in the web app is flaky. It waits a fixed two seconds.')).toBe('Login test in the web app')
+    expect(shortSessionTitle('Add a retry to the upload because the network drops sometimes')).toBe('Add a retry to the upload')
+    expect(shortSessionTitle('Move the totals into a module that the PDF and CSV both use')).toBe('Move the totals into a module')
+    expect(shortSessionTitle('Update the export docs of the')).toBe('Update the export docs')
+  })
+
   it('caps both characters and words without cutting a word or adding punctuation', () => {
     const title = shortSessionTitle('Investigate authentication configuration validation errors after deployment')!
     expect(title.length).toBeLessThanOrEqual(48)

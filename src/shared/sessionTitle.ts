@@ -6,6 +6,18 @@ const MAX_WORDS = 6
 const TRAILING = /[\p{P}\p{S}\s]+$/u
 const OPENING = /^(?:(?:can|could|would|will) you\b|please\b|i (?:need|want)(?: you)? to\b|help me\b|(?:based on (?:stage|staging|main|master)\s+)?(?:read|review|inspect) (?:this|the) repo(?:sitory)?\b)[\s,:-]*/i
 
+/** Words a title must not end on: "Refactor the invoice export so the" reads as cut off. */
+const FILLER_END = /\s+(?:the|a|an|and|or|but|so|with|to|for|of|in|on|at|by|from|as|is|are|was|that|this|these|those|it|its|my|our|your|their|into|onto|than|then|when|while|which|who|because|since|after|before|instead)$/i
+/** A clause break: what comes after explains or extends the request, so the title stops before it. */
+const CLAUSE_BREAK = /\s*(?:,|;|:|\s(?:so that|so|because|since|which|that|when|while|where|but|instead of|then)\s)/i
+
+function trimEnd(text: string): string {
+  let previous = ''
+  let current = text.replace(TRAILING, '')
+  while (current !== previous) { previous = current; current = current.replace(FILLER_END, '').replace(TRAILING, '') }
+  return current
+}
+
 function fit(text: string, maxChars = MAX_CHARS, maxWords = MAX_WORDS): string | null {
   const words = text.trim().split(/\s+/).slice(0, maxWords)
   const kept: string[] = []
@@ -13,7 +25,15 @@ function fit(text: string, maxChars = MAX_CHARS, maxWords = MAX_WORDS): string |
     if ([...kept, word].join(' ').length > maxChars) break
     kept.push(word)
   }
-  return kept.join(' ').replace(TRAILING, '').replace(/\s+(?:and|or|with|to|for)$/i, '') || null
+  return trimEnd(kept.join(' ')) || null
+}
+
+/** The main clause, when what is before the first clause break is long enough to stand alone. */
+function mainClause(text: string): string {
+  const match = CLAUSE_BREAK.exec(text)
+  if (!match) return text
+  const head = text.slice(0, match.index).trim()
+  return head.split(/\s+/).length >= 2 ? head : text
 }
 
 /** A bounded local summary, never sent to an agent. Original text is kept by the caller. */
@@ -35,7 +55,10 @@ export function shortSessionTitle(prompt: string): string | null {
   // Context-reading clauses should not hide the requested change.
   text = text.replace(/^(?:inspect|read|review|look at)\b.*?\band\s+(?=(?:fix|add|update|remove|implement|build|test)\b)/i, '')
   if (report) text = text.replace(/\b(every|all) findings?\b/i, `$1 ${report} finding`)
-  text = text.split(/[.!?](?:\s|$)|[\r\n]/)[0].trim().replace(TRAILING, '').replace(/\s+(?:and|or|with|to|for)$/i, '')
+  text = text.split(/[.!?](?:\s|$)|[\r\n]/)[0].trim()
+  // "The login test in the web app is flaky" -> "Login test in the web app".
+  text = mainClause(text.replace(/^(?:the|a|an|also|so)\s+/i, ''))
+  text = trimEnd(text)
   if (!/[\p{L}\p{N}]/u.test(text)) return null
   const title = fit(text)
   return title ? title[0].toLocaleUpperCase() + title.slice(1) : null
