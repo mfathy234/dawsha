@@ -7,6 +7,8 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.ts'],
     environment: 'node',
     testTimeout: 30_000,
-    hookTimeout: 30_000
+    hookTimeout: 30_000,
+    // Removes the dawsha* temp folders this run created.
+    globalSetup: ['./tests/support/tempCleanupSetup.ts']
   }
 })
