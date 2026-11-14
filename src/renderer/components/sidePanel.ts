@@ -21,6 +21,7 @@ interface Reply {
   id: string
   el: HTMLElement
   files: number
+  paths: string[]
 }
 
 function savePanel(change: Partial<SidePanelSettings>): void {

@@ -81,6 +81,13 @@ export function openReviewInFiles(target: FilesTarget): void {
   for (const listener of listeners) listener()
 }
 
+/** Opens Files on a checkout in Review mode with a file open. */
+export function openReviewFileInFiles(target: FilesTarget, path: string): void {
+  pending = { ...target, path, pin: true, review: true }
+  showView('files')
+  for (const listener of listeners) listener()
+}
+
 /** Opens a file in the Files view (loading its editor on first use). */
 export function openInFiles(target: FilesTarget, path: string, options: { pin?: boolean; line?: number } = {}): void {
   pending = { ...target, path, pin: options.pin === true, line: options.line }

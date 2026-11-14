@@ -4,7 +4,7 @@ import type { ChecksState } from './chat/turnState'
 /** What a pane's chat can show in the Side panel: its plan, the card of its latest reply and that reply's checks. */
 export interface PanelSource {
   todos(): readonly TodoEntry[]
-  card(): { id: string; el: HTMLElement; files: number } | null
+  card(): { id: string; el: HTMLElement; files: number; paths: string[] } | null
   checks(): ChecksState | null
   rerunChecks(): void
   showOutput(): void

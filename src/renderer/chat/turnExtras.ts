@@ -157,15 +157,16 @@ export class TurnExtras {
   }
 
   /** The card of the latest reply for the Side panel; kept in step with the one in the thread. */
-  panelCard(): { id: string; el: HTMLElement; files: number } | null {
+  panelCard(): { id: string; el: HTMLElement; files: number; paths: string[] } | null {
     const last = [...this.entries.values()].pop()
     if (!last) return null
     const id = last.summary.messageId
     const files = last.summary.files.length
-    if (last.panelEl?.isConnected) return { id, el: last.panelEl, files }
+    const paths = last.summary.files.map((file) => file.path)
+    if (last.panelEl?.isConnected) return { id, el: last.panelEl, files, paths }
     const el = this.draw(last)
     this.entries.set(id, { ...(this.entries.get(id) ?? last), panelEl: el })
-    return { id, el, files }
+    return { id, el, files, paths }
   }
 
   latestChecks(): ChecksState | null {
