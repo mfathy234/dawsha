@@ -18,9 +18,11 @@ const fromAppWindow = (window: BrowserWindow | null, event: Electron.IpcMainEven
 /** Watches the pull requests of the open sessions and runs Fix CI, merge and tidy-up for them. Returns a function that stops polling. */
 export function registerPrWatchIpc(getWindow: () => BrowserWindow | null, store: WatchStore): () => void {
   const known = (folder: unknown): Promise<string | null> => knownProjectFolder(store.get().projects, folder)
+  // DAWSHA_PR_POLL_SPEED runs the poll clock faster, for tests only.
+  const speed = Math.max(1, Number(process.env.DAWSHA_PR_POLL_SPEED) || 1)
   const watcher = new PrWatcher({
     runGh,
-    now: () => Date.now(),
+    now: () => Date.now() * speed,
     visible: () => {
       const window = getWindow()
       return !!window && !window.isDestroyed() && window.isVisible() && !window.isMinimized()
@@ -31,7 +33,7 @@ export function registerPrWatchIpc(getWindow: () => BrowserWindow | null, store:
     },
     known
   })
-  watcher.start()
+  watcher.start(speed > 1 ? 400 : undefined)
 
   ipcMain.on(PR_WATCH_IPC.sync, (event, targets: unknown) => {
     if (!fromAppWindow(getWindow(), event) || !Array.isArray(targets)) return

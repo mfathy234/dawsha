@@ -43,9 +43,9 @@ export class PrWatcher {
 
   constructor(private readonly deps: WatcherDeps) {}
 
-  start(): void {
+  start(tickMs = TICK_MS): void {
     if (this.timer) return
-    this.timer = setInterval(() => void this.tick(), TICK_MS)
+    this.timer = setInterval(() => void this.tick(), tickMs)
     this.timer.unref?.()
   }
 

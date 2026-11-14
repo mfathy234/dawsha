@@ -7,7 +7,7 @@ import { git } from './gitCommit'
 
 const MAX_ENTRIES = 400_000
 const SLOW_MS = 60_000
-const RETRIES = 4
+const RETRIES = 6
 const RETRY_MS = 500
 
 export interface LinkScan {
@@ -83,10 +83,26 @@ async function unpushedCommits(path: string, headSha: string, strict: boolean): 
 
 const pause = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms))
 
+/** The folder git leaves behind when a process still held it as its working directory. Only an empty folder goes, with no recursion. */
+async function removeEmptyFolder(path: string): Promise<boolean> {
+  for (let attempt = 1; attempt <= RETRIES; attempt += 1) {
+    try {
+      if ((await readdir(path)).length > 0) return false
+      await rmdir(path)
+      return true
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true
+      await pause(RETRY_MS * attempt)
+    }
+  }
+  return !existsSync(path)
+}
+
 /** Windows can hold a folder for a moment after the terminal inside it stops. */
 async function removeWithRetry(repo: string, path: string): Promise<{ ok: boolean; message: string }> {
   let result = await git(repo, ['worktree', 'remove', path], SLOW_MS)
-  for (let attempt = 1; !result.ok && existsSync(path) && /permission denied|being used|in use|device or resource busy/i.test(result.message) && attempt < RETRIES; attempt += 1) {
+  for (let attempt = 1; !result.ok && existsSync(path) && attempt < RETRIES; attempt += 1) {
+    if (/is not a working tree/i.test(result.message)) return { ok: await removeEmptyFolder(path), message: result.message }
     await pause(RETRY_MS * attempt)
     result = await git(repo, ['worktree', 'remove', path], SLOW_MS)
   }
