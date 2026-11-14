@@ -28,7 +28,7 @@ export function reviewCard(model: ReviewCardModel, hooks: ReviewCardHooks): HTML
   const actions = h('div', { class: 'review-card-actions' })
   const button = (label: string, run: () => void, id: string): HTMLElement => h('button', { class: 'btn small', type: 'button', id, onClick: run }, label)
   if (model.state === 'running') {
-    body.append('Reading the changes. It cannot edit any file.')
+    body.append('Reading the changes in read-only plan mode.')
     actions.append(button('Show the reviewer', hooks.open, 'review-card-open'), button('Cancel', hooks.cancel, 'review-card-cancel'))
   } else if (model.state === 'failed') {
     body.append('The reply could not be read as findings. Here it is as it came:')

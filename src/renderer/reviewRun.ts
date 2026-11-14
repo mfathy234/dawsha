@@ -259,15 +259,6 @@ export function dismissOne(id: string): void {
   changeDraft(id, (draft) => ({ ...draft, status: 'dismissed' }))
 }
 
-/** The agents that can review: the author's other agent first, then the same agent in a fresh session. */
-export const reviewerChoices = (author: AgentKind): { agent: AgentKind; label: string }[] => {
-  const other: AgentKind = author === 'claude' ? 'codex' : 'claude'
-  return [
-    { agent: other, label: `${AGENT_NAMES[other]} reviews ${AGENT_NAMES[author]}'s work` },
-    { agent: author === 'gemini' ? 'claude' : author, label: `${AGENT_NAMES[author === 'gemini' ? 'claude' : author]}, in a fresh session` }
-  ]
-}
-
 /** The Review action: asks who reviews and what, then starts it. Offered from the pane menu, the Side panel and a reply's summary. */
 export async function reviewSession(paneId: string, scope: ReviewScope = 'uncommitted'): Promise<void> {
   const author = agentOfPane(paneId)

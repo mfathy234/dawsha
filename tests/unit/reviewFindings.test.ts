@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildReviewPrompt, clipDiff, completeObjects, defaultReviewer, findingText, normalizeSeverity, parseFindings, sortFindings, summaryLabel } from '../../src/shared/reviewFindings'
+import { CODEX_REVIEWER_ENABLED, reviewerChoices, buildReviewPrompt, clipDiff, completeObjects, defaultReviewer, findingText, normalizeSeverity, parseFindings, sortFindings, summaryLabel } from '../../src/shared/reviewFindings'
 
 const one = { file: 'src/a.ts', line: 12, severity: 'high', title: 'Null deref', explanation: 'x can be null', suggested_fix: 'check it' }
 const two = { file: 'src/b.ts', line: 3, severity: 'low', title: 'Typo', explanation: 'spelling', suggested_fix: '' }
@@ -77,8 +77,14 @@ describe('review prompt', () => {
     expect(clipDiff('short').truncated).toBe(false)
   })
   it('picks the other agent and joins title with explanation', () => {
-    expect(defaultReviewer('claude')).toBe('codex')
+    expect(CODEX_REVIEWER_ENABLED).toBe(false)
+    expect(defaultReviewer('claude')).toBe('claude')
     expect(defaultReviewer('codex')).toBe('claude')
+    for (const author of ['claude', 'codex', 'gemini'] as const) {
+      const choices = reviewerChoices(author)
+      expect(choices.map((choice) => choice.agent)).toEqual(['claude'])
+      expect(choices[0].label).toContain('read-only plan mode')
+    }
     expect(findingText({ title: 'Null deref', explanation: 'x can be null' })).toBe('Null deref. x can be null')
     expect(findingText({ title: 'Same', explanation: 'Same' })).toBe('Same')
   })

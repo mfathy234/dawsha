@@ -148,7 +148,7 @@ test('a reviewer in the background returns findings that land on the right lines
     await page.getByRole('button', { name: 'Pane actions' }).click()
     await page.getByRole('menuitem', { name: 'Review this session…' }).click()
     const dialog = page.getByRole('dialog', { name: 'Review this session' })
-    await expect(dialog).toContainText("Claude reviews Codex's work")
+    await expect(dialog).toContainText('read-only plan mode')
     await dialog.getByRole('radio', { name: 'Uncommitted changes' }).check()
     await dialog.locator('#review-start').click()
     await expect(page.locator('.pane')).toHaveCount(2)

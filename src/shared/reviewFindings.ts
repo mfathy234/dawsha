@@ -164,9 +164,29 @@ export function summaryLabel(findings: readonly { severity: Severity }[]): strin
   return `${findings.length} finding${findings.length === 1 ? '' : 's'}: ${parts.join(', ')}`
 }
 
-/** The agent that reviews by default: the other one, so Codex reads Claude's work and Claude reads Codex's. */
+/** Codex runs with full access on this build (its sandbox is not usable yet), so it cannot be a read-only reviewer. Flip this to offer it again. */
+export const CODEX_REVIEWER_ENABLED = false
+
+/** The agent that reviews by default: Claude, in read-only plan mode. With Codex enabled, the other agent reads the author's work. */
 export function defaultReviewer(author: AgentKind): AgentKind {
+  if (!CODEX_REVIEWER_ENABLED) return 'claude'
   return author === 'claude' ? 'codex' : 'claude'
+}
+
+export interface ReviewerChoice {
+  agent: AgentKind
+  label: string
+}
+
+/** The agents that can review. Only Claude while Codex cannot be restricted to read-only. */
+export function reviewerChoices(author: AgentKind): ReviewerChoice[] {
+  const claude: ReviewerChoice = { agent: 'claude', label: 'Claude, in read-only plan mode' }
+  if (!CODEX_REVIEWER_ENABLED) return [claude]
+  const other = defaultReviewer(author)
+  return [
+    { agent: other, label: `${other === 'claude' ? 'Claude' : 'Codex'} reviews ${author === 'claude' ? 'Claude' : author === 'codex' ? 'Codex' : 'Gemini'}'s work` },
+    { agent: author === 'gemini' ? 'claude' : author, label: `${author === 'codex' ? 'Codex' : 'Claude'}, in a fresh session` }
+  ]
 }
 
 export interface ReviewPromptInput {

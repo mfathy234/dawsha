@@ -1,7 +1,6 @@
-import { REVIEW_SCOPES, type ReviewScope } from '../../shared/reviewFindings'
+import { REVIEW_SCOPES, reviewerChoices, type ReviewScope } from '../../shared/reviewFindings'
 import type { AgentKind } from '../../shared/types'
 import { h } from '../dom'
-import { reviewerChoices } from '../reviewRun'
 import { nextDialogId, present } from './dialogs'
 import '../files/reviewLoop.css'
 
@@ -34,7 +33,7 @@ export function reviewDialog(options: ReviewDialogOptions): Promise<ReviewChoice
   const start = h('button', { class: 'btn primary', type: 'button', id: 'review-start', 'data-confirm': '' }, 'Start review')
   const dialog = h('div', { class: 'dialog review-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Review this session' },
     h('h2', {}, 'Review this session'),
-    h('p', {}, `${options.title}. The reviewer reads the changes in the background and cannot edit any file.`),
+    h('p', {}, `${options.title}. The reviewer runs in read-only plan mode and reads the changes in the background.`),
     h('div', { class: 'review-dialog-options' }, who, what),
     h('div', { class: 'dialog-actions' }, cancel, start))
   const shown = present<ReviewChoice | null>(dialog, null, start)
