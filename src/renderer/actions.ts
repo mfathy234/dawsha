@@ -751,6 +751,7 @@ export function answerPermission(paneId: string, choice: boolean | number): bool
   const tabId = derivePanes(store.state).find((v) => v.pane.id === paneId)?.primaryTabId
   const tail = tabId ? (getTerminal(tabId)?.tailText(PERMISSION_TAIL_ROWS) ?? '') : ''
   if (!tabId || !detectPermissionPrompt(tail)) return false
+  getTerminal(tabId)?.invalidatePermission()
   const allow = choice !== false
   recordApproval(paneId, allow, tail, Date.now())
   void api.remoteAccess?.recordApproval(tabId, allow, tail).catch(() => undefined)
@@ -952,7 +953,15 @@ export function showView(view: AppState['view']): void {
   store.patch({ view })
 }
 
+let settingsReturnView: AppState['view'] = 'grid'
+
+/** Leaves Settings for the view it was opened from (Sessions when that is unknown). */
+export function leaveSettings(toSessions = false): void {
+  showView(toSessions ? 'grid' : settingsReturnView)
+}
+
 export function openSettings(section?: AppState['settingsSection']): void {
+  if (store.state.view !== 'settings') settingsReturnView = store.state.view
   store.set((s) => ({
     ...s,
     view: 'settings',

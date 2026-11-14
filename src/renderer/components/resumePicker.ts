@@ -5,7 +5,7 @@ import type { AgentKind, KeptSession, ResumeQuery, ResumeSession } from '../../s
 import { primaryModifierPressed } from '../../shared/shortcuts'
 import { clearClosedSessions, closeQuickPick, findOpenSession, openQuickPick, openSessionKeys, renameKeptSession, reopenKeptSessions, resumeInFocusedPane, resumeInNewPane, setQuickPickMode, tagKeptSession } from '../actions'
 import { confirmRemoveClosed } from '../closedActions'
-import { closedFor, closedTitle, reopenAllLabel, reopenTargets } from '../../shared/resumeClosed'
+import { closedFor, closedRenameText, closedTitle, reopenAllLabel, reopenTargets } from '../../shared/resumeClosed'
 import { closedSessionsFor, closedUsageShort } from '../../shared/keptSessions'
 import { api } from '../api'
 import { copySessionName } from '../copySessionName'
@@ -408,8 +408,8 @@ export class ResumePickerComponent {
         'div',
         { class: 'rp-row-main' },
         h('div', { class: 'rp-row-title' }, this.renamingKey === key
-          ? renameField(title, (name) => this.finishRename(session, name))
-          : h('span', { class: 'rp-title', dir: 'auto' }, title),
+          ? renameField(closedRenameText(session, kept), (name) => this.finishRename(session, name))
+          : h('span', { class: 'rp-title', dir: 'auto', title: session.firstPrompt ?? session.title }, title),
           h('span', { class: 'rp-age' }, age(session)),
           kept ? this.moreButton(session, kept, title) : null),
         h(
@@ -465,7 +465,7 @@ export class ResumePickerComponent {
         : null
     const facts = sessionFacts(session, Date.now())
     const parts: (HTMLElement | null)[] = [
-      h('div', { class: 'rp-pv-head' }, agentMark(session.agent), h('h2', { class: 'rp-pv-title', dir: 'auto' }, session.title)),
+      h('div', { class: 'rp-pv-head' }, agentMark(session.agent), h('h2', { class: 'rp-pv-title', dir: 'auto', title: session.firstPrompt ?? session.title }, closedTitle(session, this.keptFor(session)))),
       h('p', { class: 'rp-pv-sub' }, [agentLabel(session.agent), session.model].filter(Boolean).join(' · ')),
       project ? h('p', { class: 'rp-pv-sub' }, project.name) : null,
       project ? h('p', { class: 'rp-pv-path', title: project.folder }, project.folder) : null,

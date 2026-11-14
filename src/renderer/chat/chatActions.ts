@@ -57,13 +57,14 @@ export function setDefaultView(agent: ChatAgent, next: ChatView): void {
 }
 
 /** Types a message into the agent's terminal and presses Enter, the same as typing it there. */
-export function sendChatMessage(tabId: string, agent: TabAgent, text: string): { flattened: boolean } {
+export function sendChatMessage(tabId: string, agent: TabAgent, text: string, canSubmit: () => boolean = () => true): { flattened: boolean } {
   const terminal = getTerminal(tabId)
   if (!terminal || text.trim() === '') return { flattened: false }
   const { flattened } = terminal.insertText(text.trim())
   // Mark the prompt as typing Enter would, so Ctrl+Up and Copy last reply point at this message.
   terminal.prompts.noteInput('\r')
   window.setTimeout(() => {
+    if (!canSubmit()) return
     api.write(tabId, '\r')
     if (agent === 'codex') confirmSent(tabId, text.trim(), 1)
   }, submitDelayFor(agent))

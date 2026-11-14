@@ -2,13 +2,13 @@
 .pane-strip {
   position: relative;
   height: 36px;
-  margin: var(--s-2) var(--s-3) 0;
-  padding: 0 2px;
+  margin: var(--s-3) var(--s-3) 0;
+  padding: 0;
   align-items: center;
   gap: 2px;
   border-bottom: 0;
-  border-radius: 10px;
-  background: var(--well);
+  border-radius: 0;
+  background: transparent;
 }
 
 .strip-tab {
@@ -27,8 +27,8 @@
 
 .strip-tab.selected {
   flex-shrink: 0;
-  background: var(--raised);
-  box-shadow: var(--e-inset-top) var(--seam);
+  background: var(--surface);
+  box-shadow: var(--ring), var(--shadow-hairline);
   color: var(--text);
 }
 
@@ -136,3 +136,5 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.panes-quiet .pane-strip { margin: 8px 8px 0; }

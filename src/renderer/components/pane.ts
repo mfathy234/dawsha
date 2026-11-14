@@ -49,6 +49,8 @@ import { openPaneBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
 import { openPaneMeter } from './paneMeter'
+import { ContextRing } from './contextRing'
+import { contextReading } from '../../shared/chatContext'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { crewSignature, identityMark } from './crewAvatar'
@@ -69,6 +71,7 @@ import './paneCalm.css'
 import './paneQuiet.css'
 import '../chat/chatQuiet.css'
 import './paneMeter.css'
+import './contextRing.css'
 import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
 import { toolLineFromScreen } from '../../shared/sessionLine'
@@ -116,6 +119,7 @@ export class PaneComponent {
   private readonly branchName = h('span', { class: 'chip-text' })
   private readonly branchSync = h('span', { class: 'chip-sync', hidden: true })
   private readonly stateHost = h('span', { class: 'pane-state' })
+  private readonly ring = new ContextRing({ command: (text) => this.runCommand(text) })
   private readonly viewSwitch = new ViewSwitch('Session view', 'pane-view')
   private chat!: PaneChat
   private chatShown = false
@@ -166,6 +170,7 @@ export class PaneComponent {
       this.compareChip,
       this.fromChip,
       this.stateHost,
+      this.ring.el,
       this.viewSwitch.el,
       this.restart,
       this.maxButton,
@@ -249,7 +254,7 @@ export class PaneComponent {
     this.projectName.textContent = [projectName, AGENT_NAMES[view.agent]].filter((part) => part !== '').join(' · ')
     this.fresh.hidden = view.named
     this.updateTag(view.tag, view.tagAuto)
-    this.index.title = [title, projectName, view.tag ? SESSION_TAG_LABELS[view.tag] : ''].filter((part) => part !== '').join(' · ')
+    this.index.title = [view.fullTitle ?? title, projectName, view.tag ? SESSION_TAG_LABELS[view.tag] : ''].filter((part) => part !== '').join(' · ')
     const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
     const origin = view.pane.tabs.find((t) => t.id === view.primaryTabId)?.from
@@ -276,6 +281,7 @@ export class PaneComponent {
     const state = sessionState({ status: view.status, attention: view.attention })
     this.updateState(view, state)
     this.updateInfo(view, maximized)
+    this.updateRing(view)
     this.foot.hidden = this.info.hidden && this.branch.hidden
     this.updateRecap(view)
     this.updateHint(view)
@@ -485,6 +491,18 @@ export class PaneComponent {
     // Session time and age show only next to model, changes, review or the others.
     this.info.hidden = !items.some((item) => !FOOT_FILLER.some((name) => item.classList.contains(name)))
     this.info.replaceChildren(...items)
+  }
+
+  private updateRing(view: PaneView): void {
+    const reading = contextReading({ agent: view.agent, percent: view.info.contextPercent, tokens: view.info.contextTokens, window: view.info.contextWindow })
+    this.ring.update(reading, view.title)
+  }
+
+  private runCommand(text: string): void {
+    if (this.chatShown) return this.chat.sendCommand(text)
+    const view = this.current
+    const tab = view ? primaryTab(view) : null
+    if (tab && tab.status !== 'exited') sendChatMessage(tab.id, tab.agent, text)
   }
 
   // Read off the visible screen, so no file is read; at most once per RECAP_REFRESH_MS for each pane.
@@ -825,7 +843,7 @@ export class PaneComponent {
       },
       tab.label
     )
-    label.title = `${sessionLabel(tab.agent)}: ${tab.label}`
+    label.title = `${sessionLabel(tab.agent)}: ${tab.fullTitle ?? tab.label}`
     const wrapper = h(
       'div',
       { class: `tab${tab.active ? ' active' : ''}${tab.exited ? ' exited' : ''}`, 'data-tab-id': tab.id },
@@ -905,6 +923,7 @@ export class PaneComponent {
   dispose(): void {
     this.closeMenu()
     this.closeActions()
+    this.ring.destroy()
     this.timeline.dispose()
     this.chat.dispose()
     this.reply.dispose()

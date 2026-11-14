@@ -25,18 +25,19 @@ export function renameField(title: string, done: (name: string | null) => void):
     finished = true
     done(name)
   }
-  const input = h('input', { class: 'text-input rp-rename', type: 'text', dir: 'auto', maxlength: SESSION_NAME_MAX, value: title, 'aria-label': `Rename ${title}`, autocomplete: 'off', spellcheck: false })
+  const input = h('input', { class: 'text-input rp-rename', type: 'text', dir: 'auto', maxlength: Math.max(SESSION_NAME_MAX, title.length), value: title, 'aria-label': `Rename ${title}`, autocomplete: 'off', spellcheck: false })
+  const startingValue = input.value
   input.addEventListener('click', (event) => event.stopPropagation())
   input.addEventListener('keydown', (event) => {
     event.stopPropagation()
     if (event.key === 'Enter') {
       event.preventDefault()
-      finish(input.value)
+      finish(input.value === startingValue ? null : input.value)
     } else if (event.key === 'Escape') {
       event.preventDefault()
       finish(null)
     }
   })
-  input.addEventListener('blur', () => finish(input.value))
+  input.addEventListener('blur', () => finish(input.value === startingValue ? null : input.value))
   return input
 }

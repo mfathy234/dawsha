@@ -2,8 +2,9 @@ import { stepContextNotice, type ContextNotice } from '../shared/contextWarning'
 import { initialAttention, stepAttention, type Attention, type AttentionMemory } from '../shared/attention'
 import { detectPermissionPrompt, parsePermissionDetail } from '../shared/permissionPrompt'
 import { askingLine, notifyAttribution, replySnippet } from '../shared/notifyContent'
+import { canAnswerNotification } from '../shared/notificationAction'
 import { api } from './api'
-import { focusPaneFromNotification, permissionTail } from './actions'
+import { answerPermission, focusPaneFromNotification, permissionTail } from './actions'
 import { derivePanes, type PaneView } from './derive'
 import { store, type AppState } from './state'
 import { getTerminal } from './terminals'
@@ -66,7 +67,9 @@ function evaluate(state: AppState): void {
     notifyContext(state, view)
     next[paneId] = step.memory.attention
     if (step.notify && state.settings.sessionInfo.notifications) {
-      api.notify({ paneId, ...notifyText(view, step.notify), sound: state.settings.sessionInfo.sound, flash: step.notify !== 'needs' })
+      const promptId = step.notify === 'needs' ? getTerminal(view.primaryTabId)?.permissionId() : null
+      const permission = promptId ? { tabId: view.primaryTabId, promptId } : undefined
+      api.notify({ paneId, ...notifyText(view, step.notify), sound: state.settings.sessionInfo.sound, flash: step.notify !== 'needs', ...(permission ? { permission } : {}) })
     }
   }
   for (const id of [...memories.keys()]) if (!(id in next)) memories.delete(id)
@@ -104,10 +107,17 @@ export function installAttention(): void {
   window.addEventListener('focus', sync)
   window.addEventListener('blur', sync)
   sync()
-  api.onNotifyClick((paneId) => {
+  api.onNotifyClick((paneId, answer) => {
     if (!store.state.panes.some((pane) => pane.id === paneId)) {
       toast('That session is no longer open.', 'info')
       return
+    }
+    if (answer) {
+      const tabId = derivePanes(store.state).find(view => view.pane.id === paneId)?.primaryTabId
+      const promptId = tabId ? getTerminal(tabId)?.permissionId() ?? null : null
+      if (!canAnswerNotification(answer, tabId, promptId) || !answerPermission(paneId, answer.allow)) {
+        toast('That request changed. Open the session to review it.')
+      }
     }
     focusPaneFromNotification(paneId)
   })

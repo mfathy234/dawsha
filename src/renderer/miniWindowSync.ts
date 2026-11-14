@@ -1,14 +1,17 @@
-import { createMiniSnapshotGate, miniSession, orderMiniSessions, type MiniAction, type MiniSnapshot, type MiniPlanRequest } from '../shared/miniWindow'
+import { createMiniSnapshotGate, miniSession, miniStateOf, orderMiniSessions, type MiniAction, type MiniSnapshot, type MiniPlanRequest } from '../shared/miniWindow'
+import { activeMoment, elapsedSince, stepDoneMemory, type DoneMemory, type MiniLogRead } from '../shared/miniDetail'
 import type { MiniWindowSettings } from '../shared/appearance'
-import type { TodoEntry } from '../shared/chatCards'
+import { miniSendRefusal } from '../shared/miniSend'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
 import { sessionState } from '../shared/sessionState'
 import { api } from './api'
 import { answerPermission, focusPane, openQuickPick, permissionTail, saveSettings, setSessionInfo, showView } from './actions'
+import { sendChatMessage } from './chat/chatActions'
+import { openReviewInFiles } from './files/filesActions'
 import { derivePanes, primaryTab } from './derive'
 import { sessionNote } from './sessionNotes'
 import { store, folderOfPane } from './state'
-import { timeInState } from './stateClock'
+import { stateSince, timeInState } from './stateClock'
 import { sessionIdOf } from './transcriptActions'
 import { toast } from './components/toast'
 
@@ -25,6 +28,8 @@ function act(action: MiniAction): void {
   else if (action.kind === 'sound') setSessionInfo({ sound: !store.state.settings.sessionInfo.sound })
   else if (action.kind === 'new') { showView('grid'); openQuickPick() }
   else if (action.kind === 'open') { showView('grid'); focusPane(action.paneId) }
+  else if (action.kind === 'review') review(action.paneId)
+  else if (action.kind === 'send') send(action.paneId, action.text)
   else if (action.kind === 'answer') {
     // A stale card must never approve a different command that replaced its prompt.
     const tail = permissionTail(action.paneId)
@@ -34,10 +39,33 @@ function act(action: MiniAction): void {
   }
 }
 
+function review(paneId: string): void {
+  const pane = store.state.panes.find(candidate => candidate.id === paneId)
+  const folder = pane ? folderOfPane(store.state, pane) : null
+  if (pane && folder) openReviewInFiles({ projectId: pane.projectId, folder })
+  else toast('That session is gone.')
+}
+
+/** The same send path as the chat box, refused for shells and when the session is gone, has exited, shows a menu or waits for an answer. */
+function send(paneId: string, text: string): void {
+  const view = derivePanes(store.state).find(candidate => candidate.pane.id === paneId)
+  const tab = view ? primaryTab(view.pane) : null
+  if (!view || !tab) { toast('That session is gone.'); return }
+  const refusal = miniSendRefusal({ agent: tab.agent, status: tab.status, tail: permissionTail(paneId) })
+  if (refusal) { toast(refusal); return }
+  // A prompt can appear between typing and the delayed Enter; that Enter would approve it.
+  sendChatMessage(tab.id, tab.agent, text, () => {
+    const late = miniSendRefusal({ agent: tab.agent, status: tab.status, tail: permissionTail(paneId) })
+    if (late) toast(late)
+    return !late
+  })
+}
+
 /** A single bounded publisher, including plans for sessions whose Chat view is not on screen. */
 export function installMiniWindowSync(): void {
   let gate = createMiniSnapshotGate()
-  let todos: Record<string, readonly TodoEntry[]> = {}
+  let logs: Record<string, MiniLogRead> = {}
+  const done = new Map<string, DoneMemory>()
   let reading = false
   let planReadAt = -Infinity
   let generation = 0
@@ -61,20 +89,29 @@ export function installMiniWindowSync(): void {
       const note = sessionNote(id)
       const tail = permissionTail(id)
       const planNote = /^(\d+) of (\d+)$/.exec(note.plan)
+      const shape = { status: view.status, attention: view.attention, tail }
+      const since = stateSince(id, sessionState(view), state.now)
+      const memory = stepDoneMemory(done.get(id), miniStateOf(shape).state, state.now)
+      done.set(id, memory)
+      const log = logs[id]
       return miniSession({
         paneId: id, agent: view.agent, identity: view.crew?.identity, title: view.title,
         project: view.project?.name ?? '', status: view.status, attention: view.attention,
         tail, recap: note.recap, tool: note.tool, idleFor: timeInState(id, sessionState(view), state.now),
-        changed: view.info.changes?.files ?? null, todos: todos[id] ?? [],
+        changed: view.info.changes?.files ?? null, todos: log?.todos ?? [],
+        elapsed: elapsedSince(since, state.now), asked: log?.asked ?? '', reply: log?.reply ?? [],
+        changes: view.info.changes, context: view.info.contextPercent, costUsd: view.info.costUsd,
+        moment: activeMoment(memory, state.now),
         plan: view.snapshot?.plan ? { ...view.snapshot.plan, current: view.snapshot.plan.title ?? '' }
-          : planNote ? { done: Number(planNote[1]), total: Number(planNote[2]), current: '' } : null
+          : planNote ? { done: Number(planNote[1]), total: Number(planNote[2]), current: note.planNow } : null
       })
     })
+    for (const id of done.keys()) if (!views.some(view => view.pane.id === id)) done.delete(id)
     if (visible && !reading && Date.now() - planReadAt >= 1000) {
       reading = true
       planReadAt = Date.now()
       const current = generation
-      void api.miniWindow.plans(requests).then(result => { if (visible && current === generation) todos = result })
+      void api.miniWindow.plans(requests).then(result => { if (visible && current === generation) logs = result })
         .catch(() => undefined).finally(() => { reading = false })
     }
     const root = document.documentElement

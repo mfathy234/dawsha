@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanRecap, recapFromScreen } from '../../src/shared/recap'
+import { cleanRecap, outputLines, recapFromScreen } from '../../src/shared/recap'
 
 describe('recapFromScreen', () => {
   it('prefers the recap line Claude printed', () => {
@@ -41,5 +41,24 @@ describe('recapFromScreen', () => {
   it('strips markup and control characters and caps the length', () => {
     expect(cleanRecap('**Fixed** `x` [docs](http://a.b)\u001b[0m')).toBe('Fixed x docs [0m')
     expect(cleanRecap('a'.repeat(500))).toHaveLength(240)
+  })
+})
+
+describe('outputLines', () => {
+  it('keeps the agent output above its input box and drops border lines and the status line', () => {
+    const screen = [
+      '● Ran the audit spec, 12 screenshots saved.',
+      '  Waiting for 1 background agent',
+      '────────────────────',
+      '❯ ',
+      '────────────────────',
+      '● main  ✻ claude  Opus 5.5',
+      '▸▸ bypass permissions on (shift+tab to cycle)'
+    ].join('\n')
+    expect(outputLines(screen, 3)).toEqual(['● Ran the audit spec, 12 screenshots saved.', '  Waiting for 1 background agent'])
+  })
+
+  it('uses the whole screen when there is no input box', () => {
+    expect(outputLines('$ npm test\n\nPASS src/a.test.ts\n', 3)).toEqual(['$ npm test', 'PASS src/a.test.ts'])
   })
 })

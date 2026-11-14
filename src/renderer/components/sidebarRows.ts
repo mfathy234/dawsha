@@ -52,7 +52,7 @@ export function rowFacts(app: AppState, view: PaneView): RowFacts {
   const ask = waitingAsk(view.pane.id, state)
   const line = sessionLine({ state, ask, recap: note.recap, tool: note.tool, plan: note.plan, changed: view.info.changes?.files ?? null, agents: view.info.ops?.running.length ?? 0 })
   const time = sessionTime(state, stateSince(view.pane.id, state, app.now), app.now)
-  const tooltip = [sessionLabel(view), view.branch ? `Branch ${view.branch}` : '', view.tag ? tagTooltip(view.tag, view.tagAuto) : '', line].filter(Boolean).join('\n')
+  const tooltip = [sessionLabel(view), view.fullTitle !== view.title ? view.fullTitle : '', view.branch ? `Branch ${view.branch}` : '', view.tag ? tagTooltip(view.tag, view.tagAuto) : '', line].filter(Boolean).join('\n')
   return { state, line, ask, time, tooltip }
 }
 

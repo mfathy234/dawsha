@@ -1,4 +1,4 @@
-import { realPrompt, realReply } from './sessionText'
+import { isAutomaticSession, realPrompt, realReply } from './sessionText'
 import type { AgentKind } from './types'
 
 export interface SessionDetail {
@@ -145,7 +145,7 @@ interface Turn {
   text: string
 }
 
-export function codexDetail(text: string, scale = 1): SessionDetail {
+export function codexDetail(text: string, scale = 1, fullPrompt = false): SessionDetail {
   const events: Turn[] = []
   const items: Turn[] = []
   const detail: SessionDetail = { messages: 0 }
@@ -167,7 +167,7 @@ export function codexDetail(text: string, scale = 1): SessionDetail {
   for (const turn of turns) {
     const prompt = turn.role === 'user' ? realPrompt(turn.text) : null
     if (prompt === null) continue
-    detail.firstPrompt = prompt
+    detail.firstPrompt = fullPrompt && !isAutomaticSession(prompt) ? turn.text.trim() : prompt
     break
   }
   for (const turn of [...turns].reverse()) {

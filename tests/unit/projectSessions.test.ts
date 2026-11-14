@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { claudeProjectSlug, sessionIdFromFile, sessionTitle } from '../../src/shared/projectSessions'
+import { claudeProjectSlug, sessionIdFromFile, sessionTitle, sessionTitleInfo } from '../../src/shared/projectSessions'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from '../../src/main/projectSessions'
 
 const line = (value: unknown): string => JSON.stringify(value)
@@ -23,6 +23,18 @@ describe('claudeProjectSlug and file names', () => {
 })
 
 describe('sessionTitle', () => {
+  it('skips injected instructions and preserves automatic session labels', () => {
+    const head = [userLine('# AGENTS.md instructions for C:\\work'), userLine('This session is being continued from a previous conversation that ran out of context.'), userLine('Please fix login')].join('\n')
+    expect(sessionTitleInfo(head, '').firstPrompt).toBe('Please fix login')
+    expect(sessionTitleInfo(userLine('Below is a conversation log from a Claude Code coding session. Create a summary.'), '').firstPrompt).toBe('Automatic summary of an earlier session')
+  })
+  it('keeps original prompts and name provenance separate without truncating manual names', () => {
+    const prompt = 'Please fix the invoice report and check every edge case in the exported file. '.repeat(3)
+    const manual = 'An explicit title with more than eighty characters that the owner deliberately chose for this session'
+    expect(sessionTitleInfo(userLine(prompt), line({ type: 'custom-title', customTitle: manual }))).toEqual({ name: manual, nameSource: 'user', firstPrompt: prompt.trim() })
+    expect(sessionTitleInfo(userLine(prompt), line({ type: 'ai-title', aiTitle: 'Invoice report' }))).toMatchObject({ name: 'Invoice report', nameSource: 'ai', firstPrompt: prompt.trim() })
+    expect(sessionTitleInfo(userLine(prompt), '')).toMatchObject({ nameSource: 'prompt', firstPrompt: prompt.trim() })
+  })
   it('prefers a custom title, then the generated one', () => {
     const head = [line({ type: 'ai-title', aiTitle: 'Generated' }), userLine('hello there')].join('\n')
     expect(sessionTitle(head, '')).toBe('Generated')

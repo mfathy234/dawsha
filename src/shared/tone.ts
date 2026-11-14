@@ -47,6 +47,10 @@ const BORDER_SATURATION = 0.03
 const TEXT_SATURATION: Record<ThemeKind, number> = { dark: 0.09, light: 0.05 }
 const MUTED_SATURATION = 0.05
 
+/** The share of a theme's own tint the warm tone keeps. Dawsha's default theme becomes the mockup's neutral greys; every other theme keeps part of its character. */
+export const DEFAULT_TINT_KEEP = 0.45
+export const warmTintKeep = (themeId: string): number => (themeId === 'grid-dark' ? 0 : DEFAULT_TINT_KEEP)
+
 const SURFACES = ['background', 'sidebar', 'surface', 'raised', 'overlay', 'well'] as const
 
 /** Moves `colour` toward the extreme of its kind until it reads on every surface, or returns it as is when it already does. */
@@ -59,26 +63,33 @@ function readable(colour: string, surfaces: readonly string[], kind: ThemeKind):
   return target
 }
 
+/** A warm neutral of the same lightness, pulled back toward the original by `keep` so a tinted theme stays recognisable. */
+function warmed(hex: string, saturation: number, keep: number): string {
+  const neutral = neutralise(hex, saturation)
+  return keep <= 0 ? neutral : mix(neutral, hex, keep)
+}
+
 /**
- * The warm tone: the surface ladder, borders and greys of a theme become neutral greys of the same lightness. The accent,
- * status colours and everything else stay as the theme set them, and the text keeps at least 4.5:1 on every surface.
+ * The warm tone: the surface ladder, borders and greys of a theme shift toward a warm grey of the same lightness, keeping
+ * `keep` of the theme's own tint. The accent, status colours and everything else stay as the theme set them, and the text
+ * keeps at least 4.5:1 on every surface.
  */
-export function warmApp(app: AppColors, kind: ThemeKind): AppColors {
+export function warmApp(app: AppColors, kind: ThemeKind, keep = 0): AppColors {
   const surfaceSaturation = SURFACE_SATURATION[kind]
-  const surfaces = Object.fromEntries(SURFACES.map((key) => [key, neutralise(app[key], surfaceSaturation)])) as Pick<AppColors, (typeof SURFACES)[number]>
+  const surfaces = Object.fromEntries(SURFACES.map((key) => [key, warmed(app[key], surfaceSaturation, keep)])) as Pick<AppColors, (typeof SURFACES)[number]>
   const list = SURFACES.map((key) => surfaces[key])
-  const text = readable(neutralise(app.text, TEXT_SATURATION[kind]), list, kind)
-  const muted = readable(neutralise(app.muted, MUTED_SATURATION), list, kind)
-  const faint = app.faint === undefined ? undefined : readable(neutralise(app.faint, MUTED_SATURATION), list, kind)
-  return { ...app, ...surfaces, border: neutralise(app.border, BORDER_SATURATION), text, muted, ...(faint === undefined ? {} : { faint }) }
+  const text = readable(warmed(app.text, TEXT_SATURATION[kind], keep), list, kind)
+  const muted = readable(warmed(app.muted, MUTED_SATURATION, keep), list, kind)
+  const faint = app.faint === undefined ? undefined : readable(warmed(app.faint, MUTED_SATURATION, keep), list, kind)
+  return { ...app, ...surfaces, border: warmed(app.border, BORDER_SATURATION, keep), text, muted, ...(faint === undefined ? {} : { faint }) }
 }
 
 /** The theme's colours for a tone. Cool is the theme as it is. */
-export function toneApp(app: AppColors, kind: ThemeKind, tone: Tone): AppColors {
-  return tone === 'warm' ? warmApp(app, kind) : app
+export function toneApp(app: AppColors, kind: ThemeKind, tone: Tone, keep = 0): AppColors {
+  return tone === 'warm' ? warmApp(app, kind, keep) : app
 }
 
 /** The terminal's own background and cursor ink follow the well in the warm tone, so the terminal reads as part of the card. */
-export function toneTerminalBackground(background: string, tone: Tone, kind: ThemeKind): string {
-  return tone === 'warm' ? neutralise(background, SURFACE_SATURATION[kind]) : background
+export function toneTerminalBackground(background: string, tone: Tone, kind: ThemeKind, keep = 0): string {
+  return tone === 'warm' ? warmed(background, SURFACE_SATURATION[kind], keep) : background
 }

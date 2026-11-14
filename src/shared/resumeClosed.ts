@@ -1,5 +1,6 @@
 import { keptSessionKey } from './keptSessions'
 import type { KeptSession, ResumeSession } from './types'
+import { resolveSessionTitle } from './sessionTitle'
 
 export const resumeKey = (session: Pick<ResumeSession, 'agent' | 'id'>): string => `${session.agent}:${session.id}`
 
@@ -15,7 +16,13 @@ export function closedFor(
 
 /** What a closed session is called in the list: the name the user gave it, else the agent's own title. */
 export const closedTitle = (session: ResumeSession, kept: KeptSession | undefined): string =>
-  kept?.renamed ? kept.title : session.title
+  resolveSessionTitle({ name: session.title, nameSource: session.nameSource, firstPrompt: session.firstPrompt,
+    renamed: kept?.renamed ? kept.title : undefined, agent: session.agent, index: 1 }).title
+
+/** The text Rename starts with: the name in use, or the whole first message when the title was shortened from it. */
+export const closedRenameText = (session: ResumeSession, kept: KeptSession | undefined): string =>
+  resolveSessionTitle({ name: session.title, nameSource: session.nameSource, firstPrompt: session.firstPrompt,
+    renamed: kept?.renamed ? kept.title : undefined, agent: session.agent, index: 1 }).renameText
 
 /**
  * The closed sessions "Reopen all" would start for one day group. It only applies to one project at a time,

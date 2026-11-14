@@ -61,7 +61,16 @@ export class SidebarComponent {
   /** Quiet projects the user has expanded from their one-line row; not remembered across restarts. */
   private readonly quietOpen = new Set<string>()
 
+  /** Under 1100px the top-bar frame's sidebar is too narrow for the full placeholder, so it says just "Find". */
+  private readonly narrowQuery = window.matchMedia('(max-width: 1100px)')
+
+  private updatePlaceholder(): void {
+    this.filter.placeholder = this.narrowQuery.matches && this.frame === null ? 'Find' : 'Find a session'
+  }
+
   constructor() {
+    this.narrowQuery.addEventListener('change', () => this.updatePlaceholder())
+    this.updatePlaceholder()
     this.filter.classList.remove('text-input')
     this.filter.classList.add('sb-find-input')
     this.filter.setAttribute('dir', 'auto')
@@ -187,6 +196,7 @@ export class SidebarComponent {
     if (frame === this.frame) return
     this.frame = frame
     this.signature = ''
+    this.updatePlaceholder()
   }
 
   update(state: AppState, views: PaneView[]): void {
@@ -223,7 +233,7 @@ export class SidebarComponent {
       state.settings.sidebarSort,
       state.settings.sidebarHideEmpty,
       hiddenEmpty,
-      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent, v.attention, v.tag, v.tagAuto, v.branch, this.facts.get(v.pane.id)?.line, this.facts.get(v.pane.id)?.time, crewSignature(v)]),
+      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.fullTitle, v.renameTitle, v.status, v.agent, v.attention, v.tag, v.tagAuto, v.branch, this.facts.get(v.pane.id)?.line, this.facts.get(v.pane.id)?.time, crewSignature(v)]),
       this.edit?.key,
       [...this.quietOpen],
       sessionNotesVersion(),
@@ -502,7 +512,7 @@ export class SidebarComponent {
     const selected = view.pane.id === state.focusedId
     const facts = this.facts.get(view.pane.id) ?? rowFacts(state, view)
     const main = this.edit?.key === key
-      ? this.renameField(key, view.title, view.agent, selected)
+      ? this.renameField(key, view.renameTitle ?? view.title, view.agent, selected)
       : sessionRowButton(view, facts, { key, selected, dimmed: listedAbove, onClick: () => focusPane(view.pane.id) })
     return h('div', { class: `kept-session-row${selected ? ' selected' : ''}${listedAbove ? ' dimmed' : ''}` },
       main,
@@ -519,7 +529,7 @@ export class SidebarComponent {
   }
 
   private renameField(key: string, title: string, agent: AgentKind | 'shell', selected: boolean): HTMLElement {
-    const input = h('input', { class: 'text-input sess-rename', type: 'text', dir: 'auto', maxlength: SESSION_NAME_MAX, value: title, 'aria-label': `Rename ${title}`, autocomplete: 'off', spellcheck: false })
+    const input = h('input', { class: 'text-input sess-rename', type: 'text', dir: 'auto', maxlength: Math.max(SESSION_NAME_MAX, title.length), value: title, 'aria-label': `Rename ${title}`, autocomplete: 'off', spellcheck: false })
     input.addEventListener('keydown', (event) => {
       if (event.isComposing) return
       if (event.key === 'Enter') {
@@ -531,6 +541,8 @@ export class SidebarComponent {
         this.finishRename(input.value, key, false)
       }
     })
+    const startingValue = input.value
+    input.dataset.startingValue = startingValue
     input.addEventListener('blur', () => {
       if (!this.rebuilding) this.finishRename(input.value, key, true)
     })
@@ -546,15 +558,17 @@ export class SidebarComponent {
 
   private currentTitle(key: string): string | null {
     const [kind, ...rest] = key.split(':')
-    return kind === 's' ? (this.lastViews.find((view) => view.pane.id === rest[0])?.title ?? null) : null
+    const view = this.lastViews.find((view) => view.pane.id === rest[0])
+    return kind === 's' ? (view?.renameTitle ?? view?.title ?? null) : null
   }
 
   private finishRename(raw: string, key: string, save: boolean): void {
     if (this.edit?.key !== key) return
+    const unchanged = raw === this.list.querySelector<HTMLInputElement>('.sess-rename')?.dataset.startingValue
     this.edit = null
     const name = cleanSessionName(raw)
     this.focusAfterRender(key)
-    if (save && name && name !== this.currentTitle(key)) {
+    if (save && !unchanged && name && name !== this.currentTitle(key)) {
       const [kind, ...rest] = key.split(':')
       if (kind === 's') renameSession(rest[0], name)
     }

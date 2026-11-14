@@ -11,6 +11,8 @@ import './sidebarFrame.css'
 export class SidebarFrame {
   readonly top = h('div', { class: 'frame-top' })
   readonly bottom = h('div', { class: 'frame-bottom' })
+  /** The slim row above the panes: the usage limits sit at its right end. */
+  readonly bar = h('div', { class: 'frame-bar' })
   private readonly collapse = h('button', { class: 'frame-collapse', type: 'button', id: 'sidebar-collapse', onClick: () => toggleSidebar() })
   private collapsed: boolean | null = null
 
@@ -23,7 +25,8 @@ export class SidebarFrame {
       h('nav', { class: 'frame-nav', 'aria-label': 'Main views' }, ...parts.nav),
       parts.view
     )
-    this.bottom.replaceChildren(parts.updatePill, parts.crew, h('div', { class: 'frame-foot' }, parts.settings, parts.limits))
+    this.bottom.replaceChildren(parts.updatePill, parts.crew, h('div', { class: 'frame-foot' }, parts.settings))
+    this.bar.replaceChildren(parts.limits)
     this.collapsed = null
   }
 
@@ -31,6 +34,7 @@ export class SidebarFrame {
     parts.newSession.classList.remove('frame-new')
     this.top.replaceChildren()
     this.bottom.replaceChildren()
+    this.bar.replaceChildren()
     this.collapsed = null
   }
 

@@ -11,7 +11,6 @@ function tidy(text: string): string {
   const flat = text.replace(/\s+/g, ' ').trim()
   return flat.length > MAX_TITLE ? `${flat.slice(0, MAX_TITLE - 1)}…` : flat
 }
-
 function parseLines(text: string): Record_[] {
   const records: Record_[] = []
   for (const line of text.split('\n')) {
@@ -37,10 +36,18 @@ function promptText(record: Record_): string | null {
     text = typeof block?.text === 'string' ? block.text : ''
   }
   text = text.trim()
-  return text === '' || text.startsWith('<') ? null : text
+  if (text === '' || text.startsWith('<')) return null
+  const real = realPrompt(text)
+  return real === null ? null : isAutomaticSession(real) ? real : text
 }
 
 export function sessionTitle(head: string, tail: string): string | null {
+  const info = sessionTitleInfo(head, tail)
+  return info.name ? tidy(info.name) : null
+}
+
+/** Original title and prompt metadata. Display shortening must never replace these values. */
+export function sessionTitleInfo(head: string, tail: string): { name?: string; nameSource?: string; firstPrompt?: string } {
   const headRecords = parseLines(head)
   let custom: string | null = null
   let generated: string | null = null
@@ -48,11 +55,10 @@ export function sessionTitle(head: string, tail: string): string | null {
     if (record.type === 'custom-title' && typeof record.customTitle === 'string') custom = record.customTitle
     if (record.type === 'ai-title' && typeof record.aiTitle === 'string') generated = record.aiTitle
   }
-  const named = custom?.trim() || generated?.trim()
-  if (named) return tidy(named)
-  for (const record of headRecords) {
-    const prompt = promptText(record)
-    if (prompt) return tidy(prompt)
-  }
-  return null
+  const firstPrompt = headRecords.map(promptText).find((prompt) => prompt !== null) ?? undefined
+  if (custom?.trim()) return { name: custom.trim(), nameSource: 'user', firstPrompt }
+  if (generated?.trim()) return { name: generated.trim(), nameSource: 'ai', firstPrompt }
+  return firstPrompt ? { name: firstPrompt, nameSource: 'prompt', firstPrompt } : {}
 }
+import { isAutomaticSession, realPrompt } from './sessionText'
+

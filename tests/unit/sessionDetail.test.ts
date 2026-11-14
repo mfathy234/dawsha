@@ -35,6 +35,10 @@ describe('claudeDetail', () => {
 })
 
 describe('codexDetail', () => {
+  it('keeps the full first real message when requested for titles', () => {
+    const prompt = 'Please fix the login problem and add regression tests. '.repeat(200)
+    expect(codexDetail(lines({ type: 'event_msg', payload: { type: 'user_message', message: prompt } }), 1, true).firstPrompt).toBe(prompt.trim())
+  })
   it('prefers event messages and reads the model from the turn context', () => {
     const text = lines(
       { type: 'session_meta', payload: { id: 'i', cwd: 'C:\\x', timestamp: '2026-10-08T12:00:00.000Z' } },

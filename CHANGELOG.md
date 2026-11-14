@@ -3,6 +3,34 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.8] - 2026-11-13
+
+### Added
+
+- **A Mini window worth a glance.** Click a session in the Mini window to see what it is doing now and for how long, what you asked it, the first lines of its last reply, the files it changed with Review, its plan, and how full its context is and what it has cost. Its last terminal lines come last.
+- **Reply from the Mini window.** Each session has a message box, so you can answer or nudge an agent without switching to Dawsha. It waits with a reason while the session needs an answer to a request.
+- **Done moments.** When a session finishes, its Mini window card says how long it took and how many files changed, with Review.
+- **Smooth motion in the Mini window.** A working spinner, progress that slides, cards that fade in, out and into their new place, and one soft pulse when a session starts waiting for you. Reduced motion turns it all off.
+- **Short session names.** A session you have not named is called by a few words taken from your first message, without paths, links or code, instead of the whole message. The full message is in the tooltip and in Rename.
+- **Answer from Windows notifications.** A notification that a session wants to run something has Allow and Deny. They only answer while the session still waits on that same request; otherwise they open the session.
+- **Context window.** Each Claude and Codex session shows how full its context is beside its name. Click it for a small window with the numbers, Compact and Clear.
+- **Find in Settings.** Type in the box at the top of Settings to find any option.
+- **Back to sessions.** Settings has a Back to sessions link, and Esc takes you back where you were.
+
+### Changed
+
+- **Usage limits in Desktop app style.** The 5h and W rings now sit above the panes, where you can see them, instead of at the bottom of the sidebar.
+- **Themes with the Warm tone.** Each theme keeps its own colours with the Warm tone on, warmed a little, instead of every theme turning the same grey.
+- **Settings looks finished.** One column for every section, buttons that do not wrap, the Desktop app style card says On when it is on, and About shows this version's notes with the full changelog folded away.
+- **A tidier maximized view.** The session tabs line up with the pane, and Other sessions matches the Side panel.
+
+### Fixed
+
+- The Mini window showed the agent's input box and status line as its last output.
+- Ctrl+K was squeezed against the bell in the top bar.
+- The sidebar rail showed a cut-off "Sessions" label and clipped usage rings.
+- The Sidebar frame's project list was cut off on small windows.
+
 ## [1.8.7] - 2026-11-13
 
 ### Added

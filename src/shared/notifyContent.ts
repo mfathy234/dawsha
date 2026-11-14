@@ -1,6 +1,7 @@
 import { agentLabel } from './agents'
 import type { PermissionDetail } from './permissionPrompt'
 import type { TabAgent } from './types'
+import type { NotificationAction } from './notificationAction'
 
 /** Longest line a notification body gets before it is cut with an ellipsis. */
 const MAX_LINE = 140
@@ -40,6 +41,7 @@ export interface ToastContent {
   body: string
   attribution?: string
   silent: boolean
+  actions?: readonly NotificationAction[]
 }
 
 const escapeXml = (text: string): string =>
@@ -55,6 +57,7 @@ export function toastXml(content: ToastContent): string {
     `<text>${escapeXml(content.body)}</text>`,
     attribution,
     '</binding></visual>',
+    content.actions?.length ? `<actions>${content.actions.map(action => `<action content="${escapeXml(action.content)}" arguments="${escapeXml(action.arguments)}" activationType="protocol"/>`).join('')}</actions>` : '',
     content.silent ? '<audio silent="true"/>' : '<audio src="ms-winsoundevent:Notification.Default"/>',
     '</toast>'
   ].join('')

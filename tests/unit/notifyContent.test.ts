@@ -53,4 +53,11 @@ describe('toastXml', () => {
   it('leaves out an empty attribution', () => {
     expect(toastXml({ title: 't', body: 'b', silent: true })).not.toContain('attribution')
   })
+  it('renders escaped protocol actions only for permission notifications', () => {
+    const xml = toastXml({ title: 'Permission', body: 'Review', silent: true, actions: [{ content: 'Allow', arguments: 'dawsha-action:allow?pane=p&request=abc' }, { content: 'Deny', arguments: 'dawsha-action:deny?pane=p&request=abc' }] })
+    expect(xml).toContain('<actions>')
+    expect(xml).toContain('<action content="Allow" arguments="dawsha-action:allow?pane=p&amp;request=abc" activationType="protocol"/>')
+    expect(xml).toContain('content="Deny"')
+    expect(toastXml({ title: 'Done', body: 'Finished', silent: false })).not.toContain('<actions>')
+  })
 })

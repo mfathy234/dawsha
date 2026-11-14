@@ -26,7 +26,7 @@ export class SessionTabs {
   update(views: PaneView[], state: AppState, shown: boolean, selectedId: string | null): void {
     this.el.hidden = !shown
     if (!shown) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.status, v.agent, v.attention, crewSignature(v), sessionNote(v.pane.id).plan]), selectedId])
+    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.fullTitle, v.status, v.agent, v.attention, crewSignature(v), sessionNote(v.pane.id).plan]), selectedId])
     if (signature === this.signature || document.body.classList.contains('dragging-ui')) return
     this.signature = signature
     clear(this.el)
@@ -47,7 +47,7 @@ export class SessionTabs {
         type: 'button',
         role: 'tab',
         'aria-selected': selected ? 'true' : 'false',
-        title: `${name}, ${stateLabel}${plan ? `, plan ${plan.done} of ${plan.total}` : ''}`,
+        title: `${name}, ${stateLabel}${plan ? `, plan ${plan.done} of ${plan.total}` : ''}${view.fullTitle && view.fullTitle !== name ? `\n${view.fullTitle}` : ''}`,
         onClick: () => focusPane(view.pane.id)
       },
       h('span', { class: 'strip-index' }, `${view.index + 1}`),

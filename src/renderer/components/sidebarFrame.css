@@ -20,9 +20,18 @@
 .frame-sidebar .sidebar .frame-new .new-session-icon svg { width: 12px; height: 12px; }
 .frame-sidebar .sidebar .frame-new .new-session-label { display: inline; }
 .frame-sidebar .sidebar .frame-new .new-session-kbd { display: inline; margin-inline-start: auto; min-width: 0; height: auto; padding: 0; border-radius: 0; background: none; color: var(--text-3); font-size: var(--fs-12); font-weight: 400; line-height: 1; }
-.frame-sidebar .sidebar .frame-new .split-chevron { flex: none; width: 22px; height: 22px; border-radius: 6px; background: transparent; color: var(--text-3); }
+.frame-sidebar .sidebar .frame-new .split-chevron { flex: none; border: 0; box-shadow: none; width: 22px; height: 22px; border-radius: 6px; background: transparent; color: var(--text-3); }
 .frame-sidebar .sidebar .frame-new .split-chevron:hover { background: var(--hover); color: var(--text); }
 
+/* The usage limits: the same rings as the top bar, at the right end of the row above the panes. Nothing is shown when no limits are reported. */
+.frame-bar { display: none; }
+.frame-sidebar .frame-bar { flex: none; display: flex; align-items: center; justify-content: flex-end; min-width: 0; height: 34px; padding: 0 var(--sp-3); }
+.frame-sidebar .frame-bar:not(:has(> .topbar-limits:not([hidden]):not(.limits-empty))) { display: none; }
+.frame-sidebar .frame-bar .topbar-limits { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden; white-space: nowrap; }
+.frame-sidebar .frame-bar .topbar-limits.limits-empty { display: none; }
+
+/* The search shortcut is shown only in the sidebar frame; the top bar has no room for it. */
+#search-button .search-kbd { display: none; }
 .frame-sidebar .sidebar .frame-top > #search-button { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); width: 100%; height: 32px; padding: 0 var(--sp-2); border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--text-2); font-size: var(--fs-13); font-weight: 400; }
 .frame-sidebar .sidebar .frame-top > #search-button .utility-label { display: inline; }
 .frame-sidebar .sidebar .frame-top > #search-button .search-kbd { display: inline; margin-inline-start: auto; color: var(--text-3); font-size: var(--fs-12); }
@@ -36,7 +45,7 @@
 .frame-sidebar .sidebar .frame-nav .nav-button .nav-label,
 .frame-sidebar .sidebar .frame-nav .nav-button[aria-current='page'] .nav-label { display: inline; }
 .frame-sidebar .sidebar .frame-nav .nav-button[aria-pressed='true'],
-.frame-sidebar .sidebar .frame-nav .nav-button[aria-pressed='true']:hover { background: var(--raised); color: var(--text); font-weight: 400; }
+.frame-sidebar .sidebar .frame-nav .nav-button[aria-pressed='true']:hover { background: var(--press); color: var(--text); font-weight: 400; }
 .frame-sidebar .sidebar .frame-nav .nav-button[aria-pressed='true']::after { content: none; }
 
 .frame-sidebar .sidebar .frame-top > .topbar-view { display: flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-1) var(--sp-2); flex-wrap: wrap; }
@@ -52,9 +61,7 @@
 .frame-sidebar .sidebar .frame-foot #settings-button { flex: 1 1 auto; display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); width: auto; min-width: 0; height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: 10px; background: transparent; box-shadow: none; color: var(--text-2); font-size: var(--fs-13); font-weight: 400; }
 .frame-sidebar .sidebar .frame-foot #settings-button .utility-label { display: inline; }
 .frame-sidebar .sidebar .frame-foot #settings-button:hover { background: var(--hover); color: var(--text); }
-.frame-sidebar .sidebar .frame-foot #settings-button[aria-pressed='true'] { background: var(--raised); color: var(--text); }
-.frame-sidebar .sidebar .frame-foot .topbar-limits { flex: 0 1 auto; min-width: 0; margin-inline-start: auto; padding: 0 var(--sp-1); }
-.frame-sidebar .sidebar .frame-foot .topbar-limits .limits-agent-name { display: none; }
+.frame-sidebar .sidebar .frame-foot #settings-button[aria-pressed='true'] { background: var(--press); color: var(--text); }
 
 .frame-sidebar .sidebar .sidebar-head .icon-btn[aria-label='Collapse sidebar'] { display: none; }
 
@@ -68,6 +75,7 @@
 .frame-sidebar .sidebar.rail .frame-top > #search-button .utility-label,
 .frame-sidebar .sidebar.rail .frame-top > #search-button .search-kbd,
 .frame-sidebar .sidebar.rail .frame-nav .nav-label,
+.frame-sidebar .sidebar.rail .frame-nav .nav-button[aria-current='page'] .nav-label,
 .frame-sidebar .sidebar.rail .frame-bottom #settings-button .utility-label,
 .frame-sidebar .sidebar.rail .frame-top > .topbar-view,
 .frame-sidebar .sidebar.rail .frame-bottom > .crew-strip { display: none; }
@@ -79,6 +87,18 @@
 .frame-sidebar .sidebar.rail .frame-bottom { align-items: center; padding: var(--sp-2) 0 var(--sp-3); }
 .frame-sidebar .sidebar.rail .frame-bottom > .update-pill { width: 36px; padding: 0; justify-content: center; overflow: hidden; }
 .frame-sidebar .sidebar.rail .frame-foot { flex-direction: column; }
-.frame-sidebar .sidebar.rail .frame-foot .topbar-limits { margin: 0; }
 
 :root:not([data-input='pointer']) .frame-sidebar .sidebar :is(.frame-collapse, .frame-new, .frame-nav .nav-button, #search-button, #settings-button, .app-logo-menu):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* On short windows the frame gives its rows less height so the project list keeps room and scrolls. */
+@media (max-height: 800px) {
+  .frame-sidebar .sidebar:not(.rail) .frame-top { padding-top: var(--sp-2); }
+  .frame-sidebar .sidebar:not(.rail) .frame-head { padding-bottom: var(--sp-1); }
+  .frame-sidebar .sidebar:not(.rail) .frame-new { height: 32px; }
+  .frame-sidebar .sidebar:not(.rail) .frame-top > #search-button,
+  .frame-sidebar .sidebar:not(.rail) .frame-nav .nav-button { height: 28px; }
+  .frame-sidebar .sidebar:not(.rail) .frame-nav { padding-bottom: var(--sp-1); }
+  .frame-sidebar .sidebar:not(.rail) .frame-top > .topbar-view { padding-bottom: 0; }
+  .frame-sidebar .sidebar:not(.rail) .frame-bottom { padding-block: var(--sp-1) var(--sp-2); }
+  .frame-sidebar .sidebar:not(.rail) .frame-foot #settings-button { height: 32px; }
+}

@@ -1,5 +1,6 @@
 import {
   disableBridge,
+  leaveSettings,
   enableBridge,
   openDataFolder,
   openOnboarding,
@@ -48,6 +49,8 @@ import { formatShortcut, parseShortcut } from '../../shared/shortcuts'
 import { updateStatusLine } from '../../shared/updates'
 import { releaseTagUrl } from '../../shared/markdown'
 import { h } from '../dom'
+import { isOverlayOpen } from '../overlayOpen'
+import { matchesQuery, sectionTitleMatches, sectionsMatching } from '../../shared/settingsSearch'
 import { api } from '../api'
 import { createRemoteAccessView } from './remoteAccessView'
 import { CHANGELOG_ENTRIES } from '../changelog'
@@ -57,6 +60,7 @@ import { invalidateRecordingStats, recordingRows } from './recordingSettings'
 import { exportSettingsFromUi, importSettingsFromUi } from '../settingsTransferActions'
 import { pageHeader } from './pageHeader'
 import './appearance.css'
+import './settingsPolish.css'
 import { McpServersPanel } from './mcpPanel'
 import { GRID_STYLE_LABELS, type GridStyle } from '../../shared/gridStyle'
 import { setGridStyle } from '../sessionsLayout'
@@ -124,11 +128,12 @@ const COLOR_LABELS: Record<HighlightColor, string> = { red: 'Red', amber: 'Amber
 export class SettingsViewComponent {
   readonly el = h('main', { class: 'settings-view', 'aria-label': 'Settings' })
   private readonly nav = h('div', { class: 'settings-nav', role: 'tablist', 'aria-orientation': 'vertical', 'aria-label': 'Settings sections' })
-  private readonly search = h('input', { class: 'text-input settings-search', type: 'search', placeholder: 'Search settings', 'aria-label': 'Search settings', onInput: () => this.refresh() })
+  private readonly search = h('input', { class: 'text-input settings-search', type: 'search', placeholder: 'Find in Settings', 'aria-label': 'Find in Settings', id: 'settings-search', onInput: () => this.onSearch() })
   private readonly panel = h('div', { class: 'settings-panel', role: 'tabpanel' })
   private readonly title = h('h2', { class: 'settings-section-title' })
   private readonly lede = h('p', { class: 'lede' })
   private signature = ''
+  private changelogOpen = false
   private importPath = ''
   private readonly mcp = new McpServersPanel()
   private navSection: string | null = null
@@ -165,6 +170,8 @@ export class SettingsViewComponent {
       })
     }
     this.nav.addEventListener('keydown', (event) => this.onNavKey(event))
+    this.search.addEventListener('keydown', (event) => this.onSearchKey(event))
+    document.addEventListener('keydown', (event) => this.onEscape(event))
     this.panel.addEventListener('click', (event) => {
       const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-link]')
       if (!link) return
@@ -173,7 +180,7 @@ export class SettingsViewComponent {
     })
     this.el.append(
   pageHeader({ title: 'Settings', subtitle: 'Preferences for Dawsha.' }),
-      h('div', { class: 'settings-body' }, h('aside', { class: 'settings-rail' }, this.search, this.nav), h('div', { class: 'settings-content' }, this.title, this.lede, this.panel))
+      h('div', { class: 'settings-body' }, h('aside', { class: 'settings-rail' }, h('button', { class: 'settings-back', type: 'button', id: 'settings-back', onClick: () => leaveSettings(true) }, h('span', { 'aria-hidden': 'true' }, '←'), 'Back to sessions'), this.search, this.nav), h('div', { class: 'settings-content' }, this.title, this.lede, this.panel))
     )
   }
 
@@ -195,6 +202,8 @@ export class SettingsViewComponent {
       state.settings.highlights,
       state.settings.recordings,
       state.settings.sleepHiddenTerminals,
+      this.search.value,
+      this.changelogOpen,
       this.remoteAccess,
       this.remoteError,
       this.remoteBusy,
@@ -235,8 +244,8 @@ export class SettingsViewComponent {
     const sections = visibleSections(state)
     const route = state.settingsSection === 'highlights' ? 'notifications' : state.settingsSection === 'changelog' ? 'about' : state.settingsSection
     const section = sections.find((s) => s.id === route) ?? sections[0]
-    const query = this.search.value.trim().toLocaleLowerCase()
-    const filteredSections = query ? sections.filter((item) => `${item.label} ${item.lede}`.toLocaleLowerCase().includes(query)) : sections
+    const query = this.search.value.trim()
+    const filteredSections = sectionsMatching(sections, query)
     const navKey = `${section.id}|${sections.length}|${query}`
     if (this.navSection !== navKey) {
       this.navSection = navKey
@@ -245,15 +254,56 @@ export class SettingsViewComponent {
         : [h('p', { class: 'settings-no-match', role: 'status' }, 'No matching settings sections')]))
     }
     this.title.replaceChildren(section.label)
-    this.title.hidden = section.id === 'remote'
-    this.lede.hidden = section.id === 'remote'
     if (section.id === 'remote') {
       this.title.append(h('span', { id: 'remote-settings-beta', class: 'beta-badge' }, 'Beta'))
     }
     this.lede.textContent = section.lede
     this.panel.setAttribute('aria-labelledby', `settings-tab-${section.id}`)
     this.panel.replaceChildren(...this.body(section.id, state))
+    this.applyQuery(section, query)
     if (focusedId && this.el.contains(document.activeElement) === false) document.getElementById(focusedId)?.focus()
+  }
+
+  private onSearch(): void {
+    const query = this.search.value.trim()
+    const matches = sectionsMatching(visibleSections(store.state), query)
+    const current = store.state.settingsSection === 'highlights' ? 'notifications' : store.state.settingsSection === 'changelog' ? 'about' : store.state.settingsSection
+    if (query !== '' && matches.length > 0 && !matches.some((item) => item.id === current)) showSettingsSection(matches[0].id)
+    this.refresh()
+  }
+
+  private onSearchKey(event: KeyboardEvent): void {
+    if (event.key !== 'Escape') return
+    event.preventDefault()
+    event.stopPropagation()
+    if (this.search.value !== '') {
+      this.search.value = ''
+      this.onSearch()
+    } else this.search.blur()
+  }
+
+  private readonly onEscape = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || event.defaultPrevented || store.state.view !== 'settings' || isOverlayOpen()) return
+    const active = document.activeElement
+    if (active instanceof HTMLElement && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName))) return
+    event.preventDefault()
+    if (this.search.value !== '') {
+      this.search.value = ''
+      this.onSearch()
+      return
+    }
+    leaveSettings()
+  }
+
+  /** While searching, only the blocks of the open section that match are kept, and they are marked. */
+  private applyQuery(section: (typeof SECTIONS)[number], query: string): void {
+    if (query === '' || section.id === 'mcp') return
+    const everything = sectionTitleMatches(section, query)
+    for (const block of Array.from(this.panel.children) as HTMLElement[]) {
+      const hit = matchesQuery(query, block.textContent ?? '')
+      block.hidden = !everything && !hit
+      block.classList.toggle('set-match', !everything && hit)
+    }
   }
 
   private tab(section: (typeof SECTIONS)[number], selected: boolean): HTMLElement {
@@ -297,7 +347,7 @@ export class SettingsViewComponent {
         ]
       case 'import':
         return [h('div', { class: 'settings-import' },
-          h('p', {}, 'Choose a settings file to preview its projects and preferences before importing.'),
+          h('p', { class: 'hint' }, 'Choose a settings file to preview its projects and preferences before importing.'),
           h('div', { class: 'set-inline' },
             h('input', { class: 'text-input settings-import-path', id: 'settings-import-path', type: 'text', readonly: true, value: this.importPath, placeholder: 'No file selected', 'aria-label': 'Settings file' }),
             h('button', { class: 'btn', type: 'button', id: 'import-settings', onClick: () => void importSettingsFromUi((path) => { this.importPath = path; this.refresh() }) }, 'Browse'),
@@ -343,8 +393,10 @@ export class SettingsViewComponent {
         h('div', { class: 'set-name' }, 'Desktop app style'),
         h('p', { class: 'hint' }, 'Turns on Quiet panes, Sidebar frame and Warm tone in one step.')
       ),
-      h('button', { class: 'btn primary', type: 'button', id: 'appearance-use-desktop', disabled: on, onClick: () => useDesktopAppStyle() }, 'Use it'),
-      h('button', { class: 'btn ghost', type: 'button', id: 'appearance-back-classic', disabled: sameAppearance(state.settings.appearance, DEFAULT_APPEARANCE), onClick: () => backToClassic() }, 'Back to Classic')
+      h('div', { class: 'set-style-actions' },
+        on ? h('span', { class: 'set-style-state', id: 'appearance-desktop-on', role: 'status' }, 'On') : h('button', { class: 'btn primary', type: 'button', id: 'appearance-use-desktop', onClick: () => useDesktopAppStyle() }, 'Use it'),
+        h('button', { class: 'btn', type: 'button', id: 'appearance-back-classic', disabled: sameAppearance(state.settings.appearance, DEFAULT_APPEARANCE), onClick: () => backToClassic() }, 'Back to Classic')
+      )
     )
   }
 
@@ -535,19 +587,9 @@ export class SettingsViewComponent {
         bridge.note ? h('p', { class: 'note set-note', id: 'bridge-note' }, bridge.note) : null
       ),
       // Mini window preferences share the existing notification controls.
-      row('Mini window', checkbox('mini-minimize-toggle', 'Show the Mini window when Dawsha is minimized', settings.miniWindow.showOnMinimize, false, value => setMiniWindow({ showOnMinimize: value }))),
-      row(
-        'Notifications',
-        h(
-          'div',
-          { class: 'set-stack' },
-          checkbox('notify-toggle', 'Notify when a session is done or needs you', info.notifications, false, (value) =>
-            setSessionInfo({ notifications: value })
-          ),
-          checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) => setSessionInfo({ sound: value }))
-        ),
-        h('p', { class: 'hint' }, 'Choose which session updates Dawsha announces.')
-      )
+      row('Mini window', checkbox('mini-minimize-toggle', 'Show the Mini window when Dawsha is minimized', settings.miniWindow.showOnMinimize, false, value => setMiniWindow({ showOnMinimize: value })), h('p', { class: 'hint' }, 'A small window that follows your sessions while Dawsha is minimized.')),
+      row('Notifications', checkbox('notify-toggle', 'Notify when a session is done or needs you', info.notifications, false, (value) => setSessionInfo({ notifications: value })), h('p', { class: 'hint' }, 'Tell me when a session is done or needs me.')),
+      row('Sound', checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) => setSessionInfo({ sound: value })), h('p', { class: 'hint' }, 'Play a sound with each notification.'))
     ]
   }
 
@@ -861,15 +903,22 @@ export class SettingsViewComponent {
   private changelog(state: AppState): HTMLElement[] {
     const current = state.info.version
     const entries = entriesUpTo(CHANGELOG_ENTRIES, current).sort((a, b) => compareVersions(b.version, a.version))
+    const open = this.changelogOpen || state.settingsSection === 'changelog'
+    const shown = open ? entries : entries.filter((entry) => entry.version === current).slice(0, 1)
     const toolbar = row(
       "What's new",
-      h('button', { class: 'btn ghost small', type: 'button', id: 'whats-new', onClick: () => openWhatsNew() }, "Show what's new"),
-      h('p', { class: 'hint' }, 'The release notes dialog for this version.')
+      h('div', { class: 'set-inline' },
+        h('button', { class: 'btn small', type: 'button', id: 'whats-new', onClick: () => openWhatsNew() }, "Show what's new"),
+        entries.length > shown.length || open
+          ? h('button', { class: 'btn small', type: 'button', id: 'full-changelog', 'aria-expanded': String(open), 'aria-controls': 'changelog-list', onClick: () => { this.changelogOpen = !open; if (open && store.state.settingsSection === 'changelog') showSettingsSection('about'); this.refresh() } }, open ? 'Hide full changelog' : 'Full changelog')
+          : null
+      ),
+      h('p', { class: 'hint' }, 'The notes for this version. The full changelog lists every release.')
     )
     const list = h(
       'div',
       { class: 'cl-list', id: 'changelog-list' },
-      ...entries.map((entry) => {
+      ...shown.map((entry) => {
         const block = entryBlock(entry)
         block.classList.add('cl-entry')
         if (entry.version === current) {
