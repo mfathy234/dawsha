@@ -13,7 +13,7 @@ async function openPanes(page: Page, count: number): Promise<void> {
     await page.keyboard.press('Control+n')
     const picker = page.locator('.quickpick:not(.leaving)')
     await expect(picker.locator('[role="option"][aria-selected="true"]')).toHaveCount(1)
-    await expect(picker.locator('input')).toBeFocused()
+    await expect(picker.getByRole('combobox')).toBeFocused()
     await expect(picker.locator('.nd-start')).toBeEnabled()
     await page.keyboard.press('Enter')
     await expect(page.locator('.pane')).toHaveCount(existing + index + 1, { timeout: 20_000 })
@@ -45,7 +45,8 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
     await expect(panel.getByText('No checks ran after the last reply.')).toBeVisible()
 
     const handle = page.getByRole('separator', { name: 'Resize session panel' })
-    // Shrink first: on a 1024px window the default width is already the most the session leaves room for.
+    // The session keeps 480px, so a 1024px window leaves the panel no room to resize: use a wider one here and after the restart.
+    await page.setViewportSize({ width: 1280, height: 800 })
     await handle.focus()
     await page.keyboard.press('Home')
     await expect.poll(async () => (await panel.boundingBox())!.width).toBeLessThanOrEqual(281)
@@ -71,6 +72,7 @@ test('Side panel shows one session with a tab strip and a panel, remembers its w
   const second = await launchApp(sandbox)
   try {
     const { page } = second
+    await page.setViewportSize({ width: 1280, height: 800 })
     await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
     await expect(page.locator('#layout-panel')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.pane:visible')).toHaveCount(1)

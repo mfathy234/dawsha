@@ -19,8 +19,10 @@ export const SIDE_PANEL_TABS: readonly { id: SidePanelTab; label: string }[] = [
 export const DEFAULT_SIDE_PANEL_WIDTH = 380
 export const MIN_SIDE_PANEL_WIDTH = 280
 export const MAX_SIDE_PANEL_WIDTH = 640
-/** The session beside the panel never gets narrower than this. */
-export const MIN_SESSION_WIDTH = 420
+/** The session beside the panel never gets narrower than this, so its title stays readable. */
+export const MIN_SESSION_WIDTH = 480
+/** The space the panel keeps to its right edge. */
+export const PANEL_GUTTER = 12
 
 export const DEFAULT_SIDE_PANEL: SidePanelSettings = { open: true, width: DEFAULT_SIDE_PANEL_WIDTH, tab: 'session', docked: false }
 
@@ -34,7 +36,7 @@ export function clampSidePanelWidth(value: unknown): number {
 
 /** The width to draw: the wanted one, narrowed so the session keeps its minimum on a small window. */
 export function fitSidePanelWidth(wanted: number, available: number): number {
-  const room = Math.max(MIN_SIDE_PANEL_WIDTH, available - MIN_SESSION_WIDTH)
+  const room = Math.max(MIN_SIDE_PANEL_WIDTH, available - MIN_SESSION_WIDTH - PANEL_GUTTER)
   return Math.min(clampSidePanelWidth(wanted), room)
 }
 

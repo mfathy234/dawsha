@@ -190,9 +190,10 @@ export class ReviewPanel {
       tick,
       h('button', { class: 'files-review-open', type: 'button', title: file.path, 'aria-current': file.path === model.current ? 'true' : undefined, onClick: () => this.hooks.open(file.path) },
         fileIcon(file.path), h('span', { class: 'files-flat-name' }, name), folder ? h('span', { class: 'files-flat-dir' }, folder) : null),
+      h('span', { class: 'files-review-meta' },
+        file.added !== null || file.removed !== null ? h('span', { class: 'files-review-stat' }, h('span', { class: 'plus' }, `+${file.added ?? 0}`), ' ', h('span', { class: 'minus' }, `${minus}${file.removed ?? 0}`)) : null,
+        h('span', { class: `files-badge b-${file.letter === 'U' ? 'A' : file.letter}`, title: BADGE_TITLES[file.letter] ?? file.letter }, file.letter === 'U' ? 'A' : file.letter)),
       comments > 0 ? h('span', { class: 'files-review-comments', title: `${comments} comment${comments === 1 ? '' : 's'}` }, `${comments} comment${comments === 1 ? '' : 's'}`) : null,
-      file.added !== null || file.removed !== null ? h('span', { class: 'files-review-stat' }, h('span', { class: 'plus' }, `+${file.added ?? 0}`), ' ', h('span', { class: 'minus' }, `${minus}${file.removed ?? 0}`)) : null,
-      h('span', { class: `files-badge b-${file.letter === 'U' ? 'A' : file.letter}`, title: BADGE_TITLES[file.letter] ?? file.letter }, file.letter === 'U' ? 'A' : file.letter),
       viewed ? h('span', { class: 'files-review-done' }, 'Viewed') : null)
   }
 }

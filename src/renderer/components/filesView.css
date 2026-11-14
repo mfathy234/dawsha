@@ -164,6 +164,7 @@
 .files-review-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--s-2); min-height: 28px; padding: 0 var(--s-2); border-radius: var(--r-control); font-size: var(--fs-ui); }
 .files-review-row:hover { background: var(--hover); }
 .files-review-row.current { background: var(--raised); box-shadow: var(--sel-ring); }
+.files-review-meta { display: inline-flex; align-items: center; gap: var(--s-2); flex: none; white-space: nowrap; }
 .files-review-tick { flex: none; accent-color: var(--accent); margin: 0; }
 .files-review-tick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .files-review-open {
@@ -233,8 +234,9 @@
 .files-bar .spacer { flex: 0 0 0; }
 .files-crumb { flex: 1 1 60px; min-width: 60px; display: flex; align-items: center; gap: var(--s-1); overflow: hidden; white-space: nowrap; font-size: var(--fs-ui); color: var(--muted); }
 .files-crumb-sep { opacity: 0.5; flex: none; }
-.files-crumb-part { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
-.files-crumb-leaf { color: var(--text); font-weight: 500; flex: none; }
+.files-crumb-part { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 100 auto; }
+.files-crumb-leaf { color: var(--text); font-weight: 500; flex: 0 1 auto; min-width: 8ch; overflow: hidden; text-overflow: ellipsis; }
+.files-send-short { display: none; }
 .files-segment { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--r-card); background: var(--hover); flex: none; }
 .files-segment[hidden] { display: none; }
 .files-seg { height: 26px; padding: 0 var(--s-3); border: 0; border-radius: var(--r-control); background: transparent; color: var(--muted); font: inherit; font-size: var(--fs-ui); cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -441,6 +443,15 @@
 
 @container files-main (max-width: 640px) {
   .files-bar .files-seg { padding: 0 var(--s-2); }
+}
+/* Below this the bar gives up the change counts and the long Send label so the file name stays readable. */
+@container files-main (max-width: 780px) {
+  .files-bar .files-seg-stat { display: none; }
+  .files-bar .files-send-full { display: none; }
+  .files-bar .files-send-short { display: inline; }
+}
+@container files-main (max-width: 720px) {
+  .files-bar .files-send-short { display: none; }
 }
 @media (max-width: 1000px) {
   .files-bar .btn { padding: 0 var(--s-2); }

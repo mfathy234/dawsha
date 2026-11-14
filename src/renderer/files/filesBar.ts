@@ -61,7 +61,7 @@ export class FilesBar {
   private readonly diffSegment = h('div', { class: 'files-segment', role: 'group', 'aria-label': 'View' }, this.fileButton, this.changesButton, this.layoutButton)
   private readonly previewSegment = h('div', { class: 'files-segment', role: 'group', 'aria-label': 'Preview or source', hidden: true }, this.previewButton, this.sourceButton)
   private readonly done = h('button', { class: 'btn small', type: 'button', id: 'files-edit', hidden: true, 'aria-pressed': 'true', onClick: () => this.hooks.done() }, 'Done')
-  private readonly send = h('button', { class: 'btn small', type: 'button', id: 'files-send', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send to agent', icon(ICONS.chevronDown))
+  private readonly send = h('button', { class: 'btn small', type: 'button', id: 'files-send', 'aria-haspopup': 'menu', 'aria-label': 'Send to agent', title: 'Send to agent', 'aria-expanded': 'false', onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, h('span', { class: 'files-send-full' }, 'Send to agent'), h('span', { class: 'files-send-short' }, 'Send'), icon(ICONS.chevronDown))
   readonly more = h('button', { class: 'icon-btn files-more', type: 'button', id: 'files-more', 'aria-label': 'More actions', title: 'More actions', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: (event: Event) => this.hooks.more(event.currentTarget as HTMLElement) }, icon(ICONS.more))
   private readonly backButton = h('button', { class: 'files-nav', type: 'button', id: 'files-back', 'aria-label': 'Back', title: `Back (${fileHistoryShortcut('back').shortcut})`, disabled: true, onClick: () => this.hooks.back() }, icon(ARROW_LEFT))
   private readonly forwardButton = h('button', { class: 'files-nav', type: 'button', id: 'files-forward', 'aria-label': 'Forward', title: `Forward (${fileHistoryShortcut('forward').shortcut})`, disabled: true, onClick: () => this.hooks.forward() }, icon(ARROW_RIGHT))
@@ -116,7 +116,7 @@ export class FilesBar {
     this.fileButton.setAttribute('aria-pressed', String(!model.changes))
     this.changesButton.setAttribute('aria-pressed', String(model.changes))
     const stat = model.added !== null || model.removed !== null ? ` +${model.added ?? 0} ${minus}${model.removed ?? 0}` : ''
-    this.changesButton.textContent = `Changes${stat}`
+    this.changesButton.replaceChildren('Changes', ...(stat ? [h('span', { class: 'files-seg-stat' }, stat)] : []))
     this.previewSegment.hidden = !model.canPreview || !model.hasSource
     this.previewButton.textContent = model.diagram ? 'Diagram' : 'Preview'
     this.previewButton.setAttribute('aria-pressed', String(model.previewing))

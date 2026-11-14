@@ -70,7 +70,7 @@
 .files-comment-row.sent { opacity: 1; color: var(--text-2); }
 .files-comment-row.sent .files-comment-jump { color: var(--text-2); }
 .cm-review-sent, .cm-review-comment.sent .cm-review-text, .turn-cm-text.sent { color: var(--text-2); }
-.files-review-card-slot { flex: none; }
+.files-review-card-slot { flex: none; max-height: 120px; overflow: auto; }
 .files-comments { max-height: none; }
-.files-comments-list { flex: none; max-height: 96px; }
+.files-comments-list { flex: none; max-height: 72px; }
 .files-pane-review .files-review-list { min-height: 96px; }

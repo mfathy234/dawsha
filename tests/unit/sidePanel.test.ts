@@ -16,7 +16,7 @@ describe('side panel width', () => {
 
   it('narrows the panel on a small window so the session keeps its room', () => {
     expect(fitSidePanelWidth(500, 1400)).toBe(500)
-    expect(fitSidePanelWidth(500, 800)).toBe(380)
+    expect(fitSidePanelWidth(500, 800)).toBe(308)
     expect(fitSidePanelWidth(500, 500)).toBe(MIN_SIDE_PANEL_WIDTH)
   })
 })
