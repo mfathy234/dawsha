@@ -1,0 +1,17 @@
+.wt-setup { width: min(600px, calc(100vw - var(--sp-7))); max-height: calc(100vh - var(--sp-7)); overflow-y: auto; }
+.wt-setup :is(.wt-patterns, .wt-command) { width: 100%; resize: vertical; min-height: 64px; padding: var(--sp-2) var(--sp-3); font-family: var(--font-mono); line-height: 1.5; }
+.wt-commands { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-2); }
+.wt-commands .btn { max-width: 100%; height: auto; min-height: 28px; white-space: normal; overflow-wrap: anywhere; text-align: start; }
+.wt-suggestion { display: flex; flex-direction: column; gap: var(--sp-2); margin: 0 var(--sp-4) var(--sp-3); padding: var(--sp-3); border-radius: var(--r-2); background: var(--well); }
+.wt-suggestion[hidden] { display: none; }
+.wt-suggestion-copy { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; font-size: var(--fs-2); }
+.wt-suggestion-copy strong { font-weight: var(--w-medium); }
+.wt-suggestion-copy span { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wt-suggestion-actions, .wt-new-options { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.wt-new-options { margin: 0 var(--sp-4) var(--sp-2); justify-content: space-between; }
+.wt-new-options label { display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; }
+.wt-problem { color: var(--danger); font-size: var(--fs-2); }
+.wt-problem:empty { display: none; }
+.term-setup-choice { position: absolute; inset-inline: var(--sp-4); bottom: calc(var(--sp-3) - 56px); display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-2); background: var(--overlay); box-shadow: var(--shadow-lift); z-index: 5; }
+.term-setup-text { flex: 1; min-width: 120px; font-size: var(--fs-2); }
+.term-host.has-setup-choice { bottom: 56px; }

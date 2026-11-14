@@ -1,5 +1,9 @@
 import { savePresetFromUi } from '../presetActions'
-import { closeQuickPick, setQuickPickMode, showView, startSession } from '../actions'
+import { closeQuickPick, setQuickPickMode, showView, startSession, startPresetSession } from '../actions'
+import { api } from '../api'
+import { shortId } from '../../shared/compare'
+import { toast } from './toast'
+import { editWorktreeSetup, WorktreeSetupSuggestion } from './worktreeSetup'
 import { AGENTS, AGENT_NAMES } from '../../shared/agents'
 import {
   filterProjects,
@@ -51,6 +55,8 @@ export class QuickPickComponent {
   private viewOverride: ChatView | null = null
   private viewAgent: AgentKind | null = null
   private readonly viewSwitch = new ViewSwitch('Open the session as')
+  private ownWorktree: HTMLInputElement | null = null
+  private setupSuggestion: WorktreeSetupSuggestion | null = null
 
   constructor(private readonly anchor: () => HTMLElement) {}
 
@@ -81,6 +87,8 @@ export class QuickPickComponent {
     this.list = h('div', { class: 'quickpick-list', id: 'quickpick-list', role: 'listbox', 'aria-label': 'Start a session in' })
     this.agents = h('div', { class: 'nd-agents', role: 'radiogroup', 'aria-label': 'Agent' })
     this.start = h('button', { class: 'btn primary nd-start', type: 'button', onClick: () => this.startSelected() }, 'Start')
+    this.ownWorktree = h('input', { type: 'checkbox' })
+    this.setupSuggestion = new WorktreeSetupSuggestion()
     const hint = h(
       'span',
       { class: 'rp-hint' },
@@ -102,6 +110,15 @@ export class QuickPickComponent {
         h('section', { class: 'nd-col' }, h('h3', { class: 'nd-label' }, 'Project'), this.list),
         h('section', { class: 'nd-col nd-agent-col' }, h('h3', { class: 'nd-label' }, 'Agent'), this.agents)
       ),
+      h('div', { class: 'wt-new-options' },
+        h('label', {}, this.ownWorktree, 'Use its own worktree'),
+        h('button', { class: 'btn ghost small', type: 'button', onClick: () => {
+          const project = this.matches[this.selected]
+          if (!project) return
+          closeQuickPick()
+          void editWorktreeSetup(project.id)
+        } }, 'Worktree setup…')),
+      this.setupSuggestion.el,
       h(
         'div',
         { class: 'popover-foot nd-foot' },
@@ -146,6 +163,8 @@ export class QuickPickComponent {
     this.list = null
     this.agents = null
     this.start = null
+    this.ownWorktree = null
+    this.setupSuggestion = null
     if (stillOpen) return
     // A session started from here is the focused pane now: type into it, not the button that opened the pick.
     const pane = this.state?.focusedId !== this.focusedAtOpen ? this.state?.panes.find((p) => p.id === this.state?.focusedId) : undefined
@@ -158,7 +177,19 @@ export class QuickPickComponent {
     const choice = this.matches[this.selected]
     if (!choice) return
     const agent = pickedAgent(choice, this.overrides, this.preset)
-    void startSession(choice.id, agent, undefined, false, undefined, undefined, undefined, this.pickedView(agent))
+    void this.startInProject(choice, agent)
+  }
+
+  private async startInProject(project: Project, agent: AgentKind): Promise<void> {
+    const view = this.pickedView(agent)
+    if (!this.ownWorktree?.checked) {
+      await startSession(project.id, agent, undefined, false, undefined, undefined, undefined, view)
+      return
+    }
+    closeQuickPick()
+    const made = await api.worktreeCreate(project.folder, shortId())
+    if (!made.ok) return toast(made.error)
+    await startPresetSession({ projectId: project.id, agent, prompt: '', worktree: { repo: project.folder, path: made.path, branch: made.branch }, view })
   }
 
   /** Closes the pick first: its outside-click handler would otherwise fight the dialog. */
@@ -167,8 +198,9 @@ export class QuickPickComponent {
     const projectId = choice?.id ?? this.projects[0]?.id
     if (!projectId) return
     const agent = choice ? pickedAgent(choice, this.overrides, this.preset) : 'claude'
+    const worktree = this.ownWorktree?.checked === true
     closeQuickPick()
-    void savePresetFromUi({ name: '', agent, projectId, worktree: false, prompt: '' })
+    void savePresetFromUi({ name: '', agent, projectId, worktree, prompt: '' })
   }
 
   /** Only a session whose agent has a chat view takes the override; the rest start as they always did. */
@@ -188,6 +220,9 @@ export class QuickPickComponent {
     } else if (event.key === 'Enter') {
       event.preventDefault()
       this.startSelected()
+    } else if (event.key === 'Tab' && event.shiftKey) {
+      event.preventDefault()
+      this.ownWorktree?.focus()
     } else if (event.key === 'Tab') {
       event.preventDefault()
       const choice = this.matches[this.selected]
@@ -223,7 +258,7 @@ export class QuickPickComponent {
         h('span', { class: 'option-text' }, h('span', { class: 'option-name' }, project.name), h('span', { class: 'option-path' }, project.folder)),
         h('span', { class: 'option-agent' }, agentMark(agent), AGENT_NAMES[agent])
       )
-      option.addEventListener('click', () => void startSession(project.id, agent, undefined, false, undefined, undefined, undefined, this.pickedView(agent)))
+      option.addEventListener('click', () => void this.startInProject(project, agent))
       option.addEventListener('mousemove', () => {
         if (this.selected === index) return
         this.selected = index
@@ -239,6 +274,7 @@ export class QuickPickComponent {
     if (!this.agents || !this.start) return
     clear(this.agents)
     const project = this.matches[this.selected]
+    this.setupSuggestion?.show(project)
     this.start.disabled = !project
     if (!project) {
       this.start.textContent = 'Start'

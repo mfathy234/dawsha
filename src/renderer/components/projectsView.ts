@@ -18,6 +18,7 @@ import { stateIcon } from './stateIcon'
 import { TasksPanelComponent } from './tasksPanel'
 import { pageHeader } from './pageHeader'
 import './projectsView.css'
+import { editWorktreeSetup } from './worktreeSetup'
 
 const MAC = navigator.platform.toLowerCase().includes('mac')
 const FILE_MANAGER = MAC ? 'Finder' : 'Explorer'
@@ -356,6 +357,7 @@ export class ProjectsViewComponent {
       h('div', { class: 'pv-menu-sep', role: 'separator' }),
       item(`Open in ${FILE_MANAGER}`, () => void api.quickOpen('explorer', project.folder)),
       item('Open a terminal here', () => void startSession(project.id, 'shell')),
+      item('Worktree setup…', () => void editWorktreeSetup(project.id)),
       h('div', { class: 'pv-menu-sep', role: 'separator' }),
       item(`Remove ${project.name}…`, () => void removeProject(project.id), { danger: true })
     )
