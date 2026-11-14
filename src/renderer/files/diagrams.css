@@ -1,0 +1,24 @@
+/* Diagrams share the Files preview surface; PlantUML keeps its own light paper. */
+.diagram-view { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; color: var(--text); background: var(--pane); }
+.diagram-toolbar { display: flex; align-items: center; gap: var(--sp-1); flex: 0 0 auto; min-width: 0; padding: var(--sp-2) var(--sp-3); background: var(--chrome); }
+.diagram-label { flex: 1; min-width: 0; color: var(--muted); font-size: var(--fs-1); }
+.diagram-zoom-value { min-width: 42px; text-align: center; font-size: var(--fs-1); color: var(--muted); font-variant-numeric: tabular-nums; }
+.diagram-toolbar .btn { flex: 0 0 auto; }
+.diagram-stage { flex: 1; min-height: 160px; min-width: 0; overflow: auto; padding: var(--sp-6); background: var(--well); touch-action: pan-x pan-y; }
+.diagram-stage.zoomed { cursor: grab; }
+.diagram-stage.dragging { cursor: grabbing; user-select: none; }
+.diagram-canvas { margin-inline: auto; min-width: 0; border-radius: var(--r-1); overflow: hidden; }
+.diagram-canvas.plantuml { background: #fff; box-shadow: var(--shadow-card); }
+.diagram-image { display: block; max-width: none; height: auto; user-select: none; }
+.diagram-source { margin: 0; padding: var(--sp-4); flex: 1; min-height: 0; overflow: auto; white-space: pre; font: var(--fs-2)/1.6 var(--font-mono); background: var(--well); color: var(--text); }
+.diagram-source[hidden], .diagram-stage[hidden] { display: none; }
+.diagram-source code { padding: 0; background: none; color: inherit; }
+.diagram-setup, .diagram-error { padding: var(--sp-4); color: var(--muted); }
+.diagram-setup p, .diagram-error p { margin: 0 0 var(--sp-3); overflow-wrap: anywhere; white-space: pre-wrap; }
+.diagram-setup a { color: var(--accent); }
+.diagram-error .btn + .btn { margin-inline-start: var(--sp-2); }
+.diagram-notice { margin: 0; padding: var(--sp-2) var(--sp-3); color: var(--muted); font-size: var(--fs-1); }
+.diagram-stage:focus-visible, .diagram-view a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.files-md .diagram-view { margin-block: var(--sp-4); height: 440px; max-height: 70vh; border-radius: var(--r-1); overflow: hidden; }
+.files-md .diagram-image { margin: 0; }
+.diagram-render-host { position: fixed; left: -100000px; top: 0; visibility: hidden; pointer-events: none; }

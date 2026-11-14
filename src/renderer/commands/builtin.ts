@@ -95,6 +95,8 @@ function panelCommand(id: string, title: string, command: FilesCommand, keywords
 // Code navigation keys work only while Files is showing, so Ctrl+Shift+O keeps filtering the sidebar in the grid.
 function filesNavigationCommands(): Command[] {
   return [
+    filesCommand('files.copyDiagram', 'Copy diagram as SVG', 'copy-diagram', {}, 'diagram plantuml mermaid export clipboard svg'),
+    filesCommand('files.saveDiagram', 'Save diagram as…', 'save-diagram', {}, 'diagram plantuml mermaid export image png svg'),
     filesCommand('files.definition', 'Go to Definition', 'definition', functionKey('F12'), 'jump declaration f12'),
     filesCommand('files.implementation', 'Go to Implementation', 'implementation', withKeys('Ctrl+F12'), 'jump implements f12'),
     filesCommand('files.references', 'Find All References', 'references', functionKey('F12', true), 'usages peek f12'),

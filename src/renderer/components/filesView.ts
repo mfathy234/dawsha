@@ -43,6 +43,7 @@ import { BrowserTab } from '../files/browserPane'
 import { ConfigPane } from '../files/configPane'
 import { PrPanel } from '../files/prPanel'
 import { PreviewPane } from '../files/previewPane'
+import { diagramHasIncludes } from '../../shared/diagramDependencies'
 import { commitDialog } from '../files/commitDialog'
 import { locationEntries, sendEntries } from '../files/locationMenu'
 import { editorPrefs, filesLayout, updateEditorPrefs, updateLayout } from '../files/filesPrefs'
@@ -68,7 +69,7 @@ const SESSION_START_WAIT_MS = 15_000
 const SESSION_SETTLE_MS = 3000
 const SESSION_QUIET_MS = 600
 const MENU_WAIT_MS = 150
-const FILE_LIMITS = 'Text files up to 1 MB open here. Images, Markdown and HTML also show as a preview.'
+const FILE_LIMITS = 'Text files up to 1 MB open here. Images, Markdown, HTML and diagrams also show as a preview.'
 
 type CheckoutsRefresh = 'ok' | 'failed' | 'stale'
 
@@ -232,7 +233,12 @@ export class FilesViewComponent {
   private readonly editorSettings = new EditorSettings({ prefs: editorPrefs, change: (next) => this.applyEditorPrefs(updateEditorPrefs(() => next)) })
   private readonly preview = new PreviewPane({
     openBrowser: () => void this.openActiveInBrowser(),
-    openLink: (url) => void api.openExternal(url)
+    openLink: (url) => void api.openExternal(url),
+    source: (line) => {
+      this.setPreview(false)
+      const editor = this.active()?.editor
+      if (line && editor) editor.reveal(editor.posAt(line, 1))
+    }
   })
   private readonly status = h('div', { class: 'files-status', id: 'files-status' })
   private readonly inspector = new Inspector({
@@ -710,6 +716,8 @@ export class FilesViewComponent {
     this.watchTimer = window.setTimeout(() => {
       void this.loadTree()
       this.checkOpenDocs(paths)
+      const doc = this.active()
+      if (doc && this.previewing(doc) && diagramHasIncludes(doc.text())) this.preview.refreshDiagrams()
     }, WATCH_DEBOUNCE_MS)
   }
 
@@ -933,7 +941,8 @@ export class FilesViewComponent {
 
   private runCommand(command: FilesCommand): void {
     if (!this.visible) return
-    if (command === 'toggle-inspector') this.toggleInspector()
+    if (command === 'copy-diagram' || command === 'save-diagram') void this.exportDiagram(this.active()?.path, command === 'save-diagram')
+    else if (command === 'toggle-inspector') this.toggleInspector()
     else if (command === 'toggle-explorer') this.toggleExplorer()
     else if (command === 'definition' || command === 'implementation' || command === 'references') void this.nav.go(command)
     else if (command === 'back') void this.nav.back()
@@ -1262,8 +1271,26 @@ export class FilesViewComponent {
 
   // Right-click menus. Both the tree and the tabs run the same actions on a repo-relative path.
 
+  private async exportDiagram(path: string | undefined, save: boolean): Promise<void> {
+    if (!path) return
+    const doc = await this.openFile(path, { pin: true })
+    if (!doc || this.active() !== doc) return
+    if (doc.changes) await doc.toggleChanges()
+    if (this.active() !== doc) return
+    this.setPreview(true)
+    this.renderAll()
+    if (save) await this.preview.saveDiagram()
+    else await this.preview.copyDiagram()
+  }
+
   private entriesFor(spec: readonly FileMenuEntry[], path: string, kind: 'file' | 'folder'): ContextEntry[] {
-    return spec.map((entry) => (entry === 'separator' ? entry : { label: entry.label, keys: entry.keys, disabled: entry.disabled, run: () => void this.runFileAction(entry.id, path, kind) }))
+    const entries: ContextEntry[] = spec.map((entry) => (entry === 'separator' ? entry : { label: entry.label, keys: entry.keys, disabled: entry.disabled, run: () => void this.runFileAction(entry.id, path, kind) }))
+    if (kind === 'file' && /\.(puml|plantuml|pu|iuml|mmd)$/i.test(path)) {
+      entries.push('separator',
+        { label: 'Copy diagram as SVG', run: () => void this.exportDiagram(path, false) },
+        { label: 'Save diagram as…', run: () => void this.exportDiagram(path, true) })
+    }
+    return entries
   }
 
   private openMenu(spec: readonly FileMenuEntry[], target: TreeTarget, x: number, y: number, returnFocus: HTMLElement): void {
@@ -1450,7 +1477,7 @@ export class FilesViewComponent {
 
   // Typing reports a change per keystroke; the view only redraws when something it shows differs.
   private docChanged(doc: FileDoc): void {
-    const signature = `${doc.path}|${doc.status}|${doc.dirty}|${doc.editing}|${doc.changes}|${doc.conflict}|${doc.gone}|${doc.noRepo}|${doc.deleted}|${doc.stat?.added}|${doc.stat?.removed}|${doc.newFile}|${doc.previewing}|${doc.sideBySide}`
+    const signature = `${doc.path}|${doc.status}|${doc.mtimeMs}|${doc.dirty}|${doc.editing}|${doc.changes}|${doc.conflict}|${doc.gone}|${doc.noRepo}|${doc.deleted}|${doc.stat?.added}|${doc.stat?.removed}|${doc.newFile}|${doc.previewing}|${doc.sideBySide}`
     if (this.lastSignature.get(doc) === signature) return
     this.lastSignature.set(doc, signature)
     if (doc !== this.active()) this.renderTabs()
@@ -1535,6 +1562,7 @@ export class FilesViewComponent {
       editing: doc?.editing ?? false,
       canPreview: !!doc && doc.canPreview,
       previewing: (doc?.previewing ?? false) && !doc?.changes,
+      diagram: doc?.previewKind === 'plantuml' || doc?.previewKind === 'mermaid',
       hasSource: ready,
       inspectorOpen: filesLayout().inspector.open,
       inspectorFits: this.fits.matches,
