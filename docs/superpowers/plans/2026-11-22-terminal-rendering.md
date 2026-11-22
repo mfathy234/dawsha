@@ -12,13 +12,15 @@
 - [x] Add failing tests for mixed emoji/checkmark/CJK columns, non-Latin combining marks, headless cursor placement and prompt cell mapping.
 - [x] Load Unicode 11 in every terminal and measure strings using its provider.
 - [x] Check prompt scraping and Arabic overlays for independent column calculations.
-- [ ] Run focused unit tests and commit `fix: align terminal character widths with Unicode 11`.
+- [x] Run focused unit tests and commit `fix: align terminal character widths with Unicode 11`.
 
 ### 2. Inline images
-- [ ] Add failing tests for defaults, sanitization, persistence, transfer and settings search.
-- [ ] Add bounded live-terminal image support and a live setting under Terminal rendering.
-- [ ] Verify image disposal and image survival across WebGL replacement with Electron tests.
-- [ ] Run focused tests and commit `feat: show bounded inline terminal images`.
+- [x] Add failing tests for defaults, sanitization, persistence, transfer and settings search.
+- [x] Add bounded live-terminal image support and a live setting under Terminal rendering.
+- [x] Verify image disposal and image survival across WebGL replacement with Electron tests.
+- [x] Run focused tests and commit `feat: show bounded inline terminal images`.
+
+The Electron test caught the SIXEL decoder being blocked by CSP. The desktop page now permits `wasm-unsafe-eval` specifically; JavaScript evaluation stays blocked. Sleep testing simulates document backgrounding without PTY resizing, because Windows redraws real console output over renderer-injected fixtures on resize.
 
 ### 3. Ligatures
 - [ ] Add failing tests for the off default, round-trip settings and live toggling.

@@ -1057,6 +1057,11 @@ export function setSleepHiddenTerminals(sleepHiddenTerminals: boolean): void {
   void saveSettings({ sleepHiddenTerminals })
 }
 
+export function setShowTerminalImages(showTerminalImages: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, showTerminalImages } }))
+  void saveSettings({ showTerminalImages })
+}
+
 export function setDimOtherPanes(dimOtherPanes: boolean): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, dimOtherPanes } }))
   void saveSettings({ dimOtherPanes })

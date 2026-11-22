@@ -31,6 +31,7 @@ export const INCLUDED_KEYS = [
   'dimOtherPanes',
   'showRecap',
   'sleepHiddenTerminals',
+  'showTerminalImages',
   'colorSessionsByTag',
   'sidebarWidth',
   'othersCollapsed',
@@ -159,7 +160,7 @@ const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
 const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew', 'appearance'] as const
-const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits'] as const
+const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'showTerminalImages', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits'] as const
 
 function checkShapes(data: Raw): string | null {
   for (const key of LIST_KEYS) {
@@ -279,6 +280,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['dimOtherPanes', 'Dim others'],
   ['showRecap', 'Session recap'],
   ['sleepHiddenTerminals', 'Sleep hidden terminals'],
+  ['showTerminalImages', 'Show images in the terminal'],
   ['colorSessionsByTag', 'Tag colours'],
   ['sidebarWidth', 'Sidebar'],
   ['sidePanel', 'Side panel'],

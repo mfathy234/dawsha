@@ -19,6 +19,7 @@ import {
   setFocusMovesSelected,
   setShowRecap,
   setSleepHiddenTerminals,
+  setShowTerminalImages,
   setSidebarCollapsed,
   showSettingsSection,
   showView,
@@ -210,6 +211,7 @@ export class SettingsViewComponent {
       state.settings.highlights,
       state.settings.recordings,
       state.settings.sleepHiddenTerminals,
+      state.settings.showTerminalImages,
       this.search.value,
       this.changelogOpen,
       this.remoteAccess,
@@ -569,6 +571,7 @@ export class SettingsViewComponent {
       row('Tag colours', checkbox('color-sessions-by-tag', 'Colour sessions by their tag (bug, feature, ...)', state.settings.colorSessionsByTag, false, setColorSessionsByTag), h('p', { class: 'hint' }, 'Use a tag colour on each session pane.')),
       row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
       row('Terminal rendering', checkbox('sleep-hidden-terminals', 'Sleep hidden terminals', state.settings.sleepHiddenTerminals, false, setSleepHiddenTerminals), h('p', { class: 'hint' }, 'Release WebGL rendering after a hidden terminal has been out of view for 10 minutes.')),
+      row('Show images in the terminal', checkbox('show-terminal-images', 'Show images in the terminal', state.settings.showTerminalImages, false, setShowTerminalImages), h('p', { class: 'hint' }, 'Display inline images; keep up to 32 MB per terminal.')),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),
       row(
         'Getting started',

@@ -58,7 +58,8 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     fileLinks: fileLinkHost(id),
     highlights: highlightHost(),
     textOrder: () => textOrderFor(tabAgent(id)),
-    sleepingEnabled: () => store.state.settings.sleepHiddenTerminals
+    sleepingEnabled: () => store.state.settings.sleepHiddenTerminals,
+    imagesEnabled: () => store.state.settings.showTerminalImages
   })
   views.set(id, view)
   void api.getTerminalSetup(id).then((state) => showSetup(id, state)).catch(() => undefined)
@@ -67,6 +68,12 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
 }
 
 watchHighlights(() => views.values())
+let lastImages = store.state.settings.showTerminalImages
+store.subscribe((state) => {
+  if (state.settings.showTerminalImages === lastImages) return
+  lastImages = state.settings.showTerminalImages
+  for (const view of views.values()) view.refreshRendering()
+})
 setInterval(() => { for (const view of views.values()) view.updateRenderer() }, 15_000)
 document.addEventListener('visibilitychange', () => {
   for (const view of views.values()) view.refreshVisibility()

@@ -14,6 +14,7 @@ import { TerminalArabic } from './terminalArabic'
 import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
 import { registerFileLinks, type FileLinkHost, type FileLinks } from './terminalLinks'
 import { TerminalSearch } from './terminalSearch'
+import { TerminalRendering } from './terminalRendering'
 import type { ThemeBundle } from './themeManager'
 import { TERMINAL_FONT } from './terminalFont'
 import { terminalShouldSleep } from '../shared/terminalSleep'
@@ -37,6 +38,7 @@ export interface TerminalCallbacks {
   /** How the program in this terminal writes right-to-left text. */
   textOrder(): TextOrder
   sleepingEnabled(): boolean
+  imagesEnabled(): boolean
 }
 
 export class TerminalView {
@@ -45,6 +47,7 @@ export class TerminalView {
   private readonly fitAddon = new FitAddon()
   private readonly observer: ResizeObserver
   private readonly search: TerminalSearch
+  private readonly rendering: TerminalRendering
   readonly prompts: TerminalPrompts
   private readonly promptSelection: PromptSelection
   private readonly highlights: TerminalHighlights
@@ -82,6 +85,8 @@ export class TerminalView {
       minimumContrastRatio: bundle.minimumContrastRatio
     })
     loadTerminalUnicode(this.term)
+    this.rendering = new TerminalRendering(this.term)
+    this.refreshRendering()
     this.term.loadAddon(this.fitAddon)
     this.term.loadAddon(new WebLinksAddon((event, uri) => this.handleLink(event, uri)))
     this.fileLinks = registerFileLinks(this.term, callbacks.fileLinks)
@@ -115,6 +120,10 @@ export class TerminalView {
 
   refreshHighlights(): void {
     this.highlights.refresh()
+  }
+
+  refreshRendering(): void {
+    this.rendering.setImages(this.callbacks.imagesEnabled())
   }
 
   openSearch(): void {

@@ -19,6 +19,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
     'Tag colours colour sessions by their tag',
     'Recap one-line summary below the title',
     'Terminal rendering sleep hidden terminals WebGL',
+    'Show images in the terminal inline sixel iTerm IIP',
     'Sidebar start with the sidebar collapsed',
     'Getting started setup guide',
     'Recordings'

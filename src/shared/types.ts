@@ -208,6 +208,7 @@ export interface Settings {
   dimOtherPanes: boolean
   showRecap: boolean
   sleepHiddenTerminals: boolean
+  showTerminalImages: boolean
   /** How a new session of each agent opens: as its terminal or as a chat drawn from its log. */
   sessionViews: SessionViews
   /** The view each session was last left in, by agent and session id, so a resume opens the same way. */
