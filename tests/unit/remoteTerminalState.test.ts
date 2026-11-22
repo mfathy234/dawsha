@@ -2,6 +2,16 @@ import { describe, expect, it, vi } from 'vitest'
 import { RemoteTerminalState } from '../../src/main/remoteTerminalState'
 
 describe('remote terminal state', () => {
+  it('overwrites mixed emoji, checkmark and CJK text at Unicode 11 columns', async () => {
+    const state = new RemoteTerminalState()
+    state.add('widths', 10, undefined, { cols: 20, rows: 2 })
+    try {
+      state.append('widths', '😀✔日本!\x1b[1;8HX')
+      expect((await state.tail('widths'))?.split('\n')[0]).toBe('😀✔日本X')
+    } finally {
+      state.remove('widths')
+    }
+  })
   it('reports the PTY size and drops terminals when they are removed', () => {
     const state = new RemoteTerminalState()
     state.add('a', 10, { projectId: 'p1', agent: 'codex' }, { cols: 120, rows: 40 })

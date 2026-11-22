@@ -1,5 +1,6 @@
 import { Terminal } from '@xterm/headless'
 import { SerializeAddon } from '@xterm/addon-serialize'
+import { loadTerminalUnicode } from '../shared/terminalUnicode'
 import type { TabAgent } from '../shared/types'
 
 export interface RemoteTerminalSnapshot {
@@ -50,6 +51,7 @@ export class RemoteTerminalState {
     const cols = Math.max(2, Math.floor(size.cols))
     const rows = Math.max(1, Math.floor(size.rows))
     const screen = new Terminal({ cols, rows, scrollback: this.scrollback, allowProposedApi: true })
+    loadTerminalUnicode(screen)
     const serializer = new SerializeAddon()
     screen.loadAddon(serializer)
     this.terminals.set(id, { id, startedAt, projectId: metadata.projectId, agent: metadata.agent, remoteManaged: metadata.remoteManaged, cols, rows, screen, serializer, listeners: new Set() })

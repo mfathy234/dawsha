@@ -2,6 +2,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
+import { loadTerminalUnicode } from '../shared/terminalUnicode'
 import type { TextOrder } from '../shared/arabicRows'
 import { logicalText, visualFromLogical } from '../shared/visualOrder'
 import { insertionData } from '../shared/insertText'
@@ -80,6 +81,7 @@ export class TerminalView {
       theme: bundle.xterm,
       minimumContrastRatio: bundle.minimumContrastRatio
     })
+    loadTerminalUnicode(this.term)
     this.term.loadAddon(this.fitAddon)
     this.term.loadAddon(new WebLinksAddon((event, uri) => this.handleLink(event, uri)))
     this.fileLinks = registerFileLinks(this.term, callbacks.fileLinks)

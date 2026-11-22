@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { promptLayout, shrinkSelection, wordStartBefore } from '../../src/shared/promptLayout'
 
 describe('promptLayout', () => {
+  it('maps UTF-16 indexes after emoji and combining marks to terminal columns', () => {
+    const layout = promptLayout(['› 😀✔日ب\u064eX'], 30)!
+    expect(layout.cells[layout.text.indexOf('X')]).toEqual({ row: 0, col: 8 })
+    expect(layout.cells[1]).toEqual(layout.cells[0])
+  })
   it('finds a Claude Code prompt between rules and maps each character to its cell', () => {
     const rows = ['some output', '─────────────', '> fix the login bug', '─────────────', '  ? for shortcuts']
     const layout = promptLayout(rows, 40)!
