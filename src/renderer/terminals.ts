@@ -59,7 +59,8 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     highlights: highlightHost(),
     textOrder: () => textOrderFor(tabAgent(id)),
     sleepingEnabled: () => store.state.settings.sleepHiddenTerminals,
-    imagesEnabled: () => store.state.settings.showTerminalImages
+    imagesEnabled: () => store.state.settings.showTerminalImages,
+    ligaturesEnabled: () => store.state.settings.fontLigatures
   })
   views.set(id, view)
   void api.getTerminalSetup(id).then((state) => showSetup(id, state)).catch(() => undefined)
@@ -69,9 +70,11 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
 
 watchHighlights(() => views.values())
 let lastImages = store.state.settings.showTerminalImages
+let lastLigatures = store.state.settings.fontLigatures
 store.subscribe((state) => {
-  if (state.settings.showTerminalImages === lastImages) return
+  if (state.settings.showTerminalImages === lastImages && state.settings.fontLigatures === lastLigatures) return
   lastImages = state.settings.showTerminalImages
+  lastLigatures = state.settings.fontLigatures
   for (const view of views.values()) view.refreshRendering()
 })
 setInterval(() => { for (const view of views.values()) view.updateRenderer() }, 15_000)

@@ -32,8 +32,10 @@ test('terminal images decode, toggle live and survive renderer sleep at 1024px',
     await feedTerminal(page, id, '\x1b[2J\x1b[H😀✔日本!\x1b[1;8HX\r\n' + SIXEL)
     await expect.poll(() => bufferText(page, id)).toContain('😀✔日本X')
     await expect.poll(() => redImagePixels(page)).toBeGreaterThan(0)
+    const imagePixels = await redImagePixels(page)
 
     await openSettings(page)
+    await page.getByRole('switch', { name: 'Font ligatures', exact: true }).click()
     const toggle = page.getByRole('switch', { name: 'Show images in the terminal', exact: true })
     await expect(toggle).toHaveAttribute('aria-checked', 'true')
     const label = page.locator('.set-name', { hasText: 'Show images in the terminal' })
@@ -43,7 +45,7 @@ test('terminal images decode, toggle live and survive renderer sleep at 1024px',
       return range.getClientRects().length
     })).toBe(1)
     await toggle.click()
-    await expect(page.locator('.xterm-image-layer')).toHaveCount(0)
+    await expect.poll(() => redImagePixels(page)).toBe(0)
     await closeSettings(page)
     await feedTerminal(page, id, SIXEL + 'images-disabled')
     await expect.poll(() => bufferText(page, id)).toContain('images-disabled')
@@ -52,8 +54,8 @@ test('terminal images decode, toggle live and survive renderer sleep at 1024px',
     await openSettings(page)
     await toggle.click()
     await closeSettings(page)
-    await feedTerminal(page, id, '\x1b[2J\x1b[H' + SIXEL)
-    await expect.poll(() => redImagePixels(page)).toBeGreaterThan(0)
+    await feedTerminal(page, id, SIXEL)
+    await expect.poll(() => redImagePixels(page)).toBe(imagePixels)
     const renderer = page.locator(`.term-host[data-term-id="${id}"] .xterm-screen canvas:not(.xterm-image-layer)`)
     await expect(renderer).not.toHaveCount(0)
     await page.clock.install()
@@ -69,11 +71,38 @@ test('terminal images decode, toggle live and survive renderer sleep at 1024px',
       document.dispatchEvent(new Event('visibilitychange'))
     })
     await page.clock.runFor(100)
-    await expect.poll(() => redImagePixels(page)).toBeGreaterThan(0)
+    await expect.poll(() => redImagePixels(page)).toBe(imagePixels)
     await expect(renderer).not.toHaveCount(0)
+    const iip = await page.evaluate(() => {
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = 16
+      const context = canvas.getContext('2d')!
+      context.fillStyle = '#ff0000'
+      context.fillRect(0, 0, 16, 16)
+      const base64 = canvas.toDataURL('image/png').split(',')[1]
+      return `\x1b]1337;File=inline=1;size=${atob(base64).length};width=16px;height=16px:${base64}\x07\r\n`
+    })
+    await feedTerminal(page, id, '\x1b[2J\x1b[H' + iip)
+    await page.clock.runFor(100)
+    await expect.poll(() => redImagePixels(page)).toBe(16 * 16)
+    await expect(page.locator(`.term-host[data-term-id="${id}"] .xterm`)).toHaveCSS('font-feature-settings', '"calt", "liga"')
     expect(errors).toEqual([])
   } finally {
     await test.info().attach('renderer-errors', { body: JSON.stringify(errors), contentType: 'application/json' })
+    await closeApp(app)
+  }
+})
+
+test('malformed sixel dimensions cannot freeze the terminal', async () => {
+  const { app, page } = await launchApp(createSandbox())
+  try {
+    await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
+    const id = (await page.locator('.term-host.active').getAttribute('data-term-id'))!
+    await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/>\s*$/m)
+    await feedTerminal(page, id, '\x1bPq"1;1;0;2147')
+    await feedTerminal(page, id, '483647?\x1b\\\r\n' + '\x1bPq' + '-'.repeat(683) + '\x1b\\\r\nstill-responsive')
+    await expect.poll(() => bufferText(page, id)).toContain('still-responsive')
+  } finally {
     await closeApp(app)
   }
 })

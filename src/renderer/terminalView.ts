@@ -39,6 +39,7 @@ export interface TerminalCallbacks {
   textOrder(): TextOrder
   sleepingEnabled(): boolean
   imagesEnabled(): boolean
+  ligaturesEnabled(): boolean
 }
 
 export class TerminalView {
@@ -124,6 +125,7 @@ export class TerminalView {
 
   refreshRendering(): void {
     this.rendering.setImages(this.callbacks.imagesEnabled())
+    this.rendering.setLigatures(this.callbacks.ligaturesEnabled())
   }
 
   openSearch(): void {
@@ -148,6 +150,7 @@ export class TerminalView {
     if (this.opened) return
     this.opened = true
     this.term.open(this.el)
+    this.refreshRendering()
     this.loadWebgl()
     this.arabic.attach()
     this.arabic.setTheme(this.bundleTerm)
@@ -370,6 +373,7 @@ export class TerminalView {
     this.prompts.dispose()
     this.highlights.dispose()
     this.arabic.dispose()
+    this.rendering.dispose()
     this.term.dispose()
     this.el.remove()
   }

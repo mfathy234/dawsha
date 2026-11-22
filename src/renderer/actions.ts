@@ -1062,6 +1062,11 @@ export function setShowTerminalImages(showTerminalImages: boolean): void {
   void saveSettings({ showTerminalImages })
 }
 
+export function setFontLigatures(fontLigatures: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, fontLigatures } }))
+  void saveSettings({ fontLigatures })
+}
+
 export function setDimOtherPanes(dimOtherPanes: boolean): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, dimOtherPanes } }))
   void saveSettings({ dimOtherPanes })

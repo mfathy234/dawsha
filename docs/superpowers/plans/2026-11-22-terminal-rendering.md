@@ -22,11 +22,22 @@
 
 The Electron test caught the SIXEL decoder being blocked by CSP. The desktop page now permits `wasm-unsafe-eval` specifically; JavaScript evaluation stays blocked. Sleep testing simulates document backgrounding without PTY resizing, because Windows redraws real console output over renderer-injected fixtures on resize.
 
+Review also found stale image IDs across reactivation, cache growth on zoom and excessive cursor advancement for malformed zero-width sixel rasters. A retained addon, post-render cache enforcement, and a bounded public DCS finalization guard address these. Unit and Electron tests cover malformed dimensions, implicit height and split writes.
+
 ### 3. Ligatures
-- [ ] Add failing tests for the off default, round-trip settings and live toggling.
-- [ ] Load the browser-compatible ligature addon after terminal open, enable contextual ligatures, refresh immediately on toggles and WebGL replacement.
-- [ ] Verify 1024px layout, browser isolation and renderer transitions in Electron.
-- [ ] Remove unused grapheme package using package-lock-only uninstall.
-- [ ] Run relevant unit tests, typecheck, build and nearby Electron tests; review the final diff and commit `feat: toggle terminal font ligatures live`.
+- [x] Add failing tests for the off default, round-trip settings and live toggling.
+- [x] Load the browser-compatible ligature addon after terminal open, enable contextual ligatures, refresh immediately on toggles and WebGL replacement.
+- [x] Verify 1024px layout, browser isolation and renderer transitions in Electron.
+- [x] Remove unused grapheme package using package-lock-only uninstall.
+- [x] Run relevant unit tests, typecheck, build and nearby Electron tests; review the final diff and commit `feat: add live terminal font ligatures`.
 
 **Review focus:** Mixed-width overwrite and wrapping; Arabic combining marks; images disabled during output; image state across hidden renderer sleep; toggles before terminal mount and after renderer replacement. Browser tests use temporary profiles. No realpathSync calls without `.native`.
+
+## Verification
+
+- Focused rendering/settings/width unit tests: passed, including real headless cell widths and real ligature fallback ranges.
+- Full unit suite with `--maxWorkers=4`: 347 files passed; 3,572 tests passed, 5 skipped. The unrestricted run first hit two timing-sensitive code-navigation failures; both passed isolated and in this final full run.
+- `npm run typecheck`: passed. `npm run build` and subsequent final `electron-vite build`: passed.
+- Electron terminal actions, image rendering, ligatures, settings navigation/transfer, replay and Arabic specs: passed. The final terminal batch also covers light-theme DOM joining, sixel/IIP, WebGL sleep/wake, 1024px labels and malformed sixel split writes.
+- New/modified tests contain no `realpathSync(` calls. Final diff checked and reviewed; defensive security review passed after the sixel guard was added.
+- Package audit reported 12 existing advisories (8 moderate, 2 high, 2 critical); no dependency versions were upgraded. The critical findings are in the existing Vitest/tinypool test tooling; high findings include Electron and undici. Dependency remediation is outside these rendering items.
