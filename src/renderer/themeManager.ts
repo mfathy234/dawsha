@@ -123,8 +123,6 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
     '--danger-fill': app.danger,
     '--on-danger-fill': app.onDanger,
     '--scrim': light ? 'rgb(21 27 35 / .38)' : 'rgb(5 7 10 / .62)',
-    '--e1': `0 1px 2px rgb(var(--shadow-rgb) / .22), 0 0 0 1px var(--line)`,
-    '--e2': `0 8px 24px rgb(var(--shadow-rgb) / .32), 0 0 0 1px var(--line-strong)`,
     '--e3': `0 24px 64px rgb(var(--shadow-rgb) / .46), 0 0 0 1px var(--line-strong)`
   }
   for (const [variable, value] of Object.entries(semantic)) root.style.setProperty(variable, value)

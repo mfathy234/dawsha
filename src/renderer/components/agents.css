@@ -109,7 +109,7 @@
 }
 
 .crew-nm b {
-  font-weight: 500;
+  font-weight: var(--w-medium);
 }
 
 .crew-role {
@@ -203,7 +203,7 @@
 }
 
 .crew-card-plus {
-  font-size: 22px;
+  font-size: var(--fs-4);
   line-height: 1;
   color: var(--muted);
 }
@@ -247,7 +247,7 @@
 
 .crew-live-line {
   margin: 0;
-  font-weight: 600;
+  font-weight: var(--w-medium);
 }
 
 .crew-live-line::before {
@@ -265,9 +265,6 @@
   50% { opacity: .35; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .crew-live-line::before { animation: none; }
-}
 
 .crew-roster > .crew-goals .crew-goalbox {
   display: flex;
@@ -290,7 +287,7 @@
   margin: 0;
   font-size: var(--fs-3);
   line-height: var(--lh-3);
-  font-weight: 600;
+  font-weight: var(--w-medium);
 }
 
 .crew-roster > .crew-goals,

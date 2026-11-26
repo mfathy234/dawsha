@@ -1,10 +1,10 @@
 .topbar > * { flex-shrink: 0; }
 .topbar > .spacer { flex: 1 1 0; min-width: 0; }
 .sum-chip { display: inline-flex; align-items: center; gap: var(--s-1); border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--fs-ui); white-space: nowrap; }
-.sum-needs { height: 28px; padding: 0 var(--s-2); border-radius: var(--r-control); color: var(--needs-ink); font-weight: 500; cursor: pointer; }
+.sum-needs { height: 28px; padding: 0 var(--s-2); border-radius: var(--r-control); color: var(--needs-ink); font-weight: var(--w-medium); cursor: pointer; }
 .sum-needs:hover { background: var(--hover); }
 .sum-needs:active { background: var(--press); }
-.sum-needs .kbd { margin-left: var(--s-2); border-color: var(--line); background: transparent; color: var(--muted); font-weight: 400; }
+.sum-needs .kbd { margin-left: var(--s-2); border-color: var(--line); background: transparent; color: var(--muted); font-weight: var(--w-regular); }
 
 /* Account limits: one pill; the rings themselves are styled in topbarTools.css. */
 .topbar-limits { display: inline-flex; align-items: center; gap: var(--s-3); min-height: 32px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; font-family: inherit; color: var(--muted); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; cursor: pointer; }
@@ -14,10 +14,10 @@
 .topbar-limits:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .topbar-limits[aria-expanded='true'] { background: var(--raised); }
 .limits-popover { width: 340px; max-width: calc(100vw - 24px); padding: var(--s-3) var(--s-4) var(--s-2); display: flex; flex-direction: column; gap: var(--s-4); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; }
-.limits-popover .popover-title { margin: 0; font-weight: 500; font-size: var(--fs-body); }
+.limits-popover .popover-title { margin: 0; font-weight: var(--w-medium); font-size: var(--fs-body); }
 .limits-agent-block { display: flex; flex-direction: column; gap: var(--s-1); }
 .limits-agent-head { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
-.limits-agent-title { font-weight: 500; white-space: nowrap; }
+.limits-agent-title { font-weight: var(--w-medium); white-space: nowrap; }
 .limits-focused { flex: none; color: var(--accent); font-size: var(--fs-status); }
 .limits-agent-age { flex: none; margin-inline-start: auto; min-width: 0; color: var(--muted); font-size: var(--fs-status); text-align: end; white-space: nowrap; }
 .limits-account { padding-inline-start: var(--s-5); color: var(--muted); font-size: var(--fs-status); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -27,18 +27,18 @@
 .limits-row { display: grid; grid-template-columns: 84px auto 44px 1fr; align-items: center; gap: var(--s-2); padding-inline-start: var(--s-5); color: var(--muted); }
 .limits-row .charge { height: auto; margin: 0; padding: 1.5px; gap: 2px; }
 .limits-row .charge::after { display: none; }
-.limits-row .charge i { width: 6px; height: 10px; border-radius: 1.5px; }
-.limits-row-label { font-weight: 500; color: var(--text); }
+.limits-row .charge i { width: 6px; height: 10px; border-radius: 1.var(--r-micro); }
+.limits-row-label { font-weight: var(--w-medium); color: var(--text); }
 .limits-row-value { text-align: end; color: var(--text); }
 .limits-row-reset { font-size: var(--fs-status); white-space: nowrap; }
 .limits-popover .popover-foot.limits-foot { display: flex; justify-content: flex-end; margin: 0; padding: 0; box-shadow: none; font-size: var(--fs-ui); }
 .limits-foot .limits-usage-link { color: var(--accent); }
 
 .layout-switch { display: flex; align-items: center; gap: 2px; }
-.layout-switch .btn { height: 28px; padding: 0 var(--s-3); border: 0; border-radius: var(--r-control); background: transparent; color: var(--muted); font-weight: 500; }
+.layout-switch .btn { height: 28px; padding: 0 var(--s-3); border: 0; border-radius: var(--r-control); background: transparent; color: var(--muted); font-weight: var(--w-medium); }
 .layout-switch .btn:hover { color: var(--text); background: var(--hover); }
 .layout-switch .btn:active { background: var(--press); }
-.layout-switch .btn[aria-pressed='true'] { background: var(--raised); box-shadow: var(--sel-ring); color: var(--text); font-weight: 500; }
+.layout-switch .btn[aria-pressed='true'] { background: var(--raised); box-shadow: var(--sel-ring); color: var(--text); font-weight: var(--w-medium); }
 
 .count-badge { display: inline-block; margin-left: var(--s-2); color: var(--muted); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; }
 .count-badge[hidden] { display: none; }

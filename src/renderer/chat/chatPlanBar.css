@@ -33,7 +33,7 @@
   flex: none;
   width: 56px;
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--r-micro);
   background: var(--press);
   overflow: hidden;
 }
@@ -72,6 +72,3 @@
 /* Done items are just quiet, not struck through. */
 .plan-list .chat-todos .todo.completed .txt { text-decoration: none; }
 
-@media (prefers-reduced-motion: reduce) {
-  .plan-bar { transition: none; }
-}

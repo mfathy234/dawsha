@@ -21,13 +21,13 @@
 .link-quiet:active { background: var(--press); }
 .link-quiet:disabled { opacity: .5; cursor: default; text-decoration: none; }
 
-.btn-hint { margin-inline-start: var(--s-2); font-size: var(--fs-status); font-weight: 400; opacity: .7; }
+.btn-hint { margin-inline-start: var(--s-2); font-size: var(--fs-status); font-weight: var(--w-regular); opacity: .7; }
 
 /* One checkbox and radio skin. The generic input rule in styles.css gives every field a 32px min-height, so this skin resets its own size. */
 input[type='checkbox'],
 input[type='radio'] {
   appearance: none; position: relative; flex: none; box-sizing: border-box; width: 16px; height: 16px; min-width: 16px; min-height: 16px;
-  margin: 0; padding: 0; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--well); cursor: pointer;
+  margin: 0; padding: 0; border: 1px solid var(--line-strong); border-radius: var(--r-micro); background: var(--well); cursor: pointer;
   transition: background-color var(--t-feedback) var(--ease-out), border-color var(--t-feedback) var(--ease-out);
 }
 input[type='radio'] { border-radius: 50%; }
@@ -47,6 +47,3 @@ input[type='radio']:checked::before { content: ''; position: absolute; inset: 3p
 input[type='checkbox']:disabled,
 input[type='radio']:disabled { opacity: .5; cursor: not-allowed; }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
-}

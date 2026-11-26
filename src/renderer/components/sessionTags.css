@@ -23,7 +23,7 @@
 .tag-word {
   flex: none;
   color: var(--tag);
-  font-weight: 400;
+  font-weight: var(--w-regular);
   white-space: nowrap;
 }
 

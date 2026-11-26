@@ -5,7 +5,7 @@
   padding: 0 0 var(--sp-2);
   gap: 0;
   border-left: 0;
-  border-radius: var(--r-card, 14px);
+  border-radius: var(--r-card, var(--r-pop));
   background: var(--surface);
   box-shadow: var(--ring), var(--shadow-hairline);
   overflow: hidden;
@@ -38,7 +38,7 @@
 .others-panel .others-card {
   gap: 6px;
   padding: 10px 10px 8px;
-  border-radius: 10px;
+  border-radius: var(--r-control);
   background: transparent;
   box-shadow: none;
 }
@@ -57,7 +57,7 @@
 .others-panel .others-preview {
   margin-inline-start: 26px;
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: var(--r-control);
   background: var(--well);
   color: var(--text-2);
   font-size: var(--fs-12, 12px);

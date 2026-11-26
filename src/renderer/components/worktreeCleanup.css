@@ -7,7 +7,7 @@
   align-items: center;
   gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-1);
+  border-radius: var(--r-control);
   font-size: var(--fs-2);
   cursor: pointer;
 }

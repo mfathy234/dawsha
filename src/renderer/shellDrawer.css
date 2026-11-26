@@ -9,4 +9,3 @@
 .terminal-progress[data-state='3'] i { opacity: .5; }
 .terminal-progress[data-state='2'] i, .terminal-progress[data-state='4'] i { background: var(--muted); }
 @keyframes shell-enter { from { opacity: 0; transform: translateY(var(--s-2)); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { .shell-drawer { animation: none; } }

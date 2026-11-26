@@ -6,7 +6,6 @@
 .chat-msg-acts .chat-text-btn { font-size: var(--fs-1); }
 .chat-msg-acts .chat-text-btn:disabled { color: var(--text-3); cursor: default; }
 .chat-msg-acts .chat-text-btn:focus-visible, .chat-rewind-mark .chat-text-btn:focus-visible, .chat-tried .chat-text-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-micro); }
-@media (prefers-reduced-motion: reduce) { .chat-msg-acts { transition: none; } }
 
 .chat-undone { opacity: .45; }
 .chat-rewind-mark { display: flex; align-items: center; gap: var(--sp-3); color: var(--text-2); font-size: var(--fs-1); }

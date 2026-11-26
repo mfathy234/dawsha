@@ -65,7 +65,7 @@
   display: inline-block;
   width: 36px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--r-micro);
   background: var(--press);
   overflow: hidden;
 }

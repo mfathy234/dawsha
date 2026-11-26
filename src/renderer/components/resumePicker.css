@@ -20,10 +20,10 @@
 :root .rp-chip { position: relative; height: 28px; padding: 0 var(--s-2); gap: 6px; background: transparent; box-shadow: none; color: var(--text-2); }
 :root .rp-chip:hover { background: var(--hover); color: var(--text); }
 :root .rp-chip.selected,
-:root .rp-chip[aria-pressed='true'] { background: transparent; box-shadow: none; color: var(--text); font-weight: 500; }
+:root .rp-chip[aria-pressed='true'] { background: transparent; box-shadow: none; color: var(--text); font-weight: var(--w-medium); }
 :root .rp-chip.selected:hover { background: var(--hover); }
 :root .rp-chip.selected::after {
-  content: ''; position: absolute; inset-inline: 8px; bottom: 1px; height: 2px; border-radius: 2px; background: var(--accent-ink, var(--accent));
+  content: ''; position: absolute; inset-inline: 8px; bottom: 1px; height: 2px; border-radius: var(--r-micro); background: var(--accent-ink, var(--accent));
   pointer-events: none;
 }
 
@@ -59,5 +59,5 @@
 :root .rp-reopen:hover,
 :root .rp-clear:hover { color: var(--text); }
 :root .rp-reopen:focus-visible,
-:root .rp-clear:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 2px; }
+:root .rp-clear:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--r-micro); }
 :root .rp-foot .rp-clear { margin-inline-start: var(--s-4); }
