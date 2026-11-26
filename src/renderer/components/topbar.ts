@@ -55,6 +55,8 @@ const NARROW_QUERY = '(max-width: 1099px)'
 const NEEDS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+J'))
 const AGENTS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+L'))
 const FILES_KEY_HINT = formatShortcut(bind('Ctrl+Shift+E'))
+const SESSIONS_KEY_HINT = formatShortcut(bind('Ctrl+Shift+S'))
+const WORK_KEY_HINT = formatShortcut(bind('Ctrl+Shift+W'))
 
 /** The parts of the top bar that the Sidebar frame hosts in the sidebar. */
 export interface FrameParts {
@@ -107,12 +109,12 @@ export class TopBarComponent {
     h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, icon(ICONS.palette)),
     h('span', { class: 'utility-label' }, 'Theme')
   )
-  private readonly sessions = navButton('sessions-button', 'Sessions', ICONS.terminal, null, () => showView('grid'))
+  private readonly sessions = navButton('sessions-button', 'Sessions', ICONS.terminal, SESSIONS_KEY_HINT, () => showView('grid'))
   private readonly background = navButton('background-button', 'Agents', ICONS.navAgents, AGENTS_KEY_HINT, () => showView(this.background.getAttribute('aria-pressed') === 'true' ? 'grid' : 'crew'))
   private readonly crewStrip = h('div', { class: 'crew-strip', id: 'crew-strip', role: 'group', 'aria-label': 'Who is on a job', hidden: true })
   private crewStripSignature = ''
   private readonly files = navButton('files-button', 'Files', ICONS.folder, FILES_KEY_HINT, () => showView(this.files.getAttribute('aria-pressed') === 'true' ? 'grid' : 'files'))
-  private readonly work = navButton('work-button', 'Work', ICONS.navWork, null, () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work'))
+  private readonly work = navButton('work-button', 'Work', ICONS.navWork, WORK_KEY_HINT, () => showView(this.work.getAttribute('aria-pressed') === 'true' ? 'grid' : 'work'))
   private readonly skills = navButton('skills-button', 'Skills', ICONS.navSkills, null, () => showView(this.skills.getAttribute('aria-pressed') === 'true' ? 'grid' : 'skills'))
   private readonly moreDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly moreText = h('span', { class: 'more-text' }, 'More')

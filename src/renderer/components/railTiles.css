@@ -1,0 +1,70 @@
+/* The collapsed rail: project tiles say what their sessions are doing, in the letters and the fill. */
+.sidebar.rail .rail-projects {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  --fade-top: 0px;
+  --fade-bottom: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
+}
+.sidebar.rail .rail-projects::-webkit-scrollbar { display: none; }
+
+.sidebar.rail.framed { gap: 0; padding-bottom: 0; }
+.sidebar.rail.framed .rail-divider { margin: 8px 0; flex: none; }
+
+.rail-btn.rail-mono.rail-tile {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.rail-btn.rail-mono.rail-tile:hover { background: var(--hover); }
+.rail-btn.rail-mono.rail-tile.rail-open,
+.rail-btn.rail-mono.rail-tile.rail-unread,
+.rail-btn.rail-mono.rail-tile.rail-working { background: var(--raised); }
+.rail-btn.rail-mono.rail-tile.rail-open { color: var(--text-2); }
+.rail-btn.rail-mono.rail-tile.rail-unread,
+.rail-btn.rail-mono.rail-tile.rail-working { color: var(--text); }
+.rail-btn.rail-mono.rail-tile.rail-unread { font-weight: 700; }
+.rail-btn.rail-mono.rail-tile.rail-working .rail-letters { animation: rail-breath 2.4s ease-in-out infinite; }
+.rail-btn.rail-mono.rail-tile.rail-needs { background: color-mix(in srgb, var(--needs) 18%, var(--raised)); color: var(--needs); }
+.rail-btn.rail-mono.rail-tile.rail-selected { background: var(--press); color: var(--text); box-shadow: var(--e1); }
+.rail-btn.rail-mono.rail-tile .rail-badge { position: absolute; top: -3px; right: -3px; background: none; color: var(--needs); font-size: 10px; font-weight: 600; line-height: 1; letter-spacing: 0; }
+
+.rail-btn.rail-more { flex: none; width: 32px; height: 24px; border-radius: 8px; background: transparent; color: var(--text-3); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+.rail-btn.rail-more:hover { background: var(--hover); color: var(--text); }
+.rail-projects .rail-fold { flex: none; width: 16px; height: 1px; margin: 2px 0; background: var(--seam); }
+
+.rail-btn.rail-views { width: 36px; height: 32px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); cursor: pointer; }
+.rail-btn.rail-views:hover { background: var(--hover); color: var(--text); }
+.rail-btn.rail-views.away { color: var(--text); }
+.rail-btn.rail-views[aria-expanded='true'] { background: var(--press); color: var(--text); }
+.rail-btn.rail-views svg { width: 16px; height: 16px; }
+
+.popover.menu.rail-views-menu { width: 240px; padding: 6px; }
+.rail-views-menu .menu-item { height: 32px; border-radius: 8px; }
+.rail-views-menu .menu-item[aria-current='page'] { background: var(--hover); }
+.rail-views-menu .menu-kbd { margin-inline-start: auto; font-family: var(--font-ui); font-size: var(--fs-12); }
+
+/* In the Desktop app style the rail drops the section buttons and the bell; the Views button below holds them. */
+.frame-sidebar .sidebar.rail .frame-nav,
+.frame-sidebar .sidebar.rail .frame-head .bell-button { display: none; }
+
+@keyframes rail-breath { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) {
+  .rail-btn.rail-mono.rail-tile.rail-working .rail-letters { animation: none; }
+}

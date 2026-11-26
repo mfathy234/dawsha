@@ -40,7 +40,7 @@ async function resumeSeeded(page: Page): Promise<void> {
   await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
 }
 
-test('the collapsed rail has its expand button at the foot, above Add project', async () => {
+test('the collapsed rail has its expand button at the foot, below Add project and above Settings', async () => {
   const sandbox = createSandbox()
   seedSettings(sandbox, { appearance: DESKTOP, sidebarCollapsed: true })
   const { app, page } = await launchApp(sandbox)
@@ -52,10 +52,11 @@ test('the collapsed rail has its expand button at the foot, above Add project', 
     await expect(sidebar.locator('#sidebar-collapse')).toBeHidden()
     const add = sidebar.getByRole('button', { name: 'Add project' })
     const settings = sidebar.locator('#settings-button')
-    const [e, a, s, bell] = await Promise.all([expand.boundingBox(), add.boundingBox(), settings.boundingBox(), sidebar.locator('#notifications-button').boundingBox()])
-    expect(e!.y).toBeGreaterThan(bell!.y + 100)
-    expect(e!.y + e!.height).toBeLessThanOrEqual(a!.y + 1)
-    expect(a!.y).toBeLessThan(s!.y)
+    const views = sidebar.locator('#rail-views')
+    const [e, a, s, v] = await Promise.all([expand.boundingBox(), add.boundingBox(), settings.boundingBox(), views.boundingBox()])
+    expect(v!.y + v!.height).toBeLessThanOrEqual(a!.y + 1)
+    expect(a!.y + a!.height).toBeLessThanOrEqual(e!.y + 1)
+    expect(e!.y + e!.height).toBeLessThanOrEqual(s!.y + 1)
     await expand.click()
     await expect(sidebar).not.toHaveClass(/rail/)
     await expect(sidebar.locator('#sidebar-collapse')).toBeVisible()
@@ -67,7 +68,7 @@ test('the collapsed rail has its expand button at the foot, above Add project', 
   }
 })
 
-test('the notification count is a small badge on the bell in the rail and in the expanded sidebar', async () => {
+test('the notification count is a small badge on the bell in the sidebar and a count in the rail Views menu', async () => {
   const sandbox = createSandbox()
   seedSession(sandbox)
   seedSettings(sandbox, { appearance: DESKTOP })
@@ -88,8 +89,9 @@ test('the notification count is a small badge on the bell in the rail and in the
     await onBell()
     await page.locator('#sidebar-collapse').click()
     await expect(page.locator('.sidebar')).toHaveClass(/rail/)
-    await expect(badge).toHaveText('1')
-    await onBell()
+    await expect(bell).toBeHidden()
+    await page.locator('#rail-views').click()
+    await expect(page.getByRole('menuitem', { name: /^Notifications/ })).toContainText('1 new')
   } finally {
     await closeApp(app)
   }

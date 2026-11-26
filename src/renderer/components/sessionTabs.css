@@ -152,3 +152,28 @@
 }
 
 .panes-quiet .pane-strip { margin: 8px 8px 0; }
+
+.strip-status.quiet { color: var(--text-3, var(--muted)); font-variant-numeric: tabular-nums; }
+.strip-name.strong { color: var(--text); font-weight: var(--w-medium); }
+
+/* The tabs that do not fit are one button at the end of the strip; it stays in view while the strip scrolls. */
+.strip-more {
+  position: sticky;
+  inset-inline-end: 0;
+  flex: none;
+  height: 30px;
+  margin-inline-start: auto;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--bg, var(--panel));
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-1);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.strip-more:hover { color: var(--text); }
+.strip-more.needs { color: var(--state-needs); }
+.strip-more[hidden] { display: none; }
+.strip-more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }

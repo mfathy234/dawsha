@@ -101,9 +101,11 @@ test('the collapsed rail marks projects whose sessions need you', async () => {
 
     await page.getByRole('button', { name: 'Collapse sidebar' }).click()
     const rail = page.locator('.sidebar.rail')
-    const smoke = rail.getByRole('button', { name: 'Smoke, 1 needs you' })
+    const smoke = rail.getByRole('button', { name: 'Smoke · 1 needs you' })
     await expect(smoke).toBeVisible()
-    await expect(smoke.locator('.rail-badge')).toHaveText('!')
+    await expect(smoke.locator('.rail-badge')).toHaveText('1')
+    await expect(rail.getByRole('button', { name: 'Missing', exact: true })).toHaveCount(0)
+    await rail.locator('#rail-more').click()
     await expect(rail.getByRole('button', { name: 'Missing', exact: true })).toBeVisible()
     await expect(rail.locator('.rail-badge')).toHaveCount(1)
     await rail.screenshot({ path: join(SCREENS, 'sidebar-rail-badge.png') })
@@ -426,12 +428,17 @@ test('Alt+Up and Alt+Down move the focused project and switch to Manual', async 
   }
 })
 
-test('rail monograms can be dragged to reorder', async () => {
+test('rail monograms with open sessions can be dragged to reorder', async () => {
   const sandbox = createSandbox()
   seedThreeProjects(sandbox)
-  writeSettings(sandbox, { sidebarSort: 'name', sidebarCollapsed: true })
+  const third = join(sandbox.root, 'Third Project')
+  mkdirSync(third, { recursive: true })
+  writeSettings(sandbox, { sidebarSort: 'name', projects: [...readSettings(sandbox.userData).projects, { id: 'third', name: 'Third', folder: third }] })
   const { app, page } = await launchApp(sandbox)
   try {
+    for (const name of ['Other', 'Smoke', 'Third']) await page.getByRole('button', { name: new RegExp(`^New (Claude|Codex|Gemini) session in ${name}$`) }).click()
+    await expect(page.locator('.pane')).toHaveCount(3)
+    await page.getByRole('button', { name: 'Collapse sidebar' }).click()
     const monos = page.locator('.rail-mono')
     await expect(monos).toHaveCount(3)
     const source = (await monos.nth(2).boundingBox())!
@@ -441,7 +448,7 @@ test('rail monograms can be dragged to reorder', async () => {
     await page.mouse.move(source.x + 12, source.y - 6, { steps: 3 })
     await page.mouse.move(target.x + 10, target.y + 10, { steps: 8 })
     await page.mouse.up()
-    await expect.poll(() => readSettings(sandbox.userData).projects.map((p: any) => p.id)).toEqual(['smoke', 'gone', 'other'])
+    await expect.poll(() => readSettings(sandbox.userData).projects.map((p: any) => p.id)).toEqual(['third', 'other', 'smoke', 'gone'])
     await expect.poll(() => readSettings(sandbox.userData).sidebarSort).toBe('manual')
   } finally {
     await closeApp(app)
