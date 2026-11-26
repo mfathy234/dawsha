@@ -24,7 +24,7 @@ test('PowerShell commands get status, duration, output actions and shared projec
     await page.getByRole('menuitem', { name: 'Copy output', exact: true }).click()
     await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe('shell-integration-ok')
     await host.click()
-    await page.keyboard.press('Control+Shift+R')
+    await page.keyboard.press('Control+Alt+R')
     const history = page.getByRole('dialog', { name: 'Project shell history' })
     await expect(history).toBeVisible()
     await expect(history.getByRole('option').first()).toContainText('Write-Output shell-integration-ok')

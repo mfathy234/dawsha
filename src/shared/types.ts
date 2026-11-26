@@ -217,7 +217,7 @@ export interface Settings {
   notifyLongCommands: boolean
   showTerminalImages: boolean
   fontLigatures: boolean
-  /** Opens the reading view when you scroll far back in a terminal. Ctrl+Shift+R opens it any time. */
+  /** Opens the reading view when you scroll far back in a terminal. Ctrl+Alt+R opens it any time. */
   readingOnScroll: boolean
   /** How a new session of each agent opens: as its terminal or as a chat drawn from its log. */
   sessionViews: SessionViews

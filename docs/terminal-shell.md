@@ -6,7 +6,7 @@ Commands show their result and elapsed time in the gutter. The command menu offe
 
 Ctrl+backtick toggles a shell below the focused pane, using the session's working folder/worktree. Hiding retains the process and returns focus to the previous input. Drag the separator, or focus it and use Up/Down, to resize. The height is saved in app settings (120–600 pixels, default 240). A pane's drawer ends when the pane closes.
 
-Ctrl+Shift+R opens project command history while a shell has focus. Ctrl+R remains the shell's reverse search; outside shells, Ctrl+Shift+R keeps Dawsha's Resume action. Enter inserts a history item without executing it. History lives in `shell-history.json` in app data, newest first, with at most 500 commands per project shared by its checkouts and sessions.
+Ctrl+Alt+R opens project command history while a shell has focus (and Reading view in an agent's terminal). Ctrl+R remains the shell's reverse search; Ctrl+Shift+R is always Dawsha's Resume action. Enter inserts a history item without executing it. History lives in `shell-history.json` in app data, newest first, with at most 500 commands per project shared by its checkouts and sessions.
 
 A command lasting at least 30 seconds notifies when its terminal is hidden or the app is unfocused. Both the global notification setting and Long shell commands must be on. Sound follows the existing preference.
 

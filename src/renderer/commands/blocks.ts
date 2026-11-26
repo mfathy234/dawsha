@@ -13,8 +13,8 @@ const focusedPane = (run: (paneId: string) => void) => (): void => {
 }
 
 /**
- * Registered ahead of the built-in commands: Ctrl+Shift+R and Ctrl+Shift+O are the Reading view and the block outline
- * while a terminal has the keyboard, and keep resuming a session and filtering the sidebar everywhere else.
+ * Registered ahead of the built-in commands: Ctrl+Alt+R is the Reading view in an agent's terminal, and Ctrl+Shift+O is the block outline
+ * while a terminal has the keyboard, and keeps filtering the sidebar everywhere else.
  */
 export function installBlockCommands(): void {
   registerCommands(
@@ -23,7 +23,7 @@ export function installBlockCommands(): void {
       title: 'Reading view: fold long output',
       group: 'Actions',
       keywords: 'scrollback blocks fold unfold read back long output commands',
-      ...keys('Ctrl+Shift+R'),
+      ...keys('Ctrl+Alt+R'),
       keyWhen: agentTerminalHasFocus,
       scope: 'grid',
       enabled: hasPane,

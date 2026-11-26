@@ -46,7 +46,7 @@ export class TerminalShell implements IDisposable {
   }
 
   handleKey(event: KeyboardEvent): boolean {
-    if (this.host.enabled() && (event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'r') {
+    if (this.host.enabled() && (event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && event.code === 'KeyR') {
       event.preventDefault()
       this.host.history()
       return false

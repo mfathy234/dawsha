@@ -54,7 +54,7 @@ export function clearScrollback(paneId: string): void {
 
 export const terminalHasFocus = (): boolean => document.activeElement?.closest('.term-host') != null
 
-/** An agent's terminal has the keyboard. In a shell tab (or the shell drawer) Ctrl+Shift+R is the shell's command history instead. */
+/** An agent's terminal has the keyboard. In a shell tab (or the shell drawer) Ctrl+Alt+R is the shell's command history instead. */
 export const agentTerminalHasFocus = (): boolean => {
   const id = document.activeElement?.closest<HTMLElement>('.term-host')?.dataset.termId
   return id !== undefined && terminalAgent(id) !== 'shell'

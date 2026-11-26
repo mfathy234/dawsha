@@ -26,7 +26,7 @@ async function openReading(page: Page, id: string): Promise<void> {
         if (await reading.isHidden()) {
           await feedTerminal(page, id, `\r\n${SESSION}`)
           await page.locator('.term-host.active').click()
-          await page.keyboard.press('Control+Shift+R')
+          await page.keyboard.press('Control+Alt+R')
         }
         return reading.locator('.rd-row').count()
       },

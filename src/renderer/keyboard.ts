@@ -83,7 +83,7 @@ function onKeyDown(event: KeyboardEvent): void {
   if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && (event.target as HTMLElement | null)?.closest?.('.chat-edit, .turn-cm')) return
   const state = store.state
   const hostId = (event.target as HTMLElement | null)?.closest<HTMLElement>('.term-host')?.dataset.termId
-  if (hostId && terminalAgent(hostId) === 'shell' && (event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'r') {
+  if (hostId && terminalAgent(hostId) === 'shell' && (event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && event.code === 'KeyR') {
     consume(event)
     void openShellHistory(hostId)
     return
