@@ -138,6 +138,13 @@
 .strip-status,
 .strip-plan { flex: none; }
 
+/* The project's initials, the same letters as the sidebar rail, so you can tell which project a tab belongs to. */
+.strip-project {
+  flex: none;
+  color: var(--text-3, var(--muted));
+  font-weight: var(--w-medium);
+}
+
 .strip-name {
   min-width: 0;
   overflow: hidden;

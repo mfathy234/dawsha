@@ -8,6 +8,7 @@ import { parsePlanLabel } from '../../shared/planProgress'
 import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
 import { dropSlot, isNoMove, slotToIndex } from '../../shared/tabDrag'
 import { isStarred } from '../../shared/starred'
+import { monogram } from '../../shared/sidebarModel'
 import type { AppState } from '../state'
 import { openContextMenu } from './contextMenu'
 import { crewSignature, identityMark } from './crewAvatar'
@@ -28,7 +29,7 @@ export class SessionTabs {
   update(views: PaneView[], state: AppState, shown: boolean, selectedId: string | null): void {
     this.el.hidden = !shown
     if (!shown) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.fullTitle, v.status, v.agent, v.attention, isStarred(v.pane), crewSignature(v), sessionNote(v.pane.id).plan]), selectedId])
+    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.project?.name ?? '', v.fullTitle, v.status, v.agent, v.attention, isStarred(v.pane), crewSignature(v), sessionNote(v.pane.id).plan]), selectedId])
     if (signature === this.signature || document.body.classList.contains('dragging-ui')) return
     this.signature = signature
     clear(this.el)
@@ -43,6 +44,7 @@ export class SessionTabs {
     const stateLabel = SESSION_STATE_LABELS[stateName]
     const plan = parsePlanLabel(sessionNote(view.pane.id).plan)
     const starred = isStarred(view.pane)
+    const project = view.project?.name ?? ''
     const label = h(
       'button',
       {
@@ -50,12 +52,13 @@ export class SessionTabs {
         type: 'button',
         role: 'tab',
         'aria-selected': selected ? 'true' : 'false',
-        title: `${name}, ${stateLabel}${plan ? `, plan ${plan.done} of ${plan.total}` : ''}${view.fullTitle && view.fullTitle !== name ? `\n${view.fullTitle}` : ''}`,
+        title: `${name}${project ? ` (${project})` : ''}, ${stateLabel}${plan ? `, plan ${plan.done} of ${plan.total}` : ''}${view.fullTitle && view.fullTitle !== name ? `\n${view.fullTitle}` : ''}`,
         onClick: () => focusPane(view.pane.id)
       },
       h('span', { class: 'strip-index' }, `${view.index + 1}`),
       identityMark(view, 18),
       h('bdi', { class: 'strip-name', dir: 'auto' }, name),
+      project ? h('span', { class: 'strip-project', 'aria-hidden': 'true' }, monogram(project)) : null,
       starred ? h('span', { class: 'strip-pin', role: 'img', 'aria-label': 'Pinned' }, icon(ICONS.pin)) : null,
       h('span', { class: `strip-status state-${stateName}` }, stateLabel),
       selected && plan ? h('span', { class: 'strip-plan', 'aria-hidden': 'true' }, `${plan.done}/${plan.total}`) : null
