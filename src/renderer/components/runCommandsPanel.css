@@ -62,8 +62,8 @@
   box-shadow: var(--field-shadow);
 }
 .run-panel :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 .run-display {
   display: block;

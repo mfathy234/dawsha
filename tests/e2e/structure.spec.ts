@@ -169,7 +169,7 @@ for (const [mode, themeId] of THEMES) {
 
       const header = await focused.locator('.pane-header').evaluate((el) => getComputedStyle(el).backgroundColor)
       expect(header).toBe(rgb(mode === 'dark' ? '#20252d' : '#edf0f4'))
-      expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('500')
+      expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600')
       expect(await idle.locator('.pane-title').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('500')
       expect(await focused.locator('.pane-title').evaluate((el) => getComputedStyle(el, '::before').content)).toBe('none')
 

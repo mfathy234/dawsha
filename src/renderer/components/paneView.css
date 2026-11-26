@@ -25,13 +25,6 @@
   line-height: 16px;
   cursor: pointer;
 }
-.pane.maximized .pane-header > .pane-recap.expanded {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  white-space: normal;
-  overflow: hidden;
-}
 .pane.maximized .pane-header > .pane-recap[hidden] { display: none; }
 
 .pane.maximized .pane-header > .pane-state .state-pill-text {

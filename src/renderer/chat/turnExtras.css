@@ -3,7 +3,7 @@
 .chat-turn-summary:has(.turn-diff, .turn-commit, .turn-checks) { width: min(100%, 640px); max-width: 100%; }
 .chat-turn-summary .mono, .turn-pick .mono, .turn-output-dialog .mono { font-family: var(--font-mono); }
 .turn-spacer { flex: 1; }
-.turn-chev { width: 12px; flex: none; color: var(--text-3); font-size: 10px; }
+.turn-chev { width: 12px; flex: none; color: var(--text-3); font-size: var(--fs-0); }
 .chat-turn-actions { flex-wrap: wrap; }
 .chat-turn-actions .turn-ink { color: var(--text); font-weight: var(--w-medium); }
 
@@ -36,7 +36,7 @@
 /* Checks */
 .turn-checks { display: flex; flex-direction: column; gap: 2px; margin-top: var(--sp-1); }
 .turn-check { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-1); }
-.turn-check-cmd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 12.5px; }
+.turn-check-cmd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: var(--fs-1); }
 .turn-check-state { flex: none; color: var(--text-3); }
 .turn-check-state.fail { color: var(--danger); }
 .turn-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
@@ -50,7 +50,7 @@
 .turn-pick-list { display: flex; flex-direction: column; gap: 2px; margin: var(--sp-2) 0; max-height: 260px; overflow: auto; }
 .turn-pick-row, .turn-pick-auto { display: flex; align-items: center; gap: var(--sp-2); padding: 4px var(--sp-2); border-radius: var(--r-control); cursor: pointer; }
 .turn-pick-row:hover { background: var(--hover); }
-.turn-pick-name { font-family: var(--font-mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.turn-pick-name { font-family: var(--font-mono); font-size: var(--fs-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .turn-pick-auto { margin-bottom: var(--sp-2); color: var(--text-2); font-size: var(--fs-1); }
 .turn-output-dialog { width: 640px; max-width: calc(100vw - 32px); }
 .turn-output-dialog h3 { margin: var(--sp-3) 0 var(--sp-1); font-size: var(--fs-1); font-weight: var(--w-medium); }

@@ -24,7 +24,7 @@
 :root .update-popover .update-title {
   margin: 0;
   font-size: var(--popup-title-size);
-  font-weight: 500;
+  font-weight: var(--w-medium);
   line-height: 1.35;
   letter-spacing: 0;
   text-transform: none;
@@ -54,9 +54,9 @@
 @media (prefers-reduced-motion: no-preference) {
   :root .dialog,
   :root .popover,
-  :root .palette { animation: popup-in 160ms var(--ease-out); }
-  .overlay { animation: scrim-in 160ms var(--ease-out); }
-  .leaving { animation: popup-out 100ms ease-out forwards; }
+  :root .palette { animation: popup-in var(--dur-2) var(--ease-out); }
+  .overlay { animation: scrim-in var(--dur-2) var(--ease-out); }
+  .leaving { animation: popup-out var(--dur-1) ease-out forwards; }
 }
 @keyframes popup-in {
   from { opacity: 0; transform: scale(.97); }

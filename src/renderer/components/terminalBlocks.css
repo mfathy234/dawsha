@@ -58,7 +58,7 @@
   margin: 2px calc(var(--s-2) * -1);
   padding: 0 var(--s-2);
   border: 0;
-  border-radius: var(--r-1);
+  border-radius: var(--r-control);
   background: none;
   color: var(--text-2);
   font: inherit;
@@ -175,7 +175,7 @@
   height: 20px;
   padding: 0 var(--s-2);
   border: 0;
-  border-radius: var(--r-1);
+  border-radius: var(--r-control);
   background: none;
   color: var(--text-2);
   font: inherit;
@@ -190,7 +190,7 @@
   position: absolute;
   left: 4px;
   width: 2px;
-  border-radius: 1px;
+  border-radius: var(--r-micro);
   background: var(--line-strong);
   pointer-events: none;
 }
@@ -214,7 +214,7 @@
   height: 2px;
   padding: 0;
   border: 0;
-  border-radius: 1px;
+  border-radius: var(--r-micro);
   background: var(--term-cmd);
   pointer-events: auto;
   cursor: pointer;
@@ -236,9 +236,9 @@
   display: flex;
   flex-direction: column;
   padding: var(--s-2);
-  border-radius: var(--r-2);
+  border-radius: var(--r-card);
   background: var(--surface-pop);
-  box-shadow: var(--e2);
+  box-shadow: var(--shadow-pop);
   font-family: var(--font-ui, inherit);
   font-size: var(--fs-1);
 }
@@ -249,7 +249,7 @@
   height: var(--h-md);
   padding: 0 var(--s-2);
   border: 0;
-  border-radius: var(--r-1);
+  border-radius: var(--r-control);
   background: var(--well);
   color: var(--text);
   font: inherit;
@@ -265,7 +265,7 @@
   gap: var(--s-2);
   height: 28px;
   padding: 0 var(--s-2);
-  border-radius: var(--r-1);
+  border-radius: var(--r-control);
   color: var(--text-2);
   cursor: pointer;
 }
@@ -284,7 +284,7 @@
   height: 20px;
   padding: 0 var(--s-2);
   border: 0;
-  border-radius: var(--r-1);
+  border-radius: var(--r-control);
   background: none;
   color: var(--text-2);
   font: inherit;
@@ -302,9 +302,9 @@
   align-items: center;
   gap: 2px;
   padding: 2px;
-  border-radius: var(--r-1);
+  border-radius: var(--r-control);
   background: var(--surface-pop);
-  box-shadow: var(--e2);
+  box-shadow: var(--shadow-pop);
   max-width: calc(100% - var(--s-4));
   overflow: hidden;
 }
@@ -317,9 +317,9 @@
   left: 14px;
   z-index: var(--z-sticky);
   padding: 0 var(--s-2);
-  border-radius: var(--r-1);
+  border-radius: var(--r-control);
   background: var(--surface-pop);
-  box-shadow: var(--e1);
+  box-shadow: var(--ring);
   color: var(--text-2);
   font-family: var(--font-ui, inherit);
   font-size: var(--fs-1);
@@ -329,6 +329,3 @@
 
 .term-linetime[hidden] { display: none; }
 
-@media (prefers-reduced-motion: reduce) {
-  .rd-chevron, .rd-row { transition: none; }
-}

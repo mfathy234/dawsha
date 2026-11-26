@@ -42,7 +42,7 @@ import { replayPane, toggleRecordingPause } from '../replayActions'
 import { api } from '../api'
 import { COPY_SESSION_NAME, copySessionName } from '../copySessionName'
 import { sessionLabel as sessionRowName } from './sidebarRows'
-import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
+import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal, toggleReading } from '../terminalActions'
 import type { AgentKind, TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
 import { keycaps } from './keycaps'
@@ -106,6 +106,7 @@ const RESUMED_CHIP_MS = 60_000
 const RECAP_REFRESH_MS = 2_500
 const RECAP_SCREEN_ROWS = 60
 // Session time and last activity alone are not worth a footer.
+const TERMINAL_COLUMN_CAP = 120
 const FOOT_FILLER = ['info-elapsed', 'info-age']
 
 export class PaneComponent {
@@ -170,6 +171,7 @@ export class PaneComponent {
   private actionsAnchor: HTMLElement | null = null
   private readonly restart = h('button', { class: 'btn small pane-restart', type: 'button' }, 'Restart')
   private readonly maxButton = h('span', { class: 'slot pane-maximize-slot' })
+  private readonly readingButton = iconButton('Reading view (Ctrl+Alt+R)', ICONS.reading, () => toggleReading(this.paneId), 'pane-reading')
   private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'pane-body' })
@@ -185,9 +187,6 @@ export class PaneComponent {
     this.drawer = new ShellDrawer(paneId)
     this.branch.append(icon(ICONS.branch), this.branchName, this.branchSync)
     this.titles.append(this.index, this.projectName, this.fresh)
-    this.recap.addEventListener('click', () => {
-      if (this.inHeader) this.recap.classList.toggle('expanded')
-    })
     this.pin.append(icon(ICONS.pin))
     const header = h(
       'div',
@@ -204,6 +203,7 @@ export class PaneComponent {
       this.viewSwitch.el,
       this.restart,
       this.maxButton,
+      this.readingButton,
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
       this.closeButton
     )
@@ -332,9 +332,10 @@ export class PaneComponent {
     this.timeline.update(view, maximized && view.timelineOpen)
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
     this.restart.hidden = !view.activeExited
+    this.readingButton.hidden = !maximized || this.chatShown
     this.updateMaximizeButton(maximized)
     this.updateTabs(view)
-    this.updateTerminals(view)
+    this.updateTerminals(view, maximized && store.state.settings.limitLineLength ? TERMINAL_COLUMN_CAP : null)
     this.drawer.update()
     if (focused && this.lastActiveTab && this.lastActiveTab !== view.pane.activeTabId) {
       ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
@@ -352,7 +353,6 @@ export class PaneComponent {
   private placeInHeader(maximized: boolean): void {
     if (maximized === this.inHeader) return
     this.inHeader = maximized
-    this.recap.classList.remove('expanded')
     if (maximized) {
       this.titles.after(this.branch, this.recap)
     } else {
@@ -975,11 +975,12 @@ export class PaneComponent {
     return wrapper
   }
 
-  private updateTerminals(view: PaneView): void {
+  private updateTerminals(view: PaneView, columnCap: number | null): void {
     for (const tab of view.pane.tabs) {
       const terminal = ensureTerminal(tab.id, view.pane.fontSize)
       terminal.mount(this.body)
       terminal.setFontSize(view.pane.fontSize)
+      terminal.setColumnCap(columnCap)
       terminal.setVisible(tab.id === view.pane.activeTabId)
     }
   }

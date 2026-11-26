@@ -5,13 +5,13 @@
 .projects-view .pv-list { border-top: 0; }
 .projects-view .pv-head,
 .projects-view .pv-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 150px 110px 232px; column-gap: var(--s-4); align-items: center; }
-.projects-view .pv-head { padding: var(--s-2) var(--s-2); color: var(--muted); font-size: var(--fs-ui); font-weight: 500; }
+.projects-view .pv-head { padding: var(--s-2) var(--s-2); color: var(--muted); font-size: var(--fs-ui); font-weight: var(--w-medium); }
 .projects-view .pv-row { padding: var(--s-3) var(--s-2); box-shadow: 0 -1px 0 var(--line); }
 .projects-view .pv-row.pv-worktree { padding-inline-start: var(--s-6); }
 .projects-view .pv-row .field-error { grid-column: 1 / -1; }
 .projects-view .pv-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.projects-view .pv-name { display: flex; align-items: center; gap: var(--s-2); min-width: 0; font-size: var(--fs-body); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.projects-view .pv-worktree-mark { flex: none; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: var(--fs-status); font-weight: 500; }
+.projects-view .pv-name { display: flex; align-items: center; gap: var(--s-2); min-width: 0; font-size: var(--fs-body); font-weight: var(--w-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.projects-view .pv-worktree-mark { flex: none; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: var(--fs-status); font-weight: var(--w-medium); }
 .projects-view .pv-folder { min-width: 0; overflow: hidden; color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-1); white-space: nowrap; }
 .projects-view .pv-folder.invalid { color: var(--danger); }
 .projects-view .pv-missing { color: var(--danger); font-size: var(--fs-status); }
@@ -20,7 +20,7 @@
 .projects-view .pv-branch-cell { display: inline-flex; align-items: center; gap: var(--s-1); }
 .projects-view .pv-branch-name { overflow: hidden; font-family: var(--font-mono); font-size: var(--fs-1); text-overflow: ellipsis; }
 .projects-view .pv-sessions-cell { display: flex; align-items: center; gap: var(--s-2); }
-.projects-view .pv-live { color: var(--text); font-weight: 500; }
+.projects-view .pv-live { color: var(--text); font-weight: var(--w-medium); }
 .projects-view .pv-closed { color: var(--muted); }
 .projects-view .pv-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--s-1); }
 .projects-view .pv-actions [hidden] { display: none; }

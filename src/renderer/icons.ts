@@ -19,6 +19,7 @@ export const ICONS = {
   plus: svg(14, '<path d="M12 5v14 M5 12h14"/>'),
   minus: svg(14, '<path d="M5 12h14"/>'),
   close: svg(16, '<path d="M18 6L6 18 M6 6l12 12"/>'),
+  reading: svg(16, '<path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/><path d="M4 20a2 2 0 0 0 2 1h13v-3"/><path d="M9 8h6 M9 12h4"/>'),
   closeSmall: svg(10, '<path d="M18 6L6 18 M6 6l12 12"/>', 2),
   prev: svg(16, '<polyline points="15 18 9 12 15 6"/>'),
   next: svg(16, '<polyline points="9 18 15 12 9 6"/>'),

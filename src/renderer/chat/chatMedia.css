@@ -23,11 +23,11 @@
 .chat-thumb.empty {
   cursor: default;
   padding: var(--sp-2);
-  font-size: 12px;
+  font-size: var(--fs-1);
 }
 
 .chat-thumb:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -73,7 +73,7 @@
   max-height: 100%;
   object-fit: contain;
   border-radius: var(--r-control);
-  box-shadow: var(--e2);
+  box-shadow: var(--e3);
 }
 
 .chat-lightbox-bar {
@@ -109,8 +109,8 @@
 
 .chat-file:focus-visible,
 .chat-tool-open:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .chat-toolrow {
@@ -127,7 +127,7 @@
   width: 22px;
   padding: 0;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--r-micro);
   background: none;
   color: var(--text-3);
   opacity: 0;
@@ -148,7 +148,7 @@
 .chat.file-drop { outline: 2px dashed var(--accent); outline-offset: -4px; }
 .chat-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); max-width: 720px; margin: 0 auto var(--sp-2); }
 .chat-chip { display: inline-flex; align-items: center; gap: var(--sp-2); max-width: 220px; padding: 2px var(--sp-2) 2px 2px; border-radius: var(--r-control); background: var(--surface); color: var(--text-2); font-size: var(--fs-1); }
-.chat-chip-thumb { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; overflow: hidden; border-radius: 5px; color: var(--text-3); }
+.chat-chip-thumb { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; overflow: hidden; border-radius: var(--r-micro); color: var(--text-3); }
 .chat-chip-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .chat-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-chip-x { flex: none; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-3); cursor: pointer; }
@@ -170,10 +170,10 @@
 /* Copy buttons, times, day separators, the jump button and compaction. */
 .chat-feedwrap { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .chat-feedwrap > .chat-scroll { flex: 1; }
-.chat-jump { position: absolute; inset-inline: 0; bottom: var(--sp-3); margin-inline: auto; width: fit-content; padding: 4px var(--sp-4); border: 0; border-radius: 999px; background: var(--overlay); color: var(--text); box-shadow: var(--e2); cursor: pointer; }
+.chat-jump { position: absolute; inset-inline: 0; bottom: var(--sp-3); margin-inline: auto; width: fit-content; padding: 4px var(--sp-4); border: 0; border-radius: 999px; background: var(--overlay); color: var(--text); box-shadow: var(--shadow-pop); cursor: pointer; }
 .chat-jump[hidden] { display: none; }
 .chat-say, .chat-you { position: relative; }
-.chat-copy { position: absolute; inset-block-start: 0; inset-inline-end: 0; padding: 1px var(--sp-2); border: 0; border-radius: 5px; background: var(--surface); color: var(--text-3); font-size: 11px; opacity: 0; cursor: pointer; }
+.chat-copy { position: absolute; inset-block-start: 0; inset-inline-end: 0; padding: 1px var(--sp-2); border: 0; border-radius: var(--r-micro); background: var(--surface); color: var(--text-3); font-size: var(--fs-0); opacity: 0; cursor: pointer; }
 .chat-say:hover > .chat-copy, .chat-you:hover > .chat-copy, .chat-codewrap:hover > .chat-copy, .chat-copy:focus-visible { opacity: 1; }
 .chat-copy:hover { color: var(--text); }
 .chat-codewrap { position: relative; }
@@ -182,9 +182,9 @@
 .chat-time::after { content: attr(data-time); }
 .chat-copy .icon { width: 14px; height: 14px; }
 .chat-copy.copied { color: var(--accent-ink, var(--accent)); opacity: 1; }
-.chat-time { position: absolute; inset-block-end: -14px; inset-inline-end: 0; color: var(--text-3); font-size: 10px; opacity: 0; pointer-events: none; }
+.chat-time { position: absolute; inset-block-end: -14px; inset-inline-end: 0; color: var(--text-3); font-size: var(--fs-0); opacity: 0; pointer-events: none; }
 .chat-say:hover > .chat-time, .chat-you:hover > .chat-time { opacity: 1; }
-.chat-day { display: flex; align-items: center; gap: var(--sp-3); margin-block: var(--sp-2); color: var(--text-3); font-size: 11px; }
+.chat-day { display: flex; align-items: center; gap: var(--sp-3); margin-block: var(--sp-2); color: var(--text-3); font-size: var(--fs-0); }
 .chat-day::before, .chat-day::after { content: ''; flex: 1; height: 1px; background: var(--border, color-mix(in srgb, var(--text) 12%, transparent)); }
 .chat-compact { display: grid; gap: var(--sp-1); justify-items: start; }
 
@@ -192,20 +192,20 @@
 .chat-todos { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-3); display: grid; gap: 2px; border-radius: var(--r-control); background: var(--surface); }
 .chat-todos .todo { display: flex; gap: var(--sp-2); color: var(--text-2); }
 .chat-todos .todo.completed .txt { color: var(--text-3); text-decoration: line-through; }
-.chat-todos .todo.in_progress { color: var(--text); font-weight: 600; }
+.chat-todos .todo.in_progress { color: var(--text); font-weight: var(--w-medium); }
 .chat-todos .mark { flex: none; width: 1.2em; text-align: center; }
 .chat-answers { margin: 0; padding: var(--sp-1) var(--sp-3); border-radius: var(--r-control); background: var(--surface); }
 .chat-answers dt { color: var(--text-3); }
-.chat-answers dd { margin: 0 0 var(--sp-1); color: var(--text); font-weight: 600; }
+.chat-answers dd { margin: 0 0 var(--sp-1); color: var(--text); font-weight: var(--w-medium); }
 .chat-card { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-control); background: var(--surface); }
 
 /* Checklist, answers and plan cards on tool rows. */
 .chat-todos { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-3); display: grid; gap: 2px; border-radius: var(--r-control); background: var(--surface); }
 .chat-todos .todo { display: flex; gap: var(--sp-2); color: var(--text-2); }
 .chat-todos .todo.completed .txt { color: var(--text-3); text-decoration: line-through; }
-.chat-todos .todo.in_progress { color: var(--text); font-weight: 600; }
+.chat-todos .todo.in_progress { color: var(--text); font-weight: var(--w-medium); }
 .chat-todos .mark { flex: none; width: 1.2em; text-align: center; }
 .chat-answers { margin: 0; padding: var(--sp-1) var(--sp-3); border-radius: var(--r-control); background: var(--surface); }
 .chat-answers dt { color: var(--text-3); }
-.chat-answers dd { margin: 0 0 var(--sp-1); color: var(--text); font-weight: 600; }
+.chat-answers dd { margin: 0 0 var(--sp-1); color: var(--text); font-weight: var(--w-medium); }
 .chat-card { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-control); background: var(--surface); }

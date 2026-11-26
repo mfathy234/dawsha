@@ -219,6 +219,7 @@ export interface Settings {
   fontLigatures: boolean
   /** Opens the reading view when you scroll far back in a terminal. Ctrl+Alt+R opens it any time. */
   readingOnScroll: boolean
+  limitLineLength: boolean
   /** How a new session of each agent opens: as its terminal or as a chat drawn from its log. */
   sessionViews: SessionViews
   /** The view each session was last left in, by agent and session id, so a resume opens the same way. */

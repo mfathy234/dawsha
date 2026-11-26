@@ -5,7 +5,7 @@
   min-height: 0;
   display: flex;
   margin: var(--s-3) var(--s-3) var(--s-3) 0;
-  border-radius: var(--r-card, 14px);
+  border-radius: var(--r-card, var(--r-pop));
   background: var(--surface);
   box-shadow: var(--ring), var(--shadow-hairline);
 }
@@ -17,7 +17,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -8px;
+  inset-inline-start: -8px;
   width: 9px;
   z-index: 2;
   cursor: col-resize;
@@ -30,7 +30,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 4px;
+  inset-inline-start: 4px;
   width: 1px;
   background: transparent;
 }
@@ -45,7 +45,7 @@
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: var(--r-card, 14px);
+  border-radius: var(--r-card, var(--r-pop));
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -81,7 +81,7 @@
   gap: 6px;
   padding: 5px 10px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--r-control);
   background: transparent;
   color: var(--muted);
   font: inherit;
@@ -90,7 +90,7 @@
 
 .side-panel-tab:hover { background: var(--hover); color: var(--text); }
 .side-panel-tab.selected { background: var(--surface-pop, var(--raised)); color: var(--text); }
-.side-panel-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.side-panel-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 .side-panel-count {
   color: var(--accent);

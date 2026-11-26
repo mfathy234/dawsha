@@ -2,7 +2,7 @@
 
 /* Limits pill: the agent mark, then one ring per limit the agent really reported. */
 .topbar-limits .limits-agent { display: inline-flex; align-items: center; gap: var(--s-1); color: var(--text-2); white-space: nowrap; }
-.topbar-limits .limits-agent-name { font-weight: 500; }
+.topbar-limits .limits-agent-name { font-weight: var(--w-medium); }
 .topbar-limits .limits-none { color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-12); }
 .topbar-limits .agent-mark { width: 16px; height: 16px; }
 .limit-rings { display: inline-flex; align-items: center; gap: 3px; }
@@ -12,7 +12,7 @@
 .limit-ring svg { display: block; overflow: visible; }
 .limit-ring .ring-track { stroke: var(--line-strong); }
 .limit-ring .ring-arc { stroke: var(--ring); }
-.limit-ring .ring-text { fill: var(--text-2); font: 600 8.5px/1 var(--font-mono); letter-spacing: -0.02em; }
+.limit-ring .ring-text { fill: var(--text-2); font: 500 8.5px/1 var(--font-mono); letter-spacing: -0.02em; }
 .limit-ring.stage-warn .ring-text { fill: var(--busy); }
 .limit-ring.stage-danger .ring-text { fill: var(--danger); }
 .topbar-limits.stale .limit-rings { opacity: 0.55; }
@@ -23,7 +23,7 @@
 .topbar-view { display: flex; align-items: center; gap: var(--s-2); }
 .topbar-view[hidden] { display: none; }
 .topbar-sep { width: 1px; height: 20px; margin-inline: var(--s-1); background: var(--line); }
-.view-button { height: 32px; gap: var(--s-1); padding: 0 var(--s-2) 0 var(--s-3); border-radius: 8px; color: var(--text-2); font-weight: 400; }
+.view-button { height: 32px; gap: var(--s-1); padding: 0 var(--s-2) 0 var(--s-3); border-radius: var(--r-control); color: var(--text-2); font-weight: var(--w-regular); }
 .view-button[aria-expanded='true'] { background: var(--raised); color: var(--text); }
 .view-chevron svg { width: 12px; height: 12px; }
 .view-menu { min-width: 264px; }

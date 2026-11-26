@@ -58,14 +58,14 @@
 /* Usage: readable panel headings and tables that keep agent names and costs on one line. */
 .usage-view h1 {
   font-size: var(--fs-4);
-  font-weight: var(--w-semi);
+  font-weight: var(--w-medium);
 }
 
 .usage-panel h2 {
   margin: 0 0 var(--sp-3);
   font-size: var(--fs-3);
   line-height: var(--lh-3);
-  font-weight: var(--w-semi);
+  font-weight: var(--w-medium);
 }
 
 .usage-table th,
@@ -95,8 +95,8 @@
 .usage-x { color: var(--text-3); font-family: var(--font-mono); font-size: var(--fs-1); }
 .usage-x { font-variant-numeric: tabular-nums; }
 
-.usage-rank { display: block; height: 2px; margin-top: 4px; border-radius: 1px; background: var(--line); overflow: hidden; }
-.usage-rank-fill { display: block; height: 100%; border-radius: 1px; background: var(--text-3); }
+.usage-rank { display: block; height: 2px; margin-top: 4px; border-radius: var(--r-micro); background: var(--line); overflow: hidden; }
+.usage-rank-fill { display: block; height: 100%; border-radius: var(--r-micro); background: var(--text-3); }
 .usage-table td:first-child { min-width: 96px; }
 
 p.usage-notes { margin: 0; padding: 0; color: var(--text-3); font-size: var(--fs-1); line-height: 1.5; }

@@ -67,6 +67,7 @@ import { confirmQuitWithUnsavedFiles } from './files/filesActions'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
 import { applyTheme, onThemeChange, setTone } from './themeManager'
 import { removeLegacyModelCache } from './legacyModelCache'
+import './refine.css'
 
 const BRANCH_POLL_MS = 5000
 const GIT_CHANGES_POLL_MS = 10_000

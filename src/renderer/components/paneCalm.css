@@ -30,8 +30,3 @@
   transition-delay: 0ms;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .pane .pane-body {
-    transition: none;
-  }
-}

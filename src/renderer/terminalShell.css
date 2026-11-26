@@ -19,6 +19,6 @@
 .term-shell-command:hover, .term-shell-command:focus-visible { color: var(--text); outline: 1px solid var(--line); }
 .term-shell-duration { display: inline; padding-inline: var(--s-1); font-size: var(--fs-1); }
 .term-shell-command:hover .term-shell-duration, .term-shell-command:focus-visible .term-shell-duration { display: inline; }
-.term-link-tooltip { position: absolute; z-index: 10; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: var(--s-2); background: var(--raised); color: var(--text); box-shadow: var(--shadow-pop); border-radius: var(--r-1); font-size: var(--fs-1); pointer-events: none; }
+.term-link-tooltip { position: absolute; z-index: 10; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: var(--s-2); background: var(--raised); color: var(--text); box-shadow: var(--shadow-pop); border-radius: var(--r-control); font-size: var(--fs-1); pointer-events: none; }
 .tab { position: relative; }
 .term-host.shell-terminal .xterm { padding-left: calc(var(--sp-4) + 58px); }
