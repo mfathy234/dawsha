@@ -134,6 +134,7 @@ export class TerminalView {
     this.term.onData((data) => {
       if (data !== '\x1b[I' && data !== '\x1b[O') this.permissionTracker.invalidate()
       this.prompts.noteInput(data)
+      this.shell.noteInput(data)
       this.promptSelection.noteInput(data)
       callbacks.onInput(data)
     })

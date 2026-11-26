@@ -1,5 +1,6 @@
 import type { IDisposable, IMarker, Terminal } from '@xterm/xterm'
 import { commandDuration, ShellCommands, type ShellCommand } from '../shared/shellCommands'
+import { applyTyped } from '../shared/terminalText'
 import { h } from './dom'
 import { openContextMenu } from './components/contextMenu'
 import './terminalShell.css'
@@ -21,6 +22,7 @@ export class TerminalShell implements IDisposable {
   private output: IMarker | null = null
   private outputCol = 0
   private executing = false
+  private typed = ''
   private readonly decorations: IDisposable[] = []
 
   constructor(private readonly term: Terminal, private readonly host: TerminalShellHost) {
@@ -28,6 +30,7 @@ export class TerminalShell implements IDisposable {
       if (!host.enabled() || term.buffer.active.type !== 'normal') return false
       const buffer = term.buffer.active
       const row = buffer.baseY + buffer.cursorY
+      if (data === 'A' || data === 'B' || data === 'C') this.typed = ''
       if (data === 'A') { this.input?.dispose(); this.input = null; this.output?.dispose(); this.output = null; this.executing = false }
       if (data === 'B') { this.input?.dispose(); this.input = term.registerMarker(0) ?? null; this.inputCol = buffer.cursorX }
       const command = data === 'C' && this.input && !this.input.isDisposed
@@ -43,6 +46,10 @@ export class TerminalShell implements IDisposable {
       }
       return true
     })
+  }
+
+  noteInput(data: string): void {
+    this.typed = applyTyped(this.typed, data)
   }
 
   handleKey(event: KeyboardEvent): boolean {
@@ -96,7 +103,7 @@ export class TerminalShell implements IDisposable {
   }
 
   private canRerun(): boolean {
-    if (this.executing || !this.input || this.input.isDisposed) return false
+    if (this.executing || this.typed.trim() || !this.input || this.input.isDisposed) return false
     const buffer = this.term.buffer.active
     let end = buffer.baseY + buffer.cursorY
     while (buffer.getLine(end + 1)?.isWrapped) end++
