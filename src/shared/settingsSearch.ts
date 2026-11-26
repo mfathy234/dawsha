@@ -21,6 +21,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
     'Terminal rendering sleep hidden terminals WebGL',
     'Show images in the terminal inline sixel iTerm IIP',
     'Font ligatures programming symbols contextual font',
+    'Reading view open when I scroll far back in a terminal fold blocks',
     'Sidebar start with the sidebar collapsed',
     'Getting started setup guide',
     'Recordings'
@@ -41,7 +42,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
     'Notifications notify when a session is done or needs you',
     'Usage limits Warn me before a usage limit 80% 95% Claude Codex 5-hour weekly',
     'Sound play a sound with notifications',
-    'Highlight lines matching rules regex colour error warning'
+    'Highlight lines matching rules regex colour error warning notify me when a line matches watch for words'
   ],
   agents: [
     'Claude Codex Gemini full access runs without approval prompts',

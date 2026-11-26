@@ -21,6 +21,7 @@ import {
   setSleepHiddenTerminals,
   setShowTerminalImages,
   setFontLigatures,
+  setReadingOnScroll,
   setSidebarCollapsed,
   showSettingsSection,
   showView,
@@ -39,10 +40,12 @@ import {
   validateRule,
   type HighlightColor,
   type HighlightRule,
+  type HighlightTrigger,
   type HighlightSettings
 } from '../../shared/highlights'
 import { compareVersions } from '../../shared/version'
 import { swatchGroup } from './swatchGroup'
+import { selectMenu } from './selectMenu'
 import { currentBundle } from '../themeManager'
 import { entriesUpTo } from '../../shared/changelog'
 import { DEFAULT_PALETTE_SHORTCUT } from '../../shared/settingsSchema'
@@ -123,9 +126,13 @@ interface RuleDraft {
   pattern: string
   regex: boolean
   color: HighlightColor
+  trigger: HighlightTrigger | null
 }
 
-const emptyDraft = (): RuleDraft => ({ pattern: '', regex: false, color: 'red' })
+const emptyDraft = (): RuleDraft => ({ pattern: '', regex: false, color: 'red', trigger: null })
+
+const TRIGGER_CHOICES: ReadonlyArray<readonly [string, string]> = [['', 'Highlight only'], ['notify', 'Notify me'], ['needs', 'Mark as needs you']]
+const TRIGGER_NOTES: Record<HighlightTrigger, string> = { notify: 'notifies', needs: 'marks needs you' }
 
 const COLOR_LABELS: Record<HighlightColor, string> = { red: 'Red', amber: 'Amber', green: 'Green', blue: 'Blue', purple: 'Purple' }
 
@@ -214,6 +221,7 @@ export class SettingsViewComponent {
       state.settings.sleepHiddenTerminals,
       state.settings.showTerminalImages,
       state.settings.fontLigatures,
+      state.settings.readingOnScroll,
       this.search.value,
       this.changelogOpen,
       this.remoteAccess,
@@ -574,6 +582,7 @@ export class SettingsViewComponent {
       row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
       row('Terminal rendering', checkbox('sleep-hidden-terminals', 'Sleep hidden terminals', state.settings.sleepHiddenTerminals, false, setSleepHiddenTerminals), h('p', { class: 'hint' }, 'Release WebGL rendering after a hidden terminal has been out of view for 10 minutes.')),
       row('Show images in the terminal', checkbox('show-terminal-images', 'Show images in the terminal', state.settings.showTerminalImages, false, setShowTerminalImages), h('p', { class: 'hint' }, 'Display inline images; keep up to 32 MB per terminal.')),
+      row('Reading view', checkbox('reading-on-scroll', 'Open it when I scroll far back', state.settings.readingOnScroll, false, setReadingOnScroll), h('p', { class: 'hint' }, 'Ctrl+Shift+R always opens it. It folds long output into one row per command.')),
       row('Font ligatures', checkbox('font-ligatures', 'Font ligatures', state.settings.fontLigatures, false, setFontLigatures), h('p', { class: 'hint' }, 'Join programming symbols in fonts that support ligatures.')),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),
       row(
@@ -765,7 +774,7 @@ export class SettingsViewComponent {
           { class: 'hl-rule-name' },
           swatch,
           h('code', { class: 'hl-pattern' }, rule.pattern),
-          h('span', { class: 'hint' }, `${COLOR_LABELS[rule.color]}${rule.regex === true ? ', regex' : ''}`)
+          h('span', { class: 'hint' }, `${COLOR_LABELS[rule.color]}${rule.regex === true ? ', regex' : ''}${rule.trigger ? `, ${TRIGGER_NOTES[rule.trigger]}` : ''}`)
         )
       ),
       h(
@@ -876,6 +885,11 @@ export class SettingsViewComponent {
       this.updatePreview()
     })
     regex.querySelector('input')?.setAttribute('data-hl-field', '')
+    const trigger = h('select', { class: 'field-select hl-trigger', id: `${idPrefix}-trigger`, 'aria-label': 'When a line matches', disabled: options.disabled },
+      ...TRIGGER_CHOICES.map(([value, label]) => h('option', { value, selected: (draft.trigger ?? '') === value }, label)))
+    trigger.addEventListener('change', () => {
+      draft.trigger = trigger.value === 'notify' || trigger.value === 'needs' ? trigger.value : null
+    })
     const buttons = [
       h('button', { class: 'btn ghost small', type: 'button', id: `${idPrefix}-submit`, disabled: options.disabled, onClick: () => options.onSubmit() }, options.submitLabel),
       options.onCancel ? h('button', { class: 'btn ghost small', type: 'button', id: `${idPrefix}-cancel`, onClick: () => options.onCancel?.() }, 'Cancel') : null
@@ -886,7 +900,7 @@ export class SettingsViewComponent {
       h(
         'div',
         { class: 'set-main' },
-        h('div', { class: 'hl-form' }, pattern, color, regex, ...buttons),
+        h('div', { class: 'hl-form' }, pattern, color, regex, h('div', { class: 'hl-trigger-wrap' }, selectMenu(trigger)), ...buttons),
         error ? h('p', { class: 'field-error', id: `${idPrefix}-error`, role: 'alert' }, error) : null
       )
     )
@@ -908,7 +922,7 @@ export class SettingsViewComponent {
 
   private startEdit(rule: HighlightRule, index: number): void {
     this.editIndex = index
-    this.editDraft = { pattern: rule.pattern, regex: rule.regex === true, color: rule.color }
+    this.editDraft = { pattern: rule.pattern, regex: rule.regex === true, color: rule.color, trigger: rule.trigger ?? null }
     this.editError = null
     this.refresh()
     document.getElementById('hl-edit-pattern')?.focus()
@@ -932,7 +946,8 @@ export class SettingsViewComponent {
 
   private toRule(draft: RuleDraft): HighlightRule {
     const pattern = draft.pattern.trim()
-    return draft.regex ? { pattern, color: draft.color, regex: true } : { pattern, color: draft.color }
+    const base: HighlightRule = draft.regex ? { pattern, color: draft.color, regex: true } : { pattern, color: draft.color }
+    return draft.trigger ? { ...base, trigger: draft.trigger } : base
   }
 
   private problemWith(draft: RuleDraft, rules: HighlightRule[], skip: number): string | null {

@@ -14,6 +14,8 @@ const MAX_SCAN_ROWS = 5000
 
 export interface HighlightHost {
   config(): { settings: HighlightSettings; kind: 'dark' | 'light' }
+  /** A line matched a rule that has a trigger; the host decides whether it is worth announcing. */
+  fire?(rule: HighlightRule, line: string): void
 }
 
 export class TerminalHighlights {
@@ -73,8 +75,11 @@ export class TerminalHighlights {
     if (cursor === from) return
     const rules = this.rules(settings)
     for (let row = from; row < cursor; row += 1) {
-      const color = rules.test(buffer.getLine(row)?.translateToString(true) ?? '')
-      if (color) this.decorate(row, cursor, color, kind)
+      const text = buffer.getLine(row)?.translateToString(true) ?? ''
+      const rule = rules.match(text)
+      if (!rule) continue
+      this.decorate(row, cursor, rule.color, kind)
+      if (rule.trigger) this.host.fire?.(rule, text)
     }
     this.resetMarker()
   }

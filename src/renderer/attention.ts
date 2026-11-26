@@ -11,6 +11,7 @@ import { getTerminal } from './terminals'
 import { toast } from './components/toast'
 import { installLimitNotices } from './limitNotices'
 import { boardShowing } from './sessionsLayout'
+import { markedNeedsYou } from './needsYou'
 
 const PROMPT_POLL_MS = 1500
 const PROMPT_TAIL_ROWS = 24
@@ -88,6 +89,7 @@ function pollPrompts(): void {
     const tail = getTerminal(tab.id)?.tailText(PROMPT_TAIL_ROWS) ?? ''
     if (detectPermissionPrompt(tail)) waiting[view.pane.id] = true
   }
+  for (const paneId of markedNeedsYou((id) => state.panes.some((pane) => pane.id === id))) waiting[paneId] = true
   const known = state.waiting
   const same = Object.keys(waiting).length === Object.keys(known).length && Object.keys(waiting).every((k) => known[k])
   if (!same) store.patch({ waiting })

@@ -210,6 +210,8 @@ export interface Settings {
   sleepHiddenTerminals: boolean
   showTerminalImages: boolean
   fontLigatures: boolean
+  /** Opens the reading view when you scroll far back in a terminal. Ctrl+Shift+R opens it any time. */
+  readingOnScroll: boolean
   /** How a new session of each agent opens: as its terminal or as a chat drawn from its log. */
   sessionViews: SessionViews
   /** The view each session was last left in, by agent and session id, so a resume opens the same way. */
