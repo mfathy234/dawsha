@@ -40,6 +40,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
     'Mini window show when minimized',
     'Notifications notify when a session is done or needs you',
     'Usage limits Warn me before a usage limit 80% 95% Claude Codex 5-hour weekly',
+    'Catch-up card while you were away what happened after 20 minutes',
     'Sound play a sound with notifications',
     'Highlight lines matching rules regex colour error warning'
   ],

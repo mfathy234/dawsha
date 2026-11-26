@@ -41,6 +41,8 @@ export interface MiniSessionInput extends SessionStateInput {
   moment?: { took: string } | null
   /** The session's pull request, as "PR #34: checks running". */
   pr?: string
+  /** It finished while the owner was not looking and has not been viewed since. */
+  unread?: boolean
 }
 
 export interface MiniSession {
@@ -63,6 +65,7 @@ export interface MiniSession {
   permission: { command: string; prompt: string } | null
   /** What a needs-you session waits on when it is not an approval: a picker, a menu or a question. */
   waiting: MiniWaiting | null
+  unread: boolean
   plan: { done: number; total: number; current: string; items: readonly TodoEntry[] } | null
 }
 
@@ -155,6 +158,7 @@ export function miniSession(input: MiniSessionInput): MiniSession {
     tail: outputLines(input.tail, 3).map(line => cleanText(line, 600)),
     permission: asking ? { command: cleanText(detail.target, 2000), prompt: input.tail.slice(-12000) } : null,
     waiting,
+    unread: input.unread === true,
     plan: progress && progress.total > 0 ? { ...progress, items } : null
   }
 }

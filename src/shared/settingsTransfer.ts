@@ -24,6 +24,7 @@ export const INCLUDED_KEYS = [
   'crew',
   'sessionInfo',
   'warnUsageLimits',
+  'catchUp',
   'autoUpdateCheck',
   'sidebarCollapsed',
   'sidebarSort',
@@ -161,7 +162,7 @@ const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
 const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew', 'appearance'] as const
-const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'showTerminalImages', 'fontLigatures', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits'] as const
+const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'showTerminalImages', 'fontLigatures', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits', 'catchUp'] as const
 
 function checkShapes(data: Raw): string | null {
   for (const key of LIST_KEYS) {
@@ -274,6 +275,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['recordings', 'Recording settings'],
   ['crew', 'Crew members'],
   ['sessionInfo', 'Notifications'],
+  ['catchUp', 'Catch-up card'],
   ['autoUpdateCheck', 'Update checks'],
   ['sidebarCollapsed', 'Sidebar'],
   ['sidebarSort', 'Sidebar'],

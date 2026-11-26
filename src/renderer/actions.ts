@@ -1414,7 +1414,8 @@ export function buildPane(saved: SavedPane, project: Project): PaneState {
     compare: saved.compare,
     worktree: saved.worktree,
     pinned: saved.pinned === true ? true : undefined,
-    starred: saved.starred === true ? true : undefined
+    starred: saved.starred === true ? true : undefined,
+    care: saved.care
   }
 }
 

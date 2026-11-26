@@ -84,6 +84,9 @@ export interface PaneView {
   primaryTabId: string
   fileWaiting: boolean
   attention: Attention
+  /** The session finished while the owner was not looking and has not been viewed since. */
+  unread: boolean
+  snoozed: boolean
   info: PaneInfo
   snapshot: OpsSnapshot | null
   activity: ProcessActivity[]
@@ -333,6 +336,9 @@ function infoFor(
   return withUsage(state, tab, matches, baseInfoFor(state, tab, matches, folder, snapshot, opsLive))
 }
 
+/** An unread session still reads as done after a restart, when the live attention memory is empty. */
+const heldAttention = (attention: Attention, unread: boolean): Attention => (attention === 'none' && unread ? 'done' : attention)
+
 export function derivePanes(state: AppState): PaneView[] {
   const matches = matchAll(state)
   const titles = state.panes.map((pane, index) => titleFor(pane, matches, index + 1, projectById(state, pane.projectId)))
@@ -378,7 +384,9 @@ export function derivePanes(state: AppState): PaneView[] {
       activeExited: active.status === 'exited',
       primaryTabId: primary.id,
       fileWaiting: primary.agent === 'claude' && sessionWaiting(matches.claude.get(primary.id)),
-      attention: state.attention[pane.id] ?? 'none',
+      attention: heldAttention(state.attention[pane.id] ?? 'none', pane.care?.unread === true),
+      unread: pane.care?.unread === true,
+      snoozed: pane.care?.snooze !== undefined,
       info: infoFor(state, primary, matches, folder, snapshot, opsLive),
       tabs: pane.tabs.map((tab) => ({
         id: tab.id,

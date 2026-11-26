@@ -30,6 +30,7 @@ import { defaultCrew, sanitizeCrew, sanitizeCrewRuns, sanitizeIdentity } from '.
 import { sanitizeDrafts } from './reviewDrafts'
 import { defaultLead, sanitizeGoals, sanitizeLead } from './crewLead'
 import { cleanSessionName, isSessionTag, SESSION_NAME_MAX } from './sessionTags'
+import { sanitizeCare } from './sessionCare'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -115,6 +116,7 @@ export const defaultSettings = (): Settings => ({
   plantumlJarPath: '',
   trayNoticeShown: false,
   warnUsageLimits: true,
+  catchUp: true,
   watchPullRequests: true,
   warnedUsageWindows: {},
   sidePanel: DEFAULT_SIDE_PANEL,
@@ -271,6 +273,8 @@ function sanitizePane(item: unknown): SavedPane | null {
   if (worktree) pane.worktree = worktree
   if (item.pinned === true) pane.pinned = true
   if (item.starred === true) pane.starred = true
+  const care = sanitizeCare(item.care)
+  if (care) pane.care = care
   return pane
 }
 
@@ -501,6 +505,7 @@ export function migrateSettings(raw: unknown): Settings {
     plantumlJarPath: typeof raw.plantumlJarPath === 'string' && raw.plantumlJarPath.length <= 4096 && !/[\x00-\x1f]/.test(raw.plantumlJarPath) ? raw.plantumlJarPath.trim() : '',
     trayNoticeShown: raw.trayNoticeShown === true,
     warnUsageLimits: raw.warnUsageLimits !== false,
+    catchUp: raw.catchUp !== false,
     watchPullRequests: raw.watchPullRequests !== false,
     warnedUsageWindows: sanitizeWarnedWindows(raw.warnedUsageWindows),
     sidePanel: sanitizeSidePanel(raw.sidePanel),
