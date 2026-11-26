@@ -78,6 +78,11 @@ interface Start {
   exitCode?: number | null
 }
 
+const SHELL_PROMPT_RE = /[>$#%]\s+(\S.*)$/
+
+/** The command typed after a shell prompt such as "PS C:\app> npm test" or "me@box:~$ ls". */
+export const afterShellPrompt = (text: string): string => SHELL_PROMPT_RE.exec(text)?.[1] ?? text.trim()
+
 function claudeStart(text: string): Start | null {
   const tool = CLAUDE_TOOL_RE.exec(text)
   if (tool) {
@@ -102,7 +107,7 @@ function codexStart(text: string): Start | null {
 function classify(line: BlockLine, options: BlockOptions, external: Map<number, ExternalCommand>): Start | null {
   const command = external.get(line.row)
   if (command) return { kind: 'command', title: clip(command.title), exitCode: command.exitCode }
-  if (options.promptRows?.has(line.row)) return { kind: 'prompt', title: clip(line.text.replace(PROMPT_RE, '$1').replace(/^[\s>›❯$]+/, '')) }
+  if (options.agent === 'shell' && options.promptRows?.has(line.row)) return { kind: 'command', title: clip(afterShellPrompt(line.text)) }
   const question = QUESTION_RE.exec(line.text)
   if (question) return { kind: 'question', title: clip(question[1]) }
   const prompt = PROMPT_RE.exec(line.text)
@@ -272,7 +277,7 @@ export function outlineEntries(blocks: readonly Block[]): OutlineEntry[] {
     entries.push({ key: `b${block.startRow}`, row: block.startRow, kind: block.kind, title: block.title, status: block.status, detail, block })
     const first = block.errors[0]
     if (first && block.kind !== 'prompt') {
-      entries.push({ key: `e${first.row}`, row: first.row, kind: 'error', title: first.text, status: 'failed', detail: null, block })
+      entries.push({ key: `e${first.row}`, row: first.row, kind: 'error', title: first.text.replace(/^[✗✘×]\s*/, ''), status: 'failed', detail: null, block })
     }
   }
   return entries

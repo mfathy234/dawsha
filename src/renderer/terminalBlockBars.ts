@@ -81,7 +81,7 @@ export class TerminalBlockBars {
 
   private update(): void {
     if (!this.enabled || this.hidden() || !this.blocks.isNormalBuffer) return this.hideAll()
-    const list = this.blocks.list()
+    const list = this.blocks.cached()
     this.updateSticky(list)
     this.updateGutter(list)
     this.updateMarks(list)

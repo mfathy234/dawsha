@@ -97,7 +97,7 @@ export class TerminalBlockTools {
 
   canJumpBlock(direction: 1 | -1): boolean {
     if (!this.blocks.isNormalBuffer) return false
-    return stepBlock(this.blocks.list(), this.blocks.top, direction) !== null || (direction === 1 && !this.blocks.atBottom)
+    return stepBlock(this.blocks.cached(), this.blocks.top, direction) !== null || (direction === 1 && !this.blocks.atBottom)
   }
 
   jumpBlock(direction: 1 | -1): void {

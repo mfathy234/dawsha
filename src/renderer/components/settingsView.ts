@@ -45,6 +45,7 @@ import {
 } from '../../shared/highlights'
 import { compareVersions } from '../../shared/version'
 import { swatchGroup } from './swatchGroup'
+import { selectMenu } from './selectMenu'
 import { currentBundle } from '../themeManager'
 import { entriesUpTo } from '../../shared/changelog'
 import { DEFAULT_PALETTE_SHORTCUT } from '../../shared/settingsSchema'
@@ -899,7 +900,7 @@ export class SettingsViewComponent {
       h(
         'div',
         { class: 'set-main' },
-        h('div', { class: 'hl-form' }, pattern, color, regex, trigger, ...buttons),
+        h('div', { class: 'hl-form' }, pattern, color, regex, h('div', { class: 'hl-trigger-wrap' }, selectMenu(trigger)), ...buttons),
         error ? h('p', { class: 'field-error', id: `${idPrefix}-error`, role: 'alert' }, error) : null
       )
     )

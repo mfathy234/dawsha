@@ -41,7 +41,7 @@ import { replayPane, toggleRecordingPause } from '../replayActions'
 import { api } from '../api'
 import { COPY_SESSION_NAME, copySessionName } from '../copySessionName'
 import { sessionLabel as sessionRowName } from './sidebarRows'
-import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal, toggleOutline, toggleReading } from '../terminalActions'
+import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { AgentKind, TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
 import { keycaps } from './keycaps'
@@ -772,8 +772,6 @@ export class PaneComponent {
       item('Replay session', () => replayPane(this.paneId), ICONS.replay, 'pane.replay'),
       item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
       item(COPY_SESSION_NAME, () => void copySessionName(this.current ? sessionRowName(this.current) : ''), ICONS.copy),
-      item('Reading view', () => toggleReading(this.paneId), ICONS.history, 'terminal.reading'),
-      item('Block outline', () => toggleOutline(this.paneId), ICONS.search, 'terminal.outline'),
       item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
       item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),
       item('Clear scrollback', () => clearScrollback(this.paneId), ICONS.eraser),

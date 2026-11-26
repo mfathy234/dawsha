@@ -12,6 +12,7 @@ import {
 const FLASH_MS = 700
 const FLASH_COLOR = '#5b8def'
 const EMIT_MS = 250
+const SCAN_GAP_MS = 200
 const STAMP_MS = 400
 const MAX_STAMPS = 3000
 const LIVE_ROWS = 14
@@ -46,6 +47,7 @@ export function liveStartRow(rows: readonly string[], firstRow: number): number 
 export class TerminalBlocks {
   private cache: Block[] = []
   private dirty = true
+  private lastScan = 0
   private stamps: Stamp[] = []
   private lastStampAt = 0
   private timer: number | null = null
@@ -92,11 +94,18 @@ export class TerminalBlocks {
     return this.term.buffer.active.type === 'normal'
   }
 
+  /** The blocks as the buffer is now. */
   list(): Block[] {
     if (!this.dirty) return this.cache
     this.dirty = false
+    this.lastScan = Date.now()
     this.cache = this.isNormalBuffer ? this.scan() : []
     return this.cache
+  }
+
+  /** The blocks from a recent scan: cheap enough to ask for on every key press or scroll while output streams. */
+  cached(): Block[] {
+    return this.dirty && Date.now() - this.lastScan >= SCAN_GAP_MS ? this.list() : this.cache
   }
 
   blockAt(row: number): Block | null {

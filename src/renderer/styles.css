@@ -4425,6 +4425,10 @@ body.dragging-ui {
   width: 110px;
 }
 
+.hl-form .hl-trigger-wrap {
+  width: 170px;
+}
+
 .settings-panel .field-error {
   margin: 0;
 }

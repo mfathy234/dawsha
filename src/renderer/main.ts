@@ -50,6 +50,7 @@ import { installWorktreeNudge } from './worktreeCleanupActions'
 import { installNotificationCommands } from './commands/notifications'
 import { installNeedsNotices } from './needsNotice'
 import { installReplayCommands } from './commands/replay'
+import { installBlockCommands } from './commands/blocks'
 import { installQueueRunner } from './automation/queueRunner'
 import { installScheduler } from './automation/scheduler'
 import { installSettingsTransferCommands } from './commands/settingsTransfer'
@@ -159,6 +160,7 @@ async function boot(): Promise<void> {
   installHandoffCommands()
   installClosedSessionCommands()
   installReplayCommands()
+  installBlockCommands()
   installSettingsTransferCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)

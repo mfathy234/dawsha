@@ -96,9 +96,14 @@ describe('parseBlocks other sources', () => {
     ])
   })
 
-  it('takes rows from the prompt markers as prompts', () => {
-    const blocks = parseBlocks(toLines('hello there\nreply'), { promptRows: new Set([0]) })
-    expect(blocks[0]).toMatchObject({ kind: 'prompt', title: 'hello there' })
+  it('takes the rows where a shell command was typed as command blocks', () => {
+    const blocks = parseBlocks(toLines('PS C:\\app> npm test\nok'), { agent: 'shell', promptRows: new Set([0]) })
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0]).toMatchObject({ kind: 'command', title: 'npm test' })
+  })
+
+  it('ignores prompt markers for agents, whose rows move when they redraw', () => {
+    expect(parseBlocks(toLines('hello there\nreply'), { agent: 'claude', promptRows: new Set([0]) })).toEqual([])
   })
 
   it('counts wrapped rows into the end row', () => {
