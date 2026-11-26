@@ -37,6 +37,6 @@
 .inbox-actions { display: flex; gap: var(--sp-2); }
 .inbox-reply-row { display: flex; align-items: center; gap: 10px; }
 .inbox-reply { flex: 1; min-width: 0; height: 40px; padding: 0 14px; border: 0; border-radius: var(--r-control); background: var(--well); color: var(--text); font: inherit; font-size: var(--fs-2); box-shadow: var(--well-shadow), 0 0 0 1px color-mix(in srgb, var(--text) 28%, transparent); }
-.inbox-reply:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.inbox-reply:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 .inbox-send { height: 40px; }
 .inbox-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-3); font-size: var(--fs-3); }

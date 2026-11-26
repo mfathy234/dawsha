@@ -1,10 +1,10 @@
 .ctx-ring { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 24px; padding: 0 6px; border: 0; border-radius: var(--r-control); background: transparent; color: var(--text-3); font: inherit; font-size: var(--fs-12); font-variant-numeric: tabular-nums; cursor: pointer; }
 .ctx-ring[hidden] { display: none; }
 .ctx-ring:hover, .ctx-ring[aria-expanded='true'] { background: var(--hover); color: var(--text-2); }
-.ctx-ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ctx-ring:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .ctx-ring-svg { flex: none; display: block; }
 .ctx-ring-track { stroke: var(--press); }
-.ctx-ring-arc { stroke: var(--text-3); transition: stroke-dashoffset .2s ease; }
+.ctx-ring-arc { stroke: var(--text-3); transition: stroke-dashoffset var(--dur-3) var(--ease-out); }
 .ctx-ring[data-stage='warn'] { color: var(--busy); }
 .ctx-ring[data-stage='warn'] .ctx-ring-arc { stroke: var(--busy); }
 .ctx-ring[data-stage='danger'] { color: var(--danger); }

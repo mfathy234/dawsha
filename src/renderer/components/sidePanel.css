@@ -90,7 +90,7 @@
 
 .side-panel-tab:hover { background: var(--hover); color: var(--text); }
 .side-panel-tab.selected { background: var(--surface-pop, var(--raised)); color: var(--text); }
-.side-panel-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.side-panel-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 .side-panel-count {
   color: var(--accent);

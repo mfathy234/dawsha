@@ -18,7 +18,7 @@
 .work-item { display: flex; flex-direction: column; gap: var(--s-2); width: 100%; padding: var(--s-3) var(--s-2); background: transparent; color: var(--text); border: 0; border-radius: var(--radius); text-align: left; cursor: pointer; }
 .work-item:hover { background: var(--hover); }
 .work-item:active { background: var(--press); }
-.work-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.work-item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .work-item-main { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); }
 .work-item-main strong { font-size: var(--fs-body); overflow-wrap: anywhere; }
 .work-item-meta { color: var(--muted); font-size: var(--fs-ui); overflow-wrap: anywhere; }
@@ -31,13 +31,13 @@
 .work-ticket-name { font-size: var(--fs-body); overflow-wrap: anywhere; }
 .work-ticket-link { color: var(--accent); font-size: var(--fs-ui); text-decoration: none; }
 .work-ticket-link:hover { text-decoration: underline; }
-.work-ticket-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-micro); }
+.work-ticket-link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--r-micro); }
 .work-ticket-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--s-3); align-items: end; padding: var(--s-3) 0; }
 .work-ticket-form label { display: flex; flex-direction: column; gap: var(--s-1); font-size: var(--fs-ui); color: var(--muted); }
 .work-ticket-form .field-error { grid-column: 1 / -1; margin: 0; }
 .work-ticket-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: var(--s-2); }
 .work-ticket-sessions summary { color: var(--muted); font-size: var(--fs-ui); cursor: pointer; width: fit-content; }
-.work-ticket-sessions summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.work-ticket-sessions summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .work-ticket-sessions .work-items { margin-top: var(--s-1); }
 @media (max-width: 900px) {
   .work-body { padding: var(--s-4) var(--s-4) var(--s-5); }

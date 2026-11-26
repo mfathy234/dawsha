@@ -35,7 +35,7 @@ textarea.crew-area { width: 100%; resize: vertical; line-height: 1.55; min-heigh
 .crew-swatch span { width: 16px; height: 16px; border-radius: var(--r-micro); background: var(--c); }
 .crew-swatch[aria-checked='true'] { box-shadow: 0 0 0 2px var(--text); }
 .crew-swatch:disabled { cursor: default; }
-.crew-swatch:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.crew-swatch:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .crew-vars { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
 .crew-vars code, .crew-chip { font-family: var(--font-mono); font-size: var(--fs-1); background: var(--well); padding: 2px 7px; border-radius: var(--r-micro); color: var(--text); }
 .crew-chip { display: inline-flex; align-items: center; gap: 4px; }
@@ -75,7 +75,7 @@ textarea.crew-area { width: 100%; resize: vertical; line-height: 1.55; min-heigh
 .crew-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .crew-chip-btn { padding: 6px 10px; border: 0; border-radius: var(--r-control); background: var(--well); color: var(--text); font: inherit; cursor: pointer; }
 .crew-chip-btn[aria-checked='true'] { background: var(--raised); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .28); }
-.crew-chip-btn:focus-visible, .crew-seg-btn:focus-visible, .crew-radio:focus-visible, .crew-model:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.crew-chip-btn:focus-visible, .crew-seg-btn:focus-visible, .crew-radio:focus-visible, .crew-model:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .crew-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--r-control); background: var(--well); width: fit-content; }
 .crew-seg-btn { padding: 4px 11px; border: 0; border-radius: var(--r-control); background: none; color: var(--muted); font: inherit; cursor: pointer; }
 .crew-seg-btn[aria-checked='true'] { background: var(--raised); color: var(--text); }
@@ -112,7 +112,7 @@ textarea.crew-area { width: 100%; resize: vertical; line-height: 1.55; min-heigh
 .crew-strip-label .needs { color: var(--needs-ink); font-weight: var(--w-medium); }
 .crew-strip-btn { display: inline-flex; padding: 4px; border: 0; border-radius: var(--r-control); background: none; cursor: pointer; }
 .crew-strip-btn:hover { background: var(--hover); }
-.crew-strip-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.crew-strip-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 .skill-pick { display: flex; align-items: center; justify-content: center; width: 16px; }
 .skill-bulk { display: flex; align-items: center; gap: var(--s-3); margin: 0 0 var(--s-3); color: var(--muted); font-size: var(--fs-ui); }

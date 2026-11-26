@@ -75,9 +75,10 @@ export class ReviewPanel {
     onInput: (event: Event) => this.hooks.note((event.target as HTMLTextAreaElement).value)
   })
   private readonly noteToggle = h('button', { class: 'btn small ghost', type: 'button', id: 'files-review-note-toggle', 'aria-expanded': 'false', 'aria-controls': 'files-review-note', onClick: () => this.setNoteOpen(!this.noteOpen) }, 'Note to agent')
-  private readonly send = h('button', { class: 'btn small secondary', type: 'button', id: 'files-review-send', disabled: true, onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send note to agent')
+  private readonly send = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-send', disabled: true, onClick: (event: Event) => this.hooks.send(event.currentTarget as HTMLElement) }, 'Send note to agent')
   private readonly more = h('button', { class: 'icon-btn', type: 'button', id: 'files-review-more', 'aria-haspopup': 'menu', title: 'More review actions', 'aria-label': 'More review actions', onClick: () => this.openMenu() }, icon(ICONS.more))
-  private readonly commit = h('button', { class: 'btn small primary', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
+  private readonly commit = h('button', { class: 'btn small secondary', type: 'button', id: 'files-review-commit', disabled: true, onClick: () => this.hooks.commit() }, 'Commit…')
+  private readonly discard = h('button', { class: 'link-danger', type: 'button', id: 'files-review-discard', disabled: true, onClick: () => this.current && this.hooks.discard(this.current) }, 'Discard…')
   private current: string | null = null
   private last: ReviewModel | null = null
   private noteOpen = false
@@ -95,7 +96,7 @@ export class ReviewPanel {
     this.el.append(this.scopeRow, this.cardSlot, this.head, this.list, this.comments.el, this.foot)
     this.head.append(this.progress, this.prev, this.next)
     this.note.hidden = true
-    this.foot.append(this.note, this.send, h('div', { class: 'files-review-actions' }, this.noteToggle, this.more, this.commit))
+    this.foot.append(this.note, this.send, h('div', { class: 'files-review-actions' }, this.noteToggle, this.more, this.commit, this.discard))
     this.list.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
       const rows = [...this.list.querySelectorAll<HTMLElement>('.files-review-open')]
@@ -167,6 +168,9 @@ export class ReviewPanel {
     this.prev.disabled = total === 0
     this.next.disabled = total === 0
     this.commit.disabled = total === 0
+    const target = model.current && model.files.some((file) => file.path === model.current) ? split(model.current).name : null
+    this.discard.disabled = target === null
+    this.discard.title = target ? `Discard ${target}` : 'Select a changed file to discard it'
     if (model.note.trim() !== '' && !this.noteOpen) this.setNoteOpen(true, false)
     const count = model.commentTotal
     this.send.disabled = count === 0 && model.note.trim() === ''

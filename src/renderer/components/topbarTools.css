@@ -12,7 +12,7 @@
 .limit-ring svg { display: block; overflow: visible; }
 .limit-ring .ring-track { stroke: var(--line-strong); }
 .limit-ring .ring-arc { stroke: var(--ring); }
-.limit-ring .ring-text { fill: var(--text-2); font: 600 8.5px/1 var(--font-mono); letter-spacing: -0.02em; }
+.limit-ring .ring-text { fill: var(--text-2); font: 500 8.5px/1 var(--font-mono); letter-spacing: -0.02em; }
 .limit-ring.stage-warn .ring-text { fill: var(--busy); }
 .limit-ring.stage-danger .ring-text { fill: var(--danger); }
 .topbar-limits.stale .limit-rings { opacity: 0.55; }

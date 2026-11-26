@@ -22,4 +22,4 @@
 .wtc-opt { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-2); color: var(--text-2); cursor: pointer; }
 .wtc-opt input:disabled + span { color: var(--text-3); }
 
-.wtc-box:focus-visible, .wtc-opt input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wtc-box:focus-visible, .wtc-opt input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }

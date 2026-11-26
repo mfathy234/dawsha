@@ -119,7 +119,7 @@ function applyCss(bundle: ThemeBundle, settings: ThemeSettings): void {
     '--ag-codex-fg': light ? '#f1f3f7' : '#11151c',
     '--ag-gemini-bg': light ? '#6544d4' : '#a78bfa',
     '--ag-gemini-fg': light ? '#ffffff' : '#180f33',
-    '--accent-ink': light ? app.accent : `color-mix(in srgb, ${app.accent} 84%, white)`,
+    '--accent-ink': light ? `color-mix(in srgb, ${app.accent} 86%, black)` : `color-mix(in srgb, ${app.accent} 84%, white)`,
     '--danger-fill': app.danger,
     '--on-danger-fill': app.onDanger,
     '--scrim': light ? 'rgb(21 27 35 / .38)' : 'rgb(5 7 10 / .62)',

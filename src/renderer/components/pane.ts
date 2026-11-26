@@ -187,9 +187,6 @@ export class PaneComponent {
     this.drawer = new ShellDrawer(paneId)
     this.branch.append(icon(ICONS.branch), this.branchName, this.branchSync)
     this.titles.append(this.index, this.projectName, this.fresh)
-    this.recap.addEventListener('click', () => {
-      if (this.inHeader) this.recap.classList.toggle('expanded')
-    })
     this.pin.append(icon(ICONS.pin))
     const header = h(
       'div',
@@ -354,7 +351,6 @@ export class PaneComponent {
   private placeInHeader(maximized: boolean): void {
     if (maximized === this.inHeader) return
     this.inHeader = maximized
-    this.recap.classList.remove('expanded')
     if (maximized) {
       this.titles.after(this.branch, this.recap)
     } else {

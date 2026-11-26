@@ -124,8 +124,8 @@
 }
 
 .closed-reopen:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* Dragging a project: a line shows where it will land. */
@@ -228,7 +228,7 @@
 .proj-toggle:focus-visible,
 .sess-row:focus-visible,
 .foot-btn:focus-visible,
-.rail-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rail-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 
 .proj-toggle > .icon { flex: none; color: var(--muted); }
 .proj-toggle > .icon svg { width: 12px; height: 12px; }

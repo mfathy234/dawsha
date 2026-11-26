@@ -110,7 +110,7 @@
 .frame-sidebar .sidebar.rail .frame-bottom > .update-pill { width: 36px; padding: 0; justify-content: center; overflow: hidden; }
 .frame-sidebar .sidebar.rail .frame-foot { flex-direction: column; }
 
-:root:not([data-input='pointer']) .frame-sidebar .sidebar :is(.frame-collapse, .frame-expand, .frame-panel-toggle, .frame-new, .frame-nav .nav-button, #search-button, #settings-button, .app-logo-menu):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+:root:not([data-input='pointer']) .frame-sidebar .sidebar :is(.frame-collapse, .frame-expand, .frame-panel-toggle, .frame-new, .frame-nav .nav-button, #search-button, #settings-button, .app-logo-menu):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* On short windows the frame gives its rows less height so the project list keeps room and scrolls. */
 @media (max-height: 800px) {

@@ -174,4 +174,4 @@
 .strip-more:hover { color: var(--text); }
 .strip-more.needs { color: var(--state-needs); }
 .strip-more[hidden] { display: none; }
-.strip-more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.strip-more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
