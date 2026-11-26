@@ -37,8 +37,11 @@ test('a when-done rule runs the checks after a turn, sends a failure back, and s
     const pane = page.locator(`.pane[data-pane-id="${paneId}"]`)
     const termId = (await pane.locator('.term-host').first().getAttribute('data-term-id')) ?? ''
 
-    await pane.getByRole('button', { name: 'Pane actions' }).click()
-    await page.getByRole('menuitem', { name: 'When done…', exact: true }).click()
+    await pane.locator('.pane-header').click({ position: { x: 4, y: 4 } })
+    await expect(pane).toHaveClass(/focused/)
+    await page.keyboard.press('Control+k')
+    await page.locator('#palette-input').fill('When this session is done')
+    await page.keyboard.press('Enter')
     const dialog = page.getByRole('dialog', { name: /is done$/ })
     await dialog.getByRole('group', { name: 'Run commands' }).getByRole('checkbox').first().check()
     await dialog.getByLabel('Times a failure goes back to the agent').fill('1')

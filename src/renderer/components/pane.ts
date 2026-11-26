@@ -16,7 +16,6 @@ import {
   restoreGrid,
   setActiveTab,
   togglePinned,
-  toggleStarred,
   showPaneDiff,
   openChanges,
   paneHasRepo,
@@ -73,8 +72,7 @@ import { setStatePillSuffix, stateIcon, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
 import { openMergeBack, paneWorktree } from '../mergeBackActions'
-import { editNote, editRule, openSnooze } from './careDialogs'
-import { openBroadcast } from './broadcastDialog'
+import { openSnooze } from './careDialogs'
 import { ruleLineFor } from '../whenDone'
 import { OverlapNotice } from './overlapNotice'
 import { recordState } from '../timelineLog'
@@ -795,7 +793,6 @@ export class PaneComponent {
       ? [item('Make large', () => makeLarge(this.paneId), ICONS.maximize, 'pane.make-large')]
       : []
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
-    const starItem = item(this.current?.pane.starred === true ? 'Unpin' : 'Pin to top', () => toggleStarred(this.paneId), ICONS.pin)
     const source = this.current?.agent ?? 'shell'
     const handoffs =
       source === 'shell'
@@ -817,13 +814,9 @@ export class PaneComponent {
       first,
       ...largeItems,
       showDetails,
-      starItem,
       pinItem,
       item('Tag…', () => this.openTag(), ICONS.tag),
-      item(this.current?.pane.care?.note ? 'Edit note…' : 'Add note…', () => editNote(this.paneId), ICONS.toolEdit),
       item('Snooze…', () => openSnooze(this.paneId), ICONS.history),
-      item('When done…', () => editRule(this.paneId), ICONS.check),
-      item('Send to several…', () => openBroadcast(this.paneId), ICONS.next),
       h('div', { class: 'menu-separator', role: 'separator' }),
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Session'),
       item('New terminal', () => this.openTerminalPicker(), ICONS.plus),
