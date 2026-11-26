@@ -101,9 +101,9 @@ test('the collapsed rail marks projects whose sessions need you', async () => {
 
     await page.getByRole('button', { name: 'Collapse sidebar' }).click()
     const rail = page.locator('.sidebar.rail')
-    const smoke = rail.getByRole('button', { name: 'Smoke, 1 needs you' })
+    const smoke = rail.getByRole('button', { name: 'Smoke · 1 needs you' })
     await expect(smoke).toBeVisible()
-    await expect(smoke.locator('.rail-badge')).toHaveText('!')
+    await expect(smoke.locator('.rail-badge')).toHaveText('1')
     await expect(rail.getByRole('button', { name: 'Missing', exact: true })).toBeVisible()
     await expect(rail.locator('.rail-badge')).toHaveCount(1)
     await rail.screenshot({ path: join(SCREENS, 'sidebar-rail-badge.png') })

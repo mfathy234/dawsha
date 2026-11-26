@@ -20,7 +20,7 @@
 .sidebar.rail.framed { gap: 0; padding-bottom: 0; }
 .sidebar.rail.framed .rail-divider { margin: 8px 0; flex: none; }
 
-.rail-btn.rail-tile {
+.rail-btn.rail-mono.rail-tile {
   position: relative;
   flex: none;
   width: 32px;
@@ -32,18 +32,18 @@
   font-weight: 600;
   letter-spacing: 0.02em;
 }
-.rail-btn.rail-tile:hover { background: var(--hover); }
-.rail-btn.rail-tile.rail-open,
-.rail-btn.rail-tile.rail-unread,
-.rail-btn.rail-tile.rail-working { background: var(--raised); }
-.rail-btn.rail-tile.rail-open { color: var(--text-2); }
-.rail-btn.rail-tile.rail-unread,
-.rail-btn.rail-tile.rail-working { color: var(--text); }
-.rail-btn.rail-tile.rail-unread { font-weight: 700; }
-.rail-btn.rail-tile.rail-working .rail-letters { animation: rail-breath 2.4s ease-in-out infinite; }
-.rail-btn.rail-tile.rail-needs { background: color-mix(in srgb, var(--needs) 18%, var(--raised)); color: var(--needs); }
-.rail-btn.rail-tile.rail-selected { background: var(--press); color: var(--text); box-shadow: var(--e1); }
-.rail-btn.rail-tile .rail-badge { position: absolute; top: -3px; right: -3px; background: none; color: var(--needs); font-size: 10px; font-weight: 600; line-height: 1; letter-spacing: 0; }
+.rail-btn.rail-mono.rail-tile:hover { background: var(--hover); }
+.rail-btn.rail-mono.rail-tile.rail-open,
+.rail-btn.rail-mono.rail-tile.rail-unread,
+.rail-btn.rail-mono.rail-tile.rail-working { background: var(--raised); }
+.rail-btn.rail-mono.rail-tile.rail-open { color: var(--text-2); }
+.rail-btn.rail-mono.rail-tile.rail-unread,
+.rail-btn.rail-mono.rail-tile.rail-working { color: var(--text); }
+.rail-btn.rail-mono.rail-tile.rail-unread { font-weight: 700; }
+.rail-btn.rail-mono.rail-tile.rail-working .rail-letters { animation: rail-breath 2.4s ease-in-out infinite; }
+.rail-btn.rail-mono.rail-tile.rail-needs { background: color-mix(in srgb, var(--needs) 18%, var(--raised)); color: var(--needs); }
+.rail-btn.rail-mono.rail-tile.rail-selected { background: var(--press); color: var(--text); box-shadow: var(--e1); }
+.rail-btn.rail-mono.rail-tile .rail-badge { position: absolute; top: -3px; right: -3px; background: none; color: var(--needs); font-size: 10px; font-weight: 600; line-height: 1; letter-spacing: 0; }
 
 .rail-btn.rail-more { flex: none; width: 32px; height: 24px; border-radius: 8px; background: transparent; color: var(--text-3); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
 .rail-btn.rail-more:hover { background: var(--hover); color: var(--text); }
@@ -66,5 +66,5 @@
 
 @keyframes rail-breath { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) {
-  .rail-btn.rail-tile.rail-working .rail-letters { animation: none; }
+  .rail-btn.rail-mono.rail-tile.rail-working .rail-letters { animation: none; }
 }

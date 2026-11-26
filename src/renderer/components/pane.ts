@@ -78,6 +78,7 @@ import './paneCalm.css'
 import './paneQuiet.css'
 import '../chat/chatQuiet.css'
 import './paneMeter.css'
+import './paneView.css'
 import './contextRing.css'
 import './grid.css'
 import { recapFromScreen } from '../../shared/recap'
@@ -134,6 +135,9 @@ export class PaneComponent {
   private chatShown = false
   private stateSignature = ''
   private readonly recap = h('div', { class: 'pane-recap', dir: 'auto', hidden: true })
+  private readonly titles = h('div', { class: 'pane-titles' })
+  /** In the tab view the branch and the recap sit in the header row instead of the footer and the row under it. */
+  private inHeader = false
   private recapText = ''
   private recapAt = 0
   private readonly plan = h('div', { class: 'pane-plan', hidden: true })
@@ -169,12 +173,16 @@ export class PaneComponent {
 
   constructor(readonly paneId: string) {
     this.branch.append(icon(ICONS.branch), this.branchName, this.branchSync)
+    this.titles.append(this.index, this.projectName, this.fresh)
+    this.recap.addEventListener('click', () => {
+      if (this.inHeader) this.recap.classList.toggle('expanded')
+    })
     this.pin.append(icon(ICONS.pin))
     const header = h(
       'div',
       { class: 'pane-header', 'data-tour': 'pane-header' },
       this.mark,
-      h('div', { class: 'pane-titles' }, this.index, this.projectName, this.fresh),
+      this.titles,
       this.pin,
       this.tagHost,
       this.resumed,
@@ -262,7 +270,8 @@ export class PaneComponent {
     this.updateMark(view)
     const projectName = view.named ? (view.project?.name ?? '') : ''
     this.projectName.hidden = false
-    this.projectName.textContent = [projectName, AGENT_NAMES[view.agent]].filter((part) => part !== '').join(' · ')
+    this.projectName.textContent = maximized ? projectName || AGENT_NAMES[view.agent] : [projectName, AGENT_NAMES[view.agent]].filter((part) => part !== '').join(' · ')
+    this.placeInHeader(maximized)
     this.fresh.hidden = view.named
     this.updateTag(view.tag, view.tagAuto)
     this.index.title = [view.fullTitle ?? title, projectName, view.tag ? SESSION_TAG_LABELS[view.tag] : ''].filter((part) => part !== '').join(' · ')
@@ -294,7 +303,7 @@ export class PaneComponent {
     this.updateInfo(view, maximized)
     this.updateRing(view)
     this.updatePr()
-    this.foot.hidden = this.info.hidden && this.branch.hidden && this.pr.hidden
+    this.foot.hidden = this.info.hidden && (this.inHeader || this.branch.hidden) && this.pr.hidden
     this.updateRecap(view)
     this.updateHint(view)
     const asking = state === 'needs' || (this.chatShown && detectPermissionPrompt(permissionTail(this.paneId)))
@@ -314,6 +323,19 @@ export class PaneComponent {
       ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
     }
     this.lastActiveTab = view.pane.activeTabId
+  }
+
+  /** The same branch chip and recap line move into the header row in the tab view, so the header is one row. */
+  private placeInHeader(maximized: boolean): void {
+    if (maximized === this.inHeader) return
+    this.inHeader = maximized
+    this.recap.classList.remove('expanded')
+    if (maximized) {
+      this.titles.after(this.branch, this.recap)
+    } else {
+      this.foot.append(this.branch)
+      this.hint.before(this.recap)
+    }
   }
 
   // The number prefix stays put; only the session name picks its own direction, so an Arabic title does not reorder '4 · '.

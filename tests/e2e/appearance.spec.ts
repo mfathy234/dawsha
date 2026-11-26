@@ -153,8 +153,10 @@ test('the Sidebar frame still opens Agents, Files, Settings, Search and New sess
 
     await page.locator('#sidebar-collapse').click()
     await expect(sidebar).toHaveClass(/rail/)
-    for (const id of ['#new-session', '#files-button', '#settings-button']) await expect(sidebar.locator(id)).toBeVisible()
-    await page.locator('#files-button').click()
+    for (const id of ['#new-session', '#rail-views', '#settings-button']) await expect(sidebar.locator(id)).toBeVisible()
+    await expect(sidebar.locator('#files-button')).toBeHidden()
+    await page.locator('#rail-views').click()
+    await page.getByRole('menuitem', { name: /^Files/ }).click()
     await expect(page.locator('.files-view')).toBeVisible()
   } finally {
     await closeApp(app)
