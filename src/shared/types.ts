@@ -208,6 +208,8 @@ export interface Settings {
   dimOtherPanes: boolean
   showRecap: boolean
   sleepHiddenTerminals: boolean
+  shellDrawerHeight: number
+  notifyLongCommands: boolean
   showTerminalImages: boolean
   fontLigatures: boolean
   /** How a new session of each agent opens: as its terminal or as a chat drawn from its log. */

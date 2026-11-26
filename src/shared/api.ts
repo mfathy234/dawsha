@@ -74,6 +74,9 @@ import type {
 } from './types'
 
 export interface GridApi {
+  shellHistory(projectId: string): Promise<import('./shellCommands').ShellHistoryEntry[]>
+  addShellHistory(projectId: string, command: string, cwd: string): Promise<void>
+  setTerminalProgress(progress: import('./terminalOsc').TerminalProgress | null): void
   getLoginItem(): Promise<import('./desktopSettings').LoginItemState>
   setLoginItem(enabled: boolean): Promise<import('./desktopSettings').LoginItemState>
   quit(): void

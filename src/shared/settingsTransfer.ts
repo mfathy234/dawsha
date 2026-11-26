@@ -31,6 +31,8 @@ export const INCLUDED_KEYS = [
   'dimOtherPanes',
   'showRecap',
   'sleepHiddenTerminals',
+  'shellDrawerHeight',
+  'notifyLongCommands',
   'showTerminalImages',
   'fontLigatures',
   'colorSessionsByTag',
@@ -161,7 +163,7 @@ const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
 const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew', 'appearance'] as const
-const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'showTerminalImages', 'fontLigatures', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits'] as const
+const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'notifyLongCommands', 'showTerminalImages', 'fontLigatures', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits'] as const
 
 function checkShapes(data: Raw): string | null {
   for (const key of LIST_KEYS) {
@@ -184,6 +186,7 @@ function checkShapes(data: Raw): string | null {
   if (data.sidebarWidth !== undefined && (typeof data.sidebarWidth !== 'number' || !Number.isFinite(data.sidebarWidth))) {
     return '"sidebarWidth" must be a number.'
   }
+  if (data.shellDrawerHeight !== undefined && (typeof data.shellDrawerHeight !== 'number' || !Number.isFinite(data.shellDrawerHeight))) return '"shellDrawerHeight" must be a number.'
   if (isRecord(data.theme) && typeof data.theme.id !== 'string') return '"theme.id" must be text.'
   return null
 }
@@ -281,6 +284,8 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['dimOtherPanes', 'Dim others'],
   ['showRecap', 'Session recap'],
   ['sleepHiddenTerminals', 'Sleep hidden terminals'],
+  ['shellDrawerHeight', 'Shell drawer height'],
+  ['notifyLongCommands', 'Long shell commands'],
   ['showTerminalImages', 'Show images in the terminal'],
   ['fontLigatures', 'Font ligatures'],
   ['colorSessionsByTag', 'Tag colours'],
