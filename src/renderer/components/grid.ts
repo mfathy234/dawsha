@@ -109,7 +109,7 @@ export class GridComponent {
     this.sidePanel.update(state, views.find((view) => view.pane.id === panelId) ?? null, (panel && maximized) || (docked && dockedId !== null))
     const visible = new Set(views.filter((view) => this.panes.get(view.pane.id)?.el.hidden === false).map((view) => view.pane.id))
     this.others.update(state, views, visible, maximized && !panel)
-    this.updateEmpty(state, views.length)
+    this.updateEmpty(state, views.length, all.length - views.length)
     this.restoreFocus(state)
   }
 
@@ -288,10 +288,14 @@ export class GridComponent {
     })
   }
 
-  private updateEmpty(state: AppState, count: number): void {
+  private updateEmpty(state: AppState, count: number, snoozed: number): void {
     this.empty.hidden = count > 0
     if (count > 0) return
     clear(this.empty)
+    if (snoozed > 0) {
+      this.empty.append(h('h2', {}, 'Every session is snoozed'), h('p', {}, 'Wake one from Snoozed in the sidebar, or start a new session.'), h('button', { class: 'btn primary', type: 'button', onClick: () => openQuickPick() }, 'New session'))
+      return
+    }
     const hasProjects = state.settings.projects.length > 0
     this.empty.append(
       h('h2', {}, hasProjects ? 'No sessions yet' : 'Add a project to get started'),
