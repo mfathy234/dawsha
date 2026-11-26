@@ -5,12 +5,16 @@ import { enableDrag } from '../drag'
 import { ICONS } from '../icons'
 import { sessionNote } from '../sessionNotes'
 import { parsePlanLabel } from '../../shared/planProgress'
-import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
+import { SESSION_STATE_LABELS, sessionState, type SessionState } from '../../shared/sessionState'
+import { showsTabPlan, tabNameStrong, tabStatus } from '../../shared/tabStatus'
+import { overflowLabel, overflowOrder, tabsOutOfView } from '../../shared/tabOverflow'
+import { stateSince } from '../stateClock'
+import { isUnread } from '../unread'
 import { dropSlot, isNoMove, slotToIndex } from '../../shared/tabDrag'
 import { isStarred } from '../../shared/starred'
 import { monogram } from '../../shared/sidebarModel'
 import type { AppState } from '../state'
-import { openContextMenu } from './contextMenu'
+import { openContextMenu, type ContextItem } from './contextMenu'
 import { crewSignature, identityMark } from './crewAvatar'
 import './sessionTabs.css'
 
@@ -20,27 +24,94 @@ const DRAG_REACH_Y = 40
 export class SessionTabs {
   readonly el = h('div', { class: 'pane-strip', role: 'tablist', 'aria-label': 'Sessions' })
   private readonly line = h('i', { class: 'strip-drop', 'aria-hidden': 'true', hidden: true })
+  /** Opens the list of tabs that do not fit; it sits at the end of the strip. */
+  private readonly more = h('button', { class: 'strip-more', type: 'button', 'aria-haspopup': 'menu', hidden: true, onClick: () => this.openMore() })
   private signature = ''
+  private needing = new Set<string>()
+  private hidden: { id: string; name: string; state: SessionState; detail: string }[] = []
+  private entries: { id: string; name: string; state: SessionState; detail: string }[] = []
 
   constructor() {
     this.el.hidden = true
+    this.el.addEventListener('scroll', () => this.syncOverflow(), { passive: true })
+    new ResizeObserver(() => this.syncOverflow()).observe(this.el)
   }
 
   update(views: PaneView[], state: AppState, shown: boolean, selectedId: string | null): void {
     this.el.hidden = !shown
     if (!shown) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.project?.name ?? '', v.fullTitle, v.status, v.agent, v.attention, isStarred(v.pane), crewSignature(v), sessionNote(v.pane.id).plan]), selectedId])
+    const facts = views.map((view) => this.facts(view, state, view.pane.id === selectedId))
+    const signature = JSON.stringify([views.map((v, i) => [v.pane.id, v.title, v.project?.name ?? '', v.fullTitle, v.status, v.agent, v.attention, isStarred(v.pane), crewSignature(v), sessionNote(v.pane.id).plan, facts[i].text, facts[i].strong]), selectedId])
     if (signature === this.signature || document.body.classList.contains('dragging-ui')) return
     this.signature = signature
     clear(this.el)
-    for (const view of views) this.el.append(this.tab(view, view.pane.id === selectedId, views))
-    this.el.append(this.line)
+    this.entries = views.map((view, i) => ({ id: view.pane.id, name: view.title, state: facts[i].state, detail: facts[i].text || SESSION_STATE_LABELS[facts[i].state] }))
+    views.forEach((view, i) => this.el.append(this.tab(view, view.pane.id === selectedId, views, facts[i])))
+    this.el.append(this.line, this.more)
     this.el.querySelector('.strip-tab.selected')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    this.revealNeeding()
+    this.syncOverflow()
   }
 
-  private tab(view: PaneView, selected: boolean, views: PaneView[]): HTMLElement {
+  private facts(view: PaneView, app: AppState, selected: boolean): { state: SessionState; text: string; quiet: boolean; strong: boolean } {
+    const state = sessionState({ status: view.status, attention: view.attention })
+    const status = tabStatus(state, state === 'idle' ? stateSince(view.pane.id, state, app.now) : app.now, app.now, selected)
+    return { state, text: status.text, quiet: status.quiet, strong: tabNameStrong(state, isUnread(view.pane.id)) }
+  }
+
+  /** A tab that starts needing you while it is scrolled out of sight comes into view. */
+  private revealNeeding(): void {
+    const now = new Set(this.entries.filter((entry) => entry.state === 'needs').map((entry) => entry.id))
+    const fresh = [...now].filter((id) => !this.needing.has(id))
+    this.needing = now
+    const target = fresh.map((id) => this.tabById(id)).find((tab) => tab && this.isOutOfView(tab))
+    target?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }
+
+  private tabById(id: string): HTMLElement | undefined {
+    return this.tabs().find((tab) => tab.dataset.paneId === id)
+  }
+
+  private viewSpan(): { start: number; end: number } {
+    const bounds = this.el.getBoundingClientRect()
+    return { start: bounds.left, end: bounds.right - (this.more.hidden ? 0 : this.more.offsetWidth) }
+  }
+
+  private isOutOfView(tab: HTMLElement): boolean {
+    const span = this.viewSpan()
+    const rect = tab.getBoundingClientRect()
+    return tabsOutOfView([{ id: '', start: rect.left, end: rect.right }], span.start, span.end).length > 0
+  }
+
+  /** Shows "+N" at the end of the strip when tabs do not fit, in the needs colour while one of them needs you. */
+  private syncOverflow(): void {
+    if (this.el.hidden) return
+    const wasHidden = this.more.hidden
+    this.more.hidden = false
+    const span = this.viewSpan()
+    const spans = this.tabs().map((tab) => {
+      const rect = tab.getBoundingClientRect()
+      return { id: tab.dataset.paneId ?? '', start: rect.left, end: rect.right }
+    })
+    const out = new Set(tabsOutOfView(spans, span.start, span.end))
+    this.hidden = this.entries.filter((entry) => out.has(entry.id))
+    this.more.hidden = this.hidden.length === 0
+    this.more.textContent = overflowLabel(this.hidden.length)
+    const needs = this.hidden.some((entry) => entry.state === 'needs')
+    this.more.classList.toggle('needs', needs)
+    this.more.title = needs ? `${this.hidden.length} more sessions, one needs you` : `${this.hidden.length} more sessions`
+    this.more.setAttribute('aria-label', this.more.title)
+    if (wasHidden !== this.more.hidden && !this.more.hidden) this.syncOverflow()
+  }
+
+  private openMore(): void {
+    const entries: ContextItem[] = overflowOrder(this.hidden).map((entry) => ({ label: entry.name, detail: entry.detail, run: () => focusPane(entry.id) }))
+    openContextMenu({ x: 0, y: 0, label: 'More sessions', entries, anchor: this.more.getBoundingClientRect(), returnFocus: this.more })
+  }
+
+  private tab(view: PaneView, selected: boolean, views: PaneView[], fact: { state: SessionState; text: string; quiet: boolean; strong: boolean }): HTMLElement {
     const name = view.title
-    const stateName = sessionState({ status: view.status, attention: view.attention })
+    const stateName = fact.state
     const stateLabel = SESSION_STATE_LABELS[stateName]
     const plan = parsePlanLabel(sessionNote(view.pane.id).plan)
     const starred = isStarred(view.pane)
@@ -57,11 +128,11 @@ export class SessionTabs {
       },
       h('span', { class: 'strip-index' }, `${view.index + 1}`),
       identityMark(view, 18),
-      h('bdi', { class: 'strip-name', dir: 'auto' }, name),
+      h('bdi', { class: `strip-name${fact.strong ? ' strong' : ''}`, dir: 'auto' }, name),
       project ? h('span', { class: 'strip-project', 'aria-hidden': 'true' }, monogram(project)) : null,
       starred ? h('span', { class: 'strip-pin', role: 'img', 'aria-label': 'Pinned' }, icon(ICONS.pin)) : null,
-      h('span', { class: `strip-status state-${stateName}` }, stateLabel),
-      selected && plan ? h('span', { class: 'strip-plan', 'aria-hidden': 'true' }, `${plan.done}/${plan.total}`) : null
+      fact.text ? h('span', { class: `strip-status state-${stateName}${fact.quiet ? ' quiet' : ''}` }, fact.text) : null,
+      plan && showsTabPlan(stateName, selected, true) ? h('span', { class: 'strip-plan', 'aria-hidden': 'true' }, `${plan.done}/${plan.total}`) : null
     )
     const close = iconButton(`Close ${name}`, ICONS.closeSmall, () => void closePane(view.pane.id), 'strip-close')
     const tab = h(
