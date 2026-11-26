@@ -263,6 +263,27 @@
   display: none;
 }
 
+.pane-body > .pane-permission {
+  position: absolute;
+  inset-inline: var(--s-2);
+  bottom: var(--s-2);
+  margin: 0;
+  max-height: calc(100% - var(--s-4));
+  overflow: auto;
+  box-shadow: var(--shadow-pop);
+  z-index: 5;
+}
+
+.pane-body > .pane-hint {
+  position: absolute;
+  inset-inline: var(--s-2);
+  top: var(--s-2);
+  z-index: 4;
+  background: var(--raised);
+  box-shadow: var(--shadow-pop);
+  border-radius: var(--r-card);
+}
+
 .pane-permission-head {
   display: flex;
   align-items: center;

@@ -177,7 +177,7 @@ export class PtyManager {
 
   resize(id: string, cols: number, rows: number): void {
     const entry = this.entries.get(id)
-    if (!entry || cols < 2 || rows < 1) return
+    if (!entry || cols < 2 || rows < 1 || (entry.size.cols === cols && entry.size.rows === rows)) return
     entry.size = { cols, rows }
     try {
       if (!entry.exited) entry.process.resize(cols, rows)

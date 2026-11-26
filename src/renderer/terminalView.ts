@@ -19,12 +19,13 @@ import type { ThemeBundle } from './themeManager'
 import { TERMINAL_FONT } from './terminalFont'
 import { terminalShouldSleep } from '../shared/terminalSleep'
 import { PermissionPromptTracker } from '../shared/notificationAction'
+import { releaseRenderer, reserveRenderer } from './terminalGpu'
 
 const SHIFT_ENTER = '\x1b\r'
 
 
 /** A terminal hidden this long drops its GPU renderer until it is shown again. */
-const TERMINAL_SLEEP_MS = 10 * 60_000
+const TERMINAL_SLEEP_MS = 60_000
 export interface TerminalCallbacks {
   onInput(data: string): void
   onResize(cols: number, rows: number): void
@@ -56,7 +57,8 @@ export class TerminalView {
   private readonly arabic: TerminalArabic
   private webgl: WebglAddon | null = null
   private opened = false
-  private frame = 0
+  private fitTimer: ReturnType<typeof setTimeout> | undefined
+  private lastSize = ''
   private lent: HTMLElement | null = null
   private bundleTerm: ThemeBundle['theme']['term']
   private hiddenSince: number | null = null
@@ -101,7 +103,13 @@ export class TerminalView {
       this.promptSelection.noteInput(data)
       callbacks.onInput(data)
     })
-    this.term.onResize(({ cols, rows }) => callbacks.onResize(cols, rows))
+    this.term.onResize(({ cols, rows }) => {
+      const size = `${cols}:${rows}`
+      if (size === this.lastSize) return
+      this.lastSize = size
+      console.debug('[term] resize', id, cols, rows)
+      callbacks.onResize(cols, rows)
+    })
     this.term.attachCustomKeyEventHandler((event) => this.handleKey(event))
     this.observer = new ResizeObserver(() => this.scheduleFit())
     this.el.addEventListener('wheel', (event) => this.handleWheel(event), { capture: true, passive: false })
@@ -303,7 +311,7 @@ export class TerminalView {
   }
 
   refreshVisibility(): void {
-    this.visible = this.requestedVisible && document.visibilityState === 'visible'
+    this.visible = this.requestedVisible && document.visibilityState === 'visible' && (this.el.parentElement?.getClientRects().length ?? 0) > 0
     this.el.classList.toggle('active', this.visible)
     if (this.visible) {
       this.hiddenSince = null
@@ -316,8 +324,7 @@ export class TerminalView {
   updateRenderer(): void {
     const timeoutMs = TERMINAL_SLEEP_MS
     if (terminalShouldSleep({ visible: this.visible, hiddenSince: this.hiddenSince }, Date.now(), timeoutMs, this.callbacks.sleepingEnabled())) {
-      this.webgl?.dispose()
-      this.webgl = null
+      this.dropWebgl()
     }
   }
 
@@ -335,8 +342,7 @@ export class TerminalView {
     this.el.dataset.termBackground = String(bundle.xterm.background)
     this.bundleTerm = bundle.theme.term
     if (bundle.theme.kind === 'light') {
-      this.webgl?.dispose()
-      this.webgl = null
+      this.dropWebgl()
     } else if (this.opened) {
       this.loadWebgl()
     }
@@ -346,6 +352,8 @@ export class TerminalView {
   fitNow(): void {
     if (!this.opened || this.el.clientWidth < 40 || this.el.clientHeight < 20) return
     try {
+      const size = this.fitAddon.proposeDimensions()
+      if (!size || (size.cols === this.term.cols && size.rows === this.term.rows)) return
       this.fitAddon.fit()
       this.arabic.refresh()
     } catch (error) {
@@ -367,7 +375,8 @@ export class TerminalView {
   }
 
   dispose(): void {
-    cancelAnimationFrame(this.frame)
+    this.dropWebgl()
+    clearTimeout(this.fitTimer)
     this.observer.disconnect()
     this.search.dispose()
     this.prompts.dispose()
@@ -379,27 +388,36 @@ export class TerminalView {
   }
 
   private scheduleFit(): void {
-    cancelAnimationFrame(this.frame)
-    this.frame = requestAnimationFrame(() => this.fitNow())
+    clearTimeout(this.fitTimer)
+    this.fitTimer = setTimeout(() => this.fitNow(), 120)
   }
 
   private loadWebgl(): void {
-    if (!this.opened || this.webgl) return
+    if (!this.opened || this.webgl || !this.visible) return
     // xterm's WebGL renderer applies 50% opacity to SGR dim text after its
     // contrast correction, which makes dim text fail contrast on light panes.
     if (document.documentElement.dataset.kind === 'light') return
+    if (!reserveRenderer(this.id, { visible: () => this.visible, release: () => this.dropWebgl() })) return
     try {
       const webgl = new WebglAddon()
       this.webgl = webgl
       webgl.onContextLoss(() => {
+        console.warn('[term] webgl context lost', this.id)
         webgl.dispose()
-        if (this.webgl === webgl) this.webgl = null
+        if (this.webgl === webgl) { this.webgl = null; releaseRenderer(this.id) }
       })
       this.term.loadAddon(webgl)
     } catch (error) {
       this.webgl = null
+      releaseRenderer(this.id)
       console.warn('WebGL renderer unavailable, using the DOM renderer', error)
     }
+  }
+
+  private dropWebgl(): void {
+    this.webgl?.dispose()
+    this.webgl = null
+    releaseRenderer(this.id)
   }
 
   private handleLink(event: MouseEvent, uri: string): void {

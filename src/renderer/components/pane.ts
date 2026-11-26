@@ -80,7 +80,7 @@ import '../chat/chatQuiet.css'
 import './paneMeter.css'
 import './contextRing.css'
 import './grid.css'
-import { recapFromScreen } from '../../shared/recap'
+import { keepRecap } from '../../shared/recap'
 import { toolLineFromScreen } from '../../shared/sessionLine'
 import { sessionNote, setSessionNote } from '../sessionNotes'
 import { planBadge } from '../../shared/quietReply'
@@ -136,6 +136,8 @@ export class PaneComponent {
   private readonly recap = h('div', { class: 'pane-recap', dir: 'auto', hidden: true })
   private recapText = ''
   private recapAt = 0
+  private recapTab = ''
+  private readonly recaps = new Map<string, string>()
   private readonly plan = h('div', { class: 'pane-plan', hidden: true })
   private planSignature = ''
   private readonly reply: QuietReply
@@ -237,7 +239,8 @@ export class PaneComponent {
       planChanged: () => this.updatePlan(),
       onScreen: () => this.el.offsetParent !== null
     })
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.plan, this.recap, this.hint, content, this.reply.el, this.permission, this.foot)
+    this.body.append(this.hint, this.permission)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.plan, this.recap, content, this.reply.el, this.foot)
     // The chat can learn of a usage limit after the pane last rendered, so it tells the pane to update its pill.
     this.chat = new PaneChat({ ...chatHostFor(paneId, () => this.current), limitChanged: () => this.chatShown && this.showLimitState() }, this.permission)
     this.body.append(this.chat.el)
@@ -376,7 +379,7 @@ export class PaneComponent {
     this.body.classList.toggle('chat-on', shown)
     if (shown && this.chat.limitReached) this.showLimitState()
     this.el.classList.toggle('has-view-switch', chatCapable(view.agent))
-    if (!this.chat.holdsPermission && this.permission.parentElement !== this.el) this.el.insertBefore(this.permission, this.foot)
+    if (!this.chat.holdsPermission && this.permission.parentElement !== this.body) this.body.append(this.permission)
     if (shown !== this.chatShown) {
       this.chatShown = shown
       if (shown) this.chat.focusComposer()
@@ -538,15 +541,23 @@ export class PaneComponent {
 
   // Read off the visible screen, so no file is read; at most once per RECAP_REFRESH_MS for each pane.
   private updateRecap(view: PaneView): void {
+    if (view.primaryTabId !== this.recapTab) {
+      this.recapTab = view.primaryTabId
+      this.recapText = this.recaps.get(this.recapTab) ?? ''
+      this.recap.textContent = this.recapText
+      this.recap.title = this.recapText
+      this.recapAt = 0
+    }
     const now = Date.now()
     if (now - this.recapAt < RECAP_REFRESH_MS) return
     this.recapAt = now
     const screen = getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? ''
-    const text = recapFromScreen(screen)
+    const text = keepRecap(this.recapText, screen)
     // The sidebar's second line reads these even when the pane's own recap line is switched off.
     setSessionNote(this.paneId, { recap: text, tool: toolLineFromScreen(screen) })
-    if (!store.state.settings.showRecap || text === this.recapText) return
+    if (text === this.recapText) return
     this.recapText = text
+    this.recaps.set(this.recapTab, text)
     this.recap.textContent = text
     this.recap.title = text
   }
