@@ -35,12 +35,12 @@
 .sess-meta .tag-word::before,
 .board-card-tag .tag-word::before {
   content: '·';
-  margin-right: var(--s-1);
+  margin-inline-end: var(--s-1);
   color: var(--muted);
 }
 
 .board-card-tag {
-  margin-left: var(--s-1);
+  margin-inline-start: var(--s-1);
 }
 
 .menu-item-tag {
@@ -54,6 +54,6 @@
 }
 
 .menu-item-tag .tag-check {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--muted);
 }

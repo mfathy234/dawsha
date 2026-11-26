@@ -4,7 +4,7 @@
   margin: var(--s-3) var(--s-3) var(--s-3) 0;
   padding: 0 0 var(--sp-2);
   gap: 0;
-  border-left: 0;
+  border-inline-start: 0;
   border-radius: var(--r-card, var(--r-pop));
   background: var(--surface);
   box-shadow: var(--ring), var(--shadow-hairline);
@@ -64,7 +64,7 @@
 }
 
 .others-panel .others-actions { justify-content: flex-start; gap: 6px; padding-inline-start: 26px; }
-.others-panel .others-actions .others-open { margin-left: 0; }
+.others-panel .others-actions .others-open { margin-inline-start: 0; }
 .others-panel .others-card:not(.attention):not(.state-card-done) .others-open {
   border-color: transparent;
   background: transparent;

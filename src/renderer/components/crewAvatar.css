@@ -58,7 +58,7 @@
 
 .crew-av-badge {
   position: absolute;
-  right: -5px;
+  inset-inline-end: -5px;
   bottom: -5px;
   width: 15px;
   height: 15px;

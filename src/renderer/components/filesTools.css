@@ -31,7 +31,7 @@
 .edit-preview-summary { margin: 0; color: var(--muted); }
 .edit-preview-problem { margin: 0; padding: var(--s-2) var(--s-3); border-radius: var(--r-control); background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--text); }
 .edit-preview-list { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 1px; }
-.edit-preview-file { display: flex; align-items: baseline; gap: var(--s-2); width: 100%; min-height: 28px; padding: 2px var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.edit-preview-file { display: flex; align-items: baseline; gap: var(--s-2); width: 100%; min-height: 28px; padding: 2px var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text); font: inherit; text-align: start; cursor: pointer; }
 .edit-preview-file:hover { background: var(--hover); }
 .edit-preview-file[aria-expanded='true'] { background: var(--press); }
 .edit-preview-file:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
@@ -40,7 +40,7 @@
 .edit-preview-lines { padding: var(--s-1) 0 var(--s-2); font-family: var(--font-mono); font-size: var(--fs-1); }
 .edit-preview-note { margin: 0; padding: var(--s-1) var(--s-3); color: var(--muted); font-family: var(--font-sans); }
 .edit-preview-row { display: flex; gap: var(--s-2); padding: 1px var(--s-3); white-space: pre-wrap; overflow-wrap: anywhere; }
-.edit-preview-row u { flex: none; width: 4ch; color: var(--muted); text-decoration: none; text-align: right; }
+.edit-preview-row u { flex: none; width: 4ch; color: var(--muted); text-decoration: none; text-align: end; }
 .edit-preview-row.before { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .edit-preview-row.after { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 
@@ -52,10 +52,10 @@
 .call-note { margin: 0; padding: 0 var(--s-2); color: var(--muted); font-size: var(--fs-status); }
 .call-note:empty { display: none; }
 .call-list { display: grid; gap: 1px; overflow-x: hidden; overflow-y: auto; }
-.call-row { display: flex; overflow: hidden; align-items: baseline; gap: var(--s-2); width: 100%; min-height: 26px; padding: 2px var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.call-row { display: flex; overflow: hidden; align-items: baseline; gap: var(--s-2); width: 100%; min-height: 26px; padding: 2px var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text); font: inherit; text-align: start; cursor: pointer; }
 .call-row:hover { background: var(--hover); }
 .call-row:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
-.call-row.sub { padding-left: var(--s-5, 24px); color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-1); }
+.call-row.sub { padding-inline-start: var(--s-5, 24px); color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-1); }
 .call-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .call-row small { flex: none; color: var(--muted); font-size: var(--fs-status); font-variant-numeric: tabular-nums; }
 
@@ -67,11 +67,11 @@
 .files-editor .cm-mergeView.side-by-side .cm-mergeViewEditors { min-height: 100%; }
 
 /* Editor settings: the gear in the editor's corner and its popover. */
-.files-editor-tools { position: absolute; top: var(--s-2); right: 18px; z-index: 4; }
+.files-editor-tools { position: absolute; top: var(--s-2); inset-inline-end: 18px; z-index: 4; }
 .files-editor-tools[hidden] { display: none; }
 .files-editor-tools > .icon-btn { opacity: 0.55; }
 .files-editor-tools:hover > .icon-btn, .files-editor-tools:focus-within > .icon-btn, .files-editor-tools > .icon-btn[aria-expanded="true"] { opacity: 1; }
-.editor-popover { position: absolute; top: calc(100% + var(--s-1)); right: 0; width: 220px; padding: var(--s-2) var(--s-3); display: flex; flex-direction: column; transform-origin: top right; }
+.editor-popover { position: absolute; top: calc(100% + var(--s-1)); inset-inline-end: 0; width: 220px; padding: var(--s-2) var(--s-3); display: flex; flex-direction: column; transform-origin: top right; }
 .editor-popover[hidden] { display: none; }
 .editor-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-height: 36px; font-size: var(--fs-ui); }
 .editor-stepper { display: inline-flex; align-items: center; gap: var(--s-1); }

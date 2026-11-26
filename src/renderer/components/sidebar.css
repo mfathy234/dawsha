@@ -33,7 +33,7 @@
 }
 
 .kept-session-row .sess-ago {
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 
 .kept-session-row .sess-state {
@@ -95,7 +95,7 @@
 
 .sess-ago + .sess-cost::before {
   content: '·';
-  margin-right: var(--s-1);
+  margin-inline-end: var(--s-1);
 }
 
 .closed-day-row {
@@ -103,7 +103,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s-2);
-  padding-right: var(--s-2);
+  padding-inline-end: var(--s-2);
 }
 
 .closed-day-row .closed-day {
@@ -111,7 +111,7 @@
 }
 
 .closed-reopen {
-  margin-left: auto;
+  margin-inline-start: auto;
   padding: 0 var(--s-1);
   border-radius: var(--r-control);
   font-size: var(--fs-status);
@@ -305,7 +305,7 @@ aside.sidebar.rail { width: 56px; }
 }
 .rail-btn.rail-mono:hover { background: var(--hover); }
 .rail-btn.rail-mono.selected { background: color-mix(in srgb, var(--accent) 22%, var(--raised)); }
-.rail-btn .rail-badge { top: -4px; right: -4px; color: var(--muted); font-size: var(--fs-status); font-weight: var(--w-medium); }
+.rail-btn .rail-badge { top: -4px; inset-inline-end: -4px; color: var(--muted); font-size: var(--fs-status); font-weight: var(--w-medium); }
 .rail-btn .rail-badge.needs { color: var(--state-needs); }
 .rail-spacer { flex: 1; }
 
@@ -401,8 +401,8 @@ aside.sidebar.rail { width: 56px; }
   z-index: var(--z-panel);
   width: 5px;
   flex: none;
-  margin-left: -2px;
-  margin-right: -3px;
+  margin-inline-start: -2px;
+  margin-inline-end: -3px;
   cursor: col-resize;
   touch-action: none;
   outline: none;
@@ -412,7 +412,7 @@ aside.sidebar.rail { width: 56px; }
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 2px;
+  inset-inline-start: 2px;
   width: 1px;
   background: transparent;
   content: '';

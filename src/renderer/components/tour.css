@@ -9,4 +9,4 @@
 .tour-card h2 { margin: 0 0 var(--s-2, 8px); font-size: var(--fs-title, 18px); }
 .tour-card p:not(.tour-step-count) { margin: 0; color: var(--text-2); line-height: 1.5; }
 .tour-actions { display: flex; align-items: center; gap: var(--s-2, 8px); margin-top: var(--s-4, 16px); }
-.tour-actions .tour-skip { margin-right: auto; }
+.tour-actions .tour-skip { margin-inline-end: auto; }

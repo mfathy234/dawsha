@@ -41,7 +41,7 @@
 .frame-sidebar .frame-bar .topbar-limits { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden; white-space: nowrap; }
 .frame-sidebar .frame-bar .topbar-limits.limits-empty { display: none; }
 /* With the session tabs showing, the rings join the tab row instead of taking a row of their own. */
-.frame-sidebar .main:has(> .grid-area:not([hidden]) > .pane-strip:not([hidden])) > .frame-bar { position: absolute; top: var(--s-3); right: var(--s-3); z-index: 2; height: 36px; padding: 0; pointer-events: none; }
+.frame-sidebar .main:has(> .grid-area:not([hidden]) > .pane-strip:not([hidden])) > .frame-bar { position: absolute; top: var(--s-3); inset-inline-end: var(--s-3); z-index: 2; height: 36px; padding: 0; pointer-events: none; }
 .frame-sidebar .main:has(> .grid-area:not([hidden]) > .pane-strip:not([hidden])) > .frame-bar > * { pointer-events: auto; }
 .frame-sidebar .main:has(> .grid-area:not([hidden]) > .pane-strip:not([hidden])) > .frame-bar > .topbar-view { display: none; }
 .frame-sidebar .main:has(> .frame-bar .topbar-limits:not([hidden]):not(.limits-empty)) > .grid-area > .pane-strip { margin-inline-end: 180px; }
@@ -88,7 +88,7 @@
 
 .frame-sidebar .sidebar.rail .frame-top { align-items: center; padding: var(--sp-2) 0 0; gap: var(--sp-1); }
 .frame-sidebar .sidebar #notifications-button { position: relative; }
-.frame-sidebar .sidebar #notifications-button .bell-badge { position: absolute; top: 0; right: -3px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: var(--r-control); background: var(--accent); color: var(--on-accent); font-family: var(--font-ui); font-size: var(--fs-0); font-weight: var(--w-medium); line-height: 14px; text-align: center; }
+.frame-sidebar .sidebar #notifications-button .bell-badge { position: absolute; top: 0; inset-inline-end: -3px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: var(--r-control); background: var(--accent); color: var(--on-accent); font-family: var(--font-ui); font-size: var(--fs-0); font-weight: var(--w-medium); line-height: 14px; text-align: center; }
 .frame-sidebar .sidebar.rail .frame-head { flex-direction: column; padding: 0 0 var(--sp-1); gap: var(--sp-1); }
 .frame-sidebar .sidebar.rail .frame-spacer,
 .frame-sidebar .sidebar.rail .frame-head .app-title,

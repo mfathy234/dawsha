@@ -70,8 +70,8 @@
 
 .strip-bar {
   position: absolute;
-  left: 10px;
-  right: 12px;
+  inset-inline-start: 10px;
+  inset-inline-end: 12px;
   bottom: 3px;
   height: 2px;
   border-radius: var(--r-micro);
@@ -97,7 +97,7 @@
   top: 4px;
   bottom: 4px;
   width: 2px;
-  margin-left: -1px;
+  margin-inline-start: -1px;
   border-radius: var(--r-micro);
   background: var(--accent);
   pointer-events: none;

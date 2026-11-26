@@ -4,7 +4,7 @@
 .sum-needs { height: 28px; padding: 0 var(--s-2); border-radius: var(--r-control); color: var(--needs-ink); font-weight: var(--w-medium); cursor: pointer; }
 .sum-needs:hover { background: var(--hover); }
 .sum-needs:active { background: var(--press); }
-.sum-needs .kbd { margin-left: var(--s-2); border-color: var(--line); background: transparent; color: var(--muted); font-weight: var(--w-regular); }
+.sum-needs .kbd { margin-inline-start: var(--s-2); border-color: var(--line); background: transparent; color: var(--muted); font-weight: var(--w-regular); }
 
 /* Account limits: one pill; the rings themselves are styled in topbarTools.css. */
 .topbar-limits { display: inline-flex; align-items: center; gap: var(--s-3); min-height: 32px; padding: 0 var(--s-2); border: 0; border-radius: var(--r-control); background: transparent; font-family: inherit; color: var(--muted); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; cursor: pointer; }
@@ -40,6 +40,6 @@
 .layout-switch .btn:active { background: var(--press); }
 .layout-switch .btn[aria-pressed='true'] { background: var(--raised); box-shadow: var(--sel-ring); color: var(--text); font-weight: var(--w-medium); }
 
-.count-badge { display: inline-block; margin-left: var(--s-2); color: var(--muted); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; }
+.count-badge { display: inline-block; margin-inline-start: var(--s-2); color: var(--muted); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; }
 .count-badge[hidden] { display: none; }
 
