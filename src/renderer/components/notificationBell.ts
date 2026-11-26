@@ -26,7 +26,7 @@ import './notifications.css'
 
 const POPOVER_WIDTH = 380
 const TIME_REFRESH_MS = 30_000
-const BELL_SVG =
+export const BELL_SVG =
   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'
 const ALERT_SVG =
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4 M12 17h.01"/></svg>'
@@ -80,14 +80,12 @@ export class NotificationBell {
 
   private open(): void {
     this.fresh = new Set(notificationEntries().filter((entry) => !entry.read).map((entry) => entry.id))
-    const rect = this.el.getBoundingClientRect()
-    const right = Math.max(8, Math.round(window.innerWidth - rect.right))
     this.popover = h('div', {
       class: 'popover notifications-popover',
       role: 'dialog',
       'aria-labelledby': 'notifications-title',
       tabindex: '-1',
-      style: `right:${right}px;top:${Math.round(rect.bottom + 6)}px;width:${POPOVER_WIDTH}px`
+      style: this.placement()
     })
     document.body.appendChild(this.popover)
     this.el.setAttribute('aria-expanded', 'true')
@@ -97,6 +95,18 @@ export class NotificationBell {
     markNotificationsRead()
     this.render()
     this.popover.focus()
+  }
+
+  /** Under the bell; when the rail hides the bell, beside the rail's Views button it was moved into. */
+  private placement(): string {
+    const rect = this.el.getBoundingClientRect()
+    const views = rect.width === 0 ? document.getElementById('rail-views') : null
+    if (views) {
+      const anchor = views.getBoundingClientRect()
+      return `left:${Math.round(anchor.right + 8)}px;bottom:${Math.max(8, Math.round(window.innerHeight - anchor.bottom))}px;width:${POPOVER_WIDTH}px`
+    }
+    const right = Math.max(8, Math.round(window.innerWidth - rect.right))
+    return `right:${right}px;top:${Math.round(rect.bottom + 6)}px;width:${POPOVER_WIDTH}px`
   }
 
   private close(returnFocus: boolean): void {

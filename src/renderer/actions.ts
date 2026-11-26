@@ -1087,6 +1087,11 @@ export function setSidebarSort(sidebarSort: SidebarSort): void {
   void saveSettings({ sidebarSort })
 }
 
+export function setRailShowEmpty(railShowEmpty: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, railShowEmpty } }))
+  void saveSettings({ railShowEmpty })
+}
+
 export function setSidebarHideEmpty(sidebarHideEmpty: boolean): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, sidebarHideEmpty } }))
   void saveSettings({ sidebarHideEmpty })

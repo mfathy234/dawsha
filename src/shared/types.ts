@@ -205,6 +205,8 @@ export interface Settings {
   sidebarSort: import('./sidebarModel').SidebarSort
   /** Hides projects that have no sessions from the sidebar. */
   sidebarHideEmpty: boolean
+  /** The collapsed rail shows projects without open sessions inline instead of behind the dots tile. */
+  railShowEmpty: boolean
   dimOtherPanes: boolean
   showRecap: boolean
   sleepHiddenTerminals: boolean

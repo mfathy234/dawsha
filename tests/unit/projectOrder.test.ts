@@ -43,10 +43,10 @@ describe('project order', () => {
 
 describe('project status in the collapsed sidebar', () => {
   it('prefers a needs count over working', () => {
-    expect(projectStatus(['needs', 'working', 'needs', 'idle'])).toEqual({ needs: 2, working: 1 })
+    expect(projectStatus(['needs', 'working', 'needs', 'idle'])).toEqual({ needs: 2, working: 1, open: 4, unread: 0 })
     expect(projectStatusText({ needs: 2, working: 1 })).toBe('2 need you')
     expect(projectStatusText({ needs: 1, working: 0 })).toBe('1 needs you')
-    expect(projectStatusLabel('Smoke', { needs: 0, working: 3 })).toBe('Smoke, working')
+    expect(projectStatusLabel('Smoke', { needs: 0, working: 3 })).toBe('Smoke · working')
     expect(projectStatusLabel('Smoke', projectStatus(['done', 'idle']))).toBe('Smoke')
   })
 })
