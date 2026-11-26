@@ -1,11 +1,11 @@
 import { api } from './api'
 import type { FileLinkHost } from './terminalLinks'
 import type { HighlightHost } from './terminalHighlights'
-import { workFolderOfPane } from './derive'
 import { store } from './state'
 import { openTerminalLink, openTerminalLinkMenu } from './terminalFileLinks'
 import { currentBundle } from './themeManager'
 import type { TerminalView } from './terminalView'
+import { terminalDirectory } from './terminalSession'
 
 const CACHE_MS = 4000
 const CACHE_LIMIT = 2000
@@ -13,8 +13,7 @@ const CACHE_LIMIT = 2000
 const cache = new Map<string, { at: number; path: string | null }>()
 
 function folderOfTerm(id: string): string | null {
-  const pane = store.state.panes.find((p) => p.tabs.some((t) => t.id === id))
-  return pane ? workFolderOfPane(store.state, pane) : null
+  return terminalDirectory(id)
 }
 
 async function existing(folder: string, paths: string[]): Promise<(string | null)[]> {

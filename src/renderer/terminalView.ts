@@ -20,6 +20,9 @@ import { TERMINAL_FONT } from './terminalFont'
 import { terminalShouldSleep } from '../shared/terminalSleep'
 import { PermissionPromptTracker } from '../shared/notificationAction'
 import { releaseRenderer, reserveRenderer } from './terminalGpu'
+import { registerTerminalOsc, type TerminalOscHost } from './terminalOsc'
+import { TerminalShell, type TerminalShellHost } from './terminalShell'
+import type { IDisposable } from '@xterm/xterm'
 
 const SHIFT_ENTER = '\x1b\r'
 
@@ -27,6 +30,8 @@ const SHIFT_ENTER = '\x1b\r'
 /** A terminal hidden this long drops its GPU renderer until it is shown again. */
 const TERMINAL_SLEEP_MS = 60_000
 export interface TerminalCallbacks {
+  osc: TerminalOscHost
+  shell: TerminalShellHost
   onInput(data: string): void
   onResize(cols: number, rows: number): void
   onZoom(direction: 1 | -1): void
@@ -50,6 +55,9 @@ export class TerminalView {
   private readonly observer: ResizeObserver
   private readonly search: TerminalSearch
   private readonly rendering: TerminalRendering
+  private readonly osc: IDisposable
+  private readonly shell: TerminalShell
+  private readonly linkTooltip = h('div', { class: 'xterm-hover term-link-tooltip', role: 'tooltip', hidden: true })
   readonly prompts: TerminalPrompts
   private readonly promptSelection: PromptSelection
   private readonly highlights: TerminalHighlights
@@ -75,6 +83,7 @@ export class TerminalView {
     private readonly callbacks: TerminalCallbacks
   ) {
     this.el = h('div', { class: 'term-host', 'data-term-id': id })
+    this.el.classList.toggle('shell-terminal', callbacks.shell.enabled())
     this.term = new Terminal({
       fontFamily: TERMINAL_FONT,
       fontSize,
@@ -85,9 +94,22 @@ export class TerminalView {
       allowTransparency: true,
       allowProposedApi: true,
       theme: bundle.xterm,
-      minimumContrastRatio: bundle.minimumContrastRatio
+      minimumContrastRatio: bundle.minimumContrastRatio,
+      linkHandler: {
+        activate: (event, uri) => this.handleLink(event, uri),
+        hover: (event, uri) => {
+          this.linkTooltip.textContent = uri
+          this.linkTooltip.hidden = false
+          const bounds = this.el.getBoundingClientRect()
+          this.linkTooltip.style.left = `${Math.max(0, Math.min(event.clientX - bounds.left, bounds.width / 2))}px`
+          this.linkTooltip.style.top = `${Math.max(0, Math.min(event.clientY - bounds.top + 20, bounds.height - 36))}px`
+        },
+        leave: () => { this.linkTooltip.hidden = true }
+      }
     })
     loadTerminalUnicode(this.term)
+    this.osc = registerTerminalOsc(this.term, callbacks.osc)
+    this.shell = new TerminalShell(this.term, callbacks.shell)
     this.rendering = new TerminalRendering(this.term)
     this.refreshRendering()
     this.term.loadAddon(this.fitAddon)
@@ -158,6 +180,7 @@ export class TerminalView {
     if (this.opened) return
     this.opened = true
     this.term.open(this.el)
+    this.term.element?.append(this.linkTooltip)
     this.refreshRendering()
     this.loadWebgl()
     this.arabic.attach()
@@ -312,7 +335,7 @@ export class TerminalView {
 
   refreshVisibility(): void {
     this.visible = this.requestedVisible && document.visibilityState === 'visible' && (this.el.parentElement?.getClientRects().length ?? 0) > 0
-    this.el.classList.toggle('active', this.visible)
+    this.el.classList.toggle('active', this.requestedVisible)
     if (this.visible) {
       this.hiddenSince = null
       this.loadWebgl()
@@ -383,6 +406,8 @@ export class TerminalView {
     this.highlights.dispose()
     this.arabic.dispose()
     this.rendering.dispose()
+    this.osc.dispose()
+    this.shell.dispose()
     this.term.dispose()
     this.el.remove()
   }
@@ -421,7 +446,7 @@ export class TerminalView {
   }
 
   private handleLink(event: MouseEvent, uri: string): void {
-    if (event.ctrlKey || event.metaKey) this.callbacks.openLink(uri)
+    if ((event.ctrlKey || event.metaKey) && /^https?:\/\//i.test(uri)) this.callbacks.openLink(uri)
   }
 
   private handleWheel(event: WheelEvent): void {
@@ -433,6 +458,7 @@ export class TerminalView {
 
   private handleKey(event: KeyboardEvent): boolean {
     if (event.type !== 'keydown') return true
+    if (!this.shell.handleKey(event)) return false
     if (!this.promptSelection.handleKey(event)) {
       event.preventDefault()
       return false

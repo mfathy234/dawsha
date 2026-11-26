@@ -8,6 +8,9 @@ import { currentBundle } from './themeManager'
 import { fileLinkHost, highlightHost, watchHighlights } from './terminalExtras'
 import { TerminalView } from './terminalView'
 import { PendingTerminalOutput } from './pendingTerminalOutput'
+import { oscHost, shellHost } from './terminalFeatures'
+import { forgetTerminalSession, terminalAgent, terminalPane } from './terminalSession'
+import { setTerminalProgress } from './terminalProgress'
 
 export interface TerminalEvents {
   onZoom(termId: string, direction: 1 | -1): void
@@ -28,11 +31,7 @@ function clearResumeChip(id: string): void {
 }
 
 function tabAgent(id: string): TabAgent | undefined {
-  for (const pane of store.state.panes) {
-    const tab = pane.tabs.find((t) => t.id === id)
-    if (tab) return tab.agent
-  }
-  return undefined
+  return terminalAgent(id)
 }
 
 const ESC = String.fromCharCode(27)
@@ -44,14 +43,16 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
   const existing = views.get(id)
   if (existing) return existing
   const view = new TerminalView(id, fontSize, currentBundle(), {
+    osc: oscHost(id),
+    shell: shellHost(id),
     onInput: (data) => {
       api.write(id, data)
       if (data !== FOCUS_IN && data !== FOCUS_OUT) lastInput.set(id, data)
       if (data.charCodeAt(0) !== 27 || data.length === 1) clearResumeChip(id)
     },
     onResize: (cols, rows) => api.resize(id, cols, rows),
-    onZoom: (direction) => events.onZoom(id, direction),
-    onFocus: () => events.onFocus(id),
+    onZoom: (direction) => events.onZoom(terminalPane(id)?.tabs.some((tab) => tab.id === id) ? id : terminalPane(id)?.activeTabId ?? id, direction),
+    onFocus: () => events.onFocus(terminalPane(id)?.tabs.some((tab) => tab.id === id) ? id : terminalPane(id)?.activeTabId ?? id),
     readClipboard: async () => pasteText(await api.readClipboard(), tabAgent(id), shellKindOf(store.state.info.shellCommand)),
     writeClipboard: (text) => api.writeClipboard(text),
     openLink: (url) => void api.openExternal(url),
@@ -77,7 +78,7 @@ store.subscribe((state) => {
   lastLigatures = state.settings.fontLigatures
   for (const view of views.values()) view.refreshRendering()
 })
-setInterval(() => { for (const view of views.values()) view.updateRenderer() }, 15_000)
+setInterval(() => { for (const view of views.values()) view.refreshVisibility() }, 15_000)
 document.addEventListener('visibilitychange', () => {
   for (const view of views.values()) view.refreshVisibility()
 })
@@ -99,6 +100,8 @@ export function disposeTerminal(id: string): void {
   views.delete(id)
   pending.delete(id)
   setupPhases.delete(id)
+  forgetTerminalSession(id)
+  if (store.state.terminalProgress[id]) setTerminalProgress(id, null)
 }
 
 export function applyBundleToAll(): void {
@@ -130,6 +133,7 @@ export function connectPtyStreams(onExit: (id: string, exitCode: number) => void
   api.onTerminalSetup((id, state) => showSetup(id, state))
   api.onExit((id, exitCode) => {
     pending.delete(id)
+    if (store.state.terminalProgress[id]) setTerminalProgress(id, null)
     onExit(id, exitCode)
   })
 }

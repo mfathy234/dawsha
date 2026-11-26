@@ -212,6 +212,8 @@ export class SettingsViewComponent {
       state.settings.highlights,
       state.settings.recordings,
       state.settings.sleepHiddenTerminals,
+      state.settings.shellDrawerHeight,
+      state.settings.notifyLongCommands,
       state.settings.showTerminalImages,
       state.settings.fontLigatures,
       this.search.value,
@@ -575,6 +577,11 @@ export class SettingsViewComponent {
       row('Terminal rendering', checkbox('sleep-hidden-terminals', 'Sleep hidden terminals', state.settings.sleepHiddenTerminals, false, setSleepHiddenTerminals), h('p', { class: 'hint' }, 'Release WebGL rendering after a hidden terminal has been out of view for one minute.')),
       row('Show images in the terminal', checkbox('show-terminal-images', 'Show images in the terminal', state.settings.showTerminalImages, false, setShowTerminalImages), h('p', { class: 'hint' }, 'Display inline images; keep up to 32 MB per terminal.')),
       row('Font ligatures', checkbox('font-ligatures', 'Font ligatures', state.settings.fontLigatures, false, setFontLigatures), h('p', { class: 'hint' }, 'Join programming symbols in fonts that support ligatures.')),
+      row('Shell drawer height', h('input', { class: 'text-input shell-drawer-setting', type: 'number', min: '120', max: '600', value: String(state.settings.shellDrawerHeight), 'aria-label': 'Shell drawer height', onChange: (event: Event) => {
+        const height = Math.round(Math.min(600, Math.max(120, Number((event.target as HTMLInputElement).value) || 240)))
+        store.set(s => ({ ...s, settings: { ...s.settings, shellDrawerHeight: height } }))
+        void saveSettings({ shellDrawerHeight: height })
+      } }), h('p', { class: 'hint' }, 'Height in pixels. Ctrl+` opens the shell; drag its top edge to resize it.')),
       row('Sidebar', checkbox('sidebar-collapsed', 'Start with the sidebar collapsed', state.settings.sidebarCollapsed, false, setSidebarCollapsed), h('p', { class: 'hint' }, 'Open the project tree when the app starts.')),
       row(
         'Getting started',
@@ -624,6 +631,10 @@ export class SettingsViewComponent {
       // Mini window preferences share the existing notification controls.
       row('Mini window', checkbox('mini-minimize-toggle', 'Show the Mini window when Dawsha is minimized', settings.miniWindow.showOnMinimize, false, value => setMiniWindow({ showOnMinimize: value })), h('p', { class: 'hint' }, 'A small window that follows your sessions while Dawsha is minimized.')),
       row('Notifications', checkbox('notify-toggle', 'Notify when a session is done or needs you', info.notifications, false, (value) => setSessionInfo({ notifications: value })), h('p', { class: 'hint' }, 'Tell me when a session is done or needs me.')),
+      row('Long shell commands', checkbox('notify-long-commands', 'Notify when a long shell command finishes', settings.notifyLongCommands, !info.notifications, value => {
+        store.set(s => ({ ...s, settings: { ...s.settings, notifyLongCommands: value } }))
+        void saveSettings({ notifyLongCommands: value })
+      }), h('p', { class: 'hint' }, 'After 30 seconds, notify if the shell is hidden or Dawsha is unfocused.')),
       row('Warn me before a usage limit', checkbox('usage-warning-toggle', 'Warn me before a usage limit', settings.warnUsageLimits, false, value => {
         store.set(s => ({ ...s, settings: { ...s.settings, warnUsageLimits: value } }))
         void saveSettings({ warnUsageLimits: value })

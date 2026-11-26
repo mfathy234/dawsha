@@ -26,7 +26,8 @@ import {
   toggleMaximize,
   makeLarge,
   canMakeLargePane,
-  tagSession
+  tagSession,
+  startSessionIn
 } from '../actions'
 import { reviewSession } from '../reviewRun'
 import { derivePanes, type PaneView } from '../derive'
@@ -81,6 +82,8 @@ import './paneMeter.css'
 import './contextRing.css'
 import './grid.css'
 import { keepRecap } from '../../shared/recap'
+import { terminalDirectory } from '../terminalSession'
+import { ShellDrawer } from '../shellDrawer'
 import { toolLineFromScreen } from '../../shared/sessionLine'
 import { sessionNote, setSessionNote } from '../sessionNotes'
 import { planBadge } from '../../shared/quietReply'
@@ -163,6 +166,7 @@ export class PaneComponent {
   private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'pane-body' })
+  private readonly drawer: ShellDrawer
   private tabSignature = ''
   private menu: HTMLElement | null = null
   private menuAnchor: HTMLElement | null = null
@@ -170,6 +174,7 @@ export class PaneComponent {
   private lastActiveTab = ''
 
   constructor(readonly paneId: string) {
+    this.drawer = new ShellDrawer(paneId)
     this.branch.append(icon(ICONS.branch), this.branchName, this.branchSync)
     this.pin.append(icon(ICONS.pin))
     const header = h(
@@ -223,7 +228,7 @@ export class PaneComponent {
       if (!this.el.classList.contains('maximized') || target.closest('button')) return
       toggleDetails(paneId)
     })
-    const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
+    const work = h('div', { class: 'pane-work' }, this.tabs, this.body, this.drawer.el)
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.pr, this.branch)
@@ -313,6 +318,7 @@ export class PaneComponent {
     this.updateMaximizeButton(maximized)
     this.updateTabs(view)
     this.updateTerminals(view)
+    this.drawer.update()
     if (focused && this.lastActiveTab && this.lastActiveTab !== view.pane.activeTabId) {
       ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
     }
@@ -878,7 +884,7 @@ export class PaneComponent {
   private updateTabs(view: PaneView): void {
     const single = view.tabs.length === 1
     this.tabs.hidden = single
-    const signature = JSON.stringify([view.tabs, single])
+    const signature = JSON.stringify([view.tabs, single, store.state.terminalProgress])
     if (signature === this.tabSignature) return
     this.tabSignature = signature
     this.closeMenu()
@@ -914,6 +920,8 @@ export class PaneComponent {
       agentMark(tab.agent),
       label
     )
+    const progress = store.state.terminalProgress[tab.id]?.value
+    if (progress) wrapper.append(h('span', { class: 'strip-bar terminal-progress', role: 'progressbar', 'aria-label': 'Terminal progress', 'aria-valuenow': String(progress.percent), 'data-state': String(progress.state) }, h('i', { style: `width: ${progress.state === 3 ? 100 : progress.percent}%` })))
     enableDrag<HTMLElement>(wrapper, {
       ignore: '.tab-close',
       targetAt: (x, y) => this.tabTargetAt(x, y, tab.id),
@@ -953,6 +961,12 @@ export class PaneComponent {
       h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => choose(agent) }, agentMark(agent), text)
     const first = item('Claude session', 'claude')
     this.menu = h('div', { class: 'popover menu', role: 'menu' }, first, item('Codex session', 'codex'), item('Gemini session', 'gemini'), item('Shell', 'shell'))
+    const view = this.current
+    const folder = view && terminalDirectory(view.pane.activeTabId)
+    if (view && folder) this.menu.append(h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => {
+      this.closeMenu()
+      void startSessionIn(view.pane.projectId, folder)
+    } }, 'New session here'))
     this.menu.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
@@ -991,6 +1005,7 @@ export class PaneComponent {
     this.timeline.dispose()
     this.chat.dispose()
     this.reply.dispose()
+    this.drawer.dispose()
     this.el.remove()
   }
 }

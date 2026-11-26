@@ -4,6 +4,7 @@ import { clear, h, icon, iconButton } from '../dom'
 import { enableDrag } from '../drag'
 import { ICONS } from '../icons'
 import { sessionNote } from '../sessionNotes'
+import { progressForPane } from '../terminalProgress'
 import { parsePlanLabel } from '../../shared/planProgress'
 import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
 import { dropSlot, isNoMove, slotToIndex } from '../../shared/tabDrag'
@@ -28,7 +29,7 @@ export class SessionTabs {
   update(views: PaneView[], state: AppState, shown: boolean, selectedId: string | null): void {
     this.el.hidden = !shown
     if (!shown) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.fullTitle, v.status, v.agent, v.attention, isStarred(v.pane), crewSignature(v), sessionNote(v.pane.id).plan]), selectedId])
+    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.fullTitle, v.status, v.agent, v.attention, isStarred(v.pane), crewSignature(v), sessionNote(v.pane.id).plan, progressForPane(v.pane)]), selectedId])
     if (signature === this.signature || document.body.classList.contains('dragging-ui')) return
     this.signature = signature
     clear(this.el)
@@ -42,6 +43,7 @@ export class SessionTabs {
     const stateName = sessionState({ status: view.status, attention: view.attention })
     const stateLabel = SESSION_STATE_LABELS[stateName]
     const plan = parsePlanLabel(sessionNote(view.pane.id).plan)
+    const progress = progressForPane(view.pane)
     const starred = isStarred(view.pane)
     const label = h(
       'button',
@@ -66,7 +68,8 @@ export class SessionTabs {
       { class: `strip-tab${selected ? ' selected' : ''}`, 'data-pane-id': view.pane.id },
       label,
       close,
-      selected && plan ? h('span', { class: 'strip-bar', 'aria-hidden': 'true' }, h('i', { style: `width: ${plan.percent}%` })) : null
+      progress ? h('span', { class: 'strip-bar terminal-progress', role: 'progressbar', 'aria-label': 'Terminal progress', 'aria-valuenow': String(progress.percent), 'data-state': String(progress.state) }, h('i', { style: `width: ${progress.state === 3 ? 100 : progress.percent}%` }))
+        : selected && plan ? h('span', { class: 'strip-bar', 'aria-hidden': 'true' }, h('i', { style: `width: ${plan.percent}%` })) : null
     )
     tab.addEventListener('contextmenu', (event) => {
       event.preventDefault()
