@@ -8,6 +8,7 @@ import { currentBundle } from './themeManager'
 import { fileLinkHost, highlightHost, watchHighlights } from './terminalExtras'
 import { TerminalView } from './terminalView'
 import { PendingTerminalOutput } from './pendingTerminalOutput'
+import { blockCallbacks } from './terminalBlockHost'
 
 export interface TerminalEvents {
   onZoom(termId: string, direction: 1 | -1): void
@@ -56,11 +57,12 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     writeClipboard: (text) => api.writeClipboard(text),
     openLink: (url) => void api.openExternal(url),
     fileLinks: fileLinkHost(id),
-    highlights: highlightHost(),
+    highlights: highlightHost(id),
     textOrder: () => textOrderFor(tabAgent(id)),
     sleepingEnabled: () => store.state.settings.sleepHiddenTerminals,
     imagesEnabled: () => store.state.settings.showTerminalImages,
-    ligaturesEnabled: () => store.state.settings.fontLigatures
+    ligaturesEnabled: () => store.state.settings.fontLigatures,
+    blocks: blockCallbacks(id)
   })
   views.set(id, view)
   void api.getTerminalSetup(id).then((state) => showSetup(id, state)).catch(() => undefined)

@@ -11,6 +11,8 @@ export interface Command extends PaletteItem {
   hint?: string
   mark?: AgentKind
   enabled?: (state: AppState) => boolean
+  /** The keys only count when this says so (a key that means something else outside a terminal); the palette entry stays. */
+  keyWhen?: () => boolean
   run(): void | Promise<void>
 }
 
@@ -49,6 +51,7 @@ export function commandForEvent(event: KeyEventLike, state: AppState): Command |
     listCommands(state).find(
       (command) =>
         (command.scope !== 'grid' || gridView) &&
+        (command.keyWhen?.() ?? true) &&
         (command.keys ?? []).some((binding) => matchesBinding(event, binding))
     ) ?? null
   )

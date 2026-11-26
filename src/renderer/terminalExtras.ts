@@ -6,6 +6,8 @@ import { store } from './state'
 import { openTerminalLink, openTerminalLinkMenu } from './terminalFileLinks'
 import { currentBundle } from './themeManager'
 import type { TerminalView } from './terminalView'
+import { RuleTriggerLimiter } from '../shared/ruleTriggers'
+import { fireRuleTrigger } from './terminalWatch'
 
 const CACHE_MS = 4000
 const CACHE_LIMIT = 2000
@@ -43,9 +45,13 @@ export function fileLinkHost(id: string): FileLinkHost {
   }
 }
 
-export const highlightHost = (): HighlightHost => ({
-  config: () => ({ settings: store.state.settings.highlights, kind: currentBundle().theme.kind })
-})
+export const highlightHost = (termId?: string): HighlightHost => {
+  const limiter = new RuleTriggerLimiter(Date.now())
+  return {
+    config: () => ({ settings: store.state.settings.highlights, kind: currentBundle().theme.kind }),
+    fire: termId ? (rule, line) => { if (limiter.take(rule, line, Date.now())) fireRuleTrigger(termId, rule, line) } : undefined
+  }
+}
 
 export function watchHighlights(views: () => Iterable<TerminalView>): void {
   let last = store.state.settings.highlights

@@ -290,3 +290,36 @@ export function failureMessage(block: Block, text: string): string {
   const where = location ? `\nLocation: ${location[1]}:${location[2]}` : ''
   return `This failed:\n\n${blockMarkdown(block, text)}${where}`
 }
+
+/** "1 failed" when the output counts failures, otherwise just "failed". */
+export function failureLabel(block: Block): string {
+  for (const error of block.errors) {
+    const counted = /\b(\d+) (failed|failing|errors?)\b/.exec(error.text)
+    if (counted) return `${counted[1]} ${counted[2] === 'failing' ? 'failed' : counted[2]}`
+  }
+  return 'failed'
+}
+
+const two = (n: number): string => String(n).padStart(2, '0')
+
+export const formatClock = (at: number): string => {
+  const date = new Date(at)
+  return `${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}`
+}
+
+export function formatAgo(at: number, now: number): string {
+  const seconds = Math.max(0, Math.round((now - at) / 1000))
+  if (seconds < 5) return 'just now'
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.round(minutes / 60)
+  return hours < 24 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`
+}
+
+/** "14:02:31 · 3m ago", the text beside a line's edge. */
+export const lineTimeLabel = (at: number, now: number): string => `${formatClock(at)} · ${formatAgo(at, now)}`
+
+/** Output as a quote, ready to send to another session. */
+export const quoteText = (text: string): string =>
+  text.replace(/\s+$/, '').split('\n').map((line) => `> ${line}`.trimEnd()).join('\n')

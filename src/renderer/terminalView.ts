@@ -10,6 +10,8 @@ import { primaryModifierPressed } from '../shared/shortcuts'
 import { h } from './dom'
 import { PromptSelection } from './promptSelection'
 import { TerminalPrompts } from './terminalPrompts'
+import { TerminalBlockTools, type BlockCallbacks } from './terminalBlockTools'
+import { openContextMenu } from './components/contextMenu'
 import { TerminalArabic } from './terminalArabic'
 import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
 import { registerFileLinks, type FileLinkHost, type FileLinks } from './terminalLinks'
@@ -40,6 +42,7 @@ export interface TerminalCallbacks {
   sleepingEnabled(): boolean
   imagesEnabled(): boolean
   ligaturesEnabled(): boolean
+  blocks: BlockCallbacks
 }
 
 export class TerminalView {
@@ -50,6 +53,7 @@ export class TerminalView {
   private readonly search: TerminalSearch
   private readonly rendering: TerminalRendering
   readonly prompts: TerminalPrompts
+  private readonly blockTools: TerminalBlockTools
   private readonly promptSelection: PromptSelection
   private readonly highlights: TerminalHighlights
   private readonly fileLinks: FileLinks
@@ -93,6 +97,14 @@ export class TerminalView {
     this.fileLinks = registerFileLinks(this.term, callbacks.fileLinks)
     this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.prompts = new TerminalPrompts(this.term)
+    this.blockTools = new TerminalBlockTools(this.term, this.el, this.prompts, {
+      callbacks: callbacks.blocks,
+      readable: (text) => this.readable(text),
+      plain: () => callbacks.textOrder() === 'visual',
+      openFile: (ref) => callbacks.fileLinks.open(ref, { ctrlKey: true, metaKey: false, shiftKey: true }),
+      typed: (data) => callbacks.onInput(data),
+      visible: () => this.visible
+    })
     this.arabic = new TerminalArabic(this.term, () => callbacks.textOrder())
     this.promptSelection = new PromptSelection(this.term, (data) => callbacks.onInput(data))
     this.term.onData((data) => {
@@ -108,7 +120,9 @@ export class TerminalView {
     this.el.addEventListener('contextmenu', (event) => {
       event.preventDefault()
       const ref = this.fileLinks.hovered()
-      if (ref) callbacks.fileLinks.menu(ref, event.clientX, event.clientY, () => this.term.focus())
+      if (ref) return callbacks.fileLinks.menu(ref, event.clientX, event.clientY, () => this.term.focus())
+      const entries = this.blockTools.contextEntries(event)
+      if (entries.length > 0) openContextMenu({ x: event.clientX, y: event.clientY, label: 'Terminal', entries, returnFocus: () => this.term.focus() })
     })
     this.el.addEventListener('focusin', () => callbacks.onFocus())
     this.search = new TerminalSearch(this.term, this.el, {
@@ -117,6 +131,26 @@ export class TerminalView {
     })
     this.bundleTerm = bundle.theme.term
     this.applyBundle(bundle)
+  }
+
+  get blocks(): TerminalBlockTools {
+    return this.blockTools
+  }
+
+  toggleReading(): void {
+    this.blockTools.toggleReading()
+  }
+
+  toggleOutline(): void {
+    this.blockTools.toggleOutline()
+  }
+
+  canJumpBlock(direction: 1 | -1): boolean {
+    return this.blockTools.canJumpBlock(direction)
+  }
+
+  jumpBlock(direction: 1 | -1): void {
+    this.blockTools.jumpBlock(direction)
   }
 
   refreshHighlights(): void {
@@ -251,6 +285,7 @@ export class TerminalView {
   clearScrollback(): void {
     this.term.clear()
     this.prompts.clear()
+    this.blockTools.clear()
   }
 
   writeClipboard(text: string): Promise<void> {
@@ -370,6 +405,7 @@ export class TerminalView {
     cancelAnimationFrame(this.frame)
     this.observer.disconnect()
     this.search.dispose()
+    this.blockTools.dispose()
     this.prompts.dispose()
     this.highlights.dispose()
     this.arabic.dispose()
@@ -407,6 +443,7 @@ export class TerminalView {
   }
 
   private handleWheel(event: WheelEvent): void {
+    this.blockTools.noteWheel(event)
     if (!primaryModifierPressed(event)) return
     event.preventDefault()
     event.stopPropagation()

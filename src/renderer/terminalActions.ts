@@ -50,3 +50,19 @@ export function clearScrollback(paneId: string): void {
   view.clearScrollback()
   toast('Scrollback cleared', 'info')
 }
+
+export const terminalHasFocus = (): boolean => document.activeElement?.closest('.term-host') != null
+
+export function toggleReading(paneId: string): void {
+  paneTerminal(paneId)?.toggleReading()
+}
+
+export function toggleOutline(paneId: string): void {
+  paneTerminal(paneId)?.toggleOutline()
+}
+
+export const canJumpBlock = (direction: 1 | -1): boolean => focusedTerminal()?.canJumpBlock(direction) ?? false
+
+export function jumpBlock(direction: 1 | -1): void {
+  focusedTerminal()?.jumpBlock(direction)
+}

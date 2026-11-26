@@ -55,6 +55,7 @@ import { paneById, store, type AppState } from '../state'
 import { setGridStyle, setSessionsLayout, toggleDockedPanel } from '../sessionsLayout'
 import { SIDEBAR_FILTER_EVENT } from '../../shared/sidebarModel'
 import { registerCommands, registerProvider, type Command } from './registry'
+import { installBlockCommands } from './blocks'
 import { editSpendLimit, pauseAllAgents } from '../spendActions'
 import { toggleMiniWindow } from '../miniWindowSync'
 
@@ -132,6 +133,7 @@ function focusedAction(id: string, title: string, run: (paneId: string) => unkno
 }
 
 export function installBuiltinCommands(): void {
+  installBlockCommands()
   registerCommands(
     { id: 'session.new', title: 'New session', group: 'Actions', ...withKeys('Ctrl+N'), run: () => openQuickPick() },
     {
