@@ -29,15 +29,7 @@
   color: var(--text-3);
   font-size: var(--fs-12);
 }
-.pane-foot .pane-info { display: contents; }
-.pane-foot .pane-info > * { flex-shrink: 0; }
-.pane-foot .pane-info .info-model,
-.pane-foot .pane-info .info-context { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pane-foot > .chip-branch,
-.pane-foot > .pane-rule,
-.pane-foot > .pane-pr { order: 1; }
 .pane-foot > .chip-branch { margin-inline-start: auto; }
-.pane-foot .info-review { order: 2; }
 .pane-foot :is(.chip, button) { border-color: transparent; background: transparent; box-shadow: none; color: var(--text-3); font-size: var(--fs-12); }
 .pane-foot :is(.chip, button):hover { background: var(--hover); color: var(--text); }
 
@@ -86,3 +78,5 @@
 .settings-panel .set-row:last-child { box-shadow: none; }
 .settings-panel .set-control { justify-self: end; padding-top: 0; }
 .settings-content > * { max-width: 640px; }
+
+:root[data-kind='light'] :is(.segmented > button, .segmented > .tab)[aria-pressed='true'] { box-shadow: 0 0 0 1px var(--line-strong); }
