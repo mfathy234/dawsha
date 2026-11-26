@@ -1,0 +1,19 @@
+.care-dialog { width: 400px; max-width: calc(100vw - 32px); }
+.care-list { display: flex; flex-direction: column; gap: 2px; margin: var(--sp-2) 0 var(--sp-3); }
+.care-choice { display: flex; align-items: center; min-height: 36px; padding: 0 var(--sp-3); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text); font: inherit; font-size: var(--fs-2); text-align: start; cursor: pointer; }
+.care-choice:hover, .care-choice:focus-visible { background: var(--hover); }
+.care-field { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) 0; color: var(--text-2); font-size: var(--fs-1); }
+.care-field select { flex: 1; min-width: 0; }
+.care-tries { width: 64px; }
+
+.sess-row.unread .sess-name { color: var(--text); font-weight: var(--w-medium); }
+
+.snoozed-fold { display: flex; flex-direction: column; gap: 2px; margin: var(--sp-2) 0; }
+.snoozed-head { display: flex; align-items: center; gap: var(--sp-2); width: 100%; min-height: 28px; padding: 0 var(--sp-2); border: 0; background: transparent; color: var(--text-3); font: inherit; font-size: var(--fs-1); text-align: start; cursor: pointer; }
+.snoozed-head:hover { color: var(--text-2); }
+.snoozed-row { display: flex; align-items: center; gap: var(--sp-2); min-height: 32px; padding: 0 var(--sp-2); border-radius: var(--r-control); color: var(--text-2); font-size: var(--fs-1); }
+.snoozed-row:hover { background: var(--hover); }
+.snoozed-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snoozed-until { flex: none; color: var(--text-3); }
+
+.pane-rule { flex: none; color: var(--text-3); font-size: var(--fs-1); white-space: nowrap; }

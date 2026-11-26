@@ -206,6 +206,7 @@ export class SettingsViewComponent {
       state.settings.presets,
       state.settings.sessionInfo,
       state.settings.warnUsageLimits,
+      state.settings.catchUp,
       state.settings.watchPullRequests,
       state.settings.miniWindow.showOnMinimize,
       state.settings.autoUpdateCheck,
@@ -628,6 +629,10 @@ export class SettingsViewComponent {
         store.set(s => ({ ...s, settings: { ...s.settings, warnUsageLimits: value } }))
         void saveSettings({ warnUsageLimits: value })
       }), h('p', { class: 'hint' }, 'Warn at 80% and 95% of Claude and Codex 5-hour and weekly limits, on the desktop or in the app when notifications are off.')),
+      row('Catch-up', checkbox('catch-up-toggle', 'Show a catch-up when I come back', settings.catchUp, false, value => {
+        store.set(s => ({ ...s, settings: { ...s.settings, catchUp: value } }))
+        void saveSettings({ catchUp: value })
+      }), h('p', { class: 'hint' }, 'After 20 minutes away, list what needs you, what finished and what failed.')),
       row('Watch pull requests', checkbox('watch-prs-toggle', 'Watch pull requests', settings.watchPullRequests, false, value => {
         store.set(s => ({ ...s, settings: { ...s.settings, watchPullRequests: value } }))
         void saveSettings({ watchPullRequests: value })

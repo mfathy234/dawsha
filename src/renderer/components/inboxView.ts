@@ -51,7 +51,10 @@ export class InboxViewComponent {
     this.el.hidden = !visible
     if (visible !== this.visible) {
       this.visible = visible
-      if (visible) this.details.clear()
+      if (visible) {
+        this.details.clear()
+        this.selected = null
+      }
     }
     if (!visible) return
     this.items = inboxItems(state)

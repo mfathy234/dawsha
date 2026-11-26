@@ -80,12 +80,14 @@ export class GridComponent {
 
   update(state: AppState): void {
     this.lastState = state
-    const views = derivePanes(state)
+    const all = derivePanes(state)
+    // A snoozed session keeps its pane and its terminal; it only leaves the layout until it wakes.
+    const views = all.filter((view) => !view.snoozed)
     // Unhide before panes mount so terminals measure a visible grid. When empty, a visible grid
     // would take half the height and push the empty-state message below center.
     this.stage.hidden = views.length === 0
     const units = unitsOf(views)
-    this.syncPanes(views)
+    this.syncPanes(all)
     const elements = this.syncUnits(units)
     const panel = state.view === 'grid' && state.settings.sessionsLayout === 'panel'
     const shownId = panel ? (views.some((v) => v.pane.id === state.focusedId) ? state.focusedId : (views[0]?.pane.id ?? null)) : state.maximizedId

@@ -40,6 +40,9 @@ export interface InboxDetail {
 
 const NUMBERED = /^(\d+)\.\s+(.*)$/
 
+// A terminal repaint can clear the prompt while the session still waits, so the inbox keeps what it last read until the wait ends.
+const lastAsk = new Map<string, { question: string; choices: InboxChoice[] }>()
+
 function choicesOf(tail: string, labels: readonly string[]): InboxChoice[] {
   if (detectPermissionPrompt(tail)) return parsePermissionDetail(tail).options.slice(0, INBOX_CHOICES_MAX).map((option) => ({ number: option.number, label: option.label }))
   return labels.flatMap((label) => {
@@ -69,18 +72,24 @@ export function inboxItems(state: AppState): InboxItem[] {
     const needs = miniStateOf({ status: view.status, attention: view.attention, tail }).state === 'needs'
     const state2: SessionState = needs ? 'needs' : shaped.state
     const waiting = needs && !shaped.permission ? miniWaiting(tail, reply) : null
-    const choices = needs ? choicesOf(tail, waiting?.choices ?? []) : []
+    const read = needs ? choicesOf(tail, waiting?.choices ?? []) : []
+    const held = needs ? lastAsk.get(paneId) : undefined
+    const choices = read.length > 0 ? read : (held?.choices ?? [])
     const snippet = reply.length > 0 ? replySnippet(reply.join(' ')) : null
     return {
       paneId, state: state2, unread: view.unread, since: stateSince(paneId, state2, state.now), view,
       line: needs ? shaped.line : (reply[0] ?? snippet ?? shaped.line),
       waitText: stateWait({ state: state2, since: stateSince(paneId, state2, state.now), now: state.now }),
-      question: needs ? (shaped.permission ? shaped.line : (waiting?.question ?? '')) : '',
+      question: needs ? (shaped.permission ? shaped.line : (waiting?.question ?? held?.question ?? '')) : '',
       choices,
       answerable: needs && choices.length > 0,
       note: view.pane.care?.note?.text ?? ''
     }
   })
+  for (const item of items) {
+    if (item.state === 'needs') lastAsk.set(item.paneId, { question: item.question, choices: item.choices })
+    else lastAsk.delete(item.paneId)
+  }
   return inboxOrder(items)
 }
 
