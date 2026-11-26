@@ -5,6 +5,7 @@ import { ICONS } from './icons'
 import { logicalRuns, type CellRun } from './terminalCells'
 import type { TerminalBlocks } from './terminalBlocks'
 import { TERMINAL_FONT } from './terminalFont'
+import { isRecapLine } from '../shared/recap'
 import './components/terminalBlocks.css'
 
 const MAX_BODY_LINES = 3000
@@ -156,7 +157,7 @@ export class TerminalReading {
   }
 
   private fill(target: HTMLElement, block: Block, skip: number): void {
-    const lines = this.host.blocks.lines(block.startRow, block.endRow).slice(skip)
+    const lines = this.host.blocks.lines(block.startRow, block.endRow).slice(skip).filter((line) => !isRecapLine(line.text))
     const theme = this.host.theme()
     const plain = this.host.plain()
     const fragment = document.createDocumentFragment()

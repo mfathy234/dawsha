@@ -22,6 +22,7 @@ import {
   setShowTerminalImages,
   setFontLigatures,
   setReadingOnScroll,
+  setLimitLineLength,
   setSidebarCollapsed,
   showSettingsSection,
   showView,
@@ -84,7 +85,7 @@ import '../chat/chatChoice.css'
 
 const SECTIONS: { id: SettingsSection; label: string; lede: string }[] = [
   { id: 'general', label: 'General', lede: 'Keyboard shortcut, sidebar, recordings and setup.' },
-  { id: 'appearance', label: 'Appearance', lede: 'Each style works in both Terminal and Chat. Mix them as you like.' },
+  { id: 'appearance', label: 'Appearance', lede: 'How Dawsha looks. Changes apply at once.' },
   { id: 'notifications', label: 'Notifications', lede: 'What Dawsha shows and tells you while sessions run.' },
   { id: 'agents', label: 'Agents', lede: 'How new sessions start for each agent.' },
   { id: 'mcp', label: 'MCP', lede: 'The MCP servers each agent is set up with.' },
@@ -225,6 +226,7 @@ export class SettingsViewComponent {
       state.settings.showTerminalImages,
       state.settings.fontLigatures,
       state.settings.readingOnScroll,
+      state.settings.limitLineLength,
       this.search.value,
       this.changelogOpen,
       this.remoteAccess,
@@ -365,8 +367,8 @@ export class SettingsViewComponent {
         return [
           this.desktopStyleCard(state),
           ...this.appearanceRows(state),
-          row('Theme', h('button', { class: 'btn', type: 'button', id: 'settings-theme-picker', onClick: () => toggleThemePicker() }, 'Choose theme'), h('p', { class: 'hint' }, 'Choose a theme and terminal background.')),
-          row('Sessions grid', this.gridStyles(state.settings.gridStyle), h('p', { class: 'hint' }, 'Choose between one focused session and a grid of equal tiles.')),
+          row('Theme', h('button', { class: 'btn', type: 'button', id: 'settings-theme-picker', onClick: () => toggleThemePicker() }, 'Choose theme')),
+          row('Sessions grid', this.gridStyles(state.settings.gridStyle)),
           row('Large session', checkbox('focus-moves-selected', 'Move the session I pick to the large spot', state.settings.focusMovesSelected, false, setFocusMovesSelected), h('p', { class: 'hint' }, state.settings.focusMovesSelected ? 'On: the session you select becomes the large one.' : 'Off: the large session stays put. Selecting a side session just focuses it there. Applies to Calm focus.'))
         ]
       case 'import':
@@ -585,6 +587,7 @@ export class SettingsViewComponent {
       row('Recap', checkbox('show-recap', 'Show a one-line recap in each session', state.settings.showRecap, false, setShowRecap), h('p', { class: 'hint' }, 'Keep the latest session summary below its title.')),
       row('Terminal rendering', checkbox('sleep-hidden-terminals', 'Sleep hidden terminals', state.settings.sleepHiddenTerminals, false, setSleepHiddenTerminals), h('p', { class: 'hint' }, 'Release WebGL rendering after a hidden terminal has been out of view for one minute.')),
       row('Show images in the terminal', checkbox('show-terminal-images', 'Show images in the terminal', state.settings.showTerminalImages, false, setShowTerminalImages), h('p', { class: 'hint' }, 'Display inline images; keep up to 32 MB per terminal.')),
+      row('Line length', checkbox('limit-line-length', 'Limit line length in full screen', state.settings.limitLineLength, false, setLimitLineLength), h('p', { class: 'hint' }, 'Keep the terminal to 120 columns so long lines stay easy to read.')),
       row('Reading view', checkbox('reading-on-scroll', 'Open it when I scroll far back', state.settings.readingOnScroll, false, setReadingOnScroll), h('p', { class: 'hint' }, 'Ctrl+Shift+R always opens it. It folds long output into one row per command.')),
       row('Font ligatures', checkbox('font-ligatures', 'Font ligatures', state.settings.fontLigatures, false, setFontLigatures), h('p', { class: 'hint' }, 'Join programming symbols in fonts that support ligatures.')),
       row('Shell drawer height', h('input', { class: 'text-input shell-drawer-setting', type: 'number', min: '120', max: '600', value: String(state.settings.shellDrawerHeight), 'aria-label': 'Shell drawer height', onChange: (event: Event) => {

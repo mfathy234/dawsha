@@ -1,3 +1,4 @@
+import { syncRailViewsCount } from './railCount'
 import { h, icon, leave } from '../dom'
 import {
   clearNotificationHistory,
@@ -74,6 +75,7 @@ export class NotificationBell {
     const count = unreadCount(notificationEntries())
     this.badge.hidden = count === 0
     this.badge.textContent = badgeText(count)
+    syncRailViewsCount(count)
     this.el.setAttribute('aria-label', bellLabel(count))
     if (this.popover) this.render()
   }

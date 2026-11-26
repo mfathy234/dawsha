@@ -71,6 +71,7 @@ export class TerminalView {
   private opened = false
   private fitTimer: ReturnType<typeof setTimeout> | undefined
   private lastSize = ''
+  private columnCap: number | null = null
   private lent: HTMLElement | null = null
   private bundleTerm: ThemeBundle['theme']['term']
   private hiddenSince: number | null = null
@@ -407,9 +408,32 @@ export class TerminalView {
     this.arabic.setTheme(bundle.theme.term)
   }
 
+  /** Maximized panes keep lines to this many columns: the host gets narrower, so the fit addon never computes more. */
+  setColumnCap(cap: number | null): void {
+    if (cap === this.columnCap) return
+    this.columnCap = cap
+    if (cap === null) this.el.style.maxWidth = ''
+    this.scheduleFit()
+  }
+
+  private applyColumnCap(): void {
+    const cap = this.columnCap
+    const screen = this.el.querySelector<HTMLElement>('.xterm-screen')
+    const xterm = this.el.querySelector<HTMLElement>('.xterm')
+    if (cap === null || !screen || !xterm || this.term.cols < 1 || screen.clientWidth < 1) return
+    const style = getComputedStyle(xterm)
+    const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
+    const viewport = this.el.querySelector<HTMLElement>('.xterm-viewport')
+    const scrollbar = viewport ? viewport.offsetWidth - viewport.clientWidth : 0
+    const width = Math.ceil((screen.clientWidth / this.term.cols) * cap + padding + scrollbar)
+    const next = `${width}px`
+    if (this.el.style.maxWidth !== next) this.el.style.maxWidth = next
+  }
+
   fitNow(): void {
     if (!this.opened || this.el.clientWidth < 40 || this.el.clientHeight < 20) return
     try {
+      this.applyColumnCap()
       const size = this.fitAddon.proposeDimensions()
       if (!size || (size.cols === this.term.cols && size.rows === this.term.rows)) return
       this.fitAddon.fit()

@@ -10,6 +10,11 @@ const MAX_RECAP = 240
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f]/g
 
+/** Claude prints its own recap line in the terminal; the pane header already shows the recap. */
+export function isRecapLine(text: string): boolean {
+  return RECAP_LINE.test(text.trim())
+}
+
 export function cleanRecap(text: string): string {
   const plain = text
     .replace(/\s*\(turn off recaps?\b[^)]*\)\s*$/i, '')

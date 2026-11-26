@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanRecap, outputLines, recapFromScreen, keepRecap } from '../../src/shared/recap'
+import { cleanRecap, isRecapLine, outputLines, recapFromScreen, keepRecap } from '../../src/shared/recap'
 
 describe('keepRecap', () => {
   it('retains the last reply while a tool is running', () => {
@@ -90,5 +90,14 @@ describe('outputLines', () => {
 
   it('uses the whole screen when there is no input box', () => {
     expect(outputLines('$ npm test\n\nPASS src/a.test.ts\n', 3)).toEqual(['$ npm test', 'PASS src/a.test.ts'])
+  })
+})
+
+describe('isRecapLine', () => {
+  it('spots the recap line Claude prints in the terminal', () => {
+    expect(isRecapLine('※ recap: Fixed the import.')).toBe(true)
+    expect(isRecapLine('  recap: Fixed the import.')).toBe(true)
+    expect(isRecapLine('● Fixed the recap of the import')).toBe(false)
+    expect(isRecapLine('')).toBe(false)
   })
 })

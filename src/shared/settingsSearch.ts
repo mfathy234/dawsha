@@ -22,6 +22,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
     'Terminal rendering sleep hidden terminals WebGL',
     'Show images in the terminal inline sixel iTerm IIP',
     'Font ligatures programming symbols contextual font',
+    'Limit line length in full screen cap the terminal width columns',
     'Reading view open when I scroll far back in a terminal fold blocks',
     'Sidebar start with the sidebar collapsed',
     'Getting started setup guide',

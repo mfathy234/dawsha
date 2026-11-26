@@ -38,6 +38,7 @@ export const INCLUDED_KEYS = [
   'showTerminalImages',
   'fontLigatures',
   'readingOnScroll',
+  'limitLineLength',
   'colorSessionsByTag',
   'sidebarWidth',
   'othersCollapsed',
@@ -166,7 +167,7 @@ const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
 const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew', 'appearance'] as const
-const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'railShowEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'notifyLongCommands', 'showTerminalImages', 'fontLigatures', 'readingOnScroll', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits', 'catchUp'] as const
+const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'railShowEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'limitLineLength', 'notifyLongCommands', 'showTerminalImages', 'fontLigatures', 'readingOnScroll', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits', 'catchUp'] as const
 
 function checkShapes(data: Raw): string | null {
   for (const key of LIST_KEYS) {
@@ -294,6 +295,7 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['showTerminalImages', 'Show images in the terminal'],
   ['fontLigatures', 'Font ligatures'],
   ['readingOnScroll', 'Reading view on scroll'],
+  ['limitLineLength', 'Limit line length in full screen'],
   ['colorSessionsByTag', 'Tag colours'],
   ['sidebarWidth', 'Sidebar'],
   ['sidePanel', 'Side panel'],

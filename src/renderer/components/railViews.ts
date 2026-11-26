@@ -6,6 +6,7 @@ import { notificationEntries } from '../notificationHistory'
 import { unreadCount } from '../../shared/notifications'
 import type { AppState } from '../state'
 import { BELL_SVG, toggleNotifications } from './notificationBell'
+import { countBadge } from './railCount'
 
 export const RAIL_VIEWS_KEY = 'views'
 
@@ -34,7 +35,8 @@ export function railViewsButton(view: AppState['view'], onClick: () => void): HT
   return h(
     'button',
     { class: `rail-btn rail-views${away ? ' away' : ''}`, type: 'button', id: 'rail-views', 'aria-label': label, title: label, 'aria-haspopup': 'menu', 'data-menu-key': RAIL_VIEWS_KEY, onClick },
-    icon(away ? active.svg : ICONS.navViews)
+    icon(away ? active.svg : ICONS.navViews),
+    countBadge(unreadCount(notificationEntries()))
   )
 }
 

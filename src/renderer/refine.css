@@ -72,3 +72,17 @@
 
 :root[data-kind='light'] input[type='checkbox'],
 :root[data-kind='light'] input[type='radio'] { background: var(--surface); }
+
+.pane.maximized .term-host .xterm { padding: var(--sp-4) var(--sp-6); }
+
+.pane-header > .pane-reading[hidden] { display: none; }
+@container pane (max-width: 640px) { .pane-header > .pane-reading { display: none; } }
+
+.rail-btn.rail-views { position: relative; }
+.rail-btn.rail-views .rail-badge { position: absolute; top: 2px; inset-inline-end: 2px; background: none; color: var(--text-2); font-size: var(--fs-0); font-weight: var(--w-medium); line-height: 1; font-variant-numeric: tabular-nums; }
+.rail-btn.rail-mono.rail-tile.rail-working { color: var(--st-working); }
+
+.settings-panel .set-row { min-height: 56px; padding-block: var(--sp-2); align-items: center; box-shadow: 0 1px 0 var(--line); border-radius: 0; }
+.settings-panel .set-row:last-child { box-shadow: none; }
+.settings-panel .set-control { justify-self: end; padding-top: 0; }
+.settings-content > * { max-width: 640px; }

@@ -1062,6 +1062,11 @@ export function setShowTerminalImages(showTerminalImages: boolean): void {
   void saveSettings({ showTerminalImages })
 }
 
+export function setLimitLineLength(limitLineLength: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, limitLineLength } }))
+  void saveSettings({ limitLineLength })
+}
+
 export function setReadingOnScroll(readingOnScroll: boolean): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, readingOnScroll } }))
   void saveSettings({ readingOnScroll })
