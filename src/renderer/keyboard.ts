@@ -6,6 +6,8 @@ import { closeDetails, cycleActiveTab, openPalette, restoreGrid, setPaneFont, st
 import { pickedAgent } from '../shared/quickPick'
 import { commandForEvent } from './commands/registry'
 import { paneById, store, type AppState } from './state'
+import { api } from './api'
+import { getTerminal } from './terminals'
 import { closeTimeline } from './timelineActions'
 import { closePeek } from './boardActions'
 import { boardShowing } from './sessionsLayout'
@@ -44,6 +46,14 @@ function escapeShouldRestore(event: KeyboardEvent): boolean {
   // Esc cancels a tab drag first, and never leaves the Side panel layout (that has its own Back to grid).
   if (document.body.classList.contains('dragging-ui') || store.state.settings.sessionsLayout === 'panel') return false
   return store.state.maximizedId !== null && !inTerminal(event)
+}
+
+/** Esc from inside the full-screen session (its pane or the session tabs) is for that session, not for the layout. */
+function escapeBelongsToSession(event: KeyboardEvent): boolean {
+  if (store.state.maximizedId === null || document.body.classList.contains('dragging-ui')) return false
+  if (store.state.detailsPaneId !== null || store.state.timelinePaneId !== null) return false
+  const target = event.target as HTMLElement | null
+  return target?.closest('.pane, .pane-strip') != null
 }
 
 function peekShouldClose(event: KeyboardEvent): boolean {
@@ -119,6 +129,20 @@ function onKeyDown(event: KeyboardEvent): void {
       cycleActiveTab(pageKey ? (event.key === 'PageUp' ? -1 : 1) : event.shiftKey ? -1 : 1)
       return
     }
+  }
+  if (event.key === 'Escape' && escapeBelongsToSession(event)) {
+    // Esc on the tab strip or the pane's own chrome means "stop the agent", never "leave full screen". Fields and the
+    // chat box handle their own Esc, so only chrome forwards it to the session's terminal.
+    if (!inTerminalOrField(event) && state.maximizedId) {
+      consume(event)
+      const pane = paneById(state, state.maximizedId)
+      const view = pane ? getTerminal(pane.activeTabId) : undefined
+      if (pane && view) {
+        view.focus()
+        api.write(pane.activeTabId, '\x1b')
+      }
+    }
+    return
   }
   if (event.key === 'Escape' && escapeShouldRestore(event)) {
     consume(event)

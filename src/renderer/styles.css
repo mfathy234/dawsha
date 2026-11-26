@@ -7029,10 +7029,13 @@ button.tl-event:hover { background: var(--raised); }
 
 /* Full mode: the title shrinks with an ellipsis so the close X, which sits right after it, is never pushed off. */
 
+/* The tab keeps the full letter tile; squeezing it to 12px crushed the C/X into a blob. */
 .strip-label > .agent-mark {
   flex: none;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 11px;
 }
 
 .strip-label > .agent-mark svg {
