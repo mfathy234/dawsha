@@ -137,7 +137,7 @@ test('the Sidebar frame still opens Agents, Files, Settings, Search and New sess
 
     await page.locator('#files-button').click()
     await expect(page.locator('.files-view')).toBeVisible()
-    await expect(page.locator('#sessions-button')).toBeVisible()
+    await expect(page.locator('#rail-views')).toHaveAttribute('aria-label', 'Views, Files')
 
     await page.locator('#settings-button').click()
     await expect(page.locator('.settings-view')).toBeVisible()
