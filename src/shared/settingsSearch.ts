@@ -9,6 +9,7 @@ export interface SearchSection {
 /** What each section holds, so "Find in Settings" can name a section from a row's label or description without drawing it. */
 export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
   general: [
+    'Shell drawer height Ctrl+` terminal',
     'PlantUML jar path Java local diagrams MIT download',
     'When I close the window Quit Dawsha Keep running in the tray',
     'Start at sign-in Start Dawsha when you sign in Start hidden in the tray installed app',
@@ -37,6 +38,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, readonly string[]>> = {
     'Large session move the session I pick to the large spot'
   ],
   notifications: [
+    'Long shell commands notify when a command finishes after 30 seconds',
     'Session info live status line',
     'Mini window show when minimized',
     'Notifications notify when a session is done or needs you',

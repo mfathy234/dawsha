@@ -1,4 +1,5 @@
 import { statSync } from 'node:fs'
+import { registerShellIpc } from './shellIpc'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { BrowserWindow, clipboard, dialog, ipcMain, shell, app } from 'electron'
@@ -133,6 +134,7 @@ export function registerIpc(
   remoteAccess?: ReturnType<typeof createRemoteAccessController>,
   recordings?: RecordingService
 ): void {
+  registerShellIpc(getWindow, settings)
   const locations = (): BridgeLocations => ({
     settingsPath: claudeSettingsPath(),
     ...bridgeDirs(app.getPath('userData')),

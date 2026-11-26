@@ -165,7 +165,7 @@ export function launchSpec(input: SpawnRequest, platform = process.platform, loo
     const command = shellCommand(platform)
     const file = resolveExecutable(command, [], platform)
     if (!file) return `Shell not found: ${command}`
-    return { file, args: shellArgs(file, request.command, platform) }
+    return { file, args: [...shellArgs(file, request.command, platform), ...splitArgs(process.env.DAWSHA_SHELL_ARGS)] }
   }
   const pathDirs = (process.env.PATH ?? '').split(delimiter)
   if (request.agent === 'codex') {

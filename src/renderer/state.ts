@@ -113,6 +113,7 @@ export interface WhatsNewView {
 }
 
 export interface AppState {
+  terminalProgress: Record<string, { value: import('../shared/terminalOsc').TerminalProgress; at: number }>
   ready: boolean
   settings: Settings
   panes: PaneState[]
@@ -171,6 +172,7 @@ export interface AppState {
 }
 
 export const initialState = (): AppState => ({
+  terminalProgress: {},
   ready: false,
   settings: defaultSettings(),
   panes: [],

@@ -5,10 +5,9 @@ import { toRepoPath } from '../shared/projectPaths'
 import { api } from './api'
 import { openContextMenu, type ContextEntry } from './components/contextMenu'
 import { toast } from './components/toast'
-import { workFolderOfPane } from './derive'
 import { fileIndex } from './files/fileIndex'
 import { openInFiles, openInVsCode } from './files/filesActions'
-import { store } from './state'
+import { terminalDirectory, terminalPane } from './terminalSession'
 
 interface LinkContext {
   folder: string
@@ -19,8 +18,8 @@ interface LinkContext {
 }
 
 async function contextOf(termId: string, ref: FileRef, existing: (folder: string, paths: string[]) => Promise<(string | null)[]>): Promise<LinkContext | null> {
-  const pane = store.state.panes.find((p) => p.tabs.some((t) => t.id === termId))
-  const folder = pane ? workFolderOfPane(store.state, pane) : null
+  const pane = terminalPane(termId)
+  const folder = terminalDirectory(termId)
   if (!pane || !folder) return null
   const [absolute] = await existing(folder, [ref.path])
   if (!absolute) return null

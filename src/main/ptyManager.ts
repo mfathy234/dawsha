@@ -14,6 +14,7 @@ import type { RemoteTerminalFrame, RemoteTerminalScreen, RemoteTerminalSnapshot 
 import { claimPendingWorktree, completePendingWorktree, hasPendingWorktree, releasePendingWorktree, rememberPendingLaunch } from './worktreeSetupPending'
 import type { TerminalSetupAction, TerminalSetupState } from '../shared/terminalSetup'
 import { createSetupCommand, type SetupCommand } from './worktreeSetupCommand'
+import { integratedShell } from './shellIntegration'
 
 interface RemoteTerminalStateLike {
   snapshot(id?: string): RemoteTerminalSnapshot[]
@@ -133,13 +134,14 @@ export class PtyManager {
     try {
       const cols = Math.max(2, request.cols)
       const rows = Math.max(1, request.rows)
-      const first = setup?.shell.spec ?? spec
+      const env = this.environment(request.crew?.goal)
+      const first = setup?.shell.spec ?? (request.agent === 'shell' && request.command === undefined ? integratedShell(spec, env) : spec)
       const child = pty.spawn(first.file, ptyArguments(first.args), {
         name: 'xterm-256color',
         cols,
         rows,
         cwd: request.cwd,
-        env: this.environment(request.crew?.goal)
+        env
       })
       this.attach(request.id, child, request.projectId ?? null, request.agent, request.desktopVisible !== false, request.remoteManaged === true, { cols, rows }, setup)
       this.recording?.recorder.start(
@@ -177,7 +179,7 @@ export class PtyManager {
 
   resize(id: string, cols: number, rows: number): void {
     const entry = this.entries.get(id)
-    if (!entry || cols < 2 || rows < 1) return
+    if (!entry || cols < 2 || rows < 1 || (entry.size.cols === cols && entry.size.rows === rows)) return
     entry.size = { cols, rows }
     try {
       if (!entry.exited) entry.process.resize(cols, rows)
@@ -305,10 +307,11 @@ export class PtyManager {
 
   private advanceSetup(id: string, entry: Entry, retry: boolean): SpawnResult {
     const setup = entry.setup!
-    const spec = retry ? setup.shell.spec : setup.agentSpec
+    const env = this.environment(setup.request.crew?.goal)
+    const spec = retry ? setup.shell.spec : setup.request.agent === 'shell' && setup.request.command === undefined ? integratedShell(setup.agentSpec, env) : setup.agentSpec
     try {
       const child = pty.spawn(spec.file, ptyArguments(spec.args), {
-        name: 'xterm-256color', ...entry.size, cwd: setup.request.cwd, env: this.environment(setup.request.crew?.goal)
+        name: 'xterm-256color', ...entry.size, cwd: setup.request.cwd, env
       })
       entry.process = child
       entry.exited = false

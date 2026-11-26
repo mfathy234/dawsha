@@ -211,6 +211,8 @@ export interface Settings {
   dimOtherPanes: boolean
   showRecap: boolean
   sleepHiddenTerminals: boolean
+  shellDrawerHeight: number
+  notifyLongCommands: boolean
   showTerminalImages: boolean
   fontLigatures: boolean
   /** Opens the reading view when you scroll far back in a terminal. Ctrl+Shift+R opens it any time. */

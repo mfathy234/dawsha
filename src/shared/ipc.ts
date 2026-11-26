@@ -1,4 +1,7 @@
 export const IPC = {
+  shellHistoryGet: 'shell:history-get',
+  shellHistoryAdd: 'shell:history-add',
+  terminalProgress: 'terminal:progress',
   loginItemGet: 'desktop:login-item-get',
   loginItemSet: 'desktop:login-item-set',
   quit: 'desktop:quit',

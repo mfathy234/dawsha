@@ -26,7 +26,8 @@ import {
   toggleMaximize,
   makeLarge,
   canMakeLargePane,
-  tagSession
+  tagSession,
+  startSessionIn
 } from '../actions'
 import { reviewSession } from '../reviewRun'
 import { derivePanes, type PaneView } from '../derive'
@@ -84,7 +85,9 @@ import '../chat/chatQuiet.css'
 import './paneMeter.css'
 import './contextRing.css'
 import './grid.css'
-import { recapFromScreen } from '../../shared/recap'
+import { keepRecap } from '../../shared/recap'
+import { terminalDirectory } from '../terminalSession'
+import { ShellDrawer } from '../shellDrawer'
 import { toolLineFromScreen } from '../../shared/sessionLine'
 import { sessionNote, setSessionNote } from '../sessionNotes'
 import { planBadge } from '../../shared/quietReply'
@@ -141,6 +144,8 @@ export class PaneComponent {
   private readonly recap = h('div', { class: 'pane-recap', dir: 'auto', hidden: true })
   private recapText = ''
   private recapAt = 0
+  private recapTab = ''
+  private readonly recaps = new Map<string, string>()
   private readonly plan = h('div', { class: 'pane-plan', hidden: true })
   private planSignature = ''
   private readonly reply: QuietReply
@@ -167,6 +172,7 @@ export class PaneComponent {
   private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'pane-body' })
   private readonly overlap: OverlapNotice
+  private readonly drawer: ShellDrawer
   private tabSignature = ''
   private menu: HTMLElement | null = null
   private menuAnchor: HTMLElement | null = null
@@ -174,6 +180,7 @@ export class PaneComponent {
   private lastActiveTab = ''
 
   constructor(readonly paneId: string) {
+    this.drawer = new ShellDrawer(paneId)
     this.branch.append(icon(ICONS.branch), this.branchName, this.branchSync)
     this.pin.append(icon(ICONS.pin))
     const header = h(
@@ -227,7 +234,7 @@ export class PaneComponent {
       if (!this.el.classList.contains('maximized') || target.closest('button')) return
       toggleDetails(paneId)
     })
-    const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
+    const work = h('div', { class: 'pane-work' }, this.tabs, this.body, this.drawer.el)
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
     this.foot.append(this.info, this.rule, this.pr, this.branch)
@@ -243,7 +250,8 @@ export class PaneComponent {
       planChanged: () => this.updatePlan(),
       onScreen: () => this.el.offsetParent !== null
     })
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.plan, this.recap, this.hint, content, this.reply.el, this.permission, this.foot)
+    this.body.append(this.hint, this.permission)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.plan, this.recap, content, this.reply.el, this.foot)
     // The chat can learn of a usage limit after the pane last rendered, so it tells the pane to update its pill.
     this.chat = new PaneChat({ ...chatHostFor(paneId, () => this.current), limitChanged: () => this.chatShown && this.showLimitState() }, this.permission)
     this.body.append(this.chat.el)
@@ -320,6 +328,7 @@ export class PaneComponent {
     this.updateMaximizeButton(maximized)
     this.updateTabs(view)
     this.updateTerminals(view)
+    this.drawer.update()
     if (focused && this.lastActiveTab && this.lastActiveTab !== view.pane.activeTabId) {
       ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
     }
@@ -392,7 +401,7 @@ export class PaneComponent {
     this.body.classList.toggle('chat-on', shown)
     if (shown && this.chat.limitReached) this.showLimitState()
     this.el.classList.toggle('has-view-switch', chatCapable(view.agent))
-    if (!this.chat.holdsPermission && this.permission.parentElement !== this.el) this.el.insertBefore(this.permission, this.foot)
+    if (!this.chat.holdsPermission && this.permission.parentElement !== this.body) this.body.append(this.permission)
     if (shown !== this.chatShown) {
       this.chatShown = shown
       if (shown) this.chat.focusComposer()
@@ -554,15 +563,23 @@ export class PaneComponent {
 
   // Read off the visible screen, so no file is read; at most once per RECAP_REFRESH_MS for each pane.
   private updateRecap(view: PaneView): void {
+    if (view.primaryTabId !== this.recapTab) {
+      this.recapTab = view.primaryTabId
+      this.recapText = this.recaps.get(this.recapTab) ?? ''
+      this.recap.textContent = this.recapText
+      this.recap.title = this.recapText
+      this.recapAt = 0
+    }
     const now = Date.now()
     if (now - this.recapAt < RECAP_REFRESH_MS) return
     this.recapAt = now
     const screen = getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? ''
-    const text = recapFromScreen(screen)
+    const text = keepRecap(this.recapText, screen)
     // The sidebar's second line reads these even when the pane's own recap line is switched off.
     setSessionNote(this.paneId, { recap: text, tool: toolLineFromScreen(screen) })
-    if (!store.state.settings.showRecap || text === this.recapText) return
+    if (text === this.recapText) return
     this.recapText = text
+    this.recaps.set(this.recapTab, text)
     this.recap.textContent = text
     this.recap.title = text
   }
@@ -887,7 +904,7 @@ export class PaneComponent {
   private updateTabs(view: PaneView): void {
     const single = view.tabs.length === 1
     this.tabs.hidden = single
-    const signature = JSON.stringify([view.tabs, single])
+    const signature = JSON.stringify([view.tabs, single, store.state.terminalProgress])
     if (signature === this.tabSignature) return
     this.tabSignature = signature
     this.closeMenu()
@@ -923,6 +940,8 @@ export class PaneComponent {
       agentMark(tab.agent),
       label
     )
+    const progress = store.state.terminalProgress[tab.id]?.value
+    if (progress) wrapper.append(h('span', { class: 'strip-bar terminal-progress', role: 'progressbar', 'aria-label': 'Terminal progress', 'aria-valuenow': String(progress.percent), 'data-state': String(progress.state) }, h('i', { style: `width: ${progress.state === 3 ? 100 : progress.percent}%` })))
     enableDrag<HTMLElement>(wrapper, {
       ignore: '.tab-close',
       targetAt: (x, y) => this.tabTargetAt(x, y, tab.id),
@@ -962,6 +981,12 @@ export class PaneComponent {
       h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => choose(agent) }, agentMark(agent), text)
     const first = item('Claude session', 'claude')
     this.menu = h('div', { class: 'popover menu', role: 'menu' }, first, item('Codex session', 'codex'), item('Gemini session', 'gemini'), item('Shell', 'shell'))
+    const view = this.current
+    const folder = view && terminalDirectory(view.pane.activeTabId)
+    if (view && folder) this.menu.append(h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => {
+      this.closeMenu()
+      void startSessionIn(view.pane.projectId, folder)
+    } }, 'New session here'))
     this.menu.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
@@ -1000,6 +1025,7 @@ export class PaneComponent {
     this.timeline.dispose()
     this.chat.dispose()
     this.reply.dispose()
+    this.drawer.dispose()
     this.el.remove()
   }
 }

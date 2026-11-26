@@ -14,6 +14,9 @@ import { boardShowing } from './sessionsLayout'
 import { contextMenuOpen } from './components/contextMenu'
 import { requestFilesSearch } from './files/filesActions'
 import { openGlobalSearch } from './components/globalSearch'
+import { toggleShellDrawer } from './shellDrawer'
+import { openShellHistory } from './shellUi'
+import { terminalAgent } from './terminalSession'
 
 const overlayOpen = isOverlayOpen
 
@@ -79,6 +82,17 @@ function onKeyDown(event: KeyboardEvent): void {
   // Ctrl+Enter sends an edited message or saves a review comment, so it is not a shortcut while their box has focus.
   if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && (event.target as HTMLElement | null)?.closest?.('.chat-edit, .turn-cm')) return
   const state = store.state
+  const hostId = (event.target as HTMLElement | null)?.closest<HTMLElement>('.term-host')?.dataset.termId
+  if (hostId && terminalAgent(hostId) === 'shell' && (event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'r') {
+    consume(event)
+    void openShellHistory(hostId)
+    return
+  }
+  if (state.view === 'grid' && state.focusedId && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && (event.key === '`' || event.code === 'Backquote')) {
+    consume(event)
+    toggleShellDrawer(state.focusedId)
+    return
+  }
   // State changes immediately; the picker mounts on the next animation frame. A fast Enter
   // in that gap still starts its default choice instead of reaching the old terminal.
   if (state.quickPickOpen && state.quickPickMode === 'new' && event.key === 'Enter' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {

@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { cleanRecap, outputLines, recapFromScreen } from '../../src/shared/recap'
+import { cleanRecap, outputLines, recapFromScreen, keepRecap } from '../../src/shared/recap'
+
+describe('keepRecap', () => {
+  it('retains the last reply while a tool is running', () => {
+    expect(keepRecap('Fixed the import.', '● Bash(npm test)')).toBe('Fixed the import.')
+    expect(keepRecap('', '● Bash(npm test)')).toBe('')
+    expect(keepRecap('Old reply', 'recap: New reply')).toBe('New reply')
+  })
+
+  it('strips the optional recap configuration hint', () => {
+    expect(recapFromScreen('recap: Fixed the import (turn off recaps in /config)')).toBe('Fixed the import')
+    expect(recapFromScreen('recap: Tests next (turn off recap…)')).toBe('Tests next')
+  })
+})
 
 describe('recapFromScreen', () => {
   it('prefers the recap line Claude printed', () => {

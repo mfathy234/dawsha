@@ -1,6 +1,6 @@
 import { bind, formatShortcut } from '../../shared/shortcuts'
 import { paneById, store, type AppState } from '../state'
-import { canJumpBlock, jumpBlock, terminalHasFocus, toggleOutline, toggleReading } from '../terminalActions'
+import { agentTerminalHasFocus, canJumpBlock, jumpBlock, terminalHasFocus, toggleOutline, toggleReading } from '../terminalActions'
 import { registerCommands, type Command } from './registry'
 
 const hasPane = (state: AppState): boolean => paneById(state, state.focusedId) !== undefined
@@ -24,7 +24,7 @@ export function installBlockCommands(): void {
       group: 'Actions',
       keywords: 'scrollback blocks fold unfold read back long output commands',
       ...keys('Ctrl+Shift+R'),
-      keyWhen: terminalHasFocus,
+      keyWhen: agentTerminalHasFocus,
       scope: 'grid',
       enabled: hasPane,
       run: focusedPane(toggleReading)

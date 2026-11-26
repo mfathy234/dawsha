@@ -1,6 +1,7 @@
 import { toast } from './components/toast'
 import { paneById, store } from './state'
 import { getTerminal } from './terminals'
+import { terminalAgent } from './terminalSession'
 import type { TerminalView } from './terminalView'
 
 export function paneTerminal(paneId: string | null | undefined): TerminalView | undefined {
@@ -52,6 +53,12 @@ export function clearScrollback(paneId: string): void {
 }
 
 export const terminalHasFocus = (): boolean => document.activeElement?.closest('.term-host') != null
+
+/** An agent's terminal has the keyboard. In a shell tab (or the shell drawer) Ctrl+Shift+R is the shell's command history instead. */
+export const agentTerminalHasFocus = (): boolean => {
+  const id = document.activeElement?.closest<HTMLElement>('.term-host')?.dataset.termId
+  return id !== undefined && terminalAgent(id) !== 'shell'
+}
 
 export function toggleReading(paneId: string): void {
   paneTerminal(paneId)?.toggleReading()

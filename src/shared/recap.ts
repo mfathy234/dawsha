@@ -12,12 +12,18 @@ const CONTROL = /[\u0000-\u001f\u007f]/g
 
 export function cleanRecap(text: string): string {
   const plain = text
+    .replace(/\s*\(turn off recaps?\b[^)]*\)\s*$/i, '')
     .replace(CONTROL, ' ')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/[*_`#>]+/g, '')
     .replace(/\s+/g, ' ')
     .trim()
   return plain.length > MAX_RECAP ? `${plain.slice(0, MAX_RECAP - 1)}…` : plain
+}
+
+/** A transient tool-only screen must not collapse the session's recap row. */
+export function keepRecap(previous: string, screen: string): string {
+  return recapFromScreen(screen) || previous
 }
 
 /** A line that is only a border or rule, such as the lines around Claude's input box. */
