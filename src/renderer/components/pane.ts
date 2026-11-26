@@ -15,6 +15,7 @@ import {
   restartTab,
   restoreGrid,
   setActiveTab,
+  toggleStarred,
   togglePinned,
   showPaneDiff,
   openChanges,
@@ -72,7 +73,6 @@ import { setStatePillSuffix, stateIcon, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
 import { openMergeBack, paneWorktree } from '../mergeBackActions'
-import { openSnooze } from './careDialogs'
 import { ruleLineFor } from '../whenDone'
 import { OverlapNotice } from './overlapNotice'
 import { recordState } from '../timelineLog'
@@ -792,6 +792,7 @@ export class PaneComponent {
     const largeItems = canMakeLargePane(store.state, this.paneId)
       ? [item('Make large', () => makeLarge(this.paneId), ICONS.maximize, 'pane.make-large')]
       : []
+    const starItem = item(this.current?.pane.starred === true ? 'Unpin' : 'Pin to top', () => toggleStarred(this.paneId), ICONS.pin)
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
     const source = this.current?.agent ?? 'shell'
     const handoffs =
@@ -814,9 +815,9 @@ export class PaneComponent {
       first,
       ...largeItems,
       showDetails,
+      starItem,
       pinItem,
       item('Tag…', () => this.openTag(), ICONS.tag),
-      item('Snooze…', () => openSnooze(this.paneId), ICONS.history),
       h('div', { class: 'menu-separator', role: 'separator' }),
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Session'),
       item('New terminal', () => this.openTerminalPicker(), ICONS.plus),
