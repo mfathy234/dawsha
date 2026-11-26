@@ -48,6 +48,12 @@ import { installPresetCommands } from './commands/presets'
 import { installWorktreeCleanupCommands } from './commands/worktreeCleanup'
 import { installWorktreeNudge } from './worktreeCleanupActions'
 import { installNotificationCommands } from './commands/notifications'
+import { installSessionCareCommands } from './commands/sessionCare'
+import { installSnooze } from './snooze'
+import { installWhenDone } from './whenDone'
+import { installOverlap } from './overlap'
+import { installBroadcastQueue } from './broadcast'
+import { installCatchUp } from './catchUp'
 import { installNeedsNotices } from './needsNotice'
 import { installReplayCommands } from './commands/replay'
 import { installQueueRunner } from './automation/queueRunner'
@@ -154,6 +160,12 @@ async function boot(): Promise<void> {
   installPresetCommands()
   installWorktreeCleanupCommands()
   installNotificationCommands()
+  installSessionCareCommands()
+  installSnooze()
+  installWhenDone()
+  installOverlap()
+  installBroadcastQueue()
+  installCatchUp()
   installCompareCommands()
   installTurnChecksCommands()
   installHandoffCommands()

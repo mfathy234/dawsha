@@ -282,6 +282,8 @@ export interface GridApi {
   /** Pass null to read the state. Resolves to null when the terminal is not being recorded. */
   setRecordingPaused(id: string, paused: boolean | null): Promise<boolean | null>
   onFlushRequest(listener: () => Promise<void>): void
+  /** The owner left the computer or came back: window unfocused, screen locked, asleep or idle. */
+  onAway(listener: (change: import('./away').AwayChange) => void): void
   /** Asked when the window is closing; resolve false to keep it open. */
   onCloseCheck(listener: () => Promise<boolean>): void
 }

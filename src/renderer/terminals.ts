@@ -39,6 +39,13 @@ const ESC = String.fromCharCode(27)
 const FOCUS_IN = `${ESC}[I`
 const FOCUS_OUT = `${ESC}[O`
 const lastInput = new Map<string, string>()
+const inputListeners = new Set<(id: string) => void>()
+
+/** Hears every key or paste the owner (or a send from Dawsha) types into a terminal, except focus reports. */
+export function onTerminalInput(listener: (id: string) => void): () => void {
+  inputListeners.add(listener)
+  return () => inputListeners.delete(listener)
+}
 
 export function ensureTerminal(id: string, fontSize: number): TerminalView {
   const existing = views.get(id)
@@ -46,7 +53,10 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
   const view = new TerminalView(id, fontSize, currentBundle(), {
     onInput: (data) => {
       api.write(id, data)
-      if (data !== FOCUS_IN && data !== FOCUS_OUT) lastInput.set(id, data)
+      if (data !== FOCUS_IN && data !== FOCUS_OUT) {
+        lastInput.set(id, data)
+        for (const listener of inputListeners) listener(id)
+      }
       if (data.charCodeAt(0) !== 27 || data.length === 1) clearResumeChip(id)
     },
     onResize: (cols, rows) => api.resize(id, cols, rows),
