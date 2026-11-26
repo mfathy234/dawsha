@@ -60,7 +60,8 @@ const DIFF_TITLE_RE = /^(Update|Edit|MultiEdit|Write|Create|Edited|Added|Deleted
 const HUNK_RE = /^\s*@@ /
 const ADD_RE = /^\s*\d*\s*\+(?!\+\+)/
 const DEL_RE = /^\s*\d*\s*-(?!--)/
-const ERROR_RE = /✗|✘|\bFAIL(?:ED)?\b|\b[Ee]rror:|\bTraceback \(most recent|\bAssertionError\b|\bExit code [1-9]\d*|\bCommand failed\b|\bpanic:|\b(?:Type|Reference|Syntax)Error\b|\b[1-9]\d* (?:failed|failing|errors?)\b|^\s*at\s.+:\d+:\d+\)?\s*$/
+const ERROR_RE = /✗|✘|\bFAIL(?:ED)?\b|\b[Ee]rror:|\bTraceback \(most recent|\bAssertionError\b|\bExit code [1-9]\d*|\bCommand failed\b|\bpanic:|\b(?:Type|Reference|Syntax)Error\b|^\s*at\s.+:\d+:\d+\)?\s*$/
+const COUNT_RE = /[1-9]d* (?:failed|failing|errors?)/
 const FRAME_RE = /^\s*(?:at\s|File ")/
 const DURATION_RE = /(?:\bDuration\s+|\(|·\s*|\bin\s+|\btook\s+)(\d+(?:\.\d+)?)\s*(ms|s|m)\b/
 const TITLE_MAX = 90
@@ -123,9 +124,11 @@ export function parseDuration(text: string): number | null {
 }
 
 function errorsOf(lines: BlockLine[]): BlockError[] {
-  const hits = lines.filter((line) => ERROR_RE.test(line.text))
-  const messages = hits.filter((line) => !FRAME_RE.test(line.text))
-  const picked = (messages.length > 0 ? [...messages, ...hits.filter((line) => FRAME_RE.test(line.text)).slice(0, 1)] : hits).slice(0, ERRORS_KEPT)
+  const hits = lines.filter((line) => ERROR_RE.test(line.text) || COUNT_RE.test(line.text))
+  const strong = hits.filter((line) => ERROR_RE.test(line.text) && !FRAME_RE.test(line.text))
+  const counts = hits.filter((line) => !strong.includes(line) && !FRAME_RE.test(line.text))
+  const frames = hits.filter((line) => FRAME_RE.test(line.text))
+  const picked = [...strong, ...counts, ...frames.slice(0, 1)].slice(0, ERRORS_KEPT)
   return picked.map((line) => ({ row: line.row, text: clip(line.text.replace(/^[\s⎿└│]+/, '')) }))
 }
 
