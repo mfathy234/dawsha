@@ -100,6 +100,7 @@ function pollPrompts(): void {
   const known = state.waiting
   const same = Object.keys(waiting).length === Object.keys(known).length && Object.keys(waiting).every((k) => known[k])
   if (!same) store.patch({ waiting })
+  else if ([...memories.values()].some((memory) => memory.attention === 'needs')) evaluate(store.state)
 }
 
 /** Marks a done session as seen, the same way focusing its pane does, without opening it. */
