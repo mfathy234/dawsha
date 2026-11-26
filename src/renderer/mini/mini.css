@@ -141,3 +141,5 @@ body.mini-window { margin: 0; background: var(--chrome); color: var(--text); ove
 .mini-window .mini-select:hover { background: transparent; }
 .mini-window .mini-open, .mini-window .mini-hide { background: transparent; }
 .mini-window .mini-open:hover, .mini-window .mini-hide:hover { background: color-mix(in srgb, var(--text) 10%, transparent); color: var(--text); }
+
+.mini-card[data-unread='true'] .mini-info strong { color: var(--text); font-weight: var(--w-medium); }

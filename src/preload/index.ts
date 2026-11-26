@@ -6,6 +6,7 @@ import { createTurnPreload } from './turn'
 import { createMcpPreload } from './mcp'
 import { createChatPreload } from './chat'
 import { MINI_IPC } from '../shared/miniWindow'
+import { AWAY_IPC, isAwayChange } from '../shared/away'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
 import { isRemoteControlBuild } from '../shared/remoteBuild'
@@ -245,6 +246,11 @@ const api: GridApi = {
     ipcRenderer.on(IPC.closeCheck, () => {
       ipcRenderer.send(IPC.closeCheckAck)
       void listener().then((ok) => ipcRenderer.send(IPC.closeCheckDone, ok), () => ipcRenderer.send(IPC.closeCheckDone, true))
+    })
+  },
+  onAway: (listener) => {
+    ipcRenderer.on(AWAY_IPC.changed, (_event, change: unknown) => {
+      if (isAwayChange(change)) listener(change)
     })
   },
   onFlushRequest: (listener) => {

@@ -1,0 +1,12 @@
+.catchup-dialog { width: 640px; max-width: calc(100vw - 32px); }
+.catchup-headline { margin: 0 0 var(--sp-4); color: var(--text-3); font-size: var(--fs-2); }
+.catchup-rows { display: flex; flex-direction: column; gap: 2px; max-height: 340px; overflow: auto; margin-bottom: var(--sp-4); }
+.catchup-row { display: flex; align-items: baseline; gap: var(--sp-4); padding: 6px var(--sp-2); border-radius: var(--r-control); font-size: var(--fs-2); }
+.catchup-row:hover { background: var(--hover); }
+.catchup-state { flex: none; width: 112px; font-size: var(--fs-1); }
+.catchup-state.kind-needs { color: var(--needs-ink); }
+.catchup-state.kind-done { color: var(--done); }
+.catchup-state.kind-ci { color: var(--danger, #ff8080); }
+.catchup-what { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.catchup-name { font-weight: var(--w-medium); }
+.catchup-line { color: var(--text-2); }

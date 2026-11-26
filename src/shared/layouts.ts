@@ -2,6 +2,7 @@ import type { SessionBaseline } from './gitStatus'
 import type { SessionTag } from './sessionTags'
 import type { CrewIdentity } from './crew'
 import type { ChatView } from './chatLog'
+import type { SessionCare } from './sessionCare'
 import { sanitizeSplits } from './splits'
 import { LAYOUT_NAME_MAX, MAX_LAYOUTS } from './settingsSchema'
 import type { AgentKind, CompareLink, GridSplits, PaneWorktree, Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
@@ -31,6 +32,7 @@ export interface SnapshotPane {
   activeTabId: string
   pinned?: boolean
   starred?: boolean
+  care?: SessionCare
   tabs: SnapshotTab[]
 }
 
@@ -80,6 +82,7 @@ export function snapshotWorkspace(
       }
       if (pane.pinned === true) saved.pinned = true
       if (pane.starred === true) saved.starred = true
+      if (pane.care && options.portable !== true) saved.care = pane.care
       return saved
     })
   }

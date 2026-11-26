@@ -8,6 +8,7 @@ import type { CheckoutGroup } from '../../shared/allSessions'
 import { allSessionsView, type AllSessionsHooks } from './reviewAll'
 import { reviewCard, type ReviewCardHooks, type ReviewCardModel } from './reviewCard'
 import { CommentsBar, type CommentRow, type CommentsHooks } from './reviewComments'
+import { isOverlappedFile } from '../overlap'
 import './reviewLoop.css'
 
 export type ReviewScopeView = 'checkout' | 'all'
@@ -194,6 +195,7 @@ export class ReviewPanel {
         file.added !== null || file.removed !== null ? h('span', { class: 'files-review-stat' }, h('span', { class: 'plus' }, `+${file.added ?? 0}`), ' ', h('span', { class: 'minus' }, `${minus}${file.removed ?? 0}`)) : null,
         h('span', { class: `files-badge b-${file.letter === 'U' ? 'A' : file.letter}`, title: BADGE_TITLES[file.letter] ?? file.letter }, file.letter === 'U' ? 'A' : file.letter)),
       comments > 0 ? h('span', { class: 'files-review-comments', title: `${comments} comment${comments === 1 ? '' : 's'}` }, `${comments} comment${comments === 1 ? '' : 's'}`) : null,
+      isOverlappedFile(file.path) ? h('span', { class: 'files-review-overlap', title: 'Another session in this checkout also changed this file' }, 'Also edited') : null,
       viewed ? h('span', { class: 'files-review-done' }, 'Viewed') : null)
   }
 }

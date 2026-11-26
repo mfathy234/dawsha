@@ -72,6 +72,10 @@ import { setStatePillSuffix, stateIcon, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
 import { openMergeBack, paneWorktree } from '../mergeBackActions'
+import { editNote, editRule, openSnooze } from './careDialogs'
+import { openBroadcast } from './broadcastDialog'
+import { ruleLineFor } from '../whenDone'
+import { OverlapNotice } from './overlapNotice'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
 import './paneCalm.css'
@@ -123,6 +127,7 @@ export class PaneComponent {
     'aria-haspopup': 'menu',
     onClick: () => openPaneBranchMenu(this.paneId, this.branch)
   })
+  private readonly rule = h('span', { class: 'pane-rule', role: 'status', hidden: true })
   private readonly pr = h('button', { class: 'link-quiet pane-pr', type: 'button', hidden: true, 'aria-haspopup': 'menu', onClick: () => openPrMenu(this.paneId, this.pr) })
   private prSignature = ''
   private readonly branchName = h('span', { class: 'chip-text' })
@@ -161,6 +166,7 @@ export class PaneComponent {
   private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'pane-body' })
+  private readonly overlap: OverlapNotice
   private tabSignature = ''
   private menu: HTMLElement | null = null
   private menuAnchor: HTMLElement | null = null
@@ -224,7 +230,7 @@ export class PaneComponent {
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
-    this.foot.append(this.info, this.pr, this.branch)
+    this.foot.append(this.info, this.rule, this.pr, this.branch)
     this.reply = new QuietReply(paneId, {
       review: () => this.reviewInFiles(),
       send: (text) => {
@@ -241,6 +247,8 @@ export class PaneComponent {
     // The chat can learn of a usage limit after the pane last rendered, so it tells the pane to update its pill.
     this.chat = new PaneChat({ ...chatHostFor(paneId, () => this.current), limitChanged: () => this.chatShown && this.showLimitState() }, this.permission)
     this.body.append(this.chat.el)
+    this.overlap = new OverlapNotice(paneId)
+    this.body.append(this.overlap.el)
     this.watchFileDrops()
     // Header buttons (menu, details, maximize, close) act on this pane without making it the focused one,
     // which in Calm focus would also move it into the large slot.
@@ -294,7 +302,9 @@ export class PaneComponent {
     this.updateInfo(view, maximized)
     this.updateRing(view)
     this.updatePr()
-    this.foot.hidden = this.info.hidden && this.branch.hidden && this.pr.hidden
+    this.updateRule()
+    this.overlap.update(view)
+    this.foot.hidden = this.info.hidden && this.branch.hidden && this.pr.hidden && this.rule.hidden
     this.updateRecap(view)
     this.updateHint(view)
     const asking = state === 'needs' || (this.chatShown && detectPermissionPrompt(permissionTail(this.paneId)))
@@ -314,6 +324,12 @@ export class PaneComponent {
       ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
     }
     this.lastActiveTab = view.pane.activeTabId
+  }
+
+  private updateRule(): void {
+    const line = ruleLineFor(this.paneId)
+    this.rule.hidden = line === ''
+    if (this.rule.textContent !== line) this.rule.textContent = line
   }
 
   // The number prefix stays put; only the session name picks its own direction, so an Arabic title does not reorder '4 · '.
@@ -765,6 +781,10 @@ export class PaneComponent {
       starItem,
       pinItem,
       item('Tag…', () => this.openTag(), ICONS.tag),
+      item(this.current?.pane.care?.note ? 'Edit note…' : 'Add note…', () => editNote(this.paneId), ICONS.toolEdit),
+      item('Snooze…', () => openSnooze(this.paneId), ICONS.history),
+      item('When done…', () => editRule(this.paneId), ICONS.check),
+      item('Send to several…', () => openBroadcast(this.paneId), ICONS.next),
       h('div', { class: 'menu-separator', role: 'separator' }),
       h('div', { class: 'menu-heading', role: 'presentation' }, 'Session'),
       item('New terminal', () => this.openTerminalPicker(), ICONS.plus),

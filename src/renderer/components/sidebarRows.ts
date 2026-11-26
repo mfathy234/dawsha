@@ -13,6 +13,7 @@ import { identityMark } from './crewAvatar'
 import { tagTooltip } from './sessionTagUi'
 import { stateIcon } from './stateIcon'
 import { prLineFor } from '../prWatch'
+import { noteLine } from '../../shared/sessionCare'
 
 export const viewState = (view: PaneView): SessionState => sessionState({ status: view.status, attention: view.attention })
 
@@ -53,7 +54,7 @@ export function rowFacts(app: AppState, view: PaneView): RowFacts {
   const ask = waitingAsk(view.pane.id, state)
   const line = sessionLine({ state, ask, recap: note.recap, tool: note.tool, plan: note.plan, changed: view.info.changes?.files ?? null, agents: view.info.ops?.running.length ?? 0, pr: prLineFor(view.pane.id) })
   const time = sessionTime(state, stateSince(view.pane.id, state, app.now), app.now)
-  const tooltip = [sessionLabel(view), view.fullTitle !== view.title ? view.fullTitle : '', view.branch ? `Branch ${view.branch}` : '', view.tag ? tagTooltip(view.tag, view.tagAuto) : '', line].filter(Boolean).join('\n')
+  const tooltip = [sessionLabel(view), view.fullTitle !== view.title ? view.fullTitle : '', view.branch ? `Branch ${view.branch}` : '', view.tag ? tagTooltip(view.tag, view.tagAuto) : '', line, noteLine(view.pane.care?.note)].filter(Boolean).join('\n')
   return { state, line, ask, time, tooltip }
 }
 
@@ -86,7 +87,7 @@ export function sessionRowButton(view: PaneView, facts: RowFacts, options: Sessi
   return h(
     'button',
     {
-      class: `sess-row${selected ? ' selected' : ''}${dimmed ? ' dimmed' : ''}`,
+      class: `sess-row${selected ? ' selected' : ''}${dimmed ? ' dimmed' : ''}${view.unread ? ' unread' : ''}`,
       type: 'button',
       title: pinnedIn ? `${facts.tooltip}
 Pinned in ${pinnedIn}` : facts.tooltip,

@@ -16,6 +16,7 @@ import { registerRunIpc } from './runCommands'
 import { registerToolsIpc } from './toolsIpc'
 import { registerPrWatchIpc } from './prWatchIpc'
 import { registerTurnIpc } from './turnIpc'
+import { installAwayWatcher } from './awayWatcher'
 import { registerMcpIpc } from './mcpIpc'
 import { installMiniWindow } from './miniWindow'
 import { PtyManager } from './ptyManager'
@@ -295,6 +296,7 @@ app.whenReady().then(async () => {
     else if (!process.defaultApp) app.setAsDefaultProtocolClient(NOTIFICATION_SCHEME)
   }
   const stopMiniWindow = installMiniWindow(mainWindow, store)
+  const stopAwayWatcher = installAwayWatcher(() => mainWindow)
   // Without a tray icon a hidden window could never be brought back.
   if (!trayAvailable() && !mainWindow.isVisible()) mainWindow.show()
   const stopLimitNotifications = installLimitNotifications(() => mainWindow, store, usage, statusWatcher)
@@ -314,7 +316,7 @@ app.whenReady().then(async () => {
   const shutdownDeps: ShutdownDeps = {
     log: quitLog,
     stopServices: () => stopAllServices([
-      ['Mini window', stopMiniWindow], ['CLI bridge', () => stopCliServer(cliServer)],
+      ['Mini window', stopMiniWindow], ['away watcher', stopAwayWatcher], ['CLI bridge', () => stopCliServer(cliServer)],
       ['limit notifications', stopLimitNotifications],
       ['code navigation', stopCodeNavigation], ['browser pane', closeBrowserPane], ['pull request watch', stopPrWatch],
       ['sessions watcher', () => watcher.stop()], ['agent files', closeAgentFiles],

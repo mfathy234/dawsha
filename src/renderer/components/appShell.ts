@@ -29,6 +29,7 @@ import { WhatsNewComponent } from './whatsNew'
 import { TopBarComponent } from './topbar'
 import { UsageViewComponent } from './usageView'
 import { WorkViewComponent } from './workView'
+import { InboxViewComponent } from './inboxView'
 import { isSidebarCollapsed } from './sidebar'
 import { startTour } from './tour'
 import { currentTone, setTone } from '../themeManager'
@@ -57,6 +58,7 @@ export class AppShell {
   private readonly crew = new CrewViewComponent()
   private readonly usage = new UsageViewComponent()
   private readonly work = new WorkViewComponent()
+  private readonly inbox = new InboxViewComponent()
   private readonly settings = new SettingsViewComponent()
   private readonly replay = new ReplayViewComponent()
   private readonly replayPicker = new ReplayPickerComponent()
@@ -75,7 +77,7 @@ export class AppShell {
   private autoTourStarted = false
 
   constructor() {
-    const main = h('div', { class: 'main' }, this.frame.bar, this.grid.el, this.board.el, this.projects.el, this.files.el, this.agents.el, this.crew.el, this.skills.el, this.usage.el, this.work.el, this.settings.el, this.replay.el)
+    const main = h('div', { class: 'main' }, this.frame.bar, this.grid.el, this.board.el, this.projects.el, this.files.el, this.agents.el, this.crew.el, this.skills.el, this.usage.el, this.work.el, this.inbox.el, this.settings.el, this.replay.el)
     this.sidebarResize.addEventListener('pointerdown', this.onResizeStart)
     this.sidebarResize.addEventListener('pointermove', this.onResizeMove)
     this.sidebarResize.addEventListener('pointerup', this.onResizeEnd)
@@ -194,6 +196,7 @@ export class AppShell {
     this.usage.update(state)
     this.work.el.hidden = state.view !== 'work'
     this.work.update(state)
+    this.inbox.update(state)
     this.settings.el.hidden = state.view !== 'settings'
     if (state.view === 'settings' && this.lastView !== 'settings') this.settings.show()
     else if (state.view === 'settings') this.settings.update(state)

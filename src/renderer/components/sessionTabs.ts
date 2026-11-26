@@ -9,6 +9,7 @@ import { SESSION_STATE_LABELS, sessionState } from '../../shared/sessionState'
 import { dropSlot, isNoMove, slotToIndex } from '../../shared/tabDrag'
 import { isStarred } from '../../shared/starred'
 import { monogram } from '../../shared/sidebarModel'
+import { noteLine } from '../../shared/sessionCare'
 import type { AppState } from '../state'
 import { openContextMenu } from './contextMenu'
 import { crewSignature, identityMark } from './crewAvatar'
@@ -29,7 +30,7 @@ export class SessionTabs {
   update(views: PaneView[], state: AppState, shown: boolean, selectedId: string | null): void {
     this.el.hidden = !shown
     if (!shown) return
-    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.project?.name ?? '', v.fullTitle, v.status, v.agent, v.attention, isStarred(v.pane), crewSignature(v), sessionNote(v.pane.id).plan]), selectedId])
+    const signature = JSON.stringify([views.map((v) => [v.pane.id, v.title, v.project?.name ?? '', v.fullTitle, v.status, v.agent, v.attention, isStarred(v.pane), crewSignature(v), sessionNote(v.pane.id).plan, v.pane.care?.note?.text ?? '']), selectedId])
     if (signature === this.signature || document.body.classList.contains('dragging-ui')) return
     this.signature = signature
     clear(this.el)
@@ -52,7 +53,7 @@ export class SessionTabs {
         type: 'button',
         role: 'tab',
         'aria-selected': selected ? 'true' : 'false',
-        title: `${name}${project ? ` (${project})` : ''}, ${stateLabel}${plan ? `, plan ${plan.done} of ${plan.total}` : ''}${view.fullTitle && view.fullTitle !== name ? `\n${view.fullTitle}` : ''}`,
+        title: `${name}${project ? ` (${project})` : ''}, ${stateLabel}${plan ? `, plan ${plan.done} of ${plan.total}` : ''}${view.fullTitle && view.fullTitle !== name ? `\n${view.fullTitle}` : ''}${view.pane.care?.note ? `\n${noteLine(view.pane.care.note)}` : ''}`,
         onClick: () => focusPane(view.pane.id)
       },
       h('span', { class: 'strip-index' }, `${view.index + 1}`),

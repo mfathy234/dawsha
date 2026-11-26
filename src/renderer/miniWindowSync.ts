@@ -2,13 +2,12 @@ import { createMiniSnapshotGate, miniSession, miniStateOf, orderMiniSessions, ty
 import { activeMoment, clockStart, elapsedSince, stepDoneMemory, type DoneMemory, type MiniLogRead } from '../shared/miniDetail'
 import type { MiniWindowSettings } from '../shared/appearance'
 import { hideMiniSession, reconcileMiniHidden, splitMiniHidden } from '../shared/miniHidden'
-import { miniSendRefusal } from '../shared/miniSend'
 import { miniStartRefusal, orderMiniProjects, startAgents, type MiniStartOptions } from '../shared/miniStart'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
 import { formatTimeInState, stepStateClock, type StateClock } from '../shared/sessionState'
 import { api } from './api'
 import { answerPermission, focusPane, openQuickPick, permissionTail, saveSettings, setSessionInfo, showView, startPromptSession } from './actions'
-import { sendChatMessage } from './chat/chatActions'
+import { sendToSession } from './sendToSession'
 import { openReviewInFiles } from './files/filesActions'
 import { derivePanes, primaryTab } from './derive'
 import { sessionNote } from './sessionNotes'
@@ -81,17 +80,8 @@ function review(paneId: string): void {
 
 /** The same send path as the chat box, refused for shells and when the session is gone, has exited, shows a menu or waits for an answer. */
 function send(paneId: string, text: string): void {
-  const view = derivePanes(store.state).find(candidate => candidate.pane.id === paneId)
-  const tab = view ? primaryTab(view.pane) : null
-  if (!view || !tab) { toast('That session is gone.'); return }
-  const refusal = miniSendRefusal({ agent: tab.agent, status: tab.status, tail: permissionTail(paneId) })
-  if (refusal) { toast(refusal); return }
-  // A prompt can appear between typing and the delayed Enter; that Enter would approve it.
-  sendChatMessage(tab.id, tab.agent, text, () => {
-    const late = miniSendRefusal({ agent: tab.agent, status: tab.status, tail: permissionTail(paneId) })
-    if (late) toast(late)
-    return !late
-  })
+  const refusal = sendToSession(paneId, text)
+  if (refusal) toast(refusal)
 }
 
 /** A single bounded publisher, including plans for sessions whose Chat view is not on screen. */
@@ -111,7 +101,7 @@ export function installMiniWindowSync(): void {
     const state = store.state
     // Nothing to do while the Mini window is closed, so Classic pays nothing for it.
     if (!state.ready || !visible) return
-    const views = derivePanes(state)
+    const views = derivePanes(state).filter(view => !view.snoozed)
     const requests: MiniPlanRequest[] = []
     const sessionIds = new Map<string, string>()
     const sessions = views.map(view => {
@@ -141,7 +131,7 @@ export function installMiniWindowSync(): void {
         changed: view.info.changes?.files ?? null, todos: log?.todos ?? [],
         elapsed: elapsedSince(since, state.now), asked: log?.asked ?? '', reply: log?.reply ?? [],
         changes: view.info.changes, context: view.info.contextPercent, costUsd: view.info.costUsd,
-        moment: activeMoment(memory, state.now), pr: prLineFor(id),
+        moment: activeMoment(memory, state.now), pr: prLineFor(id), unread: view.unread,
         plan: view.snapshot?.plan ? { ...view.snapshot.plan, current: view.snapshot.plan.title ?? '' }
           : planNote ? { done: Number(planNote[1]), total: Number(planNote[2]), current: note.planNow } : null
       })
