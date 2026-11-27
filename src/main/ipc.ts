@@ -430,6 +430,16 @@ export function registerIpc(
     const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
     return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
   })
+  ipcMain.handle(IPC.pickProjectIcon, async () => {
+    const window = getWindow()
+    const options = {
+      title: 'Choose a project icon',
+      properties: ['openFile' as const],
+      filters: [{ name: 'Images', extensions: ['png', 'svg', 'ico', 'jpg', 'jpeg', 'webp', 'gif'] }]
+    }
+    const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
+    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
+  })
   if (recordings) {
     ipcMain.handle(IPC.recordingsList, () => recordings.list())
     ipcMain.handle(IPC.recordingsRead, (_event, id: unknown) => recordings.read(id))

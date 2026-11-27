@@ -25,6 +25,7 @@ export const IPC = {
   remoteCrewRunResult: 'remote-crew:run-result',
   pickFolder: 'dialog:pick-folder',
   pickImage: 'dialog:pick-image',
+  pickProjectIcon: 'dialog:pick-project-icon',
   checkFolder: 'fs:check-folder',
   gitBranch: 'git:branch',
   projectGroups: 'projects:groups',

@@ -216,7 +216,7 @@ test('the rail shows monograms and opens a flyout with the full session names', 
     await page.getByRole('button', { name: 'Collapse sidebar' }).click()
     const rail = page.locator('.sidebar.rail')
     await expect(rail).toBeVisible()
-    expect(await rail.evaluate((el) => Math.round(el.getBoundingClientRect().width))).toBe(56)
+    expect(await rail.evaluate((el) => Math.round(el.getBoundingClientRect().width))).toBe(72)
     await expect(rail.getByRole('button', { name: 'Smoke', exact: true }).locator('.rail-letters')).toHaveText('SM')
     await rail.getByRole('button', { name: /^Smoke/ }).click()
     const flyout = page.getByRole('menu', { name: 'Sessions in Smoke' })

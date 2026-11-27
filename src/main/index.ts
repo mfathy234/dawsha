@@ -37,6 +37,7 @@ import { setupUpdates } from './updates'
 import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
 import { killAppUtilityChildren } from './childProcesses'
+import { ProjectIcons } from './projectIcons'
 import { createQuitLog } from './quitLog'
 import { startQuitWatchdog } from './quitWatchdog'
 import { requestCloseCheck } from './closeCheck'
@@ -202,7 +203,15 @@ function createWindow(settings: SettingsStore, hidden: boolean): BrowserWindow {
 }
 
 function registerImageProtocol(settings: SettingsStore): void {
-  protocol.handle(IMAGE_SCHEME, async () => {
+  const icons = new ProjectIcons()
+  protocol.handle(IMAGE_SCHEME, async (request) => {
+    const url = new URL(request.url)
+    if (url.hostname === 'project') {
+      const project = settings.get().projects.find((item) => item.id === decodeURIComponent(url.pathname.slice(1)))
+      const iconPath = project ? icons.pathFor(project) : null
+      if (!iconPath) return new Response('No project icon', { status: 404 })
+      return net.fetch(pathToFileURL(iconPath).toString(), { bypassCustomProtocolHandlers: true })
+    }
     const path = settings.get().theme.image.path
     if (!path) return new Response('No background image', { status: 404 })
     return net.fetch(pathToFileURL(path).toString(), { bypassCustomProtocolHandlers: true })
