@@ -3,6 +3,40 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] - 2026-11-27
+
+### Added
+
+- **Reading view.** Ctrl+Alt+R turns a session's terminal into a calm, selectable page you can search and copy from. Line times show when each line arrived.
+- **Move around a long session.** Alt+Up and Alt+Down jump between prompts and replies, a sticky bar keeps the current prompt in view, and Ctrl+Shift+O opens an outline of the session. Marks on the scrollbar show where each prompt, failure and reply is.
+- **Pick a block, copy it, send it.** Select a whole reply or command output, then Copy as Markdown, Copy as image, or send a failure straight to the agent. Selected text offers quick actions, and words you choose can trigger a notification.
+- **Images, ligatures and wider characters in the terminal.** Inline images show inside the session, code fonts can draw ligatures, and emoji and wide characters line up with the cursor.
+- **Shell sessions know their commands.** Each command shows a check or cross and how long it took. Rerun it, Copy output, or Send to a session. A long command tells you when it finishes, and the tab and taskbar show its progress.
+- **A shell drawer.** Ctrl+` opens a shell under any session, in the same folder, and it keeps running while it is closed.
+- **Project command history.** Ctrl+Alt+R in a shell tab lists the commands you ran in that project. Enter puts one on the line without running it.
+- **The folder follows `cd`.** A session's folder keeps up when the shell changes directory.
+- **Clipboard from SSH and WSL.** A remote program can copy to your clipboard after you allow it, and links in terminal output show what they open.
+- **Unread replies and an Inbox.** Sessions that replied while you were elsewhere are marked, and Ctrl+I opens an Inbox with every answer waiting, so you can read, reply and move on from the keyboard. A catch-up card sums up what happened while you were away.
+- **Warnings and hand-offs between sessions.** Dawsha warns you when two sessions are editing the same file. Send one message to several sessions at once, keep a note on a session, snooze one until later, and set a when-done rule.
+- **Limit line length in full screen.** A setting that keeps long lines readable in a wide window.
+
+### Changed
+
+- **No more flicker.** The terminal no longer resizes when the permission card, recap or context nudge appear, resizes settle before they reach the agent, and sessions you cannot see give up GPU drawing sooner.
+- **Quieter, clearer tabs.** Tabs show the project's initials and keep their C, X and G tiles. They say how long ago a session went idle, show plan progress on sessions working in the background, and fold the ones that do not fit into a +N menu.
+- **One-row header.** The header fits on one row with the recap beside it, and Review, Commit and Undo sit together under the last reply.
+- **A refined sidebar rail.** A Views button holds the sections, state tiles show each project at a glance, and empty projects fold away.
+- **Esc in full screen goes to the agent,** so it stops the agent instead of leaving full screen.
+- **The whole app, refined.** One type scale and set of weights, matching corner radii, calmer surfaces, a clearer focus ring, gentler motion, and tidier menus, Settings, the review column and empty states. The light theme and right-to-left layouts follow.
+- **Ctrl+Alt+R reads back.** It opens the Reading view in an agent's terminal and the command history in a shell. Ctrl+Shift+R stays Resume.
+
+### Fixed
+
+- Acknowledging a crew run now clears its session's unread mark, and marking a board card reviewed does too.
+- Rerun stays off while you have typed text the shell has not shown yet.
+- The sidebar row shows a session's plan count as soon as the chat reports it.
+- Wrapped lines join up in exports, copied replies and the replay text, and worktrees match on their real paths on macOS.
+
 ## [1.9.0] - 2026-11-14
 
 ### Added

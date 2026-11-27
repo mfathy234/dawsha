@@ -40,7 +40,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="التنقل الرئيسي">
-      <a href="#new">الجديد في 1.9.0</a>
+      <a href="#new">الجديد في 1.10.0</a>
       <a href="#showcase">صور التطبيق</a>
       <a href="#remote">عن بُعد</a>
       <a href="#features">المميزات</a>
@@ -95,8 +95,38 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">الجديد في 1.9.0</h2>
-      <p class="section-lead">يجهّز 1.9.0 مساحات العمل نيابة عنك، ويتيح لك مراجعة عمل الوكيل سطرًا بسطر، ويتابع طلبات الدمج، ويعرض المخططات في الملفات. وتحته 1.8.9 والإصدارات الأقدم.</p>
+      <h2 id="new-h">الجديد في 1.10.0</h2>
+      <p class="section-lead">ينهي 1.10.0 وميض الطرفية، ويضيف عرض القراءة وصندوق الوارد، ويجعل جلسات الصدفة تعرف أوامرها. وتحته 1.9.0 والإصدارات الأقدم.</p>
+      <div class="feat-row" id="reading-view">
+        <div class="feat-copy">
+          <h3>اقرأ الجلسة الطويلة كأنها صفحة</h3>
+          <p>يحوّل <bdi>Ctrl+Alt+R</bdi> الطرفية إلى صفحة هادئة يمكنك البحث فيها وتحديدها ونسخ منها.</p>
+          <ul><li>تنقّل بين الرسائل بـ Alt+Up وAlt+Down، أو افتح المخطط بـ <bdi>Ctrl+Shift+O</bdi>.</li><li>انسخ رداً كاملاً بصيغة Markdown، أو أرسل الفشل إلى الوكيل.</li><li>لم تعد الطرفية تومض عند ظهور بطاقة أو ملخص.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="../assets/reading-view.png" width="1168" height="668" alt="A session's terminal in Reading view, with each command folded into one row">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="inbox">
+        <div class="feat-copy">
+          <h3>صندوق وارد لكل إجابة تنتظرك</h3>
+          <p>تُعلَّم الجلسات التي ردّت وأنت في مكان آخر، ويعرضها <bdi>Ctrl+I</bdi> كلها.</p>
+          <ul><li>اقرأ وردّ وانتقل إلى التالية من لوحة المفاتيح.</li><li>تُظهر التبويبات الأحرف الأولى للمشروع ومنذ متى توقفت الجلسة.</li><li>ينبّهك دوشة عندما تعدّل جلستان الملف نفسه.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="../assets/inbox.png" width="1168" height="668" alt="The Inbox listing three sessions with answers waiting, beside the sidebar rail">
+        </figure>
+      </div>
+      <div class="feat-wide" id="shell-drawer">
+        <div class="feat-copy">
+          <h3>صدفات تعرف أوامرها</h3>
+          <p>يُظهر كل أمر علامة نجاح أو فشل ومدة تنفيذه، ويفتح Ctrl+` درج صدفة تحت أي جلسة.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="../assets/shell-drawer.png" width="1168" height="668" alt="A session with a shell drawer open below it, showing commands with checks and times">
+        </figure>
+        <ul class="feat-cols"><li>أعد تشغيل أمر، أو انسخ مخرجاته، أو أرسلها إلى جلسة.</li><li>تُخبرك الأوامر الطويلة عند انتهائها.</li><li>يعرض <bdi>Ctrl+Alt+R</bdi> في الصدفة سجل أوامر المشروع.</li></ul>
+      </div>
       <div class="feat-row" id="review-loop">
         <div class="feat-copy">
           <h3>راجع العمل سطرًا بسطر</h3>
