@@ -16,9 +16,10 @@ async function openPanes(page: Page, count: number): Promise<void> {
 
 const termId = async (page: Page, index: number): Promise<string> => (await page.locator('.pane').nth(index).locator('.term-host').first().getAttribute('data-term-id')) ?? ''
 
-async function paneMenu(page: Page, index: number, item: string): Promise<void> {
-  await page.locator('.pane').nth(index).getByRole('button', { name: 'Pane actions' }).click()
-  await page.getByRole('menuitem', { name: item, exact: true }).click()
+async function paletteCommand(page: Page, query: string, item: RegExp): Promise<void> {
+  await page.keyboard.press('Control+k')
+  await page.locator('#palette-input').fill(query)
+  await page.getByRole('option', { name: item }).first().click()
 }
 
 test('a note shows in the tooltip, and a snoozed session leaves the layout until it is woken', async () => {
@@ -29,14 +30,15 @@ test('a note shows in the tooltip, and a snoozed session leaves the layout until
     await openPanes(page, 2)
     const paneId = (await page.locator('.pane').nth(0).getAttribute('data-pane-id')) ?? ''
 
-    await paneMenu(page, 0, 'Add note…')
+    await page.locator('.pane').nth(0).locator('.pane-title').first().click()
+    await paletteCommand(page, 'note', /Add a note/)
     const noteDialog = page.getByRole('dialog', { name: 'Add note' })
     await noteDialog.getByRole('textbox').fill('test with the 40k-row tenant')
     await noteDialog.getByRole('button', { name: 'Save' }).click()
     await expect(page.locator(`.sess-row`).first()).toHaveAttribute('title', /Next: test with the 40k-row tenant/)
     await expect.poll(() => (readSettings(sandbox.userData).workspace?.panes ?? []).map((pane: any) => pane.care?.note?.text)).toContain('test with the 40k-row tenant')
 
-    await paneMenu(page, 0, 'Snooze…')
+    await paletteCommand(page, 'snooze', /Snooze this session/)
     const snooze = page.getByRole('dialog', { name: /^Snooze/ })
     await expect(snooze.locator('.care-choice')).toHaveText(['1 hour', 'Tomorrow 9:00', 'Until it needs me'])
     await snooze.getByRole('button', { name: '1 hour' }).click()
