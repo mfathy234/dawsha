@@ -1,6 +1,7 @@
 import { open, stat } from 'node:fs/promises'
 
 export const CHAT_MAX_BYTES = 8 * 1024 * 1024
+const PROBE_BYTES = 256 * 1024
 
 export interface TailRead {
   /** The file is a different one or started over, so everything read before is stale. */
@@ -48,9 +49,14 @@ export class LogTail {
 
   private async firstOffset(path: string, size: number): Promise<number> {
     if (size <= this.maxBytes) return 0
-    const from = size - this.maxBytes
-    const probe = await readBytes(path, from, Math.min(size, from + 65536))
-    const newline = probe.indexOf(0x0a)
-    return newline < 0 ? size : from + newline + 1
+    let from = size - this.maxBytes
+    while (from < size) {
+      const probe = await readBytes(path, from, Math.min(size, from + PROBE_BYTES))
+      const newline = probe.indexOf(0x0a)
+      if (newline >= 0) return from + newline + 1
+      if (probe.length === 0) break
+      from += probe.length
+    }
+    return size
   }
 }
