@@ -1,7 +1,8 @@
 import { agentLabel } from '../../shared/agents'
 import { parsePermissionDetail, permissionPromptText } from '../../shared/permissionPrompt'
 import { needsAsk, sessionLine, sessionTime } from '../../shared/sessionLine'
-import { compareSessionStates, countSessionStates, sessionState, type SessionState } from '../../shared/sessionState'
+import { projectRowState } from '../../shared/projectStatus'
+import { sessionState, type SessionState } from '../../shared/sessionState'
 import { permissionTail } from '../actions'
 import type { PaneView } from '../derive'
 import { h } from '../dom'
@@ -143,13 +144,7 @@ export function waitingRowButton(view: PaneView, facts: RowFacts, projectName: s
   )
 }
 
-const DOT_CLASS: Partial<Record<SessionState, string>> = { working: 'w', needs: 'n', done: 'd' }
-
-/** One small dot per live session, coloured by state: working blue, needs you orange, done green. Idle sessions have none. */
-export function projectDots(states: readonly SessionState[]): HTMLElement | null {
-  const live = [...states].filter((state) => DOT_CLASS[state]).sort(compareSessionStates)
-  if (live.length === 0) return null
-  const counts = countSessionStates(states)
-  const words = [counts.working ? `${counts.working} working` : '', counts.needs ? `${counts.needs} need${counts.needs === 1 ? 's' : ''} you` : '', counts.done ? `${counts.done} done` : ''].filter(Boolean)
-  return h('span', { class: 'proj-dots', role: 'img', 'aria-label': words.join(', ') }, ...live.map((state) => h('i', { class: `dot-${DOT_CLASS[state]}` })))
+export function projectState(states: readonly SessionState[]): HTMLElement | null {
+  const label = projectRowState(states)
+  return label ? h('span', { class: `proj-state tone-${label.tone}` }, label.text) : null
 }

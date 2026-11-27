@@ -19,11 +19,13 @@ import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { crewSignature, identityMark } from './crewAvatar'
 import { projectActivity, SORT_ICON, viewActivity } from './sidebarActivity'
-import { projectDots, rowFacts, sessionLabel, sessionRowButton, viewState, waitingRowButton, type RowFacts } from './sidebarRows'
+import { projectState, rowFacts, sessionLabel, sessionRowButton, viewState, waitingRowButton, type RowFacts } from './sidebarRows'
 import { sessionNotesVersion } from '../sessionNotes'
 import { openFolderInFiles } from '../files/filesActions'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
+import { projectAvatar } from './projectAvatar'
+import { editProjectSettings } from './projectSettings'
 import { installRailTips, railScroller, railTile, type RailGroup } from './railTiles'
 import { RAIL_VIEWS_KEY, railViewsButton, railViewsItems } from './railViews'
 import { isUnread } from '../unread'
@@ -248,7 +250,7 @@ export class SidebarComponent {
       state.view,
       focusedView?.pane.projectId,
       state.focusedId,
-      projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent, p.pinned === true, p.iconPath, p.noIcon, state.missingProjects.includes(p.id)]),
+      projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent, p.pinned === true, p.iconPath, p.noIcon, p.color, state.missingProjects.includes(p.id)]),
       state.settings.foldedProjects,
       state.settings.sidebarSort,
       state.settings.sidebarHideEmpty,
@@ -320,7 +322,7 @@ export class SidebarComponent {
     // Projects without sessions come last, quieter, instead of folding behind a dots tile.
     this.el.append(railScroller(...withSessions, ...(withSessions.length > 0 && without.length > 0 ? [sep()] : []), ...without))
     const viewsButton = this.frame ? [railViewsButton(state.view, () => this.toggleViewsMenu(state.view))] : []
-    this.el.append(...viewsButton, iconButton('Add project', ICONS.plus, () => void addProject(), 'rail-btn'), ...(this.frame ? [this.frame.expand] : []), ...(this.frame ? [this.frame.bottom] : []))
+    this.el.append(h('div', { class: 'rail-divider' }), ...viewsButton, iconButton('Add project', ICONS.plus, () => void addProject(), 'rail-btn'), ...(this.frame ? [this.frame.bottom, this.frame.expand] : []))
   }
 
   private toggleViewsMenu(view: AppState['view']): void {
@@ -460,7 +462,8 @@ export class SidebarComponent {
   private zoneGroups(state: AppState, zones: SidebarZones<SidebarEntry<PaneView>>, filtering: boolean, listedAbove: ReadonlySet<string>): HTMLElement[] {
     const group = (entry: SidebarEntry<PaneView>, zone: ProjectZone): HTMLElement =>
       h('div', { class: `proj-group zone-${zone}${zone === 'active' ? ' card' : ''}`, 'data-zone': zone }, ...this.projectRows(state, entry, filtering, zone, listedAbove))
-    return [...zones.active.map((entry) => group(entry, zones.grouped ? 'active' : 'all')), ...zones.pinned.map((entry) => group(entry, 'pinned')), ...zones.quiet.map((entry) => group(entry, 'quiet'))]
+    const quiet = zones.quiet.length > 0 ? [h('div', { class: 'quiet-label' }, 'No sessions'), ...zones.quiet.map((entry) => group(entry, 'quiet'))] : []
+    return [...zones.active.map((entry) => group(entry, zones.grouped ? 'active' : 'all')), ...zones.pinned.map((entry) => group(entry, 'pinned')), ...quiet]
   }
 
   private toggleQuiet(projectId: string): void {
@@ -496,19 +499,20 @@ export class SidebarComponent {
         'data-sidebar-project': project.id,
         onClick: () => (quiet ? this.toggleQuiet(project.id) : toggleProjectExpanded(project.id))
       },
-      icon(collapsed ? ICONS.chevronRight : ICONS.chevronDown),
+      projectAvatar(project),
       h('span', { class: 'proj-title' },
         h('span', { class: 'proj-name', dir: 'auto' }, project.name),
         project.pinned === true ? h('span', { class: 'proj-pin', role: 'img', 'aria-label': 'Pinned' }, icon(ICONS.pin)) : null
-      )
+      ),
+      h('span', { class: 'proj-chev' }, icon(collapsed ? ICONS.chevronRight : ICONS.chevronDown))
     )
     if (compact) toggle.classList.add('quiet-toggle')
-    const dots = projectDots(own.map(viewState))
+    const rowState = projectState(own.map(viewState))
     const row = h(
       'div',
       { class: `proj-row${compact ? ' quiet-row' : ''}${filtering ? '' : ' reorderable'}`, 'data-drop-project': project.id },
       toggle,
-      dots ?? (own.length === 0 ? h('span', { class: 'proj-none' }, 'no sessions') : null),
+      rowState,
       h(
         'span',
         { class: 'proj-acts' },
@@ -726,6 +730,7 @@ export class SidebarComponent {
         start,
         h('div', { class: 'pv-menu-sep', role: 'separator' }),
         h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); void changeProjectIcon(project.id) } }, 'Change icon…'),
+        h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); void editProjectSettings(project.id) } }, 'Project settings…'),
         this.showsImage(project.id) ? h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); useInitials(project.id) } }, 'Use initials') : null
       ],
       `Sessions in ${project.name}`,

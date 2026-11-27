@@ -25,6 +25,8 @@ export interface Project {
   iconPath?: string
   /** Show initials even when the folder ships an icon. */
   noIcon?: boolean
+  /** The accent colour the owner picked from the project palette; unset means the one its name gives. */
+  color?: string
   /** Reviewed setup command for new worktrees, plus the one-time local-file suggestion choice. */
   worktreeSetup?: { command: string; prompted: boolean }
 }

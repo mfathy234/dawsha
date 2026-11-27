@@ -28,3 +28,16 @@ export function projectStatusLabel(name: string, status: Pick<ProjectStatus, 'ne
   const text = projectStatusText(status)
   return text ? `${name} · ${text}` : name
 }
+
+export interface ProjectRowState {
+  text: string
+  tone: 'needs' | 'working' | 'count'
+}
+
+/** What a project's row in the expanded sidebar says: how many need you, that some are working, or how many sessions are open. Nothing when none are. */
+export function projectRowState(states: readonly SessionState[]): ProjectRowState | null {
+  const status = projectStatus(states)
+  if (status.needs > 0) return { text: projectStatusText(status), tone: 'needs' }
+  if (status.working > 0) return { text: 'working', tone: 'working' }
+  return status.open > 0 ? { text: String(status.open), tone: 'count' } : null
+}

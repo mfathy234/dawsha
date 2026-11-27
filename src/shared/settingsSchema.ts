@@ -1,3 +1,4 @@
+import { isProjectColor } from './projectColor'
 import { sanitizePendingWorktrees } from './terminalSetup'
 import { sanitizeTicketNotes } from './ticketNotes'
 import { checkoutTabsKey } from './filesWorkspace'
@@ -183,6 +184,7 @@ function sanitizeProjects(value: unknown): Project[] {
     if (item.pinned === true) project.pinned = true
     if (typeof item.iconPath === 'string' && item.iconPath.length > 0 && item.iconPath.length <= 1000 && !item.iconPath.includes('\0')) project.iconPath = item.iconPath
     if (item.noIcon === true) project.noIcon = true
+    if (isProjectColor(item.color)) project.color = item.color
     if (isRecord(item.worktreeSetup)) {
       const command = item.worktreeSetup.command
       project.worktreeSetup = {

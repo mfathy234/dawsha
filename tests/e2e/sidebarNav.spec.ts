@@ -105,7 +105,7 @@ test('the collapsed rail marks projects whose sessions need you', async () => {
     await expect(smoke).toBeVisible()
     await expect(smoke.locator('.rail-badge')).toHaveText('1')
     await expect(smoke.locator('.rail-badge')).toHaveCSS('height', '16px')
-    await expect(smoke).toHaveCSS('width', '48px')
+    await expect(smoke).toHaveCSS('width', '40px')
     await expect(rail.getByRole('button', { name: 'Missing', exact: true })).toBeVisible()
     await expect(rail.locator('.rail-badge')).toHaveCount(1)
     await rail.screenshot({ path: join(SCREENS, 'sidebar-rail-badge.png') })

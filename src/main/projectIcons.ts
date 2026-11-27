@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
-import { extname, join } from 'node:path'
+import { extname, join, relative, sep } from 'node:path'
 import type { Project } from '../shared/types'
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.svg', '.ico', '.jpg', '.jpeg', '.webp', '.gif'])
@@ -75,4 +75,31 @@ export class ProjectIcons {
     this.cache.set(project.id, { key, path, at: Date.now() })
     return path
   }
+}
+
+export const PICKABLE_ICON_EXTENSIONS = ['png', 'svg', 'ico', 'jpg', 'jpeg', 'webp'] as const
+const PICKABLE = new Set(PICKABLE_ICON_EXTENSIONS.map((extension) => `.${extension}`))
+
+export type ProjectIconCheck = { ok: true; path: string } | { ok: false; error: string }
+
+/** A picked image must be a real PNG, SVG, ICO, JPG or WebP file of at most 2 MB; the dialog filter is only a hint, so main checks again. */
+export function checkProjectIconFile(path: unknown): ProjectIconCheck {
+  if (typeof path !== 'string' || path === '' || path.includes('\0')) return { ok: false, error: 'Choose an image file.' }
+  if (!PICKABLE.has(extname(path).toLowerCase())) return { ok: false, error: 'Use a PNG, SVG, ICO, JPG or WebP image.' }
+  let info
+  try {
+    info = statSync(path)
+  } catch {
+    return { ok: false, error: 'That file could not be read.' }
+  }
+  if (!info.isFile() || info.size === 0) return { ok: false, error: 'That file is empty or not an image.' }
+  if (info.size > MAX_ICON_BYTES) return { ok: false, error: 'That image is over 2 MB.' }
+  return { ok: true, path }
+}
+
+/** The icon the folder ships, as a short path inside it ("site/favicon.svg"), or null. */
+export function detectedIconLabel(folder: unknown): string | null {
+  if (typeof folder !== 'string' || folder === '') return null
+  const found = findProjectIcon(folder)
+  return found ? relative(folder, found).split(sep).join('/') : null
 }

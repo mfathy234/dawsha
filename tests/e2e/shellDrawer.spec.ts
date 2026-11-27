@@ -22,7 +22,8 @@ test('shell drawer toggles without restarting and remembers its dragged height',
     await page.keyboard.press('Control+Backquote')
     await expect(drawer).toBeHidden()
     await page.keyboard.type('drawer-hidden-input')
-    await expect.poll(() => lineText(page, agentId)).toContain('drawer-hidden-input')
+    // On CI's long temp paths ConPTY can break the prompt line with a real newline, so read it as one line.
+    await expect.poll(async () => (await lineText(page, agentId)).replace(/\r?\n/g, '')).toContain('drawer-hidden-input')
     await page.keyboard.press('Control+c')
     await page.waitForTimeout(250)
     expect(resizes.filter((text) => text.includes(agentId)).length - initial).toBeLessThanOrEqual(1)

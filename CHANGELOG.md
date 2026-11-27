@@ -3,6 +3,19 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.3] - 2026-11-27
+
+### Changed
+
+- **A calmer rail.** The collapsed rail is one slim column. New session is a round button with a green plus, and Search, Views, Add project, Settings and Expand are plain icons that light up on hover. Project tiles are neutral circles; a project's colour shows only as a thin ring once it has sessions, blue while one is working. A project's own icon sits on a rounded square, never cropped into a circle. The Views count is a small grey badge on the icon.
+- **Softer project colours.** Eight muted colours replace the bright ones.
+- **The sidebar shows each project's icon.** Every project starts with its icon or initials, says "2 need you", "working" or how many sessions it has on its own row, and projects without sessions sit in a quiet No sessions list at the bottom.
+- **Project settings.** A new Project settings… entry in the project menu lets you see where the icon comes from, choose your own image (PNG, SVG, ICO, JPG or WebP, up to 2 MB), go back to the detected icon, use initials, and pick the project's colour.
+
+### Fixed
+
+- **Less work in the background.** The branch name is read straight from the repository instead of running git every 5 seconds, the check pauses while the window is hidden, long terminal sessions are scanned for blocks from where they last settled, and the terminal image cache is smaller (16 MB).
+
 ## [1.10.2] - 2026-11-27
 
 ### Changed

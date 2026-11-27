@@ -18,6 +18,7 @@ import { stateIcon } from './stateIcon'
 import { TasksPanelComponent } from './tasksPanel'
 import { pageHeader } from './pageHeader'
 import './projectsView.css'
+import { editProjectSettings } from './projectSettings'
 import { editWorktreeSetup } from './worktreeSetup'
 
 const MAC = navigator.platform.toLowerCase().includes('mac')
@@ -352,6 +353,7 @@ export class ProjectsViewComponent {
       { class: 'popover menu pv-menu', role: 'menu', 'aria-label': `More for ${project.name}` },
       item('Rename', () => this.startRename(project.id)),
       item('Change folder…', () => void this.changeFolder(project)),
+      item('Project settings…', () => void editProjectSettings(project.id)),
       h('div', { class: 'pv-menu-label', role: 'presentation' }, 'Default agent'),
       ...AGENTS.map(agentItem),
       h('div', { class: 'pv-menu-sep', role: 'separator' }),
