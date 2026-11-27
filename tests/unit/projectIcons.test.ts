@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ProjectIcons, findProjectIcon } from '../../src/main/projectIcons'
+import { ProjectIcons, checkProjectIconFile, detectedIconLabel, findProjectIcon } from '../../src/main/projectIcons'
 
 let root = ''
 const put = (...parts: string[]): string => {
@@ -71,5 +71,46 @@ describe('ProjectIcons', () => {
   it('ignores a picked file that is not an image', () => {
     const text = put('notes.txt')
     expect(new ProjectIcons().pathFor(project({ iconPath: text }))).toBeNull()
+  })
+})
+
+describe('checkProjectIconFile', () => {
+  it.each(['png', 'svg', 'ico', 'jpg', 'jpeg', 'webp'])('accepts a .%s file', (extension) => {
+    const path = put(`logo.${extension}`)
+    expect(checkProjectIconFile(path)).toEqual({ ok: true, path })
+  })
+
+  it('refuses other types, even ones the folder scan accepts', () => {
+    expect(checkProjectIconFile(put('anim.gif'))).toMatchObject({ ok: false })
+    expect(checkProjectIconFile(put('notes.txt'))).toMatchObject({ ok: false })
+  })
+
+  it('refuses empty, missing and oversized files', () => {
+    writeFileSync(join(root, 'empty.png'), '')
+    expect(checkProjectIconFile(join(root, 'empty.png'))).toMatchObject({ ok: false })
+    expect(checkProjectIconFile(join(root, 'missing.png'))).toMatchObject({ ok: false })
+    writeFileSync(join(root, 'big.png'), Buffer.alloc(2 * 1024 * 1024 + 1))
+    expect(checkProjectIconFile(join(root, 'big.png'))).toEqual({ ok: false, error: 'That image is over 2 MB.' })
+    writeFileSync(join(root, 'edge.png'), Buffer.alloc(2 * 1024 * 1024))
+    expect(checkProjectIconFile(join(root, 'edge.png'))).toMatchObject({ ok: true })
+  })
+
+  it('refuses a folder and a value that is not a path', () => {
+    mkdirSync(join(root, 'dir.png'))
+    expect(checkProjectIconFile(join(root, 'dir.png'))).toMatchObject({ ok: false })
+    expect(checkProjectIconFile(undefined)).toMatchObject({ ok: false })
+    expect(checkProjectIconFile('a\0.png')).toMatchObject({ ok: false })
+  })
+})
+
+describe('detectedIconLabel', () => {
+  it('names the found icon by its path inside the folder', () => {
+    put('site', 'favicon.svg')
+    expect(detectedIconLabel(root)).toBe('site/favicon.svg')
+  })
+
+  it('is null when nothing is found or the folder is not a string', () => {
+    expect(detectedIconLabel(root)).toBeNull()
+    expect(detectedIconLabel(null)).toBeNull()
   })
 })

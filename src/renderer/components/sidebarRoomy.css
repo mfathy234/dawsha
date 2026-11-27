@@ -54,18 +54,6 @@
 .proj-list .proj-title .proj-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .proj-toggle { flex: 1; }
 
-.proj-dots { flex: none; display: inline-flex; align-items: center; gap: 3px; padding-inline: var(--sp-2); }
-.proj-dots i { width: 6px; height: 6px; border-radius: 50%; }
-.proj-dots .dot-w { background: var(--st-working); }
-.proj-dots .dot-n { background: var(--st-needs); }
-.proj-dots .dot-d { background: var(--accent); }
-.proj-none { flex: none; padding-inline: var(--sp-2); color: var(--text-3); font-size: var(--fs-1); }
-
-.proj-row:hover .proj-dots,
-.proj-row:focus-within .proj-dots,
-.proj-row:hover .proj-none,
-.proj-row:focus-within .proj-none { opacity: 0; }
-
 .proj-list .quiet-toggle .proj-name { max-width: none; }
 .proj-list .proj-row.quiet-row .proj-name { color: var(--text-2); font-weight: var(--w-regular); }
 .proj-list .proj-row.quiet-row .quiet-toggle { align-items: center; padding-inline-start: var(--sp-2); }
@@ -176,3 +164,17 @@
 .closed-line:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 
 .proj-group { margin-bottom: var(--sp-1); }
+
+/* 1.10.3: each project starts with its avatar, says its state on the row, and keeps its chevron for hover. */
+.proj-list .proj-toggle .proj-avatar { margin-inline-start: 2px; }
+.proj-chev { flex: none; display: inline-flex; color: var(--muted); opacity: 0; }
+.proj-chev svg { width: 12px; height: 12px; }
+.proj-row:hover .proj-chev, .proj-toggle:focus-visible .proj-chev { opacity: 1; }
+.proj-state { flex: none; padding-inline: var(--sp-2); color: var(--text-3); font-size: var(--fs-12); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.proj-state.tone-needs { color: var(--needs); }
+.proj-state.tone-working { color: var(--st-working); }
+.proj-row:hover .proj-state, .proj-row:focus-within .proj-state { opacity: 0; }
+.quiet-label { margin: var(--sp-2) var(--sp-2) 2px; padding-top: var(--sp-2); border-top: 1px solid var(--seam); color: var(--text-3); font-size: var(--fs-12); line-height: 20px; }
+.proj-list .proj-row.quiet-row .quiet-toggle .proj-chev { display: none; }
+.proj-list .proj-row.quiet-row .proj-avatar { opacity: .75; }
+.proj-list .proj-row.quiet-row { min-height: 28px; }

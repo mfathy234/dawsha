@@ -110,7 +110,8 @@ export interface GridApi {
   }
   pickFolder(): Promise<string | null>
   pickImage(): Promise<string | null>
-  pickProjectIcon(): Promise<string | null>
+  pickProjectIcon(): Promise<{ ok: true; path: string } | { ok: false; error: string } | null>
+  detectedProjectIcon(folder: string): Promise<string | null>
   pathForFile(file: File): string
   checkFolder(path: string): Promise<FolderCheck>
   gitBranch(folder: string): Promise<string | null>

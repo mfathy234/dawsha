@@ -1,4 +1,4 @@
-/* The collapsed rail: project tiles say what their sessions are doing, in the letters and the fill. */
+/* The collapsed rail is one 40px column on a 64px centre line. Project tiles are neutral circles; their colour shows only as a 2px ring when they have sessions. */
 .sidebar.rail .rail-projects {
   flex: 1 1 0;
   min-height: 0;
@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 4px 0;
   overflow-y: auto;
   scrollbar-width: none;
@@ -17,11 +17,8 @@
 }
 .sidebar.rail .rail-projects::-webkit-scrollbar { display: none; }
 
-.sidebar.rail.framed { gap: 0; padding-bottom: 0; }
-.sidebar.rail.framed .rail-divider { margin: 8px 0; flex: none; }
-
-/* A tile is a 48px coloured circle that becomes a rounded square when selected or hovered; the pill sits on the rail's left edge. */
-.sidebar.rail { --rail-edge: rgb(255 255 255 / .1); --rail-w: 72px; --tile: 48px; }
+.sidebar.rail.framed { gap: 0; padding: 14px 0; }
+.sidebar.rail { --rail-edge: rgb(255 255 255 / .1); --rail-w: 64px; --tile: 40px; }
 :root[data-kind='light'] .sidebar.rail { --rail-edge: rgb(24 28 40 / .14); }
 
 .rail-btn.rail-mono.rail-tile {
@@ -33,31 +30,33 @@
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--tile-fg);
-  font-size: 15px;
+  color: var(--text);
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0;
+  letter-spacing: .02em;
+  transition: border-radius var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out);
 }
-.rail-btn.rail-mono.rail-tile:hover { background: transparent; }
+.rail-btn.rail-mono.rail-tile:is(:hover, .selected) { background: transparent; }
+.rail-btn.rail-mono.rail-tile:is(:hover, :focus-visible, .selected, .drop-before, .drop-after, .has-image) { border-radius: 12px; }
+.rail-btn.rail-mono.rail-tile:active { transform: scale(.96); }
 .rail-tile .rail-face {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--tile-bg);
-  color: var(--tile-fg);
-  transition: border-radius 160ms ease, opacity 160ms ease;
+  box-sizing: border-box;
+  border-radius: inherit;
+  background: var(--raised);
+  color: var(--text);
 }
 .rail-tile .rail-face::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--rail-edge); pointer-events: none; }
-.rail-tile:hover .rail-face, .rail-tile:focus-visible .rail-face, .rail-tile.selected .rail-face, .rail-tile.drop-before .rail-face, .rail-tile.drop-after .rail-face { border-radius: 16px; }
+.rail-tile:not(.rail-none, .has-image) .rail-face::after { box-shadow: inset 0 0 0 2px var(--tile-color, var(--rail-edge)); }
+.rail-tile.rail-working .rail-face::after { box-shadow: inset 0 0 0 2px var(--st-working); animation: rail-ring 2.4s ease-in-out infinite; }
 .rail-tile .rail-letters[hidden], .rail-tile .rail-icon[hidden] { display: none; }
-.rail-tile .rail-icon { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.rail-btn.rail-mono.rail-tile:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 16px; }
-.rail-btn.rail-mono.rail-tile.rail-none .rail-face { opacity: 0.55; }
-.rail-btn.rail-mono.rail-tile.rail-none:hover .rail-face { opacity: 0.85; }
-.rail-btn.rail-mono.rail-tile.rail-working .rail-face::after { box-shadow: inset 0 0 0 2px var(--st-working); animation: rail-ring 2.4s ease-in-out infinite; }
+.rail-tile.has-image .rail-face { padding: 7px; }
+.rail-tile .rail-icon { width: 100%; height: 100%; object-fit: contain; }
+.rail-btn.rail-mono.rail-tile.rail-none .rail-face { opacity: .55; }
+.rail-btn.rail-mono.rail-tile.rail-none:is(:hover, :focus-visible, .selected) .rail-face { opacity: .85; }
 
 .rail-tile .rail-pill {
   position: absolute;
@@ -68,12 +67,12 @@
   border-radius: 0 4px 4px 0;
   background: var(--text);
   transform: translateY(-50%);
-  transition: height 160ms ease;
+  transition: height var(--dur-2) var(--ease-out);
   pointer-events: none;
 }
 .rail-tile.has-unread .rail-pill { height: 8px; }
-.rail-tile:hover .rail-pill, .rail-tile:focus-visible .rail-pill { height: 20px; }
-.rail-tile.selected .rail-pill { height: 40px; }
+.rail-tile:is(:hover, :focus-visible) .rail-pill { height: 20px; }
+.rail-tile.selected .rail-pill { height: 32px; }
 
 .rail-btn.rail-mono.rail-tile .rail-badge {
   position: absolute;
@@ -81,6 +80,7 @@
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
+  box-sizing: border-box;
   border-radius: 8px;
   box-shadow: 0 0 0 3px var(--sidebar);
   background: var(--needs);
@@ -94,36 +94,80 @@
 :root[data-kind='light'] .rail-btn.rail-mono.rail-tile .rail-badge { color: #fff; }
 
 .rail-sep { flex: none; width: 32px; height: 2px; margin: 2px 0; border-radius: 1px; background: var(--seam); }
-.sidebar.rail .rail-divider { width: 32px; height: 2px; border-radius: 1px; margin: 4px 0; }
+.sidebar.rail .rail-divider { flex: none; width: 32px; height: 2px; border-radius: 1px; margin: 8px 0; background: var(--seam); }
 
-/* Every other control in the rail is the same 48px circle with the same border. */
+/* Every other control is a 40px ghost button: no background until hover or press. */
 .sidebar.rail > .rail-btn:not(.rail-tile),
-.frame-sidebar .sidebar.rail .frame-new,
 .frame-sidebar .sidebar.rail .frame-top > #search-button,
 .frame-sidebar .sidebar.rail .frame-expand,
 .frame-sidebar .sidebar.rail .frame-foot #settings-button,
+.frame-sidebar .sidebar.rail .frame-head .app-logo-menu,
 .frame-sidebar .sidebar.rail .frame-bottom > .update-pill {
-  width: var(--tile);
-  height: var(--tile);
-  border-radius: 50%;
-  background: var(--raised);
-  box-shadow: inset 0 0 0 1px var(--rail-edge);
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
   color: var(--text-2);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
 }
+.sidebar.rail > .rail-btn:not(.rail-tile) svg,
+.frame-sidebar .sidebar.rail .frame-top > #search-button svg,
+.frame-sidebar .sidebar.rail .frame-foot #settings-button svg { width: 20px; height: 20px; }
+.frame-sidebar .sidebar.rail .frame-expand svg { width: 18px; height: 18px; }
 .sidebar.rail > .rail-btn:not(.rail-tile):hover,
-.frame-sidebar .sidebar.rail .frame-new:hover,
 .frame-sidebar .sidebar.rail .frame-top > #search-button:hover,
 .frame-sidebar .sidebar.rail .frame-expand:hover,
-.frame-sidebar .sidebar.rail .frame-foot #settings-button:hover { border-radius: 16px; background: var(--hover); color: var(--text); }
-.sidebar.rail > .rail-btn:not(.rail-tile),
-.frame-sidebar .sidebar.rail .frame-new,
-.frame-sidebar .sidebar.rail .frame-top > #search-button,
-.frame-sidebar .sidebar.rail .frame-expand,
-.frame-sidebar .sidebar.rail .frame-foot #settings-button { transition: border-radius 160ms ease, background var(--dur-1, 120ms); }
-.frame-sidebar .sidebar.rail .frame-new { background: var(--accent); color: var(--on-accent); }
-.frame-sidebar .sidebar.rail .frame-new:hover { background: var(--accent); color: var(--on-accent); }
-.frame-sidebar .sidebar.rail .frame-new .new-session-icon { background: transparent; color: inherit; width: 20px; height: 20px; }
-.frame-sidebar .sidebar.rail .frame-new .new-session-icon svg { width: 16px; height: 16px; }
+.frame-sidebar .sidebar.rail .frame-foot #settings-button:hover,
+.frame-sidebar .sidebar.rail .frame-head .app-logo-menu:hover { background: var(--hover); color: var(--text); }
+.sidebar.rail > .rail-btn:not(.rail-tile):active,
+.frame-sidebar .sidebar.rail .frame-expand:active,
+.frame-sidebar .sidebar.rail .frame-foot #settings-button:active,
+.frame-sidebar .sidebar.rail .frame-top > #search-button:active,
+.sidebar.rail > .rail-btn[aria-expanded='true'],
+.frame-sidebar .sidebar.rail .frame-foot #settings-button[aria-pressed='true'] { background: var(--press); color: var(--text); }
+.frame-sidebar .sidebar.rail .frame-head .app-logo-menu { color: var(--text); }
+.frame-sidebar .sidebar.rail .frame-head .app-logo-menu svg { width: 28px; height: 28px; border-radius: 8px; }
+
+/* New session: a 40px circle like the project tiles; the colour is in the plus, not the fill. */
+.frame-sidebar .sidebar.rail .frame-new {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--raised);
+  box-shadow: var(--ring);
+  color: var(--accent);
+  transition: border-radius var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out);
+}
+.frame-sidebar .sidebar.rail .frame-new:hover { border-radius: 12px; background: var(--surface-pop); color: var(--accent); }
+.frame-sidebar .sidebar.rail .frame-new:active { transform: scale(.96); background: var(--surface-pop); }
+.frame-sidebar .sidebar.rail .frame-new .new-session-icon { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 0; background: transparent; color: inherit; }
+.frame-sidebar .sidebar.rail .frame-new .new-session-icon svg { width: 18px; height: 18px; stroke-width: 2; }
+
+.sidebar.rail :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.frame-sidebar .sidebar.rail .frame-top { gap: 0; padding: 0; }
+.frame-sidebar .sidebar.rail .frame-head { padding: 0 0 8px; gap: 0; }
+.frame-sidebar .sidebar.rail .frame-top > #search-button { margin-top: 4px; }
+.frame-sidebar .sidebar.rail .frame-bottom { gap: 4px; padding: 0; }
+.frame-sidebar .sidebar.rail .frame-foot { gap: 4px; }
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill[hidden] { display: none; }
+.sidebar.rail > .rail-btn:not(.rail-tile) + .rail-btn:not(.rail-tile),
+.sidebar.rail > .rail-btn:not(.rail-tile) + .frame-bottom,
+.sidebar.rail > .frame-bottom + .frame-expand { margin-top: 4px; }
 
 .rail-tip {
   position: fixed;
@@ -147,11 +191,7 @@
 
 .rail-projects .rail-fold { flex: none; width: 16px; height: 1px; margin: 2px 0; background: var(--seam); }
 
-.rail-btn.rail-views { width: 36px; height: 32px; display: inline-grid; place-items: center; border: 0; border-radius: var(--r-control); background: transparent; color: var(--text-2); cursor: pointer; }
-.rail-btn.rail-views:hover { background: var(--hover); color: var(--text); }
 .rail-btn.rail-views.away { color: var(--text); }
-.rail-btn.rail-views[aria-expanded='true'] { background: var(--press); color: var(--text); }
-.rail-btn.rail-views svg { width: 16px; height: 16px; }
 
 .popover.menu.rail-views-menu { width: 240px; padding: 6px; }
 .rail-views-menu .menu-item { height: 32px; border-radius: var(--r-control); }
@@ -162,32 +202,28 @@
 .frame-sidebar .sidebar.rail .frame-nav,
 .frame-sidebar .sidebar.rail .frame-head .bell-button { display: none; }
 
-@keyframes rail-ring { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes rail-ring { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 
-/* Short windows: the controls shrink to 40px so the project list keeps room, and its fade shows there is more. */
-@media (max-height: 820px) {
-  .frame-sidebar .sidebar.rail .frame-new,
-  .frame-sidebar .sidebar.rail .frame-top > #search-button,
-  .frame-sidebar .sidebar.rail .frame-expand,
-  .frame-sidebar .sidebar.rail .frame-foot #settings-button,
-  .sidebar.rail > .rail-btn:not(.rail-tile) { width: 40px; height: 40px; }
-}
-
-/* The Views button's notification count is a real badge, like a project's, not a loose numeral beside the icon. */
-.sidebar.rail .rail-btn.rail-views { position: relative; }
+/* The Views count is a small neutral badge on the icon's corner. */
 .sidebar.rail .rail-btn.rail-views .rail-badge.rail-views-count {
   position: absolute;
-  inset: auto -4px -4px auto;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  box-shadow: 0 0 0 3px var(--sidebar);
+  inset: 4px 4px auto auto;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--sidebar);
   background: var(--surface-pop);
   color: var(--text);
   font-size: 11px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 14px;
   text-align: center;
 }
 .sidebar.rail .rail-btn.rail-views .rail-badge.rail-views-count[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-tile.rail-working .rail-face::after { animation: none; }
+  .rail-btn.rail-mono.rail-tile, .frame-sidebar .sidebar.rail .frame-new { transition: none; }
+}

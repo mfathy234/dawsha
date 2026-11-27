@@ -75,6 +75,7 @@ const api: GridApi = {
   pickFolder: () => ipcRenderer.invoke(IPC.pickFolder),
   pickImage: () => ipcRenderer.invoke(IPC.pickImage),
   pickProjectIcon: () => ipcRenderer.invoke(IPC.pickProjectIcon),
+  detectedProjectIcon: (folder) => ipcRenderer.invoke(IPC.detectedProjectIcon, folder),
   pathForFile: (file) => webUtils.getPathForFile(file),
   checkFolder: (path) => ipcRenderer.invoke(IPC.checkFolder, path),
   gitBranch: (folder) => ipcRenderer.invoke(IPC.gitBranch, folder),

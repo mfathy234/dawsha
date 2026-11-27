@@ -86,10 +86,10 @@
 
 .frame-sidebar .sidebar .sidebar-head .icon-btn[aria-label='Collapse sidebar'] { display: none; }
 
-.frame-sidebar .sidebar.rail .frame-top { align-items: center; padding: var(--sp-2) 0 0; gap: var(--sp-1); }
+.frame-sidebar .sidebar.rail .frame-top { align-items: center; }
 .frame-sidebar .sidebar #notifications-button { position: relative; }
 .frame-sidebar .sidebar #notifications-button .bell-badge { position: absolute; top: 0; inset-inline-end: -3px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: var(--r-control); background: var(--accent); color: var(--on-accent); font-family: var(--font-ui); font-size: var(--fs-0); font-weight: var(--w-medium); line-height: 14px; text-align: center; }
-.frame-sidebar .sidebar.rail .frame-head { flex-direction: column; padding: 0 0 var(--sp-1); gap: var(--sp-1); }
+.frame-sidebar .sidebar.rail .frame-head { flex-direction: column; }
 .frame-sidebar .sidebar.rail .frame-spacer,
 .frame-sidebar .sidebar.rail .frame-head .app-title,
 .frame-sidebar .sidebar.rail .frame-new .new-session-label,
@@ -101,13 +101,8 @@
 .frame-sidebar .sidebar.rail .frame-nav .nav-button[aria-current='page'] .nav-label,
 .frame-sidebar .sidebar.rail .frame-bottom #settings-button .utility-label,
 .frame-sidebar .sidebar.rail .frame-bottom > .crew-strip { display: none; }
-.frame-sidebar .sidebar.rail .frame-new,
-.frame-sidebar .sidebar.rail .frame-top > #search-button,
-.frame-sidebar .sidebar.rail .frame-nav .nav-button,
-.frame-sidebar .sidebar.rail .frame-foot #settings-button { width: 36px; height: 32px; padding: 0; justify-content: center; }
 .frame-sidebar .sidebar.rail .frame-nav { align-items: center; padding-bottom: 0; }
-.frame-sidebar .sidebar.rail .frame-bottom { align-items: center; padding: var(--sp-2) 0 var(--sp-3); }
-.frame-sidebar .sidebar.rail .frame-bottom > .update-pill { width: 36px; padding: 0; justify-content: center; overflow: hidden; }
+.frame-sidebar .sidebar.rail .frame-bottom { align-items: center; }
 .frame-sidebar .sidebar.rail .frame-foot { flex-direction: column; }
 
 :root:not([data-input='pointer']) .frame-sidebar .sidebar :is(.frame-collapse, .frame-expand, .frame-panel-toggle, .frame-new, .frame-nav .nav-button, #search-button, #settings-button, .app-logo-menu):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }

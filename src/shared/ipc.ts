@@ -26,6 +26,7 @@ export const IPC = {
   pickFolder: 'dialog:pick-folder',
   pickImage: 'dialog:pick-image',
   pickProjectIcon: 'dialog:pick-project-icon',
+  detectedProjectIcon: 'project:detected-icon',
   checkFolder: 'fs:check-folder',
   gitBranch: 'git:branch',
   projectGroups: 'projects:groups',

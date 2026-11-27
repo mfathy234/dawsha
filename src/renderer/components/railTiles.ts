@@ -1,5 +1,5 @@
 import { monogram, railBadge, railTileState } from '../../shared/sidebarModel'
-import { projectColor } from '../../shared/projectColor'
+import { colorOfProject } from '../../shared/projectColor'
 import { projectStatusLabel, type ProjectStatus } from '../../shared/projectStatus'
 import type { SessionState } from '../../shared/sessionState'
 import type { Project } from '../../shared/types'
@@ -24,15 +24,13 @@ function iconImage(project: Project, button: HTMLElement, letters: HTMLElement):
   return image
 }
 
-/** One project's tile in the collapsed rail: a coloured circle with letters or the project's icon, a pill on the left, and the needs-you count. */
+/** One project's tile in the collapsed rail: a neutral circle with letters, ringed in the project's colour once it has sessions, or the project's own icon on a rounded square; a pill on the left and the needs-you count. */
 export function railTile(project: Project, status: ProjectStatus, states: readonly SessionState[], selected: boolean, group: RailGroup, onClick: () => void): HTMLButtonElement {
   const label = projectStatusLabel(project.name, status)
   const state = railTileState(status, selected)
-  const color = projectColor(project.name)
   const letters = h('span', { class: 'rail-letters', 'aria-hidden': 'true' }, monogram(project.name))
   const button = h('button', { class: `rail-btn rail-mono rail-tile rail-${state}`, type: 'button', 'aria-label': label, 'aria-haspopup': 'menu', 'data-menu-key': `fly:${project.id}`, 'data-tip': label, onClick }) as HTMLButtonElement
-  button.style.setProperty('--tile-bg', color.bg)
-  button.style.setProperty('--tile-fg', color.fg)
+  button.style.setProperty('--tile-color', colorOfProject(project).color)
   const image = iconImage(project, button, letters)
   button.append(h('span', { class: 'rail-pill', 'aria-hidden': 'true' }), h('span', { class: 'rail-face' }, letters, image))
   button.dataset.dropProject = project.id

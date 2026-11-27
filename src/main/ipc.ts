@@ -26,6 +26,7 @@ import { isInstructionName, type InstructionWriteRequest } from '../shared/instr
 import type { FileRef } from '../shared/filePaths'
 import { createWorktree, createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
 import { changedFiles, currentBranch, gitChanges, gitSync } from './git'
+import { PICKABLE_ICON_EXTENSIONS, checkProjectIconFile, detectedIconLabel, type ProjectIconCheck } from './projectIcons'
 import { listBranches, runGitQuick } from './gitQuick'
 import { dirtyReport, untrackedFolders } from './gitDirty'
 import { addGitIgnore } from './gitIgnore'
@@ -430,16 +431,17 @@ export function registerIpc(
     const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
     return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
   })
-  ipcMain.handle(IPC.pickProjectIcon, async () => {
+  ipcMain.handle(IPC.pickProjectIcon, async (): Promise<ProjectIconCheck | null> => {
     const window = getWindow()
     const options = {
       title: 'Choose a project icon',
       properties: ['openFile' as const],
-      filters: [{ name: 'Images', extensions: ['png', 'svg', 'ico', 'jpg', 'jpeg', 'webp', 'gif'] }]
+      filters: [{ name: 'Images', extensions: [...PICKABLE_ICON_EXTENSIONS] }]
     }
     const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
-    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
+    return result.canceled || result.filePaths.length === 0 ? null : checkProjectIconFile(result.filePaths[0])
   })
+  ipcMain.handle(IPC.detectedProjectIcon, (_event, folder: unknown) => detectedIconLabel(folder))
   if (recordings) {
     ipcMain.handle(IPC.recordingsList, () => recordings.list())
     ipcMain.handle(IPC.recordingsRead, (_event, id: unknown) => recordings.read(id))

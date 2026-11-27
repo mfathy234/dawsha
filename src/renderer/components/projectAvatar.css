@@ -1,0 +1,24 @@
+.proj-avatar {
+  flex: none;
+  position: relative;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tile-color) 10%, var(--surface));
+  color: var(--tile-color);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+:root[data-kind='light'] .proj-avatar {
+  background: color-mix(in srgb, var(--tile-color) 14%, var(--surface));
+  color: color-mix(in srgb, var(--tile-color) 40%, var(--text));
+}
+.proj-avatar.has-image { padding: 3px; background: var(--raised); box-shadow: var(--ring); }
+.proj-avatar.large { width: 40px; height: 40px; border-radius: 12px; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+.proj-avatar.large.has-image { padding: 7px; }
+.proj-avatar-letters[hidden], .proj-avatar-icon[hidden] { display: none; }
+.proj-avatar-icon { width: 100%; height: 100%; object-fit: contain; }
