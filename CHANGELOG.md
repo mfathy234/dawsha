@@ -3,6 +3,19 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.2] - 2026-11-27
+
+### Changed
+
+- **A sidebar rail like Discord.** Each project is a 48px coloured circle that rounds into a square when you hover it or work in it. A white bar on the left edge marks the project you are in, and a short one marks a reply you have not read. An amber count shows how many sessions need you. Projects use their own icon when the repo has one; change it with Change icon… or Use initials. Projects without sessions are listed last, dimmer. Tiles have their border back.
+
+### Fixed
+
+- **The terminal fills the full-screen pane again.** Limit line length in full screen is now off unless you turn it on; 1.10.0 had it on for everyone, which left half of a wide window empty.
+- **The session’s tag sits after the branch** in the full-screen header, instead of floating in the middle.
+- **The notification count on the Views button** is a small badge in the corner, instead of a number squeezed against the icon.
+- **Chat shows long sessions.** A very long session with a large tool output could open in Chat with no messages at all.
+
 ## [1.10.1] - 2026-11-27
 
 ### Changed
