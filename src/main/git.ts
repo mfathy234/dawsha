@@ -6,6 +6,7 @@ import type { GitChanges } from '../shared/types'
 import { readHeadBranch } from './gitHead'
 
 const CHANGES_TTL_MS = 5000
+const SYNC_TTL_MS = 20_000
 
 function run(args: string[], cwd: string): Promise<string | null> {
   return new Promise((resolve) => {
@@ -15,12 +16,21 @@ function run(args: string[], cwd: string): Promise<string | null> {
   })
 }
 
+const BRANCH_ASK_TTL_MS = 30_000
+const branchAsks = new Map<string, { at: number; value: string | null }>()
+
+async function askGitForBranch(folder: string): Promise<string | null> {
+  const known = branchAsks.get(folder)
+  if (known && Date.now() - known.at < BRANCH_ASK_TTL_MS) return known.value
+  const value = (await run(['rev-parse', '--abbrev-ref', 'HEAD'], folder)) ?? (await run(['symbolic-ref', '--short', 'HEAD'], folder))
+  branchAsks.set(folder, { at: Date.now(), value })
+  return value
+}
+
+/** The branch is read from .git/HEAD; git itself is asked only when that fails, and a folder that is not a repository is asked about once every 30 seconds, not on every poll. */
 export async function currentBranch(folder: string): Promise<string | null> {
   const fromHead = await readHeadBranch(folder)
-  if (fromHead) return fromHead
-  const branch = await run(['rev-parse', '--abbrev-ref', 'HEAD'], folder)
-  if (branch) return branch
-  return run(['symbolic-ref', '--short', 'HEAD'], folder)
+  return fromHead ?? askGitForBranch(folder)
 }
 
 const changesCache = new Map<string, { at: number; value: GitChanges | null }>()
@@ -34,7 +44,7 @@ export function forgetChanges(): void {
 
 export async function gitSync(folder: string): Promise<SyncCounts | null> {
   const cached = syncCache.get(folder)
-  if (cached && Date.now() - cached.at < CHANGES_TTL_MS) return cached.value
+  if (cached && Date.now() - cached.at < SYNC_TTL_MS) return cached.value
   const counts = await run(['rev-list', '--left-right', '--count', 'HEAD...@{upstream}'], folder)
   const value = counts ? parseAheadBehind(counts) : null
   syncCache.set(folder, { at: Date.now(), value })

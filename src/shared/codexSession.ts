@@ -52,9 +52,17 @@ export function parseSessionIndex(text: string): Map<string, string> {
   return names
 }
 
-export function codexStatusFromTail(tail: string, modifiedAt: number, now: number): SessionStatus {
+/** The last turn marker in a rollout's tail ("task_started", "task_complete"...), or null when it has none. */
+export function lastTurnMarker(tail: string): string | null {
   let last: string | null = null
   for (const match of tail.matchAll(TURN_MARKER)) last = match[1]
+  return last
+}
+
+export const codexStatusFromTail = (tail: string, modifiedAt: number, now: number): SessionStatus =>
+  codexStatusFromMarker(lastTurnMarker(tail), modifiedAt, now)
+
+export function codexStatusFromMarker(last: string | null, modifiedAt: number, now: number): SessionStatus {
   const age = now - modifiedAt
   if (last === null) return age < UNMARKED_BUSY_MS ? 'busy' : 'idle'
   return last === 'task_started' && age < STALE_OPEN_TURN_MS ? 'busy' : 'idle'

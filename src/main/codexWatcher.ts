@@ -3,7 +3,8 @@ import { join } from 'node:path'
 import { codexHome } from './agentLaunch'
 import {
   codexInfoFromTail,
-  codexStatusFromTail,
+  codexStatusFromMarker,
+  lastTurnMarker,
   parseRolloutMeta,
   parseSessionIndex,
   rolloutIdFromName,
@@ -24,6 +25,7 @@ const promptCache = new Map<string, PromptEntry>()
 export function clearCodexCaches(): void {
   metaCache.clear()
   promptCache.clear()
+  tailCache.clear()
 }
 
 export async function readRange(path: string, start: number, length: number): Promise<string> {
@@ -78,13 +80,26 @@ async function readNames(home: string): Promise<Map<string, string>> {
   }
 }
 
+interface TailFacts { size: number; mtimeMs: number; marker: string | null; info: ReturnType<typeof codexInfoFromTail> }
+const tailCache = new Map<string, TailFacts>()
+
+/** What a rollout's tail says, read and parsed again only when the file changed (a 256 KB read per rollout every 3 seconds adds up). */
+async function tailFacts(path: string, size: number, mtimeMs: number): Promise<TailFacts> {
+  const known = tailCache.get(path)
+  if (known && known.size === size && known.mtimeMs === mtimeMs) return known
+  const tail = await readRange(path, Math.max(0, size - TAIL_BYTES), TAIL_BYTES)
+  const facts = { size, mtimeMs, marker: lastTurnMarker(tail), info: codexInfoFromTail(tail) }
+  tailCache.set(path, facts)
+  return facts
+}
+
 async function readOne(path: string, names: Map<string, string>, now: number): Promise<CodexSession | null> {
   try {
     const info = await stat(path)
     if (now - info.mtimeMs > RECENT_MS) return null
     const meta = await readMeta(path, info.size)
     if (!meta) return null
-    const tail = await readRange(path, Math.max(0, info.size - TAIL_BYTES), TAIL_BYTES)
+    const tail = await tailFacts(path, info.size, info.mtimeMs)
     return {
       sessionId: meta.sessionId,
       cwd: meta.cwd,
@@ -93,8 +108,8 @@ async function readOne(path: string, names: Map<string, string>, now: number): P
       nameSource: names.has(meta.sessionId) ? 'ai' : 'prompt',
       startedAt: meta.startedAt,
       updatedAt: Math.round(info.mtimeMs),
-      status: codexStatusFromTail(tail, info.mtimeMs, now),
-      ...codexInfoFromTail(tail)
+      status: codexStatusFromMarker(tail.marker, info.mtimeMs, now),
+      ...tail.info
     }
   } catch {
     return null
@@ -105,6 +120,8 @@ export async function readCodexSessions(home: string = codexHome()): Promise<Cod
   const [files, names] = await Promise.all([listRollouts(join(home, 'sessions')), readNames(home)])
   const now = Date.now()
   const sessions = await Promise.all(files.map((file) => readOne(file, names, now)))
+  const listed = new Set(files)
+  for (const path of tailCache.keys()) if (!listed.has(path)) tailCache.delete(path)
   return sessions.filter((s): s is CodexSession => s !== null)
 }
 
