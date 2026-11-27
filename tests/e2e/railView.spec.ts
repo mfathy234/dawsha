@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
+import { colorOfProject } from '../../src/shared/projectColor'
 import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
 
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -28,9 +29,10 @@ test('the collapsed rail lists projects without sessions last, with no dots tile
     const smoke = rail.locator('.rail-tile', { has: page.locator('.rail-letters', { hasText: 'SM' }) })
     await expect(smoke).toHaveCount(1)
     await expect(smoke).not.toHaveClass(/rail-none/)
-    await expect(smoke).toHaveCSS('width', '48px')
-    await expect(smoke).toHaveCSS('height', '48px')
-    await expect(smoke.locator('.rail-face')).toHaveCSS('border-radius', '16px')
+    await expect(smoke).toHaveCSS('width', '40px')
+    await expect(smoke).toHaveCSS('height', '40px')
+    await expect(smoke).toHaveCSS('border-radius', '12px')
+    await expect(smoke.locator('.rail-pill')).toHaveCSS('height', '32px')
     await expect(rail.locator('#rail-more')).toHaveCount(0)
     await expect(rail.locator('.rail-tile')).toHaveCount(2)
     await expect(rail.locator('.rail-tile.rail-none')).toHaveCount(1)
@@ -55,6 +57,51 @@ test('the collapsed rail lists projects without sessions last, with no dots tile
     await expect(page.locator('.work-view')).toBeVisible()
     await page.keyboard.press('Control+Shift+S')
     await expect(page.locator('.pane')).toHaveCount(1)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('the rail is one 40px column on a 64px centre line, in order, and still fits a 1024x728 window', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox.userData, { appearance: DESKTOP })
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1024, 728))
+    await page.getByRole('button', { name: NEW_IN_SMOKE }).first().click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await page.locator('#sidebar-collapse').click()
+    const rail = page.locator('.sidebar.rail')
+    await expect(rail).toBeVisible()
+    const railBox = (await rail.boundingBox())!
+    expect(Math.round(railBox.width)).toBe(64)
+    const controls = ['.app-logo-menu', '#new-session', '#search-button', '.rail-tile[data-drop-project="smoke"]', '#rail-views', '[aria-label="Add project"]', '#settings-button', '#sidebar-expand']
+    const boxes = []
+    for (const selector of controls) {
+      const box = (await rail.locator(selector).first().boundingBox())!
+      expect(box, selector).not.toBeNull()
+      expect(Math.round(box.width), `${selector} width`).toBe(40)
+      expect(Math.round(box.height), `${selector} height`).toBe(40)
+      expect(Math.abs(box.x + box.width / 2 - (railBox.x + 32)), `${selector} centre`).toBeLessThanOrEqual(1)
+      boxes.push(box)
+    }
+    for (let index = 1; index < boxes.length; index += 1) expect(boxes[index].y, controls[index]).toBeGreaterThanOrEqual(boxes[index - 1].y + 40)
+    expect(boxes[boxes.length - 1].y + 40).toBeLessThanOrEqual(railBox.y + railBox.height)
+    await expect(rail.locator('#new-session')).toHaveCSS('border-radius', '50%')
+    await expect(rail.locator('#search-button')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect(rail.locator('#sidebar-expand')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect(rail.locator('.rail-divider')).toHaveCount(2)
+    await expect(rail.locator('.rail-divider').first()).toHaveCSS('width', '32px')
+    await expect(rail.locator('.rail-divider').first()).toHaveCSS('height', '2px')
+    const ring = await rail.locator('.rail-tile[data-drop-project="smoke"] .rail-face').evaluate((face) => getComputedStyle(face, '::after').boxShadow)
+    const [red, green, blue] = [1, 3, 5].map((start) => parseInt(colorOfProject({ name: 'Smoke' }).color.slice(start, start + 2), 16))
+    expect(ring).toContain(`rgb(${red}, ${green}, ${blue})`)
+    expect(ring).toContain('2px')
+    const noSessions = await rail.locator('.rail-tile.rail-none .rail-face').first().evaluate((face) => getComputedStyle(face, '::after').boxShadow)
+    expect(noSessions).toContain('1px')
+    const list = (await rail.locator('.rail-projects').boundingBox())!
+    expect(list.y).toBeGreaterThanOrEqual(boxes[2].y + 40)
+    expect(list.y + list.height).toBeLessThanOrEqual(boxes[4].y)
   } finally {
     await closeApp(app)
   }
@@ -102,7 +149,7 @@ test('tabs that do not fit collapse into a +N menu, and the open tab shows its h
 
 const SVG = (fill: string): string => `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${fill}"/></svg>`
 
-test('rail tiles are coloured circles with a left pill, and a project icon can be changed or swapped for initials', async () => {
+test('rail tiles are neutral circles with a left pill, and a project icon can be changed or swapped for initials', async () => {
   const sandbox = createSandbox()
   seed(sandbox.userData, { appearance: DESKTOP })
   writeFileSync(join(sandbox.projectFolder, 'favicon.svg'), SVG('#2255aa'), 'utf8')
@@ -117,16 +164,18 @@ test('rail tiles are coloured circles with a left pill, and a project icon can b
     await expect(page.locator('.pane')).toHaveCount(1)
     await page.locator('#sidebar-collapse').click()
     const rail = page.locator('.sidebar.rail')
-    expect(await rail.evaluate((el) => Math.round(el.getBoundingClientRect().width))).toBe(72)
+    expect(await rail.evaluate((el) => Math.round(el.getBoundingClientRect().width))).toBe(64)
     const smoke = rail.locator('.rail-tile[data-drop-project="smoke"]')
     const missing = rail.locator('.rail-tile[data-drop-project="gone"]')
 
     await expect(smoke).toHaveClass(/has-image/)
     await expect(smoke.locator('.rail-icon')).toBeVisible()
-    await expect(smoke.locator('.rail-face')).toHaveCSS('border-radius', '16px')
-    await expect(smoke.locator('.rail-pill')).toHaveCSS('height', '40px')
+    await expect(smoke.locator('.rail-face')).toHaveCSS('border-radius', '12px')
+    await expect(smoke.locator('.rail-face')).toHaveCSS('padding', '7px')
+    await expect(smoke.locator('.rail-icon')).toHaveCSS('object-fit', 'contain')
+    await expect(smoke.locator('.rail-pill')).toHaveCSS('height', '32px')
     await expect(smoke.locator('.rail-pill')).toHaveCSS('width', '4px')
-    await expect(missing.locator('.rail-face')).toHaveCSS('border-radius', '50%')
+    await expect(missing).toHaveCSS('border-radius', '50%')
     await expect(missing.locator('.rail-pill')).toHaveCSS('height', '0px')
     await expect(missing.locator('.rail-face')).toHaveCSS('opacity', '0.55')
     await expect(missing.locator('.rail-letters')).toHaveText('MI')
@@ -135,6 +184,7 @@ test('rail tiles are coloured circles with a left pill, and a project icon can b
     await missing.hover()
     await expect(page.locator('.rail-tip.shown')).toHaveText('Missing')
     await expect(missing.locator('.rail-pill')).toHaveCSS('height', '20px')
+    await expect(missing).toHaveCSS('border-radius', '12px')
 
     await smoke.click()
     await page.getByRole('menuitem', { name: 'Use initials' }).click()
