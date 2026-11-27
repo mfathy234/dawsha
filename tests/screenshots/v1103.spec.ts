@@ -29,7 +29,7 @@ async function resize(app: Parameters<typeof closeApp>[0], width: number, height
 
 async function newSession(page: Page, name: string): Promise<string> {
   await page.getByRole('button', { name: new RegExp(`^New (Claude|Codex|Gemini) session in ${name}$`) }).click()
-  const id = (await page.locator('.term-host.active').getAttribute('data-term-id'))!
+  const id = (await page.locator('.pane.focused .term-host.active').first().getAttribute('data-term-id'))!
   await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/>\s*$/m)
   return id
 }
