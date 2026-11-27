@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { closeApp, createSandbox, launchApp, openSettings, closeSettings, activeTermId, bufferText } from './helpers'
 
-test('a maximized terminal keeps to 120 columns until the setting is turned off', async () => {
+test('a maximized terminal uses the full width until the line length limit is turned on', async () => {
   const { app, page } = await launchApp(createSandbox())
   try {
     await page.setViewportSize({ width: 1800, height: 900 })
@@ -13,6 +13,13 @@ test('a maximized terminal keeps to 120 columns until the setting is turned off'
     await expect(pane).toHaveClass(/maximized/)
     const host = page.locator('.term-host.active')
     const body = page.locator('.pane-body').first()
+    expect(await host.evaluate((el) => (el as HTMLElement).style.maxWidth)).toBe('')
+
+    await openSettings(page, 'general')
+    await page.locator('#limit-line-length').click()
+    await expect(page.locator('#limit-line-length')).toHaveAttribute('aria-checked', 'true')
+    await expect.poll(async () => page.evaluate(async () => (await window.gridApi.getSettings()).settings?.limitLineLength)).toBe(true)
+    await closeSettings(page)
     await expect.poll(async () => host.evaluate((el) => (el as HTMLElement).style.maxWidth)).toMatch(/px$/)
     const capped = await host.evaluate((el) => el.getBoundingClientRect().width)
     const room = await body.evaluate((el) => el.getBoundingClientRect().width)
@@ -26,7 +33,6 @@ test('a maximized terminal keeps to 120 columns until the setting is turned off'
     await openSettings(page, 'general')
     await page.locator('#limit-line-length').click()
     await expect(page.locator('#limit-line-length')).toHaveAttribute('aria-checked', 'false')
-    await expect.poll(async () => page.evaluate(async () => (await window.gridApi.getSettings()).settings?.limitLineLength)).toBe(false)
     await closeSettings(page)
     await expect.poll(async () => host.evaluate((el) => (el as HTMLElement).style.maxWidth)).toBe('')
   } finally {

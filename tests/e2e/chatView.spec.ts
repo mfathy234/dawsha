@@ -804,3 +804,25 @@ test('a prompt saved with /save is offered first in the / list, inserts its text
     await closeApp(app)
   }
 })
+
+test('a long conversation with a huge tool result in its log still shows its earlier turns in Chat', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, agentEnv(sandbox))
+  try {
+    const huge = { type: 'user', uuid: 'big', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'none', content: 'z'.repeat(9 * 1024 * 1024) }] } }
+    const turns = Array.from({ length: 40 }, (_, i) => [
+      { type: 'user', uuid: `lu${i}`, message: { role: 'user', content: `Turn ${i} question` } },
+      { type: 'assistant', uuid: `la${i}`, message: { role: 'assistant', content: [{ type: 'text', text: `Turn ${i} answer` }] } }
+    ]).flat()
+    writeLog(sandbox, [{ type: 'user', uuid: 'first', message: { role: 'user', content: 'Opening request' } }, huge, ...turns])
+    const pane = await startClaude(page, sandbox)
+    const termId = await activeTermId(page)
+    await expect.poll(() => bufferText(page, termId)).toContain('READY claude')
+    await switchTo(pane, 'Chat')
+    const chat = pane.locator('.chat')
+    await expect(chat.locator('.chat-you').last()).toContainText('Turn 39 question', { timeout: 20_000 })
+    await expect(chat.locator('.chat-empty')).toHaveCount(0)
+  } finally {
+    await closeApp(app)
+  }
+})

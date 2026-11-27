@@ -106,7 +106,7 @@ export const defaultSettings = (): Settings => ({
   showTerminalImages: true,
   fontLigatures: false,
   readingOnScroll: false,
-  limitLineLength: true,
+  limitLineLength: false,
   sessionViews: { claude: DEFAULT_CHAT_VIEW, codex: DEFAULT_CHAT_VIEW },
   chatViews: {},
   savedPrompts: [],
@@ -181,6 +181,8 @@ function sanitizeProjects(value: unknown): Project[] {
     }
     if (typeof item.fontSize === 'number') project.fontSize = clampFontSize(item.fontSize)
     if (item.pinned === true) project.pinned = true
+    if (typeof item.iconPath === 'string' && item.iconPath.length > 0 && item.iconPath.length <= 1000 && !item.iconPath.includes('\0')) project.iconPath = item.iconPath
+    if (item.noIcon === true) project.noIcon = true
     if (isRecord(item.worktreeSetup)) {
       const command = item.worktreeSetup.command
       project.worktreeSetup = {
@@ -500,7 +502,7 @@ export function migrateSettings(raw: unknown): Settings {
     showTerminalImages: raw.showTerminalImages !== false,
     fontLigatures: raw.fontLigatures === true,
     readingOnScroll: raw.readingOnScroll === true,
-    limitLineLength: raw.limitLineLength !== false,
+    limitLineLength: raw.limitLineLength === true,
     sessionViews: sanitizeSessionViews(raw.sessionViews, raw.sessionView),
     chatViews: sanitizeChatViews(raw.chatViews),
     savedPrompts: sanitizeSavedPrompts(raw.savedPrompts),

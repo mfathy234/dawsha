@@ -1323,7 +1323,7 @@ export async function addProject(): Promise<Project | null> {
 
 export function updateProject(
   projectId: string,
-  change: Partial<Pick<Project, 'name' | 'folder' | 'defaultAgent'>>
+  change: Partial<Pick<Project, 'name' | 'folder' | 'defaultAgent' | 'iconPath' | 'noIcon'>>
 ): void {
   const projects = store.state.settings.projects.map((p) => (p.id === projectId ? { ...p, ...change } : p))
   store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
@@ -1335,6 +1335,17 @@ export async function locateProject(projectId: string): Promise<void> {
   if (!folder) return
   updateProject(projectId, { folder })
   await refreshBranches()
+}
+
+/** Asks for an image and shows it on the project's rail tile instead of the folder's own icon or the initials. */
+export async function changeProjectIcon(projectId: string): Promise<void> {
+  const path = await api.pickProjectIcon()
+  if (path) updateProject(projectId, { iconPath: path, noIcon: undefined })
+}
+
+/** Shows the project's initials even when its folder ships an icon. */
+export function useInitials(projectId: string): void {
+  updateProject(projectId, { iconPath: undefined, noIcon: true })
 }
 
 export function pinProject(projectId: string, pinned: boolean): void {

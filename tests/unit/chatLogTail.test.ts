@@ -95,3 +95,14 @@ describe('ChatSession', () => {
     expect(result.status === 'failed' && result.reason).toMatch(/format Dawsha doesn't know/)
   })
 })
+
+describe('a large log whose cut falls inside a very long line', () => {
+  it('still shows the latest turns', async () => {
+    const path = join(dir, 'big.jsonl')
+    const huge = JSON.stringify({ type: 'user', uuid: 'huge', message: { content: [{ type: 'tool_result', tool_use_id: 'x', content: 'z'.repeat(400_000) }] } }) + '\n'
+    writeFileSync(path, user('old') + huge + user('latest one') + user('latest two'))
+    const session = new ChatSession('claude', 100_000)
+    await session.refresh(path)
+    expect(texts(session)).toEqual(['latest one', 'latest two'])
+  })
+})

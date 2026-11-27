@@ -354,9 +354,10 @@ export class PaneComponent {
     if (maximized === this.inHeader) return
     this.inHeader = maximized
     if (maximized) {
-      this.titles.after(this.branch, this.recap)
+      this.titles.after(this.branch, this.tagHost, this.recap)
     } else {
       this.foot.append(this.branch)
+      this.pin.after(this.tagHost)
       this.hint.before(this.recap)
     }
   }

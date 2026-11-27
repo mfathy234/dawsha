@@ -28,8 +28,9 @@ test('the collapsed rail lists projects without sessions last, with no dots tile
     const smoke = rail.locator('.rail-tile', { has: page.locator('.rail-letters', { hasText: 'SM' }) })
     await expect(smoke).toHaveCount(1)
     await expect(smoke).not.toHaveClass(/rail-none/)
-    await expect(smoke).toHaveCSS('width', '32px')
-    await expect(smoke).toHaveCSS('height', '32px')
+    await expect(smoke).toHaveCSS('width', '48px')
+    await expect(smoke).toHaveCSS('height', '48px')
+    await expect(smoke.locator('.rail-face')).toHaveCSS('border-radius', '16px')
     await expect(rail.locator('#rail-more')).toHaveCount(0)
     await expect(rail.locator('.rail-tile')).toHaveCount(2)
     await expect(rail.locator('.rail-tile.rail-none')).toHaveCount(1)
@@ -94,6 +95,58 @@ test('tabs that do not fit collapse into a +N menu, and the open tab shows its h
     await expect(page.locator('.pane.maximized .pane-foot .chip-branch')).toHaveCount(0)
     const title = page.locator('.pane.maximized .pane-title')
     expect(await title.evaluate((el) => el.scrollWidth <= el.clientWidth + 1 || getComputedStyle(el).textOverflow === 'ellipsis')).toBe(true)
+  } finally {
+    await closeApp(app)
+  }
+})
+
+const SVG = (fill: string): string => `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${fill}"/></svg>`
+
+test('rail tiles are coloured circles with a left pill, and a project icon can be changed or swapped for initials', async () => {
+  const sandbox = createSandbox()
+  seed(sandbox.userData, { appearance: DESKTOP })
+  writeFileSync(join(sandbox.projectFolder, 'favicon.svg'), SVG('#2255aa'), 'utf8')
+  const picked = join(sandbox.root, 'picked.svg')
+  writeFileSync(picked, SVG('#aa5522'), 'utf8')
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as unknown as typeof dialog.showOpenDialog
+    }, picked)
+    await page.getByRole('button', { name: NEW_IN_SMOKE }).first().click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await page.locator('#sidebar-collapse').click()
+    const rail = page.locator('.sidebar.rail')
+    expect(await rail.evaluate((el) => Math.round(el.getBoundingClientRect().width))).toBe(72)
+    const smoke = rail.locator('.rail-tile[data-drop-project="smoke"]')
+    const missing = rail.locator('.rail-tile[data-drop-project="gone"]')
+
+    await expect(smoke).toHaveClass(/has-image/)
+    await expect(smoke.locator('.rail-icon')).toBeVisible()
+    await expect(smoke.locator('.rail-face')).toHaveCSS('border-radius', '16px')
+    await expect(smoke.locator('.rail-pill')).toHaveCSS('height', '40px')
+    await expect(smoke.locator('.rail-pill')).toHaveCSS('width', '4px')
+    await expect(missing.locator('.rail-face')).toHaveCSS('border-radius', '50%')
+    await expect(missing.locator('.rail-pill')).toHaveCSS('height', '0px')
+    await expect(missing.locator('.rail-face')).toHaveCSS('opacity', '0.55')
+    await expect(missing.locator('.rail-letters')).toHaveText('MI')
+    await expect(rail.locator('.rail-sep')).toHaveCount(1)
+
+    await missing.hover()
+    await expect(page.locator('.rail-tip.shown')).toHaveText('Missing')
+    await expect(missing.locator('.rail-pill')).toHaveCSS('height', '20px')
+
+    await smoke.click()
+    await page.getByRole('menuitem', { name: 'Use initials' }).click()
+    await expect(smoke).not.toHaveClass(/has-image/)
+    await expect(smoke.locator('.rail-letters')).toBeVisible()
+    await expect.poll(() => readSettings(sandbox.userData).projects?.find((p: any) => p.id === 'smoke')?.noIcon).toBe(true)
+
+    await smoke.click()
+    await expect(page.getByRole('menuitem', { name: 'Use initials' })).toHaveCount(0)
+    await page.getByRole('menuitem', { name: 'Change icon…' }).click()
+    await expect(smoke).toHaveClass(/has-image/)
+    await expect.poll(() => readSettings(sandbox.userData).projects?.find((p: any) => p.id === 'smoke')?.iconPath).toBe(picked)
   } finally {
     await closeApp(app)
   }

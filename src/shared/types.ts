@@ -21,6 +21,10 @@ export interface Project {
   defaultAgent: AgentKind
   fontSize?: number
   pinned?: boolean
+  /** An image the user picked for the project's rail tile. */
+  iconPath?: string
+  /** Show initials even when the folder ships an icon. */
+  noIcon?: boolean
   /** Reviewed setup command for new worktrees, plus the one-time local-file suggestion choice. */
   worktreeSetup?: { command: string; prompted: boolean }
 }
