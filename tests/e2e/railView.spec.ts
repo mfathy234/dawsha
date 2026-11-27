@@ -136,9 +136,10 @@ test('tabs that do not fit collapse into a +N menu, and the open tab shows its h
     await menu.getByRole('menuitem').first().click()
     await expect(strip.locator('.strip-tab.selected')).toHaveCount(1)
 
+    // The picked tab becomes the maximized pane on the next render, so wait for its header before measuring it.
     const header = page.locator('.pane.maximized .pane-header')
-    const box = (await header.boundingBox())!
-    expect(box.height).toBeLessThanOrEqual(48)
+    await expect(header).toBeVisible()
+    await expect.poll(async () => (await header.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(48)
     await expect(page.locator('.pane.maximized .pane-foot .chip-branch')).toHaveCount(0)
     const title = page.locator('.pane.maximized .pane-title')
     expect(await title.evaluate((el) => el.scrollWidth <= el.clientWidth + 1 || getComputedStyle(el).textOverflow === 'ellipsis')).toBe(true)
