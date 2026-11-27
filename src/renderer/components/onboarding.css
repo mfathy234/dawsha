@@ -10,7 +10,7 @@
 .ob-num { display: inline-flex; justify-content: center; line-height: 20px; font-size: var(--fs-ui); font-variant-numeric: tabular-nums; color: var(--muted); }
 .ob-step.active .ob-num { color: var(--text); }
 .ob-step.done .ob-num { color: var(--accent); }
-.ob-text h3 { margin: 0; font-size: var(--fs-body); font-weight: 600; line-height: 20px; }
+.ob-text h3 { margin: 0; font-size: var(--fs-body); font-weight: var(--w-medium); line-height: 20px; }
 .ob-text p { margin: var(--s-1) 0 0; font-size: var(--fs-ui); color: var(--muted); }
 .ob-project { display: flex; flex-direction: column; gap: 1px; margin-top: var(--s-1); min-width: 0; }
 .ob-folder { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: var(--fs-ui); color: var(--muted); }

@@ -42,7 +42,7 @@
       <span>Dawsha</span>
     </a>
     <nav aria-label="Primary">
-      <a href="#new">New in 1.9.0</a>
+      <a href="#new">New in 1.10.0</a>
       <a href="#showcase">Screens</a>
       <a href="#remote">Remote</a>
       <a href="#features">Features</a>
@@ -97,8 +97,38 @@
 
   <section id="new" aria-labelledby="new-h">
     <div class="wrap">
-      <h2 id="new-h">New in 1.9.0</h2>
-      <p class="section-lead">1.9.0 sets up worktrees for you, lets you review an agent's work line by line, watches your pull requests, and shows diagrams in Files. Below it are 1.8.9 and earlier releases.</p>
+      <h2 id="new-h">New in 1.10.0</h2>
+      <p class="section-lead">1.10.0 ends the terminal flicker, adds a Reading view and an Inbox, and makes shell sessions aware of their commands. Below it are 1.9.0 and earlier releases.</p>
+      <div class="feat-row" id="reading-view">
+        <div class="feat-copy">
+          <h3>Read a long session like a page</h3>
+          <p>Ctrl+Alt+R turns the terminal into a calm page you can search, select and copy from.</p>
+          <ul><li>Jump between prompts with Alt+Up and Alt+Down, or open the outline with Ctrl+Shift+O.</li><li>Copy a whole reply as Markdown, or send a failure to the agent.</li><li>The terminal no longer flickers when a card or recap appears.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/reading-view.png" width="1168" height="668" alt="A session's terminal in Reading view, with each command folded into one row">
+        </figure>
+      </div>
+      <div class="feat-row flip" id="inbox">
+        <div class="feat-copy">
+          <h3>An Inbox for every answer waiting</h3>
+          <p>Sessions that replied while you were elsewhere are marked, and Ctrl+I lists them all.</p>
+          <ul><li>Read, reply and move to the next one from the keyboard.</li><li>Tabs show the project's initials and how long ago a session went idle.</li><li>Dawsha warns you when two sessions edit the same file.</li></ul>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/inbox.png" width="1168" height="668" alt="The Inbox listing three sessions with answers waiting, beside the sidebar rail">
+        </figure>
+      </div>
+      <div class="feat-wide" id="shell-drawer">
+        <div class="feat-copy">
+          <h3>Shells that know their commands</h3>
+          <p>Each command shows a check or cross and how long it took, and Ctrl+` opens a shell drawer under any session.</p>
+        </div>
+        <figure class="shot framed">
+          <img loading="lazy" src="assets/shell-drawer.png" width="1168" height="668" alt="A session with a shell drawer open below it, showing commands with checks and times">
+        </figure>
+        <ul class="feat-cols"><li>Rerun a command, copy its output or send it to a session.</li><li>Long commands tell you when they finish.</li><li>Ctrl+Alt+R in a shell lists the project's command history.</li></ul>
+      </div>
       <div class="feat-row" id="review-loop">
         <div class="feat-copy">
           <h3>Review the work, line by line</h3>

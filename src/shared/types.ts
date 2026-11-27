@@ -9,6 +9,7 @@ import type { SessionTag } from './sessionTags'
 import type { CrewIdentity, CrewLaunch, CrewRun, CrewSettings } from './crew'
 import type { CrewGoal, LeadSettings } from './crewLead'
 import type { ChatView, SessionViews } from './chatLog'
+import type { SessionCare } from './sessionCare'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
 export type SessionStatus = 'busy' | 'idle'
@@ -97,6 +98,8 @@ export interface SavedPane {
   pinned?: boolean
   /** Pinned to the top of the sidebar and the session tabs; not the same as `pinned`, the pane beside a large one. */
   starred?: boolean
+  /** Unread, a note, a snooze and a when-done rule; kept across restarts. */
+  care?: SessionCare
 }
 
 export interface GridSplit {
@@ -205,9 +208,18 @@ export interface Settings {
   sidebarSort: import('./sidebarModel').SidebarSort
   /** Hides projects that have no sessions from the sidebar. */
   sidebarHideEmpty: boolean
+  /** The collapsed rail shows projects without open sessions inline instead of behind the dots tile. */
+  railShowEmpty: boolean
   dimOtherPanes: boolean
   showRecap: boolean
   sleepHiddenTerminals: boolean
+  shellDrawerHeight: number
+  notifyLongCommands: boolean
+  showTerminalImages: boolean
+  fontLigatures: boolean
+  /** Opens the reading view when you scroll far back in a terminal. Ctrl+Alt+R opens it any time. */
+  readingOnScroll: boolean
+  limitLineLength: boolean
   /** How a new session of each agent opens: as its terminal or as a chat drawn from its log. */
   sessionViews: SessionViews
   /** The view each session was last left in, by agent and session id, so a resume opens the same way. */
@@ -228,6 +240,8 @@ export interface Settings {
   desktop: import('./desktopSettings').DesktopSettings
   trayNoticeShown: boolean
   warnUsageLimits: boolean
+  /** Show a short card about what happened when the owner comes back after 20 minutes or more. */
+  catchUp: boolean
   /** Whether Dawsha polls GitHub for each session's pull request. */
   watchPullRequests: boolean
   warnedUsageWindows: import('./limitWarnings').WarnedWindows

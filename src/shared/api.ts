@@ -74,6 +74,9 @@ import type {
 } from './types'
 
 export interface GridApi {
+  shellHistory(projectId: string): Promise<import('./shellCommands').ShellHistoryEntry[]>
+  addShellHistory(projectId: string, command: string, cwd: string): Promise<void>
+  setTerminalProgress(progress: import('./terminalOsc').TerminalProgress | null): void
   getLoginItem(): Promise<import('./desktopSettings').LoginItemState>
   setLoginItem(enabled: boolean): Promise<import('./desktopSettings').LoginItemState>
   quit(): void
@@ -282,6 +285,8 @@ export interface GridApi {
   /** Pass null to read the state. Resolves to null when the terminal is not being recorded. */
   setRecordingPaused(id: string, paused: boolean | null): Promise<boolean | null>
   onFlushRequest(listener: () => Promise<void>): void
+  /** The owner left the computer or came back: window unfocused, screen locked, asleep or idle. */
+  onAway(listener: (change: import('./away').AwayChange) => void): void
   /** Asked when the window is closing; resolve false to keep it open. */
   onCloseCheck(listener: () => Promise<boolean>): void
 }

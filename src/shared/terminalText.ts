@@ -1,4 +1,4 @@
-
+import { terminalWidthProvider } from './terminalUnicode'
 export interface ScreenLine {
   text: string
   isWrapped: boolean
@@ -63,19 +63,7 @@ export function applyTyped(current: string, data: string): string {
 export function displayWidth(text: string): number {
   let width = 0
   for (const char of text) {
-    const code = char.codePointAt(0) ?? 0
-    if (code < 0x20 || (code >= 0x300 && code <= 0x36f) || code === 0x200d || (code >= 0xfe00 && code <= 0xfe0f)) continue
-    const wide =
-      (code >= 0x1100 && code <= 0x115f) ||
-      (code >= 0x2e80 && code <= 0xa4cf) ||
-      (code >= 0xac00 && code <= 0xd7a3) ||
-      (code >= 0xf900 && code <= 0xfaff) ||
-      (code >= 0xfe30 && code <= 0xfe6f) ||
-      (code >= 0xff00 && code <= 0xff60) ||
-      (code >= 0xffe0 && code <= 0xffe6) ||
-      (code >= 0x1f300 && code <= 0x1faff) ||
-      (code >= 0x20000 && code <= 0x3fffd)
-    width += wide ? 2 : 1
+    width += terminalWidthProvider.wcwidth(char.codePointAt(0) ?? 0)
   }
   return width
 }

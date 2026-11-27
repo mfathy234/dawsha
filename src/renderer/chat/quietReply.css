@@ -8,15 +8,15 @@
 .panes-quiet .pane-reply-line .add { color: var(--st-done, var(--accent-ink)); }
 .panes-quiet .pane-reply-line .del { color: var(--danger); }
 .panes-quiet .pane-reply-done { color: var(--text-2); }
-.panes-quiet .pane-reply-actions { display: flex; align-items: center; gap: 4px; margin-inline-start: auto; flex: none; }
-.panes-quiet .pane-reply-btn { height: 28px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); font: inherit; cursor: pointer; }
+.panes-quiet .pane-reply-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.panes-quiet .pane-reply-btn { height: 28px; padding: 0 8px; border: 0; border-radius: var(--r-control); background: transparent; color: var(--text-2); font: inherit; cursor: pointer; }
 .panes-quiet .pane-reply-btn:first-child,
 .panes-quiet .pane-reply-btn:nth-child(2) { color: var(--text); }
 .panes-quiet .pane-reply-btn:hover { background: var(--hover); color: var(--text); }
 .panes-quiet .pane-reply-btn:active { background: var(--press); }
-:root:not([data-input='pointer']) .panes-quiet .pane-reply-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+:root:not([data-input='pointer']) .panes-quiet .pane-reply-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-.pane-reply-pop { position: absolute; inset-inline: 6px; bottom: calc(100% + 4px); z-index: 3; max-height: min(60vh, 420px); overflow: auto; padding: 4px; border-radius: 12px; background: var(--raised); box-shadow: 0 12px 32px rgb(var(--shadow-rgb) / .4), inset 0 0 0 1px var(--line); }
+.pane-reply-pop { position: absolute; inset-inline: 6px; bottom: calc(100% + 4px); z-index: 3; max-height: min(60vh, 420px); overflow: auto; padding: 4px; border-radius: var(--r-card); background: var(--raised); box-shadow: 0 12px 32px rgb(var(--shadow-rgb) / .4), inset 0 0 0 1px var(--line); }
 .pane-reply-pop[hidden] { display: none; }
 .pane-reply-pop .chat-turn-summary { max-width: none; width: 100%; box-sizing: border-box; background: transparent; }
 

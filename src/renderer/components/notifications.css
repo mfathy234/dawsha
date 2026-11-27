@@ -1,5 +1,5 @@
 .bell-button { gap: var(--s-1); }
-.bell-badge { color: var(--text); font-size: var(--fs-ui); font-weight: 500; font-variant-numeric: tabular-nums; }
+.bell-badge { color: var(--text); font-size: var(--fs-ui); font-weight: var(--w-medium); font-variant-numeric: tabular-nums; }
 .bell-badge[hidden] { display: none; }
 .notifications-popover { z-index: 40; padding: 0; max-height: min(520px, calc(100vh - 80px)); display: flex; flex-direction: column; outline: none; }
 .notifications-head { margin: 0; padding: var(--s-3) var(--s-3) var(--s-2) var(--s-4); }
@@ -15,11 +15,11 @@
 .notification-time { font-size: var(--fs-status); color: var(--muted); }
 .notification-action { flex: none; align-self: center; }
 .notifications-empty { padding: var(--s-5) var(--s-5) 30px; text-align: center; }
-.notifications-empty-title { margin: 0 0 var(--s-2); font-size: var(--fs-body); font-weight: 600; }
+.notifications-empty-title { margin: 0 0 var(--s-2); font-size: var(--fs-body); font-weight: var(--w-medium); }
 .notifications-empty-note { margin: 0; font-size: var(--fs-ui); color: var(--muted); line-height: 1.5; }
 .notifications-groups { overflow-y: auto; padding: var(--s-1); display: flex; flex-direction: column; gap: var(--s-2); }
-.notification-group-title { display: flex; align-items: baseline; justify-content: space-between; margin: 0; padding: var(--s-2) var(--s-3) 2px; color: var(--text-3, var(--muted)); font-size: var(--fs-status); font-weight: 500; letter-spacing: 0.02em; }
-.notification-group-count { font-variant-numeric: tabular-nums; font-weight: 400; }
+.notification-group-title { display: flex; align-items: baseline; justify-content: space-between; margin: 0; padding: var(--s-2) var(--s-3) 2px; color: var(--text-3, var(--muted)); font-size: var(--fs-status); font-weight: var(--w-medium); letter-spacing: 0.02em; }
+.notification-group-count { font-variant-numeric: tabular-nums; font-weight: var(--w-regular); }
 .notifications-groups .notifications-list { overflow: visible; padding: 0; }
 .notification-item.fresh { background: transparent; }
 .notification-item.jumpable { cursor: pointer; }

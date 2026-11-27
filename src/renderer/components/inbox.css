@@ -1,0 +1,42 @@
+.inbox-view { flex: 1; min-width: 0; min-height: 0; display: flex; gap: var(--sp-4); padding: var(--sp-4); background: var(--bg); overflow: hidden; }
+.inbox-view[hidden] { display: none; }
+.inbox-side { flex: none; width: 420px; max-width: 45%; display: flex; flex-direction: column; gap: var(--sp-1); min-height: 0; }
+.inbox-head { display: flex; align-items: baseline; gap: 10px; padding: var(--sp-1) var(--sp-3) var(--sp-3); }
+.inbox-title { margin: 0; font-size: var(--fs-4); line-height: var(--lh-4); font-weight: var(--w-medium); }
+.inbox-summary { color: var(--text-3); font-size: var(--fs-2); }
+.inbox-list { display: flex; flex-direction: column; gap: var(--sp-1); flex: 1; min-height: 0; overflow: auto; }
+.inbox-row { display: flex; flex-direction: column; gap: var(--sp-1); width: 100%; padding: var(--sp-3); border: 0; border-radius: var(--r-card); background: transparent; color: var(--text); font: inherit; text-align: start; cursor: pointer; }
+.inbox-row:hover { background: var(--hover); }
+.inbox-row.selected { background: var(--raised); }
+.inbox-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.inbox-row-head { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-2); min-width: 0; }
+.inbox-name { font-weight: var(--w-medium); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inbox-project { color: var(--text-3); font-size: var(--fs-1); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inbox-spacer { flex: 1; }
+.inbox-state { flex: none; font-size: var(--fs-1); }
+.inbox-line { padding-inline-start: 26px; color: var(--text-2); font-size: var(--fs-2); line-height: var(--lh-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.inbox-keys { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); padding: var(--sp-2) var(--sp-3); color: var(--text-3); font-size: var(--fs-1); }
+.inbox-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-6) 28px; border-radius: var(--r-card); background: var(--surface); box-shadow: var(--shadow-card); overflow: auto; }
+.inbox-panel[hidden], .inbox-empty[hidden], .inbox-list[hidden] { display: none; }
+.inbox-detail { display: flex; flex-direction: column; gap: var(--sp-5); flex: 1; min-height: 0; max-width: 760px; }
+.inbox-detail-head { display: flex; align-items: center; gap: 10px; }
+.inbox-detail-name { font-size: var(--fs-16); font-weight: var(--w-medium); }
+.inbox-detail-meta { color: var(--text-3); font-size: var(--fs-2); }
+.inbox-note { color: var(--text-2); font-size: var(--fs-2); }
+.inbox-asked { color: var(--text-2); font-size: var(--fs-2); line-height: var(--lh-2); }
+.inbox-asked span { color: var(--text); }
+.inbox-reply-text { font-size: var(--fs-3); line-height: 22px; }
+.inbox-reply-text p { margin: 0 0 var(--sp-1); }
+.inbox-question { display: flex; flex-direction: column; gap: 6px; }
+.inbox-ask { color: var(--needs-ink); font-size: var(--fs-2); font-weight: var(--w-medium); padding-bottom: var(--sp-1); }
+.inbox-ask-text { margin: 0 0 var(--sp-1); color: var(--text-2); font-size: var(--fs-2); }
+.inbox-hint { margin: 0; color: var(--text-3); font-size: var(--fs-2); }
+.inbox-choice { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 40px; padding: 0 14px; border: 0; border-radius: var(--r-control); background: var(--raised); color: var(--text); font: inherit; font-size: var(--fs-2); text-align: start; cursor: pointer; }
+.inbox-choice:hover, .inbox-choice:focus-visible { background: var(--surface-pop); }
+.inbox-choice-n { color: var(--text-3); }
+.inbox-actions { display: flex; gap: var(--sp-2); }
+.inbox-reply-row { display: flex; align-items: center; gap: 10px; }
+.inbox-reply { flex: 1; min-width: 0; height: 40px; padding: 0 14px; border: 0; border-radius: var(--r-control); background: var(--well); color: var(--text); font: inherit; font-size: var(--fs-2); box-shadow: var(--well-shadow), 0 0 0 1px color-mix(in srgb, var(--text) 28%, transparent); }
+.inbox-reply:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+.inbox-send { height: 40px; }
+.inbox-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-3); font-size: var(--fs-3); }

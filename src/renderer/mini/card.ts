@@ -42,6 +42,7 @@ export class CardView {
     if (animate && session.state === 'needs' && this.state !== 'needs') glow(this.ring)
     this.state = session.state
     this.el.dataset.state = session.state
+    this.el.dataset.unread = String(session.unread)
     setText(this.title, session.title)
     setAttr(this.title, 'title', session.title)
     setText(this.lineText, session.line)

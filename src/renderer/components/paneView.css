@@ -1,0 +1,37 @@
+/* The tab view's one-row header: the branch sits by the name, the recap fills the middle, and the state word is left to the tab strip. */
+.pane.maximized .pane-header .pane-titles { flex: 0 1 auto; }
+.pane.maximized .pane-header > .chip-branch {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 24%;
+  padding-inline: var(--sp-1);
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+}
+.pane.maximized .pane-header > .chip-branch:hover { background: var(--hover); color: var(--text); }
+.pane.maximized .pane-header > .chip-branch .chip-text { direction: rtl; text-align: left; white-space: nowrap; font-family: var(--font-mono); font-size: var(--fs-12); color: inherit; }
+.pane.maximized .pane-header > .chip-branch .chip-text bdi { unicode-bidi: isolate; direction: ltr; }
+
+.pane.maximized .pane-header > .pane-recap {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-inline: var(--sp-3);
+  padding: 0;
+  color: var(--text-2);
+  font-size: var(--fs-12);
+  line-height: 16px;
+  cursor: pointer;
+}
+.pane.maximized .pane-header > .pane-recap[hidden] { display: none; }
+
+.pane.maximized .pane-header > .pane-state .state-pill-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

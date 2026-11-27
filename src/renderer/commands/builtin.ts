@@ -442,7 +442,8 @@ export function installBuiltinCommands(): void {
     { id: 'view.toggleDim', title: 'Toggle dimming of other sessions', group: 'Actions', keywords: 'dim others focus calm idle sessions', run: () => setDimOtherPanes(!store.state.settings.dimOtherPanes) },
     { id: 'view.gridFocus', title: 'Sessions grid: calm focus', group: 'Actions', keywords: 'grid layout focus one large pane siblings calm sessions', run: () => setGridStyle('focus') },
     { id: 'view.gridTiles', title: 'Sessions grid: mission control', group: 'Actions', keywords: 'grid layout tiles equal mission control sessions', run: () => setGridStyle('tiles') },
-    { id: 'view.grid', title: 'Back to the grid', group: 'Actions', searchOnly: true, run: () => showView('grid') },
+    { id: 'view.grid', title: 'Open Sessions', group: 'Actions', keywords: 'back to the grid terminals', ...withKeys('Ctrl+Shift+S'), run: () => showView('grid') },
+    { id: 'view.work', title: 'Open Work', group: 'Actions', keywords: 'tickets today summary tasks', ...withKeys('Ctrl+Shift+W'), run: () => showView('work') },
     {
       id: 'app.shortcuts',
       title: 'Keyboard shortcuts',

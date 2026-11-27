@@ -18,7 +18,7 @@
   cursor: text;
 }
 
-.sb-find:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sb-find:focus-within { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .sb-find > .icon { flex: none; }
 
 .sb-find-input {
@@ -173,6 +173,6 @@
 }
 
 .closed-line:hover { background: var(--hover); color: var(--text-2); }
-.closed-line:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.closed-line:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 
 .proj-group { margin-bottom: var(--sp-1); }

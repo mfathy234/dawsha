@@ -48,8 +48,15 @@ import { installPresetCommands } from './commands/presets'
 import { installWorktreeCleanupCommands } from './commands/worktreeCleanup'
 import { installWorktreeNudge } from './worktreeCleanupActions'
 import { installNotificationCommands } from './commands/notifications'
+import { installSessionCareCommands } from './commands/sessionCare'
+import { installSnooze } from './snooze'
+import { installWhenDone } from './whenDone'
+import { installOverlap } from './overlap'
+import { installBroadcastQueue } from './broadcast'
+import { installCatchUp } from './catchUp'
 import { installNeedsNotices } from './needsNotice'
 import { installReplayCommands } from './commands/replay'
+import { installBlockCommands } from './commands/blocks'
 import { installQueueRunner } from './automation/queueRunner'
 import { installScheduler } from './automation/scheduler'
 import { installSettingsTransferCommands } from './commands/settingsTransfer'
@@ -60,6 +67,7 @@ import { confirmQuitWithUnsavedFiles } from './files/filesActions'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
 import { applyTheme, onThemeChange, setTone } from './themeManager'
 import { removeLegacyModelCache } from './legacyModelCache'
+import './refine.css'
 
 const BRANCH_POLL_MS = 5000
 const GIT_CHANGES_POLL_MS = 10_000
@@ -154,11 +162,18 @@ async function boot(): Promise<void> {
   installPresetCommands()
   installWorktreeCleanupCommands()
   installNotificationCommands()
+  installSessionCareCommands()
+  installSnooze()
+  installWhenDone()
+  installOverlap()
+  installBroadcastQueue()
+  installCatchUp()
   installCompareCommands()
   installTurnChecksCommands()
   installHandoffCommands()
   installClosedSessionCommands()
   installReplayCommands()
+  installBlockCommands()
   installSettingsTransferCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)

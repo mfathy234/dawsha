@@ -2,6 +2,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
+import { loadTerminalUnicode } from '../shared/terminalUnicode'
 import type { TextOrder } from '../shared/arabicRows'
 import { logicalText, visualFromLogical } from '../shared/visualOrder'
 import { insertionData } from '../shared/insertText'
@@ -9,21 +10,30 @@ import { primaryModifierPressed } from '../shared/shortcuts'
 import { h } from './dom'
 import { PromptSelection } from './promptSelection'
 import { TerminalPrompts } from './terminalPrompts'
+import { TerminalBlockTools, type BlockCallbacks } from './terminalBlockTools'
+import { openContextMenu } from './components/contextMenu'
 import { TerminalArabic } from './terminalArabic'
 import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
 import { registerFileLinks, type FileLinkHost, type FileLinks } from './terminalLinks'
 import { TerminalSearch } from './terminalSearch'
+import { TerminalRendering } from './terminalRendering'
 import type { ThemeBundle } from './themeManager'
 import { TERMINAL_FONT } from './terminalFont'
 import { terminalShouldSleep } from '../shared/terminalSleep'
 import { PermissionPromptTracker } from '../shared/notificationAction'
+import { releaseRenderer, reserveRenderer } from './terminalGpu'
+import { registerTerminalOsc, type TerminalOscHost } from './terminalOsc'
+import { TerminalShell, type TerminalShellHost } from './terminalShell'
+import type { IDisposable } from '@xterm/xterm'
 
 const SHIFT_ENTER = '\x1b\r'
 
 
 /** A terminal hidden this long drops its GPU renderer until it is shown again. */
-const TERMINAL_SLEEP_MS = 10 * 60_000
+const TERMINAL_SLEEP_MS = 60_000
 export interface TerminalCallbacks {
+  osc: TerminalOscHost
+  shell: TerminalShellHost
   onInput(data: string): void
   onResize(cols: number, rows: number): void
   onZoom(direction: 1 | -1): void
@@ -36,6 +46,9 @@ export interface TerminalCallbacks {
   /** How the program in this terminal writes right-to-left text. */
   textOrder(): TextOrder
   sleepingEnabled(): boolean
+  imagesEnabled(): boolean
+  ligaturesEnabled(): boolean
+  blocks: BlockCallbacks
 }
 
 export class TerminalView {
@@ -44,14 +57,21 @@ export class TerminalView {
   private readonly fitAddon = new FitAddon()
   private readonly observer: ResizeObserver
   private readonly search: TerminalSearch
+  private readonly rendering: TerminalRendering
+  private readonly osc: IDisposable
+  private readonly shell: TerminalShell
+  private readonly linkTooltip = h('div', { class: 'xterm-hover term-link-tooltip', role: 'tooltip', hidden: true })
   readonly prompts: TerminalPrompts
+  private readonly blockTools: TerminalBlockTools
   private readonly promptSelection: PromptSelection
   private readonly highlights: TerminalHighlights
   private readonly fileLinks: FileLinks
   private readonly arabic: TerminalArabic
   private webgl: WebglAddon | null = null
   private opened = false
-  private frame = 0
+  private fitTimer: ReturnType<typeof setTimeout> | undefined
+  private lastSize = ''
+  private columnCap: number | null = null
   private lent: HTMLElement | null = null
   private bundleTerm: ThemeBundle['theme']['term']
   private hiddenSince: number | null = null
@@ -68,6 +88,7 @@ export class TerminalView {
     private readonly callbacks: TerminalCallbacks
   ) {
     this.el = h('div', { class: 'term-host', 'data-term-id': id })
+    this.el.classList.toggle('shell-terminal', callbacks.shell.enabled())
     this.term = new Terminal({
       fontFamily: TERMINAL_FONT,
       fontSize,
@@ -78,29 +99,62 @@ export class TerminalView {
       allowTransparency: true,
       allowProposedApi: true,
       theme: bundle.xterm,
-      minimumContrastRatio: bundle.minimumContrastRatio
+      minimumContrastRatio: bundle.minimumContrastRatio,
+      linkHandler: {
+        activate: (event, uri) => this.handleLink(event, uri),
+        hover: (event, uri) => {
+          this.linkTooltip.textContent = uri
+          this.linkTooltip.hidden = false
+          const bounds = this.el.getBoundingClientRect()
+          this.linkTooltip.style.left = `${Math.max(0, Math.min(event.clientX - bounds.left, bounds.width / 2))}px`
+          this.linkTooltip.style.top = `${Math.max(0, Math.min(event.clientY - bounds.top + 20, bounds.height - 36))}px`
+        },
+        leave: () => { this.linkTooltip.hidden = true }
+      }
     })
+    loadTerminalUnicode(this.term)
+    this.osc = registerTerminalOsc(this.term, callbacks.osc)
+    this.shell = new TerminalShell(this.term, callbacks.shell)
+    this.rendering = new TerminalRendering(this.term)
+    this.refreshRendering()
     this.term.loadAddon(this.fitAddon)
     this.term.loadAddon(new WebLinksAddon((event, uri) => this.handleLink(event, uri)))
     this.fileLinks = registerFileLinks(this.term, callbacks.fileLinks)
     this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.prompts = new TerminalPrompts(this.term)
+    this.blockTools = new TerminalBlockTools(this.term, this.el, this.prompts, {
+      callbacks: callbacks.blocks,
+      readable: (text) => this.readable(text),
+      plain: () => callbacks.textOrder() === 'visual',
+      openFile: (ref) => callbacks.fileLinks.open(ref, { ctrlKey: true, metaKey: false, shiftKey: true }),
+      typed: (data) => callbacks.onInput(data),
+      visible: () => this.visible
+    })
     this.arabic = new TerminalArabic(this.term, () => callbacks.textOrder())
     this.promptSelection = new PromptSelection(this.term, (data) => callbacks.onInput(data))
     this.term.onData((data) => {
       if (data !== '\x1b[I' && data !== '\x1b[O') this.permissionTracker.invalidate()
       this.prompts.noteInput(data)
+      this.shell.noteInput(data)
       this.promptSelection.noteInput(data)
       callbacks.onInput(data)
     })
-    this.term.onResize(({ cols, rows }) => callbacks.onResize(cols, rows))
+    this.term.onResize(({ cols, rows }) => {
+      const size = `${cols}:${rows}`
+      if (size === this.lastSize) return
+      this.lastSize = size
+      console.debug('[term] resize', id, cols, rows)
+      callbacks.onResize(cols, rows)
+    })
     this.term.attachCustomKeyEventHandler((event) => this.handleKey(event))
     this.observer = new ResizeObserver(() => this.scheduleFit())
     this.el.addEventListener('wheel', (event) => this.handleWheel(event), { capture: true, passive: false })
     this.el.addEventListener('contextmenu', (event) => {
       event.preventDefault()
       const ref = this.fileLinks.hovered()
-      if (ref) callbacks.fileLinks.menu(ref, event.clientX, event.clientY, () => this.term.focus())
+      if (ref) return callbacks.fileLinks.menu(ref, event.clientX, event.clientY, () => this.term.focus())
+      const entries = this.blockTools.contextEntries(event)
+      if (entries.length > 0) openContextMenu({ x: event.clientX, y: event.clientY, label: 'Terminal', entries, returnFocus: () => this.term.focus() })
     })
     this.el.addEventListener('focusin', () => callbacks.onFocus())
     this.search = new TerminalSearch(this.term, this.el, {
@@ -111,8 +165,33 @@ export class TerminalView {
     this.applyBundle(bundle)
   }
 
+  get blocks(): TerminalBlockTools {
+    return this.blockTools
+  }
+
+  toggleReading(): void {
+    this.blockTools.toggleReading()
+  }
+
+  toggleOutline(): void {
+    this.blockTools.toggleOutline()
+  }
+
+  canJumpBlock(direction: 1 | -1): boolean {
+    return this.blockTools.canJumpBlock(direction)
+  }
+
+  jumpBlock(direction: 1 | -1): void {
+    this.blockTools.jumpBlock(direction)
+  }
+
   refreshHighlights(): void {
     this.highlights.refresh()
+  }
+
+  refreshRendering(): void {
+    this.rendering.setImages(this.callbacks.imagesEnabled())
+    this.rendering.setLigatures(this.callbacks.ligaturesEnabled())
   }
 
   openSearch(): void {
@@ -137,6 +216,8 @@ export class TerminalView {
     if (this.opened) return
     this.opened = true
     this.term.open(this.el)
+    this.term.element?.append(this.linkTooltip)
+    this.refreshRendering()
     this.loadWebgl()
     this.arabic.attach()
     this.arabic.setTheme(this.bundleTerm)
@@ -237,6 +318,7 @@ export class TerminalView {
   clearScrollback(): void {
     this.term.clear()
     this.prompts.clear()
+    this.blockTools.clear()
   }
 
   writeClipboard(text: string): Promise<void> {
@@ -289,8 +371,8 @@ export class TerminalView {
   }
 
   refreshVisibility(): void {
-    this.visible = this.requestedVisible && document.visibilityState === 'visible'
-    this.el.classList.toggle('active', this.visible)
+    this.visible = this.requestedVisible && document.visibilityState === 'visible' && (this.el.parentElement?.getClientRects().length ?? 0) > 0
+    this.el.classList.toggle('active', this.requestedVisible)
     if (this.visible) {
       this.hiddenSince = null
       this.loadWebgl()
@@ -302,8 +384,7 @@ export class TerminalView {
   updateRenderer(): void {
     const timeoutMs = TERMINAL_SLEEP_MS
     if (terminalShouldSleep({ visible: this.visible, hiddenSince: this.hiddenSince }, Date.now(), timeoutMs, this.callbacks.sleepingEnabled())) {
-      this.webgl?.dispose()
-      this.webgl = null
+      this.dropWebgl()
     }
   }
 
@@ -321,17 +402,41 @@ export class TerminalView {
     this.el.dataset.termBackground = String(bundle.xterm.background)
     this.bundleTerm = bundle.theme.term
     if (bundle.theme.kind === 'light') {
-      this.webgl?.dispose()
-      this.webgl = null
+      this.dropWebgl()
     } else if (this.opened) {
       this.loadWebgl()
     }
     this.arabic.setTheme(bundle.theme.term)
   }
 
+  /** Maximized panes keep lines to this many columns: the host gets narrower, so the fit addon never computes more. */
+  setColumnCap(cap: number | null): void {
+    if (cap === this.columnCap) return
+    this.columnCap = cap
+    if (cap === null) this.el.style.maxWidth = ''
+    this.scheduleFit()
+  }
+
+  private applyColumnCap(): void {
+    const cap = this.columnCap
+    const screen = this.el.querySelector<HTMLElement>('.xterm-screen')
+    const xterm = this.el.querySelector<HTMLElement>('.xterm')
+    if (cap === null || !screen || !xterm || this.term.cols < 1 || screen.clientWidth < 1) return
+    const style = getComputedStyle(xterm)
+    const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
+    const viewport = this.el.querySelector<HTMLElement>('.xterm-viewport')
+    const scrollbar = viewport ? viewport.offsetWidth - viewport.clientWidth : 0
+    const width = Math.ceil((screen.clientWidth / this.term.cols) * cap + padding + scrollbar)
+    const next = `${width}px`
+    if (this.el.style.maxWidth !== next) this.el.style.maxWidth = next
+  }
+
   fitNow(): void {
     if (!this.opened || this.el.clientWidth < 40 || this.el.clientHeight < 20) return
     try {
+      this.applyColumnCap()
+      const size = this.fitAddon.proposeDimensions()
+      if (!size || (size.cols === this.term.cols && size.rows === this.term.rows)) return
       this.fitAddon.fit()
       this.arabic.refresh()
     } catch (error) {
@@ -353,45 +458,60 @@ export class TerminalView {
   }
 
   dispose(): void {
-    cancelAnimationFrame(this.frame)
+    this.dropWebgl()
+    clearTimeout(this.fitTimer)
     this.observer.disconnect()
     this.search.dispose()
+    this.blockTools.dispose()
     this.prompts.dispose()
     this.highlights.dispose()
     this.arabic.dispose()
+    this.rendering.dispose()
+    this.osc.dispose()
+    this.shell.dispose()
     this.term.dispose()
     this.el.remove()
   }
 
   private scheduleFit(): void {
-    cancelAnimationFrame(this.frame)
-    this.frame = requestAnimationFrame(() => this.fitNow())
+    clearTimeout(this.fitTimer)
+    this.fitTimer = setTimeout(() => this.fitNow(), 120)
   }
 
   private loadWebgl(): void {
-    if (!this.opened || this.webgl) return
+    if (!this.opened || this.webgl || !this.visible) return
     // xterm's WebGL renderer applies 50% opacity to SGR dim text after its
     // contrast correction, which makes dim text fail contrast on light panes.
     if (document.documentElement.dataset.kind === 'light') return
+    if (!reserveRenderer(this.id, { visible: () => this.visible, release: () => this.dropWebgl() })) return
     try {
       const webgl = new WebglAddon()
       this.webgl = webgl
       webgl.onContextLoss(() => {
+        console.warn('[term] webgl context lost', this.id)
         webgl.dispose()
-        if (this.webgl === webgl) this.webgl = null
+        if (this.webgl === webgl) { this.webgl = null; releaseRenderer(this.id) }
       })
       this.term.loadAddon(webgl)
     } catch (error) {
       this.webgl = null
+      releaseRenderer(this.id)
       console.warn('WebGL renderer unavailable, using the DOM renderer', error)
     }
   }
 
+  private dropWebgl(): void {
+    this.webgl?.dispose()
+    this.webgl = null
+    releaseRenderer(this.id)
+  }
+
   private handleLink(event: MouseEvent, uri: string): void {
-    if (event.ctrlKey || event.metaKey) this.callbacks.openLink(uri)
+    if ((event.ctrlKey || event.metaKey) && /^https?:\/\//i.test(uri)) this.callbacks.openLink(uri)
   }
 
   private handleWheel(event: WheelEvent): void {
+    this.blockTools.noteWheel(event)
     if (!primaryModifierPressed(event)) return
     event.preventDefault()
     event.stopPropagation()
@@ -400,6 +520,7 @@ export class TerminalView {
 
   private handleKey(event: KeyboardEvent): boolean {
     if (event.type !== 'keydown') return true
+    if (!this.shell.handleKey(event)) return false
     if (!this.promptSelection.handleKey(event)) {
       event.preventDefault()
       return false

@@ -1057,6 +1057,26 @@ export function setSleepHiddenTerminals(sleepHiddenTerminals: boolean): void {
   void saveSettings({ sleepHiddenTerminals })
 }
 
+export function setShowTerminalImages(showTerminalImages: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, showTerminalImages } }))
+  void saveSettings({ showTerminalImages })
+}
+
+export function setLimitLineLength(limitLineLength: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, limitLineLength } }))
+  void saveSettings({ limitLineLength })
+}
+
+export function setReadingOnScroll(readingOnScroll: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, readingOnScroll } }))
+  void saveSettings({ readingOnScroll })
+}
+
+export function setFontLigatures(fontLigatures: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, fontLigatures } }))
+  void saveSettings({ fontLigatures })
+}
+
 export function setDimOtherPanes(dimOtherPanes: boolean): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, dimOtherPanes } }))
   void saveSettings({ dimOtherPanes })
@@ -1075,6 +1095,11 @@ export function setSidebarCollapsed(sidebarCollapsed: boolean): void {
 export function setSidebarSort(sidebarSort: SidebarSort): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, sidebarSort } }))
   void saveSettings({ sidebarSort })
+}
+
+export function setRailShowEmpty(railShowEmpty: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, railShowEmpty } }))
+  void saveSettings({ railShowEmpty })
 }
 
 export function setSidebarHideEmpty(sidebarHideEmpty: boolean): void {
@@ -1404,7 +1429,8 @@ export function buildPane(saved: SavedPane, project: Project): PaneState {
     compare: saved.compare,
     worktree: saved.worktree,
     pinned: saved.pinned === true ? true : undefined,
-    starred: saved.starred === true ? true : undefined
+    starred: saved.starred === true ? true : undefined,
+    care: saved.care
   }
 }
 

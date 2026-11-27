@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { hideEmptyProjects, isFolded, monogram, projectSummary, railBadge, sessionAge, sessionStatusLine, sidebarZones, sortProjects, waitingOnYou } from '../../src/shared/sidebarModel'
+import { hideEmptyProjects, isFolded, monogram, projectSummary, railBadge, railOrder, railTileState, sessionAge, sessionStatusLine, sidebarZones, sortProjects, waitingOnYou } from '../../src/shared/sidebarModel'
+import { projectStatus } from '../../src/shared/projectStatus'
 import type { Project } from '../../src/shared/types'
 
 const project = (id: string, name: string, pinned = false): Project => ({ id, name, folder: `/x/${id}`, defaultAgent: 'claude', ...(pinned ? { pinned: true } : {}) })
@@ -71,8 +72,8 @@ describe('rows', () => {
     expect(monogram('acme-web')).toBe('AW')
     expect(monogram('Smoke')).toBe('SM')
     expect(monogram('  ')).toBe('?')
-    expect(railBadge(['working', 'needs'])).toBe('!')
-    expect(railBadge(['working', 'working', 'idle'])).toBe('2')
+    expect(railBadge(['working', 'needs', 'needs'])).toBe('2')
+    expect(railBadge(['working', 'working', 'idle'])).toBe('')
     expect(railBadge(['idle'])).toBe('')
   })
   it('unfolds everything while filtering', () => {
@@ -118,5 +119,32 @@ describe('sidebarZones', () => {
     expect(ids(zones.active)).toEqual(['p', 'a', 'b', 'c', 'd', 'e'])
     expect(zones.pinned).toEqual([])
     expect(zones.quiet).toEqual([])
+  })
+})
+
+describe('railTileState', () => {
+  it('picks one state: needs, then selected, unread, working, open', () => {
+    expect(railTileState(projectStatus(['needs', 'working'], 1), true)).toBe('needs')
+    expect(railTileState(projectStatus(['working'], 1), true)).toBe('selected')
+    expect(railTileState(projectStatus(['working', 'done'], 1), false)).toBe('unread')
+    expect(railTileState(projectStatus(['working', 'idle']), false)).toBe('working')
+    expect(railTileState(projectStatus(['idle']), false)).toBe('open')
+    expect(railTileState(projectStatus(['exited']), false)).toBe('none')
+    expect(railTileState(projectStatus([]), false)).toBe('none')
+  })
+})
+
+describe('railOrder', () => {
+  const list = [project('a', 'A'), project('b', 'B'), project('c', 'C'), project('d', 'D'), project('e', 'E')]
+  const statuses = { a: projectStatus(['idle']), b: projectStatus([]), c: projectStatus(['needs']), d: projectStatus(['working', 'needs']), e: projectStatus(['exited']) }
+  const ids = (items: readonly { id: string }[]) => items.map((item) => item.id)
+  it('puts projects that need you first, then open ones in the given order, then the empty ones', () => {
+    const groups = railOrder(list, statuses)
+    expect(ids(groups.needs)).toEqual(['c', 'd'])
+    expect(ids(groups.open)).toEqual(['a'])
+    expect(ids(groups.empty)).toEqual(['b', 'e'])
+  })
+  it('treats a project without a status as empty', () => {
+    expect(ids(railOrder(list, {}).empty)).toEqual(['a', 'b', 'c', 'd', 'e'])
   })
 })

@@ -6,6 +6,7 @@ import { createTurnPreload } from './turn'
 import { createMcpPreload } from './mcp'
 import { createChatPreload } from './chat'
 import { MINI_IPC } from '../shared/miniWindow'
+import { AWAY_IPC, isAwayChange } from '../shared/away'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
 import { isRemoteControlBuild } from '../shared/remoteBuild'
@@ -157,6 +158,9 @@ const api: GridApi = {
   readInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsRead, folder, name),
   writeInstruction: (request) => ipcRenderer.invoke(IPC.instructionsWrite, request),
   openInstruction: (folder, name) => ipcRenderer.invoke(IPC.instructionsOpen, folder, name),
+  shellHistory: (projectId) => ipcRenderer.invoke(IPC.shellHistoryGet, projectId),
+  addShellHistory: (projectId, command, cwd) => ipcRenderer.invoke(IPC.shellHistoryAdd, projectId, command, cwd),
+  setTerminalProgress: (progress) => ipcRenderer.send(IPC.terminalProgress, progress),
   notify: (request) => ipcRenderer.send(IPC.notify, request),
   onNotifyClick: (listener) => subscribe<[string, import('../shared/notificationAction').NotificationAnswer?]>(IPC.notifyClick, listener),
   onLimitWarning: (listener) => subscribe<[string]>(IPC.limitWarning, listener),
@@ -245,6 +249,11 @@ const api: GridApi = {
     ipcRenderer.on(IPC.closeCheck, () => {
       ipcRenderer.send(IPC.closeCheckAck)
       void listener().then((ok) => ipcRenderer.send(IPC.closeCheckDone, ok), () => ipcRenderer.send(IPC.closeCheckDone, true))
+    })
+  },
+  onAway: (listener) => {
+    ipcRenderer.on(AWAY_IPC.changed, (_event, change: unknown) => {
+      if (isAwayChange(change)) listener(change)
     })
   },
   onFlushRequest: (listener) => {

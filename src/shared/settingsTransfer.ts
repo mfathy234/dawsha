@@ -24,13 +24,21 @@ export const INCLUDED_KEYS = [
   'crew',
   'sessionInfo',
   'warnUsageLimits',
+  'catchUp',
   'autoUpdateCheck',
   'sidebarCollapsed',
   'sidebarSort',
   'sidebarHideEmpty',
+  'railShowEmpty',
   'dimOtherPanes',
   'showRecap',
   'sleepHiddenTerminals',
+  'shellDrawerHeight',
+  'notifyLongCommands',
+  'showTerminalImages',
+  'fontLigatures',
+  'readingOnScroll',
+  'limitLineLength',
   'colorSessionsByTag',
   'sidebarWidth',
   'othersCollapsed',
@@ -159,7 +167,7 @@ const fail = (error: string): ParseResult => ({ ok: false, error })
 
 const LIST_KEYS = ['projects', 'layouts'] as const
 const OBJECT_KEYS = ['highlights', 'theme', 'recordings', 'sessionInfo', 'crew', 'appearance'] as const
-const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits'] as const
+const BOOLEAN_KEYS = ['autoUpdateCheck', 'sidebarCollapsed', 'sidebarHideEmpty', 'railShowEmpty', 'dimOtherPanes', 'showRecap', 'sleepHiddenTerminals', 'limitLineLength', 'notifyLongCommands', 'showTerminalImages', 'fontLigatures', 'readingOnScroll', 'colorSessionsByTag', 'othersCollapsed', 'focusMovesSelected', 'warnUsageLimits', 'catchUp'] as const
 
 function checkShapes(data: Raw): string | null {
   for (const key of LIST_KEYS) {
@@ -182,6 +190,7 @@ function checkShapes(data: Raw): string | null {
   if (data.sidebarWidth !== undefined && (typeof data.sidebarWidth !== 'number' || !Number.isFinite(data.sidebarWidth))) {
     return '"sidebarWidth" must be a number.'
   }
+  if (data.shellDrawerHeight !== undefined && (typeof data.shellDrawerHeight !== 'number' || !Number.isFinite(data.shellDrawerHeight))) return '"shellDrawerHeight" must be a number.'
   if (isRecord(data.theme) && typeof data.theme.id !== 'string') return '"theme.id" must be text.'
   return null
 }
@@ -272,13 +281,21 @@ const PREFERENCE_LABELS: [keyof TransferData, string][] = [
   ['recordings', 'Recording settings'],
   ['crew', 'Crew members'],
   ['sessionInfo', 'Notifications'],
+  ['catchUp', 'Catch-up card'],
   ['autoUpdateCheck', 'Update checks'],
   ['sidebarCollapsed', 'Sidebar'],
   ['sidebarSort', 'Sidebar'],
   ['sidebarHideEmpty', 'Sidebar'],
+  ['railShowEmpty', 'Sidebar'],
   ['dimOtherPanes', 'Dim others'],
   ['showRecap', 'Session recap'],
   ['sleepHiddenTerminals', 'Sleep hidden terminals'],
+  ['shellDrawerHeight', 'Shell drawer height'],
+  ['notifyLongCommands', 'Long shell commands'],
+  ['showTerminalImages', 'Show images in the terminal'],
+  ['fontLigatures', 'Font ligatures'],
+  ['readingOnScroll', 'Reading view on scroll'],
+  ['limitLineLength', 'Limit line length in full screen'],
   ['colorSessionsByTag', 'Tag colours'],
   ['sidebarWidth', 'Sidebar'],
   ['sidePanel', 'Side panel'],

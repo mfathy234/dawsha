@@ -29,6 +29,7 @@ import type { ChatView } from '../shared/chatLog'
 import type { CrewIdentity, CrewLaunch } from '../shared/crew'
 import type { AvatarState } from '../shared/crewLive'
 import type { GoalLive } from '../shared/crewLead'
+import type { SessionCare } from '../shared/sessionCare'
 
 export interface TermState {
   id: string
@@ -74,11 +75,13 @@ export interface PaneState {
   pinned?: boolean
   /** Pinned to the top of the sidebar and the session tabs; kept ahead of the other panes. */
   starred?: boolean
+  /** Unread, a note, a snooze and a when-done rule. */
+  care?: SessionCare
 }
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'files' | 'crew'
+export type View = 'grid' | 'projects' | 'agents' | 'skills' | 'usage' | 'work' | 'settings' | 'replay' | 'files' | 'crew' | 'inbox'
 
 export interface ReplayRef {
   id: string
@@ -110,6 +113,7 @@ export interface WhatsNewView {
 }
 
 export interface AppState {
+  terminalProgress: Record<string, { value: import('../shared/terminalOsc').TerminalProgress; at: number }>
   ready: boolean
   settings: Settings
   panes: PaneState[]
@@ -168,6 +172,7 @@ export interface AppState {
 }
 
 export const initialState = (): AppState => ({
+  terminalProgress: {},
   ready: false,
   settings: defaultSettings(),
   panes: [],

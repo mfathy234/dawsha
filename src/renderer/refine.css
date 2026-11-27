@@ -1,0 +1,82 @@
+/* 1.10 refinement: the last word on type, weight, numerals, header, footer, menus, empty states, focus and the light theme. */
+
+.pane-foot,
+.info-changes,
+.limit-rings,
+.limit-ring,
+.files-review-stat,
+.files-stat,
+.strip-index,
+.strip-status,
+.strip-plan { font-variant-numeric: tabular-nums; }
+
+.pane-header,
+.panes-quiet .pane-header { height: 36px; }
+
+.pane.maximized .pane-header > .pane-recap {
+  flex: 1 1 0;
+  max-width: 60ch;
+  margin-inline: auto;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.pane-foot {
+  min-height: var(--h-md);
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.pane-foot > .chip-branch { margin-inline-start: auto; }
+.pane-foot :is(.chip, button) { border-color: transparent; background: transparent; box-shadow: none; color: var(--text-3); font-size: var(--fs-12); }
+.pane-foot :is(.chip, button):hover { background: var(--hover); color: var(--text); }
+
+:is(.popover.menu, .context-menu, .ctx-menu, .select-menu-popover) {
+  padding: var(--sp-1);
+  border-radius: var(--r-pop);
+  animation: menu-in var(--dur-2) var(--ease-out);
+}
+@keyframes menu-in {
+  from { opacity: 0; translate: 0 4px; }
+}
+.menu-item,
+.context-menu button,
+.select-menu button { height: auto; min-height: var(--h-md); }
+.ctx-item { height: auto; min-height: var(--h-md); border-radius: var(--r-control); }
+:is(.menu-kbd, .ctx-keys) {
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+}
+.ctx-item:hover:not(:disabled),
+.ctx-item:focus-visible { background: var(--hover); }
+
+.empty h2 { font-size: var(--fs-3); font-weight: var(--w-medium); }
+.empty p { max-width: 360px; color: var(--text-3); }
+:is(.pane, .side-panel, .settings-view) .empty { align-items: flex-start; text-align: start; }
+
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+:is([role='tab'], .strip-label, .strip-tab, .sel-row, .files-review-open, .menu-item, .ctx-item, .rail-btn, .settings-tab, .files-tree-row, .option):focus-visible { outline-offset: -2px; }
+
+:root[data-kind='light'] input[type='checkbox'],
+:root[data-kind='light'] input[type='radio'] { background: var(--surface); }
+
+.pane.maximized .term-host .xterm { padding: var(--sp-4) var(--sp-6); }
+
+.pane-header > .pane-reading[hidden] { display: none; }
+@container pane (max-width: 640px) { .pane-header > .pane-reading { display: none; } }
+
+.rail-btn.rail-views { position: relative; }
+.rail-btn.rail-views .rail-badge { position: absolute; top: 2px; inset-inline-end: 2px; background: none; color: var(--text-2); font-size: var(--fs-0); font-weight: var(--w-medium); line-height: 1; font-variant-numeric: tabular-nums; }
+.rail-btn.rail-mono.rail-tile.rail-working { color: var(--st-working); }
+
+.settings-panel .set-row { min-height: 56px; padding-block: var(--sp-2); align-items: center; box-shadow: 0 1px 0 var(--line); border-radius: 0; }
+.settings-panel .set-row:last-child { box-shadow: none; }
+.settings-panel .set-control { justify-self: end; padding-top: 0; }
+.settings-content > * { max-width: 640px; }
+
+:root[data-kind='light'] :is(.segmented > button, .segmented > .tab)[aria-pressed='true'] { box-shadow: 0 0 0 1px var(--line-strong); }

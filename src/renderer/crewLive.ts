@@ -1,5 +1,5 @@
 import { api } from './api'
-import { acknowledgeAttention } from './attention'
+import { markRead } from './sessionCare'
 import { patchRuns } from './crewActions'
 import { derivePanes, matchAll, primaryTab, sessionIdOf, type PaneView } from './derive'
 import { store, type AppState, type PaneState, type TermState } from './state'
@@ -90,7 +90,7 @@ export function installCrewLive(): void {
 export function acknowledgeRun(runId: string, paneId: string): void {
   const track = tracks.get(runId)
   if (track && track.state === 'done') tracks.set(runId, { ...track, seen: true })
-  acknowledgeAttention(paneId)
+  markRead(paneId)
   evaluate(store.state)
 }
 

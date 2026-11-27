@@ -30,7 +30,7 @@
 }
 
 .pane.focused {
-  box-shadow: var(--pane-focus-ring), var(--shadow-lift);
+  box-shadow: var(--pane-focus-ring);
 }
 
 /* Needs you: a 1px amber ring that pulses three times and then holds; the header stays untinted. */
@@ -49,11 +49,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .pane.needs-you {
-    animation: none;
-  }
-}
 
 /* One state lamp everywhere: working is a neutral spinning ring, needs an amber diamond, done a mint tick, idle a hollow dot. */
 .state-icon.state-working,
@@ -119,7 +114,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--fs-body);
-  font-weight: 600;
+  font-weight: var(--w-medium);
   line-height: 18px;
   color: var(--text);
 }
@@ -263,6 +258,27 @@
   display: none;
 }
 
+.pane-body > .pane-permission {
+  position: absolute;
+  inset-inline: var(--s-2);
+  bottom: var(--s-2);
+  margin: 0;
+  max-height: calc(100% - var(--s-4));
+  overflow: auto;
+  box-shadow: var(--shadow-pop);
+  z-index: 5;
+}
+
+.pane-body > .pane-hint {
+  position: absolute;
+  inset-inline: var(--s-2);
+  top: var(--s-2);
+  z-index: 4;
+  background: var(--raised);
+  box-shadow: var(--shadow-pop);
+  border-radius: var(--r-card);
+}
+
 .pane-permission-head {
   display: flex;
   align-items: center;
@@ -276,7 +292,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: var(--w-medium);
 }
 
 .pane-permission-tool {
@@ -287,7 +303,7 @@
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: var(--fs-status);
-  font-weight: 400;
+  font-weight: var(--w-regular);
 }
 
 .pane-permission-command {
@@ -362,10 +378,10 @@
   padding: 0 4px;
   border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: var(--r-micro);
   font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: var(--fs-0);
+  font-weight: var(--w-medium);
   line-height: 1;
   opacity: 0.75;
 }

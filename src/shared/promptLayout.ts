@@ -81,8 +81,10 @@ export function promptLayout(rows: string[], _cols: number): PromptLayout | null
     let col = span.col
     for (const char of span.text) {
       text += char
-      cells.push({ row: span.row, col })
-      col += Math.max(1, displayWidth(char))
+      const width = displayWidth(char)
+      const cell = width === 0 ? (cells.at(-1) ?? { row: span.row, col }) : { row: span.row, col }
+      for (let unit = 0; unit < char.length; unit += 1) cells.push(cell)
+      col += width
     }
   })
   const trimmed = text.replace(/\s+$/, '')

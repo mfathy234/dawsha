@@ -10,14 +10,25 @@ const MAX_RECAP = 240
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f]/g
 
+/** Claude prints its own recap line in the terminal; the pane header already shows the recap. */
+export function isRecapLine(text: string): boolean {
+  return RECAP_LINE.test(text.trim())
+}
+
 export function cleanRecap(text: string): string {
   const plain = text
+    .replace(/\s*\(turn off recaps?\b[^)]*\)\s*$/i, '')
     .replace(CONTROL, ' ')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/[*_`#>]+/g, '')
     .replace(/\s+/g, ' ')
     .trim()
   return plain.length > MAX_RECAP ? `${plain.slice(0, MAX_RECAP - 1)}…` : plain
+}
+
+/** A transient tool-only screen must not collapse the session's recap row. */
+export function keepRecap(previous: string, screen: string): string {
+  return recapFromScreen(screen) || previous
 }
 
 /** A line that is only a border or rule, such as the lines around Claude's input box. */

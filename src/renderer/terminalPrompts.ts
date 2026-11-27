@@ -37,6 +37,11 @@ export class TerminalPrompts {
     return this.live().length
   }
 
+  /** The buffer rows where you sent a prompt, oldest first. */
+  lines(): number[] {
+    return this.live().map((marker) => marker.line)
+  }
+
   get viewportY(): number {
     return this.term.buffer.active.viewportY
   }

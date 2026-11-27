@@ -11,7 +11,8 @@ test('Ctrl+Shift+F finds text in the terminal, steps through matches and closes 
     const host = page.locator('.term-host.active')
     const id = (await host.getAttribute('data-term-id'))!
     await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/>\s*$/m)
-    await feedTerminal(page, id, '\r\nBuild failed: Needle missing\r\nretrying\r\nneedle found in cache\r\nNEEDLE again\r\n')
+    const text = '\x1b[2J\x1b[H\r\nBuild failed: Needle missing\r\nretrying\r\nneedle found in cache\r\nNEEDLE again\r\n'
+    await feedTerminal(page, id, text)
     await expect.poll(() => bufferText(page, id)).toContain('NEEDLE again')
 
     await host.click()
@@ -19,8 +20,13 @@ test('Ctrl+Shift+F finds text in the terminal, steps through matches and closes 
     const bar = page.getByRole('search')
     const input = bar.getByLabel('Find in terminal')
     await expect(input).toBeFocused()
-    await input.fill('needle')
-    await expect(bar.locator('.term-find-count')).toHaveText(/of 3$/)
+    // ConPTY can repaint over the fed text after the first read, so feed it again until the search sees all three.
+    await expect(async () => {
+      await feedTerminal(page, id, text)
+      await input.fill('')
+      await input.fill('needle')
+      await expect(bar.locator('.term-find-count')).toHaveText(/of 3$/, { timeout: 2000 })
+    }).toPass({ timeout: 20_000 })
     const first = await bar.locator('.term-find-count').textContent()
     await input.press('Enter')
     await expect(bar.locator('.term-find-count')).not.toHaveText(first!)

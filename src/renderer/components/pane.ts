@@ -15,8 +15,8 @@ import {
   restartTab,
   restoreGrid,
   setActiveTab,
-  togglePinned,
   toggleStarred,
+  togglePinned,
   showPaneDiff,
   openChanges,
   paneHasRepo,
@@ -26,7 +26,8 @@ import {
   toggleMaximize,
   makeLarge,
   canMakeLargePane,
-  tagSession
+  tagSession,
+  startSessionIn
 } from '../actions'
 import { reviewSession } from '../reviewRun'
 import { derivePanes, type PaneView } from '../derive'
@@ -41,7 +42,7 @@ import { replayPane, toggleRecordingPause } from '../replayActions'
 import { api } from '../api'
 import { COPY_SESSION_NAME, copySessionName } from '../copySessionName'
 import { sessionLabel as sessionRowName } from './sidebarRows'
-import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
+import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal, toggleReading } from '../terminalActions'
 import type { AgentKind, TabAgent } from '../../shared/types'
 import { describeSync, formatSync } from '../../shared/gitBranches'
 import { keycaps } from './keycaps'
@@ -72,15 +73,20 @@ import { setStatePillSuffix, stateIcon, statePill } from './stateIcon'
 import { timeInState } from '../stateClock'
 import { toggleTimeline } from '../timelineActions'
 import { openMergeBack, paneWorktree } from '../mergeBackActions'
+import { ruleLineFor } from '../whenDone'
+import { OverlapNotice } from './overlapNotice'
 import { recordState } from '../timelineLog'
 import { TimelinePanel } from './timelinePanel'
 import './paneCalm.css'
 import './paneQuiet.css'
 import '../chat/chatQuiet.css'
 import './paneMeter.css'
+import './paneView.css'
 import './contextRing.css'
 import './grid.css'
-import { recapFromScreen } from '../../shared/recap'
+import { keepRecap } from '../../shared/recap'
+import { terminalDirectory } from '../terminalSession'
+import { ShellDrawer } from '../shellDrawer'
 import { toolLineFromScreen } from '../../shared/sessionLine'
 import { sessionNote, setSessionNote } from '../sessionNotes'
 import { planBadge } from '../../shared/quietReply'
@@ -100,6 +106,7 @@ const RESUMED_CHIP_MS = 60_000
 const RECAP_REFRESH_MS = 2_500
 const RECAP_SCREEN_ROWS = 60
 // Session time and last activity alone are not worth a footer.
+const TERMINAL_COLUMN_CAP = 120
 const FOOT_FILLER = ['info-elapsed', 'info-age']
 
 export class PaneComponent {
@@ -123,6 +130,7 @@ export class PaneComponent {
     'aria-haspopup': 'menu',
     onClick: () => openPaneBranchMenu(this.paneId, this.branch)
   })
+  private readonly rule = h('span', { class: 'pane-rule', role: 'status', hidden: true })
   private readonly pr = h('button', { class: 'link-quiet pane-pr', type: 'button', hidden: true, 'aria-haspopup': 'menu', onClick: () => openPrMenu(this.paneId, this.pr) })
   private prSignature = ''
   private readonly branchName = h('span', { class: 'chip-text' })
@@ -134,8 +142,13 @@ export class PaneComponent {
   private chatShown = false
   private stateSignature = ''
   private readonly recap = h('div', { class: 'pane-recap', dir: 'auto', hidden: true })
+  private readonly titles = h('div', { class: 'pane-titles' })
+  /** In the tab view the branch and the recap sit in the header row instead of the footer and the row under it. */
+  private inHeader = false
   private recapText = ''
   private recapAt = 0
+  private recapTab = ''
+  private readonly recaps = new Map<string, string>()
   private readonly plan = h('div', { class: 'pane-plan', hidden: true })
   private planSignature = ''
   private readonly reply: QuietReply
@@ -158,9 +171,12 @@ export class PaneComponent {
   private actionsAnchor: HTMLElement | null = null
   private readonly restart = h('button', { class: 'btn small pane-restart', type: 'button' }, 'Restart')
   private readonly maxButton = h('span', { class: 'slot pane-maximize-slot' })
+  private readonly readingButton = iconButton('Reading view (Ctrl+Alt+R)', ICONS.reading, () => toggleReading(this.paneId), 'pane-reading')
   private readonly closeButton = iconButton('Close pane', ICONS.close, () => void closePane(this.paneId), 'close-pane')
   private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
   private readonly body = h('div', { class: 'pane-body' })
+  private readonly overlap: OverlapNotice
+  private readonly drawer: ShellDrawer
   private tabSignature = ''
   private menu: HTMLElement | null = null
   private menuAnchor: HTMLElement | null = null
@@ -168,13 +184,15 @@ export class PaneComponent {
   private lastActiveTab = ''
 
   constructor(readonly paneId: string) {
+    this.drawer = new ShellDrawer(paneId)
     this.branch.append(icon(ICONS.branch), this.branchName, this.branchSync)
+    this.titles.append(this.index, this.projectName, this.fresh)
     this.pin.append(icon(ICONS.pin))
     const header = h(
       'div',
       { class: 'pane-header', 'data-tour': 'pane-header' },
       this.mark,
-      h('div', { class: 'pane-titles' }, this.index, this.projectName, this.fresh),
+      this.titles,
       this.pin,
       this.tagHost,
       this.resumed,
@@ -185,6 +203,7 @@ export class PaneComponent {
       this.viewSwitch.el,
       this.restart,
       this.maxButton,
+      this.readingButton,
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
       this.closeButton
     )
@@ -221,10 +240,10 @@ export class PaneComponent {
       if (!this.el.classList.contains('maximized') || target.closest('button')) return
       toggleDetails(paneId)
     })
-    const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
+    const work = h('div', { class: 'pane-work' }, this.tabs, this.body, this.drawer.el)
     this.timeline = new TimelinePanel(paneId)
     const content = h('div', { class: 'pane-content' }, work, this.details, this.timeline.el)
-    this.foot.append(this.info, this.pr, this.branch)
+    this.foot.append(this.info, this.rule, this.pr, this.branch)
     this.reply = new QuietReply(paneId, {
       review: () => this.reviewInFiles(),
       send: (text) => {
@@ -237,10 +256,13 @@ export class PaneComponent {
       planChanged: () => this.updatePlan(),
       onScreen: () => this.el.offsetParent !== null
     })
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.plan, this.recap, this.hint, content, this.reply.el, this.permission, this.foot)
+    this.body.append(this.hint, this.permission)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.plan, this.recap, content, this.reply.el, this.foot)
     // The chat can learn of a usage limit after the pane last rendered, so it tells the pane to update its pill.
     this.chat = new PaneChat({ ...chatHostFor(paneId, () => this.current), limitChanged: () => this.chatShown && this.showLimitState() }, this.permission)
     this.body.append(this.chat.el)
+    this.overlap = new OverlapNotice(paneId)
+    this.body.append(this.overlap.el)
     this.watchFileDrops()
     // Header buttons (menu, details, maximize, close) act on this pane without making it the focused one,
     // which in Calm focus would also move it into the large slot.
@@ -262,7 +284,8 @@ export class PaneComponent {
     this.updateMark(view)
     const projectName = view.named ? (view.project?.name ?? '') : ''
     this.projectName.hidden = false
-    this.projectName.textContent = [projectName, AGENT_NAMES[view.agent]].filter((part) => part !== '').join(' · ')
+    this.projectName.textContent = maximized ? projectName || AGENT_NAMES[view.agent] : [projectName, AGENT_NAMES[view.agent]].filter((part) => part !== '').join(' · ')
+    this.placeInHeader(maximized)
     this.fresh.hidden = view.named
     this.updateTag(view.tag, view.tagAuto)
     this.index.title = [view.fullTitle ?? title, projectName, view.tag ? SESSION_TAG_LABELS[view.tag] : ''].filter((part) => part !== '').join(' · ')
@@ -294,7 +317,9 @@ export class PaneComponent {
     this.updateInfo(view, maximized)
     this.updateRing(view)
     this.updatePr()
-    this.foot.hidden = this.info.hidden && this.branch.hidden && this.pr.hidden
+    this.updateRule()
+    this.overlap.update(view)
+    this.foot.hidden = this.info.hidden && (this.inHeader || this.branch.hidden) && this.pr.hidden && this.rule.hidden
     this.updateRecap(view)
     this.updateHint(view)
     const asking = state === 'needs' || (this.chatShown && detectPermissionPrompt(permissionTail(this.paneId)))
@@ -307,13 +332,33 @@ export class PaneComponent {
     this.timeline.update(view, maximized && view.timelineOpen)
     this.el.classList.toggle('with-timeline', maximized && view.timelineOpen)
     this.restart.hidden = !view.activeExited
+    this.readingButton.hidden = !maximized || this.chatShown
     this.updateMaximizeButton(maximized)
     this.updateTabs(view)
-    this.updateTerminals(view)
+    this.updateTerminals(view, maximized && store.state.settings.limitLineLength ? TERMINAL_COLUMN_CAP : null)
+    this.drawer.update()
     if (focused && this.lastActiveTab && this.lastActiveTab !== view.pane.activeTabId) {
       ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
     }
     this.lastActiveTab = view.pane.activeTabId
+  }
+
+  private updateRule(): void {
+    const line = ruleLineFor(this.paneId)
+    this.rule.hidden = line === ''
+    if (this.rule.textContent !== line) this.rule.textContent = line
+  }
+
+  /** The same branch chip and recap line move into the header row in the tab view, so the header is one row. */
+  private placeInHeader(maximized: boolean): void {
+    if (maximized === this.inHeader) return
+    this.inHeader = maximized
+    if (maximized) {
+      this.titles.after(this.branch, this.recap)
+    } else {
+      this.foot.append(this.branch)
+      this.hint.before(this.recap)
+    }
   }
 
   // The number prefix stays put; only the session name picks its own direction, so an Arabic title does not reorder '4 · '.
@@ -376,7 +421,7 @@ export class PaneComponent {
     this.body.classList.toggle('chat-on', shown)
     if (shown && this.chat.limitReached) this.showLimitState()
     this.el.classList.toggle('has-view-switch', chatCapable(view.agent))
-    if (!this.chat.holdsPermission && this.permission.parentElement !== this.el) this.el.insertBefore(this.permission, this.foot)
+    if (!this.chat.holdsPermission && this.permission.parentElement !== this.body) this.body.append(this.permission)
     if (shown !== this.chatShown) {
       this.chatShown = shown
       if (shown) this.chat.focusComposer()
@@ -538,15 +583,23 @@ export class PaneComponent {
 
   // Read off the visible screen, so no file is read; at most once per RECAP_REFRESH_MS for each pane.
   private updateRecap(view: PaneView): void {
+    if (view.primaryTabId !== this.recapTab) {
+      this.recapTab = view.primaryTabId
+      this.recapText = this.recaps.get(this.recapTab) ?? ''
+      this.recap.textContent = this.recapText
+      this.recap.title = this.recapText
+      this.recapAt = 0
+    }
     const now = Date.now()
     if (now - this.recapAt < RECAP_REFRESH_MS) return
     this.recapAt = now
     const screen = getTerminal(view.primaryTabId)?.tailText(RECAP_SCREEN_ROWS) ?? ''
-    const text = recapFromScreen(screen)
+    const text = keepRecap(this.recapText, screen)
     // The sidebar's second line reads these even when the pane's own recap line is switched off.
     setSessionNote(this.paneId, { recap: text, tool: toolLineFromScreen(screen) })
-    if (!store.state.settings.showRecap || text === this.recapText) return
+    if (text === this.recapText) return
     this.recapText = text
+    this.recaps.set(this.recapTab, text)
     this.recap.textContent = text
     this.recap.title = text
   }
@@ -739,8 +792,8 @@ export class PaneComponent {
     const largeItems = canMakeLargePane(store.state, this.paneId)
       ? [item('Make large', () => makeLarge(this.paneId), ICONS.maximize, 'pane.make-large')]
       : []
-    const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
     const starItem = item(this.current?.pane.starred === true ? 'Unpin' : 'Pin to top', () => toggleStarred(this.paneId), ICONS.pin)
+    const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
     const source = this.current?.agent ?? 'shell'
     const handoffs =
       source === 'shell'
@@ -867,7 +920,7 @@ export class PaneComponent {
   private updateTabs(view: PaneView): void {
     const single = view.tabs.length === 1
     this.tabs.hidden = single
-    const signature = JSON.stringify([view.tabs, single])
+    const signature = JSON.stringify([view.tabs, single, store.state.terminalProgress])
     if (signature === this.tabSignature) return
     this.tabSignature = signature
     this.closeMenu()
@@ -903,6 +956,8 @@ export class PaneComponent {
       agentMark(tab.agent),
       label
     )
+    const progress = store.state.terminalProgress[tab.id]?.value
+    if (progress) wrapper.append(h('span', { class: 'strip-bar terminal-progress', role: 'progressbar', 'aria-label': 'Terminal progress', 'aria-valuenow': String(progress.percent), 'data-state': String(progress.state) }, h('i', { style: `width: ${progress.state === 3 ? 100 : progress.percent}%` })))
     enableDrag<HTMLElement>(wrapper, {
       ignore: '.tab-close',
       targetAt: (x, y) => this.tabTargetAt(x, y, tab.id),
@@ -920,11 +975,12 @@ export class PaneComponent {
     return wrapper
   }
 
-  private updateTerminals(view: PaneView): void {
+  private updateTerminals(view: PaneView, columnCap: number | null): void {
     for (const tab of view.pane.tabs) {
       const terminal = ensureTerminal(tab.id, view.pane.fontSize)
       terminal.mount(this.body)
       terminal.setFontSize(view.pane.fontSize)
+      terminal.setColumnCap(columnCap)
       terminal.setVisible(tab.id === view.pane.activeTabId)
     }
   }
@@ -942,6 +998,12 @@ export class PaneComponent {
       h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => choose(agent) }, agentMark(agent), text)
     const first = item('Claude session', 'claude')
     this.menu = h('div', { class: 'popover menu', role: 'menu' }, first, item('Codex session', 'codex'), item('Gemini session', 'gemini'), item('Shell', 'shell'))
+    const view = this.current
+    const folder = view && terminalDirectory(view.pane.activeTabId)
+    if (view && folder) this.menu.append(h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => {
+      this.closeMenu()
+      void startSessionIn(view.pane.projectId, folder)
+    } }, 'New session here'))
     this.menu.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
@@ -980,6 +1042,7 @@ export class PaneComponent {
     this.timeline.dispose()
     this.chat.dispose()
     this.reply.dispose()
+    this.drawer.dispose()
     this.el.remove()
   }
 }

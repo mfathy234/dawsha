@@ -6,7 +6,7 @@ import { folderOfPane, store } from '../state'
 import { continueIn } from '../handoffActions'
 import type { PaneView } from '../derive'
 import { timeInState } from '../stateClock'
-import { setSessionNote } from '../sessionNotes'
+import { sessionNotesVersion, setSessionNote } from '../sessionNotes'
 import { setPanelSource } from '../sidePanelSources'
 import { getTerminal } from '../terminals'
 import { openReviewInFiles } from '../files/filesActions'
@@ -28,7 +28,11 @@ export function chatHostFor(paneId: string, current: () => PaneView | null): Cha
     interrupt: () => interruptAgent(tabId()),
     screenTail: () => getTerminal(tabId())?.tailText(MENU_ROWS) ?? '',
     answer: (steps) => void answerMenu(tabId(), steps),
-    plan: (label, current) => setSessionNote(paneId, { plan: label, planNow: current }),
+    plan: (label, current) => {
+      const before = sessionNotesVersion()
+      setSessionNote(paneId, { plan: label, planNow: current })
+      if (sessionNotesVersion() !== before) store.set((state) => ({ ...state }))
+    },
     source: (source) => setPanelSource(paneId, source),
     notify: (title, body) => api.notify({ paneId, title, body, sound: store.state.settings.sessionInfo.sound }),
     reviewChanges: () => {

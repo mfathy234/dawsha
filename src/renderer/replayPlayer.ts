@@ -1,5 +1,6 @@
 import { SearchAddon } from '@xterm/addon-search'
 import { Terminal } from '@xterm/xterm'
+import { loadTerminalUnicode } from '../shared/terminalUnicode'
 import { TerminalArabic } from './terminalArabic'
 import type { TextOrder } from '../shared/arabicRows'
 import type { ParsedCast } from '../shared/cast'
@@ -74,6 +75,7 @@ export class ReplayPlayer {
       theme: bundle.xterm,
       minimumContrastRatio: bundle.minimumContrastRatio
     })
+    loadTerminalUnicode(this.term)
     this.term.loadAddon(this.search)
     this.arabic = new TerminalArabic(this.term, () => textOrder)
     this.arabic.setTheme(bundle.theme.term)

@@ -2,11 +2,17 @@ import { withAlpha } from './contrast'
 
 export type HighlightColor = 'red' | 'amber' | 'green' | 'blue' | 'purple'
 
+export type HighlightTrigger = 'notify' | 'needs'
+
 export interface HighlightRule {
   pattern: string
   color: HighlightColor
   regex?: boolean
+  /** What a matching line also does: send a notification, or mark the session as needing the user. */
+  trigger?: HighlightTrigger
 }
+
+export const HIGHLIGHT_TRIGGERS: HighlightTrigger[] = ['notify', 'needs']
 
 export interface HighlightSettings {
   enabled: boolean
@@ -77,7 +83,9 @@ export function sanitizeRule(value: unknown): HighlightRule | null {
   if (!color) return null
   const regex = raw.regex === true
   if (validateRule(pattern, regex) !== null) return null
-  return regex ? { pattern, color, regex: true } : { pattern, color }
+  const trigger = HIGHLIGHT_TRIGGERS.find((t) => t === raw.trigger)
+  const base: HighlightRule = regex ? { pattern, color, regex: true } : { pattern, color }
+  return trigger ? { ...base, trigger } : base
 }
 
 export function sanitizeHighlights(value: unknown): HighlightSettings {
@@ -100,24 +108,24 @@ export function sanitizeHighlights(value: unknown): HighlightSettings {
 
 export const sameRules = (a: HighlightRule[], b: HighlightRule[]): boolean =>
   a.length === b.length &&
-  a.every((rule, i) => rule.pattern === b[i].pattern && rule.color === b[i].color && (rule.regex === true) === (b[i].regex === true))
+  a.every((rule, i) => rule.pattern === b[i].pattern && rule.color === b[i].color && (rule.regex === true) === (b[i].regex === true) && rule.trigger === b[i].trigger)
 
 export interface CompiledRules {
   test(line: string): HighlightColor | null
+  match(line: string): HighlightRule | null
 }
 
 export function compileRules(rules: HighlightRule[]): CompiledRules {
   const compiled = rules
-    .map((rule) => ({ color: rule.color, expression: compileRule(rule) }))
-    .filter((item): item is { color: HighlightColor; expression: RegExp } => item.expression !== null)
-  return {
-    test(line: string): HighlightColor | null {
-      if (line.trim() === '') return null
-      const text = line.length > HIGHLIGHT_LINE_MAX ? line.slice(0, HIGHLIGHT_LINE_MAX) : line
-      for (const item of compiled) if (item.expression.test(text)) return item.color
-      return null
-    }
+    .map((rule) => ({ rule, expression: compileRule(rule) }))
+    .filter((item): item is { rule: HighlightRule; expression: RegExp } => item.expression !== null)
+  const match = (line: string): HighlightRule | null => {
+    if (line.trim() === '') return null
+    const text = line.length > HIGHLIGHT_LINE_MAX ? line.slice(0, HIGHLIGHT_LINE_MAX) : line
+    for (const item of compiled) if (item.expression.test(text)) return item.rule
+    return null
   }
+  return { test: (line) => match(line)?.color ?? null, match }
 }
 
 export function describeRules(rules: HighlightRule[], limit = 6): string {

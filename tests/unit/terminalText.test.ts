@@ -77,6 +77,11 @@ describe('applyTyped', () => {
 })
 
 describe('displayWidth', () => {
+  it('uses Unicode 11 widths for emoji, checkmarks, CJK and combining marks', () => {
+    expect(displayWidth('😀✔日本')).toBe(7)
+    expect(displayWidth('A\u0483ب\u064eZ')).toBe(3)
+    expect(displayWidth('a\x7fb')).toBe(2)
+  })
   it('counts wide characters as two cells', () => {
     expect(displayWidth('abc')).toBe(3)
     expect(displayWidth('日本語')).toBe(6)

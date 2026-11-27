@@ -33,7 +33,7 @@
   display: inline-grid;
   place-items: center;
   font-family: var(--font-ui);
-  font-weight: 600;
+  font-weight: var(--w-medium);
   font-size: calc(var(--size) * .38);
   line-height: 1;
   letter-spacing: .02em;
@@ -58,7 +58,7 @@
 
 .crew-av-badge {
   position: absolute;
-  right: -5px;
+  inset-inline-end: -5px;
   bottom: -5px;
   width: 15px;
   height: 15px;
@@ -66,8 +66,8 @@
   display: none;
   place-items: center;
   background: var(--pane);
-  font-size: 10px;
-  font-weight: 600;
+  font-size: var(--fs-0);
+  font-weight: var(--w-medium);
   box-shadow: 0 0 0 2px var(--pane);
 }
 

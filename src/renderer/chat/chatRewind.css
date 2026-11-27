@@ -6,7 +6,6 @@
 .chat-msg-acts .chat-text-btn { font-size: var(--fs-1); }
 .chat-msg-acts .chat-text-btn:disabled { color: var(--text-3); cursor: default; }
 .chat-msg-acts .chat-text-btn:focus-visible, .chat-rewind-mark .chat-text-btn:focus-visible, .chat-tried .chat-text-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-micro); }
-@media (prefers-reduced-motion: reduce) { .chat-msg-acts { transition: none; } }
 
 .chat-undone { opacity: .45; }
 .chat-rewind-mark { display: flex; align-items: center; gap: var(--sp-3); color: var(--text-2); font-size: var(--fs-1); }
@@ -20,7 +19,7 @@
 
 .rewind-files { margin: 0 0 var(--sp-4); }
 .rewind-list { padding: 6px 0; border-radius: var(--r-control); background: var(--well); max-height: 240px; overflow: auto; }
-.rewind-li { display: flex; align-items: center; gap: var(--sp-2); padding: 3px var(--sp-3); font: 12.5px/20px var(--font-mono); }
+.rewind-li { display: flex; align-items: center; gap: var(--sp-2); padding: 3px var(--sp-3); font: 12px/20px var(--font-mono); }
 .rewind-path { flex: 1; min-width: 0; display: flex; gap: var(--sp-2); overflow: hidden; white-space: nowrap; }
 .rewind-name { flex: none; }
 .rewind-dir { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-3); direction: rtl; text-align: left; }

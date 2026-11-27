@@ -11,6 +11,8 @@ import { getTerminal } from './terminals'
 import { toast } from './components/toast'
 import { installLimitNotices } from './limitNotices'
 import { boardShowing } from './sessionsLayout'
+import { markedNeedsYou } from './needsYou'
+import { updateCareMany } from './sessionCare'
 
 const PROMPT_POLL_MS = 1500
 const PROMPT_TAIL_ROWS = 24
@@ -54,17 +56,22 @@ function notifyContext(state: AppState, view: PaneView): void {
 function evaluate(state: AppState): void {
   const views = derivePanes(state)
   const next: Record<string, Attention> = {}
+  const unreadChanges = new Map<string, { unread: true | undefined }>()
   for (const view of views) {
     const paneId = view.pane.id
+    const focused = (boardShowing(state) ? state.boardPeekId : state.focusedId) === paneId
+    const visible = paneVisible(state, view)
     const step = stepAttention(memories.get(paneId) ?? initialAttention(), {
       status: view.status,
       waiting: view.fileWaiting || state.waiting[paneId] === true,
-      focused: (boardShowing(state) ? state.boardPeekId : state.focusedId) === paneId,
-      visible: paneVisible(state, view),
+      focused,
+      visible,
       windowFocused: state.windowFocused,
       now: Date.now()
     })
     memories.set(paneId, step.memory)
+    if (step.memory.attention === 'done' && !view.unread) unreadChanges.set(paneId, { unread: true })
+    else if (focused && visible && state.windowFocused && view.unread) unreadChanges.set(paneId, { unread: undefined })
     notifyContext(state, view)
     next[paneId] = step.memory.attention
     if (step.notify && state.settings.sessionInfo.notifications) {
@@ -77,6 +84,7 @@ function evaluate(state: AppState): void {
   const known = state.attention
   const same = Object.keys(next).length === Object.keys(known).length && Object.entries(next).every(([k, v]) => known[k] === v)
   if (!same) store.patch({ attention: next })
+  updateCareMany(unreadChanges)
 }
 
 function pollPrompts(): void {
@@ -88,9 +96,11 @@ function pollPrompts(): void {
     const tail = getTerminal(tab.id)?.tailText(PROMPT_TAIL_ROWS) ?? ''
     if (detectPermissionPrompt(tail)) waiting[view.pane.id] = true
   }
+  for (const paneId of markedNeedsYou((id) => state.panes.some((pane) => pane.id === id))) waiting[paneId] = true
   const known = state.waiting
   const same = Object.keys(waiting).length === Object.keys(known).length && Object.keys(waiting).every((k) => known[k])
   if (!same) store.patch({ waiting })
+  else if ([...memories.values()].some((memory) => memory.attention === 'needs')) evaluate(store.state)
 }
 
 /** Marks a done session as seen, the same way focusing its pane does, without opening it. */

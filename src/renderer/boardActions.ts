@@ -1,5 +1,5 @@
 import { api } from './api'
-import { acknowledgeAttention } from './attention'
+import { markRead } from './sessionCare'
 import { answerPermission, closePane, focusPane, permissionTail } from './actions'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
 import { confirmDialog } from './components/dialogs'
@@ -18,7 +18,7 @@ export function closePeek(): void {
 }
 
 export function markReviewed(paneId: string): void {
-  acknowledgeAttention(paneId)
+  markRead(paneId)
 }
 
 export function peekInGrid(paneId: string): void {

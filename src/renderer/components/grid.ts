@@ -80,12 +80,14 @@ export class GridComponent {
 
   update(state: AppState): void {
     this.lastState = state
-    const views = derivePanes(state)
+    const all = derivePanes(state)
+    // A snoozed session keeps its pane and its terminal; it only leaves the layout until it wakes.
+    const views = all.filter((view) => !view.snoozed)
     // Unhide before panes mount so terminals measure a visible grid. When empty, a visible grid
     // would take half the height and push the empty-state message below center.
     this.stage.hidden = views.length === 0
     const units = unitsOf(views)
-    this.syncPanes(views)
+    this.syncPanes(all)
     const elements = this.syncUnits(units)
     const panel = state.view === 'grid' && state.settings.sessionsLayout === 'panel'
     const shownId = panel ? (views.some((v) => v.pane.id === state.focusedId) ? state.focusedId : (views[0]?.pane.id ?? null)) : state.maximizedId
@@ -107,7 +109,7 @@ export class GridComponent {
     this.sidePanel.update(state, views.find((view) => view.pane.id === panelId) ?? null, (panel && maximized) || (docked && dockedId !== null))
     const visible = new Set(views.filter((view) => this.panes.get(view.pane.id)?.el.hidden === false).map((view) => view.pane.id))
     this.others.update(state, views, visible, maximized && !panel)
-    this.updateEmpty(state, views.length)
+    this.updateEmpty(state, views.length, all.length - views.length)
     this.restoreFocus(state)
   }
 
@@ -286,10 +288,14 @@ export class GridComponent {
     })
   }
 
-  private updateEmpty(state: AppState, count: number): void {
+  private updateEmpty(state: AppState, count: number, snoozed: number): void {
     this.empty.hidden = count > 0
     if (count > 0) return
     clear(this.empty)
+    if (snoozed > 0) {
+      this.empty.append(h('h2', {}, 'Every session is snoozed'), h('p', {}, 'Wake one from Snoozed in the sidebar, or start a new session.'), h('button', { class: 'btn primary', type: 'button', onClick: () => openQuickPick() }, 'New session'))
+      return
+    }
     const hasProjects = state.settings.projects.length > 0
     this.empty.append(
       h('h2', {}, hasProjects ? 'No sessions yet' : 'Add a project to get started'),

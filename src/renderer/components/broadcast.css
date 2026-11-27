@@ -1,0 +1,13 @@
+.broadcast-dialog { width: 560px; max-width: calc(100vw - 32px); }
+.broadcast-text { width: 100%; resize: vertical; min-height: 64px; margin: var(--sp-1) 0 var(--sp-3); box-sizing: border-box; }
+.broadcast-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); margin-bottom: var(--sp-2); }
+.broadcast-chip { height: 26px; padding: 0 var(--sp-3); border: 0; border-radius: var(--r-control); background: var(--hover); color: var(--text-2); font: inherit; font-size: var(--fs-1); cursor: pointer; }
+.broadcast-chip:hover, .broadcast-chip:focus-visible { color: var(--text); }
+.broadcast-count { margin-inline-start: auto; color: var(--text-3); font-size: var(--fs-1); }
+.broadcast-list { display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow: auto; margin-bottom: var(--sp-2); }
+.broadcast-row { display: flex; align-items: center; gap: var(--sp-2); min-height: 34px; padding: 0 var(--sp-2); border-radius: var(--r-control); font-size: var(--fs-2); cursor: pointer; }
+.broadcast-row:hover { background: var(--hover); }
+.broadcast-row.skipped { cursor: default; color: var(--text-3); }
+.broadcast-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.broadcast-project { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); font-size: var(--fs-1); }
+.broadcast-state { flex: none; color: var(--text-3); font-size: var(--fs-1); }

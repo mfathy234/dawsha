@@ -33,6 +33,8 @@ export function fixedEntries(paletteKeys: string, mod: string): Array<SheetEntry
     { group: 'Terminal', title: 'Zoom the pane text in', keys: `${mod}+=` },
     { group: 'Terminal', title: 'Zoom the pane text out', keys: `${mod}+-` },
     { group: 'Terminal', title: 'Reset the pane text size', keys: `${mod}+0` },
+    { group: 'Terminal', title: 'Show or hide the shell drawer', keys: `${mod}+\`` },
+    { group: 'Terminal', title: 'Project command history in a shell', keys: `${mod}+Alt+R` },
     { group: 'Terminal', title: 'Interrupt the agent (Esc stays in the terminal, also in full mode)', keys: 'Esc' },
     { group: 'Panes', title: 'Leave full mode when focus is outside the terminal', keys: 'Esc' },
     { group: 'Panes', title: 'Next terminal tab in a pane', keys: 'Ctrl+PageDown' },

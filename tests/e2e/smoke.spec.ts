@@ -70,6 +70,11 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await page.keyboard.press('Escape')
     await expect.poll(() => lastInput(page, fullId)).toBe('')
     await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    // Esc on the session tabs or the pane's own buttons also goes to the agent, and puts the cursor back in the terminal.
+    await page.locator('.pane-strip .strip-label').first().focus()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    await expect(page.locator('.term-host.active .xterm-helper-textarea')).toBeFocused()
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
     await page.keyboard.press('Escape')
     await expect(page.locator('.pane.maximized')).toHaveCount(0)

@@ -29,6 +29,17 @@ export async function openTerminalPicker(pane: Locator): Promise<void> {
   await pane.getByRole('menuitem', { name: 'New terminal', exact: true }).click()
 }
 
+/** Opens a Shell tab from the pane menu and returns its terminal id once it, not the session before it, is the active one. */
+export async function openShellTab(pane: Locator): Promise<string> {
+  const before = await pane.locator('.term-host.active').first().getAttribute('data-term-id')
+  await openTerminalPicker(pane)
+  await pane.getByRole('menuitem', { name: 'Shell', exact: true }).click()
+  const active = pane.locator('.term-host.active')
+  await expect(active).toHaveCount(1)
+  await expect(active).not.toHaveAttribute('data-term-id', before ?? '')
+  return (await active.getAttribute('data-term-id'))!
+}
+
 export const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')).version as string
 
 // Playwright disposes its server-side app object on exit; process() is unsafe after that.
@@ -41,6 +52,7 @@ const appProcesses = new WeakMap<ElectronApplication, AppProcess>()
 interface GridHook {
   bufferText(id: string): string
   rawBufferText(id: string): string
+  lineText(id: string): string
   lastInput(id: string): string
   fontSize(id: string): number
   feed(id: string, data: string): void
@@ -150,6 +162,10 @@ export async function activeTermId(page: Page): Promise<string> {
 
 export const bufferText = (page: Page, id: string): Promise<string> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.bufferText(termId), id)
+
+/** The buffer with wrapped rows joined back into the lines the program printed, so a long prompt or path reads as one line. */
+export const lineText = (page: Page, id: string): Promise<string> =>
+  page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.lineText(termId), id)
 
 /** The buffer as the program wrote it; bufferText puts Claude Code's visual-order Arabic back in reading order. */
 export const rawBufferText = (page: Page, id: string): Promise<string> =>

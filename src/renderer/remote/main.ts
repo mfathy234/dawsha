@@ -1,4 +1,5 @@
 import { Terminal } from '@xterm/xterm'
+import { loadTerminalUnicode } from '../../shared/terminalUnicode'
 import { FitAddon } from '@xterm/addon-fit'
 import { AGENTS, AGENT_MARKS, AGENT_NAMES } from '../../shared/agents'
 import { brandLogo } from '../brandLogo'
@@ -389,8 +390,10 @@ function ensureTerminal(): Terminal {
     lineHeight: TERMINAL_LINE_HEIGHT,
     letterSpacing: 0,
     theme: TERMINAL_THEME,
+    allowProposedApi: true,
     scrollback: 5000
   })
+  loadTerminalUnicode(terminal)
   fitAddon = new FitAddon()
   terminal.loadAddon(fitAddon)
   terminalElement.style.background = TERMINAL_THEME.background

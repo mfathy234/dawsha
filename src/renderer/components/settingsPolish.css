@@ -5,7 +5,7 @@
 .settings-panel .set-row { grid-template-columns: minmax(0, 1fr) max-content; align-items: center; min-height: 64px; }
 .settings-panel .set-row .set-control { padding-top: 0; white-space: nowrap; }
 .settings-panel .set-main { max-width: 56ch; }
-.settings-panel .set-name { font-weight: 500; }
+.settings-panel .set-name { font-weight: var(--w-medium); }
 .settings-panel .hint { color: var(--text-2); }
 
 .settings-panel .segmented { display: inline-flex; flex-wrap: nowrap; white-space: nowrap; }
@@ -25,17 +25,17 @@
 .settings-content .set-inline { flex-wrap: nowrap; }
 .settings-content .update-settings-actions { flex-wrap: nowrap; }
 
-.settings-back { display: flex; align-items: center; gap: var(--sp-2); width: 100%; height: 32px; margin-bottom: var(--sp-2); padding: 0 var(--sp-2); border: 0; border-radius: var(--r-1); background: transparent; color: var(--text-2); font: inherit; font-size: var(--fs-2); text-align: start; cursor: pointer; }
+.settings-back { display: flex; align-items: center; gap: var(--sp-2); width: 100%; height: 32px; margin-bottom: var(--sp-2); padding: 0 var(--sp-2); border: 0; border-radius: var(--r-control); background: transparent; color: var(--text-2); font: inherit; font-size: var(--fs-2); text-align: start; cursor: pointer; }
 .settings-back:hover { background: var(--hover); color: var(--text); }
 .settings-back:focus-visible,
-.settings-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.settings-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .settings-search { width: 100%; height: 34px; margin-bottom: var(--sp-3); }
-.settings-panel .set-match { border-radius: var(--r-1); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.settings-panel .set-match { border-radius: var(--r-control); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 
 .set-style-card { gap: var(--sp-4); padding: var(--sp-4); min-height: 64px; }
 .set-style-card .set-main { max-width: 44ch; }
 .set-style-actions { display: flex; flex: none; align-items: center; gap: var(--sp-2); white-space: nowrap; }
-.set-style-state { padding-inline: var(--sp-2); color: var(--accent); font-weight: 500; }
+.set-style-state { padding-inline: var(--sp-2); color: var(--accent); font-weight: var(--w-medium); }
 .set-style-card .btn.ghost { background: transparent; }
 .set-style-card .btn:not(.primary):not(:disabled) { background: var(--hover); color: var(--text); }
 

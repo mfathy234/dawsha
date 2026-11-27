@@ -1,5 +1,6 @@
 import { closedAgoShort } from './keptSessions'
 import { orderProjects } from './projectOrder'
+import type { ProjectStatus } from './projectStatus'
 import { SESSION_STATE_LABELS, type SessionState } from './sessionState'
 import type { Project } from './types'
 
@@ -96,11 +97,41 @@ export function monogram(name: string): string {
   return letters.join('').toUpperCase()
 }
 
-/** What the rail shows over a monogram: "!" when something needs you, else the working count, else nothing. */
+/** What the rail shows over a monogram: how many sessions need you, or nothing. */
 export function railBadge(states: readonly SessionState[]): string {
-  if (states.some((state) => state === 'needs')) return '!'
-  const working = states.filter((state) => state === 'working').length
-  return working > 0 ? String(working) : ''
+  const needs = states.filter((state) => state === 'needs').length
+  return needs > 0 ? String(needs) : ''
+}
+
+export type RailTileState = 'needs' | 'selected' | 'unread' | 'working' | 'open' | 'none'
+
+/** How a project's rail tile looks. When several apply: needs, then selected, unread, working, open. */
+export function railTileState(status: ProjectStatus, selected: boolean): RailTileState {
+  if (status.needs > 0) return 'needs'
+  if (selected) return 'selected'
+  if (status.unread > 0) return 'unread'
+  if (status.working > 0) return 'working'
+  return status.open > 0 ? 'open' : 'none'
+}
+
+export interface RailGroups<T> {
+  /** Projects that need you, first. */
+  needs: T[]
+  /** Projects with open sessions, in the order given (the user's manual or pinned order). */
+  open: T[]
+  /** Projects with nothing open, folded behind the dots tile. */
+  empty: T[]
+}
+
+/** Splits the projects into the rail's three groups, keeping the given order inside each. */
+export function railOrder<T extends { id: string }>(projects: readonly T[], statuses: Readonly<Record<string, ProjectStatus>>): RailGroups<T> {
+  const needs = projects.filter((project) => (statuses[project.id]?.needs ?? 0) > 0)
+  const rest = projects.filter((project) => !needs.includes(project))
+  return {
+    needs,
+    open: rest.filter((project) => (statuses[project.id]?.open ?? 0) > 0),
+    empty: rest.filter((project) => (statuses[project.id]?.open ?? 0) === 0)
+  }
 }
 
 /** Whether a project's session list is folded; a filter unfolds every match. */
