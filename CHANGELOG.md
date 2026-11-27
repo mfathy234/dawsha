@@ -15,6 +15,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - **A slow log.** When the app or its window is stuck for over half a second, one line is written to `dawsha-slow.log` in the logs folder (`%APPDATA%\Dawsha\logs` on Windows), at most once every 10 seconds, so a freeze can be traced.
 
+### Changed
+
+- **The “While you were away” card no longer pops up by itself.** The Inbox has the same list. Turn the card on in Settings, Notifications, if you want it.
+
 ## [1.10.3] - 2026-11-27
 
 ### Changed
