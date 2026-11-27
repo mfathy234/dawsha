@@ -26,7 +26,8 @@ describe('parseHead', () => {
 
 describe('parseGitdirFile', () => {
   it('resolves a relative gitdir against the folder holding the file', () => {
-    expect(parseGitdirFile('gitdir: ../main/.git/worktrees/x\n', join('C:', 'work', 'wt'))).toBe(join('C:', 'work', 'main', '.git', 'worktrees', 'x'))
+    // A real absolute folder on every platform: 'C:' is only absolute on Windows.
+    expect(parseGitdirFile('gitdir: ../main/.git/worktrees/x\n', join(tmpdir(), 'work', 'wt'))).toBe(join(tmpdir(), 'work', 'main', '.git', 'worktrees', 'x'))
   })
 
   it('keeps an absolute gitdir', () => {

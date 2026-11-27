@@ -40,7 +40,7 @@ async function resumeSeeded(page: Page): Promise<void> {
   await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
 }
 
-test('the collapsed rail has its expand button at the foot, below Add project and above Settings', async () => {
+test('the collapsed rail has its expand button last, below Views, Add project and Settings', async () => {
   const sandbox = createSandbox()
   seedSettings(sandbox, { appearance: DESKTOP, sidebarCollapsed: true })
   const { app, page } = await launchApp(sandbox)
@@ -55,8 +55,8 @@ test('the collapsed rail has its expand button at the foot, below Add project an
     const views = sidebar.locator('#rail-views')
     const [e, a, s, v] = await Promise.all([expand.boundingBox(), add.boundingBox(), settings.boundingBox(), views.boundingBox()])
     expect(v!.y + v!.height).toBeLessThanOrEqual(a!.y + 1)
-    expect(a!.y + a!.height).toBeLessThanOrEqual(e!.y + 1)
-    expect(e!.y + e!.height).toBeLessThanOrEqual(s!.y + 1)
+    expect(a!.y + a!.height).toBeLessThanOrEqual(s!.y + 1)
+    expect(s!.y + s!.height).toBeLessThanOrEqual(e!.y + 1)
     await expand.click()
     await expect(sidebar).not.toHaveClass(/rail/)
     await expect(sidebar.locator('#sidebar-collapse')).toBeVisible()
