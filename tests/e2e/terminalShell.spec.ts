@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { bufferText, closeApp, createSandbox, feedTerminal, lastInput, launchApp, openShellTab } from './helpers'
+import { bufferText, lineText, closeApp, createSandbox, feedTerminal, lastInput, launchApp, openShellTab } from './helpers'
 
 test('PowerShell commands get status, duration, output actions and shared project history', async () => {
   const sandbox = createSandbox()
@@ -11,7 +11,7 @@ test('PowerShell commands get status, duration, output actions and shared projec
     const pane = page.locator('.pane')
     const id = await openShellTab(pane)
     const host = pane.locator(`.term-host[data-term-id="${id}"]`)
-    await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/PS .*?>\s*$/m)
+    await expect.poll(() => lineText(page, id), { timeout: 30_000 }).toMatch(/PS .*?>\s*$/m)
     await host.click()
     await page.keyboard.type('Write-Output shell-integration-ok')
     await page.keyboard.press('Enter')
@@ -32,7 +32,7 @@ test('PowerShell commands get status, duration, output actions and shared projec
     const persisted = (): string => existsSync(join(sandbox.userData, 'shell-history.json')) ? readFileSync(join(sandbox.userData, 'shell-history.json'), 'utf8') : ''
     expect(persisted()).toContain('Write-Output shell-integration-ok')
     for (const _ of 'Write-Output shell-integration-ok') await page.keyboard.press('Backspace')
-    await expect.poll(() => bufferText(page, id)).toMatch(/PS [^\r\n]*>\s*$/)
+    await expect.poll(() => lineText(page, id)).toMatch(/PS [^\r\n]*>\s*$/)
     await page.keyboard.type('Write-Host -NoNewline final-row')
     await page.keyboard.press('Enter')
     const finalRow = host.getByRole('button', { name: /Write-Host -NoNewline final-row.*Command actions/ }).last()
@@ -48,7 +48,7 @@ test('PowerShell commands get status, duration, output actions and shared projec
     await page.keyboard.press('Escape')
     await page.keyboard.press('End')
     for (const _ of 'do-not-run') await page.keyboard.press('Backspace')
-    await expect.poll(() => bufferText(page, id)).toMatch(/PS [^\r\n]*>\s*$/)
+    await expect.poll(() => lineText(page, id)).toMatch(/PS [^\r\n]*>\s*$/)
     await command.click()
     await page.getByRole('menuitem', { name: 'Rerun', exact: true }).click()
     await expect(host.getByRole('button', { name: /Write-Output shell-integration-ok.*Command actions/ })).toHaveCount(2)
@@ -59,7 +59,7 @@ test('PowerShell commands get status, duration, output actions and shared projec
     await picker.getByRole('button', { name: /Claude/ }).click()
     const agentId = (await pane.locator('.term-host').first().getAttribute('data-term-id'))!
     await expect.poll(() => lastInput(page, agentId)).toContain('Shell command and output:')
-    await expect.poll(() => bufferText(page, agentId)).toContain('Shell command and output:')
+    await expect.poll(() => lineText(page, agentId)).toContain('Shell command and output:')
   } finally { await closeApp(app) }
 })
 
@@ -93,7 +93,7 @@ test('bash starts with integration and preserves command exit status', async () 
     const pane = page.locator('.pane')
     const id = await openShellTab(pane)
     const host = pane.locator(`.term-host[data-term-id="${id}"]`)
-    await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/[$#]\s*$/m)
+    await expect.poll(() => lineText(page, id), { timeout: 30_000 }).toMatch(/[$#]\s*$/m)
     await host.click()
     await page.keyboard.type('printf bash-ok; false')
     await page.keyboard.press('Enter')

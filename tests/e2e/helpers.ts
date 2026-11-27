@@ -52,6 +52,7 @@ const appProcesses = new WeakMap<ElectronApplication, AppProcess>()
 interface GridHook {
   bufferText(id: string): string
   rawBufferText(id: string): string
+  lineText(id: string): string
   lastInput(id: string): string
   fontSize(id: string): number
   feed(id: string, data: string): void
@@ -161,6 +162,10 @@ export async function activeTermId(page: Page): Promise<string> {
 
 export const bufferText = (page: Page, id: string): Promise<string> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.bufferText(termId), id)
+
+/** The buffer with wrapped rows joined back into the lines the program printed, so a long prompt or path reads as one line. */
+export const lineText = (page: Page, id: string): Promise<string> =>
+  page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.lineText(termId), id)
 
 /** The buffer as the program wrote it; bufferText puts Claude Code's visual-order Arabic back in reading order. */
 export const rawBufferText = (page: Page, id: string): Promise<string> =>

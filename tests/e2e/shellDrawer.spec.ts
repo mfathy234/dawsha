@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { bufferText, closeApp, createSandbox, launchApp } from './helpers'
+import { bufferText, lineText, closeApp, createSandbox, launchApp } from './helpers'
 
 test('shell drawer toggles without restarting and remembers its dragged height', async () => {
   const sandbox = createSandbox()
@@ -17,12 +17,12 @@ test('shell drawer toggles without restarting and remembers its dragged height',
     await expect(drawer).toBeVisible()
     const shell = drawer.locator('.term-host')
     const id = (await shell.getAttribute('data-term-id'))!
-    await expect.poll(() => bufferText(page, id)).toContain(sandbox.projectFolder)
+    await expect.poll(() => lineText(page, id)).toContain(sandbox.projectFolder)
     const initial = resizes.filter((text) => text.includes(agentId)).length
     await page.keyboard.press('Control+Backquote')
     await expect(drawer).toBeHidden()
     await page.keyboard.type('drawer-hidden-input')
-    await expect.poll(() => bufferText(page, agentId)).toContain('drawer-hidden-input')
+    await expect.poll(() => lineText(page, agentId)).toContain('drawer-hidden-input')
     await page.keyboard.press('Control+c')
     await page.waitForTimeout(250)
     expect(resizes.filter((text) => text.includes(agentId)).length - initial).toBeLessThanOrEqual(1)
