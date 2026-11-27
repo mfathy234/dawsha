@@ -22,6 +22,13 @@ function renameWithRetry(from: string, to: string): void {
   }
 }
 
+function withoutShippedLineLimit(raw: unknown): unknown {
+  if (typeof raw !== 'object' || raw === null) return raw
+  const data = raw as Record<string, unknown>
+  const wroteByDefault = data.lastSeenVersion === '1.10.0' || data.lastSeenVersion === '1.10.1'
+  return wroteByDefault && data.limitLineLength === true ? { ...data, limitLineLength: false } : data
+}
+
 export class SettingsStore {
   private settings: Settings = defaultSettings()
   private warning: string | null = null
@@ -31,7 +38,7 @@ export class SettingsStore {
   load(): SettingsLoadResult {
     try {
       const text = readFileSync(this.filePath, 'utf8')
-      this.settings = migrateSettings(JSON.parse(text))
+      this.settings = migrateSettings(withoutShippedLineLimit(JSON.parse(text)))
     } catch (error) {
       this.settings = defaultSettings()
       this.warning = this.handleLoadError(error)
