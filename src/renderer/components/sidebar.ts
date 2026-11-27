@@ -8,7 +8,7 @@ import { closedSummary } from '../../shared/sessionLine'
 import { isStarred } from '../../shared/starred'
 import { editSpendLimit } from '../spendActions'
 import { openWorktreeCleanup } from '../worktreeCleanupActions'
-import { addProject, closePane, setRailShowEmpty, locateProject, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeProject, renameSession, reorderProjectFromDisplay, toggleStarred, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagSession, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
+import { addProject, closePane, locateProject, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeProject, renameSession, reorderProjectFromDisplay, toggleStarred, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagSession, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
 import { cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
 import { editTurnChecks } from './turnChecksDialog'
 import { COPY_SESSION_NAME, copySessionName } from '../copySessionName'
@@ -24,7 +24,7 @@ import { sessionNotesVersion } from '../sessionNotes'
 import { openFolderInFiles } from '../files/filesActions'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
-import { railMoreTile, railScroller, railTile, type RailGroup } from './railTiles'
+import { railScroller, railTile, type RailGroup } from './railTiles'
 import { RAIL_VIEWS_KEY, railViewsButton, railViewsItems } from './railViews'
 import { isUnread } from '../unread'
 import type { SidebarFrame } from './sidebarFrame'
@@ -313,9 +313,8 @@ export class SidebarComponent {
       }
       return button
     }
-    const showEmpty = state.settings.railShowEmpty
-    const fold = groups.empty.length === 0 ? [] : [railMoreTile(groups.empty.length, showEmpty, () => setRailShowEmpty(!showEmpty)), ...(showEmpty ? groups.empty.map((project) => tile(project, 'empty')) : [])]
-    this.el.append(railScroller(...groups.needs.map((project) => tile(project, 'needs')), ...groups.open.map((project) => tile(project, 'open')), ...fold))
+    // Projects without sessions come last, quieter, instead of folding behind a dots tile.
+    this.el.append(railScroller(...groups.needs.map((project) => tile(project, 'needs')), ...groups.open.map((project) => tile(project, 'open')), ...groups.empty.map((project) => tile(project, 'empty'))))
     const viewsButton = this.frame ? [railViewsButton(state.view, () => this.toggleViewsMenu(state.view))] : []
     this.el.append(...viewsButton, iconButton('Add project', ICONS.plus, () => void addProject(), 'rail-btn'), ...(this.frame ? [this.frame.expand] : []), ...(this.frame ? [this.frame.bottom] : []))
   }
