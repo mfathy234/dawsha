@@ -176,6 +176,7 @@
 .proj-row:hover .proj-state, .proj-row:focus-within .proj-state { opacity: 0; }
 .quiet-label { margin: var(--sp-2) var(--sp-2) 2px; padding-top: var(--sp-2); border-top: 1px solid var(--seam); color: var(--text-3); font-size: var(--fs-12); line-height: 20px; }
 .proj-list .proj-row.quiet-row .quiet-toggle .proj-chev { display: none; }
-.proj-list .proj-row.quiet-row .proj-avatar { opacity: .75; }
+.proj-list .proj-row.quiet-row .proj-avatar { opacity: .55; }
+.proj-list .proj-row.quiet-row:is(:hover, :focus-within) .proj-avatar { opacity: .85; }
 .proj-list .proj-row.quiet-row { min-height: 28px; }
 .proj-group .kept-session-row:not(.waiting-row) { margin-inline-start: var(--sp-4); }

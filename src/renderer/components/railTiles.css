@@ -37,7 +37,7 @@
   transition: border-radius var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out);
 }
 .rail-btn.rail-mono.rail-tile:is(:hover, .selected) { background: transparent; }
-.rail-btn.rail-mono.rail-tile:is(:hover, :focus-visible, .selected, .drop-before, .drop-after, .has-image) { border-radius: 12px; }
+.rail-btn.rail-mono.rail-tile:is(:hover, :focus-visible, .selected, .drop-before, .drop-after) { border-radius: 12px; }
 .rail-btn.rail-mono.rail-tile:active { transform: scale(.96); }
 .rail-tile .rail-face {
   position: absolute;
@@ -50,10 +50,10 @@
   color: var(--text);
 }
 .rail-tile .rail-face::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--rail-edge); pointer-events: none; }
-.rail-tile:not(.rail-none, .has-image) .rail-face::after { box-shadow: inset 0 0 0 2px var(--tile-color, var(--rail-edge)); }
+.rail-tile:not(.rail-none) .rail-face::after { box-shadow: inset 0 0 0 2px var(--tile-color, var(--rail-edge)); }
 .rail-tile.rail-working .rail-face::after { box-shadow: inset 0 0 0 2px var(--st-working); animation: rail-ring 2.4s ease-in-out infinite; }
 .rail-tile .rail-letters[hidden], .rail-tile .rail-icon[hidden] { display: none; }
-.rail-tile.has-image .rail-face { padding: 7px; }
+.rail-tile.has-image .rail-face { padding: 8px; }
 .rail-tile .rail-icon { width: 100%; height: 100%; object-fit: contain; }
 .rail-btn.rail-mono.rail-tile.rail-none .rail-face { opacity: .55; }
 .rail-btn.rail-mono.rail-tile.rail-none:is(:hover, :focus-visible, .selected) .rail-face { opacity: .85; }
