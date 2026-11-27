@@ -71,10 +71,9 @@ test('a session that finishes unseen stays unread across a restart, and the inbo
       await expect(page.locator('.inbox-choice')).toHaveCount(2, { timeout: 2000 })
     }).toPass({ timeout: 30_000 })
     await expect(page.locator('.inbox-summary')).toHaveText('1 needs you · 1 unread')
-    const before = (await bufferText(page, waitingTerm)).split('\n').filter((line) => />\s*$/.test(line)).length
     await page.keyboard.press('1')
-    await expect.poll(async () => (await bufferText(page, waitingTerm)).split('\n').filter((line) => />1?\s*$/.test(line)).length).toBeGreaterThan(before - 1)
-
+    // The shell echoes the answer on a row of its own; clearing before it lands would let the echo reappear on the cleared screen.
+    await expect.poll(async () => (await bufferText(page, waitingTerm)).split('\n').some((line) => line.trim() === '1')).toBe(true)
     await feedTerminal(page, waitingTerm, '\x1b[2J\x1b[H')
     // Arrow keys move, E marks read, and the empty list says so.
     await expect(page.locator('.inbox-row')).toHaveCount(1, { timeout: 20_000 })

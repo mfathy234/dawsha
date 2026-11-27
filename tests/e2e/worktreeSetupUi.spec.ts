@@ -46,6 +46,7 @@ test('Not now is remembered and worktree setup stays available from the project 
   const { app, page } = await launchApp(sandbox)
   try {
     await page.locator('#new-session').click()
+    await expect(page.getByRole('combobox', { name: 'Filter projects' })).toBeFocused()
     await page.keyboard.press('Shift+Tab')
     await expect(page.getByRole('checkbox', { name: 'Use its own worktree', exact: true })).toBeFocused()
     await page.keyboard.press('Space')

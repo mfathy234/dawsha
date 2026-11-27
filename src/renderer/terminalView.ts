@@ -256,14 +256,9 @@ export class TerminalView {
     return this.readable(this.rawBufferText())
   }
 
-  /** The buffer exactly as the program wrote it, without putting visual-order rows back in reading order. */
+  /** The buffer exactly as the program wrote it, with wrapped rows joined into the lines it printed, without putting visual-order rows back in reading order. */
   rawBufferText(): string {
-    const buffer = this.term.buffer.active
-    const lines: string[] = []
-    for (let row = 0; row < buffer.length; row += 1) {
-      lines.push(buffer.getLine(row)?.translateToString(true) ?? '')
-    }
-    return lines.join('\n')
+    return this.joinedRows(0, this.term.buffer.active.length - 1)
   }
 
   /**

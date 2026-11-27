@@ -39,6 +39,7 @@ test('terminal images decode, toggle live and survive renderer sleep at 1024px',
     const toggle = page.getByRole('switch', { name: 'Show images in the terminal', exact: true })
     await expect(toggle).toHaveAttribute('aria-checked', 'true')
     const label = page.locator('.set-name', { hasText: 'Show images in the terminal' })
+    await expect(label).toBeVisible()
     expect(await label.evaluate((element) => {
       const range = document.createRange()
       range.selectNodeContents(element)

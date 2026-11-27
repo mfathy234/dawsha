@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { bufferText, closeApp, createSandbox, feedTerminal, lastInput, launchApp, openTerminalPicker } from './helpers'
+import { bufferText, closeApp, createSandbox, feedTerminal, lastInput, launchApp, openShellTab } from './helpers'
 
 test('PowerShell commands get status, duration, output actions and shared project history', async () => {
   const sandbox = createSandbox()
@@ -9,10 +9,8 @@ test('PowerShell commands get status, duration, output actions and shared projec
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     const pane = page.locator('.pane')
-    await openTerminalPicker(pane)
-    await pane.getByRole('menuitem', { name: 'Shell', exact: true }).click()
-    const host = pane.locator('.term-host.active')
-    const id = (await host.getAttribute('data-term-id'))!
+    const id = await openShellTab(pane)
+    const host = pane.locator(`.term-host[data-term-id="${id}"]`)
     await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/PS .*?>\s*$/m)
     await host.click()
     await page.keyboard.type('Write-Output shell-integration-ok')
@@ -71,9 +69,7 @@ test('an unseen long command notifies with its result and duration', async () =>
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     const pane = page.locator('.pane')
-    await openTerminalPicker(pane)
-    await pane.getByRole('menuitem', { name: 'Shell', exact: true }).click()
-    const id = (await pane.locator('.term-host.active').getAttribute('data-term-id'))!
+    const id = await openShellTab(pane)
     await expect.poll(() => bufferText(page, id)).toMatch(/>\s*$/m)
     await page.clock.install()
     await feedTerminal(page, id, '\x1b[2J\x1b[H\x1b]133;A\x07$ \x1b]133;B\x07npm test\r\n\x1b]133;C\x07')
@@ -95,10 +91,8 @@ test('bash starts with integration and preserves command exit status', async () 
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     const pane = page.locator('.pane')
-    await openTerminalPicker(pane)
-    await pane.getByRole('menuitem', { name: 'Shell', exact: true }).click()
-    const host = pane.locator('.term-host.active')
-    const id = (await host.getAttribute('data-term-id'))!
+    const id = await openShellTab(pane)
+    const host = pane.locator(`.term-host[data-term-id="${id}"]`)
     await expect.poll(() => bufferText(page, id), { timeout: 30_000 }).toMatch(/[$#]\s*$/m)
     await host.click()
     await page.keyboard.type('printf bash-ok; false')

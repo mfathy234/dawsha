@@ -29,6 +29,17 @@ export async function openTerminalPicker(pane: Locator): Promise<void> {
   await pane.getByRole('menuitem', { name: 'New terminal', exact: true }).click()
 }
 
+/** Opens a Shell tab from the pane menu and returns its terminal id once it, not the session before it, is the active one. */
+export async function openShellTab(pane: Locator): Promise<string> {
+  const before = await pane.locator('.term-host.active').first().getAttribute('data-term-id')
+  await openTerminalPicker(pane)
+  await pane.getByRole('menuitem', { name: 'Shell', exact: true }).click()
+  const active = pane.locator('.term-host.active')
+  await expect(active).toHaveCount(1)
+  await expect(active).not.toHaveAttribute('data-term-id', before ?? '')
+  return (await active.getAttribute('data-term-id'))!
+}
+
 export const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')).version as string
 
 // Playwright disposes its server-side app object on exit; process() is unsafe after that.

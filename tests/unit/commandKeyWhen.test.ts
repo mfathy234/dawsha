@@ -4,7 +4,8 @@ import { commandForEvent, registerCommands } from '../../src/renderer/commands/r
 import type { AppState } from '../../src/renderer/state'
 
 const state = { view: 'grid' } as AppState
-const event = { key: 'R', ctrlKey: true, shiftKey: true, altKey: false, metaKey: false }
+const mac = navigator.platform.toLowerCase().includes('mac')
+const event = { key: 'R', ctrlKey: !mac, shiftKey: true, altKey: false, metaKey: mac }
 let inTerminal = false
 
 registerCommands(
