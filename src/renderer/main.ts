@@ -27,6 +27,7 @@ import {
 import { CODEX_MARK, GEMINI_MARK } from '../shared/agents'
 import { api } from './api'
 import { installAttention } from './attention'
+import { installSlowReport } from './slowReport'
 import { installPrWatch } from './prWatch'
 import { installCrewLive } from './crewLive'
 import { installLead } from './crewLead'
@@ -153,6 +154,7 @@ async function boot(): Promise<void> {
     void refreshGitChanges()
   })
   installAttention()
+  installSlowReport()
   installPrWatch()
   installNeedsNotices()
   guardWindowDrops()

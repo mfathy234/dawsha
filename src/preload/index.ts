@@ -203,6 +203,7 @@ const api: GridApi = {
   },
   onCliNotice: (listener) => subscribe<[string, boolean]>(IPC.cliNotice, listener),
   cliReady: () => ipcRenderer.send(IPC.cliReady),
+  reportSlow: (report) => ipcRenderer.send(IPC.slowReport, report),
   getUpdateState: () => ipcRenderer.invoke(IPC.updateGet),
   onUpdateState: (listener) => subscribe<[UpdateState]>(IPC.updateState, listener),
   checkForUpdate: () => ipcRenderer.invoke(IPC.updateCheck),

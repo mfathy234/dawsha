@@ -145,6 +145,7 @@ export const IPC = {
   cliRun: 'cli:run',
   cliDone: 'cli:done',
   cliReady: 'cli:ready',
+  slowReport: 'perf:slow',
   cliNotice: 'cli:notice',
   updateGet: 'update:get',
   updateState: 'update:state',

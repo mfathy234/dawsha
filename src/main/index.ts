@@ -46,6 +46,7 @@ import { isPrivateRemoteBuild, isRemoteControlBuild } from '../shared/remoteBuil
 import { closeBehavior, startHidden } from '../shared/desktopSettings'
 import { trayAvailable } from './trayState'
 import { installLimitNotifications } from './limitNotifications'
+import { installSlowLog } from './slowLog'
 
 const IMAGE_SCHEME = 'dawsha-image'
 const quitLog = createQuitLog()
@@ -221,6 +222,8 @@ function registerImageProtocol(settings: SettingsStore): void {
 app.whenReady().then(async () => {
   if (!gotLock) return
   Menu.setApplicationMenu(null)
+  const stopSlowLog = installSlowLog()
+  app.on('will-quit', stopSlowLog)
   denyPermissionRequests()
   const userData = app.getPath('userData')
   const legacyDir = legacyUserDataDir()
