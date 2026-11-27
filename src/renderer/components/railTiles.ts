@@ -70,7 +70,7 @@ export function installRailTips(root: HTMLElement): void {
   root.addEventListener('pointerdown', hideTip)
 }
 
-const FADE = '12px'
+const FADE = '28px'
 
 /** Fades the scroller's top and bottom edges only where more tiles lie beyond them. */
 export function syncRailFade(scroller: HTMLElement): void {
@@ -84,5 +84,12 @@ export function railScroller(...tiles: (HTMLElement | null)[]): HTMLElement {
   const scroller = h('div', { class: 'rail-projects' }, ...tiles)
   scroller.addEventListener('scroll', () => syncRailFade(scroller), { passive: true })
   requestAnimationFrame(() => syncRailFade(scroller))
+  // The window can get shorter without a scroll, so the fade follows the scroller's size too.
+  const observer = new ResizeObserver(() => {
+    // The rail rebuilds often; a scroller that left the page stops being watched.
+    if (!scroller.isConnected) return observer.disconnect()
+    syncRailFade(scroller)
+  })
+  observer.observe(scroller)
   return scroller
 }

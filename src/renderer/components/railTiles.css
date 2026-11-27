@@ -163,3 +163,12 @@
 .frame-sidebar .sidebar.rail .frame-head .bell-button { display: none; }
 
 @keyframes rail-ring { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+/* Short windows: the controls shrink to 40px so the project list keeps room, and its fade shows there is more. */
+@media (max-height: 820px) {
+  .frame-sidebar .sidebar.rail .frame-new,
+  .frame-sidebar .sidebar.rail .frame-top > #search-button,
+  .frame-sidebar .sidebar.rail .frame-expand,
+  .frame-sidebar .sidebar.rail .frame-foot #settings-button,
+  .sidebar.rail > .rail-btn:not(.rail-tile) { width: 40px; height: 40px; }
+}
