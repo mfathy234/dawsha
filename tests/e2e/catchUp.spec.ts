@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { closeApp, createSandbox, feedTerminal, launchApp, openSettings } from './helpers'
@@ -6,6 +6,9 @@ import { closeApp, createSandbox, feedTerminal, launchApp, openSettings } from '
 const PROMPT = ['  npm test -- invoices', 'Do you want to run this command?', ' ❯ 1. Yes', '   2. No, and tell Claude what to do differently', ''].join('\r\n')
 
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
+
+// The card is opt-in: it only appears for people who turned it on in Notifications.
+const turnOnCatchUp = (userData: string): void => writeFileSync(join(userData, 'settings.json'), JSON.stringify({ ...readSettings(userData), catchUp: true }), 'utf8')
 
 const away = (app: ElectronApplication, change: { away: boolean; since: number }): Promise<void> =>
   app.evaluate(({ BrowserWindow }, value) => { BrowserWindow.getAllWindows()[0].webContents.send('away:changed', value) }, change)
@@ -27,9 +30,11 @@ async function needsYou(page: Page): Promise<void> {
   }).toPass({ timeout: 30_000 })
 }
 
-test('after 20 minutes away a card lists what needs you, and Open inbox goes to the inbox', async () => {
+test('with catch-up turned on, after 20 minutes away a card lists what needs you, and Open inbox goes to the inbox', async () => {
   test.setTimeout(120_000)
-  const { app, page } = await launchApp(createSandbox())
+  const sandbox = createSandbox()
+  turnOnCatchUp(sandbox.userData)
+  const { app, page } = await launchApp(sandbox)
   try {
     await openPanes(page, 2)
     const since = Date.now() - 30 * 60_000
@@ -49,7 +54,7 @@ test('after 20 minutes away a card lists what needs you, and Open inbox goes to 
   }
 })
 
-test('a short absence shows nothing, and the setting turns the card off', async () => {
+test('the card is off unless turned on, a short absence shows nothing, and the setting turns it on and off', async () => {
   test.setTimeout(120_000)
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
@@ -62,16 +67,15 @@ test('a short absence shows nothing, and the setting turns the card off', async 
     await page.waitForTimeout(800)
     await expect(page.locator('.catchup-dialog')).toHaveCount(0)
 
-    await openSettings(page, 'notifications')
-    const toggle = page.locator('#catch-up-toggle')
-    await expect(toggle).toBeChecked()
-    await toggle.uncheck()
-    await expect.poll(() => readSettings(sandbox.userData).catchUp).toBe(false)
     const long = Date.now() - 45 * 60_000
     await away(app, { away: true, since: long })
     await away(app, { away: false, since: long })
     await page.waitForTimeout(800)
     await expect(page.locator('.catchup-dialog')).toHaveCount(0)
+
+    await openSettings(page, 'notifications')
+    const toggle = page.locator('#catch-up-toggle')
+    await expect(toggle).not.toBeChecked()
     await toggle.check()
     await expect.poll(() => readSettings(sandbox.userData).catchUp).toBe(true)
     await away(app, { away: true, since: long })
@@ -79,6 +83,8 @@ test('a short absence shows nothing, and the setting turns the card off', async 
     await expect(page.locator('.catchup-dialog')).toBeVisible()
     await page.getByRole('button', { name: 'Dismiss', exact: true }).last().click()
     await expect(page.locator('.catchup-dialog')).toHaveCount(0)
+    await toggle.uncheck()
+    await expect.poll(() => readSettings(sandbox.userData).catchUp).toBe(false)
   } finally {
     await closeApp(app)
   }

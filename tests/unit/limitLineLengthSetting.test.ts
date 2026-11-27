@@ -23,6 +23,15 @@ describe('limit line length setting', () => {
     expect(new SettingsStore(file).load().settings.limitLineLength).toBe(true)
   })
 
+  it('turns off the catch-up card 1.10.0 to 1.10.3 switched on by themselves, once', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'dawsha-measure-')), 'settings.json')
+    expect(defaultSettings().catchUp).toBe(false)
+    writeFileSync(file, JSON.stringify({ catchUp: true, lastSeenVersion: '1.10.3' }))
+    expect(new SettingsStore(file).load().settings.catchUp).toBe(false)
+    writeFileSync(file, JSON.stringify({ catchUp: true, lastSeenVersion: '1.10.4' }))
+    expect(new SettingsStore(file).load().settings.catchUp).toBe(true)
+  })
+
   it('persists, transfers and is found by search', () => {
     const file = join(mkdtempSync(join(tmpdir(), 'dawsha-measure-')), 'settings.json')
     new SettingsStore(file).update({ limitLineLength: true })

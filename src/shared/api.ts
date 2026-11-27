@@ -1,4 +1,5 @@
 import type { AgentAccounts } from './agentAccounts'
+import type { SlowReport } from './slowLog'
 import type { KnownLimits } from './agentLimits'
 import type { WorkPeriod, WorkReport } from './workDashboard'
 import type { WorkRecapData } from './workRecap'
@@ -240,6 +241,7 @@ export interface GridApi {
   onCliRun(listener: (command: CliCommand) => Promise<CliReply>): void
   onCliNotice(listener: (text: string, ok: boolean) => void): () => void
   cliReady(): void
+  reportSlow(report: SlowReport): void
   getUpdateState(): Promise<UpdateState>
   onUpdateState(listener: (state: UpdateState) => void): () => void
   checkForUpdate(): Promise<void>

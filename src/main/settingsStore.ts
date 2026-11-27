@@ -29,6 +29,15 @@ function withoutShippedLineLimit(raw: unknown): unknown {
   return wroteByDefault && data.limitLineLength === true ? { ...data, limitLineLength: false } : data
 }
 
+// 1.10.0 to 1.10.3 saved the catch-up card as on without anyone choosing it; it now only shows when turned on.
+const SHIPPED_CATCH_UP = new Set(['1.10.0', '1.10.1', '1.10.2', '1.10.3'])
+
+function withoutShippedCatchUp(raw: unknown): unknown {
+  if (typeof raw !== 'object' || raw === null) return raw
+  const data = raw as Record<string, unknown>
+  return SHIPPED_CATCH_UP.has(String(data.lastSeenVersion)) && data.catchUp === true ? { ...data, catchUp: false } : data
+}
+
 export class SettingsStore {
   private settings: Settings = defaultSettings()
   private warning: string | null = null
@@ -38,7 +47,7 @@ export class SettingsStore {
   load(): SettingsLoadResult {
     try {
       const text = readFileSync(this.filePath, 'utf8')
-      this.settings = migrateSettings(withoutShippedLineLimit(JSON.parse(text)))
+      this.settings = migrateSettings(withoutShippedCatchUp(withoutShippedLineLimit(JSON.parse(text))))
     } catch (error) {
       this.settings = defaultSettings()
       this.warning = this.handleLoadError(error)

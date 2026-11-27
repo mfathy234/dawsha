@@ -3,6 +3,22 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.4] - 2026-11-28
+
+### Fixed
+
+- **The app no longer lags or freezes with many sessions open.** Sessions you are not looking at kept redrawing their screens, highlights, scrollbar ticks and layout measures every time they printed something, which could lock the window for several seconds once a few of them were busy. They now stay quiet while hidden and catch up when you open them. Typing in a busy session answers in about 20 ms instead of seconds.
+- **Lighter background work.** Codex session files are read again only when they change, folders that are not git repositories are checked every 30 seconds instead of every poll, and upstream counts are refreshed every 20 seconds.
+- **Project icons in the rail match the other tiles.** An icon is now a circle that turns into a rounded square on hover or when selected, with the icon centred inside it, and it is dimmed like the initials tiles when the project has no sessions. The No sessions list in the sidebar dims its icons the same way.
+
+### Added
+
+- **A slow log.** When the app or its window is stuck for over half a second, one line is written to `dawsha-slow.log` in the logs folder (`%APPDATA%\Dawsha\logs` on Windows), at most once every 10 seconds, so a freeze can be traced.
+
+### Changed
+
+- **The “While you were away” card no longer pops up by itself.** The Inbox has the same list. Turn the card on in Settings, Notifications, if you want it.
+
 ## [1.10.3] - 2026-11-27
 
 ### Changed

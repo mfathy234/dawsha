@@ -1,3 +1,4 @@
+import { muteHiddenSelectionRedraw } from './terminalHiddenGuard'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -31,6 +32,7 @@ const SHIFT_ENTER = '\x1b\r'
 
 /** A terminal hidden this long drops its GPU renderer until it is shown again. */
 const TERMINAL_SLEEP_MS = 60_000
+const VISIBILITY_RECHECK_MS = 2500
 export interface TerminalCallbacks {
   osc: TerminalOscHost
   shell: TerminalShellHost
@@ -77,6 +79,9 @@ export class TerminalView {
   private hiddenSince: number | null = null
   private visible = false
   private requestedVisible = false
+  private visibilityCheckedAt = 0
+  private paneHidden = false
+  private visibilityTimer: ReturnType<typeof setTimeout> | undefined
   private readonly permissionTracker = new PermissionPromptTracker(crypto.randomUUID())
   private permissionWrites = 0
   private setupBar: HTMLElement | null = null
@@ -284,6 +289,14 @@ export class TerminalView {
     return this.readable(this.joinedRows(start, end))
   }
 
+  /** The rows on screen right now, and `above` rows of scrollback before them, for tests that watch for output arriving. */
+  viewportText(above = 0): string {
+    const buffer = this.term.buffer.active
+    const lines: string[] = []
+    for (let row = -above; row < this.term.rows; row += 1) lines.push(buffer.getLine(Math.max(0, buffer.viewportY + row))?.translateToString(true) ?? '')
+    return lines.join('\n')
+  }
+
   /** The whole buffer with wrapped rows joined back into the lines the program printed, for exports. */
   lineText(): string {
     return this.readable(this.joinedRows(0, this.term.buffer.active.length - 1))
@@ -365,15 +378,27 @@ export class TerminalView {
     this.lent = null
   }
 
-  setVisible(visible: boolean): void {
-    this.requestedVisible = visible || this.lent !== null
-    this.refreshVisibility()
+  /** The pane re-asserts this on every update; measuring the layout each time forced a layout pass per terminal, so an unchanged request is re-measured at most every VISIBILITY_RECHECK_MS. */
+  setVisible(visible: boolean, paneHidden = false): void {
+    const requested = visible || this.lent !== null
+    const changed = requested !== this.requestedVisible || paneHidden !== this.paneHidden
+    this.requestedVisible = requested
+    this.paneHidden = paneHidden
+    const sinceCheck = Date.now() - this.visibilityCheckedAt
+    if (changed || sinceCheck >= VISIBILITY_RECHECK_MS) return this.refreshVisibility()
+    clearTimeout(this.visibilityTimer)
+    this.visibilityTimer = setTimeout(() => this.refreshVisibility(), VISIBILITY_RECHECK_MS - sinceCheck)
   }
 
   refreshVisibility(): void {
+    clearTimeout(this.visibilityTimer)
+    this.visibilityCheckedAt = Date.now()
     this.visible = this.requestedVisible && document.visibilityState === 'visible' && (this.el.parentElement?.getClientRects().length ?? 0) > 0
     this.el.classList.toggle('active', this.requestedVisible)
+    muteHiddenSelectionRedraw(this.term, !this.visible)
+    this.highlights.setActive(this.visible)
     if (this.visible) {
+      this.blockTools.refreshBars()
       this.hiddenSince = null
       this.loadWebgl()
       this.scheduleFit()
@@ -460,6 +485,7 @@ export class TerminalView {
   dispose(): void {
     this.dropWebgl()
     clearTimeout(this.fitTimer)
+    clearTimeout(this.visibilityTimer)
     this.observer.disconnect()
     this.search.dispose()
     this.blockTools.dispose()
