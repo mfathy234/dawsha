@@ -178,3 +178,4 @@
 .proj-list .proj-row.quiet-row .quiet-toggle .proj-chev { display: none; }
 .proj-list .proj-row.quiet-row .proj-avatar { opacity: .75; }
 .proj-list .proj-row.quiet-row { min-height: 28px; }
+.proj-group .kept-session-row:not(.waiting-row) { margin-inline-start: var(--sp-4); }
