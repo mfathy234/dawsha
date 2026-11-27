@@ -982,7 +982,7 @@ export class PaneComponent {
       terminal.mount(this.body)
       terminal.setFontSize(view.pane.fontSize)
       terminal.setColumnCap(columnCap)
-      terminal.setVisible(tab.id === view.pane.activeTabId)
+      terminal.setVisible(tab.id === view.pane.activeTabId, this.el.hidden)
     }
   }
 

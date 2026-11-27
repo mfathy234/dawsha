@@ -11,6 +11,7 @@ import {
 
 export const MAX_DECORATIONS = 500
 const MAX_SCAN_ROWS = 5000
+const RECENT_ROWS = 200
 
 export interface HighlightHost {
   config(): { settings: HighlightSettings; kind: 'dark' | 'light' }
@@ -23,6 +24,9 @@ export class TerminalHighlights {
   private marker: IMarker | null = null
   private compiled: { rules: HighlightRule[]; value: CompiledRules } | null = null
   private readonly subscription: IDisposable
+  /** False while the terminal is hidden: lines still run their triggers, but get no decoration, which a hidden terminal would only draw and throw away. */
+  private active = true
+  private skipped = false
 
   constructor(
     private readonly term: Terminal,
@@ -30,6 +34,12 @@ export class TerminalHighlights {
   ) {
     this.resetMarker()
     this.subscription = term.onWriteParsed(() => this.scan())
+  }
+
+  setActive(active: boolean): void {
+    if (active === this.active) return
+    this.active = active
+    if (active && this.skipped) this.decorateRecent()
   }
 
   refresh(): void {
@@ -78,10 +88,25 @@ export class TerminalHighlights {
       const text = buffer.getLine(row)?.translateToString(true) ?? ''
       const rule = rules.match(text)
       if (!rule) continue
-      this.decorate(row, cursor, rule.color, kind)
+      if (this.active) this.decorate(row, cursor, rule.color, kind)
+      else this.skipped = true
       if (rule.trigger) this.host.fire?.(rule, text)
     }
     this.resetMarker()
+  }
+
+  /** After a stay out of sight, decorates the matching lines of the screen and the rows just above it. */
+  private decorateRecent(): void {
+    this.skipped = false
+    const { settings, kind } = this.host.config()
+    const buffer = this.term.buffer.active
+    if (buffer.type !== 'normal' || !settings.enabled || settings.rules.length === 0) return
+    const cursor = buffer.baseY + buffer.cursorY
+    const rules = this.rules(settings)
+    for (let row = Math.max(0, cursor - this.term.rows - RECENT_ROWS); row < cursor; row += 1) {
+      const rule = rules.match(buffer.getLine(row)?.translateToString(true) ?? '')
+      if (rule) this.decorate(row, cursor, rule.color, kind)
+    }
   }
 
   private dropFrom(row: number): void {

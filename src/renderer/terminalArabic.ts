@@ -44,6 +44,9 @@ export class TerminalArabic {
   private theme: ITheme = {}
   private frame = 0
   private metrics = ''
+  /** The screen's size, kept by a ResizeObserver: reading clientWidth on every frame forced a layout pass per terminal. */
+  private size = { width: 0, height: 0 }
+  private sizeObserver: ResizeObserver | null = null
 
   /** `order` says how the program in this terminal writes right-to-left text; it is asked again on every update. */
   constructor(
@@ -61,6 +64,12 @@ export class TerminalArabic {
     this.layer = document.createElement('div')
     this.layer.className = 'term-arabic-layer'
     screen.appendChild(this.layer)
+    this.size = { width: screen.clientWidth, height: screen.clientHeight }
+    this.sizeObserver = new ResizeObserver(() => {
+      this.size = { width: screen.clientWidth, height: screen.clientHeight }
+      this.schedule()
+    })
+    this.sizeObserver.observe(screen)
     const schedule = (): void => this.schedule()
     this.subscriptions.push(
       this.term.onRender(schedule),
@@ -84,6 +93,7 @@ export class TerminalArabic {
 
   dispose(): void {
     cancelAnimationFrame(this.frame)
+    this.sizeObserver?.disconnect()
     for (const subscription of this.subscriptions) subscription.dispose()
     this.subscriptions.length = 0
     this.clear()
@@ -105,10 +115,9 @@ export class TerminalArabic {
   }
 
   private update(): void {
-    const { layer, screen } = this
-    if (!layer || !screen) return
-    const width = screen.clientWidth
-    const height = screen.clientHeight
+    const { layer } = this
+    if (!layer) return
+    const { width, height } = this.size
     const { cols, rows } = this.term
     if (width < 1 || height < 1 || cols < 1 || rows < 1) return this.clear()
     const cellW = width / cols

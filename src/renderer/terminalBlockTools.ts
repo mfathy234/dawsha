@@ -61,7 +61,7 @@ export class TerminalBlockTools {
     const common = { blocks: this.blocks, agentName: () => callbacks.agentName(), sendFailure: callbacks.sendFailure }
     this.reading = new TerminalReading({ ...common, term, theme: () => this.theme(), plain: () => host.plain(), backToLive }, el)
     this.outline = new TerminalOutline({ ...common, copy: callbacks.copy, backToLive: () => backToLive(null) }, el)
-    this.bars = new TerminalBlockBars(term, el, this.blocks, () => this.reading.isOpen)
+    this.bars = new TerminalBlockBars(term, el, this.blocks, () => this.reading.isOpen || !host.visible())
     this.selection = new TerminalSelection(term, el, {
       ...common,
       readable: (text) => host.readable(text),
@@ -75,6 +75,11 @@ export class TerminalBlockTools {
     this.scrollWatch = term.onScroll(() => {
       if (this.blocks.atBottom) this.armed = true
     })
+  }
+
+  /** Draws the bars again, for a terminal that was hidden while output arrived. */
+  refreshBars(): void {
+    this.bars.redraw()
   }
 
   get readingOpen(): boolean {
