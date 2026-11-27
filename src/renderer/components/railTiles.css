@@ -45,8 +45,6 @@
 .rail-btn.rail-mono.rail-tile.rail-selected { background: var(--press); color: var(--text); box-shadow: var(--ring); }
 .rail-btn.rail-mono.rail-tile .rail-badge { position: absolute; top: -3px; inset-inline-end: -3px; background: none; color: var(--needs); font-size: var(--fs-0); font-weight: var(--w-medium); line-height: 1; letter-spacing: 0; }
 
-.rail-btn.rail-more { flex: none; width: 32px; height: 24px; border-radius: var(--r-control); background: transparent; color: var(--text-3); font-size: var(--fs-0); font-weight: var(--w-medium); letter-spacing: 0.02em; }
-.rail-btn.rail-more:hover { background: var(--hover); color: var(--text); }
 .rail-projects .rail-fold { flex: none; width: 16px; height: 1px; margin: 2px 0; background: var(--seam); }
 
 .rail-btn.rail-views { width: 36px; height: 32px; display: inline-grid; place-items: center; border: 0; border-radius: var(--r-control); background: transparent; color: var(--text-2); cursor: pointer; }

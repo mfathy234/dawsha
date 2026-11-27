@@ -24,12 +24,6 @@ export function railTile(project: Project, status: ProjectStatus, states: readon
   return button
 }
 
-/** The dots tile that folds the projects without sessions. */
-export function railMoreTile(count: number, expanded: boolean, onToggle: () => void): HTMLButtonElement {
-  const label = expanded ? 'Hide projects without sessions' : `${count} project${count === 1 ? '' : 's'} without sessions`
-  return h('button', { class: 'rail-btn rail-more', type: 'button', id: 'rail-more', 'aria-label': label, title: label, 'aria-expanded': String(expanded), onClick: onToggle }, h('span', { 'aria-hidden': 'true' }, '···'))
-}
-
 const FADE = '12px'
 
 /** Fades the scroller's top and bottom edges only where more tiles lie beyond them. */

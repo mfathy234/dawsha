@@ -12,7 +12,7 @@ function seed(userData: string, patch: Record<string, unknown>): void {
   writeFileSync(join(userData, 'settings.json'), JSON.stringify({ ...readSettings(userData), ...patch }), 'utf8')
 }
 
-test('the collapsed rail folds empty projects behind the dots tile and keeps the sections in a Views menu', async () => {
+test('the collapsed rail lists projects without sessions last, with no dots tile, and keeps the sections in a Views menu', async () => {
   const sandbox = createSandbox()
   seed(sandbox.userData, { appearance: DESKTOP })
   const { app, page } = await launchApp(sandbox)
@@ -30,16 +30,10 @@ test('the collapsed rail folds empty projects behind the dots tile and keeps the
     await expect(smoke).not.toHaveClass(/rail-none/)
     await expect(smoke).toHaveCSS('width', '32px')
     await expect(smoke).toHaveCSS('height', '32px')
-    await expect(rail.locator('.rail-tile')).toHaveCount(1)
-
-    const more = rail.locator('#rail-more')
-    await expect(more).toHaveAttribute('aria-expanded', 'false')
-    await more.click()
+    await expect(rail.locator('#rail-more')).toHaveCount(0)
     await expect(rail.locator('.rail-tile')).toHaveCount(2)
     await expect(rail.locator('.rail-tile.rail-none')).toHaveCount(1)
-    await expect.poll(() => readSettings(sandbox.userData).railShowEmpty).toBe(true)
-    await more.click()
-    await expect(rail.locator('.rail-tile')).toHaveCount(1)
+    await expect(rail.locator('.rail-tile').last()).toHaveClass(/rail-none/)
 
     const views = rail.locator('#rail-views')
     await views.click()

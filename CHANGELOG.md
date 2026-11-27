@@ -3,6 +3,12 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.1] - 2026-11-27
+
+### Changed
+
+- **No more dots in the sidebar rail.** Projects without sessions are listed after the others in a quieter grey, instead of hiding behind a ··· tile.
+
 ## [1.10.0] - 2026-11-27
 
 ### Added

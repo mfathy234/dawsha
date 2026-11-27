@@ -104,8 +104,6 @@ test('the collapsed rail marks projects whose sessions need you', async () => {
     const smoke = rail.getByRole('button', { name: 'Smoke · 1 needs you' })
     await expect(smoke).toBeVisible()
     await expect(smoke.locator('.rail-badge')).toHaveText('1')
-    await expect(rail.getByRole('button', { name: 'Missing', exact: true })).toHaveCount(0)
-    await rail.locator('#rail-more').click()
     await expect(rail.getByRole('button', { name: 'Missing', exact: true })).toBeVisible()
     await expect(rail.locator('.rail-badge')).toHaveCount(1)
     await rail.screenshot({ path: join(SCREENS, 'sidebar-rail-badge.png') })
@@ -439,8 +437,10 @@ test('rail monograms with open sessions can be dragged to reorder', async () => 
     for (const name of ['Other', 'Smoke', 'Third']) await page.getByRole('button', { name: new RegExp(`^New (Claude|Codex|Gemini) session in ${name}$`) }).click()
     await expect(page.locator('.pane')).toHaveCount(3)
     await page.getByRole('button', { name: 'Collapse sidebar' }).click()
-    const monos = page.locator('.rail-mono')
+    // Only projects with open sessions drag; the one without sessions sits after them.
+    const monos = page.locator('.rail-mono[data-rail-group="open"]')
     await expect(monos).toHaveCount(3)
+    await expect(page.locator('.rail-mono')).toHaveCount(4)
     const source = (await monos.nth(2).boundingBox())!
     const target = (await monos.nth(0).boundingBox())!
     await page.mouse.move(source.x + 10, source.y + 10)
