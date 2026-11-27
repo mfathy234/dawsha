@@ -3,7 +3,7 @@ import { LigaturesAddon } from '@xterm/addon-ligatures'
 import type { IDisposable, Terminal } from '@xterm/xterm'
 import { sixelWithinLimits, TERMINAL_IMAGE_BYTE_LIMIT, TERMINAL_IMAGE_PIXEL_LIMIT } from '../shared/sixelLimits'
 
-const IMAGE_STORAGE_MB = 32
+const IMAGE_STORAGE_MB = 16
 
 export class TerminalRendering {
   private images: ImageAddon | null = null

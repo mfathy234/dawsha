@@ -3,6 +3,7 @@ import { parseShortstat } from '../shared/gitChanges'
 import { parseAheadBehind, type SyncCounts } from '../shared/gitBranches'
 import { parseNumstat } from '../shared/handoff'
 import type { GitChanges } from '../shared/types'
+import { readHeadBranch } from './gitHead'
 
 const CHANGES_TTL_MS = 5000
 
@@ -15,6 +16,8 @@ function run(args: string[], cwd: string): Promise<string | null> {
 }
 
 export async function currentBranch(folder: string): Promise<string | null> {
+  const fromHead = await readHeadBranch(folder)
+  if (fromHead) return fromHead
   const branch = await run(['rev-parse', '--abbrev-ref', 'HEAD'], folder)
   if (branch) return branch
   return run(['symbolic-ref', '--short', 'HEAD'], folder)

@@ -11,7 +11,7 @@ import {
   handleTerminalExit,
   openOnboarding,
   openQuickPick,
-  refreshBranches,
+  pollBranches,
   refreshAgentTools,
   refreshBridge,
   refreshGitChanges,
@@ -146,9 +146,12 @@ async function boot(): Promise<void> {
   api.onStatus(setStatusInfos)
   api.onCodexSessions(setCodexSessions)
   api.onGeminiSessions(setGeminiSessions)
-  setInterval(() => void refreshBranches(), BRANCH_POLL_MS)
+  setInterval(pollBranches, BRANCH_POLL_MS)
   setInterval(() => void refreshGitChanges(), GIT_CHANGES_POLL_MS)
-  document.addEventListener('visibilitychange', () => void refreshGitChanges())
+  document.addEventListener('visibilitychange', () => {
+    pollBranches()
+    void refreshGitChanges()
+  })
   installAttention()
   installPrWatch()
   installNeedsNotices()

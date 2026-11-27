@@ -3,11 +3,11 @@ import type { TabAgent } from '../shared/types'
 import {
   blockAtRow,
   formatDuration,
-  parseBlocks,
   type Block,
   type BlockLine,
   type ExternalCommand
 } from '../shared/terminalBlocks'
+import { BlockScanner, type BlockSource } from '../shared/terminalBlockScan'
 
 const FLASH_MS = 700
 const FLASH_COLOR = '#5b8def'
@@ -46,6 +46,7 @@ export function liveStartRow(rows: readonly string[], firstRow: number): number 
 
 export class TerminalBlocks {
   private cache: Block[] = []
+  private readonly scanner = new BlockScanner()
   private dirty = true
   private lastScan = 0
   private stamps: Stamp[] = []
@@ -73,6 +74,7 @@ export class TerminalBlocks {
   /** Shell integration hands over the commands it marked, as rows, so they become blocks. */
   setCommandSource(source: (() => ExternalCommand[]) | null): void {
     this.source = source
+    this.scanner.reset()
     this.dirty = true
   }
 
@@ -87,6 +89,7 @@ export class TerminalBlocks {
 
   reset(): void {
     this.dirty = true
+    this.scanner.reset()
     this.clearStamps()
   }
 
@@ -213,13 +216,23 @@ export class TerminalBlocks {
     }, FLASH_MS)
   }
 
+  private bufferSource(): BlockSource {
+    const buffer = this.term.buffer.active
+    return {
+      length: buffer.length,
+      stable: buffer.baseY,
+      lines: (from, to) => this.lines(from, to),
+      isWrapped: (row) => buffer.getLine(row)?.isWrapped === true
+    }
+  }
+
   private scan(): Block[] {
     const buffer = this.term.buffer.active
     const rows: string[] = []
     for (let row = Math.max(0, buffer.length - LIVE_ROWS); row < buffer.length; row += 1) rows.push(buffer.getLine(row)?.translateToString(true) ?? '')
     const agent = this.host.agent()
     const liveFromRow = agent && agent !== 'shell' ? liveStartRow(rows, Math.max(0, buffer.length - LIVE_ROWS)) : undefined
-    return parseBlocks(this.lines(0, buffer.length - 1), {
+    return this.scanner.scan(this.bufferSource(), {
       agent,
       running: this.host.busy(),
       liveFromRow,

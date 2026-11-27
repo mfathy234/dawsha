@@ -1273,6 +1273,11 @@ async function findMissingProjects(projects: Project[]): Promise<string[]> {
   return checks.filter((id): id is string => id !== null)
 }
 
+/** The 5 second branch poll: skipped while the window is hidden, and run once when it comes back. */
+export function pollBranches(): void {
+  if (!document.hidden) void refreshBranches()
+}
+
 export async function refreshBranches(): Promise<void> {
   const state = store.state
   const folders = new Set<string>()
@@ -1323,7 +1328,7 @@ export async function addProject(): Promise<Project | null> {
 
 export function updateProject(
   projectId: string,
-  change: Partial<Pick<Project, 'name' | 'folder' | 'defaultAgent' | 'iconPath' | 'noIcon'>>
+  change: Partial<Pick<Project, 'name' | 'folder' | 'defaultAgent' | 'iconPath' | 'noIcon' | 'color'>>
 ): void {
   const projects = store.state.settings.projects.map((p) => (p.id === projectId ? { ...p, ...change } : p))
   store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
@@ -1337,10 +1342,21 @@ export async function locateProject(projectId: string): Promise<void> {
   await refreshBranches()
 }
 
-/** Asks for an image and shows it on the project's rail tile instead of the folder's own icon or the initials. */
+/** Asks for an image and shows it on the project's rail tile instead of the folder's own icon or the initials. Says why when the file is not usable. */
 export async function changeProjectIcon(projectId: string): Promise<void> {
-  const path = await api.pickProjectIcon()
-  if (path) updateProject(projectId, { iconPath: path, noIcon: undefined })
+  const picked = await api.pickProjectIcon()
+  if (!picked) return
+  if (!picked.ok) return toast(picked.error)
+  updateProject(projectId, { iconPath: picked.path, noIcon: undefined })
+}
+
+/** Goes back to the icon the folder ships, if any. */
+export function useDetectedIcon(projectId: string): void {
+  updateProject(projectId, { iconPath: undefined, noIcon: undefined })
+}
+
+export function setProjectColor(projectId: string, color: string | undefined): void {
+  updateProject(projectId, { color })
 }
 
 /** Shows the project's initials even when its folder ships an icon. */
