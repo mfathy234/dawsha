@@ -126,6 +126,8 @@ Object.defineProperty(window, '__grid', {
     bufferText: (id: string): string => views.get(id)?.bufferText() ?? '',
     lineText: (id: string): string => views.get(id)?.lineText() ?? '',
     rawBufferText: (id: string): string => views.get(id)?.rawBufferText() ?? '',
+    storeStats: (): { sets: number; flushes: number; listenerMs: number } => ({ ...store.stats }),
+    viewportText: (id: string, above = 0): string => views.get(id)?.viewportText(above) ?? '',
     lastInput: (id: string): string => lastInput.get(id) ?? '',
     fontSize: (id: string): number => views.get(id)?.fontSize ?? 0,
     feed: (id: string, data: string): void => views.get(id)?.write(data),

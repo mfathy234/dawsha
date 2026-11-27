@@ -231,6 +231,7 @@ class Store {
   private current: AppState = initialState()
   private readonly listeners = new Set<Listener>()
   private scheduled = false
+  readonly stats = { sets: 0, flushes: 0, listenerMs: 0 }
 
   get state(): AppState {
     return this.current
@@ -238,11 +239,15 @@ class Store {
 
   set(update: (state: AppState) => AppState): void {
     this.current = update(this.current)
+    this.stats.sets += 1
     if (this.scheduled) return
     this.scheduled = true
     requestAnimationFrame(() => {
       this.scheduled = false
+      this.stats.flushes += 1
+      const started = performance.now()
       for (const listener of this.listeners) listener(this.current)
+      this.stats.listenerMs += performance.now() - started
     })
   }
 
