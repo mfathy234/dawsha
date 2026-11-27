@@ -290,7 +290,7 @@
 .foot-btn:active { background: var(--press); }
 .foot-btn[aria-current='page'] { color: var(--text); background: var(--raised); }
 
-aside.sidebar.rail { width: 56px; }
+aside.sidebar.rail { width: 72px; }
 .rail-btn.rail-mono {
   width: 36px;
   height: 36px;

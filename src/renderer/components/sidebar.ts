@@ -8,7 +8,7 @@ import { closedSummary } from '../../shared/sessionLine'
 import { isStarred } from '../../shared/starred'
 import { editSpendLimit } from '../spendActions'
 import { openWorktreeCleanup } from '../worktreeCleanupActions'
-import { addProject, closePane, locateProject, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeProject, renameSession, reorderProjectFromDisplay, toggleStarred, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagSession, toggleProjectExpanded, toggleSidebar, updateProject } from '../actions'
+import { addProject, changeProjectIcon, closePane, locateProject, focusPane, moveProjectFromDisplay, moveProjectInList, openResumePicker, openSessionKeys, pinProject, removeProject, renameSession, reorderProjectFromDisplay, toggleStarred, setSidebarHideEmpty, setSidebarSort, showView, startSession, tagSession, toggleProjectExpanded, toggleSidebar, updateProject, useInitials } from '../actions'
 import { cleanSessionName, SESSION_NAME_MAX, type SessionTag } from '../../shared/sessionTags'
 import { editTurnChecks } from './turnChecksDialog'
 import { COPY_SESSION_NAME, copySessionName } from '../copySessionName'
@@ -24,7 +24,7 @@ import { sessionNotesVersion } from '../sessionNotes'
 import { openFolderInFiles } from '../files/filesActions'
 import { stateIcon } from './stateIcon'
 import { SidebarMenu } from './sidebarMenu'
-import { railScroller, railTile, type RailGroup } from './railTiles'
+import { installRailTips, railScroller, railTile, type RailGroup } from './railTiles'
 import { RAIL_VIEWS_KEY, railViewsButton, railViewsItems } from './railViews'
 import { isUnread } from '../unread'
 import type { SidebarFrame } from './sidebarFrame'
@@ -82,6 +82,7 @@ export class SidebarComponent {
   }
 
   constructor() {
+    installRailTips(this.el)
     this.narrowQuery.addEventListener('change', () => this.updatePlaceholder())
     this.updatePlaceholder()
     this.filter.classList.remove('text-input')
@@ -247,7 +248,7 @@ export class SidebarComponent {
       state.view,
       focusedView?.pane.projectId,
       state.focusedId,
-      projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent, p.pinned === true, state.missingProjects.includes(p.id)]),
+      projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent, p.pinned === true, p.iconPath, p.noIcon, state.missingProjects.includes(p.id)]),
       state.settings.foldedProjects,
       state.settings.sidebarSort,
       state.settings.sidebarHideEmpty,
@@ -313,8 +314,11 @@ export class SidebarComponent {
       }
       return button
     }
+    const sep = (): HTMLElement => h('div', { class: 'rail-sep', role: 'separator' })
+    const withSessions = [...groups.needs.map((project) => tile(project, 'needs')), ...groups.open.map((project) => tile(project, 'open'))]
+    const without = groups.empty.map((project) => tile(project, 'empty'))
     // Projects without sessions come last, quieter, instead of folding behind a dots tile.
-    this.el.append(railScroller(...groups.needs.map((project) => tile(project, 'needs')), ...groups.open.map((project) => tile(project, 'open')), ...groups.empty.map((project) => tile(project, 'empty'))))
+    this.el.append(railScroller(...withSessions, ...(withSessions.length > 0 && without.length > 0 ? [sep()] : []), ...without))
     const viewsButton = this.frame ? [railViewsButton(state.view, () => this.toggleViewsMenu(state.view))] : []
     this.el.append(...viewsButton, iconButton('Add project', ICONS.plus, () => void addProject(), 'rail-btn'), ...(this.frame ? [this.frame.expand] : []), ...(this.frame ? [this.frame.bottom] : []))
   }
@@ -691,6 +695,10 @@ export class SidebarComponent {
     if (name && name.trim() !== project.name) updateProject(project.id, { name: name.trim() })
   }
 
+  private showsImage(projectId: string): boolean {
+    return this.el.querySelector(`.rail-tile.has-image[data-drop-project="${projectId}"]`) !== null
+  }
+
   private toggleFlyout(key: string, project: Project): void {
     if (this.popup.isOpenFor(key)) return this.popup.close()
     const state = this.lastState
@@ -715,7 +723,10 @@ export class SidebarComponent {
         h('div', { class: 'fly-head' }, h('span', { class: 'fly-project' }, project.name), branch ? h('span', { class: 'proj-branch' }, branch) : null),
         ...(sessions.length > 0 ? sessions : [h('div', { class: 'fly-empty' }, 'No sessions')]),
         h('div', { class: 'pv-menu-sep', role: 'separator' }),
-        start
+        start,
+        h('div', { class: 'pv-menu-sep', role: 'separator' }),
+        h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); void changeProjectIcon(project.id) } }, 'Change icon…'),
+        this.showsImage(project.id) ? h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => { this.popup.close(); useInitials(project.id) } }, 'Use initials') : null
       ],
       `Sessions in ${project.name}`,
       'rail-flyout'
