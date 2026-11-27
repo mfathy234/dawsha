@@ -35,3 +35,7 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.pane.maximized .pane-header > .pane-tag { flex: 0 1 auto; margin-inline-start: calc(var(--sp-1) * -1); font-size: var(--fs-12); line-height: 18px; opacity: 0.8; }
+.pane.maximized .pane-header > .pane-tag[hidden] { display: none; }
+.pane.maximized .pane-header > .pane-tag .tag-word { color: var(--text-3); }
