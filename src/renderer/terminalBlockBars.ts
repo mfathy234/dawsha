@@ -36,8 +36,6 @@ export function thinTicks(ticks: readonly Tick[], length: number, buckets = TICK
   return [...slots.values()]
 }
 
-const GEOMETRY_MS = 750
-
 /** What sits on top of the terminal while you read back: the prompt you answered, the long block you are inside, a gutter line and scrollbar ticks. */
 export class TerminalBlockBars {
   private readonly promptLine = h('button', { class: 'term-sticky-line term-sticky-prompt', type: 'button', hidden: true })
@@ -50,7 +48,8 @@ export class TerminalBlockBars {
   private frame = 0
   private enabled = true
   private drawn: { list: readonly Block[]; length: number } | null = null
-  private measured: { key: string; at: number; value: { top: number; cell: number } | null } | null = null
+  private measured: { key: string; value: { top: number; cell: number } | null } | null = null
+  private readonly resizes: ResizeObserver
 
   constructor(
     private readonly term: Terminal,
@@ -61,6 +60,8 @@ export class TerminalBlockBars {
     parent.append(this.sticky, this.gutter, this.marks)
     this.subscriptions.push(term.onScroll(() => this.schedule()), term.onResize(() => this.schedule()))
     this.unsubscribe = blocks.subscribe(() => this.schedule())
+    this.resizes = new ResizeObserver(() => { this.measured = null })
+    this.resizes.observe(parent)
   }
 
   schedule(): void {
@@ -76,6 +77,7 @@ export class TerminalBlockBars {
   dispose(): void {
     cancelAnimationFrame(this.frame)
     this.unsubscribe()
+    this.resizes.disconnect()
     for (const subscription of this.subscriptions) subscription.dispose()
     this.sticky.remove()
     this.gutter.remove()
@@ -90,8 +92,11 @@ export class TerminalBlockBars {
     this.updateMarks(list)
   }
 
+  /** After a stay out of sight: the scan the bars need can be long, so it waits for an idle moment (at most half a second). */
   redraw(): void {
-    this.schedule()
+    cancelAnimationFrame(this.frame)
+    if (typeof requestIdleCallback !== 'function') return this.schedule()
+    requestIdleCallback(() => this.schedule(), { timeout: 500 })
   }
 
   private hideAll(): void {
@@ -127,14 +132,13 @@ export class TerminalBlockBars {
     )
   }
 
-  /** Measured at most every GEOMETRY_MS, or when the terminal's size changed: it forces a layout pass, and output asks for it on every frame. */
+  /** Measured again only when the terminal's size or its box changed: measuring forces a layout pass, and output asks for it on every frame. */
   private geometry(): { top: number; cell: number } | null {
     const key = `${this.term.rows}|${this.term.cols}|${this.term.options.fontSize}`
-    const now = performance.now()
-    if (this.measured && this.measured.key === key && now - this.measured.at < GEOMETRY_MS) return this.measured.value
+    if (this.measured?.key === key) return this.measured.value
     const screen = this.parent.querySelector<HTMLElement>('.xterm-screen')
     const value = !screen || screen.clientHeight === 0 ? null : { top: screen.getBoundingClientRect().top - this.parent.getBoundingClientRect().top, cell: screen.clientHeight / this.term.rows }
-    this.measured = { key, at: now, value }
+    this.measured = { key, value }
     return value
   }
 

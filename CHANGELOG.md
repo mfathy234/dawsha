@@ -3,6 +3,24 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.5] - 2026-11-28
+
+### Fixed
+
+- **Switching between sessions no longer rebuilds them.** Since 1.10.0 a session hidden for a minute gave up its graphics, so going back to it in full screen redrew its whole history and could freeze the window for seconds. It is back to ten minutes, as in 1.9.
+
+
+- **Search and Settings line up in the sidebar rail.** Their icons sat to the left of the other buttons and the project tiles; every control in the rail now sits on the same centre line.
+- **Fewer freezes when you switch sessions.** The scrollbar ticks and block lines of a session measured the screen again and again while output arrived, and the first draw after you opened a session ran at once with the switch. They now measure only when the size changes and wait for an idle moment.
+- **Leaving full screen puts the cursor back in the session you were in.**
+- **The update popover stays on screen** when the update button is at the bottom of the window.
+- **A failed update says what happened.** Network errors such as `net::ERR_CONNECTION_TIMED_OUT` now read "Couldn't reach GitHub. Check your connection and try again.", with the error code in a small line under it.
+- **The update button in the collapsed rail is an icon**, not a cut-off word: a download arrow, a red refresh arrow when the update failed, and a dot when it is ready to install.
+
+### Added
+
+- **The slow log names the cause.** When a page task takes over a second, the line in `dawsha-slow.log` also lists the slowest steps just before it and the functions that ran, and the top ten by time are saved next to it as `dawsha-slow-<time>.json` (the newest five are kept).
+
 ## [1.10.4] - 2026-11-28
 
 ### Fixed

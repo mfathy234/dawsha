@@ -1,4 +1,5 @@
 import { muteHiddenSelectionRedraw } from './terminalHiddenGuard'
+import { timed } from './slowPhases'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -30,8 +31,11 @@ import type { IDisposable } from '@xterm/xterm'
 const SHIFT_ENTER = '\x1b\r'
 
 
-/** A terminal hidden this long drops its GPU renderer until it is shown again. */
-const TERMINAL_SLEEP_MS = 60_000
+/**
+ * A terminal hidden this long drops its GPU renderer until it is shown again. 1.10.0 cut this from 10 minutes to 60 s,
+ * so nearly every tab switch in full screen rebuilt a WebGL context and redrew the whole buffer; it is back to 10 minutes.
+ */
+const TERMINAL_SLEEP_MS = 10 * 60_000
 const VISIBILITY_RECHECK_MS = 2500
 export interface TerminalCallbacks {
   osc: TerminalOscHost
@@ -391,6 +395,10 @@ export class TerminalView {
   }
 
   refreshVisibility(): void {
+    timed('terminal show', () => this.applyVisibility())
+  }
+
+  private applyVisibility(): void {
     clearTimeout(this.visibilityTimer)
     this.visibilityCheckedAt = Date.now()
     this.visible = this.requestedVisible && document.visibilityState === 'visible' && (this.el.parentElement?.getClientRects().length ?? 0) > 0
@@ -457,6 +465,10 @@ export class TerminalView {
   }
 
   fitNow(): void {
+    timed('terminal fit', () => this.fitTerminal())
+  }
+
+  private fitTerminal(): void {
     if (!this.opened || this.el.clientWidth < 40 || this.el.clientHeight < 20) return
     try {
       this.applyColumnCap()

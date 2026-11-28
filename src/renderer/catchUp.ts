@@ -51,6 +51,12 @@ export function catchUpFor(since: number, now: number, before: Tracker): { headl
 }
 
 function onAway(change: AwayChange): void {
+  // The card is opt-in; with it off there is nothing to track or build, so leaving and coming back costs nothing.
+  if (!store.state.settings.catchUp) {
+    window.clearInterval(watchTimer)
+    tracker = null
+    return
+  }
   if (change.away) {
     tracker = { since: change.since, limit: fiveHourPercent(), worked: new Set() }
     window.clearInterval(watchTimer)

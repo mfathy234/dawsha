@@ -2,7 +2,7 @@ import { openUpdateLink, runUpdateAction, toggleUpdatePopover } from '../actions
 import { RELEASE_LATEST_URL, releaseTagUrl, renderMarkdown } from '../../shared/markdown'
 import { h, leave } from '../dom'
 import type { AppState } from '../state'
-import type { UpdateState } from '../../shared/updates'
+import { friendlyUpdateError, type UpdateState } from '../../shared/updates'
 import { popupDismissButton } from './popupDismiss'
 
 const BACKGROUND_NOTE = 'Downloads in the background. Your sessions keep running until you restart.'
@@ -30,14 +30,7 @@ export class UpdatePopoverComponent {
   }
 
   private open(): void {
-    const rect = this.anchor().getBoundingClientRect()
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - 16))
-    this.root = h('div', {
-      class: 'popover update-popover',
-      role: 'dialog',
-      'aria-label': 'Update',
-      style: `left:${Math.round(left)}px;top:${Math.round(rect.bottom + 6)}px`
-    })
+    this.root = h('div', { class: 'popover update-popover', role: 'dialog', 'aria-label': 'Update' })
     this.root.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
@@ -51,6 +44,7 @@ export class UpdatePopoverComponent {
       openUpdateLink(link.href)
     })
     document.body.appendChild(this.root)
+    this.place()
     document.addEventListener('pointerdown', this.outside, true)
     this.signature = ''
   }
@@ -58,6 +52,22 @@ export class UpdatePopoverComponent {
   private readonly outside = (event: Event): void => {
     const target = event.target as Node
     if (this.root && !this.root.contains(target) && !this.anchor().contains(target)) toggleUpdatePopover(false)
+  }
+
+  /**
+   * Below the button in the top bar. A button near the bottom of the window (the sidebar rail) gets the popover beside it,
+   * bottom-aligned, so it never runs off the screen. Sizes come from offsetHeight: the open animation scales the box.
+   */
+  private place(): void {
+    if (!this.root) return
+    const rect = this.anchor().getBoundingClientRect()
+    const height = this.root.offsetHeight
+    const fitsBelow = rect.bottom + 6 + height <= window.innerHeight - 8
+    const besideRail = !fitsBelow && rect.right < window.innerWidth / 3
+    const left = besideRail ? rect.right + 8 : Math.max(8, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - 16))
+    const top = fitsBelow ? rect.bottom + 6 : besideRail ? rect.bottom - height : rect.top - 6 - height
+    this.root.style.left = `${Math.round(left)}px`
+    this.root.style.top = `${Math.round(Math.max(8, Math.min(top, window.innerHeight - height - 8)))}px`
   }
 
   private close(): void {
@@ -73,6 +83,7 @@ export class UpdatePopoverComponent {
     this.signature = signature
     const hadFocus = this.root.contains(document.activeElement)
     this.root.replaceChildren(popupDismissButton(() => toggleUpdatePopover(false), 'popup-x-corner'), ...this.content(update))
+    this.place()
     if (!hadFocus) this.root.querySelector<HTMLElement>('.btn')?.focus()
   }
 
@@ -109,9 +120,11 @@ export class UpdatePopoverComponent {
       ]
     }
     if (update.status === 'error') {
-      return [
+      const failure = friendlyUpdateError(update.error)
+      const nodes: Array<HTMLElement | null> = [
         h('h2', { class: 'update-title' }, 'Update failed'),
-        h('p', { class: 'update-error', id: 'update-error', role: 'alert' }, update.error ?? 'The update could not be completed.'),
+        h('p', { class: 'update-error', id: 'update-error', role: 'alert' }, failure.message),
+        failure.detail ? h('p', { class: 'update-error-code', id: 'update-error-code' }, failure.detail) : null,
         h(
           'div',
           { class: 'update-actions' },
@@ -119,6 +132,7 @@ export class UpdatePopoverComponent {
           this.button('update-github', 'Open GitHub', () => openUpdateLink(RELEASE_LATEST_URL))
         )
       ]
+      return nodes.filter((node): node is HTMLElement => node !== null)
     }
     const portable = update.mode === 'portable'
     const later = this.button('update-later', 'Later', () => void runUpdateAction('dismiss'))

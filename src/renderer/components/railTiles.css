@@ -107,6 +107,8 @@
   flex: none;
   display: inline-grid;
   place-items: center;
+  /* Search and Settings carry the expanded sidebar's flex-start; without this their icon column sits at the left edge. */
+  place-content: center;
   width: 40px;
   height: 40px;
   min-height: 40px;
@@ -165,6 +167,15 @@
 .frame-sidebar .sidebar.rail .frame-bottom { gap: 4px; padding: 0; }
 .frame-sidebar .sidebar.rail .frame-foot { gap: 4px; }
 .frame-sidebar .sidebar.rail .frame-bottom > .update-pill[hidden] { display: none; }
+/* The rail has no room for the words: the pill is an icon, tinted for a failed update, with a dot when it is ready to install. */
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill .pill-text { display: none; }
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill .pill-icon { display: inline-grid; place-items: center; color: var(--accent); }
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill .pill-icon svg { width: 20px; height: 20px; }
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill.status-error .pill-icon { color: var(--danger); }
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill.status-ready { background: transparent; color: var(--accent); }
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill:hover { background: var(--hover); }
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill .pill-dot:not([hidden]) { display: block; position: absolute; top: 8px; inset-inline-end: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--sidebar); }
+.frame-sidebar .sidebar.rail .frame-bottom > .update-pill .pill-line { inset-inline-start: 8px; bottom: 4px; max-width: 24px; border-radius: 1px; }
 .sidebar.rail > .rail-btn:not(.rail-tile) + .rail-btn:not(.rail-tile),
 .sidebar.rail > .rail-btn:not(.rail-tile) + .frame-bottom,
 .sidebar.rail > .frame-bottom + .frame-expand { margin-top: 4px; }

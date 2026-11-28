@@ -6,14 +6,18 @@ import { panelDockedOn, type SidePanelSettings } from '../shared/sidePanel'
 import { store } from './state'
 
 export function setSessionsLayout(layout: SessionsLayout): void {
+  // Leaving the Side panel keeps you in the session it was showing.
+  const shown = store.state.settings.sessionsLayout === 'panel' && layout !== 'panel' ? store.state.maximizedId : null
   store.set((state) => ({
     ...state,
+    focusedId: shown ?? state.focusedId,
     view: 'grid',
     // The Side panel shows the focused session on its own, so it keeps a maximized pane; the other layouts start from the grid.
     maximizedId: layout === 'panel' ? (state.focusedId ?? state.panes[0]?.id ?? null) : state.settings.sessionsLayout === 'panel' ? null : state.maximizedId,
     boardPeekId: layout === 'board' ? state.boardPeekId : null,
     settings: { ...state.settings, sessionsLayout: layout }
   }))
+  if (shown) void import('./actions').then(({ focusPaneInput }) => focusPaneInput(shown))
   api.updateSettings({ sessionsLayout: layout }).catch((error: unknown) => toast((error as Error).message || 'Could not save settings.'))
 }
 

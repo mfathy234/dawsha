@@ -70,3 +70,17 @@ export function updateStatusLine(state: UpdateState, now: number): string {
   if (state.status === 'error') return `${version} · update failed`
   return state.checkedAt === null ? `${version} · not checked yet` : `${version} · up to date · checked ${formatAgo(state.checkedAt, now)}`
 }
+
+const NETWORK_ERROR = /net::ERR_|\b(ENOTFOUND|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ECONNABORTED|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH|ENETDOWN|EPIPE)\b|socket hang up|getaddrinfo|network (?:error|request failed)|timed out/i
+const NETWORK_MESSAGE = "Couldn't reach GitHub. Check your connection and try again."
+const FALLBACK_MESSAGE = 'The update could not be completed.'
+const CODE_MAX = 160
+
+/** What the update popover shows for a failed update: a plain sentence, and the raw error (a code such as net::ERR_CONNECTION_TIMED_OUT) for the small line under it. */
+export function friendlyUpdateError(error: string | null): { message: string; detail: string | null } {
+  const raw = (error ?? '').trim()
+  if (!raw) return { message: FALLBACK_MESSAGE, detail: null }
+  const first = raw.split('\n')[0].trim().slice(0, CODE_MAX)
+  if (NETWORK_ERROR.test(raw)) return { message: NETWORK_MESSAGE, detail: first }
+  return { message: first, detail: null }
+}
