@@ -31,8 +31,11 @@ import type { IDisposable } from '@xterm/xterm'
 const SHIFT_ENTER = '\x1b\r'
 
 
-/** A terminal hidden this long drops its GPU renderer until it is shown again. */
-const TERMINAL_SLEEP_MS = 60_000
+/**
+ * A terminal hidden this long drops its GPU renderer until it is shown again. 1.10.0 cut this from 10 minutes to 60 s,
+ * so nearly every tab switch in full screen rebuilt a WebGL context and redrew the whole buffer; it is back to 10 minutes.
+ */
+const TERMINAL_SLEEP_MS = 10 * 60_000
 const VISIBILITY_RECHECK_MS = 2500
 export interface TerminalCallbacks {
   osc: TerminalOscHost

@@ -7,6 +7,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Switching between sessions no longer rebuilds them.** Since 1.10.0 a session hidden for a minute gave up its graphics, so going back to it in full screen redrew its whole history and could freeze the window for seconds. It is back to ten minutes, as in 1.9.
+
+
 - **Search and Settings line up in the sidebar rail.** Their icons sat to the left of the other buttons and the project tiles; every control in the rail now sits on the same centre line.
 - **Fewer freezes when you switch sessions.** The scrollbar ticks and block lines of a session measured the screen again and again while output arrived, and the first draw after you opened a session ran at once with the switch. They now measure only when the size changes and wait for an idle moment.
 - **Leaving full screen puts the cursor back in the session you were in.**
