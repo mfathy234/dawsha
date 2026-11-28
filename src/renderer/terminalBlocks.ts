@@ -1,4 +1,5 @@
 import type { IDisposable, IMarker, Terminal } from '@xterm/xterm'
+import { timed } from './slowPhases'
 import type { TabAgent } from '../shared/types'
 import {
   blockAtRow,
@@ -102,7 +103,7 @@ export class TerminalBlocks {
     if (!this.dirty) return this.cache
     this.dirty = false
     this.lastScan = Date.now()
-    this.cache = this.isNormalBuffer ? this.scan() : []
+    this.cache = this.isNormalBuffer ? timed('block scan', () => this.scan()) : []
     return this.cache
   }
 

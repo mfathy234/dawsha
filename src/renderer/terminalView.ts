@@ -1,4 +1,5 @@
 import { muteHiddenSelectionRedraw } from './terminalHiddenGuard'
+import { timed } from './slowPhases'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -391,6 +392,10 @@ export class TerminalView {
   }
 
   refreshVisibility(): void {
+    timed('terminal show', () => this.applyVisibility())
+  }
+
+  private applyVisibility(): void {
     clearTimeout(this.visibilityTimer)
     this.visibilityCheckedAt = Date.now()
     this.visible = this.requestedVisible && document.visibilityState === 'visible' && (this.el.parentElement?.getClientRects().length ?? 0) > 0
@@ -457,6 +462,10 @@ export class TerminalView {
   }
 
   fitNow(): void {
+    timed('terminal fit', () => this.fitTerminal())
+  }
+
+  private fitTerminal(): void {
     if (!this.opened || this.el.clientWidth < 40 || this.el.clientHeight < 20) return
     try {
       this.applyColumnCap()

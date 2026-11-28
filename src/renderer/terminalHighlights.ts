@@ -9,6 +9,8 @@ import {
   type HighlightSettings
 } from '../shared/highlights'
 
+import { timed } from './slowPhases'
+
 export const MAX_DECORATIONS = 500
 const MAX_SCAN_ROWS = 5000
 const RECENT_ROWS = 200
@@ -34,7 +36,7 @@ export class TerminalHighlights {
     private readonly host: HighlightHost
   ) {
     this.resetMarker()
-    this.subscription = term.onWriteParsed(() => this.scan())
+    this.subscription = term.onWriteParsed(() => timed('highlight scan', () => this.scan()))
   }
 
   setActive(active: boolean): void {
