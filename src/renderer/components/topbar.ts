@@ -165,6 +165,8 @@ export class TopBarComponent {
   })
   private readonly pillText = h('span', { class: 'pill-text' })
   private readonly pillLine = h('span', { class: 'pill-line' })
+  private readonly pillIcon = h('span', { class: 'pill-icon', 'aria-hidden': 'true' })
+  private readonly pillDot = h('span', { class: 'pill-dot', 'aria-hidden': 'true' })
   private readonly limits = h('button', { class: 'topbar-limits', type: 'button', id: 'topbar-limits', hidden: true, 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onClick: () => this.toggleLimitsPopover() })
   private limitsSignature = ''
   private limitStore: AgentLimitStore = {}
@@ -330,10 +332,15 @@ export class TopBarComponent {
     if (!visible) return
     this.updatePill.className = `update-pill status-${update.status}`
     this.updatePill.setAttribute('aria-expanded', String(state.updatePopoverOpen))
-    this.pillText.textContent = pillLabel(update)
+    const label = pillLabel(update)
+    this.pillText.textContent = label
+    this.updatePill.setAttribute('aria-label', label)
+    this.updatePill.title = label
+    this.pillIcon.replaceChildren(icon(update.status === 'error' ? ICONS.refresh : ICONS.download))
+    this.pillDot.hidden = update.status !== 'ready'
     this.pillLine.style.width = update.status === 'downloading' ? `${Math.round(update.percent)}%` : '0'
     if (this.pillText.parentElement !== this.updatePill || this.pillLine.parentElement !== this.updatePill) {
-      this.updatePill.replaceChildren(this.pillText, this.pillLine)
+      this.updatePill.replaceChildren(this.pillIcon, this.pillText, this.pillDot, this.pillLine)
     }
   }
 

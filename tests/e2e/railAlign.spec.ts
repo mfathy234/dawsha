@@ -37,3 +37,30 @@ test('the rail centres Search, Settings and the other controls on the tile colum
     await closeApp(app)
   }
 })
+
+// The update pill in the rail is an icon on the same centre line, not a cut-off word.
+test('the rail shows the update pill as a centred icon', async () => {
+  const sandbox = createSandbox()
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify({ ...readSettings(sandbox.userData), appearance: DESKTOP, sidebarCollapsed: true }), 'utf8')
+  const script = { check: 'available', info: { version: '9.9.0', releaseDate: '2026-11-01T10:00:00.000Z', releaseNotes: 'Notes' }, progress: [], hold: true }
+  const { app, page } = await launchApp(sandbox, {
+    DAWSHA_TEST_UPDATER: 'fake',
+    DAWSHA_TEST_UPDATER_SCRIPT: JSON.stringify(script),
+    DAWSHA_UPDATE_START_DELAY_MS: '200',
+    DAWSHA_UPDATE_INTERVAL_MS: '3600000'
+  })
+  try {
+    const rail = page.locator('.sidebar.rail')
+    const pill = rail.locator('#update-pill')
+    await expect(pill).toBeVisible({ timeout: 20_000 })
+    const tile = (await rail.locator('.rail-tile').first().boundingBox())!
+    expect(Math.abs((await iconCentre(pill.locator('.pill-icon'))) - (tile.x + tile.width / 2))).toBeLessThanOrEqual(1)
+    await expect(pill.locator('.pill-text')).toBeHidden()
+    const box = (await pill.boundingBox())!
+    expect(box.width).toBe(40)
+    expect(box.height).toBe(40)
+    await expect(pill).toHaveAttribute('aria-label', 'Update 9.9.0')
+  } finally {
+    await closeApp(app)
+  }
+})

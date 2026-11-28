@@ -2,7 +2,7 @@ import { openUpdateLink, runUpdateAction, toggleUpdatePopover } from '../actions
 import { RELEASE_LATEST_URL, releaseTagUrl, renderMarkdown } from '../../shared/markdown'
 import { h, leave } from '../dom'
 import type { AppState } from '../state'
-import type { UpdateState } from '../../shared/updates'
+import { friendlyUpdateError, type UpdateState } from '../../shared/updates'
 import { popupDismissButton } from './popupDismiss'
 
 const BACKGROUND_NOTE = 'Downloads in the background. Your sessions keep running until you restart.'
@@ -120,9 +120,11 @@ export class UpdatePopoverComponent {
       ]
     }
     if (update.status === 'error') {
-      return [
+      const failure = friendlyUpdateError(update.error)
+      const nodes: Array<HTMLElement | null> = [
         h('h2', { class: 'update-title' }, 'Update failed'),
-        h('p', { class: 'update-error', id: 'update-error', role: 'alert' }, update.error ?? 'The update could not be completed.'),
+        h('p', { class: 'update-error', id: 'update-error', role: 'alert' }, failure.message),
+        failure.detail ? h('p', { class: 'update-error-code', id: 'update-error-code' }, failure.detail) : null,
         h(
           'div',
           { class: 'update-actions' },
@@ -130,6 +132,7 @@ export class UpdatePopoverComponent {
           this.button('update-github', 'Open GitHub', () => openUpdateLink(RELEASE_LATEST_URL))
         )
       ]
+      return nodes.filter((node): node is HTMLElement => node !== null)
     }
     const portable = update.mode === 'portable'
     const later = this.button('update-later', 'Later', () => void runUpdateAction('dismiss'))

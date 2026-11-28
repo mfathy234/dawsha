@@ -2394,6 +2394,11 @@ input[type='checkbox'] {
   outline-offset: 2px;
 }
 
+.pill-icon,
+.pill-dot {
+  display: none;
+}
+
 .pill-line {
   position: absolute;
   inset-inline-start: 0;
@@ -2427,6 +2432,13 @@ input[type='checkbox'] {
   margin: 0;
   font-size: var(--fs-2);
   color: var(--danger);
+}
+
+.update-error-code {
+  margin: 0;
+  font-size: var(--fs-1);
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .update-actions {
