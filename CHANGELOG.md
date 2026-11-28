@@ -3,6 +3,12 @@
 All notable changes to Dawsha are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.5] - 2026-11-28
+
+### Fixed
+
+- **Search and Settings line up in the sidebar rail.** Their icons sat to the left of the other buttons and the project tiles; every control in the rail now sits on the same centre line.
+
 ## [1.10.4] - 2026-11-28
 
 ### Fixed

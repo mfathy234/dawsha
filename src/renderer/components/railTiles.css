@@ -107,6 +107,8 @@
   flex: none;
   display: inline-grid;
   place-items: center;
+  /* Search and Settings carry the expanded sidebar's flex-start; without this their icon column sits at the left edge. */
+  place-content: center;
   width: 40px;
   height: 40px;
   min-height: 40px;
