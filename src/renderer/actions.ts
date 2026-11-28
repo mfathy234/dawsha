@@ -841,6 +841,7 @@ export function toggleMaximize(paneId?: string): void {
   const target = paneId ?? store.state.focusedId
   if (!target || !paneById(store.state, target)) return
   leaveBoard()
+  const leaving = store.state.maximizedId === target
   store.set((s) => ({
     ...s,
     focusedId: target,
@@ -851,13 +852,27 @@ export function toggleMaximize(paneId?: string): void {
     sidebarOverride: null
   }))
   persistWorkspace()
+  if (leaving) focusPaneInput(target)
+}
+
+/** After leaving full screen the keyboard goes back into the session you were in: its terminal, or its chat box in Chat view. */
+export function focusPaneInput(paneId: string): void {
+  requestAnimationFrame(() => {
+    const pane = paneById(store.state, paneId)
+    if (!pane || store.state.focusedId !== paneId) return
+    const chat = document.querySelector<HTMLElement>(`.pane[data-pane-id="${CSS.escape(paneId)}"] .chat-input`)
+    if (chat && chat.offsetParent !== null) return chat.focus()
+    getTerminal(pane.activeTabId)?.focus()
+  })
 }
 
 export function restoreGrid(): void {
   if (store.state.settings.sessionsLayout === 'panel') return setSessionsLayout('grid')
-  if (store.state.maximizedId) {
-    store.set((s) => ({ ...s, maximizedId: null, detailsPaneId: null, timelinePaneId: null, sidebarOverride: null }))
+  const was = store.state.maximizedId
+  if (was) {
+    store.set((s) => ({ ...s, focusedId: was, maximizedId: null, detailsPaneId: null, timelinePaneId: null, sidebarOverride: null }))
     persistWorkspace()
+    focusPaneInput(was)
   }
 }
 
